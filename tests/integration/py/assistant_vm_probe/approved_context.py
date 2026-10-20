@@ -56,6 +56,9 @@ ROLES = {
         "axis": "object:Axis",
         "observations": "object:Observations",
         "dataset_weight": "finite number",
+        "absorption_type": "string",
+        "absorption_type_options": "array:string",
+        "cutoff_fwhm": "finite number",
         "peak_profile": "string",
         "peak_profile_options": "array:string",
         "excluded_regions": "array:Region",
@@ -158,7 +161,18 @@ ROLES = {
         "calculating": "boolean",
         "fitting": "boolean",
         "show_actions": "boolean",
-        "calculations": "array:Calculation"
+        "calculations": "array:Calculation",
+        "interface_groups": "array:InterfaceGroup",
+        "selected_structure_id": "string",
+        "selected_experiment_id": "string"
+    },
+    # PUBLIC559: optional ordered current native manual-interface rows, not arbitrary Context metadata.
+    "InterfaceGroup": {
+        "page": "string",
+        "tier": "string",
+        "category_id": "string",
+        "member_id": "string",
+        "admitted": "boolean"
     },
     # PUBLIC535: original published PatternModel facts; neither curve visibility
     # nor scientific/fit success is inferred from these fields.
@@ -213,6 +227,8 @@ def _closed(value, role):
     assert type(value) is dict and set(value) <= set(ROLES[role]), 'CTX569: a closed role rejects unknown/raw/local-only members'
     for key, item in value.items():
         _typed(item, ROLES[role][key])
+        if role == "NativeState" and key in {"selected_structure_id", "selected_experiment_id"}:
+            assert type(item) is str and item, "PUBLIC570: a present selected member is an actual nonempty ID, never null/index"
 
 
 def context_inputs(params):

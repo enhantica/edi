@@ -1,0 +1,95 @@
+{
+  "description": "Added branches only; existing profile/exclusion branches unchanged. Enum is actual pinned-source snapshot; code derives it from FIRST selectors.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "experiment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "const": "absorption_type"
+        },
+        "value": {
+          "type": "string",
+          "enum": [
+            "none",
+            "cylinder-hewat",
+            "cylinder-lobanov",
+            "cylinder"
+          ]
+        }
+      },
+      "required": [
+        "purpose",
+        "experiment",
+        "operation",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "experiment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "const": "cutoff_fwhm"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "purpose",
+        "experiment",
+        "operation",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "experiment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "const": "dataset_weight"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "purpose",
+        "experiment",
+        "operation",
+        "value"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

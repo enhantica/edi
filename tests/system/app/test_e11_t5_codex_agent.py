@@ -2494,7 +2494,7 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'create_experiment',
         'set_experiment_type',
         'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    'edit_experiment', }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
+    'edit_experiment',  'edit_relation', }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -2664,6 +2664,11 @@ def test_native125_refused_batch_never_partially_mutates_real_project(generic, v
     assert not replies[0]['response']['result']['success'], (
         'NATIVE: invalid whole batch is refused'
     )
+    if variant == 'long-purpose':
+        assert replies[0]['decoded'] == {'schema': 'edi.assistant.outgoing/1', 'status': 'refused',
+            'code': 'refused', 'action_error': 'purpose_too_long', 'action_field': 'purpose'}, (
+            'PURPOSE719: original nonblank long-description refusal is prewrite, bounded and precisely typed'
+        )
     assert state['project'] == before['project'], (
         'NATIVE: invalid later member, physical/dependent or scope error preserves the model'
     )
@@ -4923,7 +4928,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'save_project',
         'edit_background',
                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    'edit_experiment', }, (
+    'edit_experiment',  'edit_relation', }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
     recipe_schema = tools['create_cwl_project']['inputSchema']['properties']['recipe']
@@ -5385,7 +5390,7 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'save_project',
         'edit_background',
                                                                     'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    'edit_experiment', }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
+    'edit_experiment',  'edit_relation', }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5877,7 +5882,7 @@ def signin206_shipped(state, trace):
         'save_project',
         'edit_background',
                                                                               'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    'edit_experiment', }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
+    'edit_experiment',  'edit_relation', }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
 
 
 @pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
@@ -9613,7 +9618,7 @@ def gui392_run(tmp_path, case):
                 'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
                 'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
                                                                            'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-            'edit_experiment', }, 'GUI392: custom guidance cannot register or expand native tool authority'
+            'edit_experiment',  'edit_relation', }, 'GUI392: custom guidance cannot register or expand native tool authority'
         emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         # Actual peer request/reply/client IDs, not a guessed process/row ID.
         folder167_policy(trace, None)
@@ -10347,7 +10352,7 @@ PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 's
 PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
                        'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
                        'save_project', 'edit_background', 'acquire_inputs',
-                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom', 'edit_experiment'}
+                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom', 'edit_experiment', 'edit_relation'}
 
 
 def prefs417_inventory(skills, expected):
@@ -11848,7 +11853,14 @@ def test_experiment648_original_measured_controls_and_shared_undo(generic, tmp_p
                 carrier=entry['decoded']['datasets'];assert len(carrier)==1 and carrier[0]['id']==target['id'], 'EXPERIMENT648: public actual affected identity agrees with independently inspected/raw original member'
         if index==0:
             tool=next(t for t in next(r['params']['dynamicTools']for r in records(trace)if r.get('method')=='thread/start')if t['name']=='edit_experiment')
-            expected=json.loads((ROOT/'tests/fixtures/assistant/experiment648/request.json').read_text()); assert tool['name']==expected['name'] and tool['inputSchema']==expected['inputSchema']
+            expected=json.loads((ROOT/'tests/fixtures/assistant/experiment648/request.json').read_text())
+            def declared_schema(schema):
+                # Only top-level oneOf order is semantically irrelevant. Keep every
+                # full branch, duplicate, inner array, root key and JSON type exact.
+                canonical=lambda value:json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False)
+                assert type(schema)is dict and type(schema.get('oneOf'))is list, 'EXPERIMENT648: complete declared closed union is required'
+                return canonical({**schema,'oneOf':sorted(schema['oneOf'],key=canonical)})
+            assert tool['name']==expected['name'] and declared_schema(tool['inputSchema'])==declared_schema(expected['inputSchema']), 'EXPERIMENT648: exact independently declared full schema, modulo top union permutation only'
             dataset=[d for d in current[0]['decoded']['datasets']if d['id']==target['id']]
             assert len(dataset)==1 and dataset[0]['peak_profile']==baseline_profile
             choices=(['cwl-gaussian','cwl-lorentzian','cwl-pseudo-voigt','cwl-pseudo-voigt-berar-baldinozzi','cwl-tch-pseudo-voigt','cwl-tch-pseudo-voigt-fcj'] if kind=='cw'
@@ -12085,3 +12097,110 @@ def test_calls650_original_completed_calls_do_not_spend_live_request_bound(gener
     readonly409_policy(trace)
     assert not native_records(trace, '.native-wrong-envelope.jsonl')
     assert not any(r.get('method') in {'turn/steer', 'turn/interrupt', 'account/login/start', 'account/logout'} for r in records(trace))
+
+
+@pytest.mark.parametrize('clock_case', ['idle','total','overlap','answer','reject','resolved','lifetime'])
+def test_native681_original_agent_work_and_wait_remaining_budgets(generic, clock_case):
+    import math
+
+    actor,trace=generic('transport304')
+    config_path=trace.parent/'peer-input.json';config=json.loads(config_path.read_text())
+    config['transport304_mode']='native-work681';config_path.write_text(json.dumps(config));before=config_path.read_bytes()
+    assert actor.command('codex304_start',trigger='native-work681',action='destroy',native_case=clock_case)['reply']['armed']
+    state=actor.command('codex304_inspect')['public_transport304'];actual=state['native681'];checks=actual['checks'];phases=actual['phases']
+    common={'distinct_original_native_and_question_received','inactive_inference_refused','preconsumed_budget_still_live',
+        'unknown_request_refused','original_native_work_entered','second_native_owner_refused','stale_generation_refused',
+        'foreign_wait_flag_refused','stale_wait_flag_refused','foreign_exit_refused'}
+    tails={
+        'idle':{'duplicate_native_entry_idempotent','active_work_excludes_idle_interval','original_native_work_resumed',
+            'resume_live_at_return','remaining_budget_not_discarded','remaining_budget_not_reset_or_double_excluded'},
+        'total':{'active_work_live_before_total_expiry','active_work_does_not_pause_total','failed_generation_cannot_wait'},
+        'overlap':{'original_inactive_helper_wait_entered','duplicate_native_entry_idempotent','duplicate_entry_preserves_both_clock_wait',
+            'duplicate_wait_flag_idempotent','distinct_human_overlap_entered','overlap_live','native_window_returned',
+            'duplicate_return_flag_idempotent','human_wait_survives_native_return','native_work_ended_while_human_waits',
+            'human_wait_survives_native_end','original_human_wait_resumed','resume_live_at_return','remaining_budget_not_discarded',
+            'overlap_union_not_reset_or_double_excluded'},
+        'answer':{'original_answer_once','duplicate_answer_refused'},
+        'reject':{'original_reject_once','duplicate_reject_refused'},
+        'resolved':{'resolved_request_not_answered'},
+        'lifetime':{'original_process_captured','original_inactive_helper_wait_entered','distinct_human_overlap_entered',
+            'settled_operation_cannot_wait','new_operation_native_wait_entered','new_operation_both_waits_entered',
+            'revoke_live_at_return','revoke_live_interval','real_revoke_deadline_not_suspended','failed_generation_cannot_wait',
+            'retired_wait_cannot_resume','original_process_destroyed','same_facade_reused','replacement_start_returned',
+            'replacement_requests_received','replacement_process_captured','replacement_generation_distinct',
+            'replacement_both_waits_entered','old_owner_cannot_resume_replacement','replacement_both_waits_stay_live',
+            'original_output_bound_not_suspended','actual_eof_requested','actual_eof_not_suspended','eof_generation_cannot_wait'},
+    }
+    settling={'original_inactive_helper_wait_entered','duplicate_wait_flag_idempotent','native_wait_excludes_both_intervals',
+        'removed_request_cannot_wait','removed_request_cannot_set_wait','settlement_live_at_return','settlement_live_interval',
+        'settlement_releases_wait_with_remaining_total'} if clock_case in {'answer','reject','resolved'} else set()
+    assert actual['case']==clock_case and set(checks)==common|tails[clock_case]|settling and all(v is True for v in checks.values())
+    assert not state.get('observer_error') and not state.get('observer_overflow')
+    assert (actual['total_ms'],actual['idle_ms'])==((5000,1000)if clock_case=='idle'else(1000,5000)if clock_case in {'total','answer','reject','resolved'}else(1000,1000))
+    assert all(type(v)in(int,float) and math.isfinite(v) and v>=0 for v in phases.values())
+    if clock_case!='lifetime':assert 650<=phases['prewait']<1000
+    failures=[row for row in state['events']if row['signal']=='failed']
+    def terminal(event,label,cause,lower,upper):
+        elapsed=event.get('elapsed_operation_ms')
+        assert event['receiver']==state['original_receiver'] and event['original_alive_at_entry'] is True
+        assert event['label']==label and event['explanation']==cause
+        assert type(elapsed)in(int,float) and math.isfinite(elapsed) and lower<=elapsed<=upper
+    if clock_case=='lifetime':
+        assert len(failures)==2
+        assert phases['revoke_live_checkpoint']>=phases['revoke_return']+50
+        terminal(failures[0],'A','The official agent operation exceeded its deadline.',
+            max(phases['revoke_live_checkpoint'],phases['revoke_before']+100),phases['revoke_terminal'])
+        terminal(failures[1],'B','The official agent process ended. Unfinished work was interrupted.',
+            phases['eof_before'],phases['eof_terminal'])
+        assert actual['process']['A_destroyed']==1 and actual['process']['A_pid']>0 and actual['process']['B_pid']>0
+        assert actual['process']['A_pid']!=actual['process']['B_pid'] and actual['generation_A']!=actual['generation_B']
+    else:
+        assert len(failures)==1
+        if clock_case!='total':assert phases['live_checkpoint']>=phases['resume_return']+200
+        else:assert phases['live_checkpoint']>=phases['prewait']+200
+        terminal(failures[0],'A','The official agent operation exceeded its deadline.',phases['live_checkpoint'],phases['terminal_observed'])
+        if clock_case=='idle':assert phases['resume_return']<5000
+        if clock_case=='overlap':
+            assert phases['native_return']>=phases['human_enter']+200
+            assert phases['native_end']>=phases['native_return']+200
+            assert phases['resume_before']>=phases['native_end']+200
+    requests=records(trace);events=clear_control_events(trace)
+    methods=[row.get('method')for row in requests if row.get('method')]
+    assert methods==(['initialize','initialize','original/native681-eof']if clock_case=='lifetime'else['initialize'])
+    initialize=[row for row in requests if row.get('method')=='initialize']
+    labels=['A','B']if clock_case=='lifetime'else['A']
+    declarations=[row for row in events if row['kind']=='transport308-packet-declared']
+    actual_requests=[row for row in events if row['kind']=='transport304-request']
+    assert [row['label']for row in declarations]==[row['label']for row in actual_requests]==labels
+    assert len(initialize)==len(labels)
+    for label,request,declared,received in zip(labels,initialize,declarations,actual_requests,strict=True):
+        assert request==received['request'] and state['issued'][label]==request['id']
+        assert request['params']=={'clientInfo':{'name':'independent-public-'+label,'version':'1'},'capabilities':{'experimentalApi':True}}
+        packet=[{'id':request['id'],'result':{'userAgent':'original-offline-peer/0.162.1','codexHome':str(trace.parent/'peer-unused-profile'),
+            'platformFamily':'unix','platformOs':'linux'}}]
+        packet.extend({'id':f'native681-{label}-{index}','method':'item/tool/call','params':{
+            'threadId':'native681-thread-'+label,'turnId':'native681-turn-'+label,'callId':f'native681-call-{label}-{index}',
+            'namespace':None,'tool':'diagnostics','arguments':{'purpose':'Independent original native681 clock owner'}}}for index in range(2))
+        packet.append({'id':'question681-'+label+'-0','method':'item/tool/requestUserInput','params':{'originalCaller':label,'questions':[]}})
+        assert declared['records']==packet and declared['pid']==received['pid']
+        wire=''.join(json.dumps(row,separators=(',',':'))+'\n'for row in packet)
+        assert declared['wire_utf8']==wire and declared['bytes']==len(wire.encode())<=declared['pipe_bound']
+        assert hashlib.sha256(wire.encode()).hexdigest()==declared['sha256']
+        actual_received=[(row['original_id'],row['method'])for row in state['events']if row['signal']=='serverRequest'and row['label']==label]
+        assert actual_received==[(row['id'],row['method'])for row in packet[1:]]
+    answers=[row for row in requests if row.get('method') is None]
+    assert len(answers)==(1 if clock_case in {'answer','reject'}else 0)
+    peer_answers=[row for row in events if row['kind']=='native681-response']
+    assert len(peer_answers)==len(answers)
+    if answers:
+        assert answers[0]['id']=='native681-A-0' and answers[0]==peer_answers[0]['response']
+        assert peer_answers[0]['pid']==actual_requests[0]['pid']
+        if clock_case=='answer':assert answers[0]['result']=={'contentItems':[{'type':'inputText','text':'{"schema":"edi.assistant.outgoing/1","status":"completed"}'}],'success':True}
+        else:assert 'error'in answers[0] and 'result'not in answers[0]
+    eof=[row for row in events if row['kind']=='native681-real-eof']
+    assert len(eof)==(1 if clock_case=='lifetime'else 0)
+    if eof:
+        assert eof[0]['pid']==actual_requests[1]['pid']==actual['process']['B_pid']
+        assert actual_requests[0]['pid']==actual['process']['A_pid']
+        assert events.index(actual_requests[1])<events.index(eof[0])
+    assert config_path.read_bytes()==before

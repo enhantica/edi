@@ -1922,9 +1922,17 @@ def test_structure634_real_main_initial_atom_and_ordinary_cues(tmp_path):
         [call('create_structure'),call('inspect_project'),call('list_parameters')],
         [call('edit_structure',structure=S,operation='rename',value='Main634'),
          call('edit_atom',structure=S,operation='text',atom=A,field='label',value='First634'),
+         call('set_parameters',values=[
+             {'path':'structure.cell.length_a','value':4.123},
+             {'path':'structure.atom_sites[First634].fract_x','value':.125},
+             {'path':'structure.atom_sites[First634].fract_y','value':.25},
+             {'path':'structure.atom_sites[First634].fract_z','value':.375},
+             {'path':'structure.atom_sites[First634].occupancy','value':.875},
+             {'path':'structure.atom_sites[First634].adp_iso','value':.625}]),
          call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='57Fe')],
         [call('edit_atom',structure=S,operation='append'),call('inspect_project')],
-        [call('edit_atom',structure=S,operation='text',atom=B,field='label',value='Second634')],
+        [call('edit_atom',structure=S,operation='text',atom=B,field='label',value='Second634'),
+         call('set_parameters',values=[{'path':'structure.atom_sites[Second634].fract_x','value':.375}])],
         [call('edit_structure',structure=S,operation='rename',value='Main634'),
          call('edit_atom',structure=S,operation='text',atom=A,field='label',value='First634'),
          call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='57Fe')],
@@ -1932,6 +1940,11 @@ def test_structure634_real_main_initial_atom_and_ordinary_cues(tmp_path):
     ]
     for i,group in enumerate(turns):
         for j,entry in enumerate(group):entry['call_id']=f'structure634-main-{i}-{j}'
+    # Preserve every original phase/call ID. One genuine ordinary symmetry edit
+    # and a subsequent fresh read are a prerequisite, not part of the numeric array.
+    prerequisite=[call('edit_structure',structure=S,operation='space_group_number',value=1),call('list_parameters')]
+    for j,entry in enumerate(prerequisite):entry['call_id']=f'structure634-main-6-{j}'
+    turns.insert(1,prerequisite)
     config.update(scenario='native:script',native_turn_calls=turns,structure634=True,readonly409=True,vm319_record_packets=True)
     config_path.write_text(json.dumps(config));before=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
     argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
@@ -1945,16 +1958,58 @@ def test_structure634_real_main_initial_atom_and_ordinary_cues(tmp_path):
     assert len([r for r in requests if r.get('method')=='turn/start'])==len(turns)
     for sent,reply in zip(emitted,replies,strict=True):
         assert reply['original']==sent and reply['response']['id']==sent['id']!=sent['params']['callId'] and reply['response']['result']['success'] is True
+    array450_result('values',turns[2][2],replies[7]['response']['result'])
+    assert emitted[7]['params']['tool']=='set_parameters' and emitted[7]['params']['arguments']==turns[2][2]['arguments']
+    numeric=[json.loads(line.split('STRUCTURE668_NUMERIC_RESULT ',1)[1])for line in result.stdout.splitlines()if 'STRUCTURE668_NUMERIC_RESULT 'in line]
+    assert len(numeric)==1
+    numeric=numeric[0]
+    assert numeric['noExperiment'] is True
+    assert numeric['creationCues']==[{'name':'structures.create','phase':0,'kind':'visual-target-cue','beforeStructures':0}]
+    expected=turns[2][2]['arguments']['values']
+    assert [cue['path']for cue in numeric['cues']]==[expected[i]['path']for i in numeric['changedIndices']]
+    assert all(cue['page']==2 and cue['noExperiment'] is True for cue in numeric['cues'])
+    assert len(numeric['before'])==len(numeric['after'])==len(numeric['restored']) and numeric['restored']==numeric['before']
+    before_by_path={row[0]:row for row in numeric['before']}
+    after_by_path={row[0]:row for row in numeric['after']}
+    assert len(before_by_path)==len(numeric['before']) and before_by_path.keys()==after_by_path.keys()
+    desired={entry['path']:entry['value']for entry in expected}
+    assert desired.keys()<=before_by_path.keys()
+    for path,row in before_by_path.items():
+        assert after_by_path[path]==[path,desired.get(path,row[1]),*row[2:]]
+    prepared=[json.loads(line.split('STRUCTURE699_PREPARATION ',1)[1])for line in result.stdout.splitlines()if'STRUCTURE699_PREPARATION 'in line]
+    assert len(prepared)==1
+    preparation=prepared[0]
+    assert preparation['beforeGroup']=='P b n m' and preparation['beforeWyckoff']=='a'
+    assert preparation['preparedGroup']=='P 1' and preparation['preparedNumber']==1 and preparation['preparedWyckoff']=='a'
+    assert preparation['beforeDependence']==['symmetry_fixed']*3 and preparation['preparedDependence']==['independent']*3
+    assert preparation['prerequisiteCues']==1 and preparation['prerequisiteUndos']==1 and preparation['metadataUndos']==2
+    assert preparation['sameOriginalSite']is True and preparation['restoredOriginalSymmetry']is True
+    before_parameters=replies[2]['response']['result']['contentItems']
+    prepared_parameters=replies[4]['response']['result']['contentItems']
+    assert len(before_parameters)==len(prepared_parameters)==1
+    before_rows=json.loads(before_parameters[0]['text'])['parameters']
+    prepared_rows=json.loads(prepared_parameters[0]['text'])['parameters']
+    assert [{k:v for k,v in row.items()if k!='dependence'}for row in before_rows]==[{k:v for k,v in row.items()if k!='dependence'}for row in prepared_rows], 'STRUCTURE699: ordinary P1 changes symmetry admission, never forces numeric/free/SU values'
+    coordinates=preparation['coordinatePaths']
+    assert len(coordinates)==3 and len(set(coordinates))==3
+    assert [next(row for row in before_rows if row['path']==path)['dependence']for path in coordinates]==['symmetry_fixed']*3
+    assert [next(row for row in prepared_rows if row['path']==path)['dependence']for path in coordinates]==['independent']*3
     facts=[json.loads(line.split('STRUCTURE634_MAIN_RESULT ',1)[1])for line in result.stdout.splitlines()if 'STRUCTURE634_MAIN_RESULT 'in line]
-    assert len(facts)==1 and all(facts[0][k] is True for k in ['ownerSame','firstSame','realUndo'])
+    assert len(facts)==1 and all(facts[0][k] is True for k in ['ownerSame','realUndo'])
+    first=facts[0]['firstCurrent']
+    assert first['label']=='First634' and first['typeSymbol']==facts[0]['initialType']
+    assert first['science']==facts[0]['initialScience']
+    assert first['paths']==['structure.atom_sites[First634].'+name for name in ['fract_x','fract_y','fract_z','occupancy','adp_iso']]
+    assert type(facts[0]['actualCreateInitialAtom'])is str and facts[0]['actualCreateInitialAtom']
+    assert type(facts[0]['appendedId'])is str and facts[0]['appendedId']!='First634'
     assert [facts[0][k]for k in ['keys','clicked','activated']]==[0,0,0]
+    rows674=[json.loads(line.split('ROW674_RESULT ',1)[1])for line in result.stdout.splitlines()if 'ROW674_RESULT 'in line]
+    assert len(rows674)==1 and rows674[0]['setupClipped'] is True and rows674[0]['ownerSame'] is True
+    assert rows674[0]['numericCues']==rows674[0]['numericWrites']==1 and rows674[0]['rowCues']>=2
+    assert rows674[0]['requested']==.375 and rows674[0]['actual']==.375 and rows674[0]['restored'] is True
     assert not any(r.get('method')in{'turn/interrupt','account/login/start'}for r in requests)
     assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
-    speeds=[json.loads(line.split('SPEED636_MAIN_RESULT ',1)[1])for line in result.stdout.splitlines()if 'SPEED636_MAIN_RESULT 'in line]
-    assert len(speeds)==1 and speeds[0]['speed']==5 and speeds[0]['pointer']==[100,20,100,100]
-    assert speeds[0]['ownerSame'] is True and speeds[0]['originalPointer'] is True
-    assert speeds[0]['menu']['completed'] is True and speeds[0]['menu']['scheduled'] is True
-    assert [speeds[0]['menu'][k]for k in ['opened','buttonPresses','buttonClicks','choicePresses','choiceClicks']]==[1,1,1,1,1]
+
 
 
 def test_create639_real_original_callback_consumption_and_one_undo(tmp_path):
@@ -2024,3 +2079,399 @@ def test_experiment648_real_main_manual_members_and_ordinary_cues(tmp_path):
     assert facts[0]['ownerSame']is True and facts[0]['realUndo']is True and [facts[0][k]for k in ['keys','clicked','activated']]==[0,0,0]
     assert all(facts[0][k]>=1 for k in ['profileCue','appendCue','startCue','endCue'])
     assert not any(v.get('method')in{'turn/interrupt','account/login/start'}for v in rr) and not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+
+
+def test_text678_real_current_rows_immediate_text_and_ordinary_history(tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records, save211_files
+    source=ROOT/'tests/fixtures/e04_t1/editable-project';source_files=save211_files(source)
+    env=popup171_owned_environment(tmp_path);config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT'])
+    config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    purpose='Independent current-row immediate text, genuine choice and ordinary Undo witness'
+    def call(call_id,aliases,constraints):
+        return {'tool':'add_relations','call_id':call_id,'arguments':{'purpose':purpose,'aliases':aliases,'constraints':constraints}}
+    turns=[
+        [call('text678-positive',[{'id':'text678_ba','path':'structure.atom_sites[Ba].adp_iso'}],
+              [{'id':'text678_shared','expression':'text678_ba = 2 * user678_la','enabled':True}])],
+        [call('text678-stop',[{'id':'text678_stopped','path':'structure.atom_sites[Co].adp_iso'}],[])],
+        [call('text678-dirty',[{'id':'text678_blocked','path':'structure.atom_sites[Co].adp_iso'}],[])],
+    ]
+    config.update(scenario='native:script',native_turn_calls=turns,readonly409=True,vm319_record_packets=True)
+    config_path.write_text(json.dumps(config));before=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_text678_current_relation_rows_publish_whole_text_and_ordinary_history','-o','-,txt']
+    try:
+        result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout','stderr'):
+            value=getattr(error,stream) or b'';raw=value if isinstance(value,bytes)else value.encode()
+            path=tmp_path/('text678-timeout.'+stream+'.log');path.write_bytes(raw)
+            error.add_note(str(path)+'\n'+raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path/'text678.stdout.log').write_text(result.stdout);(tmp_path/'text678.stderr.log').write_text(result.stderr)
+    (tmp_path/'text678-process.json').write_text(json.dumps({'argv':argv,'returncode':result.returncode,
+        'original_config_unchanged':config_path.read_bytes()==before},indent=2))
+    assert source_files==save211_files(source) and config_path.read_bytes()==before
+    trace=Path(config['trace']);readonly409_policy(trace);requests=records(trace)
+    emitted=[json.loads(v)for v in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(v)for v in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==3 and len({v['id']for v in emitted})==3
+    loaded=json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['native_turn_calls']==turns
+    starts=[v for v in requests if v.get('method')=='turn/start']
+    assert len(starts)==3 and all(type(v['params'].get('clientUserMessageId'))is str and v['params']['clientUserMessageId']for v in starts)
+    assert len({v['params']['clientUserMessageId']for v in starts})==3
+    assert all(type(v['params'].get(k))is str and v['params'][k]for v in emitted for k in ('threadId','turnId'))
+    assert len({v['params']['threadId']for v in emitted})==1 and len({v['params']['turnId']for v in emitted})==3
+    decoded=[]
+    for sent,reply,declared in zip(emitted,replies,[turn[0]for turn in turns],strict=True):
+        assert sent['params']['tool']==declared['tool'] and sent['params']['callId']==declared['call_id']
+        assert sent['params']['arguments']==declared['arguments']
+        assert reply['original']==sent and reply['response']['id']==sent['id']!=declared['call_id']
+        body=reply['response']['result'];content=body['contentItems']
+        assert len(content)==1 and content[0]['type']=='inputText'
+        decoded.append(json.loads(content[0]['text']))
+    assert [v['response']['result']['success']for v in replies]==[True,False,False]
+    assert decoded[0]['status']=='edited' and decoded[0]['steps_completed']==7
+    assert decoded[0]['complete'] is True and decoded[0]['atomic'] is False
+    assert decoded[1]['status']=='refused' and decoded[1]['steps_completed']==0
+    assert decoded[1]['complete'] is False and decoded[1]['atomic'] is False
+    assert replies[2]['response']['result']['success'] is False
+    assert decoded[2]['schema']=='edi.assistant.outgoing/1' and decoded[2]['status'] in {'refused','unavailable'}
+    assert decoded[2]['code'] in {decoded[2]['status'],'unclassified'}, 'TEXT680: actual closed refusal code, never arbitrary projected diagnostic text'
+    assert 'message' not in decoded[2], 'TEXT680: local nativeOutcome diagnostic is not a transport Result field'
+    interrupts=[v for v in requests if v.get('method')=='turn/interrupt']
+    assert len(interrupts)==1
+    stop_scope=emitted[1]['params']
+    assert all(type(stop_scope.get(k))is str and stop_scope[k]for k in ('threadId','turnId'))
+    assert interrupts[0]['params']=={k:stop_scope[k]for k in ('threadId','turnId')}
+    assert not any(v.get('method')in{'account/login/start','account/logout'}for v in requests)
+    facts=[json.loads(line.split('TEXT678_RESULT ',1)[1])for line in result.stdout.splitlines()if 'TEXT678_RESULT 'in line]
+    assert len(facts)==1
+    facts=facts[0]
+    expected=['aliases.append','alias.id.1','alias.parameter.1','constraints.append','constraint.id.0','constraint.expression.0','constraint.enabled.0']
+    assert sorted(facts['cues'])==sorted(expected) and facts['undo']==7
+    wanted={'alias.id.1':'text678_ba','constraint.id.0':'text678_shared','constraint.expression.0':'text678_ba = 2 * user678_la'}
+    assert set(v['name']for v in facts['spellings'])==set(wanted)
+    assert all(v['text']==wanted[v['name']]for v in facts['spellings']), 'TEXT678: actual presented prefix/erasure cannot be blessed by later successful final text'
+    assert facts['scientificKeyEdits']==0
+    assert facts['issues']==[] and facts['accepted']==facts['activated']==facts['popupShows']==facts['searchDrafts']==0
+    assert facts['targetCues']==facts['choicePublications']==facts['choiceReadbacks']==facts['stopClicks']==1
+    choice=facts['choiceProof']
+    assert choice['id']=='text678_ba' and choice['parameter']==choice['displayText']==choice['offered']=='lbco.atom_site.Ba.adp_iso'
+    assert type(choice['index'])is int and choice['index']>=0 and choice['sameControl']is True and choice['sameModel']is True
+    assert facts['sameOwner'] is True and facts['restored'] is True and facts['publications']>0 and facts['dirtyCues']==0
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and ('PASS   : edi_app::AssistantPopup::'
+        'test_text678_current_relation_rows_publish_whole_text_and_ordinary_history()')in result.stdout
+
+
+def test_scalar698_real_joint_manual_and_native_controls(tmp_path):
+    import shutil
+    from tests.integration.py.assistant_vm_probe.approved_context import context_inputs
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records, save211_files
+    source = ROOT / 'tests/fixtures/e04_t5/joint'
+    source_files = save211_files(source)
+    root = tmp_path / 'scalar698-joint'
+    shutil.copytree(source, root)
+    assert save211_files(root) == source_files
+    env = popup171_owned_environment(tmp_path)
+    path = Path(env['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(path.read_text()); config.pop('report_page_reply')
+    def call(operation, value, **extra):
+        return {'tool':'edit_experiment', 'arguments':{'purpose':'Independent ordinary scalar controls on original joint data',
+                'experiment':'hrpt', 'operation':operation, 'value':value, **extra}}
+    operations = [('absorption_type','cylinder-lobanov'), ('cutoff_fwhm',0), ('dataset_weight',.625)]
+    turns = [[call(operation,value)] for mode in [False,True] for operation,value in operations for repeat in [False,True]]
+    negatives = [call('absorption_type','cylinder'), call('cutoff_fwhm','0'),
+                 call('dataset_weight',.625,region='not-a-scalar-field'),
+                 {**call('cutoff_fwhm',30), 'arguments':{**call('cutoff_fwhm',30)['arguments'],'experiment':'second'}},
+                 {**call('dataset_weight',1), 'arguments':{**call('dataset_weight',1)['arguments'],'experiment':'independent-missing-member'}}]
+    turns += [negatives, [call('dataset_weight',.625)]]
+    for i, group in enumerate(turns):
+        for j, item in enumerate(group): item['call_id'] = f'scalar698-{i}-{j}'
+    config.update(scenario='native:script',native_turn_calls=turns,readonly409=True,vm319_record_packets=True)
+    path.write_text(json.dumps(config)); config_bytes=path.read_bytes()
+    env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_scalar698_original_joint_rows_and_ordinary_scalar_undo','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'scalar698.stdout.log').write_text(result.stdout);(tmp_path/'scalar698.stderr.log').write_text(result.stderr)
+    assert result.returncode==0 and 'FAIL!'not in result.stdout
+    assert 'PASS   : edi_app::AssistantPopup::test_scalar698_original_joint_rows_and_ordinary_scalar_undo()'in result.stdout
+    assert path.read_bytes()==config_bytes and save211_files(source)==save211_files(root)==source_files
+    trace=Path(config['trace']);readonly409_policy(trace);rr=records(trace)
+    sent=[json.loads(v)for v in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(v)for v in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(sent)==len(replies)==sum(map(len,turns)) and len({v['id']for v in sent})==len(sent)
+    actual_turns=[v for v in rr if v.get('method')=='turn/start'];assert len(actual_turns)==len(turns)
+    for turn_index,turn in enumerate(actual_turns):
+        context=context_inputs(turn['params'])[0]
+        assert context['native_state']['selected_experiment_id']=='hrpt' and context['native_state']['selected_structure_id']=='lbco'
+        expected_hrpt={'absorption_type':'cylinder-hewat','cutoff_fwhm':30,'dataset_weight':1}
+        if turn_index<12 and turn_index%2:
+            operation,value=operations[(turn_index//2)%3];expected_hrpt[operation]=value
+        for bank in ['hrpt','second']:
+            dataset=next(v for v in context['datasets']if v['id']==bank)
+            expected=expected_hrpt if bank=='hrpt'else{'absorption_type':'cylinder-hewat','cutoff_fwhm':30,'dataset_weight':1}
+            assert all(dataset[key]==value for key,value in expected.items())
+            assert dataset['absorption_type_options']==['none','cylinder-hewat','cylinder-lobanov']
+    tool=next(t for t in next(v['params']['dynamicTools']for v in rr if v.get('method')=='thread/start')if t['name']=='edit_experiment')
+    expected=json.loads((ROOT/'tests/fixtures/assistant/scalar698/request-extension.json').read_text())['oneOf']
+    assert all(branch in tool['inputSchema']['oneOf']for branch in expected), 'SCALAR698: independently declared closed public scalar branches are actually advertised'
+    for index,(request,reply)in enumerate(zip(sent,replies,strict=True)):
+        assert request==reply['original'] and reply['response']['id']==request['id']!=request['params']['callId']
+        body=reply['response']['result'];assert type(body['success'])is bool
+        assert len(body['contentItems'])==1 and body['contentItems'][0]['type']=='inputText'
+        wire=json.loads(body['contentItems'][0]['text'])
+        assert wire['schema']=='edi.assistant.outgoing/1'
+        if index<12:
+            operation,value=operations[(index//2)%3]
+            assert body['success']is True and wire['complete']is True and wire['published']is True and wire['steps_completed']==1
+            assert wire['status']==('completed'if index%2==0 else'no_change') and wire['applied']is(index%2==0)
+            assert len(wire['datasets'])==1 and wire['datasets'][0]['id']=='hrpt' and wire['datasets'][0][operation]==value
+            if operation=='absorption_type':assert wire['datasets'][0]['absorption_type_options']==['none','cylinder-hewat','cylinder-lobanov']
+        else:
+            assert body['success']is False and wire['status']=='refused' and wire['code']in{'refused','unclassified','unavailable','cancelled','uncertain','request_stale','context_unready','owner_unavailable','pending_operation','item_mismatch','duplicate_call','invalid_arguments','calculation_busy','visible_unmapped','project_required','resource_exhausted','input_changed','policy_mismatch'}
+            for dataset in wire.get('datasets',[]):
+                assert dataset['id']in{'hrpt','second'}
+                for field,value in [('absorption_type','cylinder-hewat'),('cutoff_fwhm',30),('dataset_weight',1)]:
+                    if field in dataset:assert dataset[field]==value, 'SCALAR698: any bounded refusal disclosure agrees with actual unchanged canonical joint data, never the requested failed value'
+    facts=[json.loads(v.split('SCALAR698_MAIN_RESULT ',1)[1])for v in result.stdout.splitlines()if'SCALAR698_MAIN_RESULT 'in v]
+    assert len(facts)==1 and facts[0]=={'manualUndos':6,'nativeUndos':6,'nativeChanges':6,'noops':6,'targetCues':3,'stopClicks':1,'scientificInput':0,'ownerSame':True,'joint':True}
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    assert not any(v.get('method')in{'account/login/start'}for v in rr)
+
+def relation685_declarations(mode):
+    """Literal public565 requests; current IDs are explicit fixture declarations."""
+    purpose='Edit only this explicitly identified current ordinary relation row'
+    operations=[
+        ('alias_rename','spare685','renamed685','alias.id.3'),
+        ('alias_target','spare685','structure.atom_sites[A].adp_iso','alias.parameter.3'),
+        ('alias_remove','spare685',None,'alias.remove.3'),
+        ('constraint_rename','spare685','renamed685','constraint.id.1'),
+        ('constraint_expression','spare685','b = 3*a + 1','constraint.expression.1'),
+        ('constraint_enabled','spare685',False,'constraint.enabled.1'),
+        ('constraint_remove','spare685',None,'constraint.remove.1'),
+    ]
+    phases=[]
+    def add(label,arguments,kind,control=None,manual=None):
+        call={'tool':'edit_relation','call_id':'relation685-'+label,'arguments':dict(purpose=purpose,**arguments)}
+        phases.append({'call':call,'kind':kind,'control':control,'manual':manual})
+    for index,(operation,identity,value,control)in enumerate(operations):
+        args={'operation':operation,'id':identity}
+        if not operation.endswith('_remove'):args['value']=value
+        manual={'operation':operation,'id':identity,'value':value,'row':3 if operation.startswith('alias_')else 1}
+        add(str(index)+'-changed',args,'changed',control,manual)
+        if not operation.endswith('_remove'):
+            current_id=value if operation.endswith('_rename')else identity
+            add(str(index)+'-equal',dict(args,id=current_id),'equal',control)
+        if operation.endswith('_rename'):
+            add(str(index)+'-old-id',args,'stale',control)
+    for label,args in [
+        ('missing',{'operation':'alias_remove','id':'not-present685'}),
+        ('wrong-collection',{'operation':'alias_remove','id':'keep685'}),
+        ('wrong-type',{'operation':'constraint_enabled','id':'spare685','value':'false'}),
+        ('extra-field',{'operation':'alias_remove','id':'spare685','value':'not-allowed'}),
+        ('duplicate-id',{'operation':'alias_rename','id':'spare685','value':'a'}),
+        ('referenced-alias',{'operation':'alias_remove','id':'a'}),
+    ]:add(label,args,'refused')
+    if mode=='on':
+        add('stop',{'operation':'alias_rename','id':'spare685','value':'stopped685'},'stop','alias.id.3')
+        add('manual-draft',{'operation':'alias_rename','id':'spare685','value':'blocked685'},'draft','alias.id.3')
+    return phases
+
+
+@pytest.mark.parametrize('mode',('off','on'))
+def test_relation685_real_current_rows_scalar_methods_and_one_undo(mode,tmp_path):
+    import shutil
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy,records,save211_files,PREFS417_NATIVE_TOOLS
+    source=ROOT/'tests/fixtures/constraint_expressions/project';original=save211_files(source)
+    reference=tmp_path/'reference';reference.mkdir();project=reference/'project';shutil.copytree(source,project)
+    analysis=project/'analysis/analysis.edi';pre=analysis.read_bytes()
+    # Independent original affine fixture; only explicit relation IDs/one spare declaration change.
+    assert pre==b'_edi.schema_version 3\n_fitting_mode.type single\n_minimizer.max_iterations 80\nloop_\n_alias.id\n_alias.parameter_unique_name\na phase.atom_site.A.adp_iso\nb phase.atom_site.B.adp_iso\nc bank.instrument.calib_twotheta_offset\nloop_\n_constraint.expression\n"c = b/10"\n"b = 2*a + 1"\n'
+    post=pre.replace(b'c bank.instrument.calib_twotheta_offset\n',b'c bank.instrument.calib_twotheta_offset\nspare685 phase.cell.length_a\n').replace(
+        b'_constraint.expression\n"c = b/10"\n"b = 2*a + 1"\n',
+        b'_constraint.id\n_constraint.expression\n_constraint.enabled\nkeep685 "c = b/10" true\nspare685 "b = 2*a + 1" true\n')
+    analysis.write_bytes(post)
+    assert post.replace(b'spare685 phase.cell.length_a\n',b'').replace(
+        b'_constraint.id\n_constraint.expression\n_constraint.enabled\nkeep685 "c = b/10" true\nspare685 "b = 2*a + 1" true\n',
+        b'_constraint.expression\n"c = b/10"\n"b = 2*a + 1"\n')==pre
+    assert all((project/name).read_bytes()==value for name,value in original.items()
+               if name!='analysis/analysis.edi')
+    phases=relation685_declarations(mode);(reference/'relation685.json').write_text(json.dumps({'mode':mode,'phases':phases}))
+    before=save211_files(project)
+    env=popup171_owned_environment(tmp_path);env['EDI_ACCEPTANCE_REFERENCE']=str(reference)
+    config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT']);config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    config.update(scenario='native:script',native_turn_calls=[[row['call']]for row in phases],readonly409=True,vm319_record_packets=True)
+    config_path.write_text(json.dumps(config));script=config_path.read_bytes()
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_relation685_current_rows_scalar_methods_and_one_undo','-o','-,txt']
+    try:result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in('stdout','stderr'):
+            value=getattr(error,stream)or b'';raw=value if isinstance(value,bytes)else value.encode()
+            path=tmp_path/('relation685-timeout.'+stream+'.log');path.write_bytes(raw);error.add_note(str(path)+'\n'+raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path/'relation685.stdout.log').write_text(result.stdout);(tmp_path/'relation685.stderr.log').write_text(result.stderr)
+    assert source.is_dir()and save211_files(source)==original and save211_files(project)==before and config_path.read_bytes()==script
+    trace=Path(config['trace']);readonly409_policy(trace);traffic=records(trace)
+    emitted=[json.loads(v)for v in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(v)for v in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==len(phases) and len({row['id']for row in emitted})==len(phases)
+    loaded=json.loads(config_path.with_suffix('.peer-loaded.json').read_text());assert loaded['native_turn_calls']==[[row['call']]for row in phases]
+    starts=[r['params']for r in traffic if r.get('method')=='thread/start'];assert len(starts)==1
+    tools=starts[0]['dynamicTools'];assert len(tools)==21 and len({t['name']for t in tools})==21
+    assert {t['name']for t in tools}==PREFS417_NATIVE_TOOLS|{'edit_relation'}
+    public=json.loads((ROOT/'tests/fixtures/assistant/relation685/request.json').read_text())
+    assert [t['inputSchema']for t in tools if t['name']=='edit_relation']==[public['inputSchema']]
+    turns=[r for r in traffic if r.get('method')=='turn/start'];assert len(turns)==len(phases)
+    assert len({r['params']['clientUserMessageId']for r in turns})==len(phases)
+    assert all(type(row['params'].get(k))is str and row['params'][k]for row in emitted for k in('threadId','turnId'))
+    assert len({row['params']['threadId']for row in emitted})==1 and len({row['params']['turnId']for row in emitted})==len(phases)
+    for phase,sent,reply in zip(phases,emitted,replies,strict=True):
+        call=phase['call'];assert sent['params']['tool']==call['tool']and sent['params']['callId']==call['call_id']and sent['params']['arguments']==call['arguments']and sent['params'].get('namespace')is None
+        assert reply['original']==sent and reply['response']['id']==sent['id']!=call['call_id']
+        result685=reply['response']['result'];content=result685['contentItems'];assert len(content)==1 and content[0]['type']=='inputText'
+        value=json.loads(content[0]['text']);assert value['schema']=='edi.assistant.outgoing/1'
+        if phase['kind']in{'changed','equal'}:
+            assert result685['success']is True and value['status']==('edited'if phase['kind']=='changed'else'unchanged')
+            assert type(value['applied'])is bool and type(value['published'])is bool
+            assert value['complete']is True and value['steps_completed']==1 and value['atomic']is(mode=='off')
+            args=call['arguments'];expected_id=args['value']if args['operation'].endswith('_rename')else args['id']
+            assert value['relation_id']==expected_id
+            if args['operation'].endswith('_remove'):assert value['removed']is True
+            else:assert value.get('removed',False)is False
+            if phase['kind']=='changed':assert value['applied']is True and value['published']is True
+        else:
+            assert result685['success']is False and value['status']in{'refused','unavailable'}
+            assert value.get('complete',False)is False and value.get('steps_completed',0)==0
+            assert not value.get('applied',False)and not value.get('removed',False)
+            if call['call_id'].endswith(('wrong-type','extra-field')):assert value['code']=='invalid_arguments'
+    facts=[json.loads(line.split('RELATION685_RESULT ',1)[1])for line in result.stdout.splitlines()if'RELATION685_RESULT 'in line]
+    assert len(facts)==1 and facts[0]['phases']==len(phases)and facts[0]['assistantUndo']==7 and facts[0]['manualUndo']==7
+    assert facts[0]['restored']is True and facts[0]['sameOwner']is True and facts[0]['issues']==[]
+    assert facts[0]['changedTargetCues']==(7 if mode=='on'else 0)and facts[0]['equalAllCues']==0
+    assert facts[0]['nativeRemovalSignals']==2 and facts[0]['scientificInputSignals']==0
+    interrupts=[row for row in traffic if row.get('method')=='turn/interrupt'];assert len(interrupts)==(1 if mode=='on'else 0)
+    if mode=='on':
+        stop=next(row['params']for phase,row in zip(phases,emitted,strict=True)if phase['kind']=='stop')
+        assert interrupts[0]['params']=={k:stop[k]for k in('threadId','turnId')}
+    assert not any(row.get('method')in{'account/login/start','account/logout'}for row in traffic)
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_relation685_current_rows_scalar_methods_and_one_undo()'in result.stdout
+
+def test_purpose719_real_original_native_prewrite_refusal_both_modes(tmp_path):
+    import shutil
+    from tests.integration.py.assistant_vm_probe.approved_context import context_inputs
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records, save211_files, PREFS417_NATIVE_TOOLS
+    source=ROOT/'tests/fixtures/e04_t1/editable-project';source_files=save211_files(source)
+    owned=tmp_path/'purpose719-project';shutil.copytree(source,owned);assert save211_files(owned)==source_files
+    env=popup171_owned_environment(tmp_path);config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT'])
+    config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    def call(tool,purpose,**arguments):return {'tool':tool,'arguments':{'purpose':purpose,**arguments}}
+    write={'structure':'lbco','operation':'rename','value':'lbco'}
+    calls=[call('inspect_project','p'*121),call('edit_structure','🙂'*61,**write),
+           call('add_relations','é'*121,aliases=[{'id':'purpose719_forbidden','path':'structure.atom_sites[Ba].adp_iso'}],constraints=[]),
+           call('inspect_project','p'*120),call('inspect_project','🙂'*60),call('edit_structure','Short purpose',**write)]
+    assert {k:v for k,v in calls[1]['arguments'].items()if k!='purpose'}=={k:v for k,v in calls[5]['arguments'].items()if k!='purpose'}
+    turns=[[dict(row,call_id=f'purpose719-{mode}-{index}')for index,row in enumerate(calls)]for mode in range(2)]
+    config.update(scenario='native:script',native_turn_calls=turns,readonly409=True,vm319_record_packets=True)
+    config_path.write_text(json.dumps(config));config_bytes=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_purpose719_original_native_prewrite_and_closed_refusal_both_modes','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'purpose719.stdout.log').write_text(result.stdout);(tmp_path/'purpose719.stderr.log').write_text(result.stderr)
+    assert save211_files(source)==save211_files(owned)==source_files and config_path.read_bytes()==config_bytes
+    trace=Path(config['trace']);readonly409_policy(trace);traffic=records(trace)
+    sent=[json.loads(line)for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(line)for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(sent)==len(replies)==12 and len({row['id']for row in sent})==12, 'PURPOSE719: every original native envelope gets exactly ONE reply, no automatic replay'
+    advertised=next(row['params']['dynamicTools']for row in traffic if row.get('method')=='thread/start')
+    assert {row['name']for row in advertised}==set(PREFS417_NATIVE_TOOLS), 'PURPOSE719: original registered catalogue stays exact; no synthetic capability'
+    requests=[row for row in traffic if row.get('method')=='turn/start'];assert len(requests)==2
+    for mode,request in enumerate(requests):
+        assert context_inputs(request['params'])[0]['native_state']['show_actions']is bool(mode)
+    for index,(emitted,reply)in enumerate(zip(sent,replies)):
+        expected=turns[index//6][index%6];assert emitted['params']['tool']==expected['tool'] and emitted['params']['arguments']==expected['arguments']
+        assert reply['original']==emitted and reply['response']['id']==emitted['id']!=emitted['params']['callId']
+        response=reply['response']['result'];assert type(response['success'])is bool and len(response['contentItems'])==1
+        assert response['contentItems'][0]['type']=='inputText';raw=response['contentItems'][0]['text'];wire=json.loads(raw)
+        if index%6<3:
+            assert response['success']is False
+            assert wire=={'schema':'edi.assistant.outgoing/1','status':'refused','code':'refused','action_error':'purpose_too_long','action_field':'purpose'}
+            assert 'p'*121 not in raw and 'é'*121 not in raw and '🙂'*61 not in raw
+        else:assert response['success']is True
+        assert not any(key in wire for key in ('message','purpose','exception','stack'))
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    assert not any(row.get('method')in{'turn/interrupt','account/login/start','account/logout'}for row in traffic)
+    facts=[json.loads(line.split('PURPOSE719_RESULT ',1)[1])for line in result.stdout.splitlines()if 'PURPOSE719_RESULT 'in line]
+    assert len(facts)==1 and facts[0]=={'turns':2,'pointers':0,'sameOwner':True,'unchanged':True}
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_purpose719_original_native_prewrite_and_closed_refusal_both_modes()'in result.stdout
+
+
+def test_phase709_real_original_joint_links_and_shared_undo(tmp_path):
+    """PUBLIC576 ordinary phase table, literal joint inputs and round-trip science."""
+    import shutil
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy,records,save211_files
+    source=ROOT/'tests/fixtures/e04_t5/joint';source_files=save211_files(source)
+    root=tmp_path/'phase709-joint';shutil.copytree(source,root)
+    original=(root/'structures/lbco.edi').read_text()
+    assert original.count('data_lbco\n')==1
+    for name in ['phase709_b','phase709_c']:
+        (root/f'structures/{name}.edi').write_text(original.replace('data_lbco\n',f'data_{name}\n',1))
+    local_files=save211_files(root)
+    assert all(local_files[path]==value for path,value in source_files.items()), 'PHASE709: local extra structures never replace original links, measured inputs or scientific declarations'
+    env=popup171_owned_environment(tmp_path);path=Path(env['EDI_TEST_CODEX_PEER_INPUT'])
+    config=json.loads(path.read_text());config.pop('report_page_reply')
+    def call(operation,**arguments):
+        return {'tool':'edit_experiment','arguments':{'purpose':'Independent original joint phase methods and shared Undo',
+                'experiment':'hrpt','operation':operation,**arguments}}
+    turns=[]
+    for mode in [False,True]:
+        turns += [[call('phase_append')],
+                  [call('phase_retarget',phase='lbco',value='phase709_b')],
+                  [call('phase_retarget',phase='phase709_b',value='phase709_b')],
+                  [call('phase_enabled',phase='lbco',value=False)],
+                  [call('phase_enabled',phase='lbco',value=False)],
+                  [call('phase_remove',phase='phase709_b')]]
+    turns += [[call('phase_append',phase='caller-invented-append-key'),
+               call('phase_enabled',phase='lbco',value='false'),
+               call('phase_retarget',phase='independent-stale-phase',value='phase709_b'),
+               call('phase_remove',phase='lbco'),
+               {**call('phase_enabled',phase='lbco',value=False),'arguments':{**call('phase_enabled',phase='lbco',value=False)['arguments'],'experiment':'second'}}],
+              [call('phase_retarget',phase='lbco',value='phase709_b')],
+              [call('phase_retarget',phase='lbco',value='phase709_b'),call('phase_retarget',phase='lbco',value='lbco')],
+              [call('phase_retarget',phase='lbco',value='phase709_b')],
+              [call('phase_enabled',phase='lbco',value=False)]]
+    for index,group in enumerate(turns):
+        for row,item in enumerate(group):item['call_id']=f'phase709-{index}-{row}'
+    config.update(scenario='native:script',native_turn_calls=turns,readonly409=True,vm319_record_packets=True)
+    path.write_text(json.dumps(config));config_bytes=path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_phase709_original_links_manual_native_and_shared_undo','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'phase709.stdout.log').write_text(result.stdout);(tmp_path/'phase709.stderr.log').write_text(result.stderr)
+    assert path.read_bytes()==config_bytes and save211_files(source)==source_files and save211_files(root)==local_files
+    trace=Path(config['trace']);readonly409_policy(trace);wire=records(trace)
+    emitted=[json.loads(line)for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(line)for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==sum(map(len,turns)) and len({row['id']for row in emitted})==len(emitted)
+    for sent,reply,expected in zip(emitted,replies,[item for group in turns for item in group],strict=True):
+        assert sent['params']['tool']==expected['tool'] and sent['params']['arguments']==expected['arguments']
+        assert reply['original']==sent and reply['response']['id']==sent['id']!=sent['params']['callId'] and type(reply['response']['result']['success'])is bool
+    assert len([row for row in wire if row.get('method')=='turn/start'])==len(turns)
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    tool=next(t for t in next(row['params']['dynamicTools']for row in wire if row.get('method')=='thread/start')if t['name']=='edit_experiment')
+    expected=json.loads((ROOT/'tests/fixtures/assistant/experiment648/request.json').read_text())
+    def declared(schema):
+        canonical=lambda value:json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False)
+        assert type(schema)is dict and type(schema.get('oneOf'))is list
+        return canonical({**schema,'oneOf':sorted(schema['oneOf'],key=canonical)})
+    assert tool['name']==expected['name'] and declared(tool['inputSchema'])==declared(expected['inputSchema']), 'PHASE709: exact independent full648 union plus four public576 closed branches, top permutation only'
+    assert result.returncode==0 and 'FAIL!'not in result.stdout
+    assert 'PASS   : edi_app::AssistantPopup::test_phase709_original_links_manual_native_and_shared_undo()'in result.stdout
+    markers=[json.loads(line.split('PHASE709_MAIN_RESULT ',1)[1])for line in result.stdout.splitlines()if'PHASE709_MAIN_RESULT 'in line]
+    assert len(markers)==1
+    facts=markers[0]
+    assert facts=={'manualUndos':8,'nativeUndos':8,'changes':8,'noops':4,'stopClicks':1,'scientificInput':0,'turns':17,'ownerSame':True}

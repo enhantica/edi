@@ -163,6 +163,244 @@
           "region"
         ],
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "select"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "absorption_type"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "none",
+              "cylinder-hewat",
+              "cylinder-lobanov",
+              "cylinder"
+            ]
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "cutoff_fwhm"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "dataset_weight"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "phase_append"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "phase_retarget"
+          },
+          "phase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "phase",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "phase_enabled"
+          },
+          "phase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "phase",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "phase_remove"
+          },
+          "phase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "phase"
+        ],
+        "additionalProperties": false
       }
     ]
   }

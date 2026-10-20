@@ -887,6 +887,151 @@ TEST_CASE("E11-T5 original supported profile domain preserves long escaped regis
     }
 }
 
+TEST_CASE("E11-T5 ordinary scalar absorption and cutoff weight restore retain scientific owners") {
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto structure=live.structures.front();
+    REQUIRE_MESSAGE(experiment->data.has_value(),"SCALAR698 fixture is genuinely measured CW input");
+    const auto* data=&*experiment->data;
+    edi::Edit::absorption(*experiment,"cylinder-hewat")();
+    REQUIRE(experiment->absorption.mu_r.has_value());
+    auto* shared=&*experiment->absorption.mu_r;
+    edi::Edit::value(*shared,.375)();shared->free=true;shared->uncertainty=.0125;
+    const auto before=edi::project_edi_files(live);
+    auto family=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::Absorption);
+    edi::Edit::absorption(*experiment,"cylinder-lobanov")();
+    CHECK_MESSAGE((experiment->absorption.type=="cylinder-lobanov"&&experiment->absorption.mu_r.has_value()&&&*experiment->absorption.mu_r==shared),
+        "SCALAR698 family forward transfer preserves the surviving actual coefficient handle");
+    CHECK_MESSAGE((shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR698 original coefficient value/free/SU survive an ordinary family change");
+    edi::Edit::restore_experiment_controls(live,std::move(family))();
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r==shared),
+        "SCALAR698 ordinary family Undo restores all scientific bytes and surviving identity");
+    auto removed=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::Absorption);
+    edi::Edit::absorption(*experiment,"none")();
+    CHECK_MESSAGE((!experiment->absorption.mu_r.has_value()&&!experiment->absorption.abscor1.has_value()&&!experiment->absorption.abscor2.has_value()),
+        "SCALAR698 none removes the actual optional coefficient owners");
+    const auto empty=edi::project_edi_files(live);
+    CHECK_MESSAGE((shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR698 detached old coefficient retains its last real state");
+    CHECK_THROWS_AS(edi::Edit::value(*shared,.875)(),std::exception);
+    CHECK_MESSAGE(edi::project_edi_files(live)==empty,"SCALAR698 a retired original coefficient cannot write through its historical handle");
+    edi::Edit::restore_experiment_controls(live,std::move(removed))();
+    REQUIRE(experiment->absorption.mu_r.has_value());
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r!=shared),
+        "SCALAR698 Undo restores scientific state without resurrecting a detached historical cell");
+    CHECK_THROWS_AS(edi::Edit::value(*shared,.875)(),std::exception);
+    for(double literal:{0.0,-2.5}) {
+        auto cutoff=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::CutoffFwhm);
+        edi::Edit::assign(experiment->peak.cutoff_fwhm,literal)();
+        CHECK_MESSAGE(experiment->peak.cutoff_fwhm==literal,"SCALAR698 nonpositive cutoff is stored literally, never clamped to an invented positive threshold");
+        edi::Edit::restore_experiment_controls(live,std::move(cutoff))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==before,"SCALAR698 cutoff Undo preserves the entire original project");
+    }
+    auto zero=edi::load_project(e04_t9_fixture::echidna);
+    auto negative=edi::load_project(e04_t9_fixture::echidna);
+    edi::Edit::assign(zero.experiment().peak.cutoff_fwhm,0.0)();
+    edi::Edit::assign(negative.experiment().peak.cutoff_fwhm,-2.5)();
+    zero.calculate();negative.calculate();
+    const auto& full=zero.experiment().data->intensity_calc;
+    const auto& signed_full=negative.experiment().data->intensity_calc;
+    REQUIRE_MESSAGE((!full.empty()&&full.size()==signed_full.size()),"SCALAR698 both ordinary nonpositive windows produce genuine original measured-bank calculated rows");
+    for(std::size_t row=0;row<full.size();++row) {
+        REQUIRE(std::isfinite(full[row]));REQUIRE(std::isfinite(signed_full[row]));
+        CHECK_MESSAGE(std::bit_cast<std::uint64_t>(full[row])==std::bit_cast<std::uint64_t>(signed_full[row]),
+            "SCALAR698 zero and negative cutoff have the same original full-window semantics; no invented optimum or tolerance");
+    }
+    auto weight=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::DatasetWeight);
+    edi::Edit::assign(experiment->dataset_weight,.625)();
+    CHECK_MESSAGE(experiment->dataset_weight==.625,"SCALAR698 ordinary dataset weight stores the requested scalar; no single-bank curve claim");
+    edi::Edit::restore_experiment_controls(live,std::move(weight))();
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&live.experiments.front()==experiment&&live.structures.front()==structure&&&*experiment->data==data),
+        "SCALAR698 scalar history preserves all original owners, data, observations, links, free flags and SUs");
+}
+
+TEST_CASE("E11-T5 ordinary phase links restore narrow science and pin actual appended rows") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.linked_structure),const edi::LinkedStructure*>);
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto original_structure=live.structures.front();
+    REQUIRE_MESSAGE((!experiment->linked_structures.empty()&&experiment->data.has_value()),
+        "PHASE709 original measured project has a real initial link, never a fabricated empty bank");
+    const auto initial_id=experiment->linked_structures.front()->structure_id.value();
+    const auto initial_count=experiment->linked_structures.size();
+    for(const auto* id:{"phase709_b","phase709_c"}) {
+        auto extra=*original_structure;extra.name=id;edi::Edit::add_structure(live,std::move(extra))();
+    }
+    REQUIRE_MESSAGE((experiment->linked_structures.size()==initial_count&&experiment->linked_structures.front()->structure_id==initial_id),
+        "PHASE709 ordinary independent structure setup preserves every real initial experiment link");
+    auto row=experiment->linked_structures.front();
+    edi::Edit::value(row->scale,.375)();row->scale.free=true;row->scale.uncertainty=.0125;
+    const auto baseline=edi::project_edi_files(live);
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        auto* scale=&row->scale;const auto link=row;
+        edi::Edit::link_structure(*row,"phase709_b")();
+        CHECK_MESSAGE((experiment->linked_structures.front()==link&&&link->scale==scale&&link->structure_id=="phase709_b"),
+            "PHASE709 forward ordinary retarget retains actual link and scale owners");
+        CHECK_MESSAGE((scale->value.get()==.375&&scale->free.get()&&scale->uncertainty.get()==std::optional<double>{.0125}),
+            "PHASE709 retarget retains independently supplied scale value/free/SU");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 ordinary shared Undo restores all narrow rows, relations, scientific state and any existing fit state");
+        row=experiment->linked_structures.front(); // Undo may retire old link/parameter handles.
+    }
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        edi::Edit::assign(row->enabled,false)();
+        CHECK_MESSAGE((!row->enabled.get()&&row->structure_id==initial_id&&row->scale.value.get()==.375),
+            "PHASE709 explicit false keeps the stored original row and its scale, not an inverted guess");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 enabled-state Undo restores all original scientific bytes");
+        row=experiment->linked_structures.front();
+    }
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        edi::LinkedStructure extra;extra.structure_id="phase709_b";
+        auto operation=edi::Edit::append(experiment->linked_structures,std::move(extra));
+        bool applied=false;Result result{};int inputs=0,applied_events=0,edited=0;
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;
+                CHECK_MESSAGE((!applied&&result.linked_structure==nullptr&&edi::project_edi_files(live)==baseline),
+                    "PHASE709 original Input precedes append and clears the phase identity");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;
+                CHECK_MESSAGE((applied&&experiment->linked_structures.size()==initial_count+1&&result.linked_structure==experiment->linked_structures.back().get()),
+                    "PHASE709 actual inserted phase is pinned BEFORE the original fallible Applied publication");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;
+            CHECK_MESSAGE((applied&&result.linked_structure==experiment->linked_structures.back().get()),
+                "PHASE709 original edited callback sees the same actual early phase identity");
+            throw std::runtime_error("phase709 original edited observer");},{}});
+        bool intended=false;
+        try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){intended=std::string(error.what())=="phase709 original edited observer";}
+        REQUIRE_MESSAGE((intended&&inputs==1&&applied_events==1&&edited==1),
+            "PHASE709 reaches the actual original post-apply failure exactly once, never an earlier admission/setup failure");
+        REQUIRE_MESSAGE(experiment->linked_structures.size()==initial_count+1,"PHASE709 original append changes exactly one actual stored row");
+        const auto inserted=experiment->linked_structures.back();
+        CHECK_MESSAGE((result.linked_structure==inserted.get()&&result.linked_structure!=row.get()),
+            "PHASE709 AppliedResult pins the actual newly inserted phase, never the preexisting initial link");
+        CHECK_MESSAGE((inserted->structure_id=="phase709_b"&&inserted->scale.value.get()==1&&inserted->enabled.get()),
+            "PHASE709 original ordinary append defaults are independent scale1 and enabled true");
+        CHECK_MESSAGE((experiment->linked_structures.front()==row&&row->structure_id==initial_id&&row->scale.value.get()==.375),
+            "PHASE709 append never overwrites the real initial link or scale");
+        const auto appended=edi::project_edi_files(live);
+        auto removal=edi::capture_experiment_links(live,*experiment);
+        const auto removed_id=inserted->structure_id.value();
+        edi::Edit::erase(experiment->linked_structures,experiment->linked_structures.size()-1)();
+        CHECK_MESSAGE((experiment->linked_structures.size()==initial_count&&removed_id=="phase709_b"),
+            "PHASE709 erase confirms the previously admitted ID without dereferencing an erased row");
+        edi::Edit::restore_experiment_controls(live,std::move(removal))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==appended,"PHASE709 remove Undo restores complete ordered narrow row and scientific image");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 append Undo restores original science after reacquiring current rows");
+        row=experiment->linked_structures.front();
+    }
+    CHECK_MESSAGE((row->structure_id==initial_id&&row->scale.value.get()==.375&&row->scale.free.get()&&row->scale.uncertainty.get()==std::optional<double>{.0125}),
+        "PHASE709 current reacquired original link retains every independently supplied scale fact");
+}
+
 #else
 #define E04_T9_RED(name) TEST_CASE(name) { FAIL_CHECK(" accepted worker and transaction contracts are absent on red-first main"); }
 E04_T9_RED(" I2 I3 I4 I5 worker preserves every ordered delivery and cancellation")

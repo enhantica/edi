@@ -1,0 +1,243 @@
+{
+  "type": "function",
+  "name": "edit_relation",
+  "description": "Edit ONE explicitly identified existing alias or constraint through its original app setter/remove, using actual current IDs and offered parameter paths. Rename returns the actual resulting ID. Existing relations/composition remain authoritative; validation may refuse a rename/removal referenced by enabled constraints. No automatic repair or expression rewriting. Equal stored values skip setter/cue/Undo. Both modes use the same ordinary method and recorded Undo; Show actions adds original Analysis Extra navigation/reveal/cue only. Preserve actual applied/published/partial/currentness facts and never replay uncertain edits. Does not append or infer ownership from default names.",
+  "inputSchema": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "alias_rename"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "alias_target"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "alias_remove"
+            ]
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "constraint_rename"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "constraint_expression"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 1048576,
+            "description": "Literal original single-line expression; empty is admitted only if the shared validator accepts it for the current row. Existing 1 MiB context/UTF-8 and joint admission limits also apply; no parser in the app."
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "constraint_enabled"
+            ]
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "constraint_remove"
+            ]
+          }
+        },
+        "required": [
+          "purpose",
+          "id",
+          "operation"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

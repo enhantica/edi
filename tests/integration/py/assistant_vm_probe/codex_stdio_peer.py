@@ -1714,6 +1714,13 @@ def roots207_response(request, value):
 def transport304_dispatch(request):
     """Actual owned original process; no account, inference or subject callbacks."""
     mode = config['transport304_mode']
+    if mode == 'native-work681' and request.get('method') is None:
+        assert request.get('id') == 'native681-A-0', 'NATIVE681: only the original matched native request may be answered/rejected'
+        clear_observation('native681-response', {'response': request})
+        return
+    if mode == 'native-work681' and request.get('method') == 'original/native681-eof':
+        clear_observation('native681-real-eof', {})
+        sys.exit(0)
     if mode == 'human-wait' and request.get('method') is None:
         assert request.get('id') == 'human575-A-0', 'HUMAN575: only the original first request may be answered/rejected'
         clear_observation('human575-response', {'response': request})
@@ -1748,6 +1755,13 @@ def transport304_dispatch(request):
                           'method': 'item/tool/requestUserInput',
                           'params': {'originalCaller': label, 'questions': []}}
                          for index in range(3))
+        elif mode == 'native-work681':
+            batch.extend({'id': f'native681-{label}-{index}', 'method': 'item/tool/call', 'params': {
+                'threadId': 'native681-thread-' + label, 'turnId': 'native681-turn-' + label,
+                'callId': f'native681-call-{label}-{index}', 'namespace': None, 'tool': 'diagnostics',
+                'arguments': {'purpose': 'Independent original native681 clock owner'}}} for index in range(2))
+            batch.append({'id': 'question681-' + label + '-0', 'method': 'item/tool/requestUserInput',
+                'params': {'originalCaller': label, 'questions': []}})
         elif label == 'A':
             batch.extend({'method': name, 'params': {'originalCaller': label}}
                          for name in ['original/transport304-boundary', 'original/transport304-tail'])

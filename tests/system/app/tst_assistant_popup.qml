@@ -9,6 +9,8 @@ import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import Outgoing679Reference 1.0
+import RelationUndoReference 1.0
 import EdiChartReference 1.0
 import "../../unit/app/UiInteraction.js" as Ui
 
@@ -10095,12 +10097,67 @@ TestCase {
         compare(owner.structures.count,0);compare(owner.experiments.count,0);verify(!owner.modified);
         visible185_page("project");toggle();gui392_signIn(false);verify(!assistant.showActions);
         const slots=[],watched=new Set(),cues=[];let point=null,phase=-1,keys=0,clicked=0,activated=0,pointerPresses=0,pointerShows=0;
-        let initial=null,initialLife=null,added=null,addedLife=null,addedId="",initialType="",structure=null,structureLife=null;
+        let initialId="",initialScience=null,addedScience=null,addedId="",addedType="",initialType="",structure=null,structureLife=null;
+        const numeric668=[
+            {path:"structure.cell.length_a",value:4.123,name:"cell.length_a"},
+            {path:"structure.atom_sites[First634].fract_x",value:.125,name:"atomSite.fractX.0"},
+            {path:"structure.atom_sites[First634].fract_y",value:.25,name:"atomSite.fractY.0"},
+            {path:"structure.atom_sites[First634].fract_z",value:.375,name:"atomSite.fractZ.0"},
+            {path:"structure.atom_sites[First634].occupancy",value:.875,name:"atomSite.occupancy.0"},
+            {path:"structure.atom_sites[First634].adp_iso",value:.625,name:"atomSiteAdp.iso.0"}];
+        const numericCues668=[],navigation668=[],creationCues692=[];
+        let initialGroup699=null,initialListed699=null,initialNative699=null,preparedNative699=null,prerequisiteCues699=0;
+        let coordinatePaths699=null,prerequisiteUndos699=0,metadataUndos699=0;
+        let numericInitialValues668=null,numericChanged668=null,numericBefore668=null,numericAfter668=null,numericExpected668=null;
+        let editedScience668=null,initialAll668=null;
+        let table674=null,tableLife674=null,model674=null,oldRows674=null,oldY674=null,lastValue674=null;
+        let setupClipped674=false,rowCues674=0,numericCues674=0,numericWrites674=0,restored674=false,actualValue674=null;
+        const rowBounds674=[];
+        function wholeRow674(control,stage) {
+            same();verify(alive313(tableLife674) && table674.sourceModel===model674 && model674===structure.atomSites);
+            const row=table674.itemAtIndex(1);verify(row!==null && row.index===1 && gui393_under(control,row),
+                "ROW674: exact current last canonical atom delegate owns the matched original receiver");
+            const current=rows()[1];compare(current.label,control.objectName==="atomSite.label.1"?addedId:"Second634");
+            const r=row.mapToItem(table674,0,0,row.width,row.height),header=table674.headerItem;
+            verify(header!==null);const h=header.mapToItem(table674,0,0,header.width,header.height);
+            verify(r.x>=-.5 && r.x+r.width<=table674.width+.5 && r.y>=Math.max(0,h.y+h.height)-.5
+                && r.y+r.height<=table674.height+.5,
+                "ROW674: WHOLE original last row is inside actual table viewport and below overlay header BEFORE edit cue/input");
+            const clips=[];
+            for(let ancestor=row.parent;ancestor;ancestor=ancestor.parent)if(ancestor.clip){
+                const b=row.mapToItem(ancestor,0,0,row.width,row.height);
+                verify(b.x>=-.5 && b.y>=-.5 && b.x+b.width<=ancestor.width+.5 && b.y+b.height<=ancestor.height+.5,
+                    "ROW674: WHOLE last row fits EACH actual clipping ancestor through original Main before edit");
+                clips.push([b.x,b.y,b.width,b.height,ancestor.width,ancestor.height]);
+            }
+            verify(clips.length>0);rowBounds674.push({stage:stage,name:control.objectName,row:[r.x,r.y,r.width,r.height],clips:clips});
+        }
+        function rowCue674(stage) {
+            if(phase!==3 || !point || table674===null)return;
+            for(const control of Ui.itemsWithProperty(table674,"objectName")){
+                if(!["atomSite.label.1","atomSite.fractX.1"].includes(control.objectName) || !Ui.exposed(control))continue;
+                const box=rect(control);if(point.x<box[0] || point.y<box[1] || point.x>=box[0]+box[2] || point.y>=box[1]+box[3])continue;
+                wholeRow674(control,stage);
+                if(stage==="pressed"){
+                    ++rowCues674;
+                    if(control.objectName==="atomSite.fractX.1"){
+                        compare(numericCues674,0);compare(control.item,rows()[1].fractX);compare(control.item.value,lastValue674);
+                        verify(control.item.value!==.375 && control.item.path==="structure.atom_sites[Second634].fract_x");
+                        ++numericCues674;const parameter=control.item,life=lifetime313(parameter);
+                        bind(parameter,"valueChanged",()=>{
+                            if(phase!==3)return;
+                            same();verify(alive313(life) && parameter===rows()[1].fractX);compare(numericCues674,1);
+                            wholeRow674(control,"publication");compare(parameter.value,.375);++numericWrites674;
+                        });
+                    }
+                }
+            }
+        }
         function bind(object,signal,callback){const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,life:life,signal:signal,callback:callback});}
         function scan(){
             for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
                 const name=control.objectName;
-                if(watched.has(control) || !(/^(structures\.|atomSite\.|atomSites\.|atomSiteAdp\.)/.test(name)))continue;
+                if(watched.has(control) || !(/^(structures\.|spaceGroup\.|atomSite\.|atomSites\.|atomSiteAdp\.|cell\.)/.test(name)))continue;
                 watched.add(control);
                 if(typeof control.textEdited==="function")bind(control,"textEdited",()=>{if(assistant.showingActions)++keys;});
                 if(typeof control.clicked==="function")bind(control,"clicked",()=>{if(assistant.showingActions)++clicked;});
@@ -10109,6 +10166,24 @@ TestCase {
         }
         function same(){verify(alive313(ownerLife)&&Session.project===owner && assistant===originalAssistant && alive313(assistantLife),"STRUCTURE634: original owner/assistant remains live");}
         function rows(){same();return Probe.rows(structure.atomSites);}
+        function science634(row){
+            const roles=[row.fractX,row.fractY,row.fractZ,row.occupancy,row.adpIso];
+            for(const parameter of roles)verify(parameter!==null && typeof parameter.value==="number" && isFinite(parameter.value)
+                && typeof parameter.free==="boolean" && typeof parameter.hasUncertainty==="boolean",
+                "STRUCTURE634: current row retains genuine typed native scientific roles");
+            return [row.adpType,...roles.map(parameter=>[parameter.value,parameter.free,parameter.hasUncertainty,parameter.uncertainty])];
+        }
+        function member634(index,label,type,science){
+            same();verify(alive313(structureLife) && Probe.rows(owner.structures)[0].structure===structure,
+                "STRUCTURE634: same current original native structure owns the canonical row");
+            const current=rows()[index];verify(current!==undefined);compare(current.label,label);compare(current.typeSymbol,type);
+            const paths=[current.fractX,current.fractY,current.fractZ,current.occupancy,current.adpIso].map(parameter=>parameter.path);
+            compare(JSON.stringify(paths),JSON.stringify(["fract_x","fract_y","fract_z","occupancy","adp_iso"].map(name=>"structure.atom_sites["+label+"]."+name)),
+                "STRUCTURE634: current typed roles carry the actual canonical member ID after ordinary re-keying");
+            compare(JSON.stringify(science634(current)),JSON.stringify(science),
+                "STRUCTURE634: text/rename/Undo preserves coordinates, occupancy, ADP, free flags and s.u.s");
+            return {label:current.label,typeSymbol:current.typeSymbol,paths:paths,science:science634(current)};
+        }
         function one(call,ids){
             const list=Probe.rows(assistant.messages).filter(r=>!ids.has(r.id)&&r.kind==="activity"&&r.payload&&r.payload.id===call);
             verify(list.length<=1,"STRUCTURE634: one original retained activity per native call");
@@ -10119,6 +10194,7 @@ TestCase {
         function send(index,count){
             phase=index;scan();same();
             if(assistant.contextConsentRequired)gui392_signIn(false);
+            verify(assistant.showActions);compare(owner.experiments.count,0);compare(owner.currentExperiment,null);
             const ids=new Set(Probe.rows(assistant.messages).map(r=>r.id));
             assistant.send("Original structure634 phase "+index);
             tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&one("structure634-main-"+index+"-"+(count-1),ids)!==null,
@@ -10126,143 +10202,202 @@ TestCase {
             const out=[];for(let j=0;j<count;++j){const value=one("structure634-main-"+index+"-"+j,ids);verify(value!==null);out.push(value);}
             same();return out;
         }
-        // PUBLIC525/v3 presentation preference; never assign busy/science/focus.
-        const speed636={scheduled:false,opened:0,buttonPresses:0,buttonClicks:0,choicePresses:0,choiceClicks:0,completed:false};
-        const pointer636=item("assistant.actionPointer");
-        const pointerLife636=lifetime313(pointer636);
-        let changes636=0,preview636=0;
-        bind(assistant,"actionSpeedChanged",()=>{++changes636;});
-        bind(assistant,"contextPreviewChanged",()=>{++preview636;});
-        compare(assistant.actionSpeed,1,"SPEED636: fresh original owner starts at x1");
-        const beforeSpeed636={science:visible185_values(owner),modified:owner.modified,undo:owner.canUndo,
-            account:JSON.stringify(assistant.account),model:assistant.selectedModel,effort:assistant.selectedEffort,
-            state:assistant.state,cancel:assistant.canCancel,owner:Session.project};
-        for(const value of [2,3,5,10,1]) {
-            const count=changes636,preview=preview636;
-            assistant.actionSpeed=value;
-            compare(assistant.actionSpeed,value,"SPEED636: every declared integer speed is accepted");
-            compare(changes636,count+1,"SPEED636: ONE preference notification per actual change");
-            compare(preview636,preview,"SPEED636: presentation preference does not rebuild disclosed context");
-            const invalid=[value,0,-1,4,6,9,11,2147483647];
-            for(const rejected of invalid) {
-                assistant.actionSpeed=rejected;
-                compare(assistant.actionSpeed,value,"SPEED636: equal and out-of-domain integer values preserve current preference");
-                compare(changes636,count+1,"SPEED636: equal/invalid setters emit no preference notification");
-                compare(preview636,preview,"SPEED636: equal/invalid setters emit no context notification");
-            }
-        }
-        compare(visible185_values(owner),beforeSpeed636.science);compare(owner.modified,beforeSpeed636.modified);compare(owner.canUndo,beforeSpeed636.undo);
-        compare(JSON.stringify(assistant.account),beforeSpeed636.account);compare(assistant.selectedModel,beforeSpeed636.model);compare(assistant.selectedEffort,beforeSpeed636.effort);
-        compare(assistant.state,beforeSpeed636.state);compare(assistant.canCancel,beforeSpeed636.cancel);verify(Session.project===beforeSpeed636.owner);
-        compare([pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],[500,100,500,500],
-            "SPEED636: x1 retains original public pointer durations");
-        function speedMenu636() {
-            same();verify(alive313(pointerLife636) && assistant.actionWindow===window && assistant.showingActions,
-                "SPEED636: actual user menu opens during the original live ON operation");
-            const button=item("assistant.actionSpeed"),stop=item("assistant.stopVisibleAction"),working=item("statusBar.assistant.working");
-            const buttonLife=lifetime313(button),stopLife=lifetime313(stop);
-            verify(button.enabled && Ui.exposed(button) && stop.enabled && Ui.exposed(stop) && working.visible,
-                "SPEED636: original speed and Stop controls remain genuinely exposed during work");
-            compare(button.text,"x1");compare(button.Accessible.name,button.ToolTip.text);
-            compare(button.Accessible.name,qsTr("Show actions speed: %1").arg(button.text),
-                "SPEED636: actual accessible name follows translated tooltip and current speed");
-            verify(button.background!==null && stop.background!==null && button.background.width>0);
-            compare(button.background.width,button.background.height);compare(button.background.width,stop.background.width);
-            compare(button.background.width,working.iconExtent,"SPEED636: both circles retain actual original Working icon extent");
-            compare(stop.background.width,stop.background.height);compare(button.background.radius,button.background.width/2);compare(stop.background.radius,stop.background.width/2,
-                "SPEED636: both original status buttons use the SAME positive circle metric");
-            const box=rect(button),left=rect(working),right=rect(stop);
-            verify(left[0]+left[2]<=box[0] && box[0]+box[2]<=right[0],"SPEED636: speed remains between Working and Stop");
-            bind(button,"pressedChanged",()=>{if(button.pressed){same();verify(button.enabled && Ui.exposed(button));++speed636.buttonPresses;}});
-            bind(button,"clicked",()=>{++speed636.buttonClicks;});
-            const center=Ui.clickPoint(button);verify(center!==null);mouseClick(button,center.x,center.y);
-            const menus=Probe.objectsWithProperty(window,"objectName").filter(o=>o.objectName==="assistant.actionSpeed.menu");
-            compare(menus.length,1,"SPEED636: genuine button owns ONE original native menu");
-            const menu=menus[0],menuLife=lifetime313(menu);
-            tryCompare(menu,"visible",true,2000,"SPEED636: genuine click actually opens original menu");++speed636.opened;
-            compare(menu.count,5);const choices=[];
-            for(let i=0;i<menu.count;++i){const choice=menu.itemAt(i);verify(choice!==null);choices.push(choice.text);}
-            compare(choices,["x1","x2","x3","x5","x10"],"SPEED636: closed native choices have exact public labels");
-            verify(menu.contentItem!==null);const host=menu.contentItem.Window.window;
-            verify(host!==null && host.visible,"SPEED636: native menu has its actual live content-host Window");
-            const choice=menu.itemAt(3),choiceLife=lifetime313(choice);
-            verify(choice.Window.window===host && choice.enabled && Ui.exposed(choice) && gui393_under(choice,menu.contentItem),
-                "SPEED636: user choice targets an exposed descendant of the SAME menu in its real window");
-            tryVerify(()=>menu.activeFocus,2000,
-                "SPEED636: original native menu actually owns focus before preference selection");
-            const heldScience=visible185_values(owner),heldUndo=owner.canUndo;
-            verify(waitForPolish(host,2000));host.update();verify(waitForRendering(menu.contentItem));
-            compare(visible185_values(owner),heldScience,"SPEED636: genuine focused menu does not inject pending scientific input while open");compare(owner.canUndo,heldUndo);
-            const beforeChoice=changes636;
-            bind(choice,"pressedChanged",()=>{if(choice.pressed){verify(alive313(menuLife)&&alive313(choiceLife)&&menu.visible && choice.Window.window===host);++speed636.choicePresses;}});
-            bind(choice,"clicked",()=>{++speed636.choiceClicks;});
-            const point=Ui.clickPoint(choice);verify(point!==null);mouseClick(choice,point.x,point.y);
-            tryCompare(menu,"visible",false,2000,"SPEED636: native selection closes original menu without forced focus");
-            compare(assistant.actionSpeed,5);compare(changes636,beforeChoice+1);
-            compare([speed636.buttonPresses,speed636.buttonClicks,speed636.choicePresses,speed636.choiceClicks],[1,1,1,1],
-                "SPEED636: ONE genuine button and ONE genuine same-menu choice each deliver native press/click receipts");
-            verify(alive313(buttonLife)&&alive313(stopLife)&&alive313(pointerLife636));same();
-            compare(button.text,"x5");compare(button.Accessible.name,qsTr("Show actions speed: %1").arg(button.text));
-            compare([pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],[100,20,100,100],
-                "SPEED636: live x5 updates all FOUR exposed original pointer pacing channels");
-            speed636.completed=true;
-        }
+        bind(window.appBarCentralTabs,"currentIndexChanged",()=>{navigation668.push(window.appBarCentralTabs.currentIndex);});
         bind(assistant,"actionPointerShown",()=>{++pointerShows;scan();});
-        bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();
-            if(phase===1 && !speed636.scheduled) {
-                speed636.scheduled=true;
-                // Existing event-loop seam, no timer, sleep or synthetic input.
-                Qt.callLater(speedMenu636);
-            }
-        });
+        bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();});
         bind(assistant,"actionPointerPressed",()=>{
-            ++pointerPresses;scan();same();verify(assistant.actionWindow===window && point!==null);
+            ++pointerPresses;scan();same();verify(assistant.actionWindow===window && point!==null);rowCue674("pressed");
             verify(Ui.rendered(item("assistant.actionPointer")),"STRUCTURE634: real original native pointer is visible");
             for(const control of watched){
                 if(!Ui.exposed(control))continue;const box=rect(control);
                 if(point.x>=box[0]&&point.x<box[0]+box[2]&&point.y>=box[1]&&point.y<box[1]+box[3])
                     cues.push({phase:phase,name:control.objectName,rect:box});
+                if(phase===0 && control.objectName==="structures.create"
+                    && point.x>=box[0]&&point.x<box[0]+box[2]&&point.y>=box[1]&&point.y<box[1]+box[3]){
+                    verify(control===item("structures.create") && control.enabled && Ui.exposed(control),
+                        "STRUCTURE692: actual original exposed enabled creation target owns the prewrite visual cue");
+                    compare(owner.structures.count,0,"STRUCTURE692: matching creation cue precedes ordinary member publication");
+                    creationCues692.push({name:control.objectName,phase:phase,kind:"visual-target-cue",beforeStructures:owner.structures.count});
+                }
+                if(phase===6 && control.objectName==="spaceGroup.itNumber"
+                    && point.x>=box[0]&&point.x<box[0]+box[2]&&point.y>=box[1]&&point.y<box[1]+box[3]){
+                    verify(control.enabled && Ui.exposed(control));compare(structure.spaceGroup.nameHM,initialGroup699.name);
+                    compare(rows()[0].label,initialId);compare(rows()[0].wyckoffLetter,"a");
+                    verify([rows()[0].fractX,rows()[0].fractY,rows()[0].fractZ].every(parameter=>!parameter.refinable),
+                        "STRUCTURE699: one actual original number cue precedes changing the fixed initial symmetry");
+                    ++prerequisiteCues699;
+                }
+                const numericIndex=numeric668.findIndex(entry=>entry.name===control.objectName);
+                if(phase===1 && numericIndex>=0 && point.x>=box[0]&&point.x<box[0]+box[2]&&point.y>=box[1]&&point.y<box[1]+box[3]){
+                    const entry=numeric668[numericIndex],parameter=control.item;
+                    verify(control.enabled && parameter!==null && parameter.path===entry.path);
+                    compare(owner.experiments.count,0);compare(owner.currentExperiment,null);
+                    verify(item("appBar.tab.structure").checked && !navigation668.some(page=>page===3||page===4),
+                        "STRUCTURE668: fresh numeric setup reaches original Structure controls without Experiment/Analysis prerequisites");
+                    const currentRow=rows()[0];compare(currentRow.label,"First634");compare(currentRow.adpType,"Biso");
+                    if(numericIndex>0)compare(parameter,[currentRow.fractX,currentRow.fractY,currentRow.fractZ,currentRow.occupancy,currentRow.adpIso][numericIndex-1]);
+                    else {const cells=visible185_parameters(owner).filter(value=>value.path===entry.path);compare(cells.length,1);compare(parameter,cells[0]);}
+                    verify(parameter.value!==entry.value,"STRUCTURE668: only a real changed requested field receives a scientific cue");
+                    compare(parameter.value,numericInitialValues668[numericIndex]);
+                    if(numericBefore668===null){
+                        numericBefore668=JSON.parse(visible185_values(owner));
+                        const renamedInitial=initialAll668.map(row=>[row[0].startsWith("structure.atom_sites["+initialId+"].")?
+                            "structure.atom_sites[First634]."+row[0].slice(("structure.atom_sites["+initialId+"].").length):row[0],...row.slice(1)]);
+                        compare(JSON.stringify(numericBefore668),JSON.stringify(renamedInitial),"STRUCTURE668: after the explicit P1 prerequisite, preceding rename/label changed no scientific values/free/s.u.s");
+                    }
+                    numericCues668.push({path:entry.path,name:control.objectName,before:parameter.value,page:window.appBarCentralTabs.currentIndex,
+                        noExperiment:owner.experiments.count===0&&owner.currentExperiment===null,rect:box});
+                }
             }
         });
         try {
+            const checkbox=item("assistant.showActions");verify(checkbox.enabled&&Ui.exposed(checkbox));mouseClick(checkbox);verify(assistant.showActions);
             const created=send(0,3);
-            compare([pointerShows,pointerPresses],[0,0],"SPEED636: original OFF Create remains unpaced and emits no native presentation cue");
+            verify(pointerShows>0 && pointerPresses>0,"STRUCTURE634: genuine ON Create reaches actual original native pointer cues");
+            compare(creationCues692.length,1,"STRUCTURE692: ONE genuine original creation-target cue precedes ordinary Create effect and receipt");
             const models=Probe.rows(owner.structures);compare(models.length,1);structure=models[0].structure;structureLife=lifetime313(structure);
             verify(structure!==null&&alive313(structureLife));const first=rows();compare(first.length,1);
-            initial=first[0].fractX;initialLife=lifetime313(initial);initialType=first[0].typeSymbol;
-            verify(initial!==null&&alive313(initialLife));compare(created[0].structures[0].sites[0].id,first[0].label);
+            initialId=first[0].label;initialType=first[0].typeSymbol;initialScience=science634(first[0]);
+            member634(0,initialId,initialType,initialScience);compare(created[0].structures[0].sites[0].id,initialId);
             compare(created[0].structures[0].id,structure.name,"STRUCTURE634: Create receipt names actual original member/one initial atom");
-            const checkbox=item("assistant.showActions");verify(checkbox.enabled&&Ui.exposed(checkbox));mouseClick(checkbox);verify(assistant.showActions);
-            send(1,3);verify(speed636.completed,"SPEED636: actual ON phase MUST reach and finish real native speed selection");
-            compare([speed636.opened,speed636.buttonPresses,speed636.buttonClicks,speed636.choicePresses,speed636.choiceClicks],[1,1,1,1,1]);
-            compare(rows().length,1);verify(alive313(initialLife)&&rows()[0].fractX===initial,
-                "STRUCTURE634: FIRST existing atom is edited in place, never preserved beside a duplicate target");
-            compare(structure.name,"Main634");compare(rows()[0].label,"First634");compare(rows()[0].typeSymbol,"57Fe");
+            compare(first[0].adpType,"Biso");
+            initialGroup699={name:structure.spaceGroup.nameHM,number:structure.spaceGroup.itNumber,hasNumber:structure.spaceGroup.hasItNumber,code:structure.spaceGroup.coordSystemCode};
+            compare(initialGroup699.name,"P b n m");compare(first[0].wyckoffLetter,"a");
+            coordinatePaths699=[first[0].fractX.path,first[0].fractY.path,first[0].fractZ.path];
+            verify([first[0].fractX,first[0].fractY,first[0].fractZ].every(parameter=>!parameter.refinable),
+                "STRUCTURE699: actual original created Pbnm/Wyckoff-a coordinates are fixed, never silently edited");
+            initialListed699=visible185_values(owner);initialNative699=created[2].parameters;
+            compare(JSON.stringify(coordinatePaths699.map(path=>initialNative699.filter(row=>row.path===path).map(row=>row.dependence))),
+                JSON.stringify([["symmetry_fixed"],["symmetry_fixed"],["symmetry_fixed"]]));
+            const preparation699=send(6,2);
+            verify(preparation699[0].status==="completed" && preparation699[0].applied===true && preparation699[0].published===true && preparation699[0].complete===true);
+            compare(preparation699[0].structures.length,1);compare(preparation699[0].structures[0].id,structure.name);
+            compare(structure.spaceGroup.nameHM,"P 1");compare(structure.spaceGroup.itNumber,1);verify(structure.spaceGroup.hasItNumber);
+            compare(rows().length,1);compare(rows()[0].label,initialId);compare(rows()[0].wyckoffLetter,"a");
+            verify(structure.atomSites.wyckoffLetters.includes("a"));
+            member634(0,initialId,initialType,initialScience);
+            preparedNative699=preparation699[1].parameters;
+            compare(JSON.stringify(coordinatePaths699.map(path=>preparedNative699.filter(row=>row.path===path).map(row=>row.dependence))),
+                JSON.stringify([["independent"],["independent"],["independent"]]),"STRUCTURE699: a fresh actual native read proves whole numeric-array coordinates editable BEFORE admission");
+            verify([rows()[0].fractX,rows()[0].fractY,rows()[0].fractZ].every(parameter=>parameter.refinable));
+            compare(prerequisiteCues699,1);
+            initialAll668=JSON.parse(visible185_values(owner));
+            const initialCell=visible185_parameters(owner).filter(parameter=>parameter.path==="structure.cell.length_a");compare(initialCell.length,1);
+            numericInitialValues668=[initialCell[0].value,...initialScience.slice(1).map(row=>row[0])];
+            numericChanged668=numeric668.map((entry,index)=>index).filter(index=>numericInitialValues668[index]!==numeric668[index].value);
+            verify(numericChanged668.length>0,"STRUCTURE668 SETUP: independently supplied literal array really changes the original fresh owner");
+            editedScience668=JSON.parse(JSON.stringify(initialScience));for(let index=1;index<numeric668.length;++index)editedScience668[index][0]=numeric668[index].value;
+            const edited=send(1,4);
+            verify(edited[2].status==="edited" && edited[2].complete===true && edited[2].atomic===false && edited[2].steps_completed===numeric668.length,
+                "STRUCTURE668: actual visible native array completes every requested entry including noops");
+            compare(JSON.stringify(numericCues668.map(row=>row.path)),JSON.stringify(numericChanged668.map(index=>numeric668[index].path)),
+                "STRUCTURE668: exact changed-only requested controls receive one cue each in caller order");
+            verify(numericBefore668!==null);numericAfter668=JSON.parse(visible185_values(owner));
+            numericExpected668=numericBefore668.map(row=>{const entry=numeric668.find(value=>value.path===row[0]);return [row[0],entry?entry.value:row[1],...row.slice(2)];});
+            compare(JSON.stringify(numericAfter668),JSON.stringify(numericExpected668),"STRUCTURE668: only literal requested values change; every other value/free/PRESENT-SU stays exact");
+            compare(rows().length,1,"STRUCTURE634: FIRST existing atom becomes the sole target, never a duplicate beside a placeholder");
+            compare(structure.name,"Main634");compare(edited[1].atom_id,"First634");compare(edited[3].atom_id,"First634");
+            member634(0,"First634","57Fe",editedScience668);
             verify(cues.some(c=>c.phase===1&&c.name.startsWith("structures.name."))&&cues.some(c=>c.phase===1&&c.name.startsWith("atomSite.label."))
                 &&cues.some(c=>c.phase===1&&c.name.startsWith("atomSite.typeSymbol.")),"STRUCTURE634: actual original name/label/type receivers receive visual cues");
-            const appended=send(2,2);compare(rows().length,2);added=rows()[1].fractX;addedLife=lifetime313(added);addedId=rows()[1].label;
-            verify(added!==initial&&alive313(addedLife));compare(appended[0].atom_id,addedId);
+            const appended=send(2,2);compare(rows().length,2);addedId=rows()[1].label;addedType=rows()[1].typeSymbol;addedScience=science634(rows()[1]);
+            verify(addedId!=="First634");compare(appended[0].atom_id,addedId);
+            member634(0,"First634","57Fe",editedScience668);member634(1,addedId,addedType,addedScience);
             verify(cues.some(c=>c.phase===2&&c.name==="atomSites.append"),"STRUCTURE634: append uses original actual row/list control");
-            send(3,1);compare(rows()[1].label,"Second634");verify(rows()[1].fractX===added);
+            // Original ListView's public overflow fixture: one full row plus its ordinary half-row hint.
+            visible185_page("structure");Ui.click(test,Probe,window,"sideBar.tab.basic");Ui.expandGroup(test,Probe,window,"group.atom_site");
+            table674=Ui.control(Probe,window,"atomSites.list");verify(table674!==null);tableLife674=lifetime313(table674);
+            model674=table674.sourceModel;compare(model674,structure.atomSites);compare(table674.count,2);
+            oldRows674=table674.maxRowCountShow;oldY674=table674.contentY;table674.maxRowCountShow=1;
+            table674.forceLayout();Ui.scrollIntoView(table674);rendered();table674.positionViewAtEnd();table674.forceLayout();
+            const ending674=table674.contentY;
+            table674.positionViewAtBeginning();table674.forceLayout();
+            const lastRow674=table674.itemAtIndex(1);verify(lastRow674!==null && lastRow674.height>0);
+            const beginning674=table674.contentY,targetY674=Math.round(beginning674+lastRow674.height/4);
+            verify(targetY674>beginning674 && targetY674<ending674,
+                "ROW674 SETUP: declared partial offset lies strictly between REAL native beginning/end positions");
+            table674.contentY=targetY674;table674.forceLayout();rendered();compare(table674.contentY,targetY674,
+                "ROW674 SETUP: partial row uses a real legal original scroll offset, not hidden controls or changed row height");
+            const field674=Ui.itemsWithProperty(lastRow674,"objectName").filter(c=>c.objectName==="atomSite.fractX.1");
+            compare(field674.length,1);compare(field674[0].item,rows()[1].fractX);lastValue674=rows()[1].fractX.value;verify(lastValue674!==.375);
+            const center674=field674[0].mapToItem(table674,field674[0].width/2,field674[0].height/2);
+            const partial674=lastRow674.mapToItem(table674,0,0,lastRow674.width,lastRow674.height);
+            verify(center674.x>0 && center674.x<table674.width && center674.y>0 && center674.y<table674.height
+                && partial674.y+partial674.height>table674.height+.5 && Ui.exposed(field674[0]),
+                "ROW674 SETUP: genuine current LAST numeric field center is exposed while WHOLE atom row is clipped BEFORE Send");
+            for(let ancestor=field674[0].parent;ancestor;ancestor=ancestor.parent)if(ancestor.clip){
+                const center=field674[0].mapToItem(ancestor,field674[0].width/2,field674[0].height/2);
+                verify(center.x>0 && center.x<ancestor.width && center.y>0 && center.y<ancestor.height,
+                    "ROW674 SETUP: actual field center lies inside EVERY original clipping viewport");
+            }
+            setupClipped674=true;const before674=JSON.parse(visible185_values(owner));
+            const renamed=send(3,2);compare(renamed[0].atom_id,"Second634");
+            verify(renamed[1].status==="edited",
+                "ROW719: actual same-call single numeric success reports edited; sequence-only fields are not promised");
+            compare([numericCues674,numericWrites674],[1,1]);verify(rowCues674>=2);
+            const lastEdited674=JSON.parse(JSON.stringify(addedScience));lastEdited674[1][0]=.375;
+            member634(1,"Second634",addedType,lastEdited674);member634(0,"First634","57Fe",editedScience668);
+            actualValue674=rows()[1].fractX.value;compare(actualValue674,.375);
+            const expected674=before674.map(row=>{const prefix="structure.atom_sites["+addedId+"].";
+                const path=row[0].startsWith(prefix)?"structure.atom_sites[Second634]."+row[0].slice(prefix.length):row[0];
+                return [path,path==="structure.atom_sites[Second634].fract_x"?.375:row[1],...row.slice(2)];});
+            compare(visible185_values(owner),JSON.stringify(expected674),
+                "ROW674: exact canonical last-row literal changes alone, unrelated values/free/PRESENT-SUs remain exact");
             const beforePresses=pointerPresses,beforeShows=pointerShows,beforeCues=cues.length,beforePage=window.appBarCentralTabs.currentIndex,before=visible185_values(owner),beforeUndo=owner.canUndo;
             const noops=send(4,3);for(const out of noops){compare(out.status,"no_change");compare(out.applied,false);compare(out.complete,true);}
             compare(cues.length,beforeCues,"STRUCTURE634: equal text/ID setters stop BEFORE any navigation/cue");compare(pointerPresses,beforePresses);compare(pointerShows,beforeShows);
             compare(window.appBarCentralTabs.currentIndex,beforePage);compare(visible185_values(owner),before);compare(owner.canUndo,beforeUndo);
-            const removed=send(5,1);compare(removed[0].removed,true);compare(removed[0].atom_id,"Second634");compare(rows().length,1);verify(rows()[0].fractX===initial);
+            const removed=send(5,1);compare(removed[0].removed,true);compare(removed[0].atom_id,"Second634");compare(rows().length,1);member634(0,"First634","57Fe",editedScience668);
             verify(cues.some(c=>c.phase===5&&c.name.startsWith("atomSite.remove.")),"STRUCTURE634: explicit removal cues original exact current row");
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,2);compare(rows()[1].label,"Second634");
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,2);member634(1,"Second634",addedType,lastEdited674);
+            Ui.click(test,Probe,window,"appBar.button.undo");member634(1,"Second634",addedType,addedScience);restored674=true;
             Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[1].label,addedId,"STRUCTURE634: no-op group adds no phantom Undo between actual remove and preceding rename");
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,1);compare(rows()[0].label,"First634");verify(rows()[0].fractX===initial);
+            member634(1,addedId,addedType,addedScience);
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,1);member634(0,"First634","57Fe",editedScience668);
             Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[0].typeSymbol,initialType,
                 "STRUCTURE634: NEXT ordinary Undo is the real preceding first-site type edit, not an equal setter");
+            member634(0,"First634",initialType,editedScience668);
+            compare(JSON.stringify(JSON.parse(visible185_values(owner))),JSON.stringify(numericExpected668),"STRUCTURE668: original type Undo leaves the actual preceding numeric transaction intact");
+            for(const index of numericChanged668.slice().reverse()){
+                Ui.click(test,Probe,window,"appBar.button.undo");
+                const entry=numeric668[index];numericExpected668=numericExpected668.map(row=>row[0]===entry.path?[row[0],numericInitialValues668[index],...row.slice(2)]:row);
+                compare(JSON.stringify(JSON.parse(visible185_values(owner))),JSON.stringify(numericExpected668),"STRUCTURE668: each actual changed value owns ONE ordinary Undo in reverse caller order");
+            }
+            compare(JSON.stringify(numericExpected668),JSON.stringify(numericBefore668),"STRUCTURE668: no-op numeric entries create no phantom Undo");
+            const firstCurrent=member634(0,"First634",initialType,initialScience),numericRestored699=JSON.parse(visible185_values(owner));
+            // The new ordinary prerequisite owns ONE real history entry behind
+            // the original two metadata edits; no clearing or synthetic history.
+            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;
+            member634(0,initialId,initialType,initialScience);
+            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;
+            compare(structure.name,created[0].structures[0].id);compare(structure.spaceGroup.nameHM,"P 1");
+            member634(0,initialId,initialType,initialScience);
+            Ui.click(test,Probe,window,"appBar.button.undo");++prerequisiteUndos699;
+            compare(JSON.stringify({name:structure.spaceGroup.nameHM,number:structure.spaceGroup.itNumber,hasNumber:structure.spaceGroup.hasItNumber,code:structure.spaceGroup.coordSystemCode}),JSON.stringify(initialGroup699));
+            member634(0,initialId,initialType,initialScience);compare(rows()[0].wyckoffLetter,"a");
+            verify([rows()[0].fractX,rows()[0].fractY,rows()[0].fractZ].every(parameter=>!parameter.refinable));
+            compare(visible185_values(owner),initialListed699,"STRUCTURE699: one prerequisite Undo restores the actual original symmetry-filtered table and all listed values/free/SUs");
+            verify(owner.canUndo,"STRUCTURE699: actual original Create history remains below the ordinary symmetry prerequisite");
+            console.log("STRUCTURE699_PREPARATION",JSON.stringify({beforeGroup:initialGroup699.name,beforeWyckoff:created[0].structures[0].sites[0].wyckoff,preparedGroup:preparation699[0].structures[0].space_group.hm,
+                preparedNumber:preparation699[0].structures[0].space_group.it_number,preparedWyckoff:preparation699[0].structures[0].sites[0].wyckoff,coordinatePaths:coordinatePaths699,
+                beforeDependence:coordinatePaths699.map(path=>initialNative699.filter(row=>row.path===path)[0].dependence),
+                preparedDependence:coordinatePaths699.map(path=>preparedNative699.filter(row=>row.path===path)[0].dependence),
+                prerequisiteCues:prerequisiteCues699,prerequisiteUndos:prerequisiteUndos699,metadataUndos:metadataUndos699,
+                sameOriginalSite:rows().length===1&&rows()[0].label===initialId,restoredOriginalSymmetry:structure.spaceGroup.nameHM===initialGroup699.name}));
+            console.log("STRUCTURE668_NUMERIC_RESULT",JSON.stringify({cues:numericCues668,changedIndices:numericChanged668,
+                creationCues:creationCues692,before:numericBefore668,after:numericAfter668,restored:numericRestored699,noExperiment:owner.experiments.count===0&&owner.currentExperiment===null}));
             compare([keys,clicked,activated],[0,0,0],"STRUCTURE634: ON science uses original ordinary setters after cues, no scientific key/click/menu-choice dispatch");
-            console.log("SPEED636_MAIN_RESULT",JSON.stringify({speed:assistant.actionSpeed,menu:speed636,
-                pointer:[pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],
-                ownerSame:Session.project===owner,originalPointer:alive313(pointerLife636)}));
-            console.log("STRUCTURE634_MAIN_RESULT",JSON.stringify({ownerSame:Session.project===owner,firstSame:rows()[0].fractX===initial,
+            console.log("ROW674_RESULT",JSON.stringify({setupClipped:setupClipped674,ownerSame:Session.project===owner,rowCues:rowCues674,
+                numericCues:numericCues674,numericWrites:numericWrites674,requested:.375,actual:actualValue674,restored:restored674,bounds:rowBounds674}));
+            console.log("STRUCTURE634_MAIN_RESULT",JSON.stringify({ownerSame:Session.project===owner,firstCurrent:firstCurrent,initialScience:initialScience,initialType:initialType,
                 actualCreateInitialAtom:created[0].structures[0].sites[0].id,appendedId:addedId,cues:cues,keys:keys,clicked:clicked,activated:activated,
                 noops:noops,realUndo:true,path:owner.path}));
-        } finally {for(const s of slots)disconnect313(s.life,s.object,s.signal,s.callback);}
+        } finally {
+            for(const s of slots)disconnect313(s.life,s.object,s.signal,s.callback);
+            if(table674!==null && alive313(tableLife674) && Session.project===owner && table674.sourceModel===model674){
+                table674.maxRowCountShow=oldRows674;table674.forceLayout();table674.contentY=oldY674;
+            }
+        }
     }
 
     function test_create639_original_consumed_callback_and_one_undo() {
@@ -10362,7 +10497,7 @@ TestCase {
         try {model.remove(0);} finally {disconnect313(modelLife,model,"rowsAboutToBeRemoved",onRemoving);}
         compare(callbacks,1,"EXPERIMENT648: actual original removal notification reaches synchronous consumer exactly once");
         compare(JSON.stringify(nested),JSON.stringify([false,false,false,false]),"EXPERIMENT648: both wrong-member/equal and disappeared bound setters refuse before stale model reads");
-        compare(model.count,1);compare(model.get(0,"start"),4.5);compare(model.get(0,"end"),9.5);
+        compare(model.count,1);compare(Probe.rows(model)[0].start,4.5);compare(Probe.rows(model)[0].end,9.5);
         verify(owner.canUndo);owner.undo();tryCompare(model,"count",2,2000);
         compare(JSON.stringify(Probe.rows(model)),beforeRemove,"EXPERIMENT648: ONE actual ordinary Undo restores both original rows/IDs, no phantom nested write");
         // Fresh real incarnation at the SAME independent file; no A input may
@@ -10395,8 +10530,8 @@ TestCase {
             ++cues;scan();verify(assistant.actionWindow===window&&assistant.showingActions);
             if(hit(Ui.control(Probe,window,"peak.type"),point)){compare(experiment.peakType,"cwl-tch-pseudo-voigt","EXPERIMENT648: original profile cue precedes the ordinary scientific setter");++profileCue;}
             if(hit(Ui.control(Probe,window,"excludedRegions.append"),point)){compare(regions.count,0,"EXPERIMENT648: actual Add cue precedes append");++appendCue;}
-            if(hit(Ui.control(Probe,window,"excludedRegion.start.0"),point)){compare(regions.get(0,"start"),0);++startCue;}
-            if(hit(Ui.control(Probe,window,"excludedRegion.end.0"),point)){compare(regions.get(0,"end"),0);++endCue;}
+            if(hit(Ui.control(Probe,window,"excludedRegion.start.0"),point)){compare(Probe.rows(regions)[0].start,0);++startCue;}
+            if(hit(Ui.control(Probe,window,"excludedRegion.end.0"),point)){compare(Probe.rows(regions)[0].end,0);++endCue;}
         };
         bind(assistant,"actionPointerMoved",onMoved);bind(assistant,"actionPointerPressed",onCue);bind(regions,"countChanged",scan);
         function one(call,ids){
@@ -10416,18 +10551,935 @@ TestCase {
         try {
             const profile=send(0,1)[0];compare(profile.peak_profile,"cwl-gaussian");compare(experiment.peakType,"cwl-gaussian");verify(profileCue>=1);
             const edits=send(1,3);const id=edits[0].excluded_region.id;verify(typeof id==="string"&&id.length>0);
-            compare(regions.count,1);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),2.125);
+            compare(regions.count,1);compare(Probe.rows(regions)[0].id,id);compare(Probe.rows(regions)[0].start,7.25);compare(Probe.rows(regions)[0].end,2.125);
             verify(appendCue>=1&&startCue>=1&&endCue>=1,"EXPERIMENT648: each actual original control receives its own prewrite visible cue");
             const beforeNoop={cues:cues,shows:assistant.showingActions,rows:JSON.stringify(Probe.rows(regions)),parameters:JSON.stringify(Probe.rows(owner.parameters)),undo:owner.canUndo};
             const noops=send(2,3);verify(noops.every(v=>v.status==="no_change"&&v.applied===false&&v.complete===true));
             compare(cues,beforeNoop.cues);compare(JSON.stringify(Probe.rows(regions)),beforeNoop.rows);compare(JSON.stringify(Probe.rows(owner.parameters)),beforeNoop.parameters);compare(owner.canUndo,beforeNoop.undo);
-            owner.undo();tryCompare(regions,"count",1,2000);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),0,
+            owner.undo();tryCompare(regions,"count",1,2000);compare(Probe.rows(regions)[0].id,id);compare(Probe.rows(regions)[0].start,7.25);compare(Probe.rows(regions)[0].end,0,
                 "EXPERIMENT648: ONE real Undo skips allthree noops and reverses preceding actual bound write");
             const removed=send(3,1)[0];compare(removed.exclusion_id,id);compare(removed.removed,true);compare(regions.count,0);
-            owner.undo();tryCompare(regions,"count",1,2000);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),0);
+            owner.undo();tryCompare(regions,"count",1,2000);compare(Probe.rows(regions)[0].id,id);compare(Probe.rows(regions)[0].start,7.25);compare(Probe.rows(regions)[0].end,0);
             compare(keys,0);compare(clicked,0);compare(activated,0);same();
             console.info("EXPERIMENT648_MAIN_RESULT",JSON.stringify({manualRemovalCallbacks:callbacks,nested:nested,profileCue:profileCue,appendCue:appendCue,startCue:startCue,endCue:endCue,keys:keys,clicked:clicked,activated:activated,ownerSame:true,realUndo:true,id:id}));
         } finally {for(const row of slots)disconnect313(row.life,row.object,row.signal,row.callback);}
+        assistant.signOut();tryCompare(assistant,"connected",false,2000);
+    }
+
+    function test_text678_current_relation_rows_publish_whole_text_and_ordinary_history() {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")));
+        const project=Session.project, ownerLife=lifetime313(project), originalAssistant=assistant;
+        const lengths=project.currentStructure.scatteringLengths;
+        compare(lengths.count,1);compare(Probe.rows(lengths)[0].typeSymbol,"La");
+        compare(Probe.rows(lengths)[0].lengthFm,8.24);lengths.remove(0);
+        const la=visible185_parameter(project,"La","adp_iso"), ba=visible185_parameter(project,"Ba","adp_iso");
+        const co=visible185_parameter(project,"Co","adp_iso");
+        compare(la.value,.5);compare(co.value,.5);
+        // Ordinary public scientific fixture preparation, not assistant delivery.
+        la.free=false;ba.free=false;verify(!la.free && !ba.free);
+        visible185_page("analysis");Ui.click(this,Probe,window,"parameters.nameFilter");visible185_type("adp_iso");rendered();
+        const baField=visible185_field(ba);Ui.click(this,Probe,window,baField.objectName);visible185_type("0.8");keyClick(Qt.Key_Return);
+        compare(ba.value,.8);
+        Ui.click(this,Probe,window,"sideBar.tab.extras");Ui.expandGroup(this,Probe,window,"group.alias");
+        compare(project.analysis.aliases.count,0);compare(project.analysis.constraints.count,0);
+        Ui.click(this,Probe,window,"aliases.append");rendered();
+        const priorId=Ui.control(Probe,window,"alias.id.0");verify(priorId!==null);
+        Ui.scrollIntoView(priorId);rendered();Ui.click(this,Probe,window,"alias.id.0");
+        visible185_type("user678_la");keyClick(Qt.Key_Return);
+        const priorChoice=Ui.control(Probe,window,"alias.parameter.0");verify(priorChoice!==null && priorChoice.searchable);
+        Ui.scrollIntoView(priorChoice);rendered();Ui.click(this,Probe,window,"alias.parameter.0");
+        tryCompare(priorChoice.popup,"opened",true,2000);
+        const priorSearch=Ui.find(priorChoice.popup.contentItem.headerItem,"comboBox.search");
+        verify(priorSearch!==null && Ui.exposed(priorSearch));tryCompare(priorSearch,"activeFocus",true,2000);
+        // Genuine USER setup only. The assistant publication observer is not armed yet.
+        mouseClick(priorSearch);visible185_type("lbco.atom_site.La.adp_iso");keyClick(Qt.Key_Return);
+        tryCompare(priorChoice.popup,"visible",false,2000);
+        compare(JSON.stringify(Probe.rows(project.analysis.aliases)),JSON.stringify([{id:"user678_la",parameter:"lbco.atom_site.La.adp_iso"}]));
+        tryVerify(()=>!project.calculating && Probe.computedCurrent(project.currentExperiment),10000);
+        const before=RelationUndoObserver.state(project), inputs=visible185_inputs(project), shape=relation246_shape(project);
+        const metadata=import265_owner(project), parameters=visible185_values(project);
+        const baEditPath719="structure.atom_sites[Ba].adp_iso",baLife719=lifetime313(ba);
+        compare(ba.path,baEditPath719,"TEXT719 SETUP: independent native edit path identifies the retained original Ba parameter");
+        const baBefore719=JSON.parse(parameters).filter(row=>row[0]===baEditPath719);
+        compare(baBefore719.length,1,"TEXT719 SETUP: exact Ba edit path occurs once BEFORE the requested dependence removes its Analysis row");
+        compare(JSON.stringify([ba.value,ba.free,ba.hasUncertainty,ba.uncertainty]),JSON.stringify(baBefore719[0].slice(1)));
+        toggle();gui392_signIn(false);visible185_ready("text678");
+        if(!assistant.showActions)Ui.click(this,Probe,window,"assistant.showActions");
+        verify(assistant.showActions);closeAssistant388();
+        const expected=["aliases.append","alias.id.1","alias.parameter.1","constraints.append","constraint.id.0","constraint.expression.0","constraint.enabled.0"];
+        const textWanted={"alias.id.1":"text678_ba","constraint.id.0":"text678_shared","constraint.expression.0":"text678_ba = 2 * user678_la"};
+        const bindings=[], watched=new Set(), cues=[], spellings=[], issues=[], publications=[];
+        let phase="positive", point=null, choiceReceipt=null, admittedChoiceReceipt=null, accepted=0, activated=0, targetCues=0, scientificKeyEdits=0;
+        let popupShows=0,searchDrafts=0,choicePublications=0,choiceReadbacks=0,choiceProof=null;
+        const choiceWanted="lbco.atom_site.Ba.adp_iso";
+        let stopScheduled=false, stopClicks=0, stopEntry=null, stopped=null, dirty=null, undoCount=0, dirtyCues=0;
+        const test678=this;
+        function current() { return alive313(ownerLife) && Session.project===project && Session.assistant===originalAssistant && assistant===originalAssistant; }
+        function note(ok,message) {if(!ok)issues.push(message);}
+        function bind(object,signal,callback) {
+            const life=lifetime313(object);
+            const passive=function() {try {if(alive313(life))callback.apply(null,arguments);}catch(error){issues.push("observer exception: "+String(error));}};
+            object[signal].connect(passive);bindings.push({object:object,signal:signal,callback:passive,life:life});
+        }
+        function snapshot(){return RelationUndoObserver.state(project);}
+        function admittedChoiceCurrent(receipt) {
+            if(phase!=="positive"||receipt===null||receipt!==admittedChoiceReceipt)return false;
+            if(!current()||!alive313(receipt.choiceLife)||!alive313(receipt.tableLife)||!alive313(receipt.modelLife)){
+                note(false,"TEXT703: original cued selector/table/model retired before its positive witness");return false;
+            }
+            const same=Ui.control(Probe,window,"alias.parameter.1")===receipt.choice
+                &&Ui.control(Probe,window,"aliases.list")===receipt.table
+                &&receipt.table.sourceModel===receipt.model&&receipt.model===project.analysis.aliases;
+            note(same,"TEXT703: publication/readback belongs to EXACT admitted original selector/table/model, never a replacement");
+            return same;
+        }
+        function choiceReadback(receipt) {
+            if(!admittedChoiceCurrent(receipt))return;
+            const choice=receipt.choice,model=receipt.model,table=receipt.table;
+            const rows=Probe.rows(model),row=rows[1];
+            if(!row||row.id!=="text678_ba"||row.parameter!==choiceWanted||choicePublications!==1||targetCues!==1)return;
+            const index=choice.currentIndex;
+            if(index<0||index>=choice.count||choice.textAt(index)!==choiceWanted||choice.displayText!==choiceWanted)return;
+            if(!receipt.boundSeen){receipt.boundSeen=true;++choiceReadbacks;}
+            choiceProof={id:row.id,parameter:row.parameter,index:index,displayText:choice.displayText,offered:choice.textAt(index),
+                sameControl:Ui.control(Probe,window,"alias.parameter.1")===choice,sameModel:table.sourceModel===model&&model===project.analysis.aliases};
+        }
+        function scan() {
+            if(!current()){note(false,"original current owner/controller retired");return;}
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")) {
+                const name=control.objectName;
+                if(Object.prototype.hasOwnProperty.call(textWanted,name) && !watched.has(control)) {
+                    watched.add(control);const life=lifetime313(control);
+                    bind(control,"textEdited",()=>{if(phase==="positive" && assistant.showingActions
+                        && cues.some(row=>row.name===name))++scientificKeyEdits;});
+                    bind(control,"textChanged",()=>{
+                        if(phase!=="positive" || !assistant.showingActions)return;
+                        note(current() && alive313(life) && control.editOwner===project,"text publication retained exact original live owner");
+                        const admission=cues.filter(row=>row.name===name);
+                        if(admission.length===0)return; // Initial ordinary row binding is not an assistant edit.
+                        note(admission.length===1,"text publication requires ONE preceding exact original control cue: "+name);
+                        spellings.push({name:name,text:control.text});
+                    });
+                }
+                if(name!=="alias.parameter.1" || watched.has(control))continue;
+                watched.add(control);const choice=control,choiceLife=lifetime313(choice),originalPopup=choice.popup;
+                note(choice.searchable,"actual target retains its original offered searchable control; assistant need not open it");
+                const table=Ui.control(Probe,window,"aliases.list"),model=project.analysis.aliases;
+                note(table!==null&&table.sourceModel===model,"ordinary offered selector retains the original alias collection");
+                if(table===null)continue;
+                if(admittedChoiceReceipt!==null){
+                    note(false,"TEXT703: a later selector cannot inherit the admitted original cue or reset its transition baseline");continue;
+                }
+                const receipt={choice:choice,choiceLife:choiceLife,popup:originalPopup,popupLife:lifetime313(originalPopup),
+                    table:table,tableLife:lifetime313(table),model:model,modelLife:lifetime313(model),lastParameter:null,boundSeen:false};
+                choiceReceipt=receipt; // Uncued discovery only; admission freezes this exact object.
+                bind(choice,"currentIndexChanged",()=>choiceReadback(receipt));bind(choice,"displayTextChanged",()=>choiceReadback(receipt));
+                bind(choice,"activated",()=>{if(phase==="positive"&&current()&&assistant.showingActions)++activated;});
+                if(originalPopup!==null){
+                    bind(originalPopup,"visibleChanged",()=>{if(phase==="positive"&&current()&&assistant.showingActions&&originalPopup.visible)++popupShows;});
+                    // Observe only an already-created ordinary search receiver. Never
+                    // open/reveal a popup or require a synthetic assistant draft to exist.
+                    const field=originalPopup.contentItem?Ui.find(originalPopup.contentItem.headerItem,"comboBox.search"):null;
+                    if(field!==null){
+                        bind(field,"textChanged",()=>{if(phase==="positive"&&current()&&assistant.showingActions&&field.text.length)++searchDrafts;});
+                        bind(field,"textEdited",()=>{if(phase==="positive"&&current()&&assistant.showingActions)++scientificKeyEdits;});
+                        bind(field,"accepted",()=>{if(phase==="positive"&&current()&&assistant.showingActions)++accepted;});
+                    }
+                }
+            }
+        }
+        function cue() {
+            if(phase==="dirty")++dirtyCues;
+            scan();if(point===null || !current())return;
+            const matches=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(control=>{
+                if(!expected.includes(control.objectName) || !Ui.exposed(control))return false;
+                const box=rect(control);return point.x>=box[0] && point.y>=box[1] && point.x<box[0]+box[2] && point.y<box[1]+box[3];
+            });
+            if(phase==="positive")for(const control of matches) {
+                note(assistant.actionWindow===window && assistant.showingActions && Ui.rendered(item("assistant.actionPointer")),"actual original Main owns painted prewrite cue");
+                note(control.enabled && current(),"original changed receiver remains enabled/current before write");
+                if(Object.prototype.hasOwnProperty.call(textWanted,control.objectName)) {
+                    note(control.text!==textWanted[control.objectName],"equal text must not acquire a changed scientific cue");
+                    const isAlias=control.objectName.startsWith("alias.");
+                    note(control.editModel===(isAlias?project.analysis.aliases:project.analysis.constraints)
+                        && control.editOwner===project && control.editIndex===(isAlias?1:0),"prepared text cue pins SAME original live model/member row");
+                }
+                if(control.objectName==="alias.parameter.1") {
+                    const receipt=choiceReceipt,model=project.analysis.aliases;
+                    if(admittedChoiceReceipt!==null){note(false,"TEXT703: target cue admission occurs exactly once without rebinding/reset");continue;}
+                    if(receipt===null||!alive313(receipt.choiceLife)||!alive313(receipt.tableLife)||!alive313(receipt.modelLife)
+                        ||receipt.choice!==control||receipt.model!==model){note(false,"same actual original selector owns the target cue");continue;}
+                    const row=Probe.rows(model)[1];
+                    note(row!==undefined&&row.id==="text678_ba"&&row.parameter!==choiceWanted,"ordinary alias target genuinely changes on the explicitly named row");
+                    const offered=model.parameterNames;
+                    note(offered.includes(choiceWanted)&&control.count===offered.length,"requested canonical target is actually offered by this original model/control");
+                    for(let i=0;i<control.count;++i)note(control.textAt(i)===offered[i],"original offered selector order/bindings agree with native alias model");
+                    if(receipt!==null){
+                        if(!alive313(receipt.tableLife)||!alive313(receipt.modelLife)||receipt.model!==model){note(false,"prewrite selector original table/model retired");continue;}
+                        note(receipt.table.sourceModel===model,"prewrite selector retains current sourceModel owner");
+                        const delegate=receipt.table.itemAtIndex(1);
+                        note(delegate!==null&&delegate.index===1&&gui393_under(control,delegate),"actual original row delegate contains SAME live offered target control");
+                        receipt.lastParameter=row?row.parameter:null;
+                        note(receipt.popup!==null&&alive313(receipt.popupLife)&&!receipt.popup.visible,"ordinary scientific cue does not open the choice popup");
+                    }
+                    admittedChoiceReceipt=receipt;
+                    ++targetCues;
+                }
+                cues.push({name:control.objectName,before:snapshot(),identity:identity313(lifetime313(control))});
+            }
+            if(phase==="stop" && matches.some(control=>control.objectName==="aliases.append") && !stopScheduled) {
+                stopScheduled=true;stopEntry=snapshot();
+                // Original next-event-turn Stop delivery, no new timer, forced focus or model write.
+                Qt.callLater(()=>{
+                    if(phase!=="stop" || !current()) {note(false,"Stop original owner no longer current");return;}
+                    const button=findChild(window,"assistant.stopVisibleAction"), at=button ? Ui.clickPoint(button) : null;
+                    if(!button || !button.enabled || at===null || !assistant.canCancel) {note(false,"real exposed Stop not reached during admitted original action");return;}
+                    note(assistant.showingActions && snapshot()===stopEntry,"actual Stop delivered during live prewrite interval, not after a committed prefix");
+                    const clicked=()=>{++stopClicks;};button.clicked.connect(clicked);
+                    try {mouseClick(button,at.x,at.y);} finally {button.clicked.disconnect(clicked);}
+                });
+            }
+        }
+        function admitted(callId,message) {
+            const ids=new Set(Probe.rows(assistant.messages).map(row=>row.id));assistant.send(message);
+            tryVerify(()=>!assistant.canCancel && !assistant.showingActions && visible185_outcome(callId,ids)!==null,
+                relation246_observationMs({aliases:[{id:"text678_ba",path:ba.path}],constraints:[{id:"text678_shared",expression:textWanted["constraint.expression.0"]}]}),
+                "TEXT678: original admitted call settles with factual native result");
+            return visible185_outcome(callId,ids);
+        }
+        try {
+            bind(assistant,"actionPointerShown",scan);bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();});
+            bind(assistant,"actionPointerPressed",cue);bind(window,"activeFocusItemChanged",scan);
+            for(const model of [project.analysis.aliases,project.analysis.constraints])for(const signal of ["rowsInserted","dataChanged","modelReset"])
+                bind(model,signal,()=>{
+                    scan();if(phase!=="positive"||!assistant.showingActions||!current())return;
+                    publications.push(relation245_declarations(project));
+                    const receipt=admittedChoiceReceipt;
+                    if(model!==project.analysis.aliases||receipt===null||receipt.model!==model||targetCues!==1
+                        ||!admittedChoiceCurrent(receipt))return;
+                    const row=Probe.rows(model)[1];if(!row||row.id!=="text678_ba")return;
+                    if(row.parameter!==receipt.lastParameter){
+                        note(row.parameter===choiceWanted,"actual alias model first publishes the complete offered canonical target, never a prefix or alternate member");
+                        receipt.lastParameter=row.parameter;++choicePublications;
+                    }
+                    choiceReadback(receipt);
+                });
+            const outcome=admitted("text678-positive","Add the one requested original alias and enabled affine constraint through the current ordinary rows");
+            if(!(outcome.status==="edited" && outcome.complete===true && outcome.atomic===false && outcome.steps_completed===7)){
+                // Already matched LOCAL activity nativeOutcome; transport Result deliberately omits message.
+                // Closed scalar-only diagnostic cannot write, reveal, focus or alter the first strict assertion.
+                const last=cues.length?cues[cues.length-1]:null;
+                console.info("TEXT692_LOCAL_FAILURE",JSON.stringify({call_id:"text678-positive",phase:phase,
+                    status:typeof outcome.status==="string"?outcome.status.slice(0,32):null,
+                    complete:typeof outcome.complete==="boolean"?outcome.complete:null,
+                    atomic:typeof outcome.atomic==="boolean"?outcome.atomic:null,
+                    steps_completed:typeof outcome.steps_completed==="number"&&isFinite(outcome.steps_completed)?outcome.steps_completed:null,
+                    message:typeof outcome.message==="string"?outcome.message.slice(0,512):null,
+                    sameOwner:current(),canCancel:assistant.canCancel,showingActions:assistant.showingActions,
+                    cueCount:cues.length,lastCue:last?last.name:null}));
+            }
+            verify(outcome.status==="edited" && outcome.complete===true && outcome.atomic===false && outcome.steps_completed===7,
+                "TEXT678: complete native result owns seven actual separately undoable original controls");
+            tryVerify(()=>!project.calculating && Probe.computedCurrent(project.currentExperiment),10000);
+            compare(Probe.rows(project.analysis.aliases)[0].id,"user678_la");
+            compare(Probe.rows(project.analysis.aliases)[0].parameter,"lbco.atom_site.La.adp_iso");
+            compare(JSON.stringify(Probe.rows(project.analysis.aliases).map(row=>[row.id,row.parameter])),JSON.stringify([
+                ["user678_la","lbco.atom_site.La.adp_iso"],["text678_ba","lbco.atom_site.Ba.adp_iso"]]));
+            compare(JSON.stringify(Probe.rows(project.analysis.constraints).map(row=>[row.id,row.expression,row.enabled])),
+                JSON.stringify([["text678_shared",textWanted["constraint.expression.0"],true]]));
+            choiceReadback(admittedChoiceReceipt);
+            compare(targetCues,1,"TEXT702: actual original offered target receives ONE visible prewrite cue");
+            compare(choicePublications,1,"TEXT702: actual canonical alias model publishes ONE real requested target transition");
+            compare(choiceReadbacks,1,"TEXT702: same retained selector confirms canonical offered index/display after the ordinary model setter");
+            verify(choiceProof!==null&&choiceProof.sameControl&&choiceProof.sameModel);
+            compare(la.value,.5);compare(ba.value,1);compare(co.value,.5);
+            compare(visible185_inputs(project),inputs);compare(relation246_shape(project),shape);compare(import265_owner(project),metadata);
+            const changed=JSON.parse(visible185_values(project)), original=JSON.parse(parameters);
+            // ADR0019/0024: the requested constrained Ba stays canonical but has no Analysis row.
+            const constrainedBefore=original.filter(row=>row[0]===baEditPath719);
+            compare(JSON.stringify(constrainedBefore),JSON.stringify(baBefore719),"TEXT719: PRE-CALL exact native edit identity supplies the sole declared projection exclusion");
+            verify(current()&&alive313(baLife719));compare(ba.path,baEditPath719);
+            compare(choiceWanted,"lbco.atom_site.Ba.adp_iso","TEXT719: distinct canonical offered alias name remains literal, never confused with native edit path");
+            compare(JSON.stringify([ba.value,ba.free,ba.hasUncertainty,ba.uncertainty]),JSON.stringify([1].concat(constrainedBefore[0].slice(2))),
+                "TEXT715: canonical dependent Ba has the exact affine value and retains its original free/SU state");
+            const projected=original.filter(row=>row[0]!==baEditPath719);
+            compare(changed.length,projected.length);
+            for(let i=0;i<projected.length;++i)compare(JSON.stringify(changed[i]),JSON.stringify(projected[i]),
+                "TEXT678: exact affine target alone changes value; every free/SU/unrelated scientific operand remains");
+            phase="undo";
+            compare(cues.length,7);compare(JSON.stringify(cues.map(row=>row.name).slice().sort()),JSON.stringify(expected.slice().sort()));
+            // Each real control's own preceding full native state is the round-trip
+            // invariant; no one-Undo-for-entire-ON premise and no generated golden.
+            for(let i=cues.length-1;i>=0;--i) {
+                verify(item("appBar.button.undo").enabled);Ui.click(this,Probe,window,"appBar.button.undo");++undoCount;
+                tryVerify(()=>!project.calculating && Probe.computedCurrent(project.currentExperiment),10000);
+                compare(snapshot(),cues[i].before,"TEXT678: ONE ordinary Undo restores SAME control's declarations/dependence/free/value/SUs");
+            }
+            compare(snapshot(),before);compare(visible185_values(project),parameters);
+            phase="stop";
+            stopped=admitted("text678-stop","Start the separately requested alias, then honor the user's actual Stop before its first ordinary write");
+            compare(stopScheduled,true);compare(stopClicks,1);compare(stopEntry,before);
+            verify(stopped.status==="refused" && stopped.steps_completed===0 && stopped.complete===false && stopped.atomic===false,
+                "TEXT678: actual Stop before first ordinary mutation never claims an edited or complete operation");
+            compare(snapshot(),before);verify(current());
+            phase="manual";
+            if(window.assistantManualTakeover || !popup.shown)toggle();closeAssistant388();
+            visible185_page("analysis");Ui.click(this,Probe,window,"sideBar.tab.extras");Ui.expandGroup(this,Probe,window,"group.alias");
+            const field=Ui.control(Probe,window,"alias.id.0");verify(field!==null);Ui.scrollIntoView(field);rendered();
+            Ui.click(this,Probe,window,"alias.id.0");visible185_type("user678_draft");
+            verify(field.manualEdited && field.assistantManualDraft && field.activeFocus);
+            const fieldLife=lifetime313(field), selection=[field.selectionStart,field.selectionEnd], undoBefore=project.canUndo;
+            const dirtyPage=window.appBarCentralTabs.currentIndex;
+            // Send is the existing public caller admission seam: do not blur/commit
+            // the genuine USER draft by clicking a different control first.
+            phase="dirty";
+            dirty=admitted("text678-dirty","Do not overwrite the user's actual unfinished current alias row draft");
+            verify(["refused","unavailable"].includes(dirty.status) && typeof dirty.message==="string" && dirty.message.length>0);
+            verify(alive313(fieldLife) && current() && field.editOwner===project && field.activeFocus);
+            compare(field.text,"user678_draft");compare(JSON.stringify([field.selectionStart,field.selectionEnd]),JSON.stringify(selection));
+            compare(project.canUndo,undoBefore);compare(snapshot(),before);compare(dirtyCues,0);
+            compare(window.appBarCentralTabs.currentIndex,dirtyPage,"TEXT678: manual draft refusal precedes workflow navigation or scientific cue");
+            keyClick(Qt.Key_Escape);compare(field.text,"user678_la");compare(snapshot(),before);
+            phase="settled";
+            console.info("TEXT678_RESULT",JSON.stringify({cues:cues.map(row=>row.name),spellings:spellings,issues:issues,
+                accepted:accepted,activated:activated,targetCues:targetCues,popupShows:popupShows,searchDrafts:searchDrafts,
+                choicePublications:choicePublications,choiceReadbacks:choiceReadbacks,choiceProof:choiceProof,undo:undoCount,publications:publications.length,scientificKeyEdits:scientificKeyEdits,
+                sameOwner:current(),restored:snapshot()===before,stopClicks:stopClicks,stop:stopped,dirty:dirty,dirtyCues:dirtyCues}));
+            // FIRST immediate-text criterion is deliberately after actual operation,
+            // ordinary Undo, Stop and draft cleanup. Observers never throw into the subject.
+            verify(Object.keys(textWanted).every(name=>spellings.some(row=>row.name===name)),
+                "TEXT678: all THREE real text declaration publications were observed, no absent-callback pass");
+            verify(spellings.every(row=>row.text===textWanted[row.name]),
+                "TEXT678: first presented changed draft/publication is COMPLETE bounded text, never an erased or character-prefix trail");
+            compare(scientificKeyEdits,0,"TEXT678: scientific text declarations publish through ordinary model methods, not raw helper keyboard text");
+            compare(accepted,0);compare(activated,0);compare(popupShows,0);compare(searchDrafts,0);
+            compare(targetCues,1);compare(choicePublications,1);compare(choiceReadbacks,1);verify(publications.length>0);
+            compare(JSON.stringify(issues),"[]");
+        } finally {
+            phase="cleanup";
+            if(assistant.canCancel) {assistant.cancel();tryVerify(()=>!assistant.canCancel && !assistant.showingActions,10000);}
+            for(const row of bindings)disconnect313(row.life,row.object,row.signal,row.callback);
+        }
+    }
+    function test_outgoing679_actual_closed_result_serialization_and_privacy() {
+        // Literal independent public563 vocabulary, not a production enum/reflection golden.
+        const known=["request_stale","context_unready","owner_unavailable","pending_operation","item_mismatch",
+            "duplicate_call","invalid_arguments","calculation_busy","visible_unmapped","project_required","unclassified"];
+        const privateText="PRIVATE679 /Users/secret token=secret \"quoted\"\n\u0001 λ🙂";
+        const fixture={status:"refused",message:privateText,exception:privateText,path:privateText,
+            owner:{password:privateText},parameters:[{path:"structure.cell.length_a",value:4.123,free:false,
+                uncertainty:.012,private_file:privateText,private_payload:{credential:privateText}}]};
+        for(const code of known) {
+            const source=Object.assign({},fixture,{code:code});
+            const receipt=Outgoing679.encode(source), value=JSON.parse(receipt.wire), maximum=JSON.parse(receipt.maximum_wire);
+            compare(Object.keys(value).sort().join(","),"code,parameters,schema,status");
+            compare(value.schema,"edi.assistant.outgoing/1");compare(value.status,"refused");compare(value.code,code);
+            compare(value.parameters.length,1);
+            compare(Object.keys(value.parameters[0]).sort().join(","),"free,path,uncertainty,value");
+            compare(value.parameters[0].path,"structure.cell.length_a");compare(value.parameters[0].value,4.123);
+            compare(value.parameters[0].free,false);compare(value.parameters[0].uncertainty,.012);
+            verify(!receipt.wire.includes("PRIVATE679") && !receipt.maximum_wire.includes("PRIVATE679"),
+                "OUTGOING679: ACTUAL serialized Result excludes unknown free-form/nested private payloads");
+            compare(receipt.bytes,receipt.admitted);compare(receipt.maximum_bytes,receipt.maximum_admitted);
+            verify(receipt.bytes<=receipt.maximum_bytes,"OUTGOING679: existing admitted maximum covers each literal new closed code");
+            compare(maximum.code,"resource_exhausted","OUTGOING679: original longest code role is unchanged");
+            verify(code.length<="resource_exhausted".length);
+        }
+        // PUBLIC584: length classification is independent of model/provider and
+        // applies at the original shared validator/argument boundary.
+        const acceptedPurposes719=["x".repeat(120),"é".repeat(120),"🙂".repeat(60)];
+        for(const purpose of acceptedPurposes719)compare(Outgoing679.purpose({purpose:purpose},"").kind,"accepted");
+        const oversized719=["x".repeat(121),"é".repeat(121),"🙂".repeat(61),"x".repeat(120)+"\u0000"];
+        const nativeTools719=["inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit",
+            "create_cwl_project","add_relations","save_project","edit_background","acquire_inputs","load_structure",
+            "create_experiment","set_experiment_type","load_data","read_selected_file","create_structure","edit_structure",
+            "edit_atom","edit_experiment","edit_relation"];
+        const purposeEntrances719=oversized719.map(purpose=>({purpose:purpose,tool:""})).concat(
+            nativeTools719.map(tool=>({purpose:oversized719[0],tool:tool})));
+        for(const entry of purposeEntrances719){
+            const refusal=Outgoing679.purpose({purpose:entry.purpose},entry.tool);
+            compare(Object.keys(refusal).sort().join(","),"action_error,action_field,kind");
+            compare(refusal.kind,"typed");compare(refusal.action_error,"purpose_too_long");compare(refusal.action_field,"purpose");
+        }
+        for(const invalidArguments of [{},{purpose:12},{purpose:" "},{purpose:" ".repeat(121)},{purpose:"short\u0000"},{purpose:"short\u007f"}])
+            compare(Outgoing679.purpose(invalidArguments,"").kind,"invalid","PURPOSE719: existing type/blank/control invalidity never acquires the length-only diagnosis");
+        // Arbitrary message/code text cannot acquire a diagnosis or leak itself.
+        const unknown=Outgoing679.encode({status:"refused",code:privateText,message:privateText,stack:privateText});
+        const unknownValue=JSON.parse(unknown.wire);
+        compare(Object.keys(unknownValue).sort().join(","),"code,schema,status");
+        compare(unknownValue.code,"refused");verify(!unknown.wire.includes("PRIVATE679"));
+        // Original status semantics remain authoritative over a new pre-admission code.
+        for(const row of [
+            {status:"applied_unconfirmed",code:"request_stale",expected:"uncertain"},
+            {status:"unconfirmed",code:"context_unready",expected:"uncertain"},
+            {status:"edited",uncertain:true,code:"owner_unavailable",expected:"uncertain"},
+            {status:"cancelled",code:"request_stale",expected:"cancelled"},
+            {status:"interrupted",code:"context_unready",expected:"cancelled"},
+            {status:"superseded",code:"pending_operation",expected:"cancelled"},
+            {status:"edited",code:"request_stale",expected:null},
+            {status:"completed",code:"context_unready",expected:null}
+        ]) {
+            const source={status:row.status,code:row.code,message:privateText};
+            if(row.uncertain===true)source.uncertain=true;
+            const receipt=Outgoing679.encode(source), value=JSON.parse(receipt.wire);
+            compare(value.status,row.status);
+            if(row.expected===null)verify(!Object.prototype.hasOwnProperty.call(value,"code"),"OUTGOING679: success cannot be converted into a pre-admission refusal");
+            else compare(value.code,row.expected);
+            verify(!receipt.wire.includes("PRIVATE679"));compare(receipt.bytes,receipt.admitted);
+        }
+        for(const row of [{status:"unavailable",code:"project_required",expectedCode:"project_required"},
+            {status:"error",code:"unclassified",expectedCode:"unavailable"}]) {
+            const receipt=Outgoing679.encode({status:row.status,code:row.code,message:privateText}),value=JSON.parse(receipt.wire);
+            compare(value.status,row.status);compare(value.code,row.expectedCode);compare(receipt.bytes,receipt.admitted);
+            verify(!receipt.wire.includes("PRIVATE679"));
+        }
+        // The original typed refusal/source/capacity precedence is not reclassified.
+        for(const row of [
+            {source:{status:"refused",code:"input_capacity"},expected:"resource_exhausted"},
+            {source:{status:"refused",code:"resource_exhausted"},expected:"resource_exhausted"},
+            {source:{status:"unconfirmed",uncertain:true,code:"source_changed"},expected:"input_changed"},
+            {source:{status:"cancelled",code:"policy_mismatch"},expected:"policy_mismatch"},
+            {source:{status:"refused",action_error:"input_unavailable",action_field:"file_id"},expected:"refused"},
+            {source:{status:"refused",action_error:"purpose_too_long",action_field:"purpose"},expected:"refused"},
+            {source:{status:"refused",refusal_field:"background",refusal_reason:"minimum_items",minimum_items:2},expected:"refused"}
+        ]) {
+            const receipt=Outgoing679.encode(Object.assign({},row.source,{message:privateText})), value=JSON.parse(receipt.wire);
+            compare(value.code,row.expected);compare(value.status,row.source.status);
+            for(const key of ["action_error","action_field","refusal_field","refusal_reason","minimum_items"])
+                if(Object.prototype.hasOwnProperty.call(row.source,key))compare(value[key],row.source[key]);
+            verify(!receipt.wire.includes("PRIVATE679"));compare(receipt.bytes,receipt.admitted);
+            if(row.source.action_error==="purpose_too_long"){
+                compare(Object.keys(value).sort().join(","),"action_error,action_field,code,schema,status");
+                verify(receipt.bytes<=receipt.maximum_bytes,"PURPOSE719: original maximum admission covers the new precise pair without a larger role");
+            }
+        }
+    }
+
+    function test_scalar698_original_joint_rows_and_ordinary_scalar_undo() {
+        Session.closeProject();verify(Session.openProject(Probe.referenceUrl("scalar698-joint")));
+        const owner=Session.project, ownerLife=lifetime313(owner), originalAssistant=assistant;
+        const banks=Probe.rows(owner.experiments).map(row=>row.experiment);
+        compare(banks.length,2);compare(banks[0].name,"hrpt");compare(banks[1].name,"second");
+        const experiment=banks[0];compare(owner.currentExperiment,experiment);compare(owner.analysis.fittingMode,"joint");
+        const bankLives=banks.map(lifetime313), slots=[], watched=new Set(), issues=[];
+        const plans=[{operation:"absorption_type",property:"absorptionType",value:"cylinder-lobanov",target:"absorption.type"},
+            {operation:"cutoff_fwhm",property:"cutoffFwhm",value:0,target:"peak.cutoff_fwhm"},
+            {operation:"dataset_weight",property:"datasetWeight",value:.625,target:"jointFit.weight.0"}];
+        compare(experiment.absorptionType,"cylinder-hewat");compare(experiment.cutoffFwhm,30);compare(experiment.datasetWeight,1);
+        compare(JSON.stringify(Probe.rows(experiment.absorptionTypeOptions).map(row=>row.token)),JSON.stringify(["none","cylinder-hewat","cylinder-lobanov"]));
+        let phase=-1,active=null,lastPoint=null,allCues=0,targetCues=0,scientificInput=0,stopClicks=0,stopScheduled=false;
+        let manualUndos=0,nativeUndos=0,nativeChanges=0,noops=0;
+        const test698=this;
+        function current(){return alive313(ownerLife)&&Session.project===owner&&Session.assistant===originalAssistant&&assistant===originalAssistant
+            &&bankLives.every(alive313)&&owner.currentExperiment===experiment;}
+        function note(ok,text){if(!ok)issues.push(text);}
+        function bind(object,signal,callback){
+            const life=lifetime313(object);
+            const passive=function(){try{if(alive313(life))callback.apply(null,arguments);}catch(error){issues.push("scalar observer exception: "+String(error));}};
+            object[signal].connect(passive);slots.push({object:object,life:life,signal:signal,callback:passive});
+        }
+        function image(){
+            verify(current(),"SCALAR698: exact original selected native member and both joint banks remain current/live");
+            return JSON.stringify({owner:import265_owner(owner),relations:RelationUndoObserver.state(owner),mode:owner.analysis.fittingMode,
+                values:visible185_values(owner),banks:banks.map(bank=>({name:bank.name,profile:bank.peakType,absorption:bank.absorptionType,
+                    cutoff:bank.cutoffFwhm,weight:bank.datasetWeight,options:Probe.rows(bank.absorptionTypeOptions).map(row=>row.token),
+                    observations:Probe.rows(bank.pattern).map(row=>[row.x,row.intensityMeas,row.intensityMeasSu]),
+                    exclusions:Probe.rows(bank.excludedRegions),links:Probe.rows(bank.linkedStructures).map(row=>[row.structureId,row.enabled])}))});
+        }
+        function scan(){
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
+                if(watched.has(control)||!plans.some(plan=>plan.target===control.objectName))continue;
+                watched.add(control);
+                for(const signal of ["textEdited","activated","clicked"])
+                    if(typeof control[signal]==="function")bind(control,signal,()=>{if(assistant.showingActions)++scientificInput;});
+            }
+        }
+        function hit(control,point){if(!control||!Ui.exposed(control))return false;const r=rect(control);return point.x>=r[0]&&point.x<=r[0]+r[2]&&point.y>=r[1]&&point.y<=r[1]+r[3];}
+        const onMoved=function(point){
+            if(!current()){note(false,"scalar cue owner retired");return;}lastPoint={x:point.x,y:point.y};scan();
+            if(phase!==13||!active||stopScheduled)return;
+            const field=Ui.control(Probe,window,active.target);
+            if(!hit(field,lastPoint))return;
+            const fieldLife=lifetime313(field),stop=Ui.control(Probe,window,"assistant.stopVisibleAction");
+            if(!stop){note(false,"Stop receiver absent during original prewrite movement");return;}
+            const stopLife=lifetime313(stop),before=active.before;
+            note(assistant.showActions&&assistant.showingActions&&assistant.actionWindow===window&&image()===before,
+                "SCALAR719: original matching moved target is still in the genuine prewrite interval");
+            stopScheduled=true;Qt.callLater(function(){
+                if(!current()||!alive313(fieldLife)||!alive313(stopLife)){note(false,"Stop original receiver or owner retired");return;}
+                const at=Ui.clickPoint(stop),live=phase===13&&Ui.control(Probe,window,active.target)===field
+                    &&Ui.control(Probe,window,"assistant.stopVisibleAction")===stop&&stop.enabled&&at!==null
+                    &&assistant.canCancel&&assistant.showingActions&&assistant.actionWindow===window;
+                note(live&&image()===before,"SCALAR719: actual same live physical Stop is reached BEFORE any scientific commit");
+                if(!live||image()!==before)return;
+                const clicked=function(){++stopClicks;};stop.clicked.connect(clicked);
+                try{mouseClick(stop,at.x,at.y);}finally{disconnect313(stopLife,stop,"clicked",clicked);}
+            });
+        };
+        const onPress=function(){
+            if(!current()){note(false,"scalar press owner retired");return;}++allCues;scan();
+            note(lastPoint!==null,"zero-argument scalar press has a real moved-point receipt");if(!lastPoint||!active)return;
+            const field=Ui.control(Probe,window,active.target);if(!hit(field,lastPoint))return;
+            note(assistant.showActions&&assistant.showingActions&&assistant.actionWindow===window,"scalar cue owns original live Main window");
+            note(experiment[active.property]!==active.value,"actual scalar target cue precedes ordinary write");
+            if(active.operation==="dataset_weight"){
+                const table=Ui.control(Probe,window,"jointFit.list");
+                note(table!==null&&table.sourceModel===owner.experiments&&field.editModel===owner.experiments&&field.editIndex===0
+                    &&field.editMember!==null&&field.editMember.experiment===experiment,"actual Analysis Joint fit row owns this exact selected experiment");
+            }
+            if(phase===13)note(image()===active.before,"SCALAR698: any reached Stop-phase cue is still before scientific write");
+            else ++targetCues;
+        };
+        function one(call,ids){
+            const rows=Probe.rows(assistant.messages).filter(row=>!ids.has(row.id)&&row.kind==="activity"&&row.payload&&row.payload.id===call);
+            verify(rows.length<=1,"SCALAR698: one original row owns each unique native call");
+            if(!rows.length||!["completed","failed"].includes(rows[0].status))return null;
+            const payload=rows[0].payload;verify(typeof payload.success==="boolean");
+            const contents=JSON.parse(JSON.stringify(payload.contentItems));compare(contents.length,1);compare(contents[0].type,"inputText");
+            return {success:payload.success,wire:JSON.parse(contents[0].text),local:payload.nativeOutcome};
+        }
+        function send(index,count){
+            phase=index;scan();verify(current());if(assistant.contextConsentRequired)gui392_signIn(false);
+            const ids=new Set(Probe.rows(assistant.messages).map(row=>row.id));assistant.send("Original joint scalar "+index);
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&one("scalar698-"+index+"-"+(count-1),ids)!==null,
+                visible237_observationMs(Array.from({length:count},()=>({path:"",text:""}))),"SCALAR698: actual matching terminal replies AND original idle settle");
+            const out=[];for(let i=0;i<count;++i){const entry=one("scalar698-"+index+"-"+i,ids);verify(entry!==null);out.push(entry);}verify(current());return out;
+        }
+        const baseline=image();verify(!owner.canUndo,"SCALAR698: unchanged opened joint fixture has no fabricated history");
+        for(const bank of banks)verify(Probe.rows(bank.pattern).length>0,"SCALAR698: both original datasets have genuine measured observations");
+        visible185_page("project");toggle();gui392_signIn(false);visible185_ready("scalar698");
+        bind(assistant,"actionPointerMoved",onMoved);bind(assistant,"actionPointerPressed",onPress);
+        try{
+            for(let mode=0;mode<2;++mode){
+                if(assistant.showActions!==(mode===1))Ui.click(this,Probe,window,"assistant.showActions");compare(assistant.showActions,mode===1);
+                for(let p=0;p<plans.length;++p){
+                    const plan=plans[p];active=null;
+                    experiment[plan.property]=plan.value;compare(experiment[plan.property],plan.value);
+                    verify(owner.canUndo,"SCALAR698: FIRST ordinary MANUAL scalar method owns shared history");
+                    owner.undo();++manualUndos;compare(image(),baseline,"SCALAR698: one ordinary manual Undo restores every original scientific witness");verify(!owner.canUndo);
+                    active=plan;const beforeCues=allCues,beforeTarget=targetCues;
+                    const changed=send(mode*6+p*2,1)[0];
+                    verify(changed.local!==null&&changed.local!==undefined,"SCALAR698: admitted scientific change retains its actual native receipt");
+                    verify(changed.success&&changed.wire.status==="completed"&&changed.wire.applied===true&&changed.wire.published===true&&changed.wire.complete===true&&changed.wire.steps_completed===1);
+                    compare(experiment[plan.property],plan.value);++nativeChanges;
+                    const afterChangedCues=allCues,afterChangedPage=window.assistantWorkflowPage;
+                    const equal=send(mode*6+p*2+1,1)[0];
+                    compare(allCues,afterChangedCues,"SCALAR698: equality has zero navigation/target cues");compare(window.assistantWorkflowPage,afterChangedPage);
+                    verify(equal.local!==null&&equal.local!==undefined,"SCALAR698: admitted true no-op retains canonical completion");
+                    verify(equal.success&&equal.wire.status==="no_change"&&equal.wire.applied===false&&equal.wire.published===true&&equal.wire.complete===true&&equal.wire.steps_completed===1);++noops;
+                    for(const result of [changed.wire,equal.wire]){compare(result.datasets.length,1);compare(result.datasets[0].id,"hrpt");compare(result.datasets[0][plan.operation],plan.value);}
+                    compare(targetCues-beforeTarget,mode,"SCALAR698: one ON prewrite target cue, no cue for equal or OFF");
+                    if(mode===0)compare(allCues,beforeCues);
+                    // The no-op cannot add a phantom record: ONE real Undo must reverse the preceding change.
+                    owner.undo();++nativeUndos;compare(image(),baseline);verify(!owner.canUndo);active=null;
+                }
+            }
+            const beforeInvalid=image(),invalidCues=allCues;const invalid=send(12,5);
+            for(const result of invalid)verify(!result.success&&result.wire.status==="refused","SCALAR698: wrong-mode/malformed/extra-field/noncurrent-equal/stale member remain genuine closed refusals");
+            compare(image(),beforeInvalid);compare(allCues,invalidCues);verify(!owner.canUndo);
+            active=Object.assign({},plans[2],{before:image()});const stopped=send(13,1)[0];
+            verify(stopScheduled);compare(stopClicks,1);verify(stopped.local!==null&&stopped.local!==undefined);
+            verify(!stopped.success&&stopped.wire.status==="refused"&&stopped.wire.complete===false&&stopped.wire.steps_completed===0);
+            compare(image(),active.before);verify(!owner.canUndo,"SCALAR698: Stop before ordinary scalar commit leaves no phantom Undo");
+            compare(scientificInput,0,"SCALAR698: visual-only cue does not dispatch scientific keyboard/menu/click handlers");
+            compare(JSON.stringify(issues),"[]");verify(current());
+            console.info("SCALAR698_MAIN_RESULT",JSON.stringify({manualUndos:manualUndos,nativeUndos:nativeUndos,nativeChanges:nativeChanges,noops:noops,targetCues:targetCues,stopClicks:stopClicks,scientificInput:scientificInput,ownerSame:true,joint:owner.analysis.fittingMode==="joint"}));
+        }finally{for(const row of slots)disconnect313(row.life,row.object,row.signal,row.callback);}
+        assistant.signOut();tryCompare(assistant,"connected",false,2000);
+    }
+    function test_relation685_current_rows_scalar_methods_and_one_undo() {
+        const test685=this, spec=JSON.parse(Probe.readReferenceFile("relation685.json"));
+        verify(Session.openProject(Probe.referenceUrl("project")));
+        const project=Session.project, life=lifetime313(project), controller=assistant;
+        const aliases=project.analysis.aliases, constraints=project.analysis.constraints;
+        tryVerify(()=>!project.calculating && Probe.computedCurrent(project.currentExperiment),10000);
+        compare(JSON.stringify(Probe.rows(aliases).map(r=>[r.id,r.parameter])),JSON.stringify([
+            ["a","phase.atom_site.A.adp_iso"],["b","phase.atom_site.B.adp_iso"],
+            ["c","bank.instrument.calib_twotheta_offset"],["spare685","phase.cell.length_a"]]));
+        compare(JSON.stringify(Probe.rows(constraints).map(r=>[r.id,r.expression,r.enabled])),
+            JSON.stringify([["keep685","c = b/10",true],["spare685","b = 2*a + 1",true]]));
+        verify(aliases.parameterNames.includes("phase.atom_site.A.adp_iso"),"REL685: real original offered alias target, no guessed name conversion");
+        const nativeTarget=visible185_parameters(project).filter(p=>p.path==="structure.atom_sites[A].adp_iso");
+        compare(nativeTarget.length,1);compare(nativeTarget[0].value,.3);
+        const baseline=RelationUndoObserver.state(project), values=visible185_values(project),
+            inputs=visible185_inputs(project), shape=relation246_shape(project), metadata=import265_owner(project);
+        toggle();gui392_signIn(false);visible185_ready("relation685");
+        if(assistant.showActions!==(spec.mode==="on"))Ui.click(this,Probe,window,"assistant.showActions");
+        compare(assistant.showActions,spec.mode==="on");closeAssistant388();
+        const originalAccount=assistant.connectionLabel,originalModels=JSON.stringify(Probe.rows(assistant.models));
+        const slots=[],issues=[],results=[],removals=[];let active=null,point=null,pressed=0,targetCues=0,
+            changedTargetCues=0,equalAllCues=0,scientificInputSignals=0,manualUndo=0,assistantUndo=0,
+            nativeRemovalSignals=0,stopClicks=0,stopScheduled=false,stopBefore=null,phaseCount=0;
+        function current(){return alive313(life)&&Session.project===project&&Session.assistant===controller&&assistant===controller;}
+        function note(ok,text){if(!ok)issues.push(text);}
+        function bind(object,signal,callback){
+            const receipt=lifetime313(object);const passive=function(){try{if(alive313(receipt))callback.apply(null,arguments);}catch(error){issues.push(String(error));}};
+            object[signal].connect(passive);slots.push({object:object,signal:signal,callback:passive,life:receipt});
+        }
+        function state(){return RelationUndoObserver.state(project);}
+        function settled(){tryVerify(()=>current()&&!project.calculating&&Probe.computedCurrent(project.currentExperiment),10000);}
+        function preserved(){
+            verify(current()&&assistant.connected&&!assistant.canCancel);compare(assistant.connectionLabel,originalAccount);compare(JSON.stringify(Probe.rows(assistant.models)),originalModels);compare(visible185_inputs(project),inputs);compare(relation246_shape(project),shape);compare(import265_owner(project),metadata);
+            compare(nativeTarget[0].value,.3,"REL685: literal original affine source remains unchanged");
+            const before=JSON.parse(values),after=JSON.parse(visible185_values(project));compare(after.length,before.length);
+            for(let i=0;i<before.length;++i){
+                compare(after[i][0],before[i][0]);
+                if(!["structure.atom_sites[B].adp_iso","experiment.instrument.calib_twotheta_offset"].includes(before[i][0]))
+                    compare(JSON.stringify(after[i]),JSON.stringify(before[i]),"REL685: all unrequested values/free/SUs exact");
+            }
+        }
+        function ordinary(entry){
+            const alias=entry.operation.startsWith("alias_"),model=alias?aliases:constraints;
+            compare(Probe.rows(model)[entry.row].id,entry.id);
+            if(entry.operation.endsWith("_remove")){const n=model.count;model.remove(entry.row);compare(model.count,n-1);}
+            else if(entry.operation==="constraint_enabled")verify(model.setEnabled(entry.row,entry.value));
+            else verify(model.setText(entry.row,entry.operation.endsWith("_rename")?"id":alias?"parameter":"expression",
+                entry.operation==="alias_target"?"phase.atom_site.A.adp_iso":entry.value));
+        }
+        function undo(expected){
+            verify(item("appBar.button.undo").enabled);Ui.click(test685,Probe,window,"appBar.button.undo");settled();compare(state(),expected);
+        }
+        function receive(row){
+            visible185_ready("relation685-"+row.call.call_id);row.entry=state();
+            const ids=new Set(Probe.rows(assistant.messages).map(r=>r.id));active=row;point=null;const pressBefore=pressed;targetCues=0;
+            // These TWO independently declared malformed argument rows refuse before
+            // native_prepare/NativeRecord. All admitted rows still require its receipt.
+            const preAdmission=row.call.call_id.endsWith("wrong-type")||row.call.call_id.endsWith("extra-field");
+            function completion(){
+                const matches=Probe.rows(assistant.messages).filter(r=>!ids.has(r.id)&&r.kind==="activity"&&r.payload&&r.payload.id===row.call.call_id);
+                verify(matches.length<=1,"REL687: ONE canonical retained activity owns this exact original call");
+                if(matches.length!==1)return null;
+                const match=matches[0],payload=match.payload;
+                return (match.status==="completed"||match.status==="failed")&&typeof payload.success==="boolean"
+                    &&payload.contentItems!==undefined&&payload.contentItems!==null
+                    &&(preAdmission||payload.nativeOutcome)?match:null;
+            }
+            assistant.send("Perform only the explicit current relation685 request "+row.call.call_id);
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&completion()!==null,
+                visible237_observationMs([{path:"",text:""}]),"REL689: official idle AND same-call terminal canonical response, with native receipt for admitted rows");
+            const completed=completion();verify(completed!==null);const payload=completed.payload;
+            if(preAdmission){compare(payload.success,false);compare(pressed,pressBefore,"REL687: malformed arguments refuse before native admission/cue");}
+            const content=JSON.parse(JSON.stringify(payload.contentItems));compare(content.length,1);compare(content[0].type,"inputText");
+            const wire=JSON.parse(content[0].text);compare(wire.schema,"edi.assistant.outgoing/1");
+            // Read only the already matched plain local receipt BEFORE the first
+            // original strict assertion. Never stringify arguments/model/error text.
+            if((row.kind==="changed"||row.kind==="equal")&&(!payload.success||typeof wire.applied!=="boolean"||typeof wire.published!=="boolean")){
+                const local=payload.nativeOutcome,exists=local!==null&&local!==undefined&&typeof local==="object";
+                const statuses=["edited","completed","refused","unavailable","error","no_change","cancelled","interrupted","superseded","applied_unconfirmed","unconfirmed"];
+                const codes=["refused","unavailable","resource_exhausted","uncertain","input_changed","policy_mismatch","cancelled",
+                    "request_stale","context_unready","owner_unavailable","pending_operation","item_mismatch","duplicate_call",
+                    "invalid_arguments","calculation_busy","visible_unmapped","project_required","unclassified"];
+                const errors=["project_required","input_required","input_unavailable","unsupported_input","target_unavailable","data_already_present",
+                    "type_locked","unsupported_type","reader_refused","operation_superseded","control_unavailable","invalid_range","purpose_too_long"];
+                const fields=["project","file_id","experiment","axis","token","offset","max_bytes","structure","atom","field","value","region","relation","purpose"];
+                const bool=function(key){return exists&&typeof local[key]==="boolean"?local[key]:null;};
+                const steps=exists&&Number.isSafeInteger(local.steps_completed)&&local.steps_completed>=0?local.steps_completed:null;
+                console.info("RELATION719_LOCAL_FAILURE",JSON.stringify({matchingCall:payload.id===row.call.call_id,localPresent:exists,success:payload.success,
+                    status:exists&&statuses.includes(local.status)?local.status:null,code:exists&&codes.includes(local.code)?local.code:null,
+                    action_error:exists&&errors.includes(local.action_error)?local.action_error:null,action_field:exists&&fields.includes(local.action_field)?local.action_field:null,
+                    complete:bool("complete"),atomic:bool("atomic"),applied:bool("applied"),published:bool("published"),uncertain:bool("uncertain"),steps_completed:steps}));
+            }
+            if(row.kind==="changed"||row.kind==="equal"){compare(typeof wire.applied,"boolean");compare(typeof wire.published,"boolean");}
+            results.push({id:row.call.call_id,success:payload.success,wire:wire});++phaseCount;
+            if(row.kind==="changed"){
+                compare(payload.success,true);compare(wire.status,"edited");compare(wire.complete,true);compare(wire.steps_completed,1);
+                compare(wire.applied,true);compare(wire.published,true);compare(wire.atomic,spec.mode==="off");
+                compare(targetCues,spec.mode==="on"?1:0);changedTargetCues+=targetCues;
+                const operation=row.call.arguments.operation;
+                compare(wire.relation_id,operation.endsWith("_rename")?row.call.arguments.value:row.call.arguments.id);
+                if(operation.endsWith("_remove")){compare(wire.removed,true);verify(!Probe.rows(operation.startsWith("alias_")?aliases:constraints).some(r=>r.id===wire.relation_id));}
+            }else if(row.kind==="equal"){
+                compare(payload.success,true);compare(wire.status,"unchanged");compare(wire.complete,true);compare(wire.steps_completed,1);
+                compare(wire.atomic,spec.mode==="off");compare(wire.relation_id,row.call.arguments.id);
+                equalAllCues+=pressed-pressBefore;compare(pressed,pressBefore,"REL685: same value never navigates/cues/sets");
+            }else{
+                compare(payload.success,false);verify(["refused","unavailable"].includes(wire.status));
+                verify(wire.complete!==true && !wire.applied && !wire.removed);compare(wire.steps_completed||0,0);
+                if(row.kind==="draft")compare(pressed,pressBefore,"REL685: actual unfinished USER draft refuses before any cue/navigation");
+                if(row.call.call_id.endsWith("wrong-type")||row.call.call_id.endsWith("extra-field"))compare(wire.code,"invalid_arguments");
+            }
+            active=null;return wire;
+        }
+        const watched=new Set();
+        function scan(){
+            for(const field of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
+                if(!/^(alias|constraint)\.(id|parameter|expression|enabled|remove)\./.test(field.objectName)||watched.has(field))continue;
+                watched.add(field);
+                for(const signal of["textEdited","activated","clicked"])if(field[signal]&&field[signal].connect)
+                    bind(field,signal,()=>{if(active&&assistant.showingActions)++scientificInputSignals;});
+            }
+        }
+        try{
+            bind(assistant,"actionPointerShown",scan);bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();});
+            bind(assistant,"actionPointerPressed",()=>{
+                ++pressed;scan();if(!active||point===null)return;
+                const controls=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c=>c.objectName===active.control&&Ui.exposed(c));
+                for(const control of controls){const box=rect(control);
+                    if(point.x<box[0]||point.y<box[1]||point.x>=box[0]+box[2]||point.y>=box[1]+box[3])continue;
+                    note(current()&&control.enabled&&assistant.actionWindow===window&&assistant.showingActions,"REL685: exact live current original control/window owns cue");
+                    if(active.kind==="changed"){
+                        ++targetCues;note(state()===active.before,"REL685: exact target cue precedes the ordinary write");
+                        const model=active.manual.operation.startsWith("alias_")?aliases:constraints;
+                        note(Probe.rows(model)[active.manual.row].id===active.manual.id,"REL685: same current collection/member before write");
+                    }
+                    if(active.kind==="stop"&&!stopScheduled){
+                        stopScheduled=true;stopBefore=state();Qt.callLater(()=>{
+                            if(!active||active.kind!=="stop"||!current()){note(false,"REL685: original prewrite Stop interval absent");return;}
+                            const stop=findChild(window,"assistant.stopVisibleAction"),at=stop?Ui.clickPoint(stop):null;
+                            if(!stop||!stop.enabled||at===null||!assistant.canCancel){note(false,"REL685: real Stop not admitted");return;}
+                            note(state()===stopBefore&&assistant.showingActions,"REL685: real Stop is before actual write");
+                            const click=()=>{++stopClicks;};stop.clicked.connect(click);try{mouseClick(stop,at.x,at.y);}finally{stop.clicked.disconnect(click);}
+                        });
+                    }
+                }
+            });
+            for(const model of[aliases,constraints]){
+                const publication=()=>{scan();if(active&&active.kind!=="changed")note(state()===active.entry,"REL685: no-op/refusal has no transient published declaration/scientific write");};
+                bind(model,"rowsInserted",publication);bind(model,"dataChanged",publication);
+                bind(model,"rowsRemoved",()=>{if(active&&active.kind!=="changed")note(state()===active.entry,"REL685: no-op/refusal cannot publish removal");if(active&&active.kind==="changed"){
+                    ++nativeRemovalSignals;removals.push({id:active.call.arguments.id,alias:active.call.arguments.operation.startsWith("alias_"),aliases:Probe.rows(aliases).map(r=>r.id),constraints:Probe.rows(constraints).map(r=>r.id),sameOwner:current()});
+                }});
+            }
+            let expected=baseline,pending=null;
+            for(const row of spec.phases){
+                verify(current());settled();
+                if(row.kind==="changed"){
+                    if(pending!==null){undo(baseline);++assistantUndo;pending=null;}
+                    compare(state(),baseline);ordinary(row.manual);settled();expected=state();verify(expected!==baseline);
+                    if(row.manual.operation==="constraint_expression"){
+                        const b=visible185_parameter(project,"B","adp_iso"),zero=visible185_parameters(project).filter(p=>p.path==="experiment.instrument.calib_twotheta_offset");
+                        compare(zero.length,1);fuzzyCompare(b.value,3*.3+1,1e-12);fuzzyCompare(zero[0].value,(3*.3+1)/10,1e-12);
+                    }
+                    undo(baseline);++manualUndo;row.before=baseline;receive(row);settled();compare(state(),expected,"REL685: native scalar exactly matches same original ordinary app method and full science");
+                    preserved();pending=row;
+                }else if(row.kind==="equal"||row.kind==="stale"){
+                    const before=state();receive(row);settled();compare(state(),before);preserved();
+                }else{
+                    if(pending!==null){undo(baseline);++assistantUndo;pending=null;}
+                    compare(state(),baseline);
+                    if(row.kind==="draft"){
+                        if(!popup.shown)toggle();closeAssistant388();visible185_page("analysis");Ui.click(test685,Probe,window,"sideBar.tab.extras");Ui.expandGroup(test685,Probe,window,"group.alias");
+                        const field=Ui.control(Probe,window,"alias.id.3");verify(field!==null);Ui.scrollIntoView(field);rendered();Ui.click(test685,Probe,window,"alias.id.3");visible185_type("user685_draft");
+                        verify(field.activeFocus&&field.assistantManualDraft&&field.manualEdited);const fieldLife=lifetime313(field),selection=[field.selectionStart,field.selectionEnd],page=window.appBarCentralTabs.currentIndex;
+                        receive(row);verify(current()&&alive313(fieldLife)&&field.activeFocus);compare(field.text,"user685_draft");
+                        compare(JSON.stringify([field.selectionStart,field.selectionEnd]),JSON.stringify(selection));compare(window.appBarCentralTabs.currentIndex,page);
+                        keyClick(Qt.Key_Escape);compare(field.text,"spare685");
+                    }else receive(row);
+                    settled();compare(state(),baseline);preserved();
+                }
+            }
+            if(pending!==null){undo(baseline);++assistantUndo;}
+            compare(state(),baseline);compare(visible185_values(project),values);preserved();
+            compare(manualUndo,7);compare(assistantUndo,7);compare(nativeRemovalSignals,2);compare(scientificInputSignals,0);
+            verify(removals.every(row=>row.sameOwner&&!(row.alias?row.aliases:row.constraints).includes(row.id)),"REL685: original removal callbacks witness erased member before truthful completed removed-ID result");
+            if(spec.mode==="on"){compare(stopScheduled,true);compare(stopClicks,1);compare(stopBefore,baseline);}
+            compare(JSON.stringify(issues),"[]");
+            console.info("RELATION685_RESULT",JSON.stringify({phases:phaseCount,assistantUndo:assistantUndo,manualUndo:manualUndo,
+                changedTargetCues:changedTargetCues,equalAllCues:equalAllCues,nativeRemovalSignals:nativeRemovalSignals,
+                scientificInputSignals:scientificInputSignals,issues:issues,removals:removals,stopClicks:stopClicks,restored:state()===baseline,sameOwner:current(),results:results}));
+        }finally{
+            active=null;if(assistant.canCancel){assistant.cancel();tryVerify(()=>!assistant.canCancel&&!assistant.showingActions,10000);}
+            for(const row of slots)disconnect313(row.life,row.object,row.signal,row.callback);
+        }
+    }
+
+    function test_purpose719_original_native_prewrite_and_closed_refusal_both_modes() {
+        Session.closeProject();verify(Session.openProject(Probe.referenceUrl("purpose719-project")));
+        const owner=Session.project,ownerLife=lifetime313(owner),controller=assistant;
+        const original=RelationUndoObserver.state(owner),values=visible185_values(owner),metadata=import265_owner(owner),inputs=visible185_inputs(owner);
+        compare(owner.currentStructure.name,"lbco","PURPOSE721 SETUP: literal original structure identity supplies the same genuine equal rename in both modes");
+        verify(!owner.canUndo);const test719=this;let pointers=0,turn=0;
+        function current(){return alive313(ownerLife)&&Session.project===owner&&Session.assistant===controller&&assistant===controller;}
+        function preserved(){verify(current());compare(RelationUndoObserver.state(owner),original);compare(visible185_values(owner),values);
+            compare(import265_owner(owner),metadata);compare(visible185_inputs(owner),inputs);verify(!owner.canUndo);}
+        function completion(id,ids){
+            const rows=Probe.rows(assistant.messages).filter(row=>!ids.has(row.id)&&row.kind==="activity"&&row.payload&&row.payload.id===id);
+            verify(rows.length<=1,"PURPOSE719: ONE matching original activity per unique admitted native envelope");
+            if(rows.length!==1||!["completed","failed"].includes(rows[0].status))return null;
+            const payload=rows[0].payload;if(typeof payload.success!=="boolean"||payload.contentItems===undefined)return null;
+            const content=JSON.parse(JSON.stringify(payload.contentItems));compare(content.length,1);compare(content[0].type,"inputText");
+            return {success:payload.success,wire:JSON.parse(content[0].text)};
+        }
+        const countPointer=function(){++pointers;};
+        toggle();gui392_signIn(false);visible185_ready("purpose719");
+        assistant.actionPointerShown.connect(countPointer);assistant.actionPointerMoved.connect(countPointer);assistant.actionPointerPressed.connect(countPointer);
+        try{for(const mode of [false,true]){
+            if(assistant.showActions!==mode)Ui.click(test719,Probe,window,"assistant.showActions");compare(assistant.showActions,mode);
+            closeAssistant388();preserved();const ids=new Set(Probe.rows(assistant.messages).map(row=>row.id)),beforeCues=pointers,index=turn++;
+            assistant.send("Run only original bounded purpose719 calls "+index);
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&completion("purpose719-"+index+"-5",ids)!==null,
+                visible237_observationMs(Array.from({length:6},()=>({path:"",text:""}))),"PURPOSE719: all original correlated native calls actually settle, never missing reply as refusal");
+            for(let call=0;call<6;++call){
+                const result=completion("purpose719-"+index+"-"+call,ids);verify(result!==null);
+                if(call<3){compare(result.success,false);compare(JSON.stringify(Object.keys(result.wire).sort()),
+                    JSON.stringify(["action_error","action_field","code","schema","status"]));
+                    compare(result.wire.schema,"edi.assistant.outgoing/1");compare(result.wire.status,"refused");compare(result.wire.code,"refused");
+                    compare(result.wire.action_error,"purpose_too_long");compare(result.wire.action_field,"purpose");
+                }else{compare(result.success,true);if(call===5){compare(result.wire.status,"no_change");compare(result.wire.applied,false);}}
+            }
+            compare(pointers,beforeCues,"PURPOSE719: original overlength pre-admission and explicit equal retry never enter visual/scientific preparation");
+            preserved();verify(assistant.connected);compare(assistant.showActions,mode);
+        }}finally{
+            assistant.actionPointerShown.disconnect(countPointer);assistant.actionPointerMoved.disconnect(countPointer);assistant.actionPointerPressed.disconnect(countPointer);
+        }
+        compare(turn,2);console.info("PURPOSE719_RESULT",JSON.stringify({turns:turn,pointers:pointers,sameOwner:current(),unchanged:RelationUndoObserver.state(owner)===original}));
+    }
+
+    function test_phase709_original_links_manual_native_and_shared_undo() {
+        Session.closeProject();verify(Session.openProject(Probe.referenceUrl("phase709-joint")));
+        const owner=Session.project,ownerLife=lifetime313(owner),originalAssistant=assistant;
+        const banks=Probe.rows(owner.experiments).map(row=>row.experiment),bankLives=banks.map(lifetime313);
+        compare(banks.length,2);compare(banks[0].name,"hrpt");compare(banks[1].name,"second");
+        const experiment=banks[0];compare(owner.currentExperiment,experiment);
+        const initial=Probe.rows(experiment.linkedStructures);compare(initial.length,1);compare(initial[0].structureId,"lbco");
+        const initialScale=initial[0].scale.value,initialFree=initial[0].scale.free;
+        const offered=experiment.linkedStructures.structureNames;
+        verify(offered.includes("phase709_b")&&offered.includes("phase709_c"));
+        compare(offered.filter(id=>!initial.some(row=>row.structureId===id))[0],"phase709_b",
+            "PHASE709: append default is FIRST actual offered unlinked member, independent of its eventual response");
+        const slots=[],watched=new Set(),issues=[];let active=null,point=null,allCues=0,targetCues=0,scientificInput=0,stopClicks=0,stopScheduled=false;
+        let turn=0,manualUndos=0,nativeUndos=0,changes=0,noops=0;
+        function current(){return alive313(ownerLife)&&bankLives.every(alive313)&&Session.project===owner&&Session.assistant===originalAssistant
+            &&assistant===originalAssistant&&owner.currentExperiment===experiment;}
+        function note(ok,text){if(!ok)issues.push(text);}
+        function bind(object,signal,callback){const life=lifetime313(object);const passive=function(){try{if(alive313(life))callback.apply(null,arguments);}catch(error){issues.push("phase observer: "+String(error));}};
+            object[signal].connect(passive);slots.push({object:object,life:life,signal:signal,callback:passive});}
+        function rows(){verify(current());return Probe.rows(experiment.linkedStructures);}
+        function links(){return rows().map(row=>({structure_id:row.structureId,enabled:row.enabled}));}
+        function bankState(bank){return Probe.rows(bank.linkedStructures).map(row=>
+            [row.structureId,row.enabled,row.scale.value,row.scale.free,row.scale.hasUncertainty,row.scale.uncertainty]);}
+        function unchangedParameters(){
+            verify(current());const scales=rows().map(row=>row.scale);
+            verify(scales.every(scale=>scale!==null&&scale!==undefined)&&new Set(scales).size===scales.length,
+                "PHASE719: only exact current selected-bank scale objects form the declared changing footprint");
+            const parameters=visible185_parameters(owner),paths=parameters.map(parameter=>parameter.path);
+            verify(new Set(parameters).size===parameters.length&&paths.every(path=>typeof path==="string"&&path.length>0)
+                &&new Set(paths).size===paths.length,
+                "PHASE719: original ordered public projection has distinct actual objects and qualified identity paths");
+            // uid is merely the repeated category.name descriptor. Reacquire
+            // current scale objects on EVERY call, including after Undo/rekey.
+            return parameters.filter(parameter=>!scales.includes(parameter)).map(parameter=>
+                [parameter.path,parameter.uid,parameter.value,parameter.free,parameter.hasUncertainty,parameter.uncertainty]);
+        }
+        function stableFacts(){verify(current());return JSON.stringify({metadata:import265_owner(owner),relations:RelationUndoObserver.state(owner,false),
+            unchangedParameters:unchangedParameters(),
+            mode:owner.analysis.fittingMode,otherBank:bankState(banks[1]),banks:banks.map(bank=>({id:bank.name,profile:bank.peakType,
+                weight:bank.datasetWeight,observations:Probe.rows(bank.pattern).map(row=>[row.x,row.intensityMeas,row.intensityMeasSu]),
+                exclusions:Probe.rows(bank.excludedRegions)}))});}
+        function literalEffect(plan,beforeRows,beforeFacts){
+            verify(current());compare(stableFacts(),beforeFacts,"PHASE716: other bank including scale/free/SUs and original input/metadata/relations are unchanged by either ordinary route");
+            const actual=bankState(experiment);
+            if(plan.operation==="phase_append"){
+                compare(JSON.stringify(beforeRows.map(row=>row[0])),JSON.stringify(["lbco"]));
+                compare(JSON.stringify(actual.map(row=>row.slice(0,3))),
+                    JSON.stringify([beforeRows[0].slice(0,3),["phase709_b",true,1]]),
+                    "PHASE716: complete ordered append bank is original lbco plus actual first-unlinked b with literal scale1/enabledtrue");
+                compare(JSON.stringify(actual.slice(0,1)),JSON.stringify(beforeRows),
+                    "PHASE716: append preserves the entire original link scale/free/SU state, not just its key");
+            }else{
+                const expected=beforeRows.map(row=>row.slice());
+                if(plan.operation==="phase_retarget"){
+                    compare(JSON.stringify(beforeRows.map(row=>row[0])),JSON.stringify(["lbco"]));expected[0][0]="phase709_b";
+                }else if(plan.operation==="phase_enabled"){
+                    compare(JSON.stringify(beforeRows.map(row=>row[0])),JSON.stringify(["lbco"]));expected[0][1]=false;
+                }else{
+                    compare(plan.operation,"phase_remove");compare(JSON.stringify(beforeRows.map(row=>row[0])),JSON.stringify(["lbco","phase709_b"]));expected.splice(1,1);
+                }
+                compare(JSON.stringify(actual),JSON.stringify(expected),
+                    "PHASE716: exact retarget key/explicitfalse/remaining remove bank preserves every retained scale/free/SU fact");
+            }
+        }
+        function image(){verify(current());return JSON.stringify({metadata:import265_owner(owner),relations:RelationUndoObserver.state(owner),values:visible185_values(owner),mode:owner.analysis.fittingMode,
+            banks:banks.map(bank=>({id:bank.name,profile:bank.peakType,weight:bank.datasetWeight,
+                observations:Probe.rows(bank.pattern).map(row=>[row.x,row.intensityMeas,row.intensityMeasSu]),exclusions:Probe.rows(bank.excludedRegions),
+                links:Probe.rows(bank.linkedStructures).map(row=>[row.structureId,row.enabled,row.scale.value,row.scale.free])}))});}
+        function settled(){tryVerify(()=>!owner.calculating&&!owner.fit.running,10000);}
+        function undo(){verify(current()&&owner.canUndo);owner.undo();settled();}
+        function scan(){for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
+            if(watched.has(control)||!/^linkedStructure\.(append|structureId\.|enabled\.|remove\.)/.test(control.objectName))continue;
+            watched.add(control);for(const signal of ["textEdited","activated","clicked"])if(typeof control[signal]==="function")bind(control,signal,()=>{if(assistant.showingActions)++scientificInput;});}}
+        function one(id,ids){const hits=Probe.rows(assistant.messages).filter(row=>!ids.has(row.id)&&row.kind==="activity"&&row.payload&&row.payload.id===id);
+            verify(hits.length<=1,"PHASE709: exact native call has at most one actual terminal carrier");if(!hits.length||!["completed","failed"].includes(hits[0].status))return null;
+            const payload=hits[0].payload;verify(typeof payload.success==="boolean");const content=JSON.parse(JSON.stringify(payload.contentItems));compare(content.length,1);compare(content[0].type,"inputText");
+            return {success:payload.success,wire:JSON.parse(content[0].text),local:payload.nativeOutcome};}
+        function send(count){if(assistant.contextConsentRequired)gui392_signIn(false);verify(current());const index=turn++,ids=new Set(Probe.rows(assistant.messages).map(row=>row.id));
+            assistant.send("Original shared phase controls "+index);tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&one("phase709-"+index+"-"+(count-1),ids)!==null,
+                visible237_observationMs(Array.from({length:count},()=>({path:"",text:""}))),"PHASE709: exact matching terminal replies and original idle, never missing reply as success");
+            const result=[];for(let n=0;n<count;++n){const hit=one("phase709-"+index+"-"+n,ids);verify(hit!==null);result.push(hit);}settled();verify(current());return result;}
+        function result(entry,id,changed){verify(entry.local!==null&&entry.local!==undefined,"PHASE709: admitted operation retains actual native completion");
+            verify(entry.success&&entry.wire.complete===true&&entry.wire.published===true&&entry.wire.steps_completed===1&&entry.wire.applied===changed);
+            if(!changed)compare(entry.wire.status,"no_change");compare(entry.wire.phase_id,id);compare(entry.wire.datasets.length,1);compare(entry.wire.datasets[0].id,"hrpt");
+            compare(JSON.stringify(entry.wire.datasets[0].phases),JSON.stringify(links()),"PHASE709: complete ordered actual links match independent current model, not request echo");}
+        const moved=function(p){if(!current()){note(false,"phase cue owner retired");return;}point={x:p.x,y:p.y};scan();};
+        const pressed=function(){if(!current()){note(false,"phase cue owner retired");return;}++allCues;scan();if(!active||!point)return;
+            const field=Ui.control(Probe,window,active.target);if(!field||!Ui.exposed(field))return;const box=rect(field);if(point.x<box[0]||point.y<box[1]||point.x>=box[0]+box[2]||point.y>=box[1]+box[3])return;
+            note(assistant.showActions&&assistant.showingActions&&assistant.actionWindow===window,"PHASE709: original current Main owns exact prewrite visual target cue");
+            note(image()===active.before,"PHASE709: exact target cue is before ordinary scientific change");
+            if(active.stop){if(!stopScheduled){stopScheduled=true;Qt.callLater(function(){if(!current()){note(false,"Stop owner retired");return;}
+                const stop=Ui.control(Probe,window,"assistant.stopVisibleAction");note(stop!==null&&Ui.exposed(stop)&&stop.enabled&&assistant.showingActions,"PHASE709: real Stop during live original action");
+                if(stop&&Ui.exposed(stop)&&stop.enabled&&assistant.showingActions){mouseClick(stop);++stopClicks;}});}}else ++targetCues;};
+        settled();const baseline=image();verify(!owner.canUndo);visible185_page("project");toggle();gui392_signIn(false);visible185_ready("phase709");
+        bind(assistant,"actionPointerMoved",moved);bind(assistant,"actionPointerPressed",pressed);
+        const plans=[{operation:"phase_append",target:"linkedStructure.append",id:"phase709_b"},
+            {operation:"phase_retarget",target:"linkedStructure.structureId.0",id:"phase709_b"},
+            {operation:"phase_enabled",target:"linkedStructure.enabled.0",id:"lbco"},
+            {operation:"phase_remove",target:"linkedStructure.remove.1",id:"phase709_b"}];
+        try{for(let mode=0;mode<2;++mode){if(assistant.showActions!==(mode===1))Ui.click(this,Probe,window,"assistant.showActions");compare(assistant.showActions,mode===1);
+            for(const plan of plans){active=null;compare(image(),baseline);verify(!owner.canUndo);
+                if(plan.operation==="phase_remove"){
+                    const prepareRows=bankState(experiment),prepareFacts=stableFacts();experiment.linkedStructures.append();settled();
+                    literalEffect(plans[0],prepareRows,prepareFacts);compare(rows().length,2);compare(rows()[1].structureId,"phase709_b");
+                }
+                const before=image(),hadUndo=owner.canUndo,model=experiment.linkedStructures,beforeRows=bankState(experiment),beforeFacts=stableFacts();
+                if(plan.operation==="phase_append")model.append();
+                else if(plan.operation==="phase_retarget")verify(model.setStructureId(0,"phase709_b"));
+                else if(plan.operation==="phase_enabled")verify(model.setEnabled(0,false));
+                else model.remove(1);
+                settled();literalEffect(plan,beforeRows,beforeFacts);
+                const manual=image();verify(manual!==before&&owner.canUndo,"PHASE709: original MANUAL control changed actual science through shared history");
+                if(plan.operation==="phase_retarget"){compare(rows()[0].scale.value,initialScale);compare(rows()[0].scale.free,initialFree);}
+                if(plan.operation==="phase_enabled")compare(rows()[0].enabled,false,"PHASE709: explicit false is assigned, never toggled from a guessed state");
+                undo();++manualUndos;compare(image(),before);compare(owner.canUndo,hadUndo);
+                active=Object.assign({},plan,{before:before});const cuesBefore=allCues,targetBefore=targetCues;const changed=send(1)[0];result(changed,plan.id,true);++changes;
+                literalEffect(plan,beforeRows,beforeFacts);
+                if(plan.operation==="phase_remove"){compare(changed.wire.removed,true);compare(changed.wire.phase_id,beforeRows[1][0]);}
+                compare(image(),manual,"PHASE709: OFF/ON native operation equals FIRST ordinary manual scientific effect exactly");
+                compare(targetCues-targetBefore,mode);if(mode===0)compare(allCues,cuesBefore);
+                if(plan.operation==="phase_retarget"||plan.operation==="phase_enabled"){
+                    const beforeEqualCues=allCues,beforeEqualPage=window.assistantWorkflowPage;const equal=send(1)[0];result(equal,plan.id,false);++noops;
+                    compare(image(),manual);compare(allCues,beforeEqualCues);compare(window.assistantWorkflowPage,beforeEqualPage,"PHASE709: actual equal admitted value has no navigation/cue/setter/history");}
+                active=null;undo();++nativeUndos;compare(image(),before);compare(owner.canUndo,hadUndo,"PHASE709: one Undo skips equal request and reverses the single actual change");
+                if(plan.operation==="phase_remove"){undo();compare(image(),baseline);verify(!owner.canUndo);}
+            }}
+            // Original same current project: malformed shapes, stale member, last-row removal.
+            active=null;let before=image(),cuesBefore=allCues;const refused=send(5);
+            for(const entry of refused)verify(!entry.success&&entry.wire.status==="refused","PHASE709: explicit malformed/stale/noncurrent/last-row refusal remains closed false");
+            compare(image(),before);compare(allCues,cuesBefore);verify(!owner.canUndo);
+            const duplicateRows=bankState(experiment),duplicateFacts=stableFacts();experiment.linkedStructures.append();settled();
+            literalEffect(plans[0],duplicateRows,duplicateFacts);before=image();cuesBefore=allCues;const duplicate=send(1)[0];verify(!duplicate.success&&duplicate.wire.status==="refused");compare(image(),before);compare(allCues,cuesBefore);undo();compare(image(),baseline);verify(!owner.canUndo);
+            verify(experiment.linkedStructures.setEnabled(0,false));settled();before=image();cuesBefore=allCues;const disabled=send(2);for(const entry of disabled)verify(!entry.success&&entry.wire.status==="refused");compare(image(),before);compare(allCues,cuesBefore);undo();compare(image(),baseline);verify(!owner.canUndo);
+            active={target:"linkedStructure.structureId.0",before:image(),stop:true};const stopped=send(1)[0];verify(stopScheduled);compare(stopClicks,1);verify(!stopped.success&&stopped.wire.complete===false&&stopped.wire.steps_completed===0);compare(image(),active.before);verify(!owner.canUndo);active=null;
+            // Genuine USER draft through the original phase scale editor; no synthetic accepted signal.
+            visible185_page("experiment");Ui.click(this,Probe,window,"sideBar.tab.basic");Ui.expandGroup(this,Probe,window,"group.linked_structure");
+            const originalScale=rows()[0].scale,scaleLife=lifetime313(originalScale);
+            const draft=Ui.control(Probe,window,"linkedStructure.scale.0");verify(draft!==null);const draftLife=lifetime313(draft);
+            verify(current()&&alive313(scaleLife)&&alive313(draftLife)&&rows()[0].structureId==="lbco"&&draft.item===originalScale);
+            Ui.scrollIntoView(draft);rendered();Ui.click(this,Probe,window,"linkedStructure.scale.0");visible185_type("7.25");
+            verify(current()&&alive313(scaleLife)&&alive313(draftLife),"PHASE716: real original current scale and field remain live before draft admission");
+            compare(draft.text,"7.25");compare(draft.activeFocus,true);
+            verify(draft.manualEditing&&draft.assistantManualDraft&&draft.item===originalScale&&draft.manualDraftParameter===originalScale
+                &&rows()[0].structureId==="lbco"&&rows()[0].scale===originalScale,
+                "PHASE716: literal USER draft belongs to the exact current original row scale, never a clean or recycled field");
+            const draftText=draft.text,draftFocus=draft.activeFocus,page=window.assistantWorkflowPage;before=image();compare(before,baseline);verify(!owner.canUndo);cuesBefore=allCues;
+            const dirty=send(1)[0];verify(!dirty.success&&dirty.wire.status==="refused");
+            verify(current()&&alive313(scaleLife)&&alive313(draftLife),"PHASE716: draft owner/lifetimes remain original before every post-Send field read");
+            verify(Ui.control(Probe,window,"linkedStructure.scale.0")===draft&&rows()[0].scale===originalScale&&draft.item===originalScale
+                &&draft.manualDraftParameter===originalScale&&draft.manualEditing&&draft.assistantManualDraft);
+            compare(image(),before);compare(allCues,cuesBefore);compare(window.assistantWorkflowPage,page);compare(draft.text,draftText);compare(draft.activeFocus,draftFocus);verify(!owner.canUndo);
+            keyClick(Qt.Key_Escape);compare(scientificInput,0,"PHASE709: all assistant science uses visual-only cues and ordinary model methods, never device dispatch");
+            compare(JSON.stringify(issues),"[]");verify(current());
+            console.info("PHASE709_MAIN_RESULT",JSON.stringify({manualUndos:manualUndos,nativeUndos:nativeUndos,changes:changes,noops:noops,stopClicks:stopClicks,scientificInput:scientificInput,turns:turn,ownerSame:true}));
+        }finally{for(const row of slots)disconnect313(row.life,row.object,row.signal,row.callback);}
         assistant.signOut();tryCompare(assistant,"connected",false,2000);
     }
 

@@ -351,10 +351,138 @@ struct PublicTransport304 {
         }
         result["finished_elapsed_ms"]=static_cast<double>(operation.elapsed());facts["human575"]=result;
     }
+    // NATIVE681: original public facade/elapsed clock, distinct real native and question RPCs.
+    void nativeWork681(const Object& input) {
+        const QString mode=input["native_case"].toString();
+        if(!QStringList{"idle","total","overlap","answer","reject","resolved","lifetime"}.contains(mode))
+            throw std::invalid_argument("finite original native-work case required");
+        Object checks,phases,result{{"case",mode}};
+        const auto publish=[&] {result["checks"]=checks;result["phases"]=phases;facts["native681"]=result;};
+        const auto mark=[&](const char* name) {phases[QString::fromUtf8(name)]=static_cast<double>(operation.elapsed());publish();};
+        const auto require=[&](bool ok,const char* name) {checks[QString::fromUtf8(name)]=ok;publish();if(!ok)throw std::runtime_error(name);};
+        const auto failures=[&] {int count=0;for(const auto& value:events)if(value.toObject()["signal"]=="failed")++count;return count;};
+        const auto ready=[&](const QString& label) {
+            QStringList ids,methods;
+            for(const auto& value:events) {const auto row=value.toObject();if(row["label"]!=label || row["signal"]!="serverRequest")continue;
+                ids.push_back(row["original_id"].toString());methods.push_back(row["method"].toString());}
+            return ids==QStringList{"native681-"+label+"-0","native681-"+label+"-1","question681-"+label+"-0"}
+                && methods==QStringList{"item/tool/call","item/tool/call","item/tool/requestUserInput"};
+        };
+        operation.start();while(!ready("A") && operation.elapsed()<1000)drain(1);
+        require(ready("A") && failures()==0,"distinct_original_native_and_question_received");
+        const QJsonValue request("native681-A-0"),other("native681-A-1"),question("question681-A-0");
+        const auto generation=facade->outputGeneration();result["generation_A"]=static_cast<double>(generation);publish();
+        require(!facade->beginNativeWork(request,generation),"inactive_inference_refused");
+        operation.restart();mark("operation_begin");
+        const quint64 total=mode=="idle"?5000:1000,idle=(mode=="total" || mode=="answer" || mode=="reject" || mode=="resolved")?5000:1000;
+        result["total_ms"]=static_cast<double>(total);result["idle_ms"]=static_cast<double>(idle);publish();
+        facade->beginOperation(total,idle);
+        if(mode!="lifetime")drain(650);
+        mark("prewait");require(failures()==0,"preconsumed_budget_still_live");
+        require(!facade->beginNativeWork(QJsonValue("native681-unknown"),generation),"unknown_request_refused");
+        require(facade->beginNativeWork(request,generation),"original_native_work_entered");
+        require(!facade->beginNativeWork(other,generation),"second_native_owner_refused");
+        require(!facade->beginNativeWork(request,generation+1),"stale_generation_refused");
+        require(!facade->setNativeWorkWaiting(other,generation,true),"foreign_wait_flag_refused");
+        require(!facade->setNativeWorkWaiting(request,generation+1,true),"stale_wait_flag_refused");
+        require(!facade->endNativeWork(other,generation),"foreign_exit_refused");
+        if(mode=="total") {
+            drain(200);require(failures()==0,"active_work_live_before_total_expiry");mark("live_checkpoint");
+            drain(450);require(failures()==1,"active_work_does_not_pause_total");mark("terminal_observed");
+            require(!facade->beginNativeWork(request,generation),"failed_generation_cannot_wait");
+        } else if(mode=="idle") {
+            drain(600);require(facade->beginNativeWork(request,generation),"duplicate_native_entry_idempotent");
+            drain(600);require(failures()==0,"active_work_excludes_idle_interval");
+            mark("resume_before");require(facade->endNativeWork(request,generation),"original_native_work_resumed");
+            (void)facade->endNativeWork(request,generation); // No return-value promise for an already-ended slot.
+            mark("resume_return");require(failures()==0,"resume_live_at_return");
+            drain(200);require(failures()==0,"remaining_budget_not_discarded");mark("live_checkpoint");
+            drain(450);require(failures()==1,"remaining_budget_not_reset_or_double_excluded");mark("terminal_observed");
+        } else if(mode=="overlap") {
+            require(facade->setNativeWorkWaiting(request,generation,true),"original_inactive_helper_wait_entered");
+            drain(600);require(facade->beginNativeWork(request,generation),"duplicate_native_entry_idempotent");
+            drain(600);require(failures()==0,"duplicate_entry_preserves_both_clock_wait");
+            require(facade->setNativeWorkWaiting(request,generation,true),"duplicate_wait_flag_idempotent");
+            mark("human_enter");require(facade->beginHumanWait(question,generation),"distinct_human_overlap_entered");
+            drain(200);require(failures()==0,"overlap_live");
+            mark("native_return");require(facade->setNativeWorkWaiting(request,generation,false),"native_window_returned");
+            require(facade->setNativeWorkWaiting(request,generation,false),"duplicate_return_flag_idempotent");
+            drain(200);require(failures()==0,"human_wait_survives_native_return");
+            mark("native_end");require(facade->endNativeWork(request,generation),"native_work_ended_while_human_waits");
+            drain(200);require(failures()==0,"human_wait_survives_native_end");
+            mark("resume_before");require(facade->endHumanWait(question,generation),"original_human_wait_resumed");
+            mark("resume_return");require(failures()==0,"resume_live_at_return");
+            drain(200);require(failures()==0,"remaining_budget_not_discarded");mark("live_checkpoint");
+            drain(450);require(failures()==1,"overlap_union_not_reset_or_double_excluded");mark("terminal_observed");
+        } else if(mode=="answer" || mode=="reject" || mode=="resolved") {
+            require(facade->setNativeWorkWaiting(request,generation,true),"original_inactive_helper_wait_entered");
+            drain(600);require(facade->setNativeWorkWaiting(request,generation,true),"duplicate_wait_flag_idempotent");
+            drain(600);require(failures()==0,"native_wait_excludes_both_intervals");
+            mark("resume_before");
+            if(mode=="answer") {
+                const Object answer{{"contentItems",Array{Object{{"type","inputText"},{"text","{\"schema\":\"edi.assistant.outgoing/1\",\"status\":\"completed\"}"}}}},{"success",true}};
+                require(facade->answer(request,answer),"original_answer_once");
+                require(!facade->answer(request,answer),"duplicate_answer_refused");
+            } else if(mode=="reject") {
+                require(facade->reject(request),"original_reject_once");require(!facade->reject(request),"duplicate_reject_refused");
+            } else {
+                facade->resolved(request);facade->resolved(request);
+                require(!facade->answer(request,Object{}),"resolved_request_not_answered");
+            }
+            require(!facade->beginNativeWork(request,generation),"removed_request_cannot_wait");
+            require(!facade->setNativeWorkWaiting(request,generation,true),"removed_request_cannot_set_wait");
+            mark("resume_return");require(failures()==0,"settlement_live_at_return");
+            drain(200);require(failures()==0,"settlement_live_interval");mark("live_checkpoint");
+            drain(450);require(failures()==1,"settlement_releases_wait_with_remaining_total");mark("terminal_observed");
+        } else {
+            const auto children=facade->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
+            require(children.size()==1 && children.front()->state()==QProcess::Running,"original_process_captured");
+            QPointer<QProcess> retiring=children.front();int destroyed=0;
+            Object process{{"A_pid",static_cast<double>(retiring->processId())}};
+            const auto destruction=QObject::connect(retiring.data(),&QObject::destroyed,QCoreApplication::instance(),[&]{++destroyed;});
+            const auto releaseDestruction=qScopeGuard([&]{QObject::disconnect(destruction);});
+            require(facade->setNativeWorkWaiting(request,generation,true),"original_inactive_helper_wait_entered");
+            require(facade->beginHumanWait(question,generation),"distinct_human_overlap_entered");
+            facade->settleOperation();require(!facade->beginNativeWork(request,generation),"settled_operation_cannot_wait");
+            facade->beginOperation(1000,1000);
+            require(facade->beginNativeWork(request,generation),"new_operation_native_wait_entered");
+            require(facade->setNativeWorkWaiting(request,generation,true) && facade->beginHumanWait(question,generation),"new_operation_both_waits_entered");
+            mark("revoke_before");facade->beginOperation(100,100);mark("revoke_return");require(failures()==0,"revoke_live_at_return");
+            drain(50);require(failures()==0,"revoke_live_interval");mark("revoke_live_checkpoint");
+            drain(300);require(failures()==1,"real_revoke_deadline_not_suspended");mark("revoke_terminal");
+            require(!facade->beginNativeWork(request,generation),"failed_generation_cannot_wait");
+            operation.restart();facade->retire();
+            require(!facade->beginNativeWork(request,generation) && !facade->setNativeWorkWaiting(request,generation,true),"retired_wait_cannot_resume");
+            while(!retiring.isNull() && operation.elapsed()<1000) {drain(1);QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);}
+            require(retiring.isNull() && destroyed==1,"original_process_destroyed");process["A_destroyed"]=destroyed;
+            disconnect();attach("B",false);require(identity(facade.get())==facts["original_receiver"].toString(),"same_facade_reused");
+            require(facade->start(Agent::executable(),root+"/B"),"replacement_start_returned");
+            while(!ready("B") && operation.elapsed()<1000)drain(1);
+            require(ready("B"),"replacement_requests_received");
+            const auto replacement=facade->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
+            require(replacement.size()==1 && replacement.front()->state()==QProcess::Running,"replacement_process_captured");
+            process["B_pid"]=static_cast<double>(replacement.front()->processId());result["process"]=process;
+            const auto next=facade->outputGeneration();result["generation_B"]=static_cast<double>(next);publish();
+            require(next!=generation,"replacement_generation_distinct");
+            const QJsonValue current("native681-B-0"),human("question681-B-0");
+            operation.restart();facade->beginOperation(1000,1000);
+            require(facade->beginNativeWork(current,next) && facade->setNativeWorkWaiting(current,next,true)
+                && facade->beginHumanWait(human,next),"replacement_both_waits_entered");
+            require(!facade->endNativeWork(request,generation) && !facade->setNativeWorkWaiting(request,generation,false)
+                && !facade->endHumanWait(question,generation),"old_owner_cannot_resume_replacement");
+            drain(600);require(failures()==1,"replacement_both_waits_stay_live");
+            quint64 available=0;require(!facade->remainingOutput(edi::assistant::Limits::stream_retained_bytes+1,available),"original_output_bound_not_suspended");
+            operation.restart();mark("eof_before");require(facade->notification("original/native681-eof"),"actual_eof_requested");
+            while(failures()==1 && operation.elapsed()<1000)drain(1);
+            require(failures()==2,"actual_eof_not_suspended");mark("eof_terminal");
+            require(!facade->beginNativeWork(current,next),"eof_generation_cannot_wait");
+        }
+        mark("finished");publish();
+    }
     Object start(const Object& input,const QString& temporary) {
         if(enabled)throw std::invalid_argument("one original public facade case per probe process");
         trigger=input["trigger"].toString();action=input["action"].toString();
-        if(!QStringList{"started","response","event","failed-record","failed-eof","failed-deadline","before-write","human-wait"}.contains(trigger)
+        if(!QStringList{"started","response","event","failed-record","failed-eof","failed-deadline","before-write","human-wait","native-work681"}.contains(trigger)
             || !QStringList{"destroy","recreate","restart"}.contains(action))
             throw std::invalid_argument("finite public transport boundary/action required");
         const auto executable=Agent::executable();
@@ -362,11 +490,12 @@ struct PublicTransport304 {
             || !QFileInfo(executable).isExecutable())throw std::invalid_argument("actual owned absolute executable required");
         root=temporary+"/public-transport304";
         if(!QDir().mkpath(root+"/A") || !QDir().mkpath(root+"/B"))throw std::runtime_error("owned original workspaces unavailable");
-        enabled=true;armed=trigger!="human-wait";attach("A",true);
+        enabled=true;armed=trigger!="human-wait" && trigger!="native-work681";attach("A",true);
         facts={{"trigger",trigger},{"action",action},{"original_receiver",identity(facade.get())},
                {"owned_executable",executable},{"workspace_A",root+"/A"},{"workspace_B",root+"/B"}};
         facts["initial_start_returned"]=facade->start(executable,root+"/A");
         if(trigger=="human-wait")humanWait(input);
+        else if(trigger=="native-work681")nativeWork681(input);
         return {{"armed",true}};
     }
     Object snapshot() const {
