@@ -78,9 +78,12 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
 
 // What the renderer asks for.
 struct PatternView {
-    std::optional<double> x_min, x_max;  // absent: the data's full range
+    std::optional<double> x_min, x_max;  // absent: the data's full range (the included range when included_only)
     int columns = 0;                     // plot width in device pixels (pixel_columns); 0: no decimation
     YScale y_scale = YScale::Linear;
+    // Only the included range (ADR-0044): the default x range runs from the first to the last included point,
+    // and no measured point or reflection tick is drawn inside an excluded region.
+    bool included_only = false;
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.

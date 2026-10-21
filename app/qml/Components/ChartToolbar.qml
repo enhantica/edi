@@ -6,8 +6,8 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 
 // A chart's toolbar (easydiffractionbeta's QtCharts1dTab.qml; edi ADR-0017 §15): a row of square buttons above
-// the plot's right edge — the legend, hover coordinates, a spacer, pan, box zoom, reset (Home, as the structure
-// view's), Home last (owner, 2026-10-05). The y scale drop-down is at the chart's left (PatternChart). The legend
+// the plot's right edge — the legend, hover coordinates, the included range only (ADR-0044), a spacer, pan, box
+// zoom, reset (Home, as the structure view's), Home last (owner, 2026-10-05). The y scale drop-down is at the chart's left (PatternChart). The legend
 // and the hover coordinates are on at the start, as there; pan and box zoom exclude each other, and box zoom is on
 // at the start.
 Row {
@@ -16,7 +16,10 @@ Row {
     property bool legendShown: true
     property bool hoverShown: true
     property string pointerMode: "zoom"  // "zoom" or "pan"
+    // Only the included range (edi ADR-0044), with the Excluded regions group's eraser icon.
+    property bool includedOnly: false
     signal resetClicked
+    signal includedOnlyToggled
 
     spacing: AppSizes.toolbarSpacing
 
@@ -33,6 +36,13 @@ Row {
         toolTip: qsTr("Show coordinates tooltip on hover")
         checked: toolbar.hoverShown
         onClicked: toolbar.hoverShown = !toolbar.hoverShown
+    }
+    ChartToolButton {
+        objectName: "chart.toolbar.includedRange"
+        fontIcon: "eraser"
+        toolTip: qsTr("Show only the included range")
+        checked: toolbar.includedOnly
+        onClicked: toolbar.includedOnlyToggled()
     }
     Item {
         width: EaStyle.Sizes.fontPixelSize * 0.5

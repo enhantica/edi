@@ -466,9 +466,34 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
     out.y_residual.title = "Residual";  // the owner, 2026-10-02
     static const std::vector<double> kNone;
     const std::vector<double>& x = source.x ? *source.x : kNone;
-    const auto [data_min, data_max] = full_range(x);
-    out.x.min = view.x_min.value_or(data_min);
-    out.x.max = view.x_max.value_or(data_max);
+    const auto excluded = [&](double value) {
+        return std::any_of(source.excluded.begin(), source.excluded.end(),
+                           [value](const ExcludedBand& band) { return value >= band.x_min && value <= band.x_max; });
+    };
+    std::pair<double, double> range = full_range(x);
+    if (view.included_only) {
+        std::vector<double> included;
+        for (const double value : x) {
+            if (!excluded(value)) {
+                included.push_back(value);
+            }
+        }
+        if (!included.empty()) {
+            range = full_range(included);
+        }
+    }
+    out.x.min = view.x_min.value_or(range.first);
+    out.x.max = view.x_max.value_or(range.second);
+    // An excluded row's value as a gap: the curves always break there, and the measured points do too when only
+    // the included range is shown.
+    const auto masked = [&](std::vector<double> values) {
+        for (std::size_t i = 0; i < values.size() && i < x.size(); ++i) {
+            if (excluded(x[i])) {
+                values[i] = kNaN;
+            }
+        }
+        return values;
+    };
     bool any_main = false, any_residual = false;
 
     const auto column_for = [&](const PatternSource::Column& column) -> const std::vector<double>* {
@@ -483,13 +508,14 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.id = "meas";
         series.label = "Measured (Imeas)";
         series.style = style_key("meas", source.experiment_place);
-        const std::vector<double> display = displayed(*meas, view.y_scale);
+        const std::vector<double> display =
+            view.included_only ? masked(displayed(*meas, view.y_scale)) : displayed(*meas, view.y_scale);
         const std::vector<double>* su = column_for(source.su);
         std::vector<double> bar_low(x.size()), bar_high(x.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
             const double half = su != nullptr ? (*su)[i] : 0.0;
-            bar_low[i] = to_display((*meas)[i] - half, view.y_scale);
-            bar_high[i] = to_display((*meas)[i] + half, view.y_scale);
+            bar_low[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] - half, view.y_scale);
+            bar_high[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] + half, view.y_scale);
         }
         Kept kept = decimate(x, display, display, out.x.min, out.x.max, view.columns);
         if (su != nullptr) {
@@ -545,7 +571,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.id = id;
         series.label = label;
         series.style = style;
-        const std::vector<double> display = displayed(*values, scale);
+        const std::vector<double> display = masked(displayed(*values, scale));
         fill_points(series, decimate(x, display, display, out.x.min, out.x.max, view.columns), x,
                     display);
         for (const PresentedPoint& point : series.points) {
@@ -593,7 +619,8 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];
             // A tick is drawn inside the view's x range or not at all.
-            if (std::isnan(position) || position < out.x.min || position > out.x.max) {
+            if (std::isnan(position) || position < out.x.min || position > out.x.max ||
+                (view.included_only && excluded(position))) {
                 continue;
             }
             if (binned) {

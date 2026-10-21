@@ -2,8 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-21
-- **Implementation:** 🟡 Partially implemented — the excluded-row values and their refusal are shipped; the chart
-  behaviour is in progress
+- **Implementation:** ✅ Implemented
 - **Priority:** High
 
 ## Context

@@ -320,6 +320,7 @@ Item {
         colourScheme: Preferences.colourScheme
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
+        includedOnly: !chart.report && Preferences.chartIncludedOnly
         yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
@@ -432,7 +433,11 @@ Item {
             spacing: AppSizes.toolbarSpacing
 
             ToolbarComboBox {
+                id: yScaleBox
+
                 objectName: "chart.toolbar.yscale"
+                // The two axis boxes have one width, the wider one's (the owner, 2026-10-14).
+                matchWidth: xAxisBox.naturalWidth
                 toolTip: qsTr("Y scale")
                 model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
                 // The closed box names its axis (owner, 2026-10-05).
@@ -448,11 +453,14 @@ Item {
                 }
             }
             ToolbarComboBox {
+                id: xAxisBox
+
                 objectName: "chart.toolbar.xaxis"
+                matchWidth: yScaleBox.naturalWidth
                 enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
                 model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
+                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d-spacing")]
                 currentIndex: controller.dSpacing ? 1 : 0
                 onActivated: index => {
                     if (chart.axisProject)
@@ -469,7 +477,9 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
+            includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
+            onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
         }
     }
 

@@ -55,6 +55,7 @@ QtObject {
         preferences.analysisYScale = "linear";
         preferences.experimentYScale = "linear";
         preferences.experimentXAxis = "native";
+        preferences.chartIncludedOnly = false;
     }
 
     property Settings settings: Settings {
@@ -91,6 +92,14 @@ QtObject {
     property string analysisYScale: "linear"
     property string experimentYScale: "linear"
     property string experimentXAxis: "native"
+    // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
+    property bool chartIncludedOnly: false
+
+    property Settings chartSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Charts"
+        property alias includedOnly: preferences.chartIncludedOnly
+    }
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -121,6 +130,13 @@ QtObject {
         // change must find it.
         developSettings.setValue("engineThreads", engineThreads);
         developSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+    // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
+    // for the settings' own schedule when the window closes.
+    onChartIncludedOnlyChanged: {
+        chartSettings.setValue("includedOnly", chartIncludedOnly);
+        chartSettings.sync();
         ApplicationInfo.storeSettings();
     }
 
