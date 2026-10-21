@@ -66,17 +66,17 @@ DataTable {
             horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.dSpacing)
+            number: table.shown(row.model.dSpacing)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.position)
+            number: table.shown(row.model.position)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.fSquaredCalc)
+            number: table.shown(row.model.fSquaredCalc)
         }
     }
 }

@@ -466,19 +466,20 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignLeft
                     text: row.units
                 }
-                EaComponents.TableViewLabel {
+                NumberLabel {
                     horizontalAlignment: Text.AlignRight
-                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
+                    number: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
+                    narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
                 }
-                EaComponents.TableViewLabel {
+                NumberLabel {
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    text: group.bound(row.minimum)
+                    number: group.bound(row.minimum)
                 }
-                EaComponents.TableViewLabel {
+                NumberLabel {
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    text: group.bound(row.maximum)
+                    number: group.bound(row.maximum)
                 }
                 EaComponents.TableViewCheckBox {
                     horizontalAlignment: Text.AlignHCenter

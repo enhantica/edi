@@ -239,10 +239,10 @@ EaElements.GroupBox {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.TableViewLabel {
+                                NumberLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: value.horizontalAlignment
-                                    text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                                    number: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
                                 }
                             }
                         }

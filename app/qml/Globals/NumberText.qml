@@ -178,6 +178,54 @@ QtObject {
         return format.power !== 0 ? text + "e" + format.power : text;
     }
 
+    // A number's text as written for its cell, in scientific notation with the same significant digits, for a cell too
+    // narrow to show it (the owner, 2026-10-22): `0.0000123` is `1.23e-5`, `0.0010` is `1.0e-3`, `1250000` is
+    // `1.25e6`. A whole number's trailing zeros are not counted as significant. A text that is not a plain decimal
+    // number (already an exponent, a word) is returned as it is.
+    function compact(text) {
+        const parts = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(String(text));
+        if (!parts || (parts[2] === "" && (parts[3] ?? "") === ""))
+            return String(text);
+        const whole = parts[2].replace(/^0+/, "");
+        const fraction = parts[3] ?? "";
+        let digits;
+        let power;
+        if (whole !== "") {
+            digits = whole + fraction;
+            power = whole.length - 1;
+            if (parts[3] === undefined)
+                digits = digits.replace(/0+$/, "") || "0";
+        } else {
+            const first = fraction.search(/[1-9]/);
+            if (first < 0)
+                return String(text);
+            digits = fraction.slice(first);
+            power = -(first + 1);
+        }
+        return parts[1] + digits[0] + (digits.length > 1 ? "." + digits.slice(1) : "") + "e" + power;
+    }
+
+    // A number's text as a cell `room` pixels wide shows it, measured with `metrics` (a FontMetrics in the cell's
+    // font): as it is when it fits, else in scientific notation (compact) when that is narrower, so no number is cut.
+    // `narrow` is the form to fall back to, compact(text) unless given.
+    function fitted(text, room, metrics, narrow) {
+        if (!(room > 0) || metrics.advanceWidth(text) <= room)
+            return text;
+        const short = narrow ?? compact(text);
+        return metrics.advanceWidth(short) < metrics.advanceWidth(text) ? short : text;
+    }
+
+    // An uncertainty in its own shortest scientific form, for an s.u. cell too narrow for the column's form (the
+    // owner, 2026-10-22): the one or two significant digits the project's rule gives (one without a project), never
+    // in its value's exponent, so `0.008e-6` beside 3.700e-6 is `8e-9`, and 0.0012 is `1.2e-3`.
+    function ownUncertainty(value, parameterValue) {
+        if (typeof value !== "number" || !isFinite(value) || value <= 0)
+            return "";
+        const text = ruled(parameterValue, value);
+        const written = text ? text.su : String(Number(value.toPrecision(1)));
+        return /e/.test(written) ? written.replace("e+", "e") : compact(written);
+    }
+
     // `value` in exponent form with `digits` significant digits, without trailing zeros in its mantissa.
     function exponent(value, digits) {
         const text = value.toExponential(Math.max(0, digits - 1));

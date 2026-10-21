@@ -974,6 +974,17 @@ the owner, 2026-10-10) keeps that notation. The rule is a project setting: the P
 uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
 projects (the owner, 2026-10-13).
 
+A number that does not fit its table cell is never cut short (the owner, 2026-10-22). When the text the rule writes is
+wider than the cell, the cell shows the same number in scientific notation with the same significant digits
+(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows it as written. An s.u. that does not fit takes
+its own shortest scientific form, with the one or two significant digits the rule gives, never its value's exponent:
+beside 3.700e-6 the column's `0.008e-6` becomes `8e-9`. A number that fits keeps its
+form, and the check runs again whenever the column's width changes. It applies to every numeric table cell: the
+parameter values on every page, the Analysis table's s.u., min and max, the editable number cells (excluded regions,
+atom sites, scattering lengths, constraints), the measured data and reflections tables, the fit's start values, a
+scan's extracted values and the fit results dialog's agreement factors. It changes only what the screen shows: the
+saved files, the Report and the CLI write the numbers as before.
+
 ## Consequences
 
 - The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks

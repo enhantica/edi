@@ -64,13 +64,13 @@ DataTable {
             text: row.model.id
             ToolTip.text: row.model.id
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startValue)
+            number: table.shown(row.model.startValue)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startUncertainty)
+            number: table.shown(row.model.startUncertainty)
         }
     }
 }

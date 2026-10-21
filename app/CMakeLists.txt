@@ -101,6 +101,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/NumberLabel.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml

@@ -51,10 +51,20 @@ EaComponents.TableViewParameter {
     property int significantDigits: 6
     // With fitDigits, the text is made smaller when its significant digits would not fit the cell, so all of them show
     // (a beta component's small values). Measured at the full size, in the cell's family and weight; only a fitDigits
-    // cell measures, as every value change runs these bindings again in every cell.
+    // cell measures for this, as every value change runs these bindings again in every cell.
     property bool fitDigits: false
     readonly property real room: width - leftPadding - rightPadding
-    readonly property string fullText: fitDigits && item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // The value as its rule writes it, and as the cell shows it: in scientific notation when that text would not fit
+    // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
+    // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
+    readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    readonly property string shownValue: fitDigits ? valueText : NumberText.fitted(valueText, room, shownMetrics)
+    readonly property FontMetrics shownMetrics: FontMetrics {
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: cell.item !== null && cell.item.free && cell.canFit
+    }
+    readonly property string fullText: fitDigits ? valueText : ""
     readonly property FontMetrics fullMetrics: FontMetrics {
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -94,14 +104,14 @@ EaComponents.TableViewParameter {
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
 
     EaElements.ToolTip {
-        text: cell.text
-        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+        text: cell.shownValue !== cell.valueText ? cell.valueText : cell.text
+        visible: (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width) && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, cell.significantDigits),
+        "value": cell.shownValue,
         "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,

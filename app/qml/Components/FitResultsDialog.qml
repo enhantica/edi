@@ -279,7 +279,7 @@ AppDialog {
                 Instantiator {
                     model: datasetRow.values
                     onObjectAdded: (index, object) => object.parent = datasetName.parent
-                    delegate: EaComponents.TableViewLabel {
+                    delegate: NumberLabel {
                         required property string modelData
                         required property int index
 
@@ -288,7 +288,7 @@ AppDialog {
                         height: datasetName.height
                         horizontalAlignment: Text.AlignHCenter
                         color: EaStyle.Colors.themeForeground
-                        text: modelData
+                        number: modelData
                     }
                 }
             }
