@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QSGRendererInterface>
 #include <QStringList>
@@ -76,37 +77,55 @@ QString ApplicationInfo::licenceLinkTarget(const QString& from, const QString& l
     return bundled_resource(from).isEmpty() || bundled_resource(target).isEmpty() ? QString() : target;
 }
 
-// The notices' "Components" list: from its heading to the next, one "- name | licence: X | use" line each.
+// DEPENDENCIES.md's component rows this build carries: every table under the header `Component | Version | Licence |
+// Desktop app | Web app | Python package | CLI | In edi`, a row whose cell for this build's surface is not empty or
+// "—". A surface's own version, in brackets in its cell, replaces the Version column's.
 QStringList ApplicationInfo::componentColumn(int column) {
+#ifdef Q_OS_WASM
+    constexpr int kSurface = 4;
+#else
+    constexpr int kSurface = 3;
+#endif
+    static const QStringList kHeader{"Component", "Version", "Licence", "Desktop app", "Web app", "Python package", "CLI",
+                                     "In edi"};
+    const auto cells_of = [](const QString& line) {
+        QStringList cells = line.trimmed().split(QLatin1Char('|'));
+        cells.removeFirst();
+        cells.removeLast();
+        for (QString& cell : cells) {
+            cell = cell.trimmed();
+        }
+        return cells;
+    };
     QStringList values;
-    bool inList = false;
-    const QStringList lines = read_resource(QStringLiteral(":/THIRD-PARTY-NOTICES")).split(QLatin1Char('\n'));
-    for (qsizetype i = 0; i < lines.size(); ++i) {
-        const QString& line = lines[i];
-        const bool heading = i + 1 < lines.size() && lines[i + 1].startsWith(QLatin1String("---"));
-        if (heading) {
-            if (inList) {
-                break;
+    bool inTable = false;
+    for (const QString& line : read_resource(QStringLiteral(":/DEPENDENCIES.md")).split(QLatin1Char('\n'))) {
+        if (!line.startsWith(QLatin1Char('|'))) {
+            inTable = false;
+            continue;
+        }
+        const QStringList cells = cells_of(line);
+        if (cells.value(0) == QLatin1String("Component")) {
+            inTable = cells == kHeader;
+            continue;
+        }
+        if (!inTable || cells.size() != kHeader.size() || cells[0].startsWith(QLatin1String("---"))) {
+            continue;
+        }
+        const QString& carried = cells[kSurface];
+        if (carried.isEmpty() || carried == QStringLiteral("\u2014")) {
+            continue;
+        }
+        switch (column) {
+            case 0: values.append(cells[0]); break;
+            case 1: values.append(cells[2]); break;
+            case 2: values.append(cells[7]); break;
+            default: {
+                static const QRegularExpression kOwnVersion(QStringLiteral("\\(([0-9][0-9A-Za-z.]*)\\)"));
+                const QRegularExpressionMatch own = kOwnVersion.match(carried);
+                values.append(own.hasMatch() ? own.captured(1) : cells[1]);
             }
-            inList = line.trimmed() == QLatin1String("Components");
-            continue;
         }
-        const QStringList cells = line.split(QLatin1String(" | "));
-        if (!inList || !line.startsWith(QLatin1String("- ")) || cells.size() != 3) {
-            continue;
-        }
-        if (column == 0 || column == 3) {
-            // "- Qt Graphs 6.11.2": the name, then the version when the last word is a dotted number ("Baloo 2" is a
-            // name).
-            const QString named = cells[0].trimmed().mid(2);
-            const qsizetype space = named.lastIndexOf(QLatin1Char(' '));
-            const bool versioned =
-                space > 0 && named.at(space + 1).isDigit() && named.indexOf(QLatin1Char('.'), space) > 0;
-            values.append(column == 0 ? (versioned ? named.left(space) : named) : (versioned ? named.mid(space + 1) : QString()));
-            continue;
-        }
-        const QString cell = cells[column].trimmed();
-        values.append(column == 1 ? QString(cell).remove(QLatin1String("licence: ")) : cell);
     }
     return values;
 }

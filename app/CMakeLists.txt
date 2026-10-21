@@ -258,13 +258,13 @@ file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${
 qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_BINARY_DIR}/examples FILES ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt)
 
-# The licences: the app's (COPYING, GPL-3.0, and its notice app/DISTRIBUTION-LICENSE.md, which About's
-# licence link opens), the source code's (LICENSE) and the third-party notices. They are in the app's
+# The licences: the app's (COPYING, GPL-3.0, and its notice app/DISTRIBUTION-LICENSE.md), the source code's (LICENSE),
+# the third-party notices and DEPENDENCIES.md, whose column for this build About's third-party table lists. They are in the app's
 # resources at their repository paths for the About window (qrc:/COPYING, qrc:/app/DISTRIBUTION-LICENSE.md,
 # ...), beside the built app, and installed with it.
 set(EDI_APP_LICENCE_FILES
     ${PROJECT_SOURCE_DIR}/COPYING ${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES
-    ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md)
+    ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md)
 # Stored uncompressed, so the texts stay readable in the binary itself as well.
 qt_add_resources(edi_app_module "edi_licences" PREFIX "/" BASE ${PROJECT_SOURCE_DIR}
                  OPTIONS --no-compress FILES ${EDI_APP_LICENCE_FILES})

@@ -145,6 +145,15 @@ About window has no tabs. It names the app's licences by their identifiers, `BSD
 opening its bundled text (`LICENSE`, `COPYING`) as plain text, and a *Third-party licences* link opens the table of
 the components the build bundles (ADR-0017 §1). The notice stays bundled beside the app.
 
+**Each surface lists only what it carries (owner, 2026-10-21).** `DEPENDENCIES.md` is the one list of third-party
+components: a row per component and its licence, and a column for each surface (the desktop app, the web app, the
+Python package and the command-line binary) saying whether it links, bundles or compiles the component in. The app
+embeds the file and its About window lists the column of the build's own surface, desktop or web.
+`tools/licences/sync.py` writes the rest from it: each `THIRD-PARTY-NOTICES` section's licence and use lines, and the
+Python package's `licenses/`, one licence text per component of its column, with `pyproject.toml`'s `license-files`;
+`--check` compares without writing. `THIRD-PARTY-NOTICES` keeps every licence text as its component distributes it.
+A version that differs on one surface (the web build compiles Qt's own HarfBuzz) is written in that surface's cell.
+
 The pattern chart is built on Qt Graphs (ADR-0017 §15, ADR-0020, ADR-0021). The structure view is built on Qt
 Quick 3D, which the app now links (ADR-0017 §16, ADR-0022).
 

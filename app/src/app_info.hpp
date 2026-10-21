@@ -77,8 +77,8 @@ class ApplicationInfo : public QObject {
         return {QVariantMap{{QStringLiteral("id"), QStringLiteral("BSD-3-Clause")}, {QStringLiteral("url"), licenseUrl()}},
                 QVariantMap{{QStringLiteral("id"), QStringLiteral("GPL-3.0-only")}, {QStringLiteral("url"), copyingUrl()}}};
     }
-    // The components the notices list, in their order: their names, versions (empty when the notices give none),
-    // licences and uses, index for index.
+    // The components this build carries, from DEPENDENCIES.md's column for its surface (the desktop or the web app), in
+    // that file's order: their names, versions (empty when none is given), licences and uses, index for index.
     QStringList componentNames() const { return componentColumn(0); }
     QStringList componentVersions() const { return componentColumn(3); }
     QStringList componentLicences() const { return componentColumn(1); }
