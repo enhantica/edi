@@ -76,6 +76,7 @@
    "code": "U+00B7",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
     "app/qml/Pages/Project/BlockNames.qml",
