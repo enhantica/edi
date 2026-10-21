@@ -4,6 +4,13 @@
 #include <stdexcept>
 #include <string_view>
 namespace edi_app {
+// Canonical mapped-schema description shared by offered schema/refusal (ADR-0041).
+inline constexpr std::string_view mapped_structure_guidance = "Complete closed target in this exact schema: space_group uses name_h_m and coord_system_code; cell uses length_a/length_b/length_c and angle_alpha/angle_beta/angle_gamma; atom_sites and atom_site_adps use matching id, and isotropic ADPs use adp_type with adp_iso. Do not substitute name_hm/setting, a/b/c, label or b_iso. A mapped_structure refusal does not establish setup completion; inspect current state and correct the schema before a fresh call. No permissive aliases or generated CIF are needed.";
+static_assert([] {
+    for(unsigned char c:mapped_structure_guidance)
+        if(c<0x20 || c>0x7e || c=='"' || c=='\\')return false;
+    return true;
+}());
 // Closed app-owned recipe identifiers, never provider text or exception what().
 enum class RecipeField { Recipe, ProjectName, Description, ExperimentName, SampleForm,
     BeamMode, RadiationProbe, ScatteringType, PeakProfile, Wavelength, ZeroOffset,

@@ -99,7 +99,7 @@ QJsonObject native_mapped_structure_schema() {
             {"id","type_symbol","wyckoff_letter","fract_x","fract_y","fract_z","occupancy"}))},
         {"atom_site_adps",rows(Object{{"oneOf",Array{iso,aniso}}})}},
         {"name","space_group","cell","atom_sites","atom_site_adps"});
-    schema["description"] = "Complete closed target in this exact schema: space_group uses name_h_m and coord_system_code; cell uses length_a/length_b/length_c and angle_alpha/angle_beta/angle_gamma; atom_sites and atom_site_adps use matching id, and isotropic ADPs use adp_type with adp_iso. Do not substitute name_hm/setting, a/b/c, label or b_iso. A mapped_structure refusal does not establish setup completion; inspect current state and correct the schema before a fresh call. No permissive aliases or generated CIF are needed.";
+    schema["description"] = QLatin1StringView(mapped_structure_guidance.data(), static_cast<qsizetype>(mapped_structure_guidance.size()));
     return schema;
 }
 namespace {

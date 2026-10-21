@@ -1484,8 +1484,9 @@ The existing explicit creation recipe and native reader remain authoritative in
 both modes. In particular its line-segment background requires at least two
 actual supplied anchors; no background or scientific default is invented.
 Structural/text/number/array/profile recipe validation before native admission
-uses a small app-owned typed refusal. The original reply carries only closed
-field/reason identifiers and, for array bounds, the existing minimum or maximum.
+uses a small app-owned typed refusal. The original reply carries closed field/reason identifiers and, for array bounds,
+the existing minimum or maximum. Mapped refusals also carry the exact canonical
+schema-description guidance through the closed field described below.
 The same outgoing projection validates those identifiers before construction.
 It still excludes arbitrary messages, exception what(), paths and raw data.
 The original generic refused code is retained; a malformed recipe is not an
@@ -2113,3 +2114,81 @@ transport accounting. This removes one avoidable retention owner; finite byte,
 item, event, wire and history limits remain real. No private text is copied into
 public history or a summary/cache, and no UI/state/authentication/recovery claim
 or automatic replay follows from this source change.
+
+
+### Mapped-structure refusal carries its canonical recovery guidance
+
+FIRST is native_mapped_structure_schema's existing closed schema description,
+the typed RecipeRefusal and the native outgoing Result projector. The provider
+receives projected fields, not arbitrary result.message or exception.what(). The
+former field/reason-only mapped refusal could therefore hide the already written
+canonical correction guidance at the point where the model needed to recover.
+
+The existing schema description is now one immutable app-owned declaration shared
+by the offered mapped schema and a refusal_guidance result field. This is the same
+canonical spelling authority, not a permissive alias layer or another field map.
+One native helper adds the same field/reason/bound/guidance in synchronous argument
+refusal and asynchronous candidate preparation refusal. The closed projector
+accepts only that exact guidance with a refused mapped_structure result and no
+reported applied/published/adopted/complete/uncertain effect. It still excludes
+arbitrary messages, exceptions, input values, paths and provider text.
+
+The local guidance owner is admitted before construction in both refusal routes.
+The prework creation maximum includes that exact full declaration, so original
+outcome/row/escaped-response maxima cover it before worker admission. Projection
+admits the fixed field's extra Qt owners using the existing result-field pattern.
+The original exact encoding, writer/decoder/response roles and inclusive caps
+still refuse exhaustion; no cap, synthetic free headroom or new schema cache is
+introduced. The maximum template is a size superset, never a projected refusal or
+recovery authority itself.
+
+Actual tool instructions and project-assistance retain the task and admitted
+inputs, inspect fresh state and correct a proved-prewrite schema mismatch within
+unchanged no-project/current-empty authority. They do not stop merely because a
+schema mismatch occurred or call it unsupported science. Missing scientific facts
+still need a focused question. No automatic mutation retry, partial/uncertain
+replay, scientific remapping, permissive aliases, currentness/once relaxation or
+new account/session authority is introduced. Strict schemas, oneOf alternatives,
+validators, units, occupancy/ADP semantics and original creation controls remain.
+Source and bounded-role reasoning do not establish weaker-model/native recovery;
+independent refusal/delivery/resource gates and actual provider work remain needed.
+
+The same owning instructions now require evidence or an explicit assumption for
+new numerical starts, preserving actual supplied/current accepted/fitted values
+and known-wavelength anchors. Sample/tutorial recognition is not evidence. A
+delegated whole eligible uniform category is planned as one complete set_free
+array, allowing the existing exact-membership Free menu route; explicit subsets,
+array order, no-ops and separate-call semantics remain. No grouping implementation
+is changed or alleged faulty without a proved source cause; no example or
+scientific parity baseline is edited. Actual model choices and rendered menu
+delivery still require independent observation.
+
+
+### Supported refinement continues without an unavailable alternative trial
+
+FIRST is refinement-strategy's existing ordinary live-fit/eligible-fit-Undo
+policy and its shared-ADP candidate paragraph. Requiring a retained checkpoint
+trial while the offered operations establish no general checkpoint bank was a
+capability contradiction. Alternative comparisons now require actually offered
+trial/restore operations and a proved complete starting state. Their absence is
+reported as a limit on that comparison, not a reason to stop otherwise authorized
+supported staged refinement or ADP assessment on the accepted live state. An
+unrestored rejected state remains a real blocker; no restoration, isolated trial,
+accepted-best result or new operation is fabricated. Live ADP changes retain their
+actual effects and ordinary Undo limits.
+
+Scientific justification, confirmed co-occupancy, user no-sharing constraints,
+uncertainty/covariance and physical validity still decide supported shared-site
+treatment; high uncertainty alone does not impose an equality. Routine delegated
+work needs no new preference/approval, while genuinely new chemistry or scope
+conflicts still require clarification. Preserve the actual established mixed-site
+fractions, replacing the illustrative numerical split with no material-specific
+rule. Tutorial/scientific parity references remain untouched.
+
+The changed project-assistance and refinement-strategy bodies carry their owning
+versions and exact complete SHA-256 in the existing skills/index.json. The prior
+private669 proposal omitted that required index bond; this complete successor
+repairs it explicitly. Index identities/paths/capabilities/references and every
+other skill entry stay exact. Runtime's existing catalogue and manifest validation
+remain fail-closed; no implicit build-time correction or weakened hash check is
+assumed. Original refusal-guidance/resource roles remain the complete669 design.
