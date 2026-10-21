@@ -490,6 +490,7 @@ class Edit {
         const AtomSite* atom = nullptr;
         const ExcludedRegion* exclusion = nullptr;
         const LinkedStructure* linked_structure = nullptr;
+        const ParameterConstraint* constraint = nullptr;
     };
     // Executes this same closed operation once. The result is an identity fact,
     // not a getter or a grant to use a row after its owner has retired.
@@ -1316,6 +1317,53 @@ class Edit {
                 parameter->uncertainty = state->uncertainty;
                 parameter->free = state->free;
             }
+        });
+    }
+
+    // FIRST ordinary relation edits: complete the prospective declaration inside
+    // serialized execution, after Input observers and BEFORE the live assignment.
+    static Edit constraint_append(Project& project, ParameterConstraint complete) {
+        return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(std::move(complete))] {
+            {
+                Project candidate = project;
+                candidate.constraints.push_back(std::make_shared<ParameterConstraint>(*complete));
+                if (complete->enabled.get() && candidate.structures.empty())
+                    throw std::invalid_argument("An active constraint requires a structure");
+                complete_relations(candidate);
+            }
+            auto inserted = std::make_shared<ParameterConstraint>(*complete);
+            project.constraints.push_back(inserted);
+            AppliedResult result; result.constraint = inserted.get(); return result;
+        });
+    }
+    static Edit constraint_expression(Project& project, ParameterConstraint& member, std::string text) {
+        return Edit([&project, &member, text = std::move(text)] {
+            std::size_t at = 0;
+            while (at < project.constraints.size() && project.constraints[at].get() != &member) ++at;
+            if (at == project.constraints.size()) throw std::invalid_argument("The constraint is no longer in this project");
+            {
+                Project candidate = project;
+                candidate.constraints[at]->expression = text;
+                if (candidate.constraints[at]->enabled.get() && candidate.structures.empty())
+                    throw std::invalid_argument("An active constraint requires a structure");
+                complete_relations(candidate);
+            }
+            member.expression = text;
+        });
+    }
+    static Edit constraint_enabled(Project& project, ParameterConstraint& member, bool enabled) {
+        return Edit([&project, &member, enabled] {
+            std::size_t at = 0;
+            while (at < project.constraints.size() && project.constraints[at].get() != &member) ++at;
+            if (at == project.constraints.size()) throw std::invalid_argument("The constraint is no longer in this project");
+            {
+                Project candidate = project;
+                candidate.constraints[at]->enabled = enabled;
+                if (enabled && candidate.structures.empty())
+                    throw std::invalid_argument("An active constraint requires a structure");
+                complete_relations(candidate);
+            }
+            member.enabled = enabled;
         });
     }
 

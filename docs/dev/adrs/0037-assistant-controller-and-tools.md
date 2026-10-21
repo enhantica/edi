@@ -2322,3 +2322,45 @@ archive exists. Original guarded native_release_charge lowers the transport's
 role after settlement, retaining its current parsed/unread/write buffers.
 Construction/admission refusal keeps the full old item and original charge.
 No caps, clocks, retry, epoch reset, authority, receipt, Undo or Save changes.
+
+
+## Ordinary constraint Draft handoff
+
+FIRST is the manual constraint table/Edit/RelationsUndo path in ADR0024 and the
+original WidgetRelationInput/FileLoadCue/compound relation continuation here.
+ON native complete constraints now own explicit participation before a local Draft
+exists, cue the ordinary Add, populate the complete pending declaration without
+manual auto-commit, then arm the SAME immutable exact-revision commit before the
+real row's Confirm cue. Already-equal pending field values earn no redundant
+setters/cues or scientific prefix. One actual recorded append earns one step and
+one Undo. The earlier alias prefix is unchanged; OFF retains its prevalidated
+atomic batch/one Undo. No provisional tag can become a core pointer or a last-row
+identity guess. Actual append pin/applied/publication remain independent facts.
+
+The original current/owner/manual-input/Stop/receipt fences remain. A pending
+manual Draft refuses add_relations in both modes using the existing pending_operation
+code; unrelated explicit core-row edits do not steal it. Manual takeover uses the
+existing pre-action seam, never a second helper observer. Original frame tracking
+also retains retired compound relation frames while real callbacks hold them.
+
+Assistant-owned Draft/commit/conversion backing has a checked source-size query;
+reserve_disclosure/native_charge admits the role before decoding/allocation, and
+actual capacities are checked before immutable preparation. Roles survive through
+the original callback/receipt cleanup and are released only after its ordinary
+asynchronous continuation has unwound earlier owners. The original scientific
+candidate working graph, app row publication and ordinary Undo retain their FIRST
+ownership policies, not a new global graph cap. No cap, tool, persisted schema,
+SDK/package hash, solver, modal or execution framework is introduced.
+
+
+### Constraint Draft cleanup after synchronous publication
+
+FIRST is widget_end's receiver-first original-operation cleanup guard and the
+manual takeover guard above. Native Draft disposal may allocate and synchronously
+publish row removal. It is best-effort inside noexcept cleanup: contain its
+exception, then revalidate the captured receiver/State, project, model, Draft and
+operation before any continuation. A destroyed owner or successor stops the old
+continuation. Manual takeover likewise rechecks its original model/project and
+State after Draft publication. Exact native-origin/token matching preserves a
+manual or successor Draft. Applied/partial receipts are retained before disposal;
+a presentation failure neither retracts them nor invents scientific application.

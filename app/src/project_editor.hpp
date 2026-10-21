@@ -6,7 +6,9 @@
 #include <QString>
 #include <QVariant>
 #include <functional>
+#include <memory>
 #include <string>
+#include <variant>
 
 #include "edi/edit.hpp"
 
@@ -17,6 +19,17 @@ namespace edi_app {
 // door takes no callable, so a change that writes and then throws cannot be passed to it.
 // `structural` says the set of shown parameters or rows may have changed (a profile switch, an added
 // row), so the pages' lists are re-derived; a plain value write only publishes differences.
+struct ConstraintDraftId { quint64 serial = 0; };
+struct ConstraintDraftCommit {
+    ConstraintDraftId draft;
+    quint64 revision = 0;
+    QString id, expression;
+    bool enabled = true;
+};
+struct CoreConstraintRef { const edi::ParameterConstraint* member; };
+struct DraftConstraintRef { ConstraintDraftId draft; };
+using ConstraintRowRef = std::variant<CoreConstraintRef, DraftConstraintRef>;
+
 class ProjectEditor {
    public:
     virtual ~ProjectEditor() = default;
@@ -42,12 +55,17 @@ class ProjectEditor {
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
     struct RelationAction {
-        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled, AliasRemove, ConstraintRemove };
+        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled, ConstraintCommit, AliasRemove, ConstraintRemove };
         Kind kind = Kind::Other;
         const void* row = nullptr;
         QString text;
         bool enabled = false;
+        std::shared_ptr<const ConstraintDraftCommit> commit;
     };
+    struct RelationOutcome { bool applied = false, published = false; QString message; const edi::ParameterConstraint* constraint = nullptr; };
+    virtual RelationOutcome commit_constraint(edi::Project&, edi::ParameterConstraint&&, const RelationAction&) {
+        return {false, false, QStringLiteral("Constraint commit is unavailable for this editor")};
+    }
     virtual QString apply_relation_edit(const edi::Edit& change) = 0;
     virtual QString apply_relation_control(const edi::Edit& change, const RelationAction&) {
         return apply_relation_edit(change);

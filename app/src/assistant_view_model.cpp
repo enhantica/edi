@@ -2031,6 +2031,10 @@ struct AssistantViewModel::State {
         ProjectEditor::RelationAction relation_action;
         bool step_counted = false;
         std::shared_ptr<ProjectViewModel::WidgetRelationInput> relation_input;
+        QPointer<ConstraintListModel> constraint_model;
+        ConstraintDraftId constraint_draft;
+        std::shared_ptr<const ConstraintDraftCommit> constraint_commit;
+        quint64 constraint_preparation_bytes = 0;
         unsigned reveal_steps = 0;
         double value = 0;
         bool free = false;
@@ -2370,7 +2374,7 @@ struct AssistantViewModel::State {
         const QPointer<ProjectViewModel> target(project);
         const QPointer<QQuickWindow> window(action_window);
         const auto original_owner = [&] {
-            return receiver && original && generation == binding && native_serial == serial && usage_epoch == account &&
+            return receiver && receiver->state_.get() == this && original && generation == binding && native_serial == serial && usage_epoch == account &&
                 project == target && action_window == window && original->window() == window;
         };
         const auto original_request = [&] {
@@ -2382,6 +2386,19 @@ struct AssistantViewModel::State {
         // sidebar/focus operation is added before this real user action.
         if (original_widget && original_widget->tool == "save_project") original_widget->save_manual_takeover = true;
         if (original_creation) original_creation->manual_takeover = true;
+        if (original_widget && original_widget->constraint_model && original_widget->constraint_draft.serial) {
+            const auto model = original_widget->constraint_model;
+            try {
+                if (!model->takeOverNativeDraft(original_widget->constraint_draft)) {
+                    const auto pending = model->currentDraft();
+                    if (pending && pending->serial == original_widget->constraint_draft.serial) return false;
+                }
+            }
+            catch (...) { return false; }
+            // Draft publication may destroy its model/project or replace State.
+            if (!receiver || receiver->state_.get() != this || !target || !model ||
+                original_widget->constraint_model != model || !original_request()) return false;
+        }
         if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
         if (!original_request()) return false; // A never cancels/acts through new B.
         if (manual_request_current()) native_supersede_operation(widget_outcome_error);
@@ -2414,17 +2431,27 @@ struct AssistantViewModel::State {
         native_widget.reset(); // Old callbacks cannot alter a newer operation.
         const auto original_cleanup = [&] {
             // Check receiver FIRST: no State member may be read after deletion.
-            return receiver && !native_widget && action_window == cleanup_window && project == cleanup_project &&
+            return receiver && receiver->state_.get() == this && !native_widget && action_window == cleanup_window && project == cleanup_project &&
                 widget_input.get() == helper && native_receipt == receipt && native_records.size() == cleanup_entries &&
                 generation == binding && native_serial == serial && usage_epoch == account &&
                 (!native_call || (native_call->record == run->call.record && native_call->receipt == run->call.receipt && native_call->rpc == run->call.rpc));
         };
         if (run->project) {
-            run->project->finishWidgetInput(run->input);
-            run->project->finishWidgetRelations(run->relation_input);
-            run->project->finishWidgetBackground(run->background_input);
+            const auto target = run->project;
+            const auto draft_model = run->constraint_model;
+            const auto draft = run->constraint_draft;
+            target->finishWidgetInput(run->input);
+            target->finishWidgetRelations(run->relation_input);
+            if (draft_model && draft.serial) {
+                // Local presentation cleanup is fallible and synchronously reentrant.
+                // Its failure cannot escape noexcept or erase an already retained receipt.
+                try { draft_model->discardNativeDraft(draft); } catch (...) {}
+                if (!original_cleanup() || !target || run->project != target || !draft_model ||
+                    run->constraint_model != draft_model || run->constraint_draft.serial != draft.serial) return;
+            }
+            target->finishWidgetBackground(run->background_input);
             if (run->call.record && run->call.record->fit_undo)
-                run->project->finishFitUndo(run->call.record->fit_undo->input);
+                target->finishFitUndo(run->call.record->fit_undo->input);
         }
         if (run->edit_scope) end_own_edit(run->edit_scope);
         if (original_cleanup() && run->fit_token && run->project && native_fit == run->project->fit() && !native_fit->nativeRunning()) {
@@ -3917,6 +3944,10 @@ struct AssistantViewModel::State {
     bool widget_relation_row_current(const std::shared_ptr<NativeWidget>& run) const {
         if (!widget_relation_current(run)) return false;
         if (run->relation_field == 0) return true;
+        if (run->tool == "add_relations" && run->relation_constraint && run->constraint_draft.serial)
+            return run->constraint_model && run->constraint_model == run->project->analysis()->constraints() &&
+                run->constraint_model->draftRow(run->constraint_draft) >= 0 &&
+                (!run->constraint_commit || run->constraint_model->draftCommitCurrent(run->constraint_commit));
         const auto& model = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
         if(at<0)return false;
@@ -3933,7 +3964,7 @@ struct AssistantViewModel::State {
         if(!table){widget_refuse(run,QObject::tr("The original relation table is unavailable"));return;}
         if(!widget_reveal_parameter(run,table))return;
         if(++run->reveal_steps>64){widget_refuse(run,QObject::tr("The original relation row could not be revealed"));return;}
-        const auto at=run->relation_base+run->relation_row;
+        const auto at=run->constraint_draft.serial && run->constraint_model ? run->constraint_model->draftRow(run->constraint_draft) : run->relation_base+run->relation_row;
         if(at<0 || at>=table->property("count").toLongLong()){widget_refuse(run,widget_outcome_error);return;}
         const int index=static_cast<int>(at);const auto receiver=run->receiver;
         bool revealed=false;
@@ -3941,7 +3972,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
         if(!invoked || !revealed || !table || !widget_relation_row_current(run) ||
             widget_relation_named(run,run->relation_constraint?"constraints.list":"aliases.list")!=table ||
-            run->relation_base+run->relation_row!=at){widget_refuse(run,widget_outcome_error);return;}
+            (run->constraint_draft.serial && run->constraint_model ? run->constraint_model->draftRow(run->constraint_draft) : run->relation_base+run->relation_row)!=at){widget_refuse(run,widget_outcome_error);return;}
         auto next=[this,run] {
             if(!widget_owned(run))return;
             try{widget_relation_step(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
@@ -3968,7 +3999,15 @@ struct AssistantViewModel::State {
         using Action = ProjectEditor::RelationAction;
         switch (expected.kind) {
         case Action::Kind::AliasAppend: actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size()); break;
-        case Action::Kind::ConstraintAppend: actual = position + 1 == static_cast<qsizetype>(declaration.constraints.size()) && !declaration.constraints[position]->enabled.get(); break;
+        case Action::Kind::ConstraintAppend: actual = false; break; // Provisional Add is never science.
+        case Action::Kind::ConstraintCommit: {
+            actual = false;
+            for (const auto& member : declaration.constraints)
+                if (member.get() == input->applied_result.constraint && expected.commit)
+                    actual = member->id.value() == expected.commit->id.toStdString() &&
+                        member->expression.value() == expected.commit->expression.toStdString() && member->enabled.get() == expected.commit->enabled;
+            break;
+        }
         case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[position].get() == expected.row && declaration.aliases[position]->id.value() == expected.text.toStdString(); break;
         case Action::Kind::AliasParameter: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[position].get() == expected.row && declaration.aliases[position]->parameter_unique_name.value() == expected.text.toStdString(); break;
         case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[position].get() == expected.row && declaration.constraints[position]->id.value() == expected.text.toStdString(); break;
@@ -3981,6 +4020,22 @@ struct AssistantViewModel::State {
         if (!widget_relation_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
         const auto& model = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
+        if (expected.kind == Action::Kind::ConstraintCommit) {
+            run->constraint_commit.reset(); run->constraint_draft = {}; run->constraint_model.clear();
+            run->relation_action.commit.reset(); run->relation_input.reset();
+            ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr;
+            auto next = [this,run] {
+                if (!widget_owned(run)) return;
+                // The original completed callback/local input have unwound;
+                // no old model Draft or prepared commit owner survives here.
+                run->constraint_preparation_bytes = 0;
+                try { widget_constraint_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+            };
+            const auto callback_role = reserve_disclosure(2 * sizeof(next));
+            run->callback_bytes = std::max<quint64>(run->callback_bytes, 2 * sizeof(next));
+            native_charge(); if (!widget_owned(run)) return;
+            QTimer::singleShot(500, &owner, std::move(next)); return;
+        }
         if (run->relation_field == 0) {
             if (run->relation_constraint) {
                 if (at + 1 != static_cast<qsizetype>(model.constraints.size())) { widget_refuse(run, widget_outcome_error); return; }
@@ -4010,6 +4065,7 @@ struct AssistantViewModel::State {
             run->relation_base = static_cast<qsizetype>(run->project->assistantProject()->constraints.size());
             rows = run->relation_args.value("constraints").toArray();
         }
+        if (run->relation_constraint) { widget_constraint_step(run); return; }
         const auto row = rows[run->relation_row].toObject();
         const auto at = run->relation_base + run->relation_row;
         using Action = ProjectEditor::RelationAction;
@@ -4043,6 +4099,113 @@ struct AssistantViewModel::State {
         }
         run->relation_action = action;
         widget_relation_edit_step(run); // Same original cue/model path as standalone edits.
+    }
+    void widget_constraint_step(const std::shared_ptr<NativeWidget>& run) {
+        if (!widget_relation_current(run) || !widget_input) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
+        const auto rows = run->relation_args.value("constraints").toArray();
+        if (run->relation_row == rows.size()) {
+            native_finish(true, widget_sequence_progress(run, QObject::tr("Relations edited through the existing rows; each edit has its ordinary Undo"), true)); return;
+        }
+        if (run->relation_row < 0 || run->relation_row >= rows.size()) { widget_refuse(run, widget_outcome_error); return; }
+        const auto receiver = run->receiver;
+        const QPointer<ProjectViewModel> target(run->project);
+        const QPointer<ConstraintListModel> model(target->analysis()->constraints());
+        if (!model || (run->constraint_model && run->constraint_model != model)) { widget_refuse(run, widget_outcome_error); return; }
+        const bool append = !run->constraint_draft.serial;
+        if (append && model->currentDraft()) { widget_refuse(run, QObject::tr("Finish or remove the current constraint Draft first")); return; }
+        if (!append && (!model->draftCommitCurrent(run->constraint_commit) || model->draftRow(run->constraint_draft) < 0)) {
+            widget_refuse(run, widget_outcome_error); return;
+        }
+        const auto field = run->relation_field, row = run->relation_row;
+        const auto index = append ? -1 : model->draftRow(run->constraint_draft);
+        const auto name = append ? QStringLiteral("constraints.append") : QStringLiteral("constraint.enabled.%1").arg(index);
+        const QPointer<QQuickItem> control(widget_relation_named(run, name));
+        if (!control) { if (append) widget_refuse(run, widget_outcome_error); else widget_relation_scroll(run); return; }
+        if (!widget_reveal_parameter(run, control)) return;
+        if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+        if (!target || !model || !control || !widget_relation_current(run) || run->relation_row != row || run->relation_field != field) {
+            widget_refuse(run, widget_outcome_error); return;
+        }
+        if (widget_input->manualDraftPresent()) { widget_refuse(run, QObject::tr("Finish the current manual input first")); return; }
+        if (!append && !run->relation_input) {
+            run->relation_action = {}; run->relation_action.kind = ProjectEditor::RelationAction::Kind::ConstraintCommit;
+            run->relation_action.commit = run->constraint_commit;
+            // Original prearm BEFORE the genuine Confirm cue; not a fake append.
+            widget_commit_ready(run);
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+            if (!target || !model || !control) { widget_refuse(run, widget_outcome_error); return; }
+        }
+        AssistantWidgetInput::Request request; request.kind = AssistantWidgetInput::Kind::FileLoadCue; request.target = control;
+        auto current = [this,run,receiver,target,model,control,row,field,append] {
+            return receiver && receiver->state_.get() == this && target && model && control && widget_relation_current(run) &&
+                run->relation_row == row && run->relation_field == field && model == target->analysis()->constraints() &&
+                (append ? !model->currentDraft() : model->draftCommitCurrent(run->constraint_commit));
+        };
+        auto restore = current; auto prepare = current; auto finish = [] {};
+        auto completed = [this,run,receiver,target,model,control,row,field,append](bool delivered,const QString& message) {
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+            try {
+                if (!delivered || !target || !model || !control || !widget_relation_current(run) || run->relation_row != row || run->relation_field != field) {
+                    widget_refuse(run, message); return;
+                }
+                if (append) {
+                    if (model->currentDraft()) { widget_refuse(run, widget_outcome_error); return; }
+                    const auto values = run->relation_args.value("constraints").toArray().at(row).toObject();
+                    const auto idValue = values.value("id"), expressionValue = values.value("expression");
+                    quint64 idEncoded = 0, expressionEncoded = 0;
+                    if (!codex_encoded_size(idValue, Limits::context_bytes, idEncoded) ||
+                        !codex_encoded_size(expressionValue, Limits::context_bytes, expressionEncoded))
+                        throw std::length_error("Constraint Draft source exceeds its original role");
+                    const auto decodedBacking = [](quint64 encoded) {
+                        if (encoded > std::numeric_limits<quint64>::max() / sizeof(QChar) - 1)
+                            throw std::length_error("Constraint Draft decoding size overflow");
+                        // Encoded JSON length bounds the UTF-8 source extent and
+                        // UTF-16 units; pinned Grow/header includes actual slack.
+                        return codex_json_capacity((encoded + 1) * sizeof(QChar));
+                    };
+                    const auto bytes = ConstraintListModel::nativeDraftPreparationBytes(skill_json_text_units(idValue),
+                        skill_json_text_units(expressionValue), decodedBacking(idEncoded), decodedBacking(expressionEncoded));
+                    auto role = reserve_disclosure(bytes);
+                    run->constraint_model = model; run->constraint_preparation_bytes = bytes;
+                    role.dismiss(); disclosure_preparing_bytes -= bytes; native_charge();
+                    if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+                    if (!target || !model || model->currentDraft()) { widget_refuse(run, widget_outcome_error); return; }
+                    const auto id = idValue.toString(), expression = expressionValue.toString();
+                    model->beginNativeDraft(id, expression, values.value("enabled").toBool(), &run->constraint_draft);
+                    if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+                    if (!target || !model || model->draftRow(run->constraint_draft) < 0) { widget_refuse(run, widget_outcome_error); return; }
+                    // Pending values already equal the complete requested declaration:
+                    // no redundant setters/cues, no scientific prefix for preparing them.
+                    if (model->draftPreparationBytes(run->constraint_draft) > run->constraint_preparation_bytes)
+                        throw std::length_error("The actual constraint Draft preparation exceeds its owned role");
+                    run->constraint_commit = model->prepareDraftCommit(run->constraint_draft);
+                    run->relation_field = 1; run->step_counted = false; run->relation_input.reset();
+                    widget_constraint_step(run); return;
+                }
+                const auto input = run->relation_input; const auto scope = run->edit_scope;
+                const auto cleanup = qScopeGuard([this,run,receiver,target,input,scope]() noexcept {
+                    try { if (target) target->finishWidgetRelations(input);
+                        if (receiver && receiver->state_.get() == this && run->edit_scope == scope) { run->edit_scope = 0; end_own_edit(scope); } }
+                    catch (...) {}
+                });
+                if (!input || !model->draftCommitCurrent(run->constraint_commit)) { widget_refuse(run, widget_outcome_error); return; }
+                const auto result = model->commitDraft(run->constraint_commit); // SAME ordinary recorded Edit, exactly once.
+                // The original early applied pin is already latched; later model
+                // presentation failure can only lower publication confirmation.
+                if (!result.published) input->outcome.published = false;
+                if (!receiver || receiver->state_.get() != this || !widget_owned(run) || !target || !model || run->relation_input != input) return;
+                target->finishWidgetRelations(input);
+                if (run->edit_scope == scope) { run->edit_scope = 0; end_own_edit(scope); }
+                widget_relation_done(run, true, {});
+            } catch (...) { if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+        };
+        constexpr auto callbacks = sizeof(current) + sizeof(restore) + sizeof(prepare) + sizeof(finish) + sizeof(completed);
+        const auto callback_role = reserve_disclosure(2 * callbacks);
+        run->callback_bytes = std::max<quint64>(run->callback_bytes, 2 * callbacks);
+        request.current = std::move(current); request.restoreCurrent = std::move(restore); request.prepareCommit = std::move(prepare);
+        request.finishCommit = std::move(finish); request.completed = std::move(completed);
+        native_charge(); if (!widget_owned(run)) return;
+        widget_input->start(std::move(request));
     }
     QString relation_target_name(const QString& path) {
         auto* registry=widget_parameter_registry();
@@ -4114,7 +4277,7 @@ struct AssistantViewModel::State {
         // consumed latch captures actual application before publication callbacks.
         switch(expected.kind) {
         case K::AliasAppend: target->analysis()->aliases()->append();break;
-        case K::ConstraintAppend: target->analysis()->constraints()->append();break;
+        case K::ConstraintAppend: throw std::logic_error("Constraint Add is provisional, not a scientific control");
         case K::AliasId: target->analysis()->aliases()->setText(at,QStringLiteral("id"),expected.text);break;
         case K::AliasParameter: target->analysis()->aliases()->setText(at,QStringLiteral("parameter"),expected.text);break;
         case K::AliasRemove: target->analysis()->aliases()->remove(at);break;
@@ -4513,6 +4676,7 @@ struct AssistantViewModel::State {
             else (void)edi::prepare_background_point(*project->assistantProject(), *background.experiment, background.input,
                 Limits::stream_items, Limits::id_bytes, edi::assistant::SelectedFileLimits::collection_bytes / sizeof(double), Limits::stream_items, true);
         } else if (tool == "add_relations") {
+            if (project->analysis()->constraints()->currentDraft()) throw std::runtime_error("Finish or remove the current constraint Draft first");
             const auto aliases = args.value("aliases").toArray(), constraints = args.value("constraints").toArray();
             // Same admitted batch shape as the native tool. No extra
             // singleton/fixture restriction is imposed by the ordinary form.
@@ -4573,7 +4737,7 @@ struct AssistantViewModel::State {
             run->parameterFilter.clear();
 
         }
-        if(parameter_tool || tool=="edit_background") widget_parameter_track(run);
+        if(parameter_tool || tool=="edit_background" || tool=="add_relations") widget_parameter_track(run);
         const auto receiver = run->receiver;
         native_widget = run;
         cursor_role.reset(); // The factual cursor/frame now belongs to native_bytes.
@@ -5044,6 +5208,7 @@ struct AssistantViewModel::State {
             }
             if (widget->tool == "add_relations" || widget->tool == "edit_relation") {
                 raw(sizeof(ProjectViewModel::WidgetRelationInput)); value(widget->relation_args);
+                raw(widget->constraint_preparation_bytes); // Retain all Draft/commit/conversion owners until their frame releases.
                 value(widget->relation_action.text);
                 if (widget->relation_input) value(widget->relation_input->expected.text);
                 quint64 longest = widget->tool=="edit_relation"?static_cast<quint64>(widget->relation_args.value("value").toString().size()):Limits::id_bytes;
@@ -6319,6 +6484,10 @@ struct AssistantViewModel::State {
         if(name=="save_project") {native_start_save(rpc,id,purpose,original,args,save_stage);return;}
         if(name=="undo_fit") {native_prepare(rpc,id,name,purpose,original);native_start_fit_undo();return;}
         if(name=="edit_relation") {native_prepare(rpc,id,name,purpose,original);native_start_relation_edit(args);return;}
+        if (name == "add_relations" && project->analysis()->constraints()->currentDraft()) {
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "pending_operation"},
+                {"message", "Finish or remove the current constraint Draft first"}}); return;
+        }
         std::vector<std::pair<std::string, bool>> beforeFlags;
         auto edit = project ? assistant_native_edit(*project->assistantProject(), name, args, beforeFlags) : std::optional<edi::Edit>{};
         Object read_result;
@@ -9244,7 +9413,7 @@ struct AssistantViewModel::State {
             child->valueText = step.text;
             child->parameterFilter.clear();
         }
-        if(child->scalar_entry.parameter || child->tool=="background_names" || child->tool=="edit_background")widget_parameter_track(child);
+        if(child->scalar_entry.parameter || child->tool=="background_names" || child->tool=="edit_background" || child->tool=="add_relations")widget_parameter_track(child);
         native_widget = child;
         child_role.reset(); // Transfer the captured child/frame to actual native_bytes owners.
         native_charge();

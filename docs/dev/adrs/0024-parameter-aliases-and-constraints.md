@@ -241,3 +241,40 @@ free action. Anchor that same popup in the current window overlay, using the
 original Qt Popup center anchor, so opening location does not depend on cursor
 position. Keep its QObject owner, filter, choices, normal dismissal and Undo.
 The assistant still opens and cues this same menu before the ordinary setter.
+
+
+## Provisional constraint Draft versus disabled scientific row
+
+FIRST is ConstraintListModel's ordinary declaration table, Edit/LivePreview's
+serialized refusal-before-write door and PVM applyRecordedEdit/RelationsUndo.
+Add now creates one model-local blank Draft with intended participation true;
+Add again focuses it. No arbitrary equality is prefilled, no fake disabled core
+member, dirty flag or Undo is created. An active duplicate remains provisional
+until confirmed; an explicit disabled duplicate remains disabled through ordinary
+prevalidated append. Existing loaded/disabled rows are never inferred to be Drafts.
+
+Typed CoreConstraintRef/DraftConstraintRef resolve a table key before any core
+cast. A nonrecycled serial, revision and decimal token identify the pending row;
+TextCell's editIdentity retires old input ownership when that token changes.
+Changed ID stores pending text. Changed expression or explicit Confirm validates
+the whole declaration. Unchanged duplicate text is not a scientific confirmation.
+Draft shows its unsaved status in the original status/control tooltip. Save writes
+only real declarations; Undo never resurrects provisional text.
+
+Closed Edit::constraint_append/expression/enabled factories own the complete
+inputs, resolve exact live membership after Input tracing, apply the corresponding
+operation to a prospective copy and call the original SDK complete_relations
+BEFORE the narrow live mutation. An active structureless candidate refuses.
+Disabled expressions keep original inactive storage semantics. No app expression
+parser is added. Append returns the trailing AppliedResult.constraint pin before
+callbacks; shared recorded history remains the sole ordinary Undo.
+
+The one local Draft survives unrelated publication/Undo while its model lives.
+A stale prepared owner/revision cannot commit. Original Rows::assign coalescing
+is reused locally so callbacks do not nest row transactions; original RowTableModel
+adds only destruction checkpoints around its existing notification boundaries.
+Manual takeover retires native Draft identity at FIRST retire_manual_input before
+cancellation, so old cleanup cannot discard user text. Stop discards only its exact
+still-uncommitted native Draft. During a real commit the model/PVM consumed and
+editing fences prevent a nested factory/history entry. Cleanup clears only the
+matching original row after factual application, never a successor.

@@ -2447,7 +2447,7 @@ QString ProjectViewModel::apply_relation_control(const edi::Edit& change, const 
     const auto input = widget_relation_input_;
     if (!input) return apply_relation_edit(change);
     if (input->consumed || input->expected.kind != action.kind || input->expected.row != action.row ||
-        input->expected.text != action.text || input->expected.enabled != action.enabled)
+        input->expected.text != action.text || input->expected.enabled != action.enabled || input->expected.commit != action.commit)
         return tr("A different relation control cannot enter the original native event");
     input->consumed = true;
     const QPointer<ProjectViewModel> self(this);
@@ -2576,7 +2576,8 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     const auto file_input = widget_input_executing_ ? widget_file_input_ : nullptr;
     const auto creation_input = widget_input_executing_ ? widget_creation_input_ : nullptr;
     auto* applied_result = creation_input && creation_input->consumed ? &creation_input->applied_result
-        : file_input && file_input->consumed ? &file_input->applied_result : nullptr;
+        : file_input && file_input->consumed ? &file_input->applied_result
+        : relation_input && relation_input->consumed ? &relation_input->applied_result : relation_result_;
     const auto fit_undo_input = fit_undo_invoking_ && fit_undo_input_ && fit_undo_input_->consumed && !fit_undo_input_->started ? fit_undo_input_ : nullptr;
     if (fit_undo_input) fit_undo_input->started = true;
     bool* applied = fit_undo_input ? &fit_undo_input->outcome.applied : creation_input && creation_input->consumed ? &creation_input->outcome.applied
@@ -2963,6 +2964,33 @@ QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experimen
     if (!result.applied) undo_history_.pop_back();
     try { syncUndo(); } catch (...) { if (!result.applied) throw; holdPublicationFailure(tr("The background rename and Undo are retained")); }
     return result.applied ? QString{} : result.message;
+}
+
+ProjectEditor::RelationOutcome ProjectViewModel::commit_constraint(edi::Project& project, edi::ParameterConstraint&& complete, const ProjectEditor::RelationAction& action) {
+    const PublicationScope publication(*this);
+    if (&project != project_.get()) return {false, false, tr("The constraint project changed")};
+    const auto input = widget_relation_input_;
+    if (input) {
+        if (input->consumed || input->expected.kind != RelationAction::Kind::ConstraintCommit || action.kind != input->expected.kind ||
+            !action.commit || action.commit != input->expected.commit)
+            return {false, false, tr("A different constraint control cannot enter the original native event")};
+        input->consumed = true; // Before factory/history entry; no retry after entry.
+        const QPointer<ProjectViewModel> self(this);
+        const bool previous = widget_input_executing_;
+        widget_input_executing_ = true;
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        input->outcome = applyRecordedEdit(edi::Edit::constraint_append(project, std::move(complete)), true);
+        return {input->outcome.applied, input->outcome.published, input->outcome.message, input->applied_result.constraint};
+    }
+    // A manual commit uses the same early pin without installing native input.
+    edi::Edit::AppliedResult pin;
+    auto* const previous = relation_result_;
+    if (previous) return {false, false, tr("A constraint commit is already in progress")};
+    relation_result_ = &pin;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self, previous] { if (self) self->relation_result_ = previous; });
+    const auto result = applyRecordedEdit(edi::Edit::constraint_append(project, std::move(complete)), true);
+    return {result.applied, result.published, result.message, pin.constraint};
 }
 
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {

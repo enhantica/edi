@@ -10,7 +10,7 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// Existing declaration rows stay editable while disabled; activation is explicit (ADR-0024).
+// Confirmed disabled rows retain participation; provisional rows are unsaved Drafts (ADR-0024).
 Column {
     id: group
 
@@ -55,6 +55,11 @@ Column {
             // The roles by the model: `id` cannot be a property name.
             required property var model
 
+            function focusDraft(token: string) {
+                if (row.model.draft && row.model.draftToken === token)
+                    idCell.forceActiveFocus();
+            }
+
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
@@ -63,7 +68,9 @@ Column {
             TextCell {
                 editMember: row
                 editModel: group.constraints
+                id: idCell
                 editIndex: row.index
+                editIdentity: row.model.draftToken
                 objectName: `constraint.id.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
@@ -74,6 +81,7 @@ Column {
                 editMember: row
                 editModel: group.constraints
                 editIndex: row.index
+                editIdentity: row.model.draftToken
                 objectName: `constraint.expression.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
@@ -83,9 +91,14 @@ Column {
             EaComponents.TableViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.enabled.${row.index}`
-                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
-                ToolTip.text: row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
-                onClicked: group.constraints.setEnabled(row.index, !row.model.enabled)
+                fontIcon: row.model.draft ? "check" : row.model.enabled ? "toggle-on" : "toggle-off"
+                ToolTip.text: row.model.draft ? qsTr("Draft — not saved. Confirm this constraint") + (group.constraints.lastError ? ": " + group.constraints.lastError : "") : row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
+                onClicked: {
+                    if (row.model.draft)
+                        group.constraints.commitDraft(row.model.draftToken);
+                    else
+                        group.constraints.setEnabled(row.index, !row.model.enabled);
+                }
             }
             EaComponents.TableViewButton {
                 horizontalAlignment: Text.AlignHCenter
@@ -93,6 +106,25 @@ Column {
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this constraint")
                 onClicked: group.constraints.remove(row.index)
+            }
+        }
+    }
+
+    Connections {
+        target: group.constraints
+        function onFocusDraftRequested(token: string) {
+            const model = group.constraints;
+            if (!model)
+                return;
+            for (let index = 0; index < model.count; ++index) {
+                if (model.text(index, "draftToken") !== token)
+                    continue;
+                if (!table.revealRow(index) || group.constraints !== model)
+                    return;
+                const item = table.itemAtIndex(index);
+                if (item && typeof item.focusDraft === "function" && model.text(index, "draftToken") === token)
+                    item.focusDraft(token);
+                return;
             }
         }
     }

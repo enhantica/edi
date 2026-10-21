@@ -26,6 +26,7 @@ EaComponents.ListViewTextInput {
     property var editMember: null
     property var editModel: null
     property int editIndex: -1
+    property string editIdentity: ""
     property var ownerToken: ({})
     property var draft: null
     property var commitInProgress: null
@@ -42,6 +43,7 @@ EaComponents.ListViewTextInput {
     onEditMemberChanged: ownerToken = ({})
     onEditModelChanged: ownerToken = ({})
     onEditIndexChanged: ownerToken = ({})
+    onEditIdentityChanged: ownerToken = ({})
     onObjectNameChanged: ownerToken = ({})
     onAcceptsChanged: ownerToken = ({})
     Component.onDestruction: editorLife.alive = false

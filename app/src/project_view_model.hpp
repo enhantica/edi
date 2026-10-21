@@ -341,6 +341,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
+    RelationOutcome commit_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;
     QString rename_structure(edi::Structure& structure, const std::string& name) override;
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
@@ -480,6 +481,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<FitUndoInput> prepareFitUndo();
     void finishFitUndo(const std::shared_ptr<FitUndoInput>&) noexcept;
     struct WidgetRelationInput {
+        edi::Edit::AppliedResult applied_result;
         ProjectEditor::RelationAction expected;
         bool consumed = false;
         EditOutcome outcome;
@@ -528,6 +530,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundRename(edi::ExperimentBase&, edi::LineSegment&, const std::string&);
     std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundNames(edi::ExperimentBase&);
     void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
+    edi::Edit::AppliedResult* relation_result_ = nullptr; // Scoped manual complete-row pin only.
     std::shared_ptr<WidgetRelationInput> widget_relation_input_;
     std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const ProjectEditor::RelationAction& action);
     void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
