@@ -188,3 +188,10 @@ The SDK27 linker also requires the patched TAPI1600.0.11.8 build4
 Older builds reject `arm64e.x1` slices in system TBD stubs even with Clang23.
 Select the patched reader in the shared Mac dependency table; preserve real
 linker/SDK diagnostics and never edit SDK stubs or ignore missing system symbols.
+
+Mac LLVM tools are resolved in the lock to23.1.3 to match Crysta's available clang-tools package,
+which constrains that patch. A real attempted23.1.4 solve refused because
+clang-tools23.1.4 is unavailable. Keep the existing org parity check and
+SDK ABI fingerprint checks; this does not change compiler/header/runtime identities.
+No Mac coverage-tools dependency is declared: the existing Linux-only
+coverage-tool declaration policy remains in force.
