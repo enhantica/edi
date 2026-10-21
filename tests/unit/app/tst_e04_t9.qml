@@ -91,6 +91,13 @@ TestCase {
     function maximum(points) {
         return Math.max(...points.filter(p => isFinite(p.y)).map(p => p.y));
     }
+    function approvedPalette() {
+        const catalogue = JSON.parse(Probe.readFile("tests/fixtures/approved_palettes/colours.json")).palettes;
+        const normalize = name => name.toLowerCase().replace(/[^a-z]/g, "").replace(/^edi/, "");
+        const palette = catalogue.find(row => normalize(row.name) === normalize(Preferences.colourScheme));
+        verify(palette !== undefined, "The chart expectation comes from the independently approved palette coordinates");
+        return palette;
+    }
     function corpusPages() {
         const result = [];
         ChartOracle.datasets().forEach(row => ["experiment", "analysis"].forEach(page => result.push({
@@ -166,16 +173,12 @@ TestCase {
         verify(object("chart.measured") !== null, " I26 selected measured layer draws uncertainty bars and markers");
         [false, true].forEach(dark => {
             Style.Colors.theme = dark ? Style.Colors.Themes.DarkTheme : Style.Colors.Themes.LightTheme;
-            const colors = dark ? {
-                calc: "#ef9a9a",
-                bkg: "#b0bec5",
-                resid: "#c5e1a5",
-                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), true)).toLowerCase()
-            } : {
-                calc: "#f44336",
-                bkg: "#607d8b",
-                resid: "#8bc34a",
-                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), false)).toLowerCase()
+            const reference = approvedPalette()[dark ? "dark" : "light"];
+            const colors = {
+                calc: reference.total_calculation.toLowerCase(),
+                bkg: reference.background.toLowerCase(),
+                resid: reference.difference.toLowerCase(),
+                meas: reference.measured[0].toLowerCase()
             };
             ["calc", "bkg", "resid", "meas"].forEach(key => tryVerify(() => String(object("chart.series." + key).color).toLowerCase() === colors[key], 2000, " I23 Qt series colors equal independently committed light and dark palettes"));
         });
@@ -227,6 +230,7 @@ TestCase {
         verify(selected !== null && selected.name === "length_a", " O2 requested-state reference is the selected first cell parameter");
         // Keep the pointer down so slider limits stay fixed throughout each burst.
         const baselineLength = selected.value;
+        const calculatedColour = approvedPalette().light.total_calculation;
         ["S1", "S2"].forEach(scenario => {
             const samples = [], calculationBaselines = [];
             for (let sample = 0; sample < 55; ++sample) {
@@ -264,7 +268,7 @@ TestCase {
                     calculationBaselines.push(ChartOracle.calculationBaselineMs(data.path, requested));
                 }
                 const row = expected.calc.indexOf(expected.maximum);
-                verify(ChartOracle.chartPixel(appWindow, chart, expected.x[row], expected.maximum, "#F44336"), " O3 grabbed final frame shows the independently requested maximum in calculated-series color");
+                verify(ChartOracle.chartPixel(appWindow, chart, expected.x[row], expected.maximum, calculatedColour), " O3 grabbed final frame shows the independently requested maximum in calculated-series color");
             }
             samples.sort((a, b) => a - b);
             calculationBaselines.sort((a, b) => a - b);
@@ -293,8 +297,7 @@ TestCase {
         const yAxis = object("chart.axis.y"), homeBottom = yAxis.min, homeTop = yAxis.max;
         for (let sample = 0; sample < 55; ++sample) {
             mouseClick(object("chart.toolbar.reset"));
-            tryVerify(() => axis.min === homeLeft && axis.max === homeRight && yAxis.min === homeBottom && yAxis.max === homeTop, 5000,
-                      " O2 S3 reset reaches its endpoint before the next wheel target and timing start");
+            tryVerify(() => axis.min === homeLeft && axis.max === homeRight && yAxis.min === homeBottom && yAxis.max === homeTop, 5000, " O2 S3 reset reaches its endpoint before the next wheel target and timing start");
             const left = axis.min, span = axis.max - left;
             verify(ChartOracle.arm(appWindow, chart, 0, true, left + .05 * span, left + .85 * span), " O2 S3 observer expects independently derived pointer axis ranges");
             ChartOracle.start();
