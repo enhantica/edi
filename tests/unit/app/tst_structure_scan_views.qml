@@ -150,6 +150,17 @@ Item {
                 }
             ];
         }
+        function visibleFills() {
+            const fills = [];
+            for (const item of Render.descendants(page)) {
+                if (!item.visible || item.seriesList === undefined)
+                    continue;
+                for (const series of item.seriesList)
+                    if (series.upperSeries !== undefined && series.lowerSeries !== undefined && series.visible && series.opacity > 0)
+                        fills.push(series);
+            }
+            return fills;
+        }
 
         name: "StructureScanViews"
         when: windowShown
