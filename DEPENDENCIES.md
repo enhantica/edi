@@ -36,7 +36,6 @@ Each surface lists only its own column: the application's About window reads thi
 | Qt Quick 3D | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the structure view's 3D scene, and the 3D module Qt Graphs loads; GPL-3.0 (COPYING) |
 | Qt Shader Tools | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the shader tooling Qt Quick 3D uses; GPL-3.0 (COPYING) |
 | EasyScience gui-components |  | BSD-3-Clause | compiled in | compiled in | — | — | the base QML components and styles of the application |
-| easydiffractionbeta |  | BSD-3-Clause | compiled in | compiled in | compiled in | — | the application design and QML the application is ported from, and the Jmol element colours and radii in the element table |
 | pymatgen |  | MIT | compiled in | compiled in | compiled in | — | VESTA element colours and Shannon ionic radii in the element table, compiled into edi |
 | coi-serviceworker | 0.1.7 | MIT | — | bundled | — | — | the service worker that lets the web app use threads on a host without the needed headers |
 
@@ -103,6 +102,7 @@ The desktop app links these as shared libraries; the web build compiles Qt's own
 Portions of this software are copyright © 2026 The FreeType Project (https://freetype.org). All rights reserved.
 
 edi's Python API follows the design of diffraction-lib (BSD-3-Clause, https://github.com/easyscience/diffraction-lib),
-whose element table and example data edi took over; the element table's own sources are listed above.
+whose element table and example data edi took over; of the element table's sources, pymatgen is listed above, and its
+Jmol colours and radii are scientific values that carry no notice.
 
 The facility data credits are listed in [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).
