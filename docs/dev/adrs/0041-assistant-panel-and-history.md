@@ -2192,3 +2192,33 @@ repairs it explicitly. Index identities/paths/capabilities/references and every
 other skill entry stay exact. Runtime's existing catalogue and manifest validation
 remain fail-closed; no implicit build-time correction or weakened hash check is
 assumed. Original refusal-guidance/resource roles remain the complete669 design.
+
+
+### Mapped refusal guidance excludes actual positive operation outcomes
+
+FIRST is the existing Result refusal_guidance contradiction guard above and the
+ordinary save/edit/creation/fit result owners. Exact canonical guidance is not
+enough when the same result also claims this operation committed, saved, reopened,
+activated its saved owner, removed a member, completed presentation, converged a
+fit or settled requested steps. Those claims contradict the original prewrite
+mapped-schema refusal recovery contract, even when a separate applied/adopted flag
+is absent or false. The fixed condition now rejects these existing positive
+operation facts alongside applied/published/adopted/complete/uncertain.
+
+This is a finite extension of the same borrowed-value guard. It adds no output
+field, recursive validator, payload owner, schema, numerical cap or new retry path.
+The canonical guidance, enum mapping, both original refusal routes, prework
+maximum/row/escaped-response reservations, lifetime/currentness/once and actual
+scientific validators stay unchanged. A contradictory source fails before closed
+projection/encoding and does not become a proved-prewrite recovery instruction.
+
+Keep observed context separate from operation effects. completed_existing records
+which existing-owner route was selected before population and is not alone proof
+of a write. calculation_pending can describe an already calculating live project.
+Atomicity, request retirement, missing objective, reader counts and nested current
+context summaries likewise do not themselves claim that this refused operation
+changed science or completed. Their existing field validation remains; none is
+blanket-rejected or recursively reinterpreted. Actual reported positive save/edit/
+fit/progress flags above retain their original meaning and cannot carry recovery
+guidance for a prewrite mapped refusal. No gate assertion is weakened, and source
+reasoning is not a native/provider/runtime/resource qualification.

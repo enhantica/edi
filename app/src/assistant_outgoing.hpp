@@ -180,7 +180,10 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
     if(role==Role::Result && source.contains("refusal_guidance")) {
         if(source.value("status")!="refused" || source.value("refusal_field")!="mapped_structure" || !source.contains("refusal_reason") ||
             source.value("applied").toBool() || source.value("published").toBool() || source.value("adopted").toBool() ||
-            source.value("complete").toBool() || source.value("uncertain").toBool())
+            source.value(QLatin1StringView("committed")).toBool() || source.value(QLatin1StringView("saved")).toBool() || source.value(QLatin1StringView("reopened")).toBool() ||
+            source.value(QLatin1StringView("active")).toBool() || source.value(QLatin1StringView("removed")).toBool() ||
+            source.value("complete").toBool() || source.value(QLatin1StringView("presentation_complete")).toBool() || source.value(QLatin1StringView("converged")).toBool() ||
+            source.value(QLatin1StringView("steps_completed")).toDouble() > 0 || source.value("uncertain").toBool())
             throw std::invalid_argument("Outgoing mapped guidance contradicts the actual refusal");
     }
     if(role==Role::Result && source.contains("fit_reason")) {
