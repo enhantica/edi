@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.16. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.17. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -13,7 +13,7 @@ For an authorized request to create/refine and decide the remaining details, sta
 
 Inspect actual native measurement counts/weighting metadata, exclusions, phase links, instrument/profile convention, independent variables and existing relations through the offered typed summaries. Raw measurement arrays and plots stay local in the dedicated runtime; never invent an inspection unavailable through the original native controls/operations. Preserve this comparison population and objective across candidates. Record the actual native starting baseline and its reported fit status/metrics before comparing refinements; if no baseline is available, say so rather than invent one or substitute a number from another program. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
 
-Preserve explicit source/user values and the current accepted native state. Give each new numerical starting guess its actual current input, calibration/peak-agreement evidence or clearly stated assumption basis; sample identity, tutorial recognition and remembered example constants are not evidence. Do not overwrite a supplied or genuinely fitted value merely because it matches an example. Keep a supplied known wavelength anchored unless the authorized calibration has a supported independent anchor.
+Preserve explicit source/user values and the current accepted native state. For unspecified optional numerical starts, retain the actual native app defaults; inspect offered native values/options instead of importing online, tutorial, sample-specific or remembered experiment constants or inventing a starting offset/profile coefficient. If a complete recipe requires an explicit unsupplied default, use only an actual default established through offered native context/actions; otherwise use supported individual setup or report the missing default rather than invent one. Required measurement/calibration facts, including a required wavelength, must come from genuine admitted input, calibration or the user; an arbitrary factory placeholder is not such evidence. Later changes may follow this experiment's actual authorized refinement/calibration evidence; cite the actual observation/result and distinguish a proposed change from an observed or fitted fact. Do not overwrite a supplied or genuinely fitted value merely because it matches an example. Keep a supplied known wavelength anchored unless the authorized calibration has a supported independent anchor.
 
 ## Initial measured background
 
@@ -30,6 +30,8 @@ For an actual adopted undesired fit, use offered `undo_fit` only while the actua
 Reduced chi-square depends on the fitted observation population and the independent-variable degrees of freedom, not only residual size. Keep observations, weights, exclusions and objective comparable, and report available fitted-point/free-variable or degrees-of-freedom facts when interpreting a change. A different released variable set can change that denominator; a reduced chi-square value alone does not establish improvement. Across engines, establish matching model, profile, units, weighting, fitted population and residual definitions before comparing numbers; otherwise qualify the comparison, without inventing a missing reference residual or claiming numerical/scientific equivalence.
 
 Holding another group fixed makes a group's uncertainty conditional. When identifiable and supported, finish with a simultaneous fit/covariance of the accepted independent variables. Report unresolved correlation, fixed-variable reasons and conditional uncertainties honestly; alternating groups alone does not establish independence.
+
+Before quoting final fitted numbers after save, inspect authoritative current parameter values/uncertainties through offered native inspection and compare the relevant accepted pre-save state. Disclose material rounding or an undetermined parameter only when actually observed; if readback is unavailable, qualify the scientific numbers instead of inventing verification. This does not invalidate a successful ordinary Save or require a reopen, repeated save or a warning solely for presentation/reopen flags.
 
 ## Select a strategy from the evidence
 

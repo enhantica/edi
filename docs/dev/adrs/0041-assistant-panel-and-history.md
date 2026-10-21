@@ -2222,3 +2222,89 @@ blanket-rejected or recursively reinterpreted. Actual reported positive save/edi
 fit/progress flags above retain their original meaning and cannot carry recovery
 guidance for a prewrite mapped refusal. No gate assertion is weakened, and source
 reasoning is not a native/provider/runtime/resource qualification.
+
+
+### Native starting defaults and visible relation reach diagnostics (2026-10-21)
+
+The prior native create_cwl_project description, thread developerInstructions,
+project-assistance and refinement-strategy permitted newly chosen numerical starts
+from a stated assumption. For unspecified optional numerical starts, that could
+import a tutorial/sample constant despite the ordinary app already owning the
+default. Those same existing surfaces now require retaining actual native defaults,
+without hardcoded scientific numbers or sample branches. Complete recipe required
+operands stay strict: use an actual default established through offered native
+context/actions or the supported individual path; report a missing default rather
+than invent one. A required wavelength/calibration fact still needs genuine input,
+calibration or user evidence, never a factory placeholder. Preserve supplied/accepted
+values and actual later authorized experiment fit/calibration results. The existing
+background strategy and user operands remain exact; no scientific default, schema
+or tutorial/parity reference changes. Skill body versions and index SHA bonds move
+together (project-assistance 1.5.52; refinement-strategy 1.2.17).
+
+The original visible add_relations and edit_relation paths both reach the same
+widget_reveal_parameter. That helper's explicit no-viewport/unusable/exhausted and
+hidden-control-outside-scrollable-viewport refusals used a local message which the
+closed outgoing Result projection intentionally omits. An exact private per-run
+flag now records those reach branches before normal refusal settlement. Only an
+incomplete relation result with that flag emits the existing closed
+action_error=control_unavailable and action_field=relation pair. This describes
+reach failure, not backend expression validation or constraint activation. Preserve
+actual partial steps, receipts, currentness, Undo and once-only settlement; no
+scientific fallback, mode switch, retry or new output vocabulary is added. Other
+failures are not reclassified merely because they have a message.
+
+The additional append-sequence pair is admitted before work through the existing
+result_extra role: maximum of its fixed JSON fragment and four QJsonValue owners
+plus UTF-16 key/value bytes. Existing edit_relation already admits these fields in
+its relation_extra ceiling. Original outcome, row, doubly encoded response and
+maximum metadata/ownership paths consume that same ceiling without a raised cap.
+The run flag is included by existing sizeof(NativeWidget) preparation/retention.
+No arbitrary message or new path/object payload enters the provider.
+
+The observed viewport failure itself remains unresolved. The source selects a
+viewport using nominal vertical center bounds while actual input checks window
+and ancestor clipping/enabled/visibility; the precise original failure geometry
+was not captured. No geometry rule is changed on that inference. Follow-up must
+capture the actual failing branch and retained control/group/viewport, clipping,
+row and step facts in a separately authorized local diagnostic vehicle, preserving
+the original sequence and genuine controls. Static diagnosis is not a native
+reproduction or regression qualification.
+
+Authoritative post-save scientific reporting uses the existing native inspection
+path: compare relevant accepted pre-save fitted values/uncertainties against
+authoritative current values after saving before quoting final scientific
+numbers. Disclose material rounding or undetermined parameters only when
+observed; if unavailable, qualify the scientific numbers without fabricating
+verification. Ordinary successful saved/active facts still mean Project saved.
+No reopen, repeated save, generic presentation warning or completion obstruction
+is introduced. ProjectViewModel::save's existing adopt_saved_values readback
+policy (ADR-0017/0037), serialization, rounding, science and Save lifecycle remain
+unchanged. The supplied narrative alone establishes no actual owner value loss.
+
+The existing default-off edi.assistant.widget.lookup category now also snapshots
+these exact original relation reveal refusal boundaries. A fixed local snapshot
+distinguishes absent/unusable viewport, original reveal budget and hidden-control
+branch with target/group/title/viewport/row geometry and count/current-index facts.
+It examines at most eight original parent links for at most two clipping ancestors
+and emits at most nine fixed records per refusal. No model getter, scientific
+string, QObject tree enumeration, new provider field or logging framework is used.
+Original short-circuit evaluation and reveal counter increment occur once.
+Exceptions leave the ordinary refusal intact; exact receiver/run/record/receipt/
+generation/account/helper fences stop logging/continuation after a successor.
+QPointer target captures survive callbacks; no target is dereferenced after log
+delivery, and its loss still settles the same original owned refusal. This is
+bounded local diagnostic evidence instrumentation, not a geometry correction or
+an observed reproduction.
+
+Instructional Draft/Confirm distinction (2026-10-21): the prior
+project-assistance Show-actions paragraph and native add_relations description
+called a new Draft a disabled row and omitted Confirm. Both now describe the
+existing model-local unsaved Draft: manual Append intends enabled=true, while
+native preparation retains the complete supplied ID/expression and exact enabled
+flag, including false. The original Confirm cues/calls one ordinary validated
+commit with receipt/readback; no blank backend declaration, scientific keyboard
+path or later toggle substitutes for that commit. Existing committed disabled
+rows keep their ordinary enable toggle and explicit source false remains exact.
+Draft preparation is not a scientific Undo step. The unpublished skill version
+is retained with its explicit updated index digest. No runtime/geometry fix is
+implied by this instructional correction.
