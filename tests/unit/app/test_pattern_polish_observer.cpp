@@ -11,11 +11,22 @@
 #include <algorithm>
 #include <map>
 #include "measured_layer.hpp"
+#include "project_view_model.hpp"
 
 class PatternPolishObserver final : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantMap fitRecord(QObject* project) const {
+        const auto* vm = qobject_cast<edi_app::ProjectViewModel*>(project);
+        if (!vm) return {};
+        const auto& saved = vm->project();
+        QVariantMap banks;
+        for (const auto& bank : saved.experiments)
+            banks.insert(QString::fromStdString(bank->name), bank->fit_chi_square ? QVariant(*bank->fit_chi_square) : QVariant());
+        return {{"descent", QString::fromStdString(saved.fit_result.descent)},
+                {"duration", saved.fit_result.fitting_time}, {"bankChi", banks}};
+    }
     Q_INVOKABLE QVariantList series(QObject* chart, const QString& prefix) const {
         QVariantList result;
         if (!chart) return result;

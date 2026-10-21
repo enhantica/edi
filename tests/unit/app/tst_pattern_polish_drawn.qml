@@ -249,6 +249,37 @@ TestCase {
     function tables(dialog) {
         return Render.descendants(dialog.contentItem).filter(item => item.visible && item.headerItem && typeof item.count === "number" && typeof item.itemAtIndex === "function");
     }
+    function test_global_only_saved_fit_keeps_dataset_data() {
+        return [
+            {
+                tag: "correlated",
+                path: "report_options/nontrivial"
+            },
+            {
+                tag: "signed",
+                path: "report_storage/signed"
+            }
+        ];
+    }
+    function test_global_only_saved_fit_keeps_dataset(data) {
+        const fixture = "tests/fixtures/" + data.path;
+        verify(!Probe.readFile(fixture + "/analysis/analysis.edi").includes("_fit_result_bank."), "The historical result witness has global fit factors and no bank loop");
+        open(fixture);
+        const dialog = findChild(appWindow, "fit.results");
+        dialog.open();
+        tryCompare(dialog, "opened", true, 3000, "The historical global-only result opens the real fit dialog");
+        const table = Review.find(dialog.contentItem, "fit.results.agreement");
+        verify(table !== null, "The historical result is presented in the agreement table");
+        const rows = Probe.rows(table.model);
+        compare(rows.length, 1, "A single historical fit retains exactly its dataset row without a duplicate global row");
+        compare(rows[0].label, "bank", "A saved fit without bank shares still names its fitted dataset");
+        compare(rows[0].place, 0, "The historical dataset retains its experiment icon identity");
+        compare(rows[0].values[1], "10.00", "The named historical dataset displays its saved global Rwp as a percentage");
+        for (let column = 0; column < rows[0].values.length; ++column)
+            if (column !== 1)
+                compare(rows[0].values[column], "", "Missing historical profile and phase factors remain empty rather than invented");
+        capture("global-only-" + data.tag);
+    }
     function test_fit_summary() {
         const dialog = dialogFor(5), views = tables(dialog);
         compare(views.length, 2, "Fit results split the summary and agreement factors into two real tables");
