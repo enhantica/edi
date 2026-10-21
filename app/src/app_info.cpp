@@ -148,9 +148,7 @@ QStringList ApplicationInfo::elementSymbols() const {
 }
 
 namespace {
-edi::ColourScheme colour_scheme(const QString& name) {
-    return edi::colour_scheme_from_name(name.toStdString()).value_or(edi::kDefaultColourScheme);
-}
+edi::ColourScheme colour_scheme(const QString& name) { return edi::colour_scheme_or_default(name.toStdString()); }
 }  // namespace
 
 QColor ApplicationInfo::patternColour(const QString& scheme, int place, int count, bool dark) const {
@@ -173,9 +171,31 @@ QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) co
     return {area.x() + std::max(0, (area.width() - width) / 2), area.y() + std::max(0, (area.height() - height) / 2)};
 }
 
-QColor ApplicationInfo::structureColour(const QString& scheme, int place, bool dark) const {
-    return QColor(QString::fromStdString(
-        edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)), dark)));
+QColor ApplicationInfo::structureColour(const QString& scheme, int place, int count, bool dark) const {
+    return QColor(QString::fromStdString(edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)),
+                                                               static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QStringList ApplicationInfo::colourSchemes() const {
+    QStringList names;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        names.append(QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size())));
+    }
+    return names;
+}
+
+QStringList ApplicationInfo::colourSchemeTitles() const {
+    QStringList titles;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        const std::string_view title = edi::colour_scheme_title(colour_scheme(QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size()))));
+        titles.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+    }
+    return titles;
+}
+
+QString ApplicationInfo::colourSchemeOrDefault(const QString& scheme) const {
+    const std::string_view name = edi::colour_scheme_names()[static_cast<std::size_t>(colour_scheme(scheme))];
+    return QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size()));
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {

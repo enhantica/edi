@@ -241,13 +241,12 @@ AppDialog {
                 text: qsTr("Colour scheme") + ":"
             }
             RowBox {
-                // The schemes' tokens (data/palettes), in the order the box lists them: edi's own, then published
-                // palettes for data, then app themes.
-                readonly property var schemes: ["coast", "garden", "peaceful", "fogForest", "sage", "okabeIto", "paulTolBright", "paulTolMuted", "tableau", "observable", "carbon", "dark2", "petroff", "vivid", "nord", "solarized", "catppuccin", "apple"]
+                // The schemes' tokens and names (edi::colour_scheme_names), in the order the core lists them.
+                readonly property var schemes: ApplicationInfo.colourSchemes
 
                 objectName: "preferences.colourScheme"
-                model: [qsTr("Coast"), qsTr("Garden"), qsTr("Peaceful"), qsTr("Fog forest"), qsTr("Sage"), qsTr("Okabe-Ito"), qsTr("Paul Tol bright"), qsTr("Paul Tol muted"), qsTr("Tableau 10"), qsTr("Observable 10"), qsTr("IBM Carbon"), qsTr("ColorBrewer Dark2"), qsTr("Petroff"), qsTr("Vivid"), qsTr("Nord"), qsTr("Solarized"), qsTr("Catppuccin"), qsTr("Apple")]
-                currentIndex: Math.max(0, schemes.indexOf(Preferences.colourScheme))
+                model: ApplicationInfo.colourSchemeTitles
+                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
                 onActivated: index => Preferences.colourScheme = schemes[index]
                 ToolTip.text: qsTr("The experiments' and structures' colours in every chart and icon")
             }

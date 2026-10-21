@@ -115,15 +115,23 @@ class ApplicationInfo : public QObject {
     // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
     // element the table does not have. The app holds no element colour of its own.
     QStringList elementSymbols() const;
-    // The experiment at `place` among `count` and the structure at `place`, in the colour scheme `scheme` (a token of
-    // edi::colour_scheme_from_name, data/palettes) and the theme: edi::pattern_colour and edi::structure_colour.
+    // The experiment or structure at `place` among `count`, in the colour scheme `scheme` (a token of
+    // edi::colour_scheme_from_name, data/palettes; an unknown one reads as the default) and the theme:
+    // edi::pattern_colour and edi::structure_colour.
     Q_INVOKABLE QColor patternColour(const QString& scheme, int place, int count, bool dark) const;
     // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
     Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }
-    Q_INVOKABLE QColor structureColour(const QString& scheme, int place, bool dark) const;
+    Q_INVOKABLE QColor structureColour(const QString& scheme, int place, int count, bool dark) const;
+    // The colour schemes' tokens and their titles, in the order Preferences lists them (edi::colour_scheme_names), and
+    // the token a stored preference stands for: itself, or the default's for an unknown or removed one.
+    Q_PROPERTY(QStringList colourSchemes READ colourSchemes CONSTANT)
+    Q_PROPERTY(QStringList colourSchemeTitles READ colourSchemeTitles CONSTANT)
+    QStringList colourSchemes() const;
+    QStringList colourSchemeTitles() const;
+    Q_INVOKABLE QString colourSchemeOrDefault(const QString& scheme) const;
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;

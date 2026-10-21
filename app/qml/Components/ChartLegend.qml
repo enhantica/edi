@@ -13,7 +13,8 @@ import edi.app
 Rectangle {
     id: legend
 
-    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth` and `bragg`.
+    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth`, `bragg`
+    // and `labelSegments` (the label's coloured pieces, drawn in place of `label` when there are any).
     property ChartLegendModel entries: null
     // The theme colours of the chart it belongs to.
     property FigureColors colors: FigureColors {}
@@ -62,6 +63,7 @@ Rectangle {
                 required property string mark
                 required property bool bragg
                 required property real markWidth
+                required property var labelSegments
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
@@ -77,12 +79,13 @@ Rectangle {
                     {
                         "text": label
                     }
-                ] : [legend.markPiece(mark, markWidth, color),
-                    {
-                        "text": label,
-                        "color": legend.labelInColor ? color : legend.colors.themeForeground
-                    }
-                ]
+                ] : [legend.markPiece(mark, markWidth, color)].concat((labelSegments.length > 0 ? labelSegments : [{
+                                "text": label,
+                                "color": color
+                            }]).map(piece => ({
+                                "text": piece.text,
+                                "color": legend.labelInColor && piece.color ? piece.color : legend.colors.themeForeground
+                            })))
             }
         }
     }

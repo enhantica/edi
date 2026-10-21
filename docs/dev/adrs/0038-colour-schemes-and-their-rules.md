@@ -1,53 +1,58 @@
 # Colour schemes and their rules
 
 - **Status:** Accepted
-- **Date:** 2026-10-14
-- **Implementation:** 🟡 Partially implemented: the eighteen schemes, their tables and generator are in; the checks
-  that hold every rule follow
+- **Date:** 2026-10-14, revised 2026-10-21 (five Edi palettes replace the eighteen schemes)
+- **Implementation:** ✅ Implemented: the five palettes, their tables and the count-aware assignment in the core
 - **Priority:** Medium
 
 ## Context
 
-The first five schemes mixed colours of very different lightness and saturation, and several sat close to the red
-calculated pattern, so the fit no longer stood out. The owner asked for calm, modern palettes that sit well with the
-red calculated curve, in light and dark versions, with a choice of schemes. The study behind this decision (mockups
-with measured points, the fit, filled structure contributions and scans; research on data-visualisation palettes and
-colour preference) found:
+The first version of this decision (2026-10-14) offered eighteen schemes: five of edi's own, nine published data
+palettes and four app themes, each adapted by a generator to contrast and distance rules. In use the choice was too
+wide, the structure colours were too muted to tell apart as Bragg ticks and icons, and the calculated, background and
+residual curves kept fixed colours that did not belong to any scheme. The owner reviewed a study of five candidate
+palettes, each with measured-data colours, structure colours and role colours in both themes, ordered so that the most
+distinct colours come first, and approved them with their exact values on 2026-10-21.
 
-- colour preference follows associations: blues, cyans and greens are liked, dark yellow, olive and brown disliked
-  (Palmer and Schloss, 2010);
-- a palette looks designed when its colours share lightness and saturation and differ in hue, in a perceptual space
-  (Oklab);
-- people tell apart about seven categorical colours at a glance (Healey, 1996); beyond that a gradient reads better;
-- warm, saturated colours draw the eye, so the calculated pattern should be the only one on a chart;
-- transparent fills that overlap mix into colours no legend shows, and strong colours are too strong as fills.
+The study behind the order, kept for reference: colour preference follows associations, with blues, cyans and greens
+liked (Palmer and Schloss, 2010); people tell apart about seven categorical colours at a glance (Healey, 1996), and
+beyond that a gradient reads better; a palette looks designed when its colours share lightness and saturation and
+differ in hue in a perceptual space (Oklab).
 
 ## Decision
 
-1. **Eighteen schemes, Coast the default.** edi's own Coast, Garden, Peaceful, Fog forest and Sage, designed from
-   nature palettes; the published data palettes Okabe-Ito, Paul Tol bright and muted, Tableau 10, Observable 10, IBM
-   Carbon, ColorBrewer Dark2, Petroff and Vivid; and the app themes Nord, Solarized, Catppuccin and Apple. Each has
-   light and dark colours, cited in `data/palettes/PROVENANCE.md` with its source and licence. An unknown stored scheme
-   name reads as Coast.
-2. **Measured data stay out of the calculated curve's hue range** (within 45° of either theme's calc hue in Oklab); a
-   published colour inside it goes to the end of its set. A set has at most seven colours.
-3. **Every colour keeps 3:1 contrast** against its theme's chart background, at least 0.10 Oklab from the calculated
-   colour and 0.08 from the others in its set, as `PROVENANCE.md`'s rules state.
-4. **Many datasets (a sequential fit) take a two-colour gradient** with lightness rising steadily from the first
-   dataset to the last, a path between the two colours that avoids the calculated curve's hue range, and 3:1 contrast
-   at every point along it, not only at the ends.
-5. **Structure colours are muted**, up to five per scheme, each with its own hue and lightness step and distinct from
-   the scheme's measured-data colours, so they stay apart as soft fills under the total curve.
+1. **Five palettes, Edi Natural the default.** Edi Natural, Edi Coast, Edi Garden, Edi Studio and Edi Contrast, listed
+   in that order. Their colours are stored in `data/palettes/edi-*.tsv` exactly as approved and are never regenerated
+   or retuned; `data/palettes/PROVENANCE.md` cites each colour's source. A stored scheme name that is not one of the
+   five (the eighteen earlier schemes included) reads as Edi Natural, and the app keeps that choice.
+2. **Roles.** Each palette has, in each theme, five measured colours in the order blue, violet, green, raspberry,
+   teal; five structure colours in the order orange, gold, brown, amber, olive; and three role colours: total
+   calculation, background and difference. The first colour and the whole order are the same in both themes.
+3. **Assignment.** Datasets and structures are assigned separately, each from its own group, by its place among its
+   own kind. Up to five items take the first colours of the group in order. More than five take a gradient over the
+   whole group instead, from the group's first colour to its second: item i of N, counted from zero, takes
+   t = i / (N − 1), mixed in Oklab (Björn Ottosson, 2020), with the two ends the stored colours themselves and every
+   result a valid sRGB colour. The gradient never cycles through the five and never follows them. A place past the
+   last item takes the last item's colour, and no assignment divides by zero.
+4. **One colour per dataset or structure.** Its measured curve, Bragg ticks, icon, report figures and, when they
+   come, its structure curve and fill all take the colour of item 3.
+5. **Drawing.** Widths, marker sizes, opacities and dashes stay as ADR-0017 §15 states them. Measured data are filled
+   markers with connecting lines, drawn under the calculated curves; the total calculation is a line in its role
+   colour with no fill; the background and the difference take their role colours.
 6. **A report always takes the light colours.**
+7. **Edi Contrast** is a custom palette for colour-vision differences, inspired by the Okabe–Ito palette and Paul
+   Tol's schemes. It is not either of them, and it is no guarantee for every colour-vision deficiency.
 
 ## Consequences
 
-- The colour checks gate every rule above for every scheme, in both themes.
-- A filled per-structure contribution (planned) uses the structure colours with a clear outline and fills that do not
-  stack.
+- The palette data and the assignment live in the core (`core/src/palette.cpp`, the tables embedded at build time);
+  QML, the report, the demos and the icons ask the core and hold no colour of their own.
+- `tools/palettes/check.py` checks the tables' shape and that `PROVENANCE.md` lists the same values. It writes
+  nothing, so no tool can overwrite the approved colours.
+- The earlier rules that moved colours for contrast and distance no longer apply: the approved values are the data.
 
 ## Alternatives considered
 
-- **Keep five schemes.** Rejected by the owner: too few choices and not pleasant enough.
-- **Pure nature palettes for data lines.** Rejected: they rely on lightness steps, which the contrast rule removes;
-  at one lightness their earthy colours become indistinguishable. They work as soft fills, so structures use them.
+- **Keep the eighteen schemes.** Rejected by the owner: too many choices, and the structure colours were too muted.
+- **Cycle through the five colours past five items.** Rejected: two datasets of one scan would share a colour.
+- **Append a gradient after the fifth colour.** Rejected: the first five would no longer follow the scan's order.

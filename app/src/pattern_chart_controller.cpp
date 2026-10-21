@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 #include <QStringList>
+#include <QVariantMap>
 #include <utility>
 
 namespace edi_app {
@@ -79,16 +80,16 @@ void replace(const QPointer<QXYSeries>& target, const QList<QPointF>& list) {
     }
 }
 
-// The tick series: one per structure colour of the scheme with the most (five).
-constexpr std::size_t kBraggSeries = 5;
+// The tick series: one per structure colour of a scheme.
+constexpr std::size_t kBraggSeries = edi::kGroupColourCount;
 
-// The tick series a `bragg.<place>` style draws in: the place taken round the scheme's structure colours.
-std::size_t bragg_slot(const std::string& style, edi::ColourScheme scheme) {
+// The tick series a `bragg.<place>` style draws in: the place taken round the tick series.
+std::size_t bragg_slot(const std::string& style) {
     std::size_t place = 0;
     if (style.starts_with("bragg.")) {
         std::from_chars(style.data() + 6, style.data() + style.size(), place);
     }
-    return place % std::min(edi::structure_colour_count(scheme), kBraggSeries);
+    return place % kBraggSeries;
 }
 
 }  // namespace
@@ -295,7 +296,7 @@ void PatternChartController::setColourScheme(const QString& scheme) {
 }
 
 edi::ColourScheme PatternChartController::scheme() const {
-    return edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::kDefaultColourScheme);
+    return edi::colour_scheme_or_default(colour_scheme_.toStdString());
 }
 
 std::vector<edi::SeriesStyle> PatternChartController::styles() const {
@@ -450,8 +451,16 @@ void PatternChartController::refresh() {
                 width = style.width_px;
             }
         }
+        // The label's pieces, each in its style's colour; a plain piece (no style) is drawn in the theme's colour.
+        QVariantList segments;
+        for (const edi::TitleSegment& segment : edi::legend_label(shown_, series)) {
+            segments.append(QVariantMap{{QStringLiteral("text"), QString::fromStdString(segment.text)},
+                                        {QStringLiteral("color"), segment.style.empty()
+                                                                      ? QVariant()
+                                                                      : QVariant(color(QString::fromStdString(segment.style)))}});
+        }
         legend.append({QString::fromStdString(series.label), color(QString::fromStdString(series.style)),
-                       bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width});
+                       bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width, segments});
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -462,7 +471,7 @@ void PatternChartController::refresh() {
             case edi::SeriesKind::Residual: residual = &series; break;
             case edi::SeriesKind::BraggTicks: {
                 // A structure's ticks join the series of its colour, its own row kept.
-                ticks[bragg_slot(series.style, scheme())] += points_of(series);
+                ticks[bragg_slot(series.style)] += points_of(series);
                 ++rows;
                 break;
             }
@@ -664,10 +673,21 @@ QString PatternChartController::hoverReadout(double x, double y, int pane, doubl
     QStringList lines;
     for (const edi::HoverLine& line :
          edi::hover_readout(experiment_->patternSource(axis()), *found->series, found->point)) {
-        const QString text = QString::fromStdString(line.text).toHtmlEscaped();
-        lines.append(line.style.empty() ? text
-                                        : QStringLiteral("<span style=\"color:%1\">%2</span>")
-                                              .arg(color(QString::fromStdString(line.style)).name(QColor::HexRgb), text));
+        const auto piece = [this](const std::string& text, const std::string& style) {
+            const QString escaped = QString::fromStdString(text).toHtmlEscaped();
+            return style.empty() ? escaped
+                                 : QStringLiteral("<span style=\"color:%1\">%2</span>")
+                                       .arg(color(QString::fromStdString(style)).name(QColor::HexRgb), escaped);
+        };
+        if (line.segments.empty()) {
+            lines.append(piece(line.text, line.style));
+            continue;
+        }
+        QString text;
+        for (const edi::TitleSegment& segment : line.segments) {
+            text += piece(segment.text, segment.style);
+        }
+        lines.append(text);
     }
     return lines.join(QStringLiteral("<br>"));
 }

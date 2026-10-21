@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace edi::detail {
-// data/palettes, one table per scheme in ColourScheme's order, embedded by core/CMakeLists.txt.
+// data/palettes, one table per scheme in ColourScheme's order, embedded by cmake/edi_core_sources.cmake.
 extern const char* const kPaletteTsv[];
 extern const std::size_t kPaletteTsvCount;
 }  // namespace edi::detail
@@ -20,13 +20,18 @@ namespace edi {
 
 namespace {
 
+// The role rows' names, in ChartRole's order.
+constexpr std::array<std::string_view, 3> kRoleNames{"total_calculation", "background", "difference"};
+
 struct Palette {
-    std::vector<std::array<std::string, 2>> pattern, gradient, structure;  // light, dark
+    std::vector<std::array<std::string, 2>> measured, structure;  // light, dark
+    std::array<std::array<std::string, 2>, 3> role;                // by ChartRole
 };
 
-// A table's rows, by role, in the order listed; a malformed row refuses the whole table.
+// A table's rows, by role, in the order listed; a malformed row or a missing colour refuses the whole table.
 Palette parse(const char* text) {
     Palette palette;
+    std::array<bool, 3> roles_read{};
     std::istringstream in(text);
     std::string line;
     std::getline(in, line);  // the header
@@ -44,21 +49,33 @@ Palette parse(const char* text) {
             return colour.size() == 7 && colour[0] == '#' &&
                    std::all_of(colour.begin() + 1, colour.end(), [](char c) { return std::isxdigit(c) != 0; });
         };
-        if (!hex(light) || !hex(dark) || (role != "pattern" && role != "gradient" && role != "structure")) {
+        if (!hex(light) || !hex(dark)) {
             throw std::logic_error("a palette row is malformed: " + line);
         }
-        (role == "pattern" ? palette.pattern : role == "gradient" ? palette.gradient : palette.structure)
-            .push_back({light, dark});
+        if (role == "measured") {
+            palette.measured.push_back({light, dark});
+        } else if (role == "structure") {
+            palette.structure.push_back({light, dark});
+        } else {
+            const auto found = std::find(kRoleNames.begin(), kRoleNames.end(), role);
+            if (found == kRoleNames.end()) {
+                throw std::logic_error("a palette row is malformed: " + line);
+            }
+            const auto at = static_cast<std::size_t>(found - kRoleNames.begin());
+            palette.role[at] = {light, dark};
+            roles_read[at] = true;
+        }
     }
-    if (palette.pattern.empty() || palette.gradient.size() < 2 || palette.structure.empty()) {
-        throw std::logic_error("a palette lists too few colours");
+    if (palette.measured.size() != kGroupColourCount || palette.structure.size() != kGroupColourCount ||
+        !std::all_of(roles_read.begin(), roles_read.end(), [](bool read) { return read; })) {
+        throw std::logic_error("a palette does not list five measured, five structure and three role colours");
     }
     return palette;
 }
 
-constexpr std::array<std::string_view, 18> kNames{
-    "coast",      "garden", "peaceful", "fogForest", "sage",  "okabeIto", "paulTolBright", "paulTolMuted", "tableau",
-    "observable", "carbon", "dark2",    "petroff",   "vivid", "nord",     "solarized",     "catppuccin",   "apple"};
+constexpr std::array<std::string_view, 5> kNames{"ediNatural", "ediCoast", "ediGarden", "ediStudio", "ediContrast"};
+constexpr std::array<std::string_view, 5> kTitles{"Edi Natural", "Edi Coast", "Edi Garden", "Edi Studio",
+                                                  "Edi Contrast"};
 
 const Palette& palette_of(ColourScheme scheme) {
     static const std::vector<Palette> kPalettes = [] {
@@ -107,6 +124,23 @@ std::string hex_of(const Lab& lab) {
     return out;
 }
 
+// ADR-0038: up to five items take the group's first colours in order; more take a gradient over the whole group, from
+// its first colour to its second, item `place` at t = place / (count - 1). The ends are the colours themselves.
+std::string group_colour(const std::vector<std::array<std::string, 2>>& group, std::size_t place, std::size_t count,
+                         std::size_t side) {
+    if (count <= group.size()) {
+        return group[std::min(place, group.size() - 1)][side];
+    }
+    const std::size_t at = std::min(place, count - 1);
+    if (at == 0 || at == count - 1) {
+        return group[at == 0 ? 0 : 1][side];
+    }
+    const double t = static_cast<double>(at) / static_cast<double>(count - 1);
+    const Lab from = oklab(group[0][side]);
+    const Lab to = oklab(group[1][side]);
+    return hex_of({from.l + (to.l - from.l) * t, from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
+}
+
 }  // namespace
 
 std::span<const std::string_view> colour_scheme_names() { return kNames; }
@@ -119,30 +153,22 @@ std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {
     return static_cast<ColourScheme>(found - kNames.begin());
 }
 
-std::size_t pattern_colour_count(ColourScheme scheme) { return palette_of(scheme).pattern.size(); }
-
-std::size_t structure_colour_count(ColourScheme scheme) { return palette_of(scheme).structure.size(); }
-
-std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
-    const Palette& palette = palette_of(scheme);
-    const std::size_t side = dark ? 1 : 0;
-    if (count <= palette.pattern.size()) {
-        return palette.pattern[std::min(place, palette.pattern.size() - 1)][side];
-    }
-    // tools/palettes/generate.py samples the same way when it checks every gradient colour's contrast.
-    const auto& stops = palette.gradient;
-    const double t = static_cast<double>(std::min(place, count - 1)) / static_cast<double>(count - 1);
-    const double position = t * static_cast<double>(stops.size() - 1);
-    const std::size_t below = std::min(static_cast<std::size_t>(position), stops.size() - 2);
-    const double mix = position - static_cast<double>(below);
-    const Lab from = oklab(stops[below][side]);
-    const Lab to = oklab(stops[below + 1][side]);
-    return hex_of({from.l + (to.l - from.l) * mix, from.a + (to.a - from.a) * mix, from.b + (to.b - from.b) * mix});
+ColourScheme colour_scheme_or_default(std::string_view name) {
+    return colour_scheme_from_name(name).value_or(kDefaultColourScheme);
 }
 
-std::string structure_colour(ColourScheme scheme, std::size_t place, bool dark) {
-    const auto& rows = palette_of(scheme).structure;
-    return rows[place % rows.size()][dark ? 1 : 0];
+std::string_view colour_scheme_title(ColourScheme scheme) { return kTitles[static_cast<std::size_t>(scheme)]; }
+
+std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
+    return group_colour(palette_of(scheme).measured, place, count, dark ? 1 : 0);
+}
+
+std::string structure_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
+    return group_colour(palette_of(scheme).structure, place, count, dark ? 1 : 0);
+}
+
+std::string role_colour(ColourScheme scheme, ChartRole role, bool dark) {
+    return palette_of(scheme).role[static_cast<std::size_t>(role)][dark ? 1 : 0];
 }
 
 }  // namespace edi

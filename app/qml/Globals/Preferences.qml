@@ -34,10 +34,10 @@ QtObject {
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
-    // The experiments' and structures' colours (data/palettes): a scheme's token, "coast" (the default) or another of
-    // AppPreferencesDialog's list; an unknown one reads as the default. Every chart, icon and report the app draws
-    // follows it, a report in the scheme's light colours.
-    property string colourScheme: "coast"
+    // The experiments' and structures' colours (data/palettes, edi ADR-0038): a scheme's token, "ediNatural" (the
+    // default) or another of ApplicationInfo.colourSchemes; a stored token no longer offered reads as the default.
+    // Every chart, icon and report the app draws follows it, a report in the scheme's light colours.
+    property string colourScheme: "ediNatural"
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
     // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.
     property string newReportLibraries: "online"
@@ -51,7 +51,7 @@ QtObject {
         preferences.scanPatternUpdates = 2;
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
-        preferences.colourScheme = "coast";
+        preferences.colourScheme = "ediNatural";
         preferences.analysisYScale = "linear";
         preferences.experimentYScale = "linear";
         preferences.experimentXAxis = "native";
@@ -114,6 +114,14 @@ QtObject {
     }
 
     onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
+    // A stored scheme no longer offered (one of the eighteen before the Edi palettes) becomes the default, so the
+    // chosen scheme and the one drawn agree and the settings file keeps the one shown.
+    onColourSchemeChanged: {
+        const offered = ApplicationInfo.colourSchemeOrDefault(colourScheme);
+        if (offered !== colourScheme) {
+            colourScheme = offered;
+        }
+    }
     onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
     onEngineThreadsChanged: {
         ApplicationInfo.setEngineThreads(engineThreads);

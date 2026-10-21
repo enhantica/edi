@@ -16,14 +16,15 @@ QtObject {
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
 
-    // A structure's colour by its place in the project, from the colour scheme's palette (data/palettes; the
-    // default's orange, teal and pink, as easydiffractionbeta colours its models), round again after its last.
+    // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
+    // the first ones in order, or past five a gradient along the order.
     function structure(index) {
-        return index >= 0 ? ApplicationInfo.structureColour(Preferences.colourScheme, index, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
+        const count = Session.project ? Math.max(Session.project.structures.count, 1) : 1;
+        return index >= 0 ? ApplicationInfo.structureColour(Preferences.colourScheme, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
     }
 
-    // An experiment's colour by its place among the project's, from the colour scheme's palette: the default's
-    // light blue first; past the palette's own colours, a gradient along the order. None is a structure's colour.
+    // An experiment's colour by its place among the project's, from the colour scheme's measured colours: the first
+    // ones in order, or past five a gradient along the order. None is a structure's colour.
     // `dark` picks the dark theme's colour; without it, the app's theme decides (a PDF's figure asks for the light one).
     function experiment(index, dark) {
         const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;

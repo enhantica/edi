@@ -53,8 +53,9 @@ background, residual and tick series are absent.
 Linear; Sqrt as `sign(y) × sqrt(abs(y))`; Log10 as `log10(y)` for y > 0 and a gap otherwise. The residual pane is
 always linear. Axis labels and hover text show original values, printed with six significant digits and a decimal
 point whatever the process's locale is: the core formats them with the classic locale and changes no global one. The
-chart's hover read-out (`hover_readout`) is diffraction-lib's instead: over the data or the residual, `x`, `Imeas`,
-`Ibkg`, `Icalc` and `Imeas - Icalc` at the point's `_data` row, each line in its series' style; over a Bragg tick,
+chart's hover read-out (`hover_readout`) is diffraction-lib's instead, named as the y titles name the series: over
+the data or the residual, `x`, `meas`, `bkg`, `calc` and `meas − calc` at the point's `_data` row, each line in its
+series' style and `meas − calc` coloured as the residual pane's title (edi ADR-0017 §15); over a Bragg tick,
 the structure's name, `x` and `Miller indices: (h k l)` of its `_refln` row, the Miller indices alone in the tick's
 style. Its numbers have two decimals and a comma between thousands, in the same classic locale.
 

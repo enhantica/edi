@@ -191,8 +191,11 @@ function trace(pattern, series, index) {
   const marks = (look.mark ?? 'line').split('+');
   const out = {
     type: 'scatter',
-    // The legend names each series in its colour, as the app's chart legend does.
-    name: inColour(series.label, look.light),
+    // The legend names each series in its colour, as the app's chart legend does: the residual's `meas − calc`
+    // coloured as the residual pane's title (edi::legend_label).
+    name: series.kind === 'residual' && (pattern.y_residual.segments ?? []).length > 0
+      ? `${inColour('Residual (', look.light)}${axisTitle(pattern.y_residual)}${inColour(')', look.light)}`
+      : inColour(series.label, look.light),
     x: series.x,
     y: series.y,
     xaxis: 'x',

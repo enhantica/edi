@@ -21,6 +21,7 @@
 
 #include "analysis_view_model.hpp"
 #include "edi/categories.hpp"
+#include "edi/palette.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
@@ -458,11 +459,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every colour scheme in both themes, on the Analysis page's chart of a two-structure example. Run only when asked
     // (`--demo-only schemes-`).
     if (only.startsWith(QLatin1String("schemes-"))) {
-        const QStringList schemes{"Coast",          "Garden",         "Peaceful",   "Fog forest",
-                                  "Sage",           "Okabe-Ito",      "Paul Tol bright", "Paul Tol muted",
-                                  "Tableau 10",     "Observable 10",  "IBM Carbon", "ColorBrewer Dark2",
-                                  "Petroff",        "Vivid",          "Nord",       "Solarized",
-                                  "Catppuccin",     "Apple"};
+        QStringList schemes;
+        for (const std::string_view name : edi::colour_scheme_names()) {
+            const std::string_view title = edi::colour_scheme_title(edi::colour_scheme_or_default(name));
+            schemes.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+        }
         const auto pick = [](const QString& scheme) {
             return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colourScheme",
                                "choose:" + scheme, "choose:OK"};

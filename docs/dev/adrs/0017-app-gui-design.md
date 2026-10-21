@@ -271,15 +271,17 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Coast, the default, or one of
-seventeen more), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
-`pattern_colour` and `structure_colour`, which the charts' style table and the report read too. Each colour has at
-least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); a report always takes the light ones:
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Edi Natural, the default, Edi
+Coast, Edi Garden, Edi Studio or Edi Contrast; ADR-0038), read from the palettes in `data/palettes` (PROVENANCE.md
+there) through the core's `pattern_colour` and `structure_colour`, which the charts' style table and the report read
+too. Datasets and structures are assigned separately, each by its place among its own kind: up to five take the first
+colours of their group in order, more a gradient from the group's first colour to its second. A report always takes
+the light colours:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme), Coast scheme |
+| Block | Icon | Colour by its place in the project's list (light / dark theme), Edi Natural |
 |---|---|---|
-| structure | `layer-group` | wheat `#94846A` / `#AD9C82`, plum `#916678` / `#D0A2B5`, sage `#47593A` / `#CBE0BA`, artichoke `#4B395B` / `#F2E5FF`, then round again |
-| experiment | `microscope` | sea blue `#2C90D7` / `#71BFFF`, then teal `#079E92` / `#44D0C1`, green `#3CA059` / `#87D999`, violet `#8978D7` / `#B6AAFF` and cyan `#05859C` / `#58DCF9`; past the set's five, a gradient from indigo `#39336F` / `#8A88CC` to green `#03A97A` / `#8EFFD0` along the order |
+| structure | `layer-group` | orange `#D26E3C` / `#F59B6F`, gold `#958508` / `#BAAD52`, brown `#936844` / `#BD9372`, amber `#C28B0A` / `#EBB352`, olive `#71964E` / `#98BB79`; past five, a gradient from orange to gold along the order |
+| experiment | `microscope` | blue `#039EDC` / `#71CBFE`, violet `#8989F7` / `#C0B6E8`, green `#6EA163` / `#A1CD97`, raspberry `#D475AD` / `#FDA8CB`, teal `#479F93` / `#81CAC2`; past five, a gradient from blue to violet along the order |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -381,9 +383,9 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Colour scheme — Coast (the default), Garden, Peaceful, Fog forest, Sage, Okabe-Ito, Paul Tol
-  bright, Paul Tol muted, Tableau 10, Observable 10, IBM Carbon, ColorBrewer Dark2, Petroff, Vivid, Nord, Solarized,
-  Catppuccin or Apple** (the experiments' and structures' colours, §8, in every chart, icon and report the app draws);
+- **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
+  Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
+  draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
   **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
   2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
@@ -565,8 +567,10 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
   chart's own button list.
 - **Legend.** Inside the main plot's top right corner: one line per series in the series' colour — *Measured
-  (Imeas)*, *Total calculated (Icalc)*, *Background (Ibkg)*, *Residual (Imeas − Icalc)*, and per structure *Bragg
-  peaks*, the structure icon and the structure's name. The legend's rows and the excluded bands reach QML as typed
+  (meas)*, *Total calculated (calc)*, *Background (bkg)*, *Residual (meas − calc)*, and per structure *Bragg
+  peaks*, the structure icon and the structure's name. The names are the y titles' (the owner, 2026-10-21), and
+  *meas − calc* is coloured as the residual pane's title colours it: `meas` in the measured colour, `calc` in the
+  calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
   list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
   of dictionaries.
 - **Pointer.** Box zoom sets the x range and the main y range to the dragged box, drawn as the base's chart draws it: a border in the theme's
@@ -577,8 +581,8 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   ranges, so no point of a frame's range is missing; a pan or a scale change first ends a running one at its end, a wheel notch continues from it,
   and a chart that is hidden draws no frame: its animation ends at its target, drawn when the chart is shown again (the owner, 2026-10-02). With
   hover coordinates on, the pointer shows diffraction-lib's read-out of a point within plotly's default hover distance, 20 px (a Bragg tick by its
-  x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `Imeas`, `Ibkg`, `Icalc` and
-  `Imeas - Icalc` at that row, each value in its series' colour; over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
+  x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `meas`, `bkg`, `calc` and
+  `meas − calc` at that row, each value in its series' colour, `meas − calc` named and coloured as the residual pane's title (the owner, 2026-10-21); over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
   indices alone in the tick's colour (the owner, 2026-10-03). Numbers have two decimals and a comma between thousands (`edi::hover_readout`).
 - **Y scales.** Square root and log are display mappings (ADR-0021 §5), and the y-scale button cycles linear,
   square root, log. On each the main y axis labels original values. A square-root axis has its ticks at round
@@ -606,11 +610,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Coast scheme) | `#2C90D7` / `#71BFFF`, then `#079E92` / `#44D0C1`, then `#3CA059` / `#87D999` | 2 px line, 5 px markers, 1 px bars |
-| Calculated | `#F44336` / `#EF9A9A` | 2 px line |
-| Background | `#607D8B` / `#B0BEC5` | 1 px line |
-| Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place (Coast scheme) | `#94846A` / `#AD9C82`, then `#916678` / `#D0A2B5`, then `#47593A` / `#CBE0BA` | 1 px ticks (the owner, 2026-10-02) |
+| Measured, by the experiment's place (Edi Natural) | `#039EDC` / `#71CBFE`, then `#8989F7` / `#C0B6E8`, then `#6EA163` / `#A1CD97` (§8) | 2 px line, 5 px markers, 1 px bars, drawn under the calculated curves |
+| Total calculation (Edi Natural) | the scheme's role colour, `#CA5C6E` / `#EE8795` | 2 px line, no fill |
+| Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px line |
+| Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02) |
+| Bragg ticks, by the structure's place (Edi Natural) | `#D26E3C` / `#F59B6F`, then `#958508` / `#BAAD52`, then `#936844` / `#BD9372` (§8) | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.

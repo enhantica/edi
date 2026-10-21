@@ -151,9 +151,10 @@ struct SeriesStyle {
     double marker_px = 0.0;
 };
 // The style table of a project of `experiments` experiments and `structures` structures in `scheme`: a
-// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least the scheme's
-// structure colours), each colour the palette's (edi::pattern_colour, edi::structure_colour, which takes the structure
-// colours round again), and the role rows, the calculated, background, residual and excluded-region styles.
+// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least five), each
+// colour the scheme's for its place among its group (edi::pattern_colour, edi::structure_colour), and the role rows:
+// the calculated, background and residual styles in the scheme's role colours (edi::role_colour) and the
+// excluded-region style.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
                                              std::size_t structures = 0);
 
@@ -169,13 +170,19 @@ int pixel_columns(double plot_width, double device_pixel_ratio);
 // Empty for a gap or a tick's end.
 std::string hover_text(const PatternSource& source, const PatternSeries& series, std::size_t point);
 
+// A series' legend label as coloured pieces: its label in its own style, except the residual's, "Residual (meas −
+// calc)", whose `meas − calc` is coloured as the residual pane's title colours it.
+std::vector<TitleSegment> legend_label(const PatternPresentation& presentation, const PatternSeries& series);
+
 // One line of a hover read-out: its text and the style key whose colour draws it (empty: the theme's
-// text colour).
+// text colour), or, when `segments` is not empty, the same text as pieces each in its own style's colour.
 struct HoverLine {
     std::string text, style;
+    std::vector<TitleSegment> segments;
 };
-// Diffraction-lib's read-out of one presented point. A data or residual point: `x`, then `Imeas`, `Ibkg`,
-// `Icalc` and `Imeas - Icalc` at its `_data` row, each present column in its series' colour. A Bragg tick:
+// Diffraction-lib's read-out of one presented point, named as the y titles name the series. A data or residual
+// point: `x`, then `meas`, `bkg`, `calc` and `meas − calc` at its `_data` row, each present column in its series'
+// colour, `meas − calc` coloured as the residual pane's title with its value in the residual's colour. A Bragg tick:
 // the structure's name, `x` and `Miller indices: (h k l)` of its `_refln` row, the Miller indices alone in the
 // tick's colour. Numbers with two decimals and a thousands separator. Empty for a gap or a tick's end.
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point);
