@@ -53,7 +53,7 @@ QtObject {
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
         preferences.patternYScale = "linear";
-        preferences.structureCurves = false;
+        preferences.structureCurves = true;
     }
 
     property Settings settings: Settings {
@@ -91,7 +91,7 @@ QtObject {
     // The two pages' former names of the one y scale.
     property alias analysisYScale: preferences.patternYScale
     property alias experimentYScale: preferences.patternYScale
-    property bool structureCurves: false
+    property bool structureCurves: true
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
