@@ -30,6 +30,19 @@ for name in USER LANG LC_ALL PIXI_CACHE_DIR RATTLER_CACHE_DIR XDG_CACHE_HOME CCA
     http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY SSL_CERT_FILE; do
     [ -z "${!name:-}" ] || clean+=("$name=${!name}")
 done
+# Check the selected Apple SDK/tools in the SAME clean environment before even
+# git metadata or Pixi installation. xcrun also supports Command Line Tools-only
+# setups; do not require Xcode or accept a license on the user's behalf.
+if [ "$(uname -s)" = Darwin ]; then
+    if ! macos_sdk="$("${clean[@]}" /usr/bin/xcrun --sdk macosx --show-sdk-path)" ||
+        [ -z "$macos_sdk" ] || [ ! -d "$macos_sdk" ] ||
+        ! "${clean[@]}" /usr/bin/xcrun --sdk macosx clang++ --version >/dev/null; then
+        echo "app-with-crysta: selected macOS developer tools are not ready; stopping before local SDK/app builds." >&2
+        echo "app-with-crysta: open Xcode and complete its setup/license, or install/select the Command Line Tools; follow the Apple error above." >&2
+        echo "app-with-crysta: if Apple requests a license review, run sudo xcodebuild -license yourself in Terminal." >&2
+        exit 1
+    fi
+fi
 echo "app-with-crysta: building crysta from $src ($(git -C "$src" describe --always --dirty 2>/dev/null || echo 'no git')); crysta's tests are not run"
 # The `cpp-ci` environment is brought to crysta's lock file first, so an environment made before a pin
 # moved is updated. Where crysta's own Python package is not installed yet, it stays out: its editable

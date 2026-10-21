@@ -143,3 +143,20 @@ same-source content replacement refuses until that selected edi unit is rebuilt;
 failed configure/build is not successful content provenance. The standalone helper resolves from the entry's
 absolute repository root, preserving invocation from outside the checkout. Existing core/consumer build argv
 remain unchanged; the app and explicitly invoked diagnostic builds retain their existing parallel controls.
+
+
+## Local developer launcher: selected Apple prerequisites
+
+FIRST is tools/dev/app-with-crysta.sh's existing clean-environment local SDK build
+and tools/ci/app-build.sh's ordinary app build/identity, documented in local-crysta.
+The local launcher now checks selected macOS SDK availability and the selected
+Apple C++ tool through xcrun in that SAME clean environment before suppressed Git
+metadata, Pixi installation or a build. Original stderr is preserved and failure
+stops with manual setup/license instructions. Ready Command Line Tools-only
+installations remain valid; no full-Xcode-only probe, automatic sudo/license
+acceptance/install, compiler macro workaround or toolchain/flag change is added.
+The observed license refusal precedes downstream libc++ NAN/INFINITY errors; it
+is not proof of their sole cause. CI refusal remains before this local preflight;
+non-Darwin paths, clean allowlist, source/argument isolation, pinned CI/release
+SDK and ordinary app build remain as before. Actual Mac recovery requires the
+user's ready selected installation and a subsequent genuine build.

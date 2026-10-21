@@ -11,6 +11,17 @@ pixi run -e app app-with-crysta ../crysta
 
 Here `../crysta` is a crysta checkout next to edi. When a change spans both, check out the same branch in each.
 
+On macOS, the selected Apple developer tools must already be ready. Before Git metadata, Pixi installation
+or either build, the launcher checks the selected macOS SDK and Apple C++ tool in the same clean environment
+used for crysta. Ready Command Line Tools-only setups are supported; full Xcode is not required. A failed
+check keeps Apple's original error and stops. Complete the indicated setup or license review yourself:
+open Xcode when using Xcode, or install/select the Command Line Tools. If Apple specifically requests
+`sudo xcodebuild -license`, review that license manually in Terminal; the launcher never runs it for you.
+
+This is a prerequisite check, not a compiler/header diagnosis. Resolve the first developer-tools error
+before investigating later `NAN`/`INFINITY` or other compilation failures; this check does not prove their
+cause or guarantee that they disappear. Linux and the original local/CI separation are unchanged.
+
 - crysta is built as it is in the checkout, uncommitted changes included, in crysta's own `cpp-ci` pixi
   environment, and installed under `<crysta>/build/edi-local`. crysta's tests are not run.
 - The app is built into `build/app` against that install. The next plain `pixi run -e app app` goes back
