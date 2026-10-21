@@ -25,7 +25,7 @@ differ in hue in a perceptual space (Oklab).
    in that order. Their colours are stored in `data/palettes/edi-*.tsv` exactly as approved and are never regenerated
    or retuned; `data/palettes/PROVENANCE.md` cites each colour's source. A stored scheme name that is not one of the
    five (the eighteen earlier schemes included) reads as Edi Natural, and the app keeps that choice.
-2. **Roles.** Each palette has, in each theme, five measured colours in the order blue, violet, green, raspberry,
+2. **Roles.** Each palette has, in each theme, five measured colours in the order blue, green, violet, raspberry,
    teal; five structure colours in the order orange, gold, brown, amber, olive; and three role colours: total
    calculation, background and difference. The first colour and the whole order are the same in both themes.
 3. **Assignment.** Datasets and structures are assigned separately, each from its own group, by its place among its

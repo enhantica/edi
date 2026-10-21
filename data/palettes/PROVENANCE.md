@@ -16,7 +16,7 @@ The colours are the ones the owner approved on 2026-10-21, stored exactly; nothi
 | `light` | The colour in the light theme, `#RRGGBB`                                                                  |
 | `dark`  | The colour in the dark theme, `#RRGGBB`                                                                   |
 
-Measured colours are listed in the order blue, violet, green, raspberry, teal, and structure colours in the order
+Measured colours are listed in the order blue, green, violet, raspberry, teal, and structure colours in the order
 orange, gold, brown, amber, olive, the most distinct first. Up to five datasets, or five structures, take the first
 colours of their group in order. More take a gradient over the whole group, from its first colour to its second, mixed
 in the Oklab colour space (Björn Ottosson, 2020): item i of N, from zero, at t = i / (N − 1).
@@ -53,8 +53,8 @@ The schemes the palettes take colours from, as the earlier eighteen schemes cite
 | Role | Place | Colour | Light | Light source | Dark | Dark source |
 | ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
 | measured | 0 | Blue | `#039EDC` | edi's own | `#71CBFE` | edi's own |
-| measured | 1 | Violet | `#8989F7` | edi's own | `#C0B6E8` | edi's own |
-| measured | 2 | Green | `#6EA163` | edi's own | `#A1CD97` | edi's own |
+| measured | 1 | Green | `#6EA163` | edi's own | `#A1CD97` | edi's own |
+| measured | 2 | Violet | `#8989F7` | edi's own | `#C0B6E8` | edi's own |
 | measured | 3 | Raspberry | `#D475AD` | edi's own | `#FDA8CB` | edi's own |
 | measured | 4 | Teal | `#479F93` | edi's own | `#81CAC2` | edi's own |
 | structure | 0 | Orange | `#D26E3C` | edi's own | `#F59B6F` | edi's own |
@@ -73,8 +73,8 @@ The schemes the palettes take colours from, as the earlier eighteen schemes cite
 | Role | Place | Colour | Light | Light source | Dark | Dark source |
 | ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
 | measured | 0 | Blue | `#2C90D7` | Coast | `#71BFFF` | Coast |
-| measured | 1 | Violet | `#8978D7` | Coast | `#B6AAFF` | Coast |
-| measured | 2 | Green | `#3CA059` | Coast | `#7CCD8E` | Coast |
+| measured | 1 | Green | `#3CA059` | Coast | `#7CCD8E` | Coast |
+| measured | 2 | Violet | `#8978D7` | Coast | `#B6AAFF` | Coast |
 | measured | 3 | Raspberry | `#CC79A7` | Okabe-Ito | `#F5C2E7` | Catppuccin |
 | measured | 4 | Teal | `#079E92` | Coast | `#44D0C1` | Coast |
 | structure | 0 | Orange | `#CB4B16` | Solarized | `#FAB387` | Catppuccin |
@@ -93,8 +93,8 @@ The schemes the palettes take colours from, as the earlier eighteen schemes cite
 | Role | Place | Colour | Light | Light source | Dark | Dark source |
 | ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
 | measured | 0 | Blue | `#3D84A0` | Garden | `#7CC3E0` | Garden |
-| measured | 1 | Violet | `#7172B6` | Peaceful | `#ACAFF8` | Peaceful |
-| measured | 2 | Green | `#668558` | Garden | `#A2C393` | Garden |
+| measured | 1 | Green | `#668558` | Garden | `#A2C393` | Garden |
+| measured | 2 | Violet | `#7172B6` | Peaceful | `#ACAFF8` | Peaceful |
 | measured | 3 | Raspberry | `#9F6683` | Peaceful | `#E0A2C1` | Peaceful |
 | measured | 4 | Teal | `#42897C` | Peaceful | `#80C8B9` | Peaceful |
 | structure | 0 | Orange | `#D95F02` | ColorBrewer Dark2 | `#D08770` | Nord |
@@ -113,8 +113,8 @@ The schemes the palettes take colours from, as the earlier eighteen schemes cite
 | Role | Place | Colour | Light | Light source | Dark | Dark source |
 | ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
 | measured | 0 | Blue | `#1E66F5` | Catppuccin | `#89B4FA` | Catppuccin |
-| measured | 1 | Violet | `#8839EF` | Catppuccin | `#CBA6F7` | Catppuccin |
-| measured | 2 | Green | `#40A02B` | Catppuccin | `#A6E3A1` | Catppuccin |
+| measured | 1 | Green | `#40A02B` | Catppuccin | `#A6E3A1` | Catppuccin |
+| measured | 2 | Violet | `#8839EF` | Catppuccin | `#CBA6F7` | Catppuccin |
 | measured | 3 | Raspberry | `#EA76CB` | Catppuccin | `#F5C2E7` | Catppuccin |
 | measured | 4 | Teal | `#179299` | Catppuccin | `#94E2D5` | Catppuccin |
 | structure | 0 | Orange | `#FE640B` | Catppuccin | `#FAB387` | Catppuccin |
@@ -133,8 +133,8 @@ The schemes the palettes take colours from, as the earlier eighteen schemes cite
 | Role | Place | Colour | Light | Light source | Dark | Dark source |
 | ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
 | measured | 0 | Blue | `#009DE2` | Edi Contrast, custom | `#91D4FF` | Edi Contrast, custom |
-| measured | 1 | Violet | `#7264D0` | Edi Contrast, custom | `#9E96F8` | Edi Contrast, custom |
-| measured | 2 | Green | `#6FA065` | Edi Contrast, custom | `#A4D89A` | Edi Contrast, custom |
+| measured | 1 | Green | `#6FA065` | Edi Contrast, custom | `#A4D89A` | Edi Contrast, custom |
+| measured | 2 | Violet | `#7264D0` | Edi Contrast, custom | `#9E96F8` | Edi Contrast, custom |
 | measured | 3 | Raspberry | `#D66CAC` | Edi Contrast, custom | `#FFAEDD` | Edi Contrast, custom |
 | measured | 4 | Teal | `#2D9894` | Edi Contrast, custom | `#60D1BD` | Edi Contrast, custom |
 | structure | 0 | Orange | `#D35E40` | Edi Contrast, custom | `#FFA273` | Edi Contrast, custom |
