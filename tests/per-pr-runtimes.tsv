@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T13:11:00Z
+# measured_utc = 2026-10-21T13:40:40Z
 #
-# Recorded from: complete background action host deadline sweep; process scheduling watchdogs separated from the unchanged measured tier, every assertion retained
-# Collected tests: 16148; with a reported duration: 9455
+# Recorded from: scoped implicit default environment, full registry reachability and exact Linux coverage dependency contract
+# Collected tests: 16148; with a reported duration: 9465
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -817,7 +817,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.100	tests/integration/py/test_c11_t41_corpus_fit_policy.py::test_i20_staged_analysis_must_equal_one_complete_declared_variant
 0.020	tests/integration/py/test_c11_t41_corpus_fit_policy.py::test_i20_staged_data_must_come_from_one_case
 0.010	tests/integration/py/test_c11_t41_corpus_fit_policy.py::test_i20_subset_and_mixed_variant_are_refused
-0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_cpp_coverage_port_is_isolated_explicit_total_and_report_only
+0.003	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_cpp_coverage_port_is_isolated_explicit_total_and_report_only
 0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_cpp_test_is_a_per_commit_gate_once_the_tier_has_cases
 0.000	tests/integration/py/test_c11_t41_cpp_unit_coverage.py::test_edi_cpp_unit_tier_is_one_excluded_doctest_binary
 0.310	tests/integration/py/test_c11_t41_fast_suite_contract.py::test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces
@@ -1791,21 +1791,21 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-tof-diamond-dream]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd_neut_cwl_lif_single]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t23_cli_projects.py::test_fullprof_diamond_measured_data_remains_byte_identical_after_refit
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[conditional-step]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disabled-job]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disabled-step]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disjunctive-guard]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[negated-guard]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[none]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[optional-job]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[subset-command]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[wrong-os]
+0.004	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[conditional-step]
+0.003	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disabled-job]
+0.004	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disabled-step]
+0.003	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[disjunctive-guard]
+0.004	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[negated-guard]
+0.003	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[none]
+0.003	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[optional-job]
+0.004	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[subset-command]
+0.003	tests/integration/py/test_c34_t23_cli_projects.py::test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes[wrong-os]
 0.640	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_keep_multiple_occurrences_distinguishable[second.edi]
 0.510	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_keep_multiple_occurrences_distinguishable[sepd.edi]
 0.260	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_preserve_value_and_refined_state[5.0]
 0.270	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_preserve_value_and_refined_state[7.25(1)]
 0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_reject_comment_and_ignored_metadata_tokens
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_pull_request_ci_and_verify_execute_the_complete_registry
+0.054	tests/integration/py/test_c34_t23_cli_projects.py::test_pull_request_ci_and_verify_execute_the_complete_registry
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_registry_executes_owner_declared_set_and_retains_every_seed
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s1]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s4]
