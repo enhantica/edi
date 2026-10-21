@@ -21,3 +21,12 @@ scales and its declared background coefficients.
 | violet    |         16 |    3 |
 | east      |         11 |    4 |
 | west      |         12 |    5 |
+
+The same parser writes `ncaf.json` from the committed `fit_tables/five` project.
+Its declared I 21 3 setting has one independent cubic cell length. The saved
+Wyckoff forms of Ca1, Al1, Na1 and F3 each have one coordinate; F1 and F2 have
+three. Those forms leave ten coordinates, six occupancies, six isotropic
+displacements and one cell length: 23 structure parameters. The explicit
+fixture-specific constraints omit dependent y/z and cell fields before counting;
+neither engine supplies a count. Each bank retains its declared TOF profile,
+calibration, absorption, structure scale and background-intensity fields.
