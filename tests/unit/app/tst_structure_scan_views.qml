@@ -107,11 +107,12 @@ Item {
             tryVerify(() => visibleFills().length === Session.project.structures.count, 2000, "The chart draws one visible area series for each structure");
             let background = null;
             for (const item of Render.descendants(page))
-                if (item.seriesList !== undefined)
+                if (item.visible && item.seriesList !== undefined)
                     for (const series of item.seriesList)
                         if (series.objectName === "chart.series.bkg")
                             background = series;
             verify(background !== null && background.count > 0, "The fill baseline is the chart's actual nonempty background curve");
+            tryVerify(() => visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared");
             for (const fill of visibleFills()) {
                 verify(fill.lowerSeries !== null && fill.upperSeries !== null, "Every unstacked structure fill retains its own curve over a background baseline");
                 compare(fill.lowerSeries.count, background.count, "Each structure fill spans the same grid as the background");
