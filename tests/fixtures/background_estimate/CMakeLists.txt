@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(background_lifecycle_author LANGUAGES CXX)
+find_package(crysta CONFIG REQUIRED)
+add_executable(save_auto save_auto.cpp)
+target_compile_features(save_auto PRIVATE cxx_std_20)
+target_link_libraries(save_auto PRIVATE crysta::crysta)

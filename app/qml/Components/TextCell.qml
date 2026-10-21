@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -23,7 +24,16 @@ EaComponents.ListViewTextInput {
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.
     property string refusal: ""
+    // Read-only but shown as usual, not greyed (an auto-estimated background; the owner, 2026-10-20): nothing can be
+    // typed or committed.
+    property bool locked: false
     signal committed(string text)
+
+    readOnly: locked
+    activeFocusOnPress: !locked
+    activeFocusOnTab: !locked
+    // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
+    color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
     text: shown
     warned: refusal !== ""
@@ -38,8 +48,10 @@ EaComponents.ListViewTextInput {
 
     // Return and leaving the cell both commit; the second of the two finds nothing new.
     function commit() {
-        if (text === shown)
+        if (locked || text === shown) {
+            text = Qt.binding(() => cell.shown);
             return;
+        }
         refusal = TypedInput.refusal(text, accepts);
         if (refusal === "") {
             committed(text);

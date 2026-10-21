@@ -158,6 +158,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/LinkedStructureGroup.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
+        qml/Pages/Experiment/BackgroundExtrasGroup.qml
         qml/Pages/Experiment/PeakGroup.qml
         qml/Pages/Experiment/PreferredOrientationGroup.qml
         qml/Pages/Experiment/ReflectionsGroup.qml

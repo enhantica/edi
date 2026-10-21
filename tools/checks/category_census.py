@@ -177,7 +177,7 @@ COLUMN = re.compile(
 )
 CONTAINER = re.compile(r'\bstd::(?:vector|deque|list|map|set|unordered_map|unordered_set)\b')
 SCALAR = re.compile(
-    r'^(?:std::optional<)?(?:std::string|double|int|bool|\w+Enum)>?$|^std::optional<Parameter>$|^OptionalParameter$'
+    r'^(?:std::optional<)?(?:std::string|double|int|bool|std::uint64_t|\w+Enum)>?$|^std::optional<Parameter>$|^OptionalParameter$'
 )
 
 

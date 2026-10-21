@@ -28,7 +28,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("data_range"), {T::Basic, "arrows-alt-h"}},
         {QStringLiteral("instrument"), {T::Basic, "microscope"}},
         {QStringLiteral("peak"), {T::Basic, "shapes", true}},
-        {QStringLiteral("background"), {T::Basic, "wave-square"}},
+        {QStringLiteral("background"), {T::Basic, "wave-square", true}},
         {QStringLiteral("linked_structure"), {T::Basic, "layer-group"}},
         {QStringLiteral("excluded_region"), {T::Basic, "eraser"}},
         {QStringLiteral("absorption"), {T::Extras, "tint"}},

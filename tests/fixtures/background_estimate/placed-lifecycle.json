@@ -1,0 +1,67 @@
+{
+  "claim": "REGRESSION INPUT: one calculate/save under exact placed-count semantics; no physics oracle",
+  "repository": "https://github.com/enhantica/edi",
+  "writer": "crysta C++ CLI",
+  "engine_commit": "3188231bb61f9594e06bbed8e39cb37393477672",
+  "writer_binary_sha256": "96359983b89fd561db60d35d41fbe2e69d7a0c2abee61c896d7f3b9e34708007",
+  "command": "python -m tests.fixtures.background_estimate.generate_placed_lifecycle --cli ../background-reference/bin/crysta --engine-commit 3188231bb61f9594e06bbed8e39cb37393477672",
+  "source": "tests/fixtures/background_estimate/projects/lifecycle-auto",
+  "source_sha256": {
+    "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
+    "experiments/hrpt.edi": "27227c6af4d23013eb807ff308b4b0cb72d6f94baf9ee47bb080147fc3563bed",
+    "project.edi": "960b6626b39b9363052b3ac36cfc4a95d6b70830550bc1392571cbf0f7e7b68c",
+    "structures/lbco.edi": "6621c0fa15c69d3bb315f8fdca9a34ce723efbaec2d1cba7e4e4a66549dafcb4"
+  },
+  "project": "tests/fixtures/background_estimate/projects/lifecycle-saved-placed",
+  "saved_digests": {
+    "inputs_digest": "2110dce9da16c947",
+    "points_digest": "af016f720ae992c8"
+  },
+  "points": [
+    [
+      10.0,
+      154.25
+    ],
+    [
+      44.15,
+      153.33572967075077
+    ],
+    [
+      46.25,
+      0.0
+    ],
+    [
+      64.85,
+      156.10220027990928
+    ],
+    [
+      66.25,
+      0.0
+    ],
+    [
+      78.2,
+      174.31426414570706
+    ],
+    [
+      80.3,
+      0.0
+    ],
+    [
+      81.95,
+      167.18279045187305
+    ],
+    [
+      164.85,
+      108.99567148073145
+    ]
+  ],
+  "sha256": {
+    "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
+    "experiments/hrpt.edi": "9b2ba84cf9b668ff88b08bc056a3769458712a1350c6b867fb81e4e34c174c6c",
+    "project.edi": "960b6626b39b9363052b3ac36cfc4a95d6b70830550bc1392571cbf0f7e7b68c",
+    "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+  },
+  "supersedes_input_for_current_semantics": "saved-lifecycle.json",
+  "before_points": 5,
+  "requested_placed_count": 9
+}

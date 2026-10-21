@@ -125,8 +125,10 @@ The decisions it rests on, unchanged here:
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
   unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
 - **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
-  Its buttons stay below it: Add point, Ids from positions and Autodetect for points (Add term for a polynomial
-  or Chebyshev background), each with its longer wording as a tooltip (the owner, 2026-10-11).
+  Its buttons stay below it: Add point, Id from position and Estimate for points, and Add term, Id from order and
+  Estimate for a polynomial or Chebyshev background's terms, each with its longer wording as a tooltip (the owner,
+  2026-10-11; the singular names and Id from order, 2026-10-20, so each names the id column it fills). The terms
+  table shows each term's id before its order, as the points table does.
 - **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
   (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
@@ -142,7 +144,9 @@ disabled** rather than left out, so the layout is final:
   easydiffractionbeta's (idea 13). Experiments has **Load experiment** and **Create experiment** in the same
   places (§18).
 - **Autodetect** (tooltip: reset to the autodetected background) beside **Add point** in Background, the
-  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`).
+  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`). Now implemented as **Estimate**,
+  in the same place with the same icon: it opens the estimate dialog of
+  [ADR-0040](0040-automatic-background-estimation.md).
 - **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
   27). Get started's four buttons sit two by two: *Create a new project*, *Open an existing project*; *Save
   project as…* (§13), *Open project from URL…*.

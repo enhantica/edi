@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
@@ -279,6 +280,14 @@ def test_loop_expectations_cover_fixture_bytes(source):
     contents = (
         path.read_bytes() if modes == {'current'} else original_tokens(pre_catalogue_bytes(path))
     )
+    if source == 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi':
+        # Before: whole input equals the original loop witness. After: only the
+        # declared manual category is added; every loop byte keeps the old pin.
+        receipt = json.loads((estimate_bytes.HERE / 'manual-bytes.json').read_text())
+        estimate_bytes.require_bytes(
+            contents, cases[0]['sha256'], receipt['after']['input_sha256']
+        )
+        contents = estimate_bytes.without_category(contents)
     actual_digest = hashlib.sha256(contents).hexdigest()
     replacement = json.loads((ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text())
     for case in cases:

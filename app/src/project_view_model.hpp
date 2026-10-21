@@ -26,6 +26,7 @@
 #include "block_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
@@ -282,6 +283,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
+    // Id from order: the current experiment's polynomial or Chebyshev terms take their orders as ids
+    // (edi::order_term_ids), every reference following, as one edit with one Undo step.
+    Q_INVOKABLE bool nameTermsByOrder();
+    // Estimate: the current experiment's line-segment points replaced by crysta's estimate with the experiment's
+    // `_background_estimate` settings (edi::estimate_background, ADR-0040), numbered and fixed, as one edit with
+    // one Undo step. The summary and any warning go to the messages.
+    Q_INVOKABLE bool estimateBackground();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -358,6 +366,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    QString value_refusal(const edi::Parameter& parameter) const override;
+    QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
+                                  bool structural) override;
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
@@ -384,6 +395,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
+    // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
+    // ignored them (the owner, 2026-10-20).
+    void information(const QString& text);
     void pathChanged();
     void modifiedChanged();
     // A calculation was published; each experiment's pattern holds its outcome (Session's message list).
@@ -398,6 +412,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationFinished();
 
    private:
+    // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
+    void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);
     // Each of these signals only what changed since it was last published (the owner's per-property
     // rule).
@@ -454,10 +470,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct FreeFlags {
         std::vector<std::pair<std::string, bool>> before;
     };
-    // Name points by position: the experiment's background point ids as they were, in order.
+    // Id from position or Id from order: the experiment's background point or term ids as they were, in order.
     struct PointIds {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
+        bool terms = false;
+    };
+    // Estimate: the experiment's line-segment points, mode and their record as they were.
+    struct BackgroundPoints {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundState before;
     };
     // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
     // before and after it, so its Undo puts back the same shared results rather than renamed copies.
@@ -469,7 +491,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BackgroundPoints, BlockName,
+                                    edi::ReportSettingsState>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.

@@ -4,6 +4,7 @@ Before : raw corpus inputs and saved bytes equalled the old hashes.
 After inherited main cf5d5253: reverse only the six declared seed changes,
 check/remove exactly one canonical calculator block per saved experiment,
 and compare every other byte and the full file inventory to the same pins.
+The later manual estimate category has a separately labelled exact byte extension.
 """
 
 import hashlib
@@ -15,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
 from tests.fixtures.report_units.iucr_reference import without_default_rule
@@ -227,6 +229,10 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'the public adaptation must prove all original saved bytes first'
         )
         expected = public
+    # Before: no estimate category. After: exact manual/arpls category, with
+    # every prior non-category byte and the complete input/output inventory retained.
+    if case in estimate_bytes.CASES:
+        expected = estimate_bytes.adapted_pin(expected, source)
     if case in RELATIONS['cases']:
         extension = RELATIONS['cases'][case]
         assert RELATIONS['claim'].startswith('REGRESSION PIN:'), (
@@ -293,7 +299,10 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         live_source = REFERENCE.inputs()[case]
         live_raw = {
             path.relative_to(live_source).as_posix(): hashlib.sha256(
-                metadata_bytes.pre_catalogue_bytes(path)
+                estimate_bytes.without_category(path.read_bytes())
+                if case in estimate_bytes.CASES
+                and path.relative_to(live_source).as_posix() == estimate_bytes.EXPERIMENT
+                else metadata_bytes.pre_catalogue_bytes(path)
             ).hexdigest()
             for path in live_source.rglob('*')
             if path.is_file()
@@ -305,12 +314,22 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         source = REFERENCE.committed_input(
             ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'
         )
+        if case in estimate_bytes.CASES:
+            (source / estimate_bytes.EXPERIMENT).write_bytes(
+                (live_source / estimate_bytes.EXPERIMENT).read_bytes()
+            )
     assert REFERENCE.legacy_input_hashes(source, case) == expected['input_sha256'], (
         ' I22 the storage move cannot alter inputs to hide a serialization regression'
     )
     assert observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == rounded_pins(
         expected['saved_sha256']
-    ), ' I22 save must retain the pre-move bytes of every file in this project'
+    ), 'I22 save retains all historical bytes plus the labelled manual estimate extension'
+    if case in estimate_bytes.CASES:
+        estimate_bytes.require_saved(
+            tmp_path / 'saved',
+            BASELINE['cases'][case]['saved_sha256'][estimate_bytes.EXPERIMENT],
+            expected['saved_sha256'][estimate_bytes.EXPERIMENT],
+        )
 
 
 @pytest.mark.parametrize('case', sorted(EXTENSION['cases']))
@@ -447,3 +466,25 @@ def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(tmp_p
     monkeypatch.setattr(REFERENCE, 'inputs', lambda: {case: changed})
     with pytest.raises(AssertionError, match='changed live example bytes'):
         test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'damaged', case)
+
+
+@pytest.mark.parametrize('damage', ['mode', 'method', 'missing', 'duplicate', 'extra', 'value'])
+def test_manual_estimate_byte_extension_refuses_rebanked_unrelated_changes(damage):
+    before = b'data_hrpt\n\n_background.intensity 37.125\n'
+    after = before + estimate_bytes.BLOCK
+    old_hash = hashlib.sha256(before).hexdigest()
+    estimate_bytes.require_bytes(after, old_hash, hashlib.sha256(after).hexdigest())
+    if damage == 'mode':
+        after = after.replace(b'manual', b'auto')
+    elif damage == 'method':
+        after = after.replace(b'arpls', b'snip')
+    elif damage == 'missing':
+        after = after.replace(b'_background_estimate.method arpls\n', b'')
+    elif damage == 'duplicate':
+        after += estimate_bytes.BLOCK
+    elif damage == 'extra':
+        after += b'_background_estimate.width 3.125\n'
+    else:
+        after = after.replace(b'37.125', b'37.126')
+    with pytest.raises(AssertionError, match='manual estimate'):
+        estimate_bytes.require_bytes(after, old_hash, hashlib.sha256(after).hexdigest())

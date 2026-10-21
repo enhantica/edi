@@ -7,7 +7,9 @@ import copy
 import hashlib
 import json
 import re
+import tomllib
 from collections import Counter
+from operator import itemgetter
 from pathlib import Path
 
 import pytest
@@ -823,14 +825,17 @@ def test_linux_source_guard_reaches_task_and_script_replacement(event, damage):
         for path, changes in {
             'tools/ci/build-crysta.sh': (
                 ('PLATFORM=linux-64 ;;', 'PLATFORM=osx-arm64 ;;'),
-                ('osx-arm64-app) PLATFORM=osx-arm64', 'osx-arm64-app) PLATFORM=linux-64'),
+                (
+                    'osx-arm64 | macOS-ARM64 | Darwin-arm64) PLATFORM=osx-arm64',
+                    'osx-arm64 | macOS-ARM64 | Darwin-arm64) PLATFORM=linux-64',
+                ),
                 ('fetch --platform', 'check --platform'),
                 ('printf \'%s\\n\' "$SHA"', 'printf \'%s\\n\' "unchecked"'),
                 ('edi_producer_lock "$ROOT"', 'true'),
             ),
             'tools/ci/edi_native.py': (
-                ("'linux-64-app': 'linux-64'", "'linux-64-app': 'osx-arm64'"),
-                ("'osx-arm64-app': 'osx-arm64'", "'osx-arm64-app': 'linux-64'"),
+                ("'linux-64': 'linux-64'", "'linux-64': 'osx-arm64'"),
+                ("'osx-arm64': 'osx-arm64'", "'osx-arm64': 'linux-64'"),
                 ('    prove_import()', '    pass'),
                 ("'source_tree': git('rev-parse', 'HEAD^{tree}')", "'source_tree': 'unchecked'"),
                 ('return table.get(host) or refuse', "return 'linux-64' or refuse"),
@@ -851,11 +856,16 @@ def test_linux_source_guard_reaches_task_and_script_replacement(event, damage):
             assert extension != baseline and retains_work(path, baseline, extension), (
                 'An added macOS alias is admitted in the original mapping layout too'
             )
-            assert 'osx-arm64-app' in candidate, (
-                'Platform extension controls reach the current macOS app alias'
+            retired = without_retired_app_aliases(path, candidate)
+            assert not any(alias in retired for alias in ('linux-64-app', 'osx-arm64-app')), (
+                'The retirement control must remove both historical custom-platform aliases'
+            )
+            assert retains_work(path, baseline, retired), (
+                'Removing only retired aliases must preserve canonical platform '
+                'and qualification operations'
             )
             assert retains_work(path, baseline, candidate), (
-                'The macOS app alias preserves the frozen Linux mapping and qualification source'
+                'Canonical platforms preserve the frozen Linux mapping and qualification source'
             )
             assert not retains_work(path, baseline, 'true\n'), (
                 'A macOS alias exemption cannot admit replacement of a qualification script'
@@ -1032,3 +1042,78 @@ def test_moved_gates_keep_every_required_full_run_and_reject_each_escape(event, 
         assert not moved_gate_required(broken, event, target), (
             'Owner event policy: missing, skipped, advisory and empty full-run gates must refuse'
         )
+
+
+def without_retired_app_aliases(path, source):
+    """An exact byte-only retirement control, independent of source normalization."""
+    if path.endswith('.sh'):
+        source = '\n'.join(
+            line.replace('linux-64-app', 'linux-64').replace('osx-arm64-app', 'osx-arm64')
+            if line.lstrip().startswith('#')
+            else line
+            for line in source.split('\n')
+        )
+        return (
+            source
+            .replace('linux-64 | linux-64-app | ', 'linux-64 | ')
+            .replace('osx-arm64 | osx-arm64-app | ', 'osx-arm64 | ')
+            .replace(
+                "  osx-arm64-app) PLATFORM=osx-arm64 ;;  # the app environment's "
+                'macOS platform (macOS 14)\n',
+                '',
+            )
+        )
+    return source.replace("'linux-64-app': 'linux-64', ", '').replace(
+        "    table |= {'osx-arm64-app': 'osx-arm64'}\n", ''
+    )
+
+
+def test_workspace_platforms_use_unnamed_subdir_version_floors():
+    manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
+    platforms = manifest['workspace']['platforms']
+    assert len(platforms) == 2, (
+        'The workspace must declare exactly one Linux and one macOS subdir, without named variants'
+    )
+    assert sorted(platforms, key=itemgetter('platform')) == [
+        {'platform': 'linux-64', 'glibc': '2.34'},
+        {'platform': 'osx-arm64', 'macos': '14.0'},
+    ], 'Every environment must inherit the owner-declared unnamed subdir floors'
+    assert 'platforms' not in manifest['feature']['app'], (
+        'The app must inherit workspace platforms rather than select custom app platforms'
+    )
+    assert 'core-platforms' not in manifest['feature'], (
+        'The retired core-platform selector must not override the common workspace subdirs'
+    )
+
+
+@pytest.mark.parametrize('path', ['tools/ci/build-crysta.sh', 'tools/ci/edi_native.py'])
+@pytest.mark.parametrize('damage', ['linux-map', 'mac-map', 'qualification', 'refusal'])
+def test_retired_aliases_do_not_exempt_canonical_sdk_or_qualification_work(path, damage):
+    baseline = SHIPPED['execution_sources'][path]
+    current = (ROOT / path).read_text()
+    retired = without_retired_app_aliases(path, current)
+    assert retains_work(path, baseline, retired), (
+        'The owner-authorized alias retirement must retain the original executable closure'
+    )
+    if path.endswith('.sh'):
+        operations = {
+            'linux-map': ('PLATFORM=linux-64 ;;', 'PLATFORM=osx-arm64 ;;'),
+            'mac-map': ('PLATFORM=osx-arm64 ;;', 'PLATFORM=linux-64 ;;'),
+            'qualification': ('fetch --platform', 'check --platform'),
+            'refusal': ('>&2; exit 1 ;;', '>&2; exit 0 ;;'),
+        }
+    else:
+        operations = {
+            'linux-map': ("'linux-64': 'linux-64'", "'linux-64': 'osx-arm64'"),
+            'mac-map': ("'osx-arm64': 'osx-arm64'", "'osx-arm64': 'linux-64'"),
+            'qualification': ('    prove_import()', '    pass'),
+            'refusal': ('return table.get(host) or refuse', "return 'linux-64' or refuse"),
+        }
+    old, new = operations[damage]
+    assert old in retired, (
+        'The alias-retirement control must reach its canonical protected operation'
+    )
+    assert not retains_work(path, baseline, retired.replace(old, new)), (
+        'Retiring app aliases must not admit changed canonical maps, '
+        'missing qualification or lost refusal'
+    )
