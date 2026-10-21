@@ -9660,9 +9660,9 @@ struct AssistantViewModel::State {
                 } else if(category->id=="excluded_region") {
                     for(std::size_t i=0;i<experiment.excluded_regions.size();++i) {
                         add(Kind::Navigate,"excludedRegions.append");
-                        const auto& region=*experiment.excluded_regions[i];const auto previous=i?experiment.excluded_regions[i-1]->second.get():0.;
-                        if(region.first.get()>previous) {add(Kind::Text,QString("excludedRegion.end.%1").arg(i),number(region.second.get()));add(Kind::Text,QString("excludedRegion.start.%1").arg(i),number(region.first.get()));}
-                        else {add(Kind::Text,QString("excludedRegion.start.%1").arg(i),number(region.first.get()));add(Kind::Text,QString("excludedRegion.end.%1").arg(i),number(region.second.get()));}
+                        const auto& region=*experiment.excluded_regions[i];
+                        add(Kind::Text,QString("excludedRegion.start.%1").arg(i),number(region.first.get()));
+                        add(Kind::Text,QString("excludedRegion.end.%1").arg(i),number(region.second.get()));
                     }
                 } else {
                     if(category->id=="peak")add(Kind::Choose,"peak.type",QString::fromStdString(edi::effective_peak_type(experiment)));
