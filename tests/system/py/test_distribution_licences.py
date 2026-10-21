@@ -1,4 +1,4 @@
-"""The distribution's licence list is checked against its actual bundled files."""
+"""Check the licence material in real install trees and an unpacked Python wheel."""
 
 import os
 import re
@@ -6,12 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.integration.py.test_table_and_about_contract import dependency_matrix
+from tests.integration.py.test_table_and_about_contract import ROOT, dependency_matrix
 
-# Filenames identify compiled/bundled components independently of the overview table.
+# Positive filename witnesses are independent of the overview. Compiled-in
+# components need their licence even when no standalone library file survives.
 FILES = {
-    'nanobind': ('*nanobind*',),
-    'robin-map': ('*robin*map*',),
     'Qt': ('*Qt6Core*', '*Qt6Qml*', '*Qt6Quick.*'),
     'Qt Graphs': ('*Qt6Graphs*',),
     'Qt Quick 3D': ('*Qt6Quick3D*',),
@@ -19,6 +18,15 @@ FILES = {
     'plotly.js': ('*plotly*.js',),
     'three.js': ('*three*.js', '*OrbitControls.js'),
 }
+ABSENT = {'', '-', '—', 'no', 'n/a'}
+
+
+def section_texts(text):
+    starts = list(re.finditer(r'^## (.+)$', text, re.MULTILINE))
+    return {
+        match[1]: text[match.end() : starts[i + 1].start() if i + 1 < len(starts) else None]
+        for i, match in enumerate(starts)
+    }
 
 
 @pytest.mark.parametrize(
@@ -32,43 +40,66 @@ FILES = {
 )
 def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
     matrix = dependency_matrix()
-    bundle = os.environ.get(variable)
-    assert bundle and Path(bundle).is_dir(), (
-        'The licence gate needs the actual unpacked distribution at ' + variable
+    root = Path(os.environ.get(variable, ROOT / 'build/distribution-licences' / surface))
+    assert root.is_dir(), (
+        'Build the licence packages with tests/fixtures/distribution_licences/stage.py; '
+        'the licence-surfaces CI job supplies ' + variable + ': ' + str(root)
     )
-    root = Path(bundle)
-    notices = [p for p in root.rglob('*') if p.is_file() and p.name == 'THIRD-PARTY-NOTICES']
-    assert notices, 'Each actual distribution carries its own component notices'
-    listed = '\n'.join(p.read_text(errors='replace') for p in notices)
-    entries = re.findall(r'^- ([^|]+)\| licence:', listed, re.MULTILINE)
-    listed_names = set()
-    for entry in entries:
-        names = [
-            name
-            for name in matrix
-            if entry.strip() == name or entry.strip().startswith(name + ' ')
-        ]
-        assert names, 'Every bundled notice entry names a component in the overview: ' + entry
-        listed_names.add(max(names, key=len))
-    absent = {'', '-', '—', 'no', 'n/a'}
-    for name, columns in matrix.items():
-        required = columns[surface].casefold() not in absent
-        assert (name in listed_names) == required, (
-            'A delivered licence list contains exactly its own overview column: '
+    required = {name for name, row in matrix.items() if row[surface].casefold() not in ABSENT}
+    assert 'diffraction-lib' not in required, (
+        'A reference-only project does not appear among any delivered surface components'
+    )
+    if surface in {'desktop', 'web'}:
+        manifests = list(root.rglob('DEPENDENCIES.md'))
+        assert manifests, 'The delivered app carries its dependency overview for its About table'
+        assert all(
+            path.read_bytes() == (ROOT / 'DEPENDENCIES.md').read_bytes() for path in manifests
+        ), 'The shipped overview agrees exactly with the source used for the About table'
+        notices = list(root.rglob('THIRD-PARTY-NOTICES'))
+        assert notices, 'Each delivered app carries the full third-party licence texts'
+        reference = section_texts((ROOT / 'THIRD-PARTY-NOTICES').read_text())
+        for notice in notices:
+            sections = section_texts(notice.read_text())
+            for name in required:
+                assert name in sections and sections[name] == reference[name], (
+                    'Every carried component retains its complete licence text: '
+                    + surface
+                    + '/'
+                    + name
+                )
+        # The common legal-text document may contain other surfaces' texts. The
+        # displayed app list is checked separately in the rendered About actor.
+        assert 'plotly.js' in required and 'three.js' in required, (
+            'Both app surfaces ship the report libraries and list their licences'
+        )
+    else:
+        paths = [path for path in root.rglob('*-LICENSE') if 'licenses' in path.parts]
+        names = {re.sub(r'[^A-Za-z0-9.+-]+', '-', name).strip('-'): name for name in matrix}
+        listed = {names.get(path.name.removesuffix('-LICENSE'), path.name) for path in paths}
+        notices = list(root.rglob('THIRD-PARTY-NOTICES'))
+        for notice in notices:
+            listed.update(section_texts(notice.read_text()))
+        assert listed == required, (
+            'The delivered package carries exactly its own component licences: '
             + surface
-            + '/'
-            + name
+            + '/missing='
+            + repr(sorted(required - listed))
+            + '/extra='
+            + repr(sorted(listed - required))
         )
-    for name, patterns in FILES.items():
-        bundled = any(any(root.rglob(pattern)) for pattern in patterns)
-        if bundled:
-            assert name in matrix and matrix[name][surface].casefold() not in absent, (
-                'A real bundled library needs its licence on this surface: ' + surface + '/' + name
+        reference = section_texts((ROOT / 'THIRD-PARTY-NOTICES').read_text())
+        for path in paths:
+            name = names[path.name.removesuffix('-LICENSE')]
+            indented = reference[name].splitlines()
+            first = next(i for i, line in enumerate(indented) if line.startswith('    '))
+            expected = (
+                '\n'.join(line.removeprefix('    ') for line in indented[first:]).rstrip() + '\n'
             )
-    if surface == 'desktop':
-        assert not any(root.rglob('*plotly*.js')), (
-            'The desktop distribution does not bundle report-only plotly.js'
-        )
-        assert 'diffraction-lib' not in listed_names and 'plotly.js' not in listed_names, (
-            'The desktop About list excludes API references and report-only libraries'
-        )
+            assert path.read_text() == expected, (
+                'The packaged component licence retains the complete original text: ' + name
+            )
+    for name, patterns in FILES.items():
+        if any(any(root.rglob(pattern)) for pattern in patterns):
+            assert name in required, (
+                'A physically bundled library is declared on its surface: ' + surface + '/' + name
+            )

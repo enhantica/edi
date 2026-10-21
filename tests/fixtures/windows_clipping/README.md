@@ -1,34 +1,98 @@
-# Windows clipping check
+# Hosted Windows clipping job
 
-`job.yml` is a job fragment for the application workflow. It consumes the actual
-`edi-webapp` artifact from the same workflow run, extracts it and runs the browser
-actor on hosted Windows with Edge. It does not compile a substitute renderer.
-The app build must retain the existing native control-geometry hook. Keep hardware
-ANGLE enabled: forcing SwiftShader or the Qt software backend would change the
-Windows rendering path under investigation. Record the browser version and GPU
-renderer in the receipt. Run both single-thread and multi-thread web kits.
+`job.yml` is the job to add beside `app-wasm` in the application workflow. The
+existing Linux `app-wasm` job builds both Qt kits with
+`pixi run -e app --skip-deps wasm-build` and uploads the directory
+`build/wasm/site` as `edi-webapp`. Download that artifact directly into the site's
+folder. Do not expand a zip: the uploaded directory contains `build.json`, the
+start page and the two content-addressed kit folders.
 
-The six small cases described in shapes-app's `wasm/prototype` layout change are:
-clipped rows, an antialiased clipped border, outer clip off, both clips on,
-`layer.enabled`, and an opaque cover with clipping off. The referenced source
-could not be fetched during authoring. These descriptions come from the task
-brief; they are not claimed to be a transcription of the unavailable files.
-Before the Windows result can count, the build job must include a test host of
-these presets using the same pinned gui-components and the production render
-configuration. It must also exercise the real Structure, Experiment and Analysis
-tables, sidebar groups and a popup. Neither the presets alone nor a screenshot
-of an empty viewport satisfies the application requirement.
+The consumer is `windows-web-clipping` on `windows-2025`. It needs no Windows
+compiler or Pixi environment. It needs Node 22.23.2, Python 3.13, the locked
+Playwright driver from `tests/fixtures/web_parallel`, and the image's installed
+Microsoft Edge. It serves localhost with COOP/COEP headers so the multithread kit
+can use shared memory. The actor verifies isolation, the requested kit, the
+browser version and the actual WebGL renderer. It runs headed Edge through
+Windows ANGLE/D3D11; it does not force SwiftShader or Qt's software renderer. A
+hosted runner may report a software Windows adapter: record that fact rather
+than calling it a hardware-GPU result. If WebGL2 cannot start, the job fails.
 
-For each case the browser captures a settled frame, moves a brightly coloured
-child partly outside the inner clip and then across the enclosing clip, and
-compares every pixel in the outside band with an empty background capture. It
-also requires a positive inside-band witness. The cover case is the independent
-pixel-reference control, and turning clips off must produce visible sentinel
-pixels. Row scrolling, group collapse and popup close use trusted browser input;
-the baseline is taken at the same layout and theme. Save before/after screenshots,
-geometry, pixel counts, console errors and the GPU receipt. Repeat both themes.
+## Producer work required before the job can pass
 
-The browser actor intentionally refuses without the preset host. A Linux result,
-a disabled browser gate or an unevaluated job fragment is not a Windows green.
-The conductor must arrange the producer hook and wire this fragment into the
-actual required CI workflow before gate 2 can pass.
+The ordinary site currently has `ediControlGeometry` and `ediOpenExample` but no
+clipping fixture. The producer must compile a test-only host into **both** kits,
+using the same app module, pinned gui-components, compiler options and rendering
+backend as the normal app. The current shared-cell pin is the published commit
+beginning `a69bef27`. Record the full pin, edi commit, source hashes of the host
+and preset QML, Qt kit and Emscripten version in `clipping-host.json` at the site
+root. Preserve the production entry points and pages. Do not provide a separate
+HTML/CSS imitation of QML, or a renderer with clipping implemented by the host.
+
+Build integration: add the fixture's QML to `edi_app_module`'s `QML_FILES`, its
+native observation bridge to `SOURCES`, and install that bridge immediately
+after `install_web_page_hooks(engine)` in a temporary source snapshot. Use the
+existing `tools/ci/wasm-build.sh` kit configuration and `wasm-pack.sh` packing
+recipe against that snapshot. The host must be disabled on a normal start and
+activate only for `?acceptance=clipping`. Publish the instrumented site's two
+kits together as this run's `edi-webapp` artifact. That producer integration is
+implementation work still required; this test job refuses a normal artifact
+without its host manifest. Wiring the consumer alone cannot produce a green.
+
+The host exposes asynchronous
+`ediClippingAcceptance(scenario, theme, phase)`. Preparation may open the actual
+example and switch the actual page, theme and sidebar groups. Observation must
+read native QQuickItem scene geometry and actual visibility/contentY; it must
+not return desired geometry or perform the action being tested. Its contract:
+
+- `background`: return a settled, empty-content reference of the same scene,
+  before the sentinel content has ever been drawn; unrelated layout is fixed.
+- `prepare`: draw the case, await actual Qt frame swaps, and return `clip`
+  (`x,y,width,height`), `region` (the full possible overflowing child bounds,
+  including antialiasing), and `action` (trusted click or wheel coordinates).
+- `read`: observe the completed real input action, await actual Qt frame swaps,
+  and return `completed: true` only after contentY, expanded state or popup
+  visibility proves that action occurred. It cannot hide or move items itself.
+  The actor checks the actual `contentHeight` and before/after `contentY`,
+  `expanded`, and `popupVisible` fields as appropriate. Presets also expose
+  native `innerClip`, `outerClip`, `coverVisible`, `layerEnabled` and
+  `antialiasing` properties; their names alone never prove the preset ran.
+
+The region includes all possible escaped child pixels, rather than an arbitrary
+strip that could miss a distant overflow. For collapse and close, take the
+background at the resulting layout with the content never created, then restore
+the identical layout for the visible witness. Do not take the background after
+the close: that could bless a stale frame as its own reference. The input target
+and unrelated animated content must not add pixels outside the reference mask.
+
+## Cases and independent controls
+
+Exercise every combination of the two kits and light/dark themes. The six
+minimal presets named in the task brief are clipped rows, an antialiased clipped
+border, outer clipping off, both clips on, `layer.enabled`, and an opaque cover
+with clipping off. Give each a saturated sentinel crossing both the inner and
+outer native bounds. Copy the upstream shapes-app preset source when available,
+record its revision, and retain the preset source hashes in the artifact. The
+upstream source was unavailable during initial authoring; the case names alone
+are not a claim that these presets have already been reproduced.
+
+Also use the production Structure, Experiment and Analysis tables, an actual
+collapsible sidebar group, and a real popup. Use a populated project, scroll a
+row completely out of view, collapse expanded content, and close the popup with
+trusted browser input. A table containing no rows cannot supply a witness.
+The producer must retain enough rows to overflow each table in both themes.
+
+For every case save background, visible and post-action screenshots; native
+geometry; actual post-action state; browser/GPU and build identities; pixel
+counts; console errors. A positive inside witness proves real content was
+visible before the action. Every pixel outside the allowed clip, within all
+possible overflowing bounds, must match the independent empty reference. For a
+closed popup or collapsed group the vacated area must also match that reference.
+Turning outer clipping off must produce outside sentinel pixels; the opaque
+cover must remove them without enabling clipping. Those controls must fail if
+the pixel comparison is disabled or the sentinel is never drawn.
+
+The job must become required at the exact app head. `app-wasm` currently skips
+pull requests, so the dependent Windows job also skips those events: either run
+both jobs on the accepted head by dispatch/main, or change the producer's event
+policy before requiring this on pull requests. A skipped job, a Linux actor, a
+job fragment, or a missing fixture host supplies no Windows acceptance evidence.

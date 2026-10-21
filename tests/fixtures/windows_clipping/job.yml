@@ -1,37 +1,49 @@
-# Job fragment for the application workflow. The build job supplies both web kits.
+# Add beside app-wasm. The producer requirements are in README.md.
 windows-web-clipping:
   needs: app-wasm
+  if: ${{ !cancelled() && needs.app-wasm.result == 'success' }}
   runs-on: windows-2025
   timeout-minutes: 15
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: actions/download-artifact@v4
       with:
         name: edi-webapp
-        path: build/wasm
+        path: build/wasm/site
     - uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '22.23.2'
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13'
-    - name: Install the browser driver
+    - name: Install the pinned browser driver
       working-directory: tests/fixtures/web_parallel
       run: npm ci --ignore-scripts
-    - name: Serve the delivered web application
+    - name: Check the delivered host and serve the site
       shell: pwsh
       run: |
-        Expand-Archive build/wasm/edi-webapp.zip build/wasm/unpacked
-        Start-Process python -ArgumentList @('tests/fixtures/windows_clipping/serve.py', 'build/wasm/unpacked', '8765') -RedirectStandardOutput server.log -RedirectStandardError server-errors.log
-    - name: Check clips in Edge on Windows
+        $ErrorActionPreference = 'Stop'
+        if (!(Test-Path build/wasm/site/build.json)) { throw 'The app-wasm site artifact is missing' }
+        if (!(Test-Path build/wasm/site/clipping-host.json)) { throw 'The app-wasm producer has not included the clipping fixture host' }
+        $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+        if (!(Test-Path $edge)) { throw 'The hosted Windows image must provide Microsoft Edge' }
+        "EDI_BROWSER=$edge" >> $env:GITHUB_ENV
+        $server = Start-Process python -PassThru -ArgumentList @('tests/fixtures/windows_clipping/serve.py', 'build/wasm/site', '8765') -RedirectStandardOutput server.log -RedirectStandardError server-errors.log
+        "EDI_CLIPPING_SERVER_PID=$($server.Id)" >> $env:GITHUB_ENV
+    - name: Check both Qt kits and both themes in Windows Edge
+      shell: pwsh
+      run: node tests/system/manual/windows_clipping.mjs http://127.0.0.1:8765 build/windows-clipping
+    - name: Stop the local server
+      if: always()
       shell: pwsh
       run: |
-        $env:EDI_BROWSER = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-        node tests/system/manual/windows_clipping.mjs http://127.0.0.1:8765 build/windows-clipping
+        if ($env:EDI_CLIPPING_SERVER_PID) { Stop-Process -Id $env:EDI_CLIPPING_SERVER_PID -ErrorAction SilentlyContinue }
     - uses: actions/upload-artifact@v4
       if: always()
       with:
         name: windows-web-clipping
         path: |
           build/windows-clipping
+          build/wasm/site/clipping-host.json
           server*.log
+        if-no-files-found: error

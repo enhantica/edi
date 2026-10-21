@@ -31,6 +31,27 @@ Item {
                 dialog.destroy();
             dialog = null;
         }
+        function desktopComponents() {
+            const result = [];
+            let header = null;
+            for (const line of Probe.readFile("DEPENDENCIES.md").split("\n")) {
+                if (!line.startsWith("|")) {
+                    header = null;
+                    continue;
+                }
+                const cells = line.slice(1, line.lastIndexOf("|")).split("|").map(cell => cell.trim());
+                if (cells[0] === "Component") {
+                    header = cells;
+                    continue;
+                }
+                if (!header || cells[0].startsWith("---"))
+                    continue;
+                const value = cells[header.indexOf("Desktop app")];
+                if (value && value !== "—")
+                    result.push(cells[0]);
+            }
+            return result;
+        }
         function test_links_order_and_plain_text() {
             dialog = factory.createObject(surface);
             verify(dialog !== null, "The acceptance check opens the production About dialog");
@@ -58,13 +79,27 @@ Item {
                 }
             ]) {
                 mouseClick(entry.label, entry.label.width / 2, entry.label.height / 2);
-                tryVerify(() => Render.descendants(surface.Window.window.contentItem).some(item => item.visible && typeof item.text === "string" && item.text === entry.expected && item.readOnly === true && item.textFormat === TextEdit.PlainText), 1000, "Each identifier opens its real licence as read-only plain text");
+                const popup = findChild(dialog, "about.licencePopup");
+                verify(popup !== null, "Each licence link has a named popup in the About object tree");
+                tryCompare(popup, "opened", true, 1000, "Clicking a licence identifier opens its popup");
+                const text = findChild(popup, "about.licence.text");
+                verify(text !== null && text.visible, "The licence popup contains a visible text field");
+                compare(text.text, entry.expected, "The popup shows the complete repository licence file without a summary or markup");
+                compare(text.readOnly, true, "The displayed licence text cannot be edited");
+                compare(text.textFormat, TextEdit.PlainText, "The licence field interprets its contents as plain text");
                 keyClick(Qt.Key_Escape);
+                tryCompare(popup, "visible", false, 1000, "The first licence popup finishes closing before the next link is clicked");
             }
             mouseClick(dependencies, dependencies.width / 2, dependencies.height / 2);
-            const table = findChild(surface.Window.window.contentItem, "about.components");
+            const table = findChild(dialog, "about.components");
             verify(table !== null && table.visible && table.count > 0, "The third-party link opens the actual dependency table");
+            verify(waitForPolish(table), "The dependency popup completes its table layout");
             table.forceLayout();
+            const expectedComponents = desktopComponents();
+            verify(expectedComponents.length > 0, "The independent overview parser reaches real component rows");
+            compare(table.count, expectedComponents.length, "Desktop About lists exactly the desktop overview column");
+            for (let index = 0; index < table.count; ++index)
+                compare(table.sourceModel.get(index).component, expectedComponents[index], "Every displayed dependency belongs to the desktop surface in overview order");
             const header = Render.cells(table.headerItem);
             const row = table.itemAtIndex(0);
             verify(row !== null && row.enabled && row.opacity === 1, "Dependency rows look enabled");
