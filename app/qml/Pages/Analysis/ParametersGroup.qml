@@ -90,6 +90,20 @@ EaElements.GroupBox {
         }
     }
 
+    // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
+    // project's list.
+    function datablockColor(kind, name) {
+        const blocks = group.project ? (kind === "structure" ? group.project.structures : group.project.experiments) : null;
+        let place = 0;
+        for (let row = 0; blocks && row < blocks.count; ++row) {
+            if (blocks.text(row, "name") === name) {
+                place = row;
+                break;
+            }
+        }
+        return kind === "structure" ? AppColors.structure(place) : AppColors.experiment(place);
+    }
+
     function bound(value) {
         return value === Infinity ? "inf" : value === -Infinity ? "-inf" : String(value);
     }
@@ -104,64 +118,144 @@ EaElements.GroupBox {
             font.pixelSize: EaStyle.Sizes.fontPixelSize
             text: "\uf0d7"
         }
-        EaElements.GroupRow {
+        // The filters (edi ADR-0046): datablocks, categories and parameters on the top line, each narrowing the next,
+        // then the name filter and a button clearing all four. Every count is a number of parameters.
+        Column {
             id: filters
-            spacing: AppSizes.inputSpacing
-            EaElements.TextField {
-                objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                placeholderText: qsTr("Filter by name")
-                onTextChanged: filter.nameFilter = text
-            }
-            SearchableComboBox {
-                id: categoryPicker
-                objectName: "parameters.category"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                model: filter.categoryGroups
-                textRole: "title"
-                searchThreshold: 1000
-                popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
-                currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
-                onActivated: index => filter.categoryFilter = filter.categories[index]
-                delegate: EaElements.MenuItem {
-                    id: categoryEntry
-                    required property int index
-                    required property var modelData
-                    width: categoryPicker.popup.width
-                    height: EaStyle.Sizes.comboBoxHeight
-                    text: modelData.title
-                    highlighted: categoryPicker.highlightedIndex === index
-                    contentItem: Item {
-                        implicitHeight: categoryLine.implicitHeight
-                        IconLine {
-                            id: categoryLine
-                            anchors.verticalCenter: parent.verticalCenter
-                            maximumWidth: parent.width
-                            textColor: EaStyle.Colors.themeForeground
-                            segments: categoryEntry.modelData.icon === "" ? [
-                                {
-                                    text: categoryEntry.modelData.title,
-                                    bold: categoryEntry.modelData.datablock
-                                }
-                            ] : [
-                                {
-                                    icon: categoryEntry.modelData.icon,
-                                    color: EaStyle.Colors.themeForegroundMinor
-                                },
-                                {
-                                    text: categoryEntry.modelData.title,
-                                    bold: categoryEntry.modelData.datablock
-                                }
-                            ]
+
+            readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+
+            spacing: AppSizes.groupContentSpacing
+
+            Row {
+                spacing: AppSizes.inputSpacing
+
+                SearchableComboBox {
+                    id: datablockPicker
+                    objectName: "parameters.datablock"
+                    width: filters.third
+                    model: filter.datablockGroups
+                    textRole: "title"
+                    searchThreshold: 1000
+                    popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
+                    currentIndex: Math.max(0, filter.datablocks.indexOf(filter.datablockFilter))
+                    // The box follows the filter again after a choice, so a reset or a datablock that goes away shows.
+                    onActivated: index => {
+                        filter.datablockFilter = filter.datablocks[index];
+                        currentIndex = Qt.binding(() => Math.max(0, filter.datablocks.indexOf(filter.datablockFilter)));
+                    }
+                    delegate: EaElements.MenuItem {
+                        id: datablockEntry
+                        required property int index
+                        required property var modelData
+                        width: datablockPicker.popup.width
+                        height: EaStyle.Sizes.comboBoxHeight
+                        text: modelData.title
+                        highlighted: datablockPicker.highlightedIndex === index
+                        contentItem: Item {
+                            implicitHeight: datablockLine.implicitHeight
+                            IconLine {
+                                id: datablockLine
+                                anchors.verticalCenter: parent.verticalCenter
+                                maximumWidth: parent.width
+                                textColor: EaStyle.Colors.themeForeground
+                                segments: datablockEntry.modelData.icon === "" ? [
+                                    {
+                                        text: datablockEntry.modelData.title
+                                    }
+                                ] : [
+                                    {
+                                        icon: datablockEntry.modelData.icon,
+                                        color: group.datablockColor(datablockEntry.modelData.blockKind, datablockEntry.modelData.blockName)
+                                    },
+                                    {
+                                        text: datablockEntry.modelData.title
+                                    }
+                                ]
+                            }
                         }
                     }
                 }
+                SearchableComboBox {
+                    id: categoryPicker
+                    objectName: "parameters.category"
+                    width: filters.third
+                    model: filter.categoryGroups
+                    textRole: "title"
+                    searchThreshold: 1000
+                    popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
+                    currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
+                    onActivated: index => {
+                        filter.categoryFilter = filter.categories[index];
+                        currentIndex = Qt.binding(() => Math.max(0, filter.categories.indexOf(filter.categoryFilter)));
+                    }
+                    delegate: EaElements.MenuItem {
+                        id: categoryEntry
+                        required property int index
+                        required property var modelData
+                        width: categoryPicker.popup.width
+                        height: EaStyle.Sizes.comboBoxHeight
+                        text: modelData.title
+                        highlighted: categoryPicker.highlightedIndex === index
+                        contentItem: Item {
+                            implicitHeight: categoryLine.implicitHeight
+                            IconLine {
+                                id: categoryLine
+                                anchors.verticalCenter: parent.verticalCenter
+                                maximumWidth: parent.width
+                                textColor: EaStyle.Colors.themeForeground
+                                segments: categoryEntry.modelData.icon === "" ? [
+                                    {
+                                        text: categoryEntry.modelData.title,
+                                        bold: categoryEntry.modelData.datablock
+                                    }
+                                ] : [
+                                    {
+                                        icon: categoryEntry.modelData.icon,
+                                        color: EaStyle.Colors.themeForegroundMinor
+                                    },
+                                    {
+                                        text: categoryEntry.modelData.title,
+                                        bold: categoryEntry.modelData.datablock
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+                SearchableComboBox {
+                    objectName: "parameters.variability"
+                    width: filters.third
+                    model: [qsTr("All parameters (%1)").arg(filter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(filter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(filter.variabilityCounts[2])]
+                    currentIndex: filter.variability
+                    onActivated: index => {
+                        filter.variability = index;
+                        currentIndex = Qt.binding(() => filter.variability);
+                    }
+                }
             }
-            SearchableComboBox {
-                objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
-                onActivated: index => filter.variability = index
+            Row {
+                spacing: AppSizes.inputSpacing
+
+                EaElements.TextField {
+                    id: nameField
+                    objectName: "parameters.nameFilter"
+                    width: EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing - clearButton.width
+                    placeholderText: qsTr("Filter by name")
+                    text: filter.nameFilter
+                    onTextEdited: filter.nameFilter = text
+                }
+                EaElements.SideBarButton {
+                    id: clearButton
+                    objectName: "parameters.clearFilters"
+                    width: height
+                    height: nameField.height
+                    property string toolTip: qsTr("Clear all filters")
+                    fontIcon: "eraser"
+                    text: ""
+                    ToolTip.text: toolTip
+                    onClicked: filter.clearFilters()
+                }
             }
         }
 
