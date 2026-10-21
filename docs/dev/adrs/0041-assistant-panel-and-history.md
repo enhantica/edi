@@ -2308,3 +2308,35 @@ rows keep their ordinary enable toggle and explicit source false remains exact.
 Draft preparation is not a scientific Undo step. The unpublished skill version
 is retained with its explicit updated index digest. No runtime/geometry fix is
 implied by this instructional correction.
+
+Mapped required-field guidance completeness (2026-10-21): the prior shared
+mapped_structure_guidance description/refusal listed corrected key spellings
+but omitted required root/site fields, including wyckoff_letter. The same
+existing code-owned constant now lists every required root, space-group, cell
+and site field and both isotropic/anisotropic ADP alternatives from
+native_mapped_structure_schema, matching unique IDs and required array membership.
+A required key remains required even where the schema admits an empty string;
+no Wyckoff letter or scientific value is guessed. The offered tool schema and
+current refusal, not staged skill files or workspace searches, own API shape.
+Closed validation, aliases refusal, original scientific evidence and actual
+prewrite/current-owner/no-replay restrictions stay exact.
+
+Schema description and both synchronous/asynchronous refusal routes reuse this
+single constant. Existing static ASCII/no-escape proof, exact typed identity,
+known refusal reason and positive-effect contradiction guard remain unchanged.
+All wire/Qt-owner/projected/row/doubly-escaped wrapper preparation already derives
+from this constant's size; no hardcoded prior length, new field/type/path protocol,
+cap increase, generated CIF or scientific fallback is introduced. The full
+required schema and original validator remain authoritative for types, limits
+and scientific validation; this hint does not supply missing evidence or prove
+model recovery, native setup, the viewport regression or task completion.
+
+The FIRST project-assistance complete-action paragraph also incorrectly began
+with only selected CIF/measurement IDs. It now names the actual alternatives:
+a genuine cif_file_id OR complete scientifically mapped mapped_structure, plus
+genuine data_file_id. Canonical space_group keys and matching site/ADP IDs route
+to the offered full native schema/current hint, including required Wyckoff field
+presence without guessed letters. This is strategy routing, not a second schema
+implementation or a claim that staged skills contain the full tool contract.
+Project-assistance advances to 1.5.53 and its explicit index version/SHA follows
+the exact body; prior Draft/default/post-save guidance remains intact.
