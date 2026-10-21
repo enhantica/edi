@@ -578,6 +578,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"seqfit-2-running", {"wait-files:60", "capture-now"}});
         steps_.push_back({"seqfit-3-done", {"wait-fit", "choose:OK"}});
     }
+    // The chart legend of latp_scan's three structures, each listed once as its Bragg peaks, in both themes. Run only
+    // when asked (`--demo-only legend-`).
+    if (only.startsWith(QLatin1String("legend-"))) {
+        steps_.push_back({"legend-1-light", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                             QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
+        steps_.push_back({"legend-2-dark", {"theme:dark"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
