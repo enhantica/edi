@@ -140,7 +140,10 @@ notice (`app/DISTRIBUTION-LICENSE.md`) says so, as `DEPENDENCIES.md` does. **Ame
 About dialog's licence link opens that notice, bundled in the app, and the dialog carries no separate
 "distributed under" sentence; its second link opens the bundled third-party notices. The notice's own links
 (`COPYING`, `LICENSE`, `THIRD-PARTY-NOTICES`) open those bundled texts in the same viewer, resolved against the
-notice's location, and nothing outside the bundled licence texts opens there.
+notice's location, and nothing outside the bundled licence texts opens there. **Amended 2026-10-21 (owner):** the
+About window has no tabs. It names the app's licences by their identifiers, `BSD-3-Clause` and `GPL-3.0-only`, each
+opening its bundled text (`LICENSE`, `COPYING`) as plain text, and a *Third-party licences* link opens the table of
+the components the build bundles (ADR-0017 §1). The notice stays bundled beside the app.
 
 The pattern chart is built on Qt Graphs (ADR-0017 §15, ADR-0020, ADR-0021). The structure view is built on Qt
 Quick 3D, which the app now links (ADR-0017 §16, ADR-0022).

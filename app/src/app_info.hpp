@@ -10,6 +10,8 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 // What the app says about itself — its name, version and links. The only source of the identity the user
@@ -31,6 +33,8 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString appLicenseUrl READ appLicenseUrl CONSTANT)
     Q_PROPERTY(QString copyingUrl READ copyingUrl CONSTANT)
     Q_PROPERTY(QString noticesUrl READ noticesUrl CONSTANT)
+    // edi's own licences, as the About window names them: {id, url} each, the SPDX identifier and its bundled text.
+    Q_PROPERTY(QVariantList appLicences READ appLicences CONSTANT)
     Q_PROPERTY(QStringList componentNames READ componentNames CONSTANT)
     Q_PROPERTY(QStringList componentVersions READ componentVersions CONSTANT)
     Q_PROPERTY(QStringList componentLicences READ componentLicences CONSTANT)
@@ -69,6 +73,10 @@ class ApplicationInfo : public QObject {
     QString appLicenseUrl() const { return QStringLiteral("qrc:/app/DISTRIBUTION-LICENSE.md"); }
     QString copyingUrl() const { return QStringLiteral("qrc:/COPYING"); }
     QString noticesUrl() const { return QStringLiteral("qrc:/THIRD-PARTY-NOTICES"); }
+    QVariantList appLicences() const {
+        return {QVariantMap{{QStringLiteral("id"), QStringLiteral("BSD-3-Clause")}, {QStringLiteral("url"), licenseUrl()}},
+                QVariantMap{{QStringLiteral("id"), QStringLiteral("GPL-3.0-only")}, {QStringLiteral("url"), copyingUrl()}}};
+    }
     // The components the notices list, in their order: their names, versions (empty when the notices give none),
     // licences and uses, index for index.
     QStringList componentNames() const { return componentColumn(0); }

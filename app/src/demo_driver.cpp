@@ -487,6 +487,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
+    // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
+    if (only.startsWith(QLatin1String("about-"))) {
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString open = theme == QLatin1String("light") ? QStringLiteral("resize:1280x960") : QStringLiteral("key:Escape");
+            steps_.push_back({"about-" + theme + "-1-window", {open, "theme:" + theme, "appBar.tab.home", "home.about"}});
+            steps_.push_back({"about-" + theme + "-2-bsd", {"about.licence.BSD-3-Clause"}});
+            steps_.push_back({"about-" + theme + "-3-third-party", {"key:Escape", "about.thirdParty"}});
+        }
+    }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
         const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");

@@ -42,8 +42,12 @@ The decisions it rests on, unchanged here:
   font units). The wordmark carries no caption: the version never hangs under the name.
 - **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
   easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
-- **About** stacks, each centred: the wordmark and version, then the licence links, the description, and the
-  copyright footer. **Home** stacks the wordmark and version, then Start, then the two link columns.
+- **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
+  copyright footer (the owner, 2026-10-21). The first link names edi's own licences by their identifiers
+  (`BSD-3-Clause`, `GPL-3.0-only`) after the licence icon, each opening its text (`LICENSE`, `COPYING`) as plain
+  text in a popup; the second, *Third-party licences* after the same icon, opens a popup with the third-party
+  table: component, version and licence, its rows with the header's margins, looking enabled and selecting nothing.
+  The space above and below the links is the space the description and the copyright had between them. **Home** stacks the wordmark and version, then Start, then the two link columns.
 - **The description** reads *"EasyDiffraction is a software for calculating diffraction patterns based on
   structural models and refining their parameters against experimental data."* (`ApplicationInfo.description`,
   idea 1). It wraps, centred, at a width of 1.15 × one third of its one-line width, so it takes three lines of

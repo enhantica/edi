@@ -11,32 +11,20 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The About window (easydiffractionbeta Pages/Home/AboutDialog.qml), filled from ApplicationInfo: one dialog with
-// three tabs, as Preferences has, so nothing opens on top of it (the owner, 2026-10-10). About shows the wordmark
-// with the version, the description and the copyright; Licence a short text for users, with the app's licence
-// notice below it on request; Third-party software the components the app links or bundles, from the notices'
-// list, with the selected one's licence text below.
+// The About window (easydiffractionbeta Pages/Home/AboutDialog.qml), filled from ApplicationInfo, without tabs: the
+// wordmark with the version, the description, two links, then the copyright (the owner, 2026-10-21). The first link
+// names edi's own licences by their identifiers, each opening its text; the second opens the third-party components
+// this build bundles (ADR-0015 §6). The links have the space around them that the description and the copyright had
+// between them.
 AppDialog {
     id: dialog
 
-    // A licence text: read-only, scrolling within the space it is given. Plain texts are in the monospaced font;
-    // the app's notice is Markdown, and a link in it to another bundled licence text (COPYING, LICENSE,
-    // THIRD-PARTY-NOTICES) opens that text here (ADR-0015 §6).
+    // A licence text, plain and read-only, scrolling within the space it is given.
     component LicenceText: Flickable {
         id: flickable
 
-        // The bundled text shown, by its URL; or `text` set directly.
-        property string url: ""
         property alias text: textArea.text
         property alias textObjectName: textArea.objectName
-        readonly property bool markdown: url.endsWith(".md") || url === ApplicationInfo.noticesUrl
-
-        // Opens the bundled text a link leads to; ApplicationInfo admits only the bundled licence texts.
-        function followLink(link: string) {
-            const target = ApplicationInfo.licenceLinkTarget(flickable.url, link);
-            if (target)
-                flickable.url = target;
-        }
 
         contentHeight: textArea.implicitHeight
         clip: true
@@ -50,21 +38,8 @@ AppDialog {
             width: flickable.width
             readOnly: true
             wrapMode: TextEdit.Wrap
-            textFormat: flickable.markdown ? TextEdit.MarkdownText : TextEdit.PlainText
-            font.family: flickable.markdown ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.monoFontFamily
-            text: flickable.url ? ApplicationInfo.licenceText(flickable.url) : ""
-            onLinkActivated: link => flickable.followLink(link)
-            HoverHandler {
-                cursorShape: textArea.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor
-            }
-            // A read-only text area does not activate its links on a click by itself, so the tap is read here.
-            TapHandler {
-                onTapped: eventPoint => {
-                    const link = textArea.linkAt(eventPoint.position.x, eventPoint.position.y);
-                    if (link)
-                        flickable.followLink(link);
-                }
-            }
+            textFormat: TextEdit.PlainText
+            font.family: EaStyle.Fonts.monoFontFamily
         }
     }
     // A link-coloured label that runs `activated` on a click.
@@ -90,218 +65,183 @@ AppDialog {
     standardButtons: Dialog.Ok
 
     contentWidth: AppSizes.aboutWidth
-    contentHeight: AppSizes.aboutHeight
 
-    EaElements.TabBar {
-        id: bar
+    Column {
+        width: parent.width
+        spacing: EaStyle.Sizes.fontPixelSize * 2.0
+        topPadding: EaStyle.Sizes.fontPixelSize
 
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-
-        background: Rectangle {
-            z: 2
-            anchors.fill: parent
-            color: "transparent"
-            border.color: EaStyle.Colors.appBarBorder
+        WordmarkWithVersion {
+            anchors.horizontalCenter: parent.horizontalCenter
+            link: ApplicationInfo.homepageUrl
+            versionObjectName: "about.version"
         }
+        // The description, wrapped to about three lines of similar width: a third of its one-line width, with room for
+        // the words to break.
+        EaElements.Label {
+            id: descriptionLabel
 
-        EaElements.AppBarTabButton {
-            objectName: "about.tab.about"
-            fontIcon: "info-circle"
-            text: qsTr("About")
+            objectName: "about.description"
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.ceil(descriptionMetrics.advanceWidth / 3 * 1.15)
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: ApplicationInfo.description
+
+            TextMetrics {
+                id: descriptionMetrics
+
+                font: descriptionLabel.font
+                text: descriptionLabel.text
+            }
         }
-        EaElements.AppBarTabButton {
-            objectName: "about.tab.licence"
-            fontIcon: "balance-scale"
-            text: qsTr("Licence")
+        // The two links, one under the other, each after the licence icon.
+        Column {
+            objectName: "about.links"
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            Row {
+                objectName: "about.licences"
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                IconLine {
+                    segments: [{
+                            "icon": "balance-scale",
+                            "color": EaStyle.Colors.link
+                        }]
+                }
+                Repeater {
+                    model: ApplicationInfo.appLicences
+
+                    LinkLabel {
+                        required property var modelData
+
+                        objectName: "about.licence." + modelData.id
+                        text: modelData.id
+                        onActivated: {
+                            licencePopup.title = modelData.id;
+                            licencePopup.licence = ApplicationInfo.licenceText(modelData.url);
+                            licencePopup.open();
+                        }
+                    }
+                }
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                IconLine {
+                    segments: [{
+                            "icon": "balance-scale",
+                            "color": EaStyle.Colors.link
+                        }]
+                }
+                LinkLabel {
+                    objectName: "about.thirdParty"
+                    text: qsTr("Third-party licences")
+                    onActivated: thirdPartyPopup.open()
+                }
+            }
         }
-        EaElements.AppBarTabButton {
-            objectName: "about.tab.thirdParty"
-            fontIcon: "cubes"
-            text: qsTr("Third-party software")
+        EaElements.Label {
+            objectName: "about.copyright"
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "© %1-%2 %3".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
         }
     }
 
-    SwipeView {
-        anchors.top: bar.bottom
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
+    // One of edi's own licences as plain text (LICENSE, COPYING).
+    AppDialog {
+        id: licencePopup
 
-        topPadding: EaStyle.Sizes.fontPixelSize
-        currentIndex: bar.currentIndex
-        interactive: false
-        clip: true
+        property string licence: ""
 
-        // About: the wordmark, then the version, each centred, as on Home (WordmarkWithVersion; edi ADR-0017
-        // §1), the description and the copyright.
-        Column {
-            spacing: EaStyle.Sizes.fontPixelSize * 2.0
-            topPadding: EaStyle.Sizes.fontPixelSize
+        objectName: "about.licencePopup"
+        parent: Overlay.overlay
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.aboutWidth
+        contentHeight: AppSizes.aboutHeight
 
-            WordmarkWithVersion {
-                anchors.horizontalCenter: parent.horizontalCenter
-                link: ApplicationInfo.homepageUrl
-                versionObjectName: "about.version"
-            }
-            // The description, wrapped to about three lines of similar width: a third of its one-line width,
-            // with room for the words to break.
-            EaElements.Label {
-                id: descriptionLabel
+        LicenceText {
+            anchors.fill: parent
+            textObjectName: "about.licencePopup.text"
+            text: licencePopup.licence
+        }
+    }
 
-                objectName: "about.description"
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.ceil(descriptionMetrics.advanceWidth / 3 * 1.15)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                text: ApplicationInfo.description
+    // The third-party components this build bundles: component, version and licence. The rows have the header's
+    // margins, look enabled and select nothing.
+    AppDialog {
+        id: thirdPartyPopup
 
-                TextMetrics {
-                    id: descriptionMetrics
+        objectName: "about.thirdPartyPopup"
+        parent: Overlay.overlay
+        title: qsTr("Third-party licences")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.aboutWidth
 
-                    font: descriptionLabel.font
-                    text: descriptionLabel.text
-                }
-            }
-            EaElements.Label {
-                objectName: "about.copyright"
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "© %1-%2 %3".arg(ApplicationInfo.developerYearsFrom).arg(ApplicationInfo.developerYearsTo).arg(ApplicationInfo.copyrightHolder)
+        ListModel {
+            id: componentRows
+
+            Component.onCompleted: {
+                for (let index = 0; index < ApplicationInfo.componentNames.length; ++index)
+                    append({
+                        "component": ApplicationInfo.componentNames[index],
+                        "version": ApplicationInfo.componentVersions[index],
+                        "licence": ApplicationInfo.componentLicences[index]
+                    });
             }
         }
+        DataTable {
+            id: components
 
-        // Licence: what a user may do, in a few lines, and on request the app's licence notice, whose links open the
-        // full texts in the same place (ADR-0015 §6), the full GPL text or the source code's BSD licence.
-        Column {
-            id: licencePage
+            objectName: "about.components"
+            width: parent.width
+            maxRowCountShow: 10
+            maximumTextColumnShare: 0.5
+            defaultInfoText: ""
+            selectable: false
+            sourceModel: componentRows
 
-            spacing: EaStyle.Sizes.fontPixelSize
+            columnWidths: [textColumnWidth("component", qsTr("Component")), textColumnWidth("version", qsTr("Version")), -1]
 
-            EaElements.Label {
-                objectName: "about.licence.summary"
-                width: parent.width
-                wrapMode: Text.WordWrap
-                textFormat: Text.MarkdownText
-                text: qsTr("**EasyDiffraction is free software.** You may:\n\n- use it for any purpose;\n- share copies of it;\n- change it, and share your changes under the same licence, the GNU General Public License, version 3.\n\nIts source code is also available under the BSD 3-Clause License, so a part of it can be reused on its own.")
-            }
-            Row {
-                spacing: EaStyle.Sizes.fontPixelSize * 2
-
-                // The app's licence notice, which links the full texts, then each full text.
-                LinkLabel {
-                    objectName: "about.licence.gpl"
-                    text: qsTr("GNU General Public License")
-                    onActivated: licenceText.url = ApplicationInfo.appLicenseUrl
+            header: EaComponents.ListViewHeader {
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Component")
                 }
-                LinkLabel {
-                    objectName: "about.licence.copying"
-                    text: qsTr("Full GPL text")
-                    onActivated: licenceText.url = ApplicationInfo.copyingUrl
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Version")
                 }
-                LinkLabel {
-                    objectName: "about.licence.bsd"
-                    text: qsTr("BSD 3-Clause License")
-                    onActivated: licenceText.url = ApplicationInfo.licenseUrl
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Licence")
                 }
             }
-            LicenceText {
-                id: licenceText
 
-                textObjectName: "about.licence.text"
-                visible: url !== ""
-                width: parent.width
-                height: licencePage.height - y
-            }
-        }
+            delegate: TableRow {
+                id: row
 
-        // Third-party software: the notices' component list, columns as wide as their contents, and the selected
-        // component's licence text below.
-        Column {
-            id: thirdPartyPage
+                required property string component
+                required property string version
+                required property string licence
 
-            readonly property int selectedRow: components.selectedIndexes.length > 0 ? components.selectedIndexes[0].row : 0
-
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            ListModel {
-                id: componentRows
-
-                Component.onCompleted: {
-                    for (let index = 0; index < ApplicationInfo.componentNames.length; ++index)
-                        append({
-                            "component": ApplicationInfo.componentNames[index],
-                            "version": ApplicationInfo.componentVersions[index],
-                            "licence": ApplicationInfo.componentLicences[index],
-                            "use": ApplicationInfo.componentUses[index]
-                        });
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: row.component
                 }
-            }
-            DataTable {
-                id: components
-
-                objectName: "about.components"
-                width: parent.width
-                maxRowCountShow: 8
-                maximumTextColumnShare: 0.4
-                defaultInfoText: ""
-                sourceModel: componentRows
-
-                columnWidths: [textColumnWidth("component", qsTr("Component")), textColumnWidth("version", qsTr("Version")), textColumnWidth("licence", qsTr("Licence")), -1]
-
-                header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: qsTr("Component")
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: qsTr("Version")
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: qsTr("Licence")
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: qsTr("Used for")
-                    }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: row.version
                 }
-
-                delegate: EaComponents.ListViewDelegate {
-                    id: row
-
-                    required property int index
-                    required property string component
-                    required property string version
-                    required property string licence
-                    required property string use
-
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: row.component
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        color: EaStyle.Colors.themeForegroundMinor
-                        text: row.version
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: row.licence
-                    }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignLeft
-                        text: row.use
-                        ToolTip.text: row.use
-                    }
+                EaComponents.TableViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: row.licence
                 }
-            }
-            LicenceText {
-                textObjectName: "about.components.licence"
-                width: parent.width
-                height: thirdPartyPage.height - y
-                text: ApplicationInfo.componentLicenceText(thirdPartyPage.selectedRow)
             }
         }
     }
