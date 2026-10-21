@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/io.hpp"
 
 namespace edi {
@@ -220,6 +221,7 @@ void select_background_type(ExperimentBase& experiment, const std::string& token
         experiment.background_x_min = low;
         experiment.background_x_max = high;
     }
+    rebaseline_background_estimate(experiment);  // ADR-0040: auto estimates the new type, never a hand edit
 }
 
 PolynomialTerm next_background_term(const ExperimentBase& experiment) {
@@ -287,33 +289,78 @@ std::vector<std::string> position_point_ids(const ExperimentBase& experiment) {
     return ids;
 }
 
-void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
-    if (ids.size() != experiment.background.size()) {
-        throw std::invalid_argument("background point ids: " + std::to_string(ids.size()) + " ids for " +
-                                    std::to_string(experiment.background.size()) + " points");
+namespace {
+// A background table's rows renamed to `ids`, in their order. Two passes, so no rename meets an id another row
+// still holds: first to names no row holds, then to the ids asked for.
+template <class Row>
+void rename_rows(ItemVec<Row>& rows, const std::vector<std::string>& ids, const std::string& what) {
+    if (ids.size() != rows.size()) {
+        throw std::invalid_argument("background " + what + " ids: " + std::to_string(ids.size()) + " ids for " +
+                                    std::to_string(rows.size()) + " " + what + "s");
     }
     const std::set<std::string> distinct(ids.begin(), ids.end());
     if (distinct.size() != ids.size() || distinct.contains(std::string())) {
-        throw std::invalid_argument("background point ids must be distinct and not empty");
+        throw std::invalid_argument("background " + what + " ids must be distinct and not empty");
     }
-    // Two passes, so no rename meets an id another point still holds: first to names no point holds, then to the
-    // ids asked for.
     std::set<std::string> held;
-    for (const auto& point : experiment.background) {
-        held.insert(point->id.value());
+    for (const auto& row : rows) {
+        held.insert(row->id.value());
     }
     held.insert(ids.begin(), ids.end());
     std::size_t counter = 0;
-    for (const auto& point : experiment.background) {
+    for (const auto& row : rows) {
         std::string spare;
         do {
             spare = "renaming-" + std::to_string(++counter);
         } while (held.contains(spare));
-        point->id = spare;
+        row->id = spare;
     }
     for (std::size_t i = 0; i < ids.size(); ++i) {
-        experiment.background[i]->id = ids[i];
+        rows[i]->id = ids[i];
     }
+}
+}  // namespace
+
+void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
+    rename_rows(experiment.background, ids, "point");
+}
+
+std::vector<std::string> order_term_ids(const ExperimentBase& experiment) {
+    std::vector<std::string> ids;
+    ids.reserve(experiment.background_terms.size());
+    for (const auto& term : experiment.background_terms) {
+        ids.push_back(std::to_string(term->order.get()));
+    }
+    return ids;
+}
+
+void set_background_term_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
+    rename_rows(experiment.background_terms, ids, "term");
+}
+
+void set_background_points(ExperimentBase& experiment, const std::vector<LineSegment>& points) {
+    if (experiment.background_type != "line-segment") {
+        throw std::invalid_argument("a " + experiment.background_type +
+                                    " background holds terms, not line-segment points; set background_type first");
+    }
+    std::vector<std::shared_ptr<LineSegment>> rows;
+    rows.reserve(points.size());
+    for (const LineSegment& point : points) {
+        rows.push_back(std::make_shared<LineSegment>(point));
+    }
+    experiment.background.assign(std::move(rows));
+}
+
+void set_background_terms(ExperimentBase& experiment, const std::vector<PolynomialTerm>& terms) {
+    if (experiment.background_type == "line-segment") {
+        throw std::invalid_argument("a line-segment background holds points, not terms; set background_type first");
+    }
+    std::vector<std::shared_ptr<PolynomialTerm>> rows;
+    rows.reserve(terms.size());
+    for (const PolynomialTerm& term : terms) {
+        rows.push_back(std::make_shared<PolynomialTerm>(term));
+    }
+    experiment.background_terms.assign(std::move(rows));
 }
 
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {

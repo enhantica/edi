@@ -144,6 +144,11 @@ struct BackgroundView {
     ItemVec<LineSegment>& vec() const { return experiment->background; }
 };
 
+// The experiment's `_background_estimate` settings (ADR-0040).
+struct BackgroundEstimateView {
+    ExperimentBase* experiment;
+};
+
 struct BackgroundIter {
     ExperimentBase* experiment;
     std::size_t index = 0;

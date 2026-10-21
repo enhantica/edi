@@ -90,15 +90,16 @@ AppDialog {
                 required property string message
                 required property string severity
                 readonly property bool isError: severity === "error"
+                readonly property bool isInformation: severity === "information"
 
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.kind.${row.index}`
-                    icon: row.isError ? "times-circle" : "exclamation-triangle"
-                    iconColor: String(row.isError ? EaStyle.Colors.red : EaStyle.Colors.orange)
-                    toolTip: row.isError ? qsTr("Error") : qsTr("Warning")
+                    icon: row.isError ? "times-circle" : row.isInformation ? "info-circle" : "exclamation-triangle"
+                    iconColor: String(row.isError ? EaStyle.Colors.red : row.isInformation ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.orange)
+                    toolTip: row.isError ? qsTr("Error") : row.isInformation ? qsTr("Information") : qsTr("Warning")
                 }
                 EaComponents.TableViewLabel {
                     id: messageCell

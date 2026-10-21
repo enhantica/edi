@@ -172,3 +172,41 @@ sites:
     why: Authored coordinate-dependent domains and drive-only pattern inputs exercise real single and joint fit rejection; no fitted number supplies a correctness oracle.
   - file: tests/integration/py/test_e05_t1_fit_result.py
     case: lbco-hrpt-s2
+  - file: tests/system/py/test_background_estimate_settings_cli.py
+    case: lbco-hrpt-s2
+
+  - file: tests/system/py/test_background_estimate_lifecycle_cli.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_lifecycle_scan.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_relation_order.py
+    case: lbco-hrpt-s2
+    why: Disposable related-model projects compare stale targets with explicit relation application; one iteration only, with no fitted-value oracle.
+    assertion_feed: Automatic point equality after declared and symmetry relations, with a nonzero model, across every calculate and fit entry.
+    audit: 2026-10-20; the Python fit and CLI fit helpers reach actual public fitting entries.
+
+  - file: tests/integration/py/test_background_estimate_fitted_baseline.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/system/py/test_background_estimate_fitted_baseline_cli.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/integration/py/test_background_estimate_review3.py
+    case: cosio-d20-s4
+
+  - file: tests/system/py/test_background_estimate_review3_cli.py
+    case: cosio-d20-s4

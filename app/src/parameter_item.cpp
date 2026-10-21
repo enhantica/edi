@@ -75,6 +75,13 @@ void ParameterItem::setRefinable(bool refinable) {
     }
 }
 
+void ParameterItem::setEstimated(bool estimated) {
+    if (estimated_ != estimated) {
+        estimated_ = estimated;
+        emit estimatedChanged();
+    }
+}
+
 namespace {
 // The refusal of a write to a parameter symmetry holds (edi ADR-0019). The pages disable such a field, so
 // this answers only a caller that writes anyway.
@@ -84,6 +91,11 @@ QString symmetry_refusal() { return QObject::tr("the space group fixes this para
 void ParameterItem::setValue(double value) {
     if (!refinable_) {
         setLastError(symmetry_refusal());
+        return;
+    }
+    // Asked of the project as it is now, not of `estimated`, which follows the mode only at the next publish.
+    if (const QString refusal = editor_.value_refusal(*parameter_); !refusal.isEmpty()) {
+        setLastError(refusal);
         return;
     }
     edi::Parameter* parameter = parameter_;

@@ -72,8 +72,8 @@ class BackgroundListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
-// The polynomial or Chebyshev background terms: `order` (text-editable, unique within the type's range) and `coef`
-// (ParameterItem), with append (the lowest free order) and remove.
+// The polynomial or Chebyshev background terms: `id` and `order` (text-editable, each unique; the order within the
+// type's range) and `coef` (ParameterItem), with append (the lowest free order) and remove.
 class BackgroundTermListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -83,13 +83,15 @@ class BackgroundTermListModel : public RowTableModel {
     BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
                             QObject* parent);
     void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setOrder(int row, int order);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
-        return role == QLatin1String("order") && setOrder(row, value.toInt());
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("order") && setOrder(row, value.toInt());
     }
 
    private:

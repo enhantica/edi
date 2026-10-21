@@ -6,6 +6,7 @@
 #include <QObject>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <utility>
 
@@ -39,6 +40,7 @@ class ParameterRegistry : public QObject {
    private:
     void refreshElements(const edi::Project& project);
     void refreshRefinable(edi::Project& project);
+    void refreshEstimated(const edi::Project& project);
     ProjectEditor& editor_;
     QList<ParameterItem*> items_;
     std::map<std::pair<const edi::Parameter*, std::string>, ParameterItem*> by_key_;

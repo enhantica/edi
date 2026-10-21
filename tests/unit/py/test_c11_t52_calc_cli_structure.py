@@ -12,6 +12,11 @@ def _calc_project() -> tuple[SimpleNamespace, list[str]]:
     calls: list[str] = []
     experiment = SimpleNamespace(
         name='bank',
+        # The calc facade now snapshots background points before and after calculation.
+        background=[
+            SimpleNamespace(position=1.25, intensity=SimpleNamespace(value=5.5, free=True)),
+            SimpleNamespace(position=2.5, intensity=SimpleNamespace(value=6.125, free=False)),
+        ],
         data=SimpleNamespace(
             intensity_calc=[3.0, 4.25],
             axis=lambda: [1.25, 2.5],
@@ -20,6 +25,8 @@ def _calc_project() -> tuple[SimpleNamespace, list[str]]:
     project = SimpleNamespace(
         analysis=SimpleNamespace(calculate=lambda: calls.append('calculate')),
         experiments=[experiment],
+        # These saved rows are current, so calc has no automatic estimate to save.
+        _background_estimates_due=lambda: False,
     )
     return project, calls
 

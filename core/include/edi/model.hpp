@@ -3752,6 +3752,25 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
+    // The automatic background estimate's settings (`_background_estimate`, ADR-0040), each empty until
+    // declared: the mode (`manual` or `auto`; empty is manual), the method (`auto`, `arpls`, `snip` or
+    // `fabc`; empty is auto), the width, smoothness and point count (empty is derived from the data), the
+    // tolerance in noise units (empty is 2), the rule for points on peaks (`move` or `drop`; empty is move) and
+    // what to do with the calculated peaks (`auto`, `subtract` or `ignore`; empty is auto).
+    std::optional<std::string> background_estimate_mode;
+    std::optional<std::string> background_estimate_method;
+    std::optional<double> background_estimate_width;
+    std::optional<double> background_estimate_smoothness;
+    std::optional<int> background_estimate_n_points;
+    std::optional<double> background_estimate_tolerance;
+    std::optional<std::string> background_estimate_in_peaks;
+    std::optional<std::string> background_estimate_use_model;
+    std::optional<int> background_estimate_max_terms;
+    // In auto mode, a digest of what the points came from (the included measured pattern and the settings; 1 when
+    // the next calculation estimates) and one of the points as auto was chosen, loaded or last estimated; 0 in
+    // manual mode. Saved as `_background_estimate.inputs_digest` and `.points_digest` (ADR-0040).
+    std::uint64_t background_estimate_inputs = 0;
+    std::uint64_t background_estimate_points = 0;
     // This bank's share of the project's last fit (`_fit_result_bank`, beside the project's `_fit_result`;
     // crysta's ExperimentBase carries the same): the points it fitted, its profile, weighted-profile and
     // expected R factors, the two with the background taken out (fractions) and its raw chi-square. Absent
@@ -5168,6 +5187,24 @@ struct DataSourceCategory {
     static constexpr std::array items{"file_name"};
 };
 static_assert(detail::one_entry_per_column(DataSourceCategory::columns, DataSourceCategory::items));
+
+// ADR-0040: the automatic background estimate's settings, and the two digests of what the experiment's points
+// came from and were, saved in auto mode so a reload need not estimate again.
+struct BackgroundEstimateCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_background_estimate";
+    static constexpr auto columns = std::tuple{
+        &ExperimentBase::background_estimate_mode,       &ExperimentBase::background_estimate_method,
+        &ExperimentBase::background_estimate_width,      &ExperimentBase::background_estimate_smoothness,
+        &ExperimentBase::background_estimate_n_points,   &ExperimentBase::background_estimate_tolerance,
+        &ExperimentBase::background_estimate_in_peaks,   &ExperimentBase::background_estimate_use_model,
+        &ExperimentBase::background_estimate_max_terms,  &ExperimentBase::background_estimate_inputs,
+        &ExperimentBase::background_estimate_points};
+    static constexpr std::array items{"mode",      "method",    "width",     "smoothness",    "n_points",
+                                      "tolerance", "in_peaks",  "use_model", "max_terms",     "inputs_digest",
+                                      "points_digest"};
+};
+static_assert(detail::one_entry_per_column(BackgroundEstimateCategory::columns, BackgroundEstimateCategory::items));
 
 struct JointFitCategory {
     using Owner = ExperimentBase;

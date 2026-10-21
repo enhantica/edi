@@ -293,6 +293,8 @@ EaElements.GroupBox {
                     columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
+                    // An auto-mode background's values are the estimate's, as in the Experiment page's table.
+                    locked: row.parameter ? row.parameter.estimated : false
                     onActiveFocusChanged: if (activeFocus)
                         group.selected = row.parameter
                 }
@@ -366,7 +368,7 @@ EaElements.GroupBox {
                 objectName: "parameters.slider"
                 width: EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize * 14
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: sliderRow.selected !== null
+                enabled: sliderRow.selected !== null && !sliderRow.selected.estimated
                 from: sliderRow.lower
                 to: sliderRow.upper
                 value: sliderRow.selected ? sliderRow.selected.value : 0

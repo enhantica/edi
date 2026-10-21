@@ -1,5 +1,6 @@
 """Real fit completion complements the deterministic full-loop serialization witness."""
 
+import hashlib
 import math
 import os
 import shlex
@@ -11,6 +12,7 @@ import edi
 import pytest
 
 from tests.conftest import corpus_case_dir, crysta_reference_prefix
+from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
 from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
@@ -52,8 +54,15 @@ def test_real_fit_emits_every_pinned_single_or_template_correlation_row(
     corpus_id = {'single': 'lbco-hrpt-s2', 'scan': 'cosio-d20-scan-3f'}[case]
     corpus_project = corpus_case_dir(corpus_id) / 'project'
     for directory in ['structures', 'experiments']:
-        assert hashes(source / directory) == hashes(corpus_project / directory), (
-            'The declared disposable fit site must retain its pinned corpus physical inputs'
+        current = hashes(corpus_project / directory)
+        if case == 'single' and directory == 'experiments':
+            # Before: byte-identical corpus. After: exactly the manual-settings
+            # addition; the original fit input and every fitted result pin stay fixed.
+            data = (corpus_project / 'experiments/hrpt.edi').read_bytes()
+            current['hrpt.edi'] = hashlib.sha256(estimate_bytes.without_category(data)).hexdigest()
+        assert hashes(source / directory) == current, (
+            'The frozen fit input differs from the live corpus '
+            'only by the manual estimate category'
         )
     assert b'_fit_parameter_correlation.' not in (source / 'analysis/analysis.edi').read_bytes(), (
         'The real generated-output witness must start without saved expected correlation rows'

@@ -1,0 +1,65 @@
+{
+  "command": "python tests/fixtures/background_estimate/series/generate_known.py --output ../background-reference/series",
+  "numpy": "2.2.6",
+  "pybaselines": "1.2.1",
+  "cases": {
+    "known-polynomial": {
+      "sha256": "1a344a66709ba64ea2a9cb27ba9049c2d7782f1c3aac3af8de16cb3dcf4c635a",
+      "seed": "0xC34B28",
+      "noise": "LCG32 uniform bounded +/-0.1",
+      "truth": [
+        50.0,
+        12.0,
+        -5.0,
+        7.0
+      ],
+      "origin": 47.125,
+      "domain": [
+        17.0,
+        86.0
+      ],
+      "stage1": "pybaselines Baseline.arpls(lam=1000)",
+      "width": 6,
+      "noise_mad": 0.06585469865269634,
+      "noise_convention": "second-difference MAD * 1.4826 / sqrt(6), diffraction-lib constant",
+      "candidate_errors": [
+        10.117370461896783,
+        1.693433452948483,
+        0.6904913549656655,
+        0.05437934482516482,
+        0.05418464235354037,
+        0.05411003925320301
+      ],
+      "coefficient_absolute_tolerance": 0.3
+    },
+    "known-chebyshev": {
+      "sha256": "e9f67a8a89fae38dc41f0c0b33e1ae9cf7ea0b0ea87cba4ad8ff8cdcf4b7c2b3",
+      "seed": "0xC34B28",
+      "noise": "LCG32 uniform bounded +/-0.1",
+      "truth": [
+        50.0,
+        12.0,
+        -5.0,
+        7.0
+      ],
+      "origin": 47.125,
+      "domain": [
+        17.0,
+        86.0
+      ],
+      "stage1": "pybaselines Baseline.arpls(lam=1000)",
+      "width": 6,
+      "noise_mad": 0.06560669703168184,
+      "noise_convention": "second-difference MAD * 1.4826 / sqrt(6), diffraction-lib constant",
+      "candidate_errors": [
+        18.300571700540004,
+        13.87227215871733,
+        7.094689134971311,
+        0.0930927744333232,
+        0.09580588890557351,
+        0.09443578963760046
+      ],
+      "coefficient_absolute_tolerance": 0.3
+    }
+  }
+}

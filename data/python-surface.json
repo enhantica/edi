@@ -726,6 +726,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "background_estimate": {
+     "need": {
+      "by": "deviation",
+      "ref": "D88",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "background_origin": {
      "need": {
       "by": "deviation",
@@ -2885,6 +2894,15 @@
     }
    },
    "LineSegment": {
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LineSegment.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "intensity": {
      "need": {
       "by": "deviation",
@@ -3660,6 +3678,15 @@
      "need": {
       "by": "counterpart",
       "ref": "PolynomialTerm.coef",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PolynomialTerm.id",
       "verdict": "keep"
      },
      "reason": "C",
@@ -6564,7 +6591,7 @@
    }
   }
  },
- "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
+ "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -6707,6 +6734,7 @@
    "members": [
     "absorption",
     "background",
+    "background_estimate",
     "background_origin",
     "background_terms",
     "background_type",
@@ -7106,6 +7134,7 @@
   "LineSegment": {
    "kind": "class",
    "members": [
+    "id",
     "intensity",
     "parameters",
     "position"
@@ -7251,6 +7280,7 @@
    "kind": "class",
    "members": [
     "coef",
+    "id",
     "order",
     "parameters"
    ]

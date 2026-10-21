@@ -71,12 +71,14 @@ void BackgroundListModel::sync() {
 
 bool BackgroundListModel::setId(int row, const QString& id) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
+    return point != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
 }
 
 bool BackgroundListModel::setPosition(int row, double position) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_position(*point, position), false).isEmpty();
+    return point != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_position(*point, position), false).isEmpty();
 }
 
 void BackgroundListModel::append() {
@@ -87,7 +89,7 @@ void BackgroundListModel::append() {
         point.position = last.position;
         point.intensity.value = last.intensity.value;
     }
-    editor_.apply(edi::Edit::append(experiment.background, std::move(point)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::append(experiment.background, std::move(point)), true);
 }
 
 void BackgroundListModel::remove(int row) {
@@ -95,32 +97,40 @@ void BackgroundListModel::remove(int row) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
 }
 
 BackgroundTermListModel::BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                                  ParameterRegistry& registry, QObject* parent)
-    : RowTableModel({"order", "coef"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
+    : RowTableModel({"id", "order", "coef"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
     sync();
 }
 
 void BackgroundTermListModel::sync() {
     QList<Row> rows;
     for (const auto& term : experiment_.background_terms) {
-        rows.append({term.get(), {term->order.get(), parameter_role(registry_, &term->coef)}});
+        rows.append({term.get(), {QString::fromStdString(term->id.value()), term->order.get(), parameter_role(registry_, &term->coef)}});
     }
     setTableRows(rows);
+}
+
+bool BackgroundTermListModel::setId(int row, const QString& id) {
+    auto* term = const_cast<edi::PolynomialTerm*>(static_cast<const edi::PolynomialTerm*>(keyAt(row)));
+    return term != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_id(*term, id.toStdString()), true).isEmpty();
 }
 
 bool BackgroundTermListModel::setOrder(int row, int order) {
     auto* term = const_cast<edi::PolynomialTerm*>(static_cast<const edi::PolynomialTerm*>(keyAt(row)));
     edi::ExperimentBase& experiment = experiment_;
-    return term != nullptr && editor_.apply(edi::Edit::background_term_order(experiment, *term, order), false).isEmpty();
+    return term != nullptr &&
+           editor_.apply_background_edit(experiment, edi::Edit::background_term_order(experiment, *term, order), false)
+               .isEmpty();
 }
 
 void BackgroundTermListModel::append() {
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::append_background_term(experiment), true);
+    editor_.apply_background_edit(experiment, edi::Edit::append_background_term(experiment), true);
 }
 
 void BackgroundTermListModel::remove(int row) {
@@ -128,7 +138,8 @@ void BackgroundTermListModel::remove(int row) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background_terms, static_cast<std::size_t>(row)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::erase(experiment.background_terms, static_cast<std::size_t>(row)),
+                                  true);
 }
 
 // ---- ExcludedRegionListModel --------------------------------------------------------------------

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <chrono>
 #include <filesystem>
@@ -22,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
 #include "edi/presentation.hpp"
@@ -32,6 +34,7 @@
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
+#include "crysta/background_estimate.hpp"
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
@@ -60,6 +63,7 @@
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/selectors.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
@@ -2316,9 +2320,48 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
                           item->computed_current());
     }
     if (std::find(current.begin(), current.end(), true) != current.end()) {
+        // A save writes edi's points. A bank whose estimate is due (its settings or data changed since its points)
+        // is never current, so its columns stay out; the engine's calculation estimates it, and its points and
+        // digests are put back afterwards (ADR-0040).
+        // The whole background: points, or terms with their origin or domain, and its estimate record.
+        struct HeldPoints {
+            std::vector<crysta::LineSegment> points;
+            std::vector<crysta::PolynomialTerm> terms;
+            std::optional<double> origin, x_min, x_max;
+            std::optional<std::string> mode;
+            std::uint64_t inputs = 0;
+            std::uint64_t written = 0;
+        };
+        std::vector<std::optional<HeldPoints>> held(cproject.experiments.size());
+        for (std::size_t index = 0; index < model.experiments.size(); ++index) {
+            if (background_estimate_due(*model.experiments[index])) {
+                const crysta::BraggPdExperiment& bank = cproject.experiments[index];
+                held[index] = HeldPoints{{bank.background.begin(), bank.background.end()},
+                                         {bank.background_terms.begin(), bank.background_terms.end()},
+                                         bank.background_origin.get(),
+                                         bank.background_x_min.get(),
+                                         bank.background_x_max.get(),
+                                         bank.background_estimate_mode.get(),
+                                         bank.background_estimate_inputs.get(),
+                                         bank.background_estimate_points.get()};
+            }
+        }
         try {
             crysta::calculate_project(cproject);
         } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — saved uncomputed
+        }
+        for (std::size_t index = 0; index < held.size(); ++index) {
+            if (held[index]) {
+                crysta::BraggPdExperiment& bank = cproject.experiments[index];
+                bank.background.assign(held[index]->points);
+                bank.background_terms.assign(held[index]->terms);
+                bank.background_origin = held[index]->origin;
+                bank.background_x_min = held[index]->x_min;
+                bank.background_x_max = held[index]->x_max;
+                bank.background_estimate_mode = held[index]->mode;
+                bank.background_estimate_inputs = held[index]->inputs;
+                bank.background_estimate_points = held[index]->written;
+            }
         }
         for (std::size_t index = 0; index < current.size(); ++index) {
             if (!current[index]) {
@@ -2547,6 +2590,23 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
                                               e.neutron_scattering_length.value_or(""));
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
+    // ADR-0040: the estimate settings, with the mode in force and, in auto mode, what the points came from, so a save
+    // writes edi's mode and digests and the engine estimates again only what edi would.
+    if (e.background_estimate_mode) {
+        built.background_estimate_mode = background_estimate_mode(e);
+        if (*built.background_estimate_mode.get() == "auto") {
+            built.background_estimate_inputs = e.background_estimate_inputs;
+            built.background_estimate_points = e.background_estimate_points;
+        }
+    }
+    built.background_estimate_method = e.background_estimate_method;
+    built.background_estimate_width = e.background_estimate_width;
+    built.background_estimate_smoothness = e.background_estimate_smoothness;
+    built.background_estimate_n_points = e.background_estimate_n_points;
+    built.background_estimate_tolerance = e.background_estimate_tolerance;
+    built.background_estimate_in_peaks = e.background_estimate_in_peaks;
+    built.background_estimate_use_model = e.background_estimate_use_model;
+    built.background_estimate_max_terms = e.background_estimate_max_terms;
     std::vector<crysta::ExcludedRegion> regions;
     regions.reserve(e.excluded_regions.size());
     for (const auto& region : e.excluded_regions) {
@@ -3140,6 +3200,7 @@ bool ExperimentBase::computed_current() const {
 }
 
 void Project::calculate() {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // The reference shape (diffraction-lib Analysis.calculate): no arguments — every input is
     // read from the model (grid = the data node's engaged axis, bank angle and
     // cutoff = the experiment's declared values, scattering = the structure's declared map or the
@@ -3945,6 +4006,10 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
             p.start_uncertainty.reset();
         }
     }
+    // A fit may refine auto-mode points; they are the background now (ADR-0040).
+    for (const auto& experiment : project.experiments) {
+        record_fitted_background(*experiment);
+    }
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
@@ -3957,6 +4022,10 @@ crysta::FitQuality fitted_quality(crysta::Project& fitted, const std::deque<crys
         fitted.experiments[bank].data = measured[bank];
         fitted.experiments[bank].calculation_only = false;
         fitted.experiments[bank].explicit_grid = false;
+        // The quality describes the points the fit ran with, never an estimate from these data (ADR-0040).
+        if (fitted.experiments[bank].background_estimate_mode.get()) {
+            crysta::set_background_estimate_mode(fitted.experiments[bank], "manual");
+        }
     }
     crysta::calculate_project(fitted);
     return crysta::fit_quality(fitted, n_free);
@@ -4251,6 +4320,26 @@ crysta::DescentRequest declared_request(const std::string& descent, int max_iter
 
 }  // namespace
 
+namespace {
+// ADR-0040: an auto-mode background is estimated from the experiment's own measured pattern before a fit (the
+// no-argument fits refresh first). A fit of other measurements, or one whose estimate is overdue, would solve with
+// a background that does not belong to the data it fits, so it is refused before anything is built.
+void require_auto_background_for(const ExperimentBase& experiment, const std::vector<double>& grid,
+                                 const std::vector<double>& observed) {
+    if (background_estimate_mode(experiment) != "auto") {
+        return;
+    }
+    const bool own = experiment.data.has_value() && experiment.data->axis() == grid &&
+                     experiment.data->intensity_meas.get() == observed;
+    if (!own || background_estimate_due(experiment)) {
+        throw std::invalid_argument("experiment '" + experiment.name +
+                                    "': its background is estimated automatically from its own measured data, so a "
+                                    "fit of other data cannot use it; set background_estimate.mode to manual, or fit "
+                                    "the experiment's own data");
+    }
+}
+}  // namespace
+
 FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<double>& observed,
                            const std::vector<double>& sigma, const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
@@ -4259,6 +4348,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit");
     detail::validate_fit_request(grid, observed, sigma, *this);
+    if (!experiments.empty()) {
+        require_auto_background_for(experiment(), grid, observed);  // the one experiment a single fit fits
+    }
     try {
         // Stateless rebuild-per-fit: the same single crysta-touching build path
         // (build_crysta_project + select_scattering) the forward accessors use — no persistent
@@ -4469,6 +4561,7 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                           const FileCompleteCallback& on_file_complete,
                                           const CancelCallback& should_cancel,
                                           const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-2 F2: this entry serves EXACTLY `independent`, and it reaches the shared scan body
     // DIRECTLY. It used to delegate to fit_sequential(), which accepted either scan mode — so
     // an `independent` project also succeeded through the explicitly sequential entry, whose
@@ -4488,6 +4581,7 @@ FitResultBase Project::fit_sequential(const IterationCallback& on_iteration,
                                          const FileCompleteCallback& on_file_complete,
                                          const CancelCallback& should_cancel,
                                          const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Serves EXACTLY `sequential` — the scan family is no longer accepted here.
     if (fitting_mode != "sequential") {
         throw std::invalid_argument("edi fit_sequential: _fitting_mode.type is '" +
@@ -4706,6 +4800,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                    const FileCompleteCallback& on_file_complete,
                                    const CancelCallback& should_cancel,
                                    const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // The ONE native entry point the `sequential` fitting mode delegates to. The whole loop, the
     // carry-forward/resume state (the CSV) and the results.csv writer are crysta's — one
     // crysta::fit_project call on the converted project (criterion 6's one writer, literal); edi
@@ -5011,6 +5106,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit_joint");
     detail::validate_joint_request(*this, experiments, patterns);
+    for (std::size_t index = 0; index < experiments.size() && index < patterns.size(); ++index) {
+        require_auto_background_for(*experiments[index], patterns[index].axis(),
+                                    patterns[index].intensity_meas.get());
+    }
     try {
         // Stateless rebuild-per-fit, the same shape as the single-bank path: one crysta Project over
         // the shared structure and EVERY loaded bank, so crysta's own free_from_model dispatches to
@@ -5321,5 +5420,439 @@ EngineThreading engine_threading() noexcept {
 void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
 
 int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
+
+namespace {
+
+static_assert(kDefaultBackgroundTolerance == crysta::kDefaultBackgroundTolerance);
+static_assert(kAutoModelBelowShare == crysta::kAutoModelBelowShare);
+
+crysta::BackgroundEstimateOptions engine_estimate_options(const BackgroundEstimateOptions& options) {
+    crysta::BackgroundEstimateOptions out;
+    out.method = options.method;
+    out.width = options.width;
+    out.smoothness = options.smoothness;
+    out.n_points = options.n_points;
+    out.tolerance = options.tolerance;
+    out.in_peaks = options.in_peaks;
+    out.use_model = options.use_model;
+    out.max_terms = options.max_terms;
+    return out;
+}
+
+// The pattern an estimate reads: the measured pattern on the whole axis, with the calculated one when
+// the experiment holds it (stale or not, as diffraction-lib reads it: subtracting the calculated peaks
+// stays right after a background edit). crysta keeps the points outside the excluded regions.
+crysta::BackgroundEstimateInput engine_estimate_input(const ExperimentBase& experiment, const std::string& use_model) {
+    if (!experiment.data.has_value() || experiment.data->intensity_meas.get().empty()) {
+        return {};
+    }
+    const PdDataBase& data = *experiment.data;
+    return crysta::background_estimate_input(data.axis(), data.intensity_meas.get(), data.intensity_calc.values(),
+                                             data.intensity_bkg.values(),
+                                             excluded_region_ranges(experiment.excluded_regions), use_model);
+}
+
+BackgroundEstimate from_engine(const crysta::BackgroundEstimate& estimate, bool used_model) {
+    BackgroundEstimate out;
+    out.method = estimate.method;
+    out.model_choice = estimate.model_choice;
+    out.model_reason = estimate.model_reason;
+    out.width = estimate.width;
+    out.noise = estimate.noise;
+    out.used_model = used_model;
+    out.warnings = estimate.warnings;
+    for (const auto& [name, value] : estimate.backend_params) {
+        if (name == "lam") {
+            out.smoothness = value;
+        } else if (name == "max_half_window") {
+            out.half_window = static_cast<int>(value);
+        }
+    }
+    out.summary = crysta::background_estimate_summary(estimate);
+    return out;
+}
+
+}  // namespace
+
+std::vector<std::string> background_estimator_methods() { return crysta::background_estimator_methods(); }
+
+BackgroundEstimate background_estimate_defaults(const ExperimentBase& experiment,
+                                                const BackgroundEstimateOptions& options) {
+    const crysta::BackgroundEstimateInput input = engine_estimate_input(experiment, options.use_model);
+    return from_engine(crysta::background_estimate_defaults(input, engine_estimate_options(options)),
+                       input.used_model);
+}
+
+BackgroundEstimate estimate_background(const ExperimentBase& experiment, const BackgroundEstimateOptions& options) {
+    const crysta::BackgroundEstimateInput input = engine_estimate_input(experiment, options.use_model);
+    if (experiment.background_type != "line-segment") {
+        // A polynomial about its origin, a Chebyshev series over its domain: the declared ones, else the middle
+        // and the range of the included data.
+        const double first = input.x.empty() ? 0.0 : input.x.front();
+        const double last = input.x.empty() ? 1.0 : input.x.back();
+        const crysta::BackgroundEstimate estimate = crysta::estimate_background_series(
+            input, engine_estimate_options(options), experiment.background_type,
+            experiment.background_origin.value_or(0.5 * (first + last)), experiment.background_x_min.value_or(first),
+            experiment.background_x_max.value_or(last));
+        BackgroundEstimate out = from_engine(estimate, input.used_model);
+        out.origin = estimate.origin;
+        out.x_min = estimate.x_min;
+        out.x_max = estimate.x_max;
+        for (std::size_t m = 0; m < estimate.coefficients.size(); ++m) {
+            PolynomialTerm term;
+            term.id = std::to_string(m);  // named by its order
+            term.order = static_cast<int>(m);
+            term.coef.value = estimate.coefficients[m];
+            term.coef.free = false;
+            out.terms.push_back(std::move(term));
+        }
+        return out;
+    }
+    const crysta::BackgroundEstimate estimate =
+        crysta::estimate_background_points(input, engine_estimate_options(options));
+    BackgroundEstimate out = from_engine(estimate, input.used_model);
+    for (std::size_t i = 0; i < estimate.anchor_x.size(); ++i) {
+        LineSegment point;
+        point.id = std::to_string(i + 1);
+        point.position = estimate.anchor_x[i];
+        point.intensity.value = estimate.anchor_y[i];
+        point.intensity.free = false;
+        out.points.push_back(std::move(point));
+    }
+    return out;
+}
+
+namespace {
+
+// What the points came from: 0 is no record (manual), kStaleEstimate "estimate at the next calculation". The digests
+// are crysta's, so a file either product saves reads the same in both (ADR-0040).
+constexpr std::uint64_t kNoRecord = 0;
+constexpr std::uint64_t kStaleEstimate = 1;
+
+std::uint64_t inputs_digest(const ExperimentBase& experiment, const BackgroundEstimateOptions& options) {
+    // A series' basis, as crysta's own experiment digest has it.
+    crysta::BackgroundSeriesBasis basis;
+    if (experiment.background_type == "polynomial") {
+        basis = {experiment.background_type, experiment.background_origin, {}, {}};
+    } else if (experiment.background_type == "chebyshev") {
+        basis = {experiment.background_type, {}, experiment.background_x_min, experiment.background_x_max};
+    }
+    return crysta::background_estimate_inputs_digest(engine_estimate_input(experiment, "ignore"),
+                                                     engine_estimate_options(options), basis);
+}
+
+std::uint64_t points_digest(const ExperimentBase& experiment) {
+    std::vector<crysta::BackgroundPointValues> points;
+    if (experiment.background_type != "line-segment") {
+        // A polynomial's or Chebyshev's terms, the order in place of a position, as the engine reads them.
+        for (const auto& term : experiment.background_terms) {
+            points.push_back({term->id.value(), static_cast<double>(term->order.get()), term->coef.value.get(),
+                              term->coef.free.get()});
+        }
+        return crysta::background_points_digest(points);
+    }
+    points.reserve(experiment.background.size());
+    for (const auto& point : experiment.background) {
+        points.push_back({point->id.value(), point->position.get(), point->intensity.value.get(),
+                          point->intensity.free.get()});
+    }
+    return crysta::background_points_digest(points);
+}
+
+bool declares_auto(const ExperimentBase& experiment) {
+    return experiment.background_estimate_mode && *experiment.background_estimate_mode == "auto";
+}
+
+bool edited_by_hand(const ExperimentBase& experiment) {
+    return experiment.background_estimate_points != kNoRecord &&
+           experiment.background_estimate_points != points_digest(experiment);
+}
+
+bool has_included_points(const ExperimentBase& experiment) {
+    return !engine_estimate_input(experiment, "ignore").x.empty();
+}
+
+}  // namespace
+
+BackgroundEstimateOptions background_estimate_options(const ExperimentBase& experiment) {
+    BackgroundEstimateOptions options;
+    options.method = experiment.background_estimate_method.value_or("auto");
+    options.width = experiment.background_estimate_width;
+    options.smoothness = experiment.background_estimate_smoothness;
+    options.n_points = experiment.background_estimate_n_points;
+    options.tolerance = experiment.background_estimate_tolerance;
+    options.in_peaks = experiment.background_estimate_in_peaks.value_or("move");
+    options.use_model = experiment.background_estimate_use_model.value_or("auto");
+    options.max_terms = experiment.background_estimate_max_terms;
+    return options;
+}
+
+// ADR-0040: the declared mode; an auto-mode background whose rows differ from the estimate is refused, never read as
+// manual.
+std::string background_estimate_mode(const ExperimentBase& experiment) {
+    return declares_auto(experiment) ? "auto" : "manual";
+}
+
+void set_background_estimate_mode(ExperimentBase& experiment, const std::string& mode) {
+    if (mode != "manual" && mode != "auto") {
+        throw std::invalid_argument("background_estimate.mode must be manual or auto, got '" + mode + "'.");
+    }
+    experiment.background_estimate_mode = mode;
+    const bool automatic = mode == "auto";
+    experiment.background_estimate_inputs = automatic ? kStaleEstimate : kNoRecord;
+    experiment.background_estimate_points = automatic ? points_digest(experiment) : kNoRecord;
+}
+
+void set_background_estimate_method(ExperimentBase& experiment, const std::string& method) {
+    crysta::resolve_background_estimator_method(method);
+    experiment.background_estimate_method = method;
+}
+
+void set_background_estimate_width(ExperimentBase& experiment, std::optional<double> width) {
+    crysta::BackgroundEstimateOptions check;
+    check.width = width;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_width = width;
+}
+
+void set_background_estimate_smoothness(ExperimentBase& experiment, std::optional<double> smoothness) {
+    crysta::BackgroundEstimateOptions check;
+    check.smoothness = smoothness;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_smoothness = smoothness;
+}
+
+void set_background_estimate_n_points(ExperimentBase& experiment, std::optional<int> n_points) {
+    crysta::BackgroundEstimateOptions check;
+    check.n_points = n_points;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_n_points = n_points;
+}
+
+void set_background_estimate_tolerance(ExperimentBase& experiment, std::optional<double> tolerance) {
+    crysta::BackgroundEstimateOptions check;
+    check.tolerance = tolerance;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_tolerance = tolerance;
+}
+
+void set_background_estimate_in_peaks(ExperimentBase& experiment, const std::string& in_peaks) {
+    crysta::BackgroundEstimateOptions check;
+    check.in_peaks = in_peaks;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_in_peaks = in_peaks;
+}
+
+void rebaseline_background_estimate(ExperimentBase& experiment) {
+    if (declares_auto(experiment)) {
+        experiment.background_estimate_inputs = kStaleEstimate;
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+}
+
+void record_fitted_background(ExperimentBase& experiment) {
+    if (declares_auto(experiment) && experiment.background_estimate_points != kNoRecord) {
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+}
+
+void require_background_edit(const ExperimentBase& experiment) {
+    if (background_estimate_mode(experiment) == "auto") {
+        throw std::invalid_argument(
+            "the background is estimated automatically (background_estimate.mode is auto); set "
+            "background_estimate.mode to manual before editing its points or terms");
+    }
+}
+
+std::vector<const Parameter*> estimated_background_values(const ExperimentBase& experiment) {
+    std::vector<const Parameter*> values;
+    if (background_estimate_mode(experiment) == "auto") {
+        for (const auto& point : experiment.background) {
+            values.push_back(&point->intensity);
+        }
+        for (const auto& term : experiment.background_terms) {
+            values.push_back(&term->coef);
+        }
+    }
+    return values;
+}
+
+void set_background_estimate_max_terms(ExperimentBase& experiment, std::optional<int> max_terms) {
+    crysta::BackgroundEstimateOptions check;
+    check.max_terms = max_terms;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_max_terms = max_terms;
+}
+
+void set_background_estimate_use_model(ExperimentBase& experiment, const std::string& use_model) {
+    crysta::BackgroundEstimateOptions check;
+    check.use_model = use_model;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_use_model = use_model;
+}
+
+std::uint64_t parse_background_digest(const std::string& text) { return crysta::parse_background_digest(text); }
+
+void settle_loaded_background_estimate(ExperimentBase& experiment) {
+    if (!declares_auto(experiment)) {
+        experiment.background_estimate_inputs = kNoRecord;
+        experiment.background_estimate_points = kNoRecord;
+        return;
+    }
+    if (experiment.background_estimate_points == kNoRecord) {
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+    if (experiment.background_estimate_inputs == kNoRecord) {
+        experiment.background_estimate_inputs = kStaleEstimate;
+    }
+}
+
+void apply_background_estimate(ExperimentBase& experiment, const BackgroundEstimate& estimate,
+                               const BackgroundEstimateOptions& options) {
+    if (!estimate.terms.empty()) {
+        set_background_terms(experiment, estimate.terms);
+        // The origin or domain the terms are about, when the experiment declared none.
+        if (experiment.background_type == "polynomial") {
+            if (!experiment.background_origin) {
+                experiment.background_origin = estimate.origin;
+            }
+        } else if (!experiment.background_x_min || !experiment.background_x_max) {
+            experiment.background_x_min = estimate.x_min;
+            experiment.background_x_max = estimate.x_max;
+        }
+        experiment.background_estimate_inputs = inputs_digest(experiment, options);
+        experiment.background_estimate_points = points_digest(experiment);
+        return;
+    }
+    if (estimate.points.empty()) {
+        return;  // nothing measured: the points stay
+    }
+    set_background_points(experiment, estimate.points);
+    experiment.background_estimate_inputs = inputs_digest(experiment, options);
+    experiment.background_estimate_points = points_digest(experiment);
+}
+
+bool background_estimate_due(const ExperimentBase& experiment) {
+    if (!declares_auto(experiment)) {
+        return false;
+    }
+    if (edited_by_hand(experiment)) {
+        return true;
+    }
+    if (!has_included_points(experiment)) {
+        return false;
+    }
+    return experiment.background_estimate_inputs !=
+           inputs_digest(experiment, background_estimate_options(experiment));
+}
+
+bool background_estimates_due(const Project& project) {
+    return std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& experiment) { return background_estimate_due(*experiment); });
+}
+
+bool refresh_background_estimates(Project& project, std::vector<std::pair<std::string, std::string>>* reasons) {
+    if (!background_estimates_due(project)) {
+        return false;
+    }
+    // crysta estimates, on the project a calculation would build, against the peaks of its current model; the
+    // conversion carries each experiment's digests, so the engine estimates exactly the experiments due here.
+    const BuiltExperiments banks = calculation_banks(project.experiments);
+    crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+    fill_crysta_relations(project, engine);
+    std::vector<std::pair<std::size_t, std::string>> engine_reasons;
+    crysta::refresh_background_estimates(engine, reasons != nullptr ? &engine_reasons : nullptr);
+    if (reasons != nullptr) {
+        for (const auto& [index, reason] : engine_reasons) {
+            reasons->emplace_back(project.experiments[index]->name, reason);
+        }
+    }
+    bool changed = false;
+    for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+        ExperimentBase& experiment = *project.experiments[index];
+        if (!background_estimate_due(experiment)) {
+            continue;
+        }
+        if (edited_by_hand(experiment)) {
+            // The engine refuses such an experiment before anything is written; never reached.
+            throw std::invalid_argument("experiment '" + experiment.name +
+                                        "': its background points or terms differ from the estimate while "
+                                        "background_estimate.mode is auto; set background_estimate.mode to manual to "
+                                        "keep them, or estimate again");
+        }
+        const crysta::BraggPdExperiment& estimated = engine.experiments[index];
+        if (experiment.background_type != "line-segment") {
+            std::vector<PolynomialTerm> terms;
+            for (const crysta::PolynomialTerm& from : estimated.background_terms) {
+                PolynomialTerm term;
+                term.id = from.id.value();
+                term.order = from.order.get();
+                term.coef.value = from.coef.value();
+                term.coef.free = from.coef.free();
+                terms.push_back(std::move(term));
+            }
+            set_background_terms(experiment, terms);
+            experiment.background_origin = estimated.background_origin.get();
+            experiment.background_x_min = estimated.background_x_min.get();
+            experiment.background_x_max = estimated.background_x_max.get();
+            experiment.background_estimate_inputs = estimated.background_estimate_inputs.get();
+            experiment.background_estimate_points = points_digest(experiment);
+            changed = true;
+            continue;
+        }
+        std::vector<LineSegment> points;
+        points.reserve(estimated.background.size());
+        for (const crysta::LineSegment& from : estimated.background) {
+            LineSegment point;
+            point.id = from.id.value();
+            point.position = from.position.get();
+            point.intensity.value = from.intensity.value();
+            point.intensity.free = from.intensity.free();
+            points.push_back(std::move(point));
+        }
+        set_background_points(experiment, points);
+        experiment.background_estimate_inputs = estimated.background_estimate_inputs.get();
+        experiment.background_estimate_points = points_digest(experiment);
+        changed = true;
+    }
+    return changed;
+}
+
+BackgroundState capture_background(const ExperimentBase& experiment) {
+    BackgroundState state;
+    state.type = experiment.background_type;
+    for (const auto& point : experiment.background) {
+        state.points.push_back(*point);
+    }
+    for (const auto& term : experiment.background_terms) {
+        state.terms.push_back(*term);
+    }
+    state.origin = experiment.background_origin;
+    state.x_min = experiment.background_x_min;
+    state.x_max = experiment.background_x_max;
+    state.mode = experiment.background_estimate_mode;
+    state.inputs = experiment.background_estimate_inputs;
+    state.written = experiment.background_estimate_points;
+    return state;
+}
+
+void restore_background(ExperimentBase& experiment, const BackgroundState& state) {
+    // The whole typed state, the type included: an undo after a type change gives back the type with its rows, never
+    // one type's rows in another's model.
+    experiment.background_type = state.type;
+    experiment.background.clear();
+    experiment.background_terms.clear();
+    if (state.type == "line-segment") {
+        set_background_points(experiment, state.points);
+    } else {
+        set_background_terms(experiment, state.terms);
+    }
+    experiment.background_origin = state.origin;
+    experiment.background_x_min = state.x_min;
+    experiment.background_x_max = state.x_max;
+    experiment.background_estimate_mode = state.mode;
+    experiment.background_estimate_inputs = state.inputs;
+    experiment.background_estimate_points = state.written;
+}
 
 }  // namespace edi

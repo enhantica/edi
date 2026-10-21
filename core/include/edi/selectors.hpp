@@ -143,6 +143,17 @@ std::vector<std::string> position_point_ids(const ExperimentBase& experiment);
 // name the point (the rename-propagation rule). Refused, with nothing renamed, when the count differs or two ids are
 // equal or empty.
 void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
+// Ids for a polynomial's or Chebyshev's terms from their orders (`0`, `1`, ...), which no two terms share.
+std::vector<std::string> order_term_ids(const ExperimentBase& experiment);
+// The terms renamed to `ids`, in their order, as set_background_point_ids renames the points.
+void set_background_term_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
+// A line-segment background's points replaced at once by copies of `points` (an estimate, or undo putting
+// back the points it replaced). Refused, with nothing written, on another background type or when two
+// points share an id.
+void set_background_points(ExperimentBase& experiment, const std::vector<LineSegment>& points);
+// A polynomial or Chebyshev background's terms replaced at once by copies of `terms` (an estimate, or undo putting
+// back the terms it replaced). Refused, with nothing written, on a line-segment background.
+void set_background_terms(ExperimentBase& experiment, const std::vector<PolynomialTerm>& terms);
 // A term's order, refused outside 0..background_max_order of the experiment's type or when another term holds it.
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order);
 // The polynomial background's origin: finite and not zero (crysta's rule).

@@ -427,9 +427,9 @@ cocoa does on macOS (`tools/ci/app-platform.sh`):
 - The app cannot be a Wayland client of Weston itself: conda-forge's Mesa is built without the Wayland EGL
   platform (its `libEGL_mesa` reports "Wayland platform not built"; it has x11, xcb, gbm, surfaceless and
   device).
-- conda-forge's only Weston (16.0.0) needs glibc 2.34. The app environment runs on a Linux platform of its
-  own that declares it (`linux-64-app` in `pixi.toml`), which moves its sysroot from glibc 2.28 to 2.34; the
-  default environment, the core and its wheels stay on `linux-64` at 2.28.
+- conda-forge's only Weston (16.0.0) needs glibc 2.34, so `pixi.toml` declares `linux-64` with glibc 2.34
+  (amended 2026-10-20: one platform per subdir, for every environment). The core and its wheels still build
+  against the glibc 2.28 sysroot.
 - The demo asks for 8 bits per colour channel. An EGL display can offer 16-bit RGB565 first: a Wayland probe
   on the host's own Mesa captured 32 red levels where the committed set had 255.
 
@@ -460,9 +460,9 @@ So the gap was on the reference side, and the set is now captured on the Xwaylan
 The desktop app runs on Linux (x86-64) and on macOS 14 or later (Apple silicon). The web app runs in a current
 browser. The app uses one Qt release everywhere, the one the web build's kits pin (ADR-0023), and `wasm-toolchain`
 refuses a different host Qt. conda-forge's `qt6-main` 6.11.2 for macOS depends on `moltenvk` 1.4, which is built
-for macOS 14, so the app environment runs on a macOS platform of its own that declares 14.0 (`osx-arm64-app` in
-`pixi.toml`), as `linux-64-app` declares glibc 2.34. The default environment, the core, its wheels and the CLI keep
-the 13.4 deployment target their own source needs.
+for macOS 14, so `pixi.toml` declares `osx-arm64` with macOS 14.0, as it declares `linux-64` with glibc 2.34
+(amended 2026-10-20: one platform per subdir, for every environment, so no named platform has to match the host).
+The core, its wheels and the CLI keep the 13.4 deployment target their own source needs.
 
 ## Consequences
 

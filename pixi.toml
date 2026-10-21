@@ -6,16 +6,12 @@
 name = "edi"
 channels = ["conda-forge"]
 platforms = [
-    # osx-64 is not built (ADR-0017): crysta publishes no osx-64 SDK.
-    "linux-64",
-    "osx-arm64",
-    # The app environment's Linux: conda-forge's only weston (16.0.0), the UI test's headless display, needs
-    # glibc 2.34. Only the app feature selects it; the default environment, the core and its wheels stay on
-    # linux-64's glibc 2.28 (the `core-platforms` feature).
-    { name = "linux-64-app", platform = "linux-64", glibc = "2.34" },
-    # The app environment's macOS: conda-forge's Qt 6.11.2 needs moltenvk 1.4, built for macOS 14, so the app
-    # requires macOS 14 or later while the core keeps its 13.4 floor.
-    { name = "osx-arm64-app", platform = "osx-arm64", macos = "14.0" },
+    # osx-64 is not built (ADR-0017): crysta publishes no osx-64 SDK. One platform per subdir, with the floor
+    # the app environment needs: conda-forge's only weston (16.0.0), the UI test's headless display, needs
+    # glibc 2.34, and its Qt 6.11.2 needs moltenvk 1.4, built for macOS 14. The core still builds against the
+    # glibc 2.28 sysroot and the 13.4 deployment target (MACOSX_DEPLOYMENT_TARGET below).
+    { platform = "linux-64", glibc = "2.34" },
+    { platform = "osx-arm64", macos = "14.0" },
 ]  # win-64 returns once the bash-based tasks get platform shims
 # The org launcher pin: pixi itself refuses to run under any other launcher version, locally and
 # in CI alike. CI installs exactly this version via .github/actions/setup-pixi; the hub parity
@@ -143,16 +139,18 @@ nodejs = "==22.23.2"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-f865770a742bb1f83ae4b8e4eab96448fc513cfc"
-CRYSTA_SDK_SHA256 = "b49c5137f09dd24660ce0c08edc0bfc7bf655a6e8ccc8a5b1ce846e7ae243b28"
+CRYSTA_SDK_TAG = "build-f74e299f8e7e007f529cc2c4bc5ec9b7a88ef517"
+CRYSTA_SDK_SHA256 = "5f46964aa70bc527e55716198412b402a905d2520ae753c354b3c3b860e8d395"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-f865770a742bb1f83ae4b8e4eab96448fc513cfc"
-CRYSTA_SDK_SHA256 = "fed7d175fa1059552c930bce6e66ee9138d5376ddc249773e09a23efc0aaaebf"
+CRYSTA_SDK_TAG = "build-f74e299f8e7e007f529cc2c4bc5ec9b7a88ef517"
+CRYSTA_SDK_SHA256 = "15a4dc5138f1d78b24b0781f34d890d309e37715898c775097ce1d28f194d662"
 
 [target.linux-64.dependencies]
 clangxx = "22.*"
 llvm-tools = "22.*"
+# The core and its wheels link against glibc 2.28 although the platform's floor is 2.34 (the app's).
+sysroot_linux-64 = "2.28.*"
 
 # ADR-0015: the Qt/QML app host builds in its own environment, so the default environment stays Qt-free for
 # the core, the bindings and CI legs that never touch the app. qt6-main is LGPL-3.0-only on conda-forge.
@@ -223,14 +221,6 @@ aqtinstall = "==3.3.0"
 CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
-# The app environment runs on linux-64-app (glibc 2.34, for weston) and osx-arm64-app (macOS 14, for Qt 6.11.2).
-[feature.app]
-platforms = ["linux-64-app", "osx-arm64-app"]
-
-# The default environment keeps the workspace's own platforms, never linux-64-app or osx-arm64-app.
-[feature.core-platforms]
-platforms = ["linux-64", "osx-arm64"]
-
 [feature.app.tasks]
 # Build the app host into build/app (crysta first, through the same build-crysta.sh the core uses). Each app
 # step below builds first when run on its own (an incremental build, every time); a full sequence builds once
@@ -278,7 +268,6 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 app-gates = { depends-on = [{ task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
 [environments]
-default = ["core-platforms"]
 app = ["app"]
 
 [pypi-dependencies]

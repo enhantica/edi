@@ -46,6 +46,8 @@ BeamModeEnum.TIME_OF_FLIGHT	other-public
 BraggPdExperiment	other-public
 BraggPdExperiment.absorption	other-public
 BraggPdExperiment.background	other-public
+# Saved estimator settings are model state rather than a calculation entry point.
+BraggPdExperiment.background_estimate	other-public
 BraggPdExperiment.data	other-public
 BraggPdExperiment.dataset_weight	other-public
 BraggPdExperiment.excluded_regions	other-public
@@ -717,3 +719,7 @@ LinkedStructure.weight_fraction	other-public
 WeightFraction	other-public
 WeightFraction.uncertainty	other-public
 WeightFraction.value	other-public
+
+# Stored background row identifiers are public model data, not input providers.
+LineSegment.id	other-public
+PolynomialTerm.id	other-public

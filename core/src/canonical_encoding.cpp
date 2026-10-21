@@ -181,6 +181,25 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
         put_double(out, region->first);
         put_double(out, region->second);
     }
+    // ADR-0040: in auto mode the estimate settings decide the points a calculation uses, so they are its
+    // inputs; what the points came from (the two digests) is not.
+    put_text(out, experiment.background_estimate_mode.value_or(""));
+    put_text(out, experiment.background_estimate_method.value_or(""));
+    for (const std::optional<double>* value :
+         {&experiment.background_estimate_width, &experiment.background_estimate_smoothness}) {
+        out += value->has_value() ? 'G' : '-';
+        if (value->has_value()) {
+            put_double(out, **value);
+        }
+    }
+    put_u64(out, static_cast<std::uint64_t>(experiment.background_estimate_n_points.value_or(0)));
+    out += experiment.background_estimate_tolerance.has_value() ? 'G' : '-';
+    if (experiment.background_estimate_tolerance.has_value()) {
+        put_double(out, *experiment.background_estimate_tolerance);
+    }
+    put_text(out, experiment.background_estimate_in_peaks.value_or(""));
+    put_text(out, experiment.background_estimate_use_model.value_or(""));
+    put_u64(out, static_cast<std::uint64_t>(experiment.background_estimate_max_terms.value_or(0)));
     // `ExperimentBase::data` is DELIBERATELY NOT ENCODED: the encoding fingerprints the
     // model content, and embedded data alters nothing a forward calculation computes.
 }
@@ -466,6 +485,7 @@ template class OneRow<AbsorptionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
+template class OneRow<BackgroundEstimateCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
 template class OneRow<SuFormatCategory>;

@@ -43,6 +43,42 @@ def blob_id(path):
     ).hexdigest()
 
 
+def require_estimate_cli_extension(path, name, live_directory):
+    extension = json.loads(
+        (ROOT / 'tests/fixtures/c13_t4_march/regression-pins.json').read_text()
+    )['sha256']
+    fixture = ROOT / 'tests/fixtures/background_estimate'
+    baseline = fixture / (
+        'cli-before.edi' if name.endswith('hrpt.edi') else 'cli-expected-before.json'
+    )
+    assert (
+        hashlib.sha256(original_tokens(baseline.read_bytes())).hexdigest()
+        == extension[(live_directory / name).relative_to(ROOT).as_posix()]
+    ), 'The estimate extension must retain the independently pinned prior CLI witness'
+    if name.endswith('hrpt.edi'):
+        allowed = tuple(
+            '_background_estimate.' + field + ' '
+            for field in ('mode', 'method', 'width', 'smoothness', 'n_points', 'use_model')
+        )
+        retained = [
+            line
+            for line in original_tokens(path.read_bytes()).decode().splitlines()
+            if line.strip() and not line.startswith(allowed)
+        ]
+        before = [
+            line
+            for line in original_tokens(baseline.read_bytes()).decode().splitlines()
+            if line.strip()
+        ]
+        assert retained == before, (
+            'The LBCO input may add six estimate settings while retaining other nonblank lines'
+        )
+        return
+    assert path.read_bytes() == baseline.read_bytes(), (
+        'The manual estimate category must preserve every byte of the existing fit regression pins'
+    )
+
+
 def checker():
     path = ROOT / 'tools/checks/cli_projects.py'
     assert path.is_file(), ' requires the executable CLI-project checker and real-loader seam'
@@ -146,13 +182,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
             'expected.json',
             'project/experiments/hrpt.edi',
         }:
-            extension = json.loads(
-                (ROOT / 'tests/fixtures/c13_t4_march/regression-pins.json').read_text()
-            )['sha256']
-            assert (
-                hashlib.sha256(original_tokens(path.read_bytes())).hexdigest()
-                == extension[(live_directory / name).relative_to(ROOT).as_posix()]
-            ), ' only the reviewed March extension bytes replace the original LBCO seed'
+            require_estimate_cli_extension(path, name, live_directory)
             continue
         if project_id in {
             'cosio-d20-s1',
@@ -253,7 +283,16 @@ def task_commands(manifest, name, environment='default', seen=None):
     if identity in seen:
         return []
     seen.add(identity)
-    features = manifest['environments'][environment]
+    environments = manifest.get('environments', {})
+    # The default feature is implicit when no default environment is declared.
+    # Named environments must still resolve explicitly; no fallback may hide one.
+    if environment == 'default' and environment not in environments:
+        features = []
+    else:
+        assert environment in environments, (
+            'Task reachability requires a declared named environment: ' + environment
+        )
+        features = environments[environment]
     if isinstance(features, dict):
         tasks = {} if features.get('no-default-feature') else dict(manifest['tasks'])
         features = features['features']
@@ -261,6 +300,12 @@ def task_commands(manifest, name, environment='default', seen=None):
         tasks = dict(manifest['tasks'])
     for feature in features:
         tasks.update(manifest['feature'][feature].get('tasks', {}))
+    assert name in tasks, (
+        'Task reachability requires the task in its effective environment: '
+        + environment
+        + '/'
+        + name
+    )
     task = tasks[name]
     if isinstance(task, str):
         return [task]
@@ -280,6 +325,39 @@ def task_commands(manifest, name, environment='default', seen=None):
 
 
 def test_pull_request_ci_and_verify_execute_the_complete_registry():
+    # Independent task-graph controls retain implicit default, qualified edges,
+    # explicit default features and named-environment isolation in the resolver.
+    control = {
+        'tasks': {
+            'root-only': 'root command',
+            'qualified': {'depends-on': [{'task': 'feature-only', 'environment': 'app'}]},
+        },
+        'environments': {'app': {'features': ['app'], 'no-default-feature': True}},
+        'feature': {'app': {'tasks': {'feature-only': 'feature command'}}},
+    }
+    assert task_commands(control, 'root-only') == ['root command'], (
+        'An omitted default environment must retain the root default-feature tasks'
+    )
+    assert list(filter(None, task_commands(control, 'qualified'))) == ['feature command'], (
+        'An implicit default must follow an explicitly environment-qualified dependency'
+    )
+    with pytest.raises(AssertionError, match='declared named environment'):
+        task_commands(control, 'root-only', environment='missing')
+    with pytest.raises(AssertionError, match='effective environment'):
+        task_commands(control, 'root-only', environment='app')
+    control['environments']['default'] = {'features': ['app'], 'no-default-feature': True}
+    assert task_commands(control, 'feature-only') == ['feature command'], (
+        'An explicit isolated default must retain its declared feature tasks'
+    )
+    with pytest.raises(AssertionError, match='effective environment'):
+        task_commands(control, 'root-only')
+    control['environments']['default'] = ['app']
+    assert task_commands(control, 'root-only') == ['root command'], (
+        'An explicit feature-list default must continue to inherit the root tasks'
+    )
+    assert task_commands(control, 'feature-only') == ['feature command'], (
+        'An explicit feature-list default must retain its declared feature tasks'
+    )
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_registry_wiring(
         manifest, yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
