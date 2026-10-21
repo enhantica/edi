@@ -33,6 +33,10 @@ EaComponents.ListView {
         return metrics.advanceWidth(text);
     }
     function textColumnWidth(role: string, title: string): real {
+        return Math.min(naturalTextColumnWidth(role, title), width * maximumTextColumnShare);
+    }
+    // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
+    function naturalTextColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
         let widths = rowWidths[role];
         if (!widths || widths.length !== count) {
@@ -42,7 +46,7 @@ EaComponents.ListView {
             rowWidths[role] = widths;
         }
         const result = widths.reduce((widest, measured) => Math.max(widest, measured), metrics.advanceWidth(title));
-        return Math.min(Math.ceil(result) + AppSizes.fieldSpacing * 2, width * maximumTextColumnShare);
+        return Math.ceil(result) + AppSizes.fieldSpacing * 2;
     }
     // Cleared in place: the bindings that read the cache depend on modelRevision, never on the cache itself.
     function forgetWidths() {

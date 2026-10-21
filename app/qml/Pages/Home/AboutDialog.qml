@@ -112,10 +112,12 @@ AppDialog {
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
                 IconLine {
-                    segments: [{
+                    segments: [
+                        {
                             "icon": "balance-scale",
                             "color": EaStyle.Colors.themeForeground
-                        }]
+                        }
+                    ]
                 }
                 // The identifiers, a dot in the text colour between them: "BSD-3-Clause · GPL-3.0-only".
                 Repeater {
@@ -150,10 +152,12 @@ AppDialog {
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
                 IconLine {
-                    segments: [{
+                    segments: [
+                        {
                             "icon": "balance-scale",
                             "color": EaStyle.Colors.themeForeground
-                        }]
+                        }
+                    ]
                 }
                 LinkLabel {
                     objectName: "about.thirdParty"
@@ -188,8 +192,8 @@ AppDialog {
         }
     }
 
-    // The third-party components this build bundles: component, version and licence. The rows have the header's
-    // margins, look enabled and select nothing.
+    // The third-party components this build bundles: component, version and licence. The table is as wide as its
+    // columns, each cell keeps a cell's margins, and the rows look enabled and select nothing.
     AppDialog {
         id: thirdPartyPopup
 
@@ -197,9 +201,11 @@ AppDialog {
         parent: Overlay.overlay
         title: qsTr("Third-party licences")
         standardButtons: Dialog.Ok
-        contentWidth: AppSizes.aboutWidth
-        // The table sets its height, not an implicit one, so the popup is told how tall its content is.
+        // The table sets its size, not an implicit one, so the popup is told how large its content is. The width is
+        // set, not implicit: the OK button's box takes the popup's width, and an implicit width read it back.
+        contentWidth: components.width
         contentHeight: components.height
+        width: contentWidth + leftPadding + rightPadding
 
         ListModel {
             id: componentRows
@@ -217,28 +223,35 @@ AppDialog {
             id: components
 
             objectName: "about.components"
-            width: parent.width
+            readonly property var naturalWidths: [naturalTextColumnWidth("component", qsTr("Component")), naturalTextColumnWidth("version", qsTr("Version")), naturalTextColumnWidth("licence", qsTr("Licence"))]
+
+            width: naturalWidths.reduce((sum, column) => sum + column, 0) + EaStyle.Sizes.tableColumnSpacing * (naturalWidths.length - 1) + EaStyle.Sizes.borderThickness * 2 + rowPadding * 2
             // As many rows as fit in the window with the popup's title and OK button, so the popup is never taller than
             // the window and stays centred in it; the rest scroll.
             maxRowCountShow: Math.max(3, Math.floor(((thirdPartyPopup.parent ? thirdPartyPopup.parent.height : 0) - EaStyle.Sizes.fontPixelSize * 14) / tableRowHeight) - 1)
-            maximumTextColumnShare: 0.5
             defaultInfoText: ""
             selectable: false
             sourceModel: componentRows
 
-            columnWidths: [textColumnWidth("component", qsTr("Component")), textColumnWidth("version", qsTr("Version")), -1]
+            columnWidths: naturalWidths
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     text: qsTr("Component")
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     text: qsTr("Version")
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     text: qsTr("Licence")
                 }
             }
@@ -254,15 +267,21 @@ AppDialog {
 
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     text: row.component
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.version
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
+                    leftPadding: AppSizes.fieldSpacing
+                    rightPadding: AppSizes.fieldSpacing
                     text: row.licence
                 }
             }
