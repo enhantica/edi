@@ -12,8 +12,8 @@ import edi.app
 // button follows the datasets' fits (edi ADR-0017 §17): Start fitting while none is fitted, Continue fitting while
 // some are not (it fits from the first unfitted one), disabled once all are. Reset fits, between it and Follow,
 // clears every dataset's fit result in one Undo step. Follow is enabled while a scan runs: on, the pattern tab shows
-// the file being fitted. Follow is shown only in the sequential and independent modes, so a single or joint fit has
-// Start fitting alone at the full width (edi ADR-0046); the shown buttons share the row equally.
+// the file being fitted. Reset fits and Follow are shown only in the sequential and independent modes, so a single or
+// joint fit has Start fitting alone at the full width (edi ADR-0046); the shown buttons share the row equally.
 // Untitled and fixed open, as the original's group.
 EaElements.GroupBox {
     id: group
@@ -26,9 +26,8 @@ EaElements.GroupBox {
     Row {
         id: buttons
 
-        readonly property bool scan: Session.project !== null && Session.project.scan
         readonly property bool scanMode: group.fit !== null && group.fit.scanMode
-        readonly property int shown: 1 + (scan ? 1 : 0) + (scanMode ? 1 : 0)
+        readonly property int shown: scanMode ? 3 : 1
         readonly property real share: (EaStyle.Sizes.sideBarContentWidth - (shown - 1) * spacing) / shown
 
         spacing: EaStyle.Sizes.fontPixelSize
@@ -44,7 +43,7 @@ EaElements.GroupBox {
         }
         EaElements.SideBarButton {
             objectName: "fitting.reset"
-            visible: buttons.scan
+            visible: buttons.scanMode
             width: buttons.share
             enabled: group.fit !== null && group.fit.canReset
             fontIcon: "eraser"

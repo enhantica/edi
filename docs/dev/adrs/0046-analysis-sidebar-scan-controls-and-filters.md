@@ -15,9 +15,9 @@ structure or one experiment, or to undo every filter at once.
 
 ## Decision
 
-1. **Scan-only controls.** The Evolution tab and the Follow button are shown only when the fitting mode is sequential
-   or independent. For single and joint fits both are hidden, not greyed, and Start fitting takes the full width of
-   the row. They appear and disappear as soon as the mode changes; a page showing Evolution when it goes away returns
+1. **Scan-only controls.** The Evolution tab and the Reset fits and Follow buttons are shown only when the fitting mode
+   is sequential or independent: they act on a scan's datasets one by one. For single and joint fits all three are
+   hidden, not greyed, and Start fitting takes the full width of the row, also in a scan project. They appear and disappear as soon as the mode changes; a page showing Evolution when it goes away returns
    to the pattern.
 2. **Two filter lines.** The top line has three pickers of equal width: datablocks, categories, parameters (all, free
    or fixed). The bottom line has the "Filter by name" field and, at its end, a square button with the eraser icon

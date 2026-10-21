@@ -829,7 +829,8 @@ refuses to write its bank rows into it.
   table is disabled and every edit is refused.
 - **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
   on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
-  the three share the row in thirds.
+  the three share the row in thirds. Reset fits and Follow show only in the sequential and independent modes;
+  otherwise Start fitting is alone at the full width (ADR-0046).
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
