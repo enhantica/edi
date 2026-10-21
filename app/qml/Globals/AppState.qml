@@ -40,6 +40,13 @@ QtObject {
     property bool patternLegendShown: false
     property bool patternHoverShown: true
     property string patternPointerMode: "zoom"
+    // A project opened, reset or closed starts with its full view; the toolbar's choices stay.
+    property Connections patternViewReset: Connections {
+        target: Session
+        function onProjectChanged() {
+            AppState.patternViewRanges = [];
+        }
+    }
 
     // The furthest page the user has opened with Start or Continue; an open project opens every page
     // (easydiffractionbeta: loading a project enables the workflow pages together).

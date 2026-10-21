@@ -510,6 +510,19 @@ void PatternChartController::refresh() {
         static const edi::PatternSource kNothing;
         const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
         shown_ = edi::present_pattern(source, view());
+        // A range chosen on one x quantity or unit means nothing on another: the new axis starts with its full view.
+        if (shown_.x.title != presented_x_) {
+            const bool changed = !presented_x_.empty();
+            presented_x_ = shown_.x.title;
+            if (changed && (x_min_ || x_max_ || y_min_ || y_max_)) {
+                finishAnimation();
+                x_min_.reset();
+                x_max_.reset();
+                y_min_.reset();
+                y_max_.reset();
+                emit viewRangesChanged();
+                shown_ = edi::present_pattern(source, view());
+            }
         }
         if (experiment_ && active_) {
             experiment_->notePresented();

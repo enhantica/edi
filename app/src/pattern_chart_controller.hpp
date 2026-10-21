@@ -346,6 +346,7 @@ class PatternChartController : public QObject {
     QList<StructureSeries> structure_series_;
     bool structure_curves_ = false, has_calculated_ = false;
     QVariantList structure_curve_colors_;
+    std::string presented_x_;  // the x axis last presented, its quantity and unit
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;
