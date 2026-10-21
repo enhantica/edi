@@ -1,0 +1,131 @@
+{
+  "source": "crysta fit and forward calculation, then textbook sums of saved curves; timing and phase display records are authored",
+  "crysta_sha": "2be6c5eca1cafda5c47a412faddf8fe015128640",
+  "input": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+  "parameters": 193,
+  "banks": [
+    {
+      "name": "wish_1_10",
+      "sums": {
+        "n": 3758,
+        "absolute": 158749.80339659879,
+        "weighted": 3895.5716391173514,
+        "obs_absolute": 1319541.3895,
+        "obs_weighted": 1802304.9537628947,
+        "corrected_absolute": 539814.6287792523,
+        "corrected_weighted": 165545.66633019655
+      },
+      "values": [
+        0.12030680102937293,
+        0.04649127530396326,
+        0.04447496642479732,
+        0.2940820699053651,
+        0.1534004697650872
+      ],
+      "parameters": 193
+    },
+    {
+      "name": "wish_2_9",
+      "sums": {
+        "n": 3977,
+        "absolute": 210539.28884414726,
+        "weighted": 19749.336355534924,
+        "obs_absolute": 1996851.7571,
+        "obs_weighted": 4755927.649373,
+        "corrected_absolute": 929239.9717642779,
+        "corrected_weighted": 1673411.566666591
+      },
+      "values": [
+        0.10543561288190494,
+        0.0644404602539719,
+        0.028207067919317774,
+        0.22657149416895206,
+        0.10863627604551591
+      ],
+      "parameters": 193
+    },
+    {
+      "name": "wish_3_8",
+      "sums": {
+        "n": 3703,
+        "absolute": 177561.37293458745,
+        "weighted": 44309.75038168901,
+        "obs_absolute": 2188060.6582,
+        "obs_weighted": 7116723.144398763,
+        "corrected_absolute": 992762.0161227965,
+        "corrected_weighted": 3188383.808669863
+      },
+      "values": [
+        0.08115011449484114,
+        0.0789059251416207,
+        0.022208208321510974,
+        0.17885592926696398,
+        0.11788657609717136
+      ],
+      "parameters": 193
+    },
+    {
+      "name": "wish_4_7",
+      "sums": {
+        "n": 3745,
+        "absolute": 172189.81707503358,
+        "weighted": 52480.73461192042,
+        "obs_absolute": 2389902.6468,
+        "obs_weighted": 7998656.23041425,
+        "corrected_absolute": 1042177.034953384,
+        "corrected_weighted": 3541506.6405935935
+      },
+      "values": [
+        0.07204888337422029,
+        0.08100119701642823,
+        0.02107307741506383,
+        0.16522127364160882,
+        0.12173232660684644
+      ],
+      "parameters": 193
+    },
+    {
+      "name": "wish_5_6",
+      "sums": {
+        "n": 3790,
+        "absolute": 182970.35272807025,
+        "weighted": 57911.69306925721,
+        "obs_absolute": 2492754.8804,
+        "obs_weighted": 8453005.833925731,
+        "corrected_absolute": 1065766.3260098181,
+        "corrected_weighted": 3678494.226183444
+      },
+      "values": [
+        0.07340086029586267,
+        0.08277087505348231,
+        0.02062835679746664,
+        0.17167961518647634,
+        0.12547236719504512
+      ],
+      "parameters": 193
+    }
+  ],
+  "pooled": {
+    "n": 18973,
+    "absolute": 902010.6349784373,
+    "weighted": 178347.08605751893,
+    "obs_absolute": 10387111.332,
+    "obs_weighted": 30126617.81187464,
+    "corrected_absolute": 4569759.977629528,
+    "corrected_weighted": 12247341.908443687
+  },
+  "global_values": [
+    0.08683941147329154,
+    0.07694099884157282,
+    0.024967358944314517,
+    0.1973868735763092,
+    0.12067354966676735
+  ],
+  "bank1_brief_percent": [
+    12.03,
+    4.66,
+    4.45,
+    29.41,
+    15.34
+  ]
+}

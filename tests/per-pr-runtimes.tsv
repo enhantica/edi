@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-19T18:25:50Z
+# measured_utc = 2026-10-21T12:54:19Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 13719 banked, 0 stale row(s) dropped)
-# Collected tests: 15055; with a reported duration: 8782
+# Recorded from: measured test run (18 node(s) measured once, 13721 banked, 0 stale row(s) dropped)
+# Collected tests: 15073; with a reported duration: 8796
 # Module-scoped fixture costs recorded: 58
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15055
+# inventory_python = 15073
 # inventory_cpp = 335
-# inventory_measured = 13721
-# inventory_unmeasured = 1669
+# inventory_measured = 13735
+# inventory_unmeasured = 1673
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -5294,6 +5294,23 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[cw]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[tof]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[cw]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[tof]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[d_spacing-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[d_spacing-tof]
+0.020	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_bkg-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_bkg-tof]
+0.020	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-tof]
+0.020	tests/integration/py/test_fit_tables_reference.py::test_ncaf_bank_one_retains_the_external_brief_values
+0.080	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[All datasets]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_1_10]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_2_9]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_3_8]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_4_7]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_5_6]
 0.020	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[independent]
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
@@ -11136,6 +11153,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+1.390	tests/system/py/test_excluded_examples.py::test_committed_examples_do_not_claim_excluded_zero_calculations
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
