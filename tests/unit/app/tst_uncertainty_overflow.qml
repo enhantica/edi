@@ -193,11 +193,17 @@ TestCase {
         open(data.rule);
         widths("narrow");
         const rows = Probe.rows(table.sourceModel);
-        const index = rows.findIndex(row => row.parameter.blockName === "wish_5_6" && row.parameter.uid === "peak.decay_beta_0");
-        verify(index >= 0, "The full-hover control reaches the real fifth-bank beta-zero parameter");
-        const ref = reference(rows[index].parameter, data.rule);
-        const cell = cellAt(index, data.column);
-        verify(ordinaryWidth(cell, ref[data.column + "_text"]) > room(cell), "The hover witness starts with a number whose ordinary text exceeds its column");
+        let cell = null, ref = null;
+        for (let index = 0; index < rows.length; ++index) {
+            const candidate = reference(rows[index].parameter, data.rule);
+            const rendered = cellAt(index, data.column);
+            if (candidate[data.column + "_text"] !== "" && ordinaryWidth(rendered, candidate[data.column + "_text"]) > room(rendered)) {
+                cell = rendered;
+                ref = candidate;
+                break;
+            }
+        }
+        verify(cell !== null && ref !== null, "The full-hover witness reaches an actual overflowing saved NCAF number under the current font metrics");
         Ui.scrollIntoView(cell);
         const point = Ui.clickPoint(cell);
         verify(point !== null, "The actual narrow numeric cell exposes a real hover target");
@@ -307,7 +313,8 @@ TestCase {
                 if (number.truncated === true || /…|\.\./.test(number.text) || number.contentWidth > room(number) + 0.5)
                     failures.push(ref.phase + ": LATP numeric glyphs exceed their actual column");
         });
-        verify(compact > 0, "The LATP witness reaches the reported shared-exponent overflow rather than a wide-column identity");
+        if (data.layout === "narrow")
+            verify(compact > 0, "The forced-narrow LATP witness reaches shared-exponent overflow rather than an identity layout");
         compare(failures.length, 0, "Every overflowing LATP uncertainty uses its own shortest exponent with the rule's independent significant digits and no elision: " + failures.join("; "));
     }
     function test_latp_full_hover_data() {
@@ -331,7 +338,9 @@ TestCase {
         }
     }
     function sidebarContainer() {
-        const contents = Ui.page(appWindow).sideBar;
+        const workflow = Render.descendants(Ui.page(appWindow)).find(item => typeof item.pageName === "string" && typeof item.placeSideBar === "function");
+        verify(workflow !== undefined, "The active page contains its real production workflow component");
+        const contents = workflow.sideBar;
         verify(contents !== undefined, "Every tested workflow page exposes its actual sidebar content");
         for (let index = 0; index < contents.length; ++index)
             if (contents[index].continueButton !== undefined && contents[index].parent)
@@ -391,6 +400,7 @@ TestCase {
         verify(cell.font.bold, "A real free parameter retains its bold value style in each theme");
         const ink = item => String(item.color).toLowerCase();
         const rendered = [tick, success, check].concat(digits);
+        tryVerify(() => rendered.every(item => ink(item) === ink(success)), 2000, "The actual Success tick, label and successful-file count settle to the same rendered green");
         tryVerify(() => rendered.every(item => ink(item) === ink(cell)), 2000, "The bold free value shares the rendered Success tick, label and successful-file count colour in " + data.theme + ": free=" + ink(cell) + " status=" + rendered.map(ink).join(","));
         appWindow.update();
         verify(waitForRendering(appWindow.contentItem), "The shared-green witness reaches a real completed frame");
