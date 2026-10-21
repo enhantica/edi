@@ -156,8 +156,7 @@ Item {
         const mainAxis = mainView.plotArea.x - mainView.marginLeft;
         const residualAxis = residualView.visible ? residualView.plotArea.x - residualView.marginLeft : 0;
         // Far enough right for the y titles and labels, and for the longest structure name of the tick rows (4.8).
-        const edge = Math.round(Math.max(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom),
-                                         sideMargin + braggLabelsRoom + braggLabelGap));
+        const edge = Math.round(Math.max(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom), sideMargin + braggLabelsRoom + braggLabelGap));
         const set = (view, margin) => {
             if (Math.abs(view.marginLeft - margin) > 0.5)
                 view.marginLeft = margin;
@@ -581,13 +580,16 @@ Item {
 
     // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
     // its structure's colour, drawn under the other series and not stacked. The chart keeps one area per structure it
-    // has drawn and hides those not drawn now: an area removed from a Qt Graphs view kept its last drawing on screen.
+    // has drawn; one not drawn now holds no points and no colour. Qt Graphs kept the last drawing of an area it hid or
+    // removed (the owner's Mac, 2026-10-21), so none is.
+    // A chart made while the curves are on has its colours before this handler is connected: it counts them once made.
     property int structureCurveSlots: 0
     Connections {
         target: controller
         function onStructureCurveColorsChanged() {
             chart.structureCurveSlots = Math.max(chart.structureCurveSlots, controller.structureCurveColors.length);
         }
+        Component.onCompleted: onStructureCurveColorsChanged()
     }
     Instantiator {
         model: chart.structureCurveSlots
@@ -599,14 +601,12 @@ Item {
             readonly property var colours: controller.structureCurveColors[index] ?? ({})
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
-                visible: area.drawn
-                color: area.colours.color ?? "transparent"
+                color: area.drawn ? area.colours.color ?? "transparent" : "transparent"
                 width: 1.5
             }
 
             objectName: "chart.series.structure." + area.index
-            visible: area.drawn
-            color: area.colours.fill ?? "transparent"
+            color: area.drawn ? area.colours.fill ?? "transparent" : "transparent"
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}

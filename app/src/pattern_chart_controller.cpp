@@ -510,6 +510,7 @@ void PatternChartController::refresh() {
         static const edi::PatternSource kNothing;
         const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
         shown_ = edi::present_pattern(source, view());
+        }
         if (experiment_ && active_) {
             experiment_->notePresented();
         }
@@ -657,18 +658,37 @@ void PatternChartController::refresh() {
         if (static_cast<qsizetype>(index) >= structure_series_.size()) {
             continue;  // the chart makes its series and hands them over, which draws again
         }
-        // The area holds the drawn points only: a gap (an excluded region) is not a point an area can take.
+        // The area holds the drawn points only: a gap (an excluded region, or a curve the log scale cannot show) is
+        // not a point an area can take, so the area closes onto its base at each gap instead of bridging it. A
+        // background the log scale cannot show (zero or less) is below the axis: the fill reaches the axis there.
+        // The area's upper edge keeps a twentieth of a pixel above its lower one: where the two met (a curve on a
+        // zero background between its peaks, or a closed gap) Qt Graphs filled the area as a fan from its first point
+        // or not at all.
+        const double lift = plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0;
         const QList<QPointF> curve = points_of(series);
         QList<QPointF> upper, lower;
-        upper.reserve(curve.size());
-        lower.reserve(curve.size());
+        upper.reserve(curve.size() + 2);
+        lower.reserve(curve.size() + 2);
+        bool open = false;
         for (qsizetype k = 0; k < curve.size(); ++k) {
-            const auto at = static_cast<std::size_t>(k);
-            const double base = at < series.bar_low.size() ? series.bar_low[at] : std::numeric_limits<double>::quiet_NaN();
-            if (std::isfinite(curve[k].x()) && std::isfinite(curve[k].y()) && std::isfinite(base)) {
-                upper.append(curve[k]);
-                lower.append(QPointF(curve[k].x(), base));
+            if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
+                if (open) {
+                    upper.append(QPointF(lower.back().x(), lower.back().y() + lift));
+                    lower.append(lower.back());
+                    open = false;
+                }
+                continue;
             }
+            const auto at = static_cast<std::size_t>(k);
+            const double low = at < series.bar_low.size() ? series.bar_low[at] : std::numeric_limits<double>::quiet_NaN();
+            const QPointF base(curve[k].x(), std::isfinite(low) ? low : shown_y_min_);
+            if (!open && !upper.isEmpty()) {
+                upper.append(QPointF(base.x(), base.y() + lift));
+                lower.append(base);
+            }
+            upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), base.y() + lift)));
+            lower.append(base);
+            open = true;
         }
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
         replace(target.upper, upper);

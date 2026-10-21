@@ -607,13 +607,18 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
             }
             const std::vector<double> display = displayed(upper, view.y_scale);
             const std::vector<double> base = displayed(*bkg, view.y_scale);
+            // A background the log scale cannot show still leaves the curve drawn: its rows are kept by the curve.
+            std::vector<double> kept_low(base.size());
+            for (std::size_t row = 0; row < base.size(); ++row) {
+                kept_low[row] = std::isnan(base[row]) ? display[row] : base[row];
+            }
             PatternSeries series;
             series.kind = SeriesKind::StructureCurve;
             series.pane = Pane::Main;
             series.id = "structure/" + component.structure_id;
             series.label = component.label;
             series.style = style_key("structure", component.place);
-            fill_points(series, decimate(x, base, display, out.x.min, out.x.max, view.columns), x, display);
+            fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns), x, display);
             series.bar_low.reserve(series.rows.size());
             for (const std::size_t row : series.rows) {
                 series.bar_low.push_back(row == kNoRow ? kNaN : base[row]);

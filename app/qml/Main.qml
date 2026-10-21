@@ -190,7 +190,6 @@ EaComponents.ApplicationWindow {
 
     statusBar: StatusBar {}
 
-
     AppPreferencesDialog {}
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal

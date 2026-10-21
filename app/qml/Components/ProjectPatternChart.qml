@@ -50,13 +50,4 @@ Item {
             holder.renew();
         }
     }
-    // Switching each structure's curve makes the chart anew: Qt Graphs kept an area's last drawing when the area was
-    // hidden or removed (the owner's Mac, 2026-10-21). The new chart takes the shared view, so the zoom stays.
-    Connections {
-        target: Preferences
-        enabled: holder.settingsPage === "pattern"
-        function onStructureCurvesChanged() {
-            holder.renew();
-        }
-    }
 }

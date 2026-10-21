@@ -533,6 +533,40 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
         steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
     }
+    // The owner's stray structure fill: ncaf's five banks, one structure, on log and square-root y with each
+    // structure's curve off, then on and off again. Run only when asked (`--demo-only ncaf-`).
+    if (only.startsWith(QLatin1String("ncaf-"))) {
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        steps_.push_back({"ncaf-1-log-off", {"resize:1280x960", "theme:dark", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5",
+                                             analysis, basic, yscale, "choose:log"}});
+        steps_.push_back({"ncaf-2-sqrt-off", {yscale, "choose:square root"}});
+        steps_.push_back({"ncaf-3-sqrt-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-4-log-on", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-5-linear-on", {yscale, "choose:linear"}});
+        steps_.push_back({"ncaf-6-linear-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-7-log-off", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:square root", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-9-bank2-sqrt-off", {"chart.toolbar.structureCurves"}});
+    }
+    // The owner's retest: each structure's curve switched on, off and on again through the toolbar on latp_scan, on
+    // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
+    // Run only when asked (`--demo-only retest-`).
+    if (only.startsWith(QLatin1String("retest-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        const QString curves = QStringLiteral("chart.toolbar.structureCurves");
+        steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95", curves}});
+        steps_.push_back({"retest-02-latp-off", {curves}});
+        steps_.push_back({"retest-03-latp-on", {curves}});
+        steps_.push_back({"retest-04-latp-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-05-latp-sqrt", {yscale, "choose:square root"}});
+        steps_.push_back({"retest-06-cosio", {"open-cli-project:pd-neut-cwl_cosio-d20_start-4", analysis, basic}});
+        steps_.push_back({"retest-07-cosio-linear", {yscale, "choose:linear"}});
+        steps_.push_back({"retest-08-ncaf", {"open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic}});
+        steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-10-ncaf-off", {curves}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {

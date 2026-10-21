@@ -79,13 +79,15 @@ Rectangle {
                     {
                         "text": label
                     }
-                ] : [legend.markPiece(mark, markWidth, color)].concat((labelSegments.length > 0 ? labelSegments : [{
-                                "text": label,
-                                "color": color
-                            }]).map(piece => ({
-                                "text": piece.text,
-                                "color": legend.labelInColor && piece.color ? piece.color : legend.colors.themeForeground
-                            })))
+                ] : [legend.markPiece(mark, markWidth, color)].concat((labelSegments.length > 0 ? labelSegments : [
+                        {
+                            "text": label,
+                            "color": color
+                        }
+                    ]).map(piece => ({
+                            "text": piece.text,
+                            "color": legend.labelInColor && piece.color ? piece.color : legend.colors.themeForeground
+                        })))
             }
         }
     }
