@@ -29,6 +29,7 @@ function(edi_core_sources root out)
         ${root}/core/src/fit_job.cpp
         ${root}/core/src/presentation.cpp
         ${root}/core/src/structure_scene.cpp
+        ${root}/core/src/scan_views.cpp
     )
 
     # ADR-0022: the element table (data/elements/element-styles.tsv, PROVENANCE.md beside it) is embedded in the core
@@ -52,6 +53,12 @@ function(edi_core_sources root out)
     endforeach()
     configure_file(${root}/core/src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
+    # ADR-0041: the 2D map's colour map (data/colormaps/viridis.tsv, PROVENANCE.md beside it), embedded the same way.
+    set(EDI_VIRIDIS_TSV ${root}/data/colormaps/viridis.tsv)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_VIRIDIS_TSV})
+    file(READ ${EDI_VIRIDIS_TSV} EDI_VIRIDIS)
+    configure_file(${root}/core/src/colour_map_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/colour_map_data.cpp @ONLY)
+
     # ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes
     # the same file with no lookup; a change to the script reconfigures.
     set(EDI_REPORT_JS_FILE ${root}/data/report/report.js)
@@ -63,6 +70,7 @@ function(edi_core_sources root out)
         ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/colour_map_data.cpp
     )
     set(${out} ${sources} PARENT_SCOPE)
 endfunction()
