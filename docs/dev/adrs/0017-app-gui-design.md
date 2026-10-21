@@ -559,7 +559,8 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
 - **Toolbar.** One line centred under the block selector row (the owner, 2026-10-11): the axis boxes, then, a
   toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
-  legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
+  legend, hover coordinates, each structure's curve (shown only when the chart has a calculated pattern), a spacer,
+  pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
   y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
   (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
   (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
@@ -579,6 +580,14 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
   list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
   of dictionaries.
+- **Each structure's curve** (the owner, 2026-10-14 and 2026-10-21): a toolbar switch with the structure icon, tooltip
+  *Show each structure's curve*, draws every linked structure's calculated curve (crysta's
+  `component_intensities_net`, its ADR-0096) as a soft fill from the background up to the curve, 0.25 opaque, with a
+  1.5 px outline, both in the structure's colour (ADR-0038); the fills are not stacked, and they are drawn under the
+  measured data and the other curves. Off by default; the switch is an app setting (`Preferences.structureCurves`),
+  remembered between sessions, and a report figure never draws the curves. The legend names each curve by its
+  structure. The experiment's data table shows the same curves, one column per structure headed by its name, after
+  `bkg`.
 - **Pointer.** Box zoom sets the x range and the main y range to the dragged box, drawn as the base's chart draws it: a border in the theme's
   app-border colour filled with the same colour half transparent (the owner, 2026-10-02). Pan moves the x range by the dragged distance. One wheel
   notch multiplies the x span by 0.8 (towards the user: by 1.25), keeping the x under the pointer fixed. A right click resets, as the reset button

@@ -498,6 +498,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"tables-4-report-light", {"theme:light"}});
         steps_.push_back({"tables-5-report-again", {"theme:light"}});
     }
+    // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
+    // data table with a column per structure. Run only when asked (`--demo-only curves-`).
+    if (only.startsWith(QLatin1String("curves-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"curves-1-analysis-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
+        steps_.push_back({"curves-2-analysis-zoomed", {"drag:chart.pointer:0.74,0.05,0.80,0.95"}});
+        steps_.push_back({"curves-3-analysis-dark", {"theme:dark"}});
+        steps_.push_back({"curves-4-data-table", {"theme:light", experiment, extras, "group.data"}});
+        steps_.push_back({"curves-5-analysis-off", {analysis, "chart.toolbar.structureCurves"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {

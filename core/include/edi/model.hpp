@@ -3299,6 +3299,11 @@ struct PdDataBase {
     ComputedColumn<double> intensity_calc;
     ComputedColumn<double> intensity_bkg;
     ComputedColumn<std::string> calc_status;
+    // crysta's structure curves (its ADR-0096): each linked structure's calculated curve above the background,
+    // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
+    // calculation ran, and when no structure is linked.
+    ComputedColumn<double> component_intensities_net;
+    ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
     // above; never saved, and not a Python member.
@@ -3335,6 +3340,8 @@ struct PdDataBase {
         intensity_calc.clear();
         intensity_bkg.clear();
         calc_status.clear();
+        component_intensities_net.clear();
+        component_order.clear();
         residual.clear();
     }
 

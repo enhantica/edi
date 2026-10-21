@@ -53,6 +53,7 @@ QtObject {
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
         preferences.analysisYScale = "linear";
+        preferences.structureCurves = false;
         preferences.experimentYScale = "linear";
         preferences.experimentXAxis = "native";
     }
@@ -89,6 +90,9 @@ QtObject {
     // "sqrt" or "log"), the Experiment chart's x axis ("native" or "d_spacing"; the Analysis chart's is the project's),
     // and how a followed scan redraws.
     property string analysisYScale: "linear"
+    // Whether the pattern charts draw each structure's curve over the background (the chart toolbar's switch; off by
+    // default, the owner, 2026-10-21).
+    property bool structureCurves: false
     property string experimentYScale: "linear"
     property string experimentXAxis: "native"
 
@@ -97,6 +101,7 @@ QtObject {
         category: "Analysis"
         property alias scanPatternUpdates: preferences.scanPatternUpdates
         property alias yScale: preferences.analysisYScale
+        property alias structureCurves: preferences.structureCurves
     }
 
     property Settings experimentSettings: Settings {

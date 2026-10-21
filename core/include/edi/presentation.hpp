@@ -26,7 +26,7 @@ class Project;
 
 enum class YScale : std::uint8_t { Linear, Sqrt, Log10 };
 enum class Pane : std::uint8_t { Main, Bragg, Residual };
-enum class SeriesKind : std::uint8_t { Measured, Calculated, Background, Residual, BraggTicks };
+enum class SeriesKind : std::uint8_t { Measured, Calculated, Background, Residual, BraggTicks, StructureCurve };
 
 // One excluded region of the experiment, as [min, max] on the x axis. Never decimated.
 struct ExcludedBand {
@@ -49,6 +49,14 @@ struct PatternSource {
     std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
     Column x, meas, su, calc, bkg, resid;  // null: the column is absent
     std::vector<Phase> phases;
+    // Each linked structure's calculated curve above the background (crysta's component_intensities_net), in the
+    // order the experiment links them; captured with the calculated columns.
+    struct Component {
+        std::string structure_id, label;
+        std::size_t place = 0;  // the structure's place in the project's list: its colour
+        Column net;
+    };
+    std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
     std::size_t experiment_place = 0;  // the experiment's place in the project's list: its colour
     bool current = false;              // the computed columns describe the model now
@@ -81,6 +89,7 @@ struct PatternView {
     std::optional<double> x_min, x_max;  // absent: the data's full range
     int columns = 0;                     // plot width in device pixels (pixel_columns); 0: no decimation
     YScale y_scale = YScale::Linear;
+    bool structure_curves = false;  // each structure's curve over the background (edi ADR-0017 §15)
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.
@@ -93,14 +102,14 @@ inline constexpr std::size_t kNoRow = std::numeric_limits<std::size_t>::max();
 struct PatternSeries {
     SeriesKind kind{};
     Pane pane{};
-    std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>"
+    std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>", "structure/<structure id>"
     std::string label;  // the legend text
     std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place>`
     std::vector<PresentedPoint> points;
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
-    // Measured only, per point: the error bar's ends in the display scale. A NaN lower end is
-    // drawn to the bottom of the pane.
+    // Measured, per point: the error bar's ends in the display scale. A NaN lower end is
+    // drawn to the bottom of the pane. A structure curve: bar_low is the background its fill starts from.
     std::vector<double> bar_low, bar_high;
 };
 

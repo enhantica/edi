@@ -118,6 +118,12 @@ class PatternChartController : public QObject {
     // structure's place in the project taken round the scheme's colours, as the structure lists take them.
     // Each structure's tick colour, by its place: one per `bragg.<place>` row of the style table.
     Q_PROPERTY(QVariantList braggColors READ braggColors NOTIFY braggColorsChanged)
+    // Each structure's curve over the background (edi ADR-0017 §15): whether it is drawn, and, for each one drawn,
+    // in presentation order, its outline colour (`color`) and its fill colour (`fill`).
+    Q_PROPERTY(bool structureCurves READ structureCurves WRITE setStructureCurves NOTIFY structureCurvesChanged)
+    Q_PROPERTY(QVariantList structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
+    // Whether the chart presents a calculated pattern, which the structure curves need.
+    Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -183,6 +189,13 @@ class PatternChartController : public QObject {
     QColor residualColor() const { return color(QStringLiteral("resid")); }
     QColor excludedColor() const { return color(QStringLiteral("excluded")); }
     QVariantList braggColors() const;
+    bool structureCurves() const { return structure_curves_; }
+    void setStructureCurves(bool on);
+    QVariantList structureCurveColors() const { return structure_curve_colors_; }
+    bool hasCalculated() const { return has_calculated_; }
+    // The area (filled between its upper and lower series) and the outline of the structure curve at `index`, in
+    // presentation order: the chart makes them as `structureCurveColors` grows and hands each over here.
+    Q_INVOKABLE void setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline);
     // The structures' tick series, one per `bragg.<place>` row of the style table, in place order: the chart makes
     // them as `braggColors` grows and hands each over here.
     Q_INVOKABLE void setBraggSeries(int place, QXYSeries* series);
@@ -259,6 +272,9 @@ class PatternChartController : public QObject {
     void residualColorChanged();
     void excludedColorChanged();
     void braggColorsChanged();
+    void structureCurvesChanged();
+    void structureCurveColorsChanged();
+    void hasCalculatedChanged();
 
    private:
     void invalidate();
@@ -317,6 +333,12 @@ class PatternChartController : public QObject {
     std::optional<double> target_[4];
     QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_;
     QList<QPointer<QXYSeries>> bragg_series_;
+    struct StructureSeries {
+        QPointer<QXYSeries> upper, lower, outline;
+    };
+    QList<StructureSeries> structure_series_;
+    bool structure_curves_ = false, has_calculated_ = false;
+    QVariantList structure_curve_colors_;
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;

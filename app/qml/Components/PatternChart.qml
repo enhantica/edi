@@ -319,6 +319,8 @@ Item {
         experiment: chart.experiment
         report: chart.report
         colourScheme: Preferences.colourScheme
+        // Each structure's curve, a report figure never (edi ADR-0017 §15).
+        structureCurves: !chart.report && Preferences.structureCurves
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
         yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
@@ -465,6 +467,7 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
+            structureCurvesAvailable: !chart.report && controller.hasCalculated
             onResetClicked: controller.reset()
         }
     }
@@ -526,6 +529,40 @@ Item {
             objectName: "chart.series.calc"
             color: controller.calculatedColor
             width: 2
+        }
+    }
+
+    // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
+    // its structure's colour, drawn under the other series and not stacked. Made as curves are presented and handed
+    // to the controller to fill.
+    Instantiator {
+        model: controller.structureCurveColors.length
+        delegate: AreaSeries {
+            id: area
+
+            required property int index
+            readonly property var colours: controller.structureCurveColors[index] ?? ({})
+            property LineSeries outline: LineSeries {
+                objectName: "chart.series.structure.outline." + area.index
+                color: area.colours.color ?? "transparent"
+                width: 1.5
+            }
+
+            objectName: "chart.series.structure." + area.index
+            color: area.colours.fill ?? "transparent"
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+        }
+        onObjectAdded: (index, area) => {
+            mainView.insertSeries(0, area.outline);
+            mainView.insertSeries(0, area);
+            controller.setStructureSeries(index, area.upperSeries, area.lowerSeries, area.outline);
+        }
+        onObjectRemoved: (index, area) => {
+            controller.setStructureSeries(index, null, null, null);
+            mainView.removeSeries(area.outline);
+            mainView.removeSeries(area);
         }
     }
 

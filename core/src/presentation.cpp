@@ -284,6 +284,11 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
         table.push_back({"bragg." + std::to_string(place), structure_colour(scheme, place, structures, false),
                          structure_colour(scheme, place, structures, true), "ticks", 1.0, 1.0, 0.0});
     }
+    // A structure's curve: an outline in its structure colour over a soft fill of the same colour (ADR-0038).
+    for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
+        table.push_back({"structure." + std::to_string(place), structure_colour(scheme, place, structures, false),
+                         structure_colour(scheme, place, structures, true), "line+fill", 1.5, 0.25, 0.0});
+    }
     table.push_back({"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0});
     return table;
 }
@@ -342,6 +347,9 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
         for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
                                               &source.resid}) {
             *column = reversed(*column);
+        }
+        for (PatternSource::Component& component : source.components) {
+            component.net = reversed(component.net);
         }
     }
     // A tick is drawn where its peak is: its native position mapped as the points are, so the zero and line shifts
@@ -405,6 +413,29 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names);
+    // The structure curves, one column each out of crysta's row-major table.
+    const std::vector<std::string>& order = data.component_order.values();
+    const std::vector<double>& net = data.component_intensities_net.values();
+    const std::size_t points = data.axis().size();
+    if (!order.empty() && net.size() == points * order.size()) {
+        for (std::size_t k = 0; k < order.size(); ++k) {
+            PatternSource::Component component;
+            component.structure_id = order[k];
+            component.label = order[k];
+            component.place = k;
+            for (std::size_t place = 0; place < names.size(); ++place) {
+                if (names[place] == order[k]) {
+                    component.place = place;
+                }
+            }
+            std::vector<double> values(points);
+            for (std::size_t row = 0; row < points; ++row) {
+                values[row] = net[row * order.size() + k];
+            }
+            component.net = std::make_shared<const std::vector<double>>(std::move(values));
+            source.components.push_back(std::move(component));
+        }
+    }
     if (axis == PatternAxis::DSpacing) {
         to_d_axis(source, data, refln);
     }
@@ -563,6 +594,35 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
              view.y_scale);
         line(source.bkg, SeriesKind::Background, Pane::Main, "bkg", "Background (bkg)", "bkg",
              view.y_scale);
+        // Each structure's curve over the background, its fill down to the background (bar_low); not stacked.
+        const std::vector<double>* bkg = column_for(source.bkg);
+        for (const PatternSource::Component& component : source.components) {
+            const std::vector<double>* net = column_for(component.net);
+            if (!view.structure_curves || bkg == nullptr || net == nullptr) {
+                continue;
+            }
+            std::vector<double> upper(net->size());
+            for (std::size_t row = 0; row < upper.size(); ++row) {
+                upper[row] = (*bkg)[row] + (*net)[row];
+            }
+            const std::vector<double> display = displayed(upper, view.y_scale);
+            const std::vector<double> base = displayed(*bkg, view.y_scale);
+            PatternSeries series;
+            series.kind = SeriesKind::StructureCurve;
+            series.pane = Pane::Main;
+            series.id = "structure/" + component.structure_id;
+            series.label = component.label;
+            series.style = style_key("structure", component.place);
+            fill_points(series, decimate(x, base, display, out.x.min, out.x.max, view.columns), x, display);
+            series.bar_low.reserve(series.rows.size());
+            for (const std::size_t row : series.rows) {
+                series.bar_low.push_back(row == kNoRow ? kNaN : base[row]);
+            }
+            for (const PresentedPoint& point : series.points) {
+                cover(out.y_main, any_main, point.y);
+            }
+            out.series.push_back(std::move(series));
+        }
         line(source.resid, SeriesKind::Residual, Pane::Residual, "resid", "Residual (meas − calc)", "resid",
              YScale::Linear);
     }

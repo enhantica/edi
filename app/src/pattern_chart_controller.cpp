@@ -203,6 +203,25 @@ QVariantList PatternChartController::braggColors() const {
     return colours;
 }
 
+void PatternChartController::setStructureCurves(bool on) {
+    if (on != structure_curves_) {
+        structure_curves_ = on;
+        emit structureCurvesChanged();
+        invalidate();
+    }
+}
+
+void PatternChartController::setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline) {
+    if (index < 0) {
+        return;
+    }
+    if (structure_series_.size() <= index) {
+        structure_series_.resize(index + 1);
+    }
+    structure_series_[index] = {upper, lower, outline};
+    invalidate();
+}
+
 void PatternChartController::setBraggSeries(int place, QXYSeries* series) {
     if (place < 0) {
         return;
@@ -434,6 +453,7 @@ edi::PatternView PatternChartController::view() const {
     view.x_max = x_max_;
     view.columns = plot_width_ > 0.0 ? edi::pixel_columns(plot_width_, device_pixel_ratio_) : 0;
     view.y_scale = core_scale(y_scale_);
+    view.structure_curves = structure_curves_;
     return view;
 }
 
@@ -457,6 +477,7 @@ void PatternChartController::refresh() {
     const edi::PatternSeries* background = nullptr;
     const edi::PatternSeries* residual = nullptr;
     std::vector<QList<QPointF>> ticks(static_cast<std::size_t>(bragg_series_.size()));
+    std::vector<const edi::PatternSeries*> structure_curves;
     QList<ChartLegendModel::Entry> legend;
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
@@ -474,7 +495,9 @@ void PatternChartController::refresh() {
                                                                       ? QVariant()
                                                                       : QVariant(color(QString::fromStdString(segment.style)))}});
         }
-        legend.append({QString::fromStdString(series.label), color(QString::fromStdString(series.style)),
+        QColor mark = color(QString::fromStdString(series.style));
+        mark.setAlphaF(1.0F);  // a structure curve's outline, not its fill
+        legend.append({QString::fromStdString(series.label), mark,
                        bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width, segments});
     };
     int rows = 0;
@@ -484,6 +507,7 @@ void PatternChartController::refresh() {
             case edi::SeriesKind::Calculated: calculated = &series; break;
             case edi::SeriesKind::Background: background = &series; break;
             case edi::SeriesKind::Residual: residual = &series; break;
+            case edi::SeriesKind::StructureCurve: structure_curves.push_back(&series); break;
             case edi::SeriesKind::BraggTicks: {
                 // A structure's ticks join the series of its colour, its own row kept.
                 if (const std::size_t place = bragg_place(series.style); place < ticks.size()) {
@@ -579,6 +603,37 @@ void PatternChartController::refresh() {
     for (std::size_t place = 0; place < ticks.size(); ++place) {
         replace(bragg_series_[static_cast<qsizetype>(place)], ticks[place]);
     }
+    // Each structure curve: its area between the background and the curve, and its outline.
+    QVariantList curve_colours;
+    for (std::size_t index = 0; index < structure_curves.size(); ++index) {
+        const edi::PatternSeries& series = *structure_curves[index];
+        const QColor fill = color(QString::fromStdString(series.style));
+        QColor outline = fill;
+        outline.setAlphaF(1.0F);
+        curve_colours.append(QVariantMap{{QStringLiteral("color"), outline}, {QStringLiteral("fill"), fill}});
+        if (static_cast<qsizetype>(index) >= structure_series_.size()) {
+            continue;  // the chart makes its series and hands them over, which draws again
+        }
+        const QList<QPointF> upper = points_of(series);
+        QList<QPointF> lower;
+        lower.reserve(upper.size());
+        for (qsizetype k = 0; k < upper.size(); ++k) {
+            const double base = static_cast<std::size_t>(k) < series.bar_low.size() ? series.bar_low[static_cast<std::size_t>(k)]
+                                                                                     : std::numeric_limits<double>::quiet_NaN();
+            lower.append(QPointF(upper[k].x(), base));
+        }
+        const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
+        replace(target.upper, upper);
+        replace(target.lower, lower);
+        replace(target.outline, upper);
+    }
+    for (qsizetype index = static_cast<qsizetype>(structure_curves.size()); index < structure_series_.size(); ++index) {
+        replace(structure_series_[index].upper, {});
+        replace(structure_series_[index].lower, {});
+        replace(structure_series_[index].outline, {});
+    }
+    publish(structure_curve_colors_, curve_colours, &PatternChartController::structureCurveColorsChanged);
+    publish(has_calculated_, calculated != nullptr, &PatternChartController::hasCalculatedChanged);
     // More structures than tick series: the chart makes the rest, each handed over in turn.
     if (const qsizetype count = braggColors().size(); count != bragg_colour_count_) {
         bragg_colour_count_ = count;

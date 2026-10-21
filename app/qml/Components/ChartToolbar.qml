@@ -15,6 +15,9 @@ Row {
 
     property bool legendShown: true
     property bool hoverShown: true
+    // Whether the chart has a calculated pattern, which each structure's curve needs; the curves' own switch is
+    // Preferences.structureCurves, remembered between sessions.
+    property bool structureCurvesAvailable: false
     property string pointerMode: "zoom"  // "zoom" or "pan"
     signal resetClicked
 
@@ -33,6 +36,14 @@ Row {
         toolTip: qsTr("Show coordinates tooltip on hover")
         checked: toolbar.hoverShown
         onClicked: toolbar.hoverShown = !toolbar.hoverShown
+    }
+    ChartToolButton {
+        objectName: "chart.toolbar.structureCurves"
+        visible: toolbar.structureCurvesAvailable
+        fontIcon: "layer-group"
+        toolTip: qsTr("Show each structure's curve")
+        checked: Preferences.structureCurves
+        onClicked: Preferences.structureCurves = !Preferences.structureCurves
     }
     Item {
         width: EaStyle.Sizes.fontPixelSize * 0.5

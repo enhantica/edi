@@ -3586,6 +3586,9 @@ void Project::publish_calculation() {
         columns.intensity_calc = shared_column(computed.intensity_calc);
         columns.intensity_bkg = shared_column(computed.intensity_bkg);
         columns.calc_status = status_column(computed.calc_status);
+        columns.component_intensities_net = shared_column(computed.component_intensities_net);
+        columns.component_order =
+            ComputedColumn<std::string>(std::make_shared<const std::vector<std::string>>(computed.component_order));
         columns.residual = shared_column(crysta::residual(engine.experiments[index]));
         data.push_back(std::move(columns));
 
@@ -3609,6 +3612,8 @@ void Project::publish_calculation() {
         target.intensity_calc = std::move(data[index].intensity_calc);
         target.intensity_bkg = std::move(data[index].intensity_bkg);
         target.calc_status = std::move(data[index].calc_status);
+        target.component_intensities_net = std::move(data[index].component_intensities_net);
+        target.component_order = std::move(data[index].component_order);
         target.residual = std::move(data[index].residual);
         bank.refln = std::move(reflections[index]);
         bank.computed_source = std::move(sources[index]);
@@ -3739,6 +3744,8 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
             columns.intensity_calc = computed.intensity_calc;
             columns.intensity_bkg = computed.intensity_bkg;
             columns.calc_status = computed.calc_status;
+            columns.component_intensities_net = computed.component_intensities_net;
+            columns.component_order = computed.component_order;
             columns.residual = computed.residual;
         }
         result.data.push_back(std::move(columns));
@@ -3851,6 +3858,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         target.intensity_calc = std::move(result.data[index].intensity_calc);
         target.intensity_bkg = std::move(result.data[index].intensity_bkg);
         target.calc_status = std::move(result.data[index].calc_status);
+        target.component_intensities_net = std::move(result.data[index].component_intensities_net);
+        target.component_order = std::move(result.data[index].component_order);
         target.residual = std::move(result.data[index].residual);
         bank.refln = std::move(result.refln[index]);
         bank.computed_source = std::move(sources[index]);
