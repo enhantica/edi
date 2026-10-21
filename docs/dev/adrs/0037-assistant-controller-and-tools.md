@@ -2221,3 +2221,40 @@ The possibility of an intensity-scale collapse under displaced peaks is a
 least-squares inference, not a diagnosis of a particular run. Use actual
 inspection and eligible ordinary Undo; keep known wavelength/calibration and
 chemical constraints. No new solver, flag override or automatic retry is added.
+
+
+## Settled output transfers to its original bounded owner
+
+Prior implementations: generic_present/publish owns durable activity rows;
+generic_items owns stream assembly and finalization evidence; native_finish
+owns exact original/outcome/response/canonical receipt facts. After an activity
+is truly finalized and its exact payload is in the bounded archive, its
+redundant generic registry value can release to that existing owner. Finalized
+native items use their completed canonical record, only without outstanding
+shared/native callback ownership. Keep registry keys/counts/finalized markers;
+all duplicate checks resolve the exact original object, not a hash or summary.
+Private reasoning/user/assistant-text items and all unfinished work retain
+their original full charges. No completion, reply or receipt is inferred.
+
+A completed, answered, durably retained native terminal row can similarly
+release its redundant row payload only with no shared record owner and an
+actual matching archived host outcome. Original arguments, outcome, response,
+canonical identity and once flags remain. Release occurs after generic item
+frames unwind, before lowering the original callback-free transport charge;
+current parsed/unread/write roles remain charged. Prepared fit-Undo alternative
+settlement banks release only after completed/answered/durable settlement and
+exclusive record/bank/input ownership; the actual typed outcome/response and
+ordinary scientific history remain. Eligibility requires actual item completion;
+cleanup runs after completion/returned requests or original coalesced archive
+presentation, never as a streamed-text polling loop. No cap or allocator policy
+changes. Missing originals and changed final items still refuse.
+
+CodexAgent latches a closed local failure kind before its original failed
+signal. Known capacity and operation-expiry branches distinguish those local
+causes from an unclassified failure; explanation text is never parsed as
+authority. Failure feedback preserves the original explanation and describes
+retained task/project state without claiming provider-token expiry. Original
+authentication/retirement/required-reply/currentness behavior is unchanged.
+The actual account/read adapter exposes no proven stable account identity;
+therefore cross-epoch automatic task replay remains guarded, with no email or
+plan comparison, epoch reset, file-grant replay or unsupported thread resume.

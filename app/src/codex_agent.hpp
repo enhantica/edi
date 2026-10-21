@@ -51,6 +51,10 @@ public:
     bool beginNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration);
     bool setNativeWorkWaiting(const QJsonValue& originalRequestId, quint64 originalGeneration, bool waiting);
     bool endNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration);
+    // First local transport cause, latched before the original failed signal.
+    enum class FailureKind : unsigned char { Other, LocalCapacity, OperationDeadline };
+    FailureKind failureKind() const noexcept { return failure_kind_; }
+    bool failureActive() const noexcept { return failed_ && failure_generation_ == generation_; }
 signals:
     void started();
     void response(const QString& id, const QString& method, const QJsonObject& envelope);
@@ -80,6 +84,8 @@ private:
     QHash<QString, QJsonValue> server_requests_;
     quint64 next_id_ = 0, generation_ = 0;
     bool failed_ = false;
+    FailureKind failure_kind_ = FailureKind::Other;
+    quint64 failure_generation_ = 0;
     quint64 pending_bytes_ = 0, output_bytes_ = 0, record_bytes_ = 0, request_bytes_ = 0;
     QElapsedTimer clock_;
     QTimer timer_;
@@ -96,7 +102,7 @@ private:
     bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false, bool optionalUsage = false);
     void read(QProcess* process, quint64 generation, bool finished = false);
     void receive(const QByteArray& record);
-    void fail(const char* explanation) noexcept;
+    void fail(const char* explanation, FailureKind kind = FailureKind::Other) noexcept;
     void checkDeadline();
     void retireOptionalUsage(const QString& id);
     void preemptOptionalUsage();

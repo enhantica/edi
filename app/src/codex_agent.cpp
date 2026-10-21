@@ -155,7 +155,7 @@ void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     if (operation_start_ >= 0 && (now < operation_start_ || now < last_activity_ ||
         (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
         (idle_ms_ && static_cast<quint64>(now - last_activity_) >= idle_ms_))) {
-        fail("The official agent operation exceeded its deadline."); return;
+        fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline); return;
     }
     if (operation_start_ < 0) { wire_bytes_ = 0; event_count_ = 0; }
     else if (total_ms_) {
@@ -185,7 +185,7 @@ bool CodexAgent::remainingOutput(quint64 bytes, quint64& available) const noexce
 bool CodexAgent::retainOutput(quint64 bytes) {
     quint64 available = 0;
     if (!remainingOutput(bytes, available)) {
-        fail("The official agent output exceeds retained capacity."); return false;
+        fail("The official agent output exceeds retained capacity.", FailureKind::LocalCapacity); return false;
     }
     output_bytes_ = bytes; return true;
 }
@@ -235,7 +235,7 @@ bool CodexAgent::beginHumanWait(const QJsonValue& originalRequestId, quint64 ori
     if(human_wait_start_>=0)return human_wait_id_==found.key();
     const auto now=clock_.elapsed();
     if(!accountWaits(now))return false;
-    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline);return false;}
     human_wait_id_=found.key();human_wait_start_=now;wait_accounted_at_=now;
     return true;
 }
@@ -253,7 +253,7 @@ bool CodexAgent::beginNativeWork(const QJsonValue& originalRequestId, quint64 or
     if(!native_work_id_.isEmpty())return native_work_id_==found.key();
     const auto now=clock_.elapsed();
     if(!accountWaits(now))return false;
-    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline);return false;}
     native_work_id_=found.key();native_work_waiting_=false;wait_accounted_at_=now;
     return true;
 }
@@ -264,7 +264,7 @@ bool CodexAgent::setNativeWorkWaiting(const QJsonValue& originalRequestId, quint
     if(native_work_waiting_==waiting)return true;
     const auto now=clock_.elapsed();
     if(!accountWaits(now))return false;
-    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline);return false;}
     native_work_waiting_=waiting;wait_accounted_at_=now;
     return true;
 }
@@ -280,7 +280,7 @@ bool CodexAgent::endNativeWork(const QJsonValue& originalRequestId, quint64 orig
     if(!accountWaits(now))return false;
     native_work_id_.clear();native_work_waiting_=false;
     if(human_wait_start_<0)wait_accounted_at_=-1;
-    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline);return false;}
     return true;
 }
 void CodexAgent::settleOperation() {
@@ -357,7 +357,7 @@ void CodexAgent::checkDeadline() {
     if (operation_start_ < 0) return;
     const auto operationNow=clock_.elapsed();
     if(!accountWaits(operationNow))return;
-    if(operationExpired(operationNow))fail("The official agent operation exceeded its deadline.");
+    if(operationExpired(operationNow))fail("The official agent operation exceeded its deadline.", FailureKind::OperationDeadline);
 }
 CodexAgent::~CodexAgent() { retire(); }
 
@@ -415,6 +415,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         if (generation_ == std::numeric_limits<quint64>::max()) return false;
         scope = ++generation_;
         settleOperation();
+        failure_kind_ = FailureKind::Other;
         failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
@@ -455,9 +456,9 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
                 original->setReadChannel(QProcess::StandardError);
                 while (current() && !failed_ && original->bytesAvailable() > 0) {
                     const auto remaining = Limits::stream_wire_bytes - wire_bytes_;
-                    if (remaining == 0) { fail("The official agent operation exceeded its wire capacity."); break; }
+                    if (remaining == 0) { fail("The official agent operation exceeded its wire capacity.", FailureKind::LocalCapacity); break; }
                     quint64 available=0;
-                    if(!remainingOutput(output_bytes_,available) || !available){fail("The official agent diagnostic exceeds joint retained capacity.");return;}
+                    if(!remainingOutput(output_bytes_,available) || !available){fail("The official agent diagnostic exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
                     const auto count=std::min({static_cast<quint64>(Limits::http_chunk_bytes),remaining,available});
                     read_bytes_+=count;
                     const auto discardedRole=qScopeGuard([receiver,count]{if(receiver)receiver->read_bytes_-=count;});
@@ -498,7 +499,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     checkDeadline(); if (!receiver || process_ != process || generation_ != epoch || failed_) return false;
     quint64 encoded = 0;
     if (!encodedSize(envelope, Limits::request_bytes, encoded) || encoded >= Limits::request_bytes) {
-        if (!nonfatalPreflight) fail("The official agent request exceeds the transport capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent request exceeds the transport capacity.", FailureKind::LocalCapacity); return false;
     }
     const auto initialQueued = static_cast<quint64>(process_->bytesToWrite());
     const auto lineSize = encoded + 1;
@@ -508,7 +509,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     if (!receiver || process_ != process || generation_ != epoch || failed_ || !process_) return false;
     const auto queued = static_cast<quint64>(process_->bytesToWrite());
     if (queued > Limits::request_bytes) {
-        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity.", FailureKind::LocalCapacity); return false;
     }
     const auto held = static_cast<quint64>(deferred_required_.size());
     // Logical required bytes never exceed the existing hard write capacity.
@@ -518,11 +519,11 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const auto requiredQueued = queued - optionalHead;
     if (requiredQueued > Limits::request_bytes || held > Limits::request_bytes - requiredQueued ||
         lineSize > Limits::request_bytes - requiredQueued - held) {
-        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity.", FailureKind::LocalCapacity); return false;
     }
     const bool deferred = held != 0 || lineSize > Limits::request_bytes - queued;
     if (deferred && (optionalUsage || held > Limits::retained_record_bytes || lineSize > Limits::retained_record_bytes - held)) {
-        if (!nonfatalPreflight) fail("The official agent queued control exceeds retained capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent queued control exceeds retained capacity.", FailureKind::LocalCapacity); return false;
     }
     // Actual wire and LF-appended line coexist; a detached holding copy grows
     // only on the deferred path. Charge them beside current VM/record/unread,
@@ -541,7 +542,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const quint64 wireRole=wireCapacity+lineSize+(deferred?oldHeldCapacity+nextHeldCapacity:0);
     if(wireRole>Limits::stream_retained_bytes || writerScratch>Limits::stream_retained_bytes-wireRole ||
         !remainingOutput(output_bytes_,available) || wireRole+writerScratch>available) {
-        if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.");return false;
+        if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.", FailureKind::LocalCapacity);return false;
     }
     request_bytes_+=wireRole+writerScratch;
     quint64 retainedRequest=wireRole+writerScratch;
@@ -662,17 +663,17 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
             process->setReadChannel(QProcess::StandardOutput);
             while (current() && !failed_ && original->bytesAvailable() > 0) {
                 const auto capacity = recordLimit + 1 - incoming_.size();
-                if (capacity <= 0) { fail("The official agent response exceeds the transport capacity."); return; }
+                if (capacity <= 0) { fail("The official agent response exceeds the transport capacity.", FailureKind::LocalCapacity); return; }
                 checkDeadline(); if (!current() || failed_) return;
                 const auto old=static_cast<quint64>(incoming_.size());
                 quint64 available=0;
                 if(!remainingOutput(output_bytes_,available) || available<=old) {
-                    fail("The official agent assembly exceeds retained capacity.");return;
+                    fail("The official agent assembly exceeds retained capacity.", FailureKind::LocalCapacity);return;
                 }
                 const auto wireRoom=Limits::stream_wire_bytes-wire_bytes_;
                 const auto requested=std::min({static_cast<quint64>(capacity),static_cast<quint64>(Limits::http_chunk_bytes),
                                                (available-old)/2,wireRoom});
-                if(!requested){fail("The official agent response has no admitted input capacity.");return;}
+                if(!requested){fail("The official agent response has no admitted input capacity.", FailureKind::LocalCapacity);return;}
                 // The local read chunk and complete replacement assembly coexist
                 // with the old incoming member. Reserve both before QProcess reads.
                 quint64 prepared=requested+old+requested;
@@ -692,7 +693,7 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
                 read_bytes_-=static_cast<quint64>(bytes.size());prepared-=static_cast<quint64>(bytes.size());
                 qsizetype newline;
                 while (current() && !failed_ && (newline = incoming_.indexOf('\n')) >= 0) {
-                    if (newline > recordLimit) { fail("The official agent response exceeds the transport capacity."); return; }
+                    if (newline > recordLimit) { fail("The official agent response exceeds the transport capacity.", FailureKind::LocalCapacity); return; }
                     quint64 recordOwner=0;
                     const auto raw=qScopeGuard([receiver,&recordOwner]{if(receiver)receiver->record_bytes_-=recordOwner;});
                     QByteArray record;
@@ -700,7 +701,7 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
                         const auto originalSize=static_cast<quint64>(incoming_.size());
                         const auto prospective=originalSize-1; // Record and remaining tail, excluding the delimiter.
                         quint64 room=0;
-                        if(!remainingOutput(output_bytes_,room) || prospective>room){fail("The official agent record exceeds joint retained capacity.");return;}
+                        if(!remainingOutput(output_bytes_,room) || prospective>room){fail("The official agent record exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
                         quint64 preparation=prospective;read_bytes_+=preparation;
                         const auto split=qScopeGuard([receiver,&preparation]{if(receiver)receiver->read_bytes_-=preparation;});
                         record=incoming_.left(newline);
@@ -714,7 +715,7 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
                     }
                     const bool blank=std::all_of(record.cbegin(),record.cend(),[](char c){return c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='\v' || c=='\f';});
                     if (!blank) {
-                        if (event_count_ >= Limits::stream_events) { fail("The official agent operation exceeded its event capacity."); return; }
+                        if (event_count_ >= Limits::stream_events) { fail("The official agent operation exceeded its event capacity.", FailureKind::LocalCapacity); return; }
                         ++event_count_;
                         receive(record);
                         if (!current()) return;
@@ -746,13 +747,13 @@ void CodexAgent::receive(const QByteArray& record) {
             else if (c == '"') quoted = false;
         } else if (c == '"') quoted = true;
         else if (c == '{' || c == '[') {
-            if (++depth > Limits::json_depth) { fail("The official agent response exceeds the JSON depth capacity."); return; }
+            if (++depth > Limits::json_depth) { fail("The official agent response exceeds the JSON depth capacity.", FailureKind::LocalCapacity); return; }
         } else if ((c == '}' || c == ']') && depth) --depth;
     }
     // Preserve the original encoded-record accounting convention for the
     // parsed representation as a distinct owner beside the raw local frame.
     const auto parsedBytes=static_cast<quint64>(record.size());quint64 available=0;
-    if(!remainingOutput(output_bytes_,available) || parsedBytes>available){fail("The official agent parsed response exceeds joint retained capacity.");return;}
+    if(!remainingOutput(output_bytes_,available) || parsedBytes>available){fail("The official agent parsed response exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
     read_bytes_+=parsedBytes;
     const auto parsedRole=qScopeGuard([receiver,parsedBytes]{if(receiver)receiver->read_bytes_-=parsedBytes;});
     QJsonParseError error;
@@ -774,12 +775,12 @@ void CodexAgent::receive(const QByteArray& record) {
             }
             quint64 bytes = 0;
             if (!encodedSize(envelope, Limits::record_bytes, bytes)) {
-                fail("The official agent pending approvals exceed capacity."); return;
+                fail("The official agent pending approvals exceed capacity.", FailureKind::LocalCapacity); return;
             }
             if (bytes > Limits::retained_record_bytes - pending_bytes_) preemptOptionalUsage();
             if (!current() || failed_) return;
             if (bytes > Limits::retained_record_bytes - pending_bytes_) {
-                fail("The official agent pending approvals exceed capacity."); return;
+                fail("The official agent pending approvals exceed capacity.", FailureKind::LocalCapacity); return;
             }
             server_requests_.insert(key, id); server_sizes_.insert(key, bytes); pending_bytes_ += bytes;
             emit serverRequest(id, method, params);
@@ -800,9 +801,10 @@ void CodexAgent::receive(const QByteArray& record) {
     optional_usage_ids_.remove(id);
     emit response(id, method, envelope);
 }
-void CodexAgent::fail(const char* explanation) noexcept {
+void CodexAgent::fail(const char* explanation, FailureKind kind) noexcept {
     if (failed_) return;
     const QPointer<QProcess> original(process_);
+    failure_kind_ = kind; failure_generation_ = generation_;
     failed_ = true; // Nonallocating revocation precedes diagnostics or observers.
     settleOperation();
     deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
