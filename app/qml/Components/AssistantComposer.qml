@@ -48,7 +48,7 @@ Rectangle {
         choicePopup.intent=original;
         if(Qt.isQtObject(choicePopup) && choicePopup.intent===original && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled)choicePopup.open();
     }
-    onAssistantChanged: closeChoices()
+    onAssistantChanged: { closeChoices(); workReportBinding = ({}); workReportDraft = null; }
     onChoicesEnabledChanged: { if (!choicesEnabled) closeChoices(); }
     Connections {
         target: composer.assistant
@@ -327,6 +327,31 @@ Rectangle {
     property int savedSelectionStart: 0
     property int savedSelectionEnd: 0
     property var submittedDrafts: []
+    property var workReportDraft: null
+    property var workReportBinding: ({})
+    readonly property bool localWorkReport: editor.text.trim() === "/work-report"
+    function finishWorkReport(receipt) {
+        const waiting = workReportDraft;
+        if (!waiting || receipt.id !== waiting.id || receipt.phase !== "terminal") return;
+        workReportDraft = null;
+        if ((receipt.disposition === "saved" || receipt.disposition === "saved_incomplete")
+                && !receipt.scope_retired && assistant === waiting.owner
+                && workReportBinding === waiting.binding && draftOwnerRevision === waiting.ownerRevision && textRevision === waiting.revision
+                && editor.text === waiting.text && !editor.inputMethodComposing && editor.preeditText.length === 0) editor.clear();
+    }
+    function submitWorkReport() {
+        if (!localWorkReport || editor.inputMethodComposing || editor.preeditText.length) return;
+        const owner = assistant, text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision, binding = workReportBinding;
+        const receipt = owner.captureWorkReport();
+        if (!Qt.isQtObject(composer) || !Qt.isQtObject(owner) || assistant !== owner
+                || draftOwnerRevision !== ownerRevision || workReportBinding !== binding) return;
+        if (receipt.id && receipt.phase === "accepted")
+            workReportDraft = {id:receipt.id,owner:owner,text:text,revision:revision,ownerRevision:ownerRevision,binding:binding};
+        else if (receipt.id) {
+            workReportDraft = {id:receipt.id,owner:owner,text:text,revision:revision,ownerRevision:ownerRevision,binding:binding};
+            finishWorkReport(receipt);
+        }
+    }
     property int draftOwnerRevision: 0
     property int consentFileRevision: 0
     property int pendingFileCount: 0
@@ -419,7 +444,8 @@ Rectangle {
     }
     Connections {
         target: composer.assistant
-        function onConversationRetired() { ++composer.draftOwnerRevision; composer.submittedDrafts = []; }
+        function onConversationRetired() { ++composer.draftOwnerRevision; composer.submittedDrafts = []; composer.workReportDraft = null; }
+        function onWorkReportFinished(receipt) { composer.finishWorkReport(receipt); }
     }
     Component.onCompleted: refreshFilePresentation()
     implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
@@ -502,6 +528,7 @@ Rectangle {
         return true;
     }
     function submit(approvedDraft) {
+        if (!approvedDraft && localWorkReport) { submitWorkReport(); return; }
         const component = composer, original = assistant;
         if (!approvedDraft && component.explainBlockedSubmission()) return;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
@@ -911,8 +938,8 @@ Rectangle {
                 text: qsTr("Send")
                 ToolTip.text: text
                 highlighted: true
-                visible: !composer.assistant.canCancel || (composer.canSteer && composer.hasDraft)
-                enabled: composer.assistant.connected && (!composer.assistant.canCancel || composer.canSteer) && composer.hasDraft
+                visible: composer.localWorkReport || !composer.assistant.canCancel || (composer.canSteer && composer.hasDraft)
+                enabled: composer.localWorkReport ? !editor.inputMethodComposing && editor.preeditText.length === 0 : composer.assistant.connected && (!composer.assistant.canCancel || composer.canSteer) && composer.hasDraft
                 Accessible.name: text
                 onClicked: composer.submit()
             }

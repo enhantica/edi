@@ -4,6 +4,7 @@
 
 #include <QString>
 #include <memory>
+#include "assistant_work_report.hpp"
 
 class QQmlEngine;
 
@@ -13,6 +14,7 @@ class Session;
 // The engine setup the host and the Qt Quick Test runner share: the values the gui-components base
 // reads from its host — a writable settings file and "not a test run".
 void configure_engine(QQmlEngine& engine);
+void configure_engine(QQmlEngine& engine, AssistantWorkReportOptions options);
 void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session);
 // ADR-0031 §3: the one app-settings store's file on the desktop, QSettings' ini file of the user scope
 // (`~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS).

@@ -2388,3 +2388,201 @@ owning compiler syntax context. The failing ce8d artifacts and build identities
 are preserved separately as OLD evidence before shared-source application.
 Corrected compile/link and native behavior remain separate pending validations;
 this source change and the prior failure do not establish Mac or whole-task success.
+
+
+### Local work-report evidence and native terminal ownership (E11-T5,684)
+
+Extends the FIRST panel/composer, retained history, NativeRecord, immutable skill/input disclosure, protected assistant-result file primitives and existing gated test observer. One local collector projects bounded same-owner retained rows across actual turns; legacy or other-owner history is excluded with coverage. Canonical arguments, purpose and native outcomes remain in the original row. Only missing exact projected replies, original UI first-cause snapshots, immutable identity and turn metadata supplement that row. Optional diagnostic admission yields to original terminal/history promises and cannot fence, retry or change science. Public agent assessments stay unverified. Original terminal capture precedes cleanup; actual pending work is settlement unknown, never invented completion. Early Main sidebar lookup and later relation reveal are distinct original phases.
+
+Manual `/work-report` and immutable native `--assistant-work-reports` share that collector and one frozen writer. Session exposes the option read-only; automatic failure/cancel/retirement capture does not depend on the model. Native receipts correlate exact scope/revision/ID and coverage. A newer busy automatic request has its own missing-export receipt and checked omission counter; there is no pending snapshot queue. Composer acknowledges only that ID's successful terminal receipt under the same VM/text/revisions and no IME/preedit. Native reply preparation and `answer(true)` are prepared/attempted, never proof of provider receipt.
+
+The public schema is `edi.assistant.work-report/1` under reviewed680/683 with committed ffb461d6e version correction: Skill.version is a tagged observed/missing fact. Preserve the actual already verified manifest version at immutable capture, genuinely absent version is not_present and historical unretained version is not_observed; no later disk lookup or invented version. Native identity/input/registration facts may have null row_id when no original history row existed, while capture/scope identity remains bound. No auth/account objects, environment, raw stderr or hidden reasoning enter the source whitelist. Admitted scientific/user strings remain local evidence, not a promise of universal secret detection.
+
+One fixed application-owned namespace, latest report and candidate, reuses original no-follow/identity and atomic no-replace/exchange primitives. Nonblocking mkdir arbitrates writers without stale-PID guessing. A crash leaves a truthful writer-busy/recovery-required state and documented close-all/manual preservation instructions. Before rename failures preserve the prior namespace; after actual rename the writer latches changed before readback, and reports committed_unverified if proof/cleanup fails. Scientific Session Save and its source semantics are untouched. Payload files stay at original record_bytes each and retained_record_bytes combined; no new budget is granted.
+
+Original common retained-output roles include live report reservations and optional metadata. Frozen aliases extend original backing lifetime; encoder/writer/worker/callback/receipt overlap remains reserved. Checked serial allocation cannot wrap. Existing test-observer gates expose read-only actual owner views and fixed once-only writer faults, never actor setters. The original QProcess physical allocation/backing inventory cannot currently be proved, so whole physical aggregate measurement is explicitly unavailable and must not qualify a resource gate; logical queued bytes/reservations are not a measured physical peak. Feature qualification remains held until independent source/gate review and reached checks; this ADR is not runtime or scientific acceptance.
+
+
+### Held report correction685: failed-transport settlement blocker
+
+This section records a PRIVATE INCOMPLETE successor to held report684, not a
+shipped behavior or application authorization. The exact original authoring base
+is55777a7606d9df2a24553e239b05c79a81b4c0c5; qualified feature parent, compiler,
+tests and runtime remain unknown. Reviewed684 and prior675–677 science remain
+literal parents. Root owns future materialization and qualification.
+
+Review837's seven classes require aggregate pre-admission before optional
+metadata/receipt/Variant/export construction, real Clear retirement, actual
+failure facts before freeze, the original native local-command door, Composer's
+pre-callback binding token, exhausted-revision fences before coalescing and stable
+fit/save event correlation. Private685 drafts these together and preserves the
+early Main/sidebar/reveal/Draft snapshots. Optional diagnostic failure must not
+change scientific work, original promises, revocation, Undo, Save or transport
+capacity. The e8e233dee10ceba5557d15477f68e3f232316c02 pre-admission fallback
+is immediate null-ID report_capacity/pre_admission_capacity, not an artifact,
+accepted request or draft-clear acknowledgement. A new unavailable report handle
+must remain POD and ordinary VM construction continues.
+
+The failed transport path exposes a concrete missing owning seam. Original
+CodexAgent::read retains active_frames_ through fail; fail sets failed_ before
+its synchronous failed signal. remainingOutput then refuses that failed live
+frame. Original VM generic_fail also retires the process before the corrected
+terminal-fact/freeze position; retired_process_ continues that fence. Existing
+signals do not announce release of both owners. Reordering capture within the
+failure callback cannot prove room; a queued guess, timer, transport relaxation
+or new allowance cannot replace proof. Normal failed automatic export is NOT
+implemented by this draft. Returning report_capacity honestly does not fulfill
+that ordinary failure-report requirement.
+
+The next design must first bind a minimum original transport-owned read-only
+settlement notification and bounded once/currentness-bound failure-fact capture.
+Original revocation and remainingOutput stay authoritative, cleanup is not
+replayed, and unavailable native effects remain unknown. No implementation of
+that seam is authorized by this draft. Its exact source trace, remaining
+admission/lifetime audit limits and full preposts/inverses are in the private685
+blocked handback. Physical aggregate observation remains unavailable; no source
+escape is described as reached. This draft is not application/build authority.
+
+###687 complete private report source successor (not applied or qualified)
+
+Authority2106e786b8607a1627685931bc1c07cf9db8c88e elects the complete source
+successor to incomplete685, following independent842's source-clear686 design.
+The literal685 record above remains a historical draft/blocker, not a statement
+that the new source has been shipped or passed. Authoring base is actual557;
+feature-qualified parent, compiler, build, tests and runtime remain unbound.
+
+The original history/NativeRecord remains the evidence store. Native submitDraft
+and send intercept literal /work-report before provider admission, like Composer.
+Successful official Clear retires its report binding at the actual archive commit,
+not the later protocol rebind; failed Clear preserves it. Composer binds before
+calling capture and checks the same binding/revision/text/IME state on return and
+ID-correlated completion. Revision/serial exhaustion precedes reuse. Fit/save
+observation IDs survive reply preparation/attempt/completion, and each retained
+WorkEvidence points to that exact scientific observation. Attempted transport
+answer remains unknown delivery, never delivered. No science operation changes.
+
+Optional metadata/receipt/Variant/build owners are admitted against original
+native_room and the shared original Limits before growth. New report handles
+remain nonallocating when admission fails. The immutable fixed refusal bank and
+cached empty schema template stay charged process-wide after Control death;
+Control/receipt leases are declared before owned fields so destruction releases
+backing first. Fixed display/active/return/publication/callback/reentry frames and
+native failure/process/local shells are admitted before original transport work.
+Borrowed source sizing precedes detached fields, schema hashes, UI arrays, skill
+and input projections, build strings and deduplication. Ordinary publication
+retains its exact original candidate alias when optional supplementation fails;
+it never reconstructs arbitrary history or fences an ordinary promise for a
+report-capacity error. Metadata ownership transfers callback-free into the original
+native retention calculation. Source roles count simultaneous old/new aliases,
+not measured physical Qt allocation; physical aggregate remains unavailable.
+
+Official failure still revokes first. Its one bounded native terminal intent
+retains actual FailureKind, bounded explanation, original IDs/witnesses and
+terminal-retention/pending flags before cleanup. It is neither a report request
+nor a writer queue, and has no receipt ID/ACK/document. The already-admitted
+immutable lease is passed only to the original transport facade. An observed
+private QProcess specialization delegates original DeferredDelete, then uses only
+local weak/POD/lease copies after the original delete returns. A matching birth
+barrier is published with process_ before start/error callbacks. QObject::destroyed
+is not release. Null-lease callers keep the original QProcess path. All five
+original frame guards notify after their original inner buffers/counters settle;
+read clears reading_ first. Original remainingOutput is byte-for-byte unchanged.
+The predicate/hint is a logical precondition, not room or science proof.
+
+The failed terminal slot moves Building→Awaiting only through its own checked
+retirement transitions. Either release edge plus the immediate readiness
+checkpoint can consume it exactly once. Clear/account/project/reconnect/new
+work/deletion cancel it; old/dead/replaced facade notifications cannot populate a
+successor. Completing retains the facts-before-freeze fence through callbacks,
+including manual reentry. Actual error-row code/explanation and terminal Turn
+identity precede the same collector's admission. Pending scientific work and
+unretained rows stay unknown. Busy/capacity/exhaustion terminate this one optional
+capture; no later room/writer retry, timer, polling or allowance is introduced.
+The fixed lease survives detached process and after-delete locals without owning
+State. Early Main/sidebar and later reveal/Draft/prefix snapshots are retained
+before cleanup; they do not diagnose or repair the owner's unproven Mac cause.
+
+The approved pre-admission-capacity null-ID receipt remains its sole additional
+exception: missing/capacity scope/revision/counters, extent_unknown, no artifact,
+scope_retired=false, no accepted/coalesced/writer/clear acknowledgement. All
+admitted requests use real IDs except original serial exhaustion. Native facts
+remain separate from evidence-linked public agent assessment. Publication still
+uses the original protected directory/file primitives, one bounded writer and
+fixed namespace/interprocess lock; committed-but-unverified is distinct from
+precommit preservation. Save/Undo, defaults, Draft continuation and all original
+scientific file semantics are unchanged. Source review and reached native/resource
+qualification are required before root may apply/build/publish this feature.
+
+###688 callback, Clear and original-writer completion correction
+
+This private source successor preserves literal687 and its failed syntax/source
+review evidence. Authorities3b5fa0ba13c8c67c2e3d23361bc754645ec99d1d,
+b2e83c23cd94b9e672b431be4e74316ea08953af and
+692aa7f8b2acd9a7ed1e17b17983c0d0bed95c77 authorize the finite844 correction and
+847-reviewed completion exception. Neither design clear nor these source posts
+qualifies compilation, execution or feature publication.
+
+Blocked Building, unfinished Completing and transport Releasing now enter an
+explicit helper fence before every active/saved coalescing path. They return a
+new real-ID terminal limitation, not the earlier pre-failure artifact. Recursive
+entry uses preowned framing without recursively notifying. Ordinary safe exact
+snapshot coalescing remains. Failure projection catches only preparation; its
+single automatic collector call is outside that catch. Receipt callback throws
+are isolated without another collection. Clear records no precommit retirement
+or clear_requested first cause. Its original successful archive commit retires
+report/failure identity before later callbacks, including disconnected Clear;
+a failed commit preserves the original factual Turn, scope and pending failure.
+Original cancellation behavior is unchanged.
+
+reserve_disclosure keeps its original qScopeGuard and body: only its dependent
+methods move below that deduced-auto definition. The original browser no-op
+metadata route remains available. Scope counting accepts borrowed QAnyStringView
+and compares views without creating QString backing. Old generated-header macro
+failures from the687 diagnostic still require genuine configure; no default or
+substitute build fact is introduced.
+
+The fixed-file publication result is latched into one fresh per-writer completion
+cell before fallible receipt projection. Its synchronized POD distinguishes
+Pending, Queued, Delivering, Settled and Unavailable. Settled means the original
+callback executed, never proof an external receiver consumed a signal. The same
+cell's immutable bounded fallback receipts retain original ID/scope/revision and
+frozen evidence coverage. Known namespace change with unavailable verified
+artifact details is committed_unverified/recovery_required=true and artifact
+missing/not_observed; uncertain publication is publication_indeterminate with
+the same recovery/missing semantics. Only proved unchanged/prepublication failure
+is failed_precommit. completion_dispatch_unavailable is a bounded code-owned
+error, not copied exception text. Saved requires actual complete artifact facts.
+
+The cell, fallback JSON/Variants, temporary arrays, atomic/shared/observer and
+closure payload types are admitted against the same original Limits before
+allocation/handoff. A tiny last-worker-capture lease distinguishes a failed launch
+with no future writer from a QtConcurrent future whose worker still owns the
+attempt. It is not a new process framework, task queue or retry. Worker and
+callback lambdas each capture only one plain shared payload. Named payload member
+order makes Qt owners die before their role; lambda capture destruction order is
+not used as a proof. Cell role is likewise declared before its immutable owners.
+Fixed read-only observer views expose the accessible new owners; full physical
+aggregate remains unavailable where Qt backing is unobservable.
+
+Worker writes only its cell's atomics and local payload Qt data, and uses the
+original Qt dispatch door once. It never inspects or mutates State/Project or
+owner-thread Qt state. An early callback claims Pending before enqueue returns;
+worker Queued publication cannot overwrite that claim. A failed dispatch can
+claim only Pending, so successfully queued ordinary completion remains callback
+owned. Original Control tracks this exact cell, never a reset/reused future cell.
+Its owner-thread receipt getter/capture checkpoint consumes only proven
+Unavailable once, exposes the preowned same-ID limitation and releases only its
+own logical busy/active bookkeeping. Actual worker/callback/local leases remain
+until their own destruction. A late old callback is inert; old scope completion
+cannot overwrite successor display/history or a final receipt.
+
+This narrowly clarifies683's unconditional terminal-signal wording: surviving
+receiver plus available original event delivery emits the ordinary single queued
+terminal after return. Failed original dispatch or receiver destruction is
+unavailable delivery, with no fabricated finished signal/ACK, additional enqueue,
+retry, polling, watcher or liveness promise without a surviving event loop/owner
+entry. Getter reconciliation emits no signal, launches no work and changes no
+scientific/history/Save state. A genuine ordinary saved automatic failure report
+is still required; a limitation/capacity receipt is not a positive qualification.
+All original remainingOutput/five release guards/limits,675–677/science/Save/Undo,
+source whitelist, immutable skills and other687 changes remain exact.

@@ -167,14 +167,14 @@ struct Session::SaveIntent {
     std::function<void()> cancelled;
 };
 
-Session::Session(QObject* parent)
-    : QObject(parent), assistant_(new AssistantViewModel(this)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+Session::Session(QObject* parent, AssistantWorkReportOptions options)
+    : QObject(parent), work_report_options_(options), assistant_(new AssistantViewModel(this, options)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
 }
 
 #ifndef __EMSCRIPTEN__
-Session::Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent)
-    : QObject(parent), assistant_(new AssistantViewModel(std::move(dependencies), this)),
+Session::Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent, AssistantWorkReportOptions options)
+    : QObject(parent), work_report_options_(options), assistant_(new AssistantViewModel(std::move(dependencies), this, options)),
       examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
 }

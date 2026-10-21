@@ -8,6 +8,7 @@
 #include <type_traits>
 #include "assistant_runtime_config.hpp"
 #include <QCoreApplication>
+#include <QEvent>
 #include <QFile>
 #include <stdexcept>
 #include <QDir>
@@ -135,7 +136,48 @@ bool codex_json_encoding(const QJsonValue& value,quint64 cap,CodexJsonEncoding& 
     return addSize(edi::assistant::Limits::json_depth*4+sizeof(QByteArray),
         std::numeric_limits<quint64>::max(),roles.writer_scratch);
 }
-CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
+// This is the original process with one after-DeferredDelete observation.
+// Qt still decides when to deliver/delete; all other behavior is inherited.
+class CodexAgent::Process final : public QProcess {
+    const QPointer<CodexAgent> owner_;
+    const quint64 birth_;
+    const std::shared_ptr<const void> lease_;
+public:
+    Process(CodexAgent* owner,quint64 birth,std::shared_ptr<const void> lease)
+        :QProcess(owner),owner_(owner),birth_(birth),lease_(std::move(lease)) {}
+protected:
+    bool event(QEvent* event) override {
+        if(event->type()!=QEvent::DeferredDelete)return QProcess::event(event);
+        const auto owner=owner_;const auto birth=birth_;const auto lease=lease_;
+        const bool handled=QProcess::event(event); // Original delete completes here.
+        // No this/process/event access after that call. Lease outlives both
+        // deletion and callback, including facade death/reentrant replacement.
+        if(owner)owner->processOwnerReleased(birth);
+        return handled;
+    }
+};
+quint64 CodexAgent::releaseObservationBytes() noexcept {
+    return sizeof(Process)-sizeof(QProcess)+sizeof(release_owner_)+sizeof(process_birth_)+sizeof(process_owner_alive_)+
+        sizeof(QPointer<CodexAgent>)+sizeof(quint64)+sizeof(std::shared_ptr<const void>)+
+        sizeof(QMetaObject::Connection)+sizeof(QPointer<CodexAgent>)+sizeof(void*);
+}
+CodexAgent::OutputOwnerState CodexAgent::outputOwnerState() const noexcept {
+    if(!release_owner_)return OutputOwnerState::Unobserved;
+    if(process_ && !failed_)return OutputOwnerState::Live;
+    if(process_ || retired_process_ || process_owner_alive_ || active_frames_ || reading_ ||
+       request_bytes_ || read_bytes_ || record_bytes_)return OutputOwnerState::Releasing;
+    return OutputOwnerState::Released;
+}
+void CodexAgent::maybeOwnersReleased() noexcept {
+    if(outputOwnerState()!=OutputOwnerState::Released)return;
+    try {emit outputOwnersReleased();}catch(...){} // Terminal: receiver may delete this.
+}
+void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
+    if(!release_owner_ || birth!=process_birth_)return;
+    process_owner_alive_=false;
+    maybeOwnersReleased(); // No facade access after notification.
+}
+CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : QObject(parent),release_owner_(std::move(releaseOwner)) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
         const QPointer<CodexAgent> receiver(this); const auto scope = generation_;
@@ -308,7 +350,7 @@ void CodexAgent::flushRequired() noexcept {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
     if(active_frames_==std::numeric_limits<quint64>::max())return;
     ++active_frames_;
-    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
+    const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
     if (deferred_required_.isEmpty() || !process_ || failed_) return;
     try {
         checkDeadline();
@@ -405,7 +447,7 @@ QString CodexAgent::executable() {
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
-    if (process_ || retired_process_ || active_frames_ || request_bytes_ || read_bytes_ || record_bytes_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
+    if ((release_owner_ && process_owner_alive_) || process_ || retired_process_ || active_frames_ || request_bytes_ || read_bytes_ || record_bytes_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
     const QPointer<CodexAgent> receiver(this);
     QPointer<QProcess> prepared;
@@ -420,8 +462,11 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
         pending_bytes_ = 0; output_bytes_ = 0; record_bytes_ = 0; request_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
-        auto* process = new QProcess(this);
+        auto* process = release_owner_?static_cast<QProcess*>(new Process(this,scope,release_owner_)):new QProcess(this);
         prepared = process; process_ = process;
+        // Birth/barrier publish with the original process_, before any original
+        // start/error/started callback, including failed-to-start.
+        if(release_owner_){process_birth_=scope;process_owner_alive_=true;}
         process->setProgram(executable);
         process->setArguments({QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
@@ -451,7 +496,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             if (!current()) return;
             if(active_frames_==std::numeric_limits<quint64>::max())return;
             ++active_frames_;
-            const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
+            const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
             try {
                 original->setReadChannel(QProcess::StandardError);
                 while (current() && !failed_ && original->bytesAvailable() > 0) {
@@ -493,7 +538,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const QPointer<CodexAgent> receiver(this);
     if(active_frames_==std::numeric_limits<quint64>::max())return false;
     ++active_frames_;
-    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
+    const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
     auto* process = process_; const auto epoch = generation_;
     if (!process_ || failed_ || process_->state() != QProcess::Running) return false;
     checkDeadline(); if (!receiver || process_ != process || generation_ != epoch || failed_) return false;
@@ -589,7 +634,7 @@ QString CodexAgent::request(const QString& method, const QJsonObject& params, co
     const QPointer<CodexAgent> receiver(this);
     if(active_frames_==std::numeric_limits<quint64>::max())return {};
     ++active_frames_;
-    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
+    const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
     auto* originalProcess = process_; const auto scope = generation_;
     QString id; bool charged = false;
     const auto discard = [&] {
@@ -655,7 +700,7 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
     const QPointer<QProcess> original(process);
     if(active_frames_==std::numeric_limits<quint64>::max())return;
     ++active_frames_;reading_=true;
-    const auto frame=qScopeGuard([receiver]{if(receiver){receiver->reading_=false;--receiver->active_frames_;}});
+    const auto frame=qScopeGuard([receiver]{if(receiver){receiver->reading_=false;--receiver->active_frames_;receiver->maybeOwnersReleased();}});
     const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
     const auto drain=[&] {
         if (!current() || failed_) return;

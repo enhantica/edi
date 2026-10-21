@@ -65,4 +65,4 @@ fi
 # already builds with EDI_BUILD_BINDINGS=OFF; a Python extension/default-env
 # bootstrap is a separate developer/test operation, never an app prerequisite.
 EDI_CRYSTA_PREFIX="$prefix" EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh
-exec bash tools/ci/app-run.sh "$@"
+exec bash tools/ci/app-run.sh --assistant-work-reports "$@"

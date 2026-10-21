@@ -307,10 +307,11 @@ void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session) {
     (void)binding.release();
     configure_engine_settings(engine);
 }
-void configure_engine(QQmlEngine& engine) {
+void configure_engine(QQmlEngine& engine) { configure_engine(engine, AssistantWorkReportOptions{}); }
+void configure_engine(QQmlEngine& engine, AssistantWorkReportOptions options) {
     if (session_binding(engine) || engine.thread() != QThread::currentThread())
         throw std::invalid_argument("Repeated or wrong-thread engine configuration");
-    configure_engine(engine, std::make_unique<Session>(nullptr));
+    configure_engine(engine, std::make_unique<Session>(nullptr, options));
 }
 Session* Session::create(QQmlEngine* engine, QJSEngine* script_engine) {
     if (!engine || static_cast<QJSEngine*>(engine) != script_engine || engine->thread() != QThread::currentThread()) {

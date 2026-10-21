@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
+#include <memory>
 #include <QObject>
 #include <functional>
 #include <QHash>
@@ -24,7 +25,10 @@ quint64 codex_json_capacity(quint64 bytes);
 class CodexAgent final : public QObject {
     Q_OBJECT
 public:
-    explicit CodexAgent(QObject* parent = nullptr);
+    explicit CodexAgent(QObject* parent = nullptr,std::shared_ptr<const void> releaseOwner = {});
+    enum class OutputOwnerState { Unobserved, Live, Releasing, Released };
+    OutputOwnerState outputOwnerState() const noexcept;
+    static quint64 releaseObservationBytes() noexcept;
     static QString executable();
     static QString policyPatch();
     ~CodexAgent() override;
@@ -56,6 +60,7 @@ public:
     FailureKind failureKind() const noexcept { return failure_kind_; }
     bool failureActive() const noexcept { return failed_ && failure_generation_ == generation_; }
 signals:
+    void outputOwnersReleased(); // Hint only; recheck owner state and original room.
     void started();
     void response(const QString& id, const QString& method, const QJsonObject& envelope);
     void serverRequest(const QJsonValue& originalId, const QString& method, const QJsonObject& params);
@@ -64,6 +69,12 @@ signals:
     // Only a correlated optional account/rateLimits/read disposition; not a provider error.
     void optionalUsageUnavailable(const QString& id);
 private:
+    class Process;
+    const std::shared_ptr<const void> release_owner_;
+    quint64 process_birth_=0;
+    bool process_owner_alive_=false;
+    void processOwnerReleased(quint64) noexcept;
+    void maybeOwnersReleased() noexcept;
     using Limits = edi::assistant::Limits;
     static constexpr qsizetype recordLimit = Limits::message_bytes;
     static constexpr qsizetype pendingLimit = Limits::http_operations;

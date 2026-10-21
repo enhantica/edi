@@ -59,3 +59,13 @@ Use reviewed matching lockfiles and a fresh isolated local build. Do not patch
 `NAN`/`INFINITY`, mix an old SDK archive with new headers, or infer a successful
 Mac build from dependency declarations. The actual selected SDK and resolved
 compiler/header/ABI identities still require a genuine build check.
+
+### Local assistant work reports
+
+The development launcher enables `--assistant-work-reports`. Native terminal boundaries attempt a local work report even on failure or retirement; model cooperation is not required. Without the flag, automatic export is off. In either mode, type `/work-report` in the Assistant composer to export the currently retained same-owner evidence, including while disconnected or another turn is running. The composer retains the command until its exact native receipt saves; edits, composition and owner replacement preserve your newer draft.
+
+The fixed local file is `assistant/work-reports/work-report.json` under Qt's AppLocalDataLocation. The native receipt supplies the actual path and verified identity after successful publication. It contains admitted user/scientific arguments, public results and explicit missing coverage, so review it before sharing. It is not sent to the model or uploaded automatically. Public agent explanations remain unverified claims. A report does not establish fit convergence, successful project Save or delivery of a tool reply to the model.
+
+An occupied `.writer` directory means another writer may be active, or a killed process left recovery data. Edi does not guess from a PID or remove it automatically. Close every Edi instance before inspecting that fixed directory. Preserve both the latest report and any `.writer/candidate.json` for diagnosis, then move the `.writer` directory out of `work-reports` yourself before requesting a new report. A `committed_unverified` receipt means the namespace changed but later readback/cleanup failed; the prior report is not promised preserved. Do not discard either file merely because the command did not say saved. An unavailable report never retries scientific work or Save.
+
+Resource observer qualification is separate: the current original Qt process transport lacks a proved physical backing inventory. Its test observer therefore reports aggregate physical measurement unavailable; queued bytes and conservative admission reservations are not a measured aggregate peak.

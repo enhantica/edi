@@ -68,6 +68,18 @@ Popup {
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
+    readonly property var workReport: assistant.workReportReceipt
+    readonly property string workReportNotice: {
+        const r = workReport;
+        if (!r || !r.disposition || r.scope_retired) return "";
+        if (r.phase === "accepted") return qsTr("Writing local work report…");
+        if (r.disposition === "saved" || r.disposition === "saved_incomplete") {
+            const path = r.artifact && r.artifact.state === "observed" ? r.artifact.value.path : "";
+            return (r.disposition === "saved_incomplete" ? qsTr("Local work report saved with explicit evidence gaps: %1") : qsTr("Local work report saved: %1")).arg(path);
+        }
+        if (r.recovery_required) return qsTr("Local work report unavailable (%1). Close all Edi instances before checking the work-report writer directory; see the local diagnostics instructions.").arg(r.disposition);
+        return qsTr("Local work report unavailable: %1").arg(r.disposition);
+    }
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
@@ -666,6 +678,10 @@ Popup {
                     Layout.rightMargin: -AppSizes.unit
                     implicitHeight: EaStyle.Sizes.borderThickness
                     color: EaStyle.Colors.appBorder
+                }
+                EdiNotice {
+                    Layout.fillWidth: true
+                    noticeText: panel.workReportNotice
                 }
                 AssistantComposer {
                     id: composer

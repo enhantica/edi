@@ -84,6 +84,7 @@ class Session : public QObject {
     QML_SINGLETON
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
+    Q_PROPERTY(bool assistantWorkReportsAutomatic READ assistantWorkReportsAutomatic CONSTANT)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(edi_app::ExampleListModel* examples READ examples CONSTANT)
@@ -103,13 +104,14 @@ class Session : public QObject {
     Q_PROPERTY(bool needsFreshSaveAs READ needsFreshSaveAs NOTIFY needsSaveAsChanged)
 
    public:
-    explicit Session(QObject* parent);
+    explicit Session(QObject* parent, AssistantWorkReportOptions options = {});
     static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
 #ifndef __EMSCRIPTEN__
-    Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
+    Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr, AssistantWorkReportOptions options = {});
 #endif
     ~Session() override;
 
+    bool assistantWorkReportsAutomatic() const { return work_report_options_.automatic; }
     ProjectViewModel* project() const { return project_; }
     AssistantViewModel* assistant() const { return assistant_; }
     bool hasProject() const { return project_ != nullptr; }
@@ -176,6 +178,7 @@ class Session : public QObject {
     void loadFailed(const QString& message);
 
    private:
+    const AssistantWorkReportOptions work_report_options_;
     struct ProjectCreationOutcome;
     bool createProjectImpl(const QString& name, const QString& description, const QString& location,
                            const QString& suRule, const QString& title, const QString& authors,

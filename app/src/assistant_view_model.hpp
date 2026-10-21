@@ -14,6 +14,7 @@
 
 #include "edi/assistant.hpp"
 #include "row_table_model.hpp"
+#include "assistant_work_report.hpp"
 #ifndef __EMSCRIPTEN__
 #include "chatgpt_connection.hpp"
 #endif
@@ -33,6 +34,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
+    Q_PROPERTY(QVariantMap workReportReceipt READ workReportReceipt NOTIFY workReportReceiptChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
@@ -56,11 +58,13 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextPreviewChanged)
 
    public:
-    explicit AssistantViewModel(QObject* parent = nullptr);
+    explicit AssistantViewModel(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
 #ifndef __EMSCRIPTEN__
-    AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
+    AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr, AssistantWorkReportOptions options = {});
 #endif
     ~AssistantViewModel() override;
+    QVariantMap workReportReceipt() const;
+    Q_INVOKABLE QVariantMap captureWorkReport();
     bool showActions() const;
     bool showingActions() const;
     QQuickWindow* actionWindow() const;
@@ -123,6 +127,8 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void workReportFinished(QVariantMap receipt);
+    void workReportReceiptChanged();
     void accountChanged();
     void showActionsChanged();
     void showingActionsChanged();

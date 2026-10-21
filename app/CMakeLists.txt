@@ -29,6 +29,14 @@ if(EXISTS "${_edi_crysta_manifest}")
         set(EDI_APP_CRYSTA_COMMIT "unreadable SDK manifest")
     endif()
 endif()
+# Work-report native build facts; labels never masquerade as source hashes.
+set(EDI_APP_SDK_SOURCE_KIND "unknown")
+string(LENGTH "${EDI_APP_CRYSTA_COMMIT}" _edi_sdk_source_length)
+if(_edi_sdk_source_length EQUAL 40 AND EDI_APP_CRYSTA_COMMIT MATCHES "^[0-9a-f]+$")
+    set(EDI_APP_SDK_SOURCE_KIND "manifest")
+elseif(EDI_APP_CRYSTA_COMMIT STREQUAL "a local build (no SDK manifest)")
+    set(EDI_APP_SDK_SOURCE_KIND "local_without_manifest")
+endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
@@ -81,6 +89,8 @@ qt_add_qml_module(edi_app_module
         src/assistant_view_model.hpp src/assistant_view_model.cpp
         src/assistant_widget_input.hpp src/assistant_widget_input.cpp
         src/assistant_result.hpp src/assistant_result.cpp
+        src/assistant_file_primitives.hpp src/assistant_file_primitives.cpp
+        src/assistant_work_report.hpp src/assistant_work_report.cpp
         src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
