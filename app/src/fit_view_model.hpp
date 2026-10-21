@@ -104,6 +104,8 @@ class FitViewModel : public QObject {
     // the first unfitted one. `canReset`: Reset fits can clear the scan's fit results (one Undo step).
     Q_PROPERTY(bool continuable READ continuable NOTIFY continuableChanged)
     Q_PROPERTY(bool canReset READ canReset NOTIFY canResetChanged)
+    // The fitting mode is a scan's, sequential or independent: the Evolution tab and Follow are shown only then.
+    Q_PROPERTY(bool scanMode READ scanMode NOTIFY scanModeChanged)
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
@@ -154,6 +156,7 @@ class FitViewModel : public QObject {
     bool running() const { return running_; }
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
+    bool scanMode() const { return scan_mode_; }
     bool scanning() const { return scanning_; }
     // The completed files (fitted or skipped) of all the scan's files.
     double scanProgress() const {
@@ -221,6 +224,7 @@ class FitViewModel : public QObject {
     void runningChanged();
     void continuableChanged();
     void canResetChanged();
+    void scanModeChanged();
     void scanningChanged();
     void followingChanged();
     void patternUpdatesChanged();
@@ -315,6 +319,7 @@ class FitViewModel : public QObject {
     QTimer clock_timer_;
     bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
     bool can_reset_ = false;
+    bool scan_mode_ = false;
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;

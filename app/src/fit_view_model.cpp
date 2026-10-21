@@ -462,6 +462,10 @@ void FitViewModel::sync() {
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     const bool scan = edi::is_scan_fitting_mode(mode.toStdString());
     const bool declared = project_.sequential_fit.declared();
+    if (scan != scan_mode_) {
+        scan_mode_ = scan;
+        emit scanModeChanged();
+    }
     QString reason;
     if (scan) {
         reason = owner_.scanRefusal();
