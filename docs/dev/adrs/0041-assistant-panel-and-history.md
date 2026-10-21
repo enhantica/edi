@@ -2084,3 +2084,13 @@ Prior implementation: AssistantWorking supplies the same busy label to StatusBar
 and AssistantPanel, with its accessible name bound to that text. Its label is now
 "Agent working...". This changes wording only; busy state, animation, layout,
 visibility and cancellation ownership remain the original shared implementation.
+
+
+## One-hour new inference-operation budget
+
+Prior implementation: CodexAgent::beginOperation preserves the earliest
+remaining total budget, and its original owned human/native wait accounting
+keeps control/EOF/revoke deadlines independent. New inference operations use
+3600000ms (one hour); idle, sign-in, control/revoke deadlines and all finite
+byte/count limits stay unchanged. No running role is renewed, and this is
+neither a provider-token lifetime setting nor a week-long operation promise.
