@@ -155,26 +155,39 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     const auto row = [&rows, &key](const QString& label, int place, const QStringList& values) {
         rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {label, place, values}});
     };
-    const auto fitted =
-        std::count_if(project.experiments.begin(), project.experiments.end(),
-                      [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    // The datasets of the fit: those holding their own factors, or, in a record with no per-dataset factors, the
+    // first experiment, as the experiment selector reads it (ExperimentListModel).
+    const bool shares =
+        std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    const auto in_fit = [&](std::size_t i) {
+        return shares ? project.experiments[i]->fit_prof_wr_factor.has_value() : i == 0;
+    };
+    std::size_t datasets = 0;
+    for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+        datasets += in_fit(i) ? 1 : 0;
+    }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
+    const QStringList global{percent(result.prof_r_factor), percent(result.prof_wr_factor),
+                             percent(result.prof_wr_expected), percent(result.prof_cr_factor),
+                             percent(result.prof_cwr_factor)};
     // The global row only when it does not repeat a single dataset's own (the owner, 2026-10-21); a phase factor is
     // not defined over several datasets.
-    if (fitted != 1) {
-        row(tr("All datasets"), -1,
-            QStringList{percent(result.prof_r_factor), percent(result.prof_wr_factor), percent(result.prof_wr_expected),
-                        percent(result.prof_cr_factor), percent(result.prof_cwr_factor)} +
-                blank_structures);
+    if (datasets != 1) {
+        row(tr("All datasets"), -1, global + blank_structures);
     }
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
-        const edi::ExperimentBase& experiment = *project.experiments[i];
-        if (!experiment.fit_prof_wr_factor.has_value()) {
+        if (!in_fit(i)) {
             continue;
         }
-        QStringList values{percent(experiment.fit_prof_r_factor), percent(experiment.fit_prof_wr_factor),
-                           percent(experiment.fit_prof_wr_expected), percent(experiment.fit_prof_cr_factor),
-                           percent(experiment.fit_prof_cwr_factor)};
+        const edi::ExperimentBase& experiment = *project.experiments[i];
+        // Without its own factors the one dataset's are the global ones.
+        QStringList values = shares ? QStringList{percent(experiment.fit_prof_r_factor),
+                                                  percent(experiment.fit_prof_wr_factor),
+                                                  percent(experiment.fit_prof_wr_expected),
+                                                  percent(experiment.fit_prof_cr_factor),
+                                                  percent(experiment.fit_prof_cwr_factor)}
+                                    : global;
         for (const auto& [name, place] : ordered) {
             QString bragg, f;
             for (const auto& link : experiment.linked_structures) {
