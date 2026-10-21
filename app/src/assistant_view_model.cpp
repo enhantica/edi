@@ -32,6 +32,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QCborValue>
+#include <QSharedData>
 #include <QMetaObject>
 #include <QMouseEvent>
 #include <QKeyEvent>
@@ -1445,6 +1447,7 @@ struct AssistantViewModel::State {
     QJsonValue generic_question_rpc;
     QString generic_question_item, generic_question_id, generic_question_public_id, generic_question_thread, generic_question_turn;
     quint64 generic_item_bytes = 0;
+    quint64 generic_item_depth = 0; // Snapshot-alias lifetime only; never reset by a conversation/epoch clear.
 
 #ifndef __EMSCRIPTEN__
     static void validate_source_configuration(const QJsonArray& rows) {
@@ -6228,6 +6231,14 @@ struct AssistantViewModel::State {
         }
     }
 
+    auto generic_item_lifetime() {
+        if (generic_item_depth == std::numeric_limits<quint64>::max()) throw std::length_error("Agent item invocation depth exceeded");
+        const QPointer<AssistantViewModel> receiver(&owner);
+        ++generic_item_depth;
+        return qScopeGuard([this,receiver] {
+            if (receiver && receiver->state_.get() == this) --generic_item_depth;
+        });
+    }
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage) {
         const auto publication=file_projection();
         const bool inspecting = params.value("tool") == "inspect_project";
@@ -6244,6 +6255,7 @@ struct AssistantViewModel::State {
         }
         const auto name = generic_id(params.value("tool"));
         const auto id = generic_id(params.value("callId"));
+        const auto item_lifetime = generic_item_lifetime(); // Original snapshot may be private on refusal.
         const auto original = generic_item_snapshot(id);
         if (!assistant_native_tool(name) || !params.value("arguments").isObject() ||
             (!params.value("namespace").isNull() && !params.value("namespace").isUndefined()) ||
@@ -11020,6 +11032,7 @@ struct AssistantViewModel::State {
         stage = "ITEM_VALIDATE";
         const char* role = "ITEM";
         quint64 bound = Limits::stream_retained_bytes;
+        const auto item_lifetime = generic_item_lifetime(); // Before every full-item local alias.
         std::shared_ptr<NativeRecord> record;
         try {
             const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
@@ -11028,7 +11041,15 @@ struct AssistantViewModel::State {
             const auto old = generic_item_snapshot(id);
             if (!old.isEmpty() && old.value("type") != type) throw std::runtime_error("Agent item type changed");
             if (generic_final_items.contains(id)) {
-                if ((completed || snapshot) && old == item) return false;
+                if (completed || snapshot) {
+                    if (type == "reasoning") {
+                        // Only this already-final, unconsumed private body has
+                        // no app equality authority. ID/type/final remain exact.
+                        generic_size(item, Limits::stream_retained_bytes);
+                        return false;
+                    }
+                    if (old == item) return false;
+                }
                 throw std::runtime_error("An agent item changed after finalization");
             }
             if (!completed && !snapshot && !old.isEmpty()) {
@@ -11153,18 +11174,67 @@ struct AssistantViewModel::State {
     void generic_release_settled() {
         if (!publishing || !generic_authenticated || generic_retiring || generic_revoke_pending || generic_clear_pending ||
             generic_context_pending || generic_blocked || native_blocked || generic_held_row) return;
+        const auto publication = file_projection();
+        const bool private_aliases_unwound = generic_item_depth == 0;
+        const auto item_lifetime = generic_item_lifetime(); // Protect this settlement's aliases from nested cleanup.
         quint64 released = 0;
         for (auto it = generic_items.begin(); it != generic_items.end(); ++it) {
             if (it.value().isEmpty() || !generic_final_items.contains(it.key())) continue;
             quint64 bytes = 0;
             bool transferred = false;
+            quint64 private_reasoning_next = 0, private_reasoning_preparing = 0;
+            const auto private_role = qScopeGuard([this,publication,&private_reasoning_preparing] {
+                if (private_reasoning_preparing && publication.receiver && publication.receiver->state_.get() == this)
+                    disclosure_preparing_bytes -= private_reasoning_preparing;
+            });
             {
                 const auto value = it.value();
                 const auto type = value.value("type");
-                // These have no exact activity-payload archive. Keep them
-                // private and fully charged, including all unfinished items.
-                if (type == "agentMessage" || type == "reasoning" || type == "userMessage") continue;
-                if (type == "dynamicToolCall") {
+                if (type == "reasoning") {
+                    // ALL item frames must have unwound, including synchronous
+                    // nested receiver/render callbacks. Current transport input
+                    // is separately still owned/charged by CodexAgent.
+                    if (!private_aliases_unwound || value.size() == 1) continue;
+                    const auto old_bytes = generic_size(value, Limits::stream_retained_bytes);
+                    if (released > generic_item_bytes || old_bytes > generic_item_bytes - released)
+                        throw std::logic_error("Private settled item accounting changed");
+                    // Pinned Qt6.11.2 QCborContainerPrivate: QSharedData, usedData,
+                    // QByteArray, QList<Element>. Public sizeof ceilings avoid
+                    // adding a private Qt API dependency. Element is16 bytes;
+                    // public QCborValue is at least that large in this source.
+                    static_assert(sizeof(QCborValue) >= 2 * sizeof(qint64)); // Pinned Element static_assert(sizeof)==16.
+                    constexpr quint64 container_shell = sizeof(QSharedData) + alignof(qsizetype) - 1 +
+                        sizeof(qsizetype) + sizeof(QByteArray) + sizeof(QList<QJsonValue>);
+                    constexpr quint64 byte_header = sizeof(qsizetype) + alignof(qsizetype) - 1;
+                    constexpr quint64 type_utf16_bytes = sizeof(u"type") - sizeof(char16_t);
+                    constexpr quint64 reasoning_utf16_bytes = sizeof(u"reasoning") - sizeof(char16_t);
+                    const auto retained = sizeof(Object) + container_shell +
+                        codex_json_capacity(2 * sizeof(QCborValue)) +
+                        codex_json_capacity(2 * byte_header + type_utf16_bytes + reasoning_utf16_bytes) +
+                        sizeof(R"({"type":"reasoning"})") - 1;
+                    // One initializer pair/value string container coexists
+                    // with the result. Literals' QString data are static.
+                    const auto preparing = retained + sizeof(std::pair<QString,QJsonValue>) + container_shell +
+                        codex_json_capacity(sizeof(QCborValue)) + codex_json_capacity(byte_header + reasoning_utf16_bytes);
+                    if (retained > Limits::stream_retained_bytes - (generic_item_bytes - old_bytes))
+                        throw std::logic_error("Private header exceeded its original role");
+                    const auto next_bytes = generic_item_bytes - old_bytes + retained;
+                    auto header_role = reserve_disclosure(preparing); // BEFORE first new header holder.
+                    native_charge(); // Admit both current full body and all header construction owners.
+                    Object header{{QStringLiteral("type"), QStringLiteral("reasoning")}};
+                    // No ID copy: the original map key and final set own it.
+                    it.value() = std::move(header);
+                    // The full value alias still exists until this inner scope
+                    // ends; preserve both its old charge and the new role here.
+                    private_reasoning_next = next_bytes;
+                    private_reasoning_preparing = preparing;
+                    header_role.dismiss(); // Transfer to the outer local guard below.
+                    transferred = true;
+                } else if (type == "agentMessage" || type == "userMessage") continue;
+                if (private_reasoning_preparing) {
+                    // Private body is neither archived nor borrowed from a
+                    // scientific/native owner; only its header was elected.
+                } else if (type == "dynamicToolCall") {
                     for (const auto& record : native_records)
                         if (record.use_count() == 1 && record->completed && record->answered && !record->reserved &&
                             record->call == it.key() && record->thread == generic_thread && record->turn == generic_turn &&
@@ -11177,12 +11247,22 @@ struct AssistantViewModel::State {
                         }
                 }
                 if (!transferred) continue;
-                bytes = generic_size(value, Limits::stream_retained_bytes);
-                if (bytes < 2 || released > generic_item_bytes || bytes - 2 > generic_item_bytes - released)
-                    throw std::logic_error("Settled item accounting changed");
-                it.value() = {}; // Keep the key, cardinality and finalization guard.
-            } // The last local full-value alias dies BEFORE the charge is lowered.
-            released += bytes - 2; // The empty JSON object keeps its original two-byte role.
+                if (!private_reasoning_preparing) {
+                    bytes = generic_size(value, Limits::stream_retained_bytes);
+                    if (bytes < 2 || released > generic_item_bytes || bytes - 2 > generic_item_bytes - released)
+                        throw std::logic_error("Settled item accounting changed");
+                    it.value() = {}; // Keep the key, cardinality and finalization guard.
+                }
+            } // The last local full-value alias dies BEFORE any charge transfer.
+            if (private_reasoning_preparing) {
+                // Retain the actual fixed header owner, not just its encoded20
+                // bytes. Earlier ordinary release deltas remain conservative.
+                generic_item_bytes = private_reasoning_next;
+                disclosure_preparing_bytes -= private_reasoning_preparing;
+                private_reasoning_preparing = 0;
+                // Original caller's native_release_charge lowers the transport
+                // role only after this entire settlement stack has unwound.
+            } else released += bytes - 2; // Original empty-object role remains two bytes.
         }
         generic_item_bytes -= released;
         for (const auto& record : native_records) {

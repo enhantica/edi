@@ -2094,3 +2094,22 @@ keeps control/EOF/revoke deadlines independent. New inference operations use
 3600000ms (one hour); idle, sign-in, control/revoke deadlines and all finite
 byte/count limits stay unchanged. No running role is renewed, and this is
 neither a provider-token lifetime setting nor a week-long operation promise.
+
+
+## Completed generic private reasoning is not display history
+
+FIRST is ADR0037 generic_item/generic_release_settled and the original public
+archive owner. Completed private reasoning never creates a chat/activity row,
+clipboard/export body, file grant or scientific/native input. After all item
+frames unwind, its unused body can therefore release while the bounded actual
+ID/type/final membership remain. Already-final private body equality is
+explicitly narrower; public/native/user/agent outcomes and unfinished reasoning
+retain their original exactness and budgets. The original stateless Responses
+opaque continuation is a separate owner and is not changed here.
+
+The fixed replacement header and construction overlap are pre-admitted, fully
+charged in the existing aggregate, and released only through original current
+transport accounting. This removes one avoidable retention owner; finite byte,
+item, event, wire and history limits remain real. No private text is copied into
+public history or a summary/cache, and no UI/state/authentication/recovery claim
+or automatic replay follows from this source change.

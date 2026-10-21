@@ -2232,9 +2232,10 @@ is truly finalized and its exact payload is in the bounded archive, its
 redundant generic registry value can release to that existing owner. Finalized
 native items use their completed canonical record, only without outstanding
 shared/native callback ownership. Keep registry keys/counts/finalized markers;
-all duplicate checks resolve the exact original object, not a hash or summary.
-Private reasoning/user/assistant-text items and all unfinished work retain
-their original full charges. No completion, reply or receipt is inferred.
+public/native duplicate checks resolve the exact original object, not a hash or
+summary. User/assistant-text items and all unfinished work retain their original
+full charges. Final private reasoning follows the explicitly narrowed body-equality
+contract below. No completion, reply or receipt is inferred.
 
 A completed, answered, durably retained native terminal row can similarly
 release its redundant row payload only with no shared record owner and an
@@ -2247,7 +2248,9 @@ exclusive record/bank/input ownership; the actual typed outcome/response and
 ordinary scientific history remain. Eligibility requires actual item completion;
 cleanup runs after completion/returned requests or original coalesced archive
 presentation, never as a streamed-text polling loop. No cap or allocator policy
-changes. Missing originals and changed final items still refuse.
+changes. Missing public/native originals and changed final public/native items
+still refuse; only already-final unconsumed private reasoning has the narrower
+identity described below.
 
 CodexAgent latches a closed local failure kind before its original failed
 signal. Known capacity and operation-expiry branches distinguish those local
@@ -2284,5 +2287,38 @@ or a new wire field. No new notice suffix is required; the original visible
 sentence and all original fail/return/currentness/receipt/limits remain.
 CAPACITY is an exception class, not proof of a particular exhausted byte budget.
 This observes a future occurrence; it does not diagnose or fix a reported run,
-retry an action, change a cap or recover an account/thread. Existing657 open
-reasoning-retention and cross-epoch continuity limits remain explicit.
+retry an action, change a cap or recover an account/thread. Unfinished private-work
+retention and cross-epoch continuity limits remain explicit.
+
+
+## Finalized generic private reasoning retains identity, not its unused body
+
+FIRST is generic_item/snapshot/final membership, generic_release_settled and
+native_release_charge. This is a deliberate contract amendment for the generic
+CodexAgent stream only: an already-final reasoning body is never displayed,
+archived, read by science/native dispatch or reused by app continuation. Retain
+its actual ID in the original bounded map key, exact type in one fixed header
+and original final-set membership. Repeated final completion/terminal snapshots
+still validate incoming ID/type/size, but do not compare this unconsumed body.
+Start after final and changed type still refuse. All unfinished reasoning,
+public/native/user/agent bodies, counts, thread/account/turn/source/once and
+scientific authority remain under their original rules. The separate stateless
+Responses backend's original opaque reasoning continuation is unchanged.
+
+A fixed invocation-depth guard defers only private-body cleanup while ANY
+original item, native-dispatch snapshot or settlement frame can own a raw local
+alias, including nested queued presentation/server-request reentry. It is stack lifetime, not conversation
+state: Clear/retirement must not reset it before the old stack unwinds. The
+original weak receiver/State equality fences its final decrement.
+
+Before creating the fixed type-only QJsonObject, reserve original disclosure
+room for the complete pinned-Qt container/data/element growth and the one
+initializer value's simultaneous container. Charge old body plus preparation;
+never spend its future freed bytes. The original map value is replaced only by
+a nonthrowing move, and its final full-value/type aliases die before the
+counter transfers. generic_item_bytes then owns the complete retained header
+role, not just its short encoded spelling; no new registry/cache/digest/body
+archive exists. Original guarded native_release_charge lowers the transport's
+role after settlement, retaining its current parsed/unread/write buffers.
+Construction/admission refusal keeps the full old item and original charge.
+No caps, clocks, retry, epoch reset, authority, receipt, Undo or Save changes.
