@@ -468,8 +468,8 @@ TestCase {
             const parameter = Probe.rows(Session.project.parameters).map(row => row.parameter).find(item => item.blockName === state.block && item.uid === "peak.rise_alpha_0");
             verify(parameter !== undefined, "Undo reaches the independently named bank's alpha parameter");
             verify(Session.project.setParametersFree([parameter], !parameter.free), "The pre-undo free change creates a real restoration record");
-            const undo = control("appBar.button.undo");
-            verify(undo.enabled, "A real filter-rebuilding edit enables the app's Undo control");
+            const undo = Ui.control(Probe, appWindow, "appBar.button.undo");
+            verify(undo !== null && undo.enabled, "A real filter-rebuilding edit enables the app's Undo control");
             Ui.click(test, Probe, appWindow, "appBar.button.undo");
         } else if (data.action === "fit") {
             verify(control("fitting.start").enabled, "The independently reduced free subset enables a real fit");
