@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA 71a351ed70a6d4773572db7eb0b80c5c0adf3270)  # head of the edi branch, ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 d711386689709012d23772891473e10ba5bbd44a9d8b7a545f886120a0d5d983)
+set(EDI_GUI_COMPONENTS_SHA 59e37a63a050b8b2aba8d7384f64afd85374832d)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 d435979fa684a98570416c5bf41582d4e7d2a2d1b7e8b1c73141af039ec47276)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 4093e921e2c000ef92ef52edb0d1655d94087a78738ee81a8cbd5104edfbf8c0)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 9bb72101ed37d93e8b8d26a5160d5d3e932be3395e6568b7da44a33ac3d5b656)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
