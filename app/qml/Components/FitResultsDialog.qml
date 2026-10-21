@@ -27,6 +27,9 @@ AppDialog {
     title: qsTr("Least-squares fit results")
     standardButtons: Dialog.Ok
     contentWidth: Math.max(listArea.width, agreementArea.width)
+    // From the content alone. The base also takes the title's and the buttons' widths, which follow the dialog's own
+    // width, so a content width that changes as results arrive was a binding loop. Both are narrower than the tables.
+    implicitWidth: contentWidth + leftPadding + rightPadding
     contentHeight: agreementArea.y + agreementArea.height + (dialog.scan ? evolutionButton.height + EaStyle.Sizes.fontPixelSize : 0)
 
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
@@ -44,6 +47,13 @@ AppDialog {
         }
         function onCountChanged() {
             dialog.resultsRevision++;
+        }
+    }
+    // A read-only row takes no hover: the base row tints itself from its own hover handler, which a disabled row keeps.
+    function passive(row) {
+        for (const handler of row.resources) {
+            if (handler instanceof HoverHandler)
+                handler.enabled = false;
         }
     }
     function widestSummaryText(title, cell) {
@@ -124,6 +134,7 @@ AppDialog {
                 // Read-only (the owner, 2026-10-21): no hover, no selection, no click; the colours are set, not the
                 // disabled ones.
                 enabled: false
+                Component.onCompleted: dialog.passive(row)
 
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -248,6 +259,7 @@ AppDialog {
 
                 // Read-only, as the summary (no hover, no selection, no click).
                 enabled: false
+                Component.onCompleted: dialog.passive(datasetRow)
 
                 // The global row keeps an empty icon cell, so its cells stay in the dataset rows' columns.
                 IconCell {
