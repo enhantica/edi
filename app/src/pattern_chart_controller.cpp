@@ -219,7 +219,7 @@ void PatternChartController::setStructureSeries(int index, QXYSeries* upper, QXY
         structure_series_.resize(index + 1);
     }
     structure_series_[index] = {upper, lower, outline};
-    invalidate();
+    invalidateLater();
 }
 
 void PatternChartController::setBraggSeries(int place, QXYSeries* series) {
@@ -231,7 +231,7 @@ void PatternChartController::setBraggSeries(int place, QXYSeries* series) {
     }
     if (bragg_series_[place] != series) {
         bragg_series_[place] = series;
-        invalidate();
+        invalidateLater();
     }
 }
 
@@ -447,6 +447,17 @@ void PatternChartController::invalidate() {
     }
 }
 
+void PatternChartController::invalidateLater() {
+    // A series the chart makes is handed over while a drawing publishes the colours that made it: drawing again
+    // there would replace the presentation the drawing still reads, so the next drawing waits for the event loop.
+    dirty_ = true;
+    QMetaObject::invokeMethod(this, [this] {
+        if (dirty_ && active_) {
+            refresh();
+        }
+    }, Qt::QueuedConnection);
+}
+
 edi::PatternView PatternChartController::view() const {
     edi::PatternView view;
     view.x_min = x_min_;
@@ -614,18 +625,23 @@ void PatternChartController::refresh() {
         if (static_cast<qsizetype>(index) >= structure_series_.size()) {
             continue;  // the chart makes its series and hands them over, which draws again
         }
-        const QList<QPointF> upper = points_of(series);
-        QList<QPointF> lower;
-        lower.reserve(upper.size());
-        for (qsizetype k = 0; k < upper.size(); ++k) {
-            const double base = static_cast<std::size_t>(k) < series.bar_low.size() ? series.bar_low[static_cast<std::size_t>(k)]
-                                                                                     : std::numeric_limits<double>::quiet_NaN();
-            lower.append(QPointF(upper[k].x(), base));
+        // The area holds the drawn points only: a gap (an excluded region) is not a point an area can take.
+        const QList<QPointF> curve = points_of(series);
+        QList<QPointF> upper, lower;
+        upper.reserve(curve.size());
+        lower.reserve(curve.size());
+        for (qsizetype k = 0; k < curve.size(); ++k) {
+            const auto at = static_cast<std::size_t>(k);
+            const double base = at < series.bar_low.size() ? series.bar_low[at] : std::numeric_limits<double>::quiet_NaN();
+            if (std::isfinite(curve[k].x()) && std::isfinite(curve[k].y()) && std::isfinite(base)) {
+                upper.append(curve[k]);
+                lower.append(QPointF(curve[k].x(), base));
+            }
         }
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
         replace(target.upper, upper);
         replace(target.lower, lower);
-        replace(target.outline, upper);
+        replace(target.outline, curve);
     }
     for (qsizetype index = static_cast<qsizetype>(structure_curves.size()); index < structure_series_.size(); ++index) {
         replace(structure_series_[index].upper, {});

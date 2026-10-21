@@ -278,6 +278,7 @@ class PatternChartController : public QObject {
 
    private:
     void invalidate();
+    void invalidateLater();
     // One property's value and its own signal: only what changed notifies (the app's per-property rule).
     template <typename T>
     void publish(T& member, const T& value, void (PatternChartController::*changed)()) {
