@@ -548,7 +548,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:square root", "chart.toolbar.structureCurves"}});
         steps_.push_back({"ncaf-9-bank2-sqrt-off", {"chart.toolbar.structureCurves"}});
     }
-    // The owner's retest: each structure's curve switched on, off and on again through the toolbar on latp_scan, on
+    // The owner's retest: each structure's curve on (the default), off and on again through the toolbar on latp_scan, on
     // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
     // Run only when asked (`--demo-only retest-`).
     if (only.startsWith(QLatin1String("retest-"))) {
@@ -556,7 +556,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QString yscale = QStringLiteral("chart.toolbar.yscale");
         const QString curves = QStringLiteral("chart.toolbar.structureCurves");
         steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
-                                                experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95", curves}});
+                                                experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95"}});
         steps_.push_back({"retest-02-latp-off", {curves}});
         steps_.push_back({"retest-03-latp-on", {curves}});
         steps_.push_back({"retest-04-latp-log", {yscale, "choose:log"}});
@@ -566,6 +566,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"retest-08-ncaf", {"open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic}});
         steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
         steps_.push_back({"retest-10-ncaf-off", {curves}});
+    }
+    // The owner's sequential fit: cosio's 162 patterns fitted with each structure's curve on (the default) and zoomed,
+    // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
+    if (only.startsWith(QLatin1String("seqfit-"))) {
+        steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                                "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
+                                                                "wait-files:30", "capture-now"}});
+        steps_.push_back({"seqfit-2-running", {"wait-files:60", "capture-now"}});
+        steps_.push_back({"seqfit-3-done", {"wait-fit", "choose:OK"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
