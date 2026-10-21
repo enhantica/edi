@@ -365,6 +365,21 @@ TestCase {
         sameRows(expected, "The source-file and Wyckoff construction accounts for every real NCAF parameter identity");
         compare(actualRows().filter(row => row.free).map(identity).sort(), expected.filter(row => row.free).map(identity).sort(), "Saved value parentheses independently account for every NCAF free parameter");
     }
+    function test_closed_filter_icons_data() {
+        return ["datablock", "category"].map(selector => ({
+                    tag: selector,
+                    selector: selector
+                }));
+    }
+    function test_closed_filter_icons(data) {
+        ncaf();
+        select(control("parameters.datablock"), "wish_2_9");
+        select(control("parameters.category"), "Peak asymmetry");
+        const picker = control("parameters." + data.selector);
+        const icons = Render.texts(picker.contentItem).filter(item => item.isIcon);
+        verify(icons.length > 0, "A selected datablock or category renders its icon on the closed selector before any further rebuild");
+        verify(icons.every(item => item.width > 0 && item.height > 0 && Ui.exposed(item)), "Closed selector icons have actual visible glyph geometry");
+    }
     function test_rebuild_consistency_data() {
         const cases = [];
         for (const action of ["datablock", "category", "free-to-fixed", "fixed-to-free", "name", "fit", "undo", "load"])
@@ -401,7 +416,7 @@ TestCase {
                 row.free = row.category === "background" && row.label === "c0";
             for (const row of Probe.rows(Session.project.parameters)) {
                 const parameter = row.parameter;
-                parameter.free = parameter.uid === "background.coef.c0";
+                parameter.free = parameter.category === "background" && parameter.rowLabel === "c0";
             }
             state = {
                 block: "east",
