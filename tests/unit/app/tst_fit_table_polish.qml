@@ -100,7 +100,7 @@ TestCase {
                     font: cell.font
                 });
                 const text = String(cell.text || "").replace(/<[^>]*>/g, "");
-                widths[column] = Math.max(widths[column], Math.ceil(metrics.advanceWidth(text)) + AppSizes.fieldSpacing * 2);
+                widths[column] = Math.max(widths[column], Math.ceil(metrics.advanceWidth(text)) + AppSizes.fieldSpacing * 2 + (column === 3 ? Style.Sizes.fontPixelSize : 0));
                 metrics.destroy();
                 verify(!cell.truncated, "Content-width summary cells keep every metric and value readable");
             }
