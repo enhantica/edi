@@ -231,3 +231,13 @@ The scoped fit-only ordinary-input receipt is armed immediately around the same 
 FIRST is ParameterItem.setValue/setFree through ProjectEditor, the recorded free-header batch and relation editors, and PVM.applyRecordedEdit's preowned RelationsUndo. The two plain PVM scalar fallbacks previously delegated to unrecorded apply while the matched native-input branches already used recorded history. Changed ordinary numeric/free assignments now enter that same recorded-edit method. The existing snapshot restores the original relation rows and all changed parameter values, uncertainties and free flags through the ordinary appbar Undo; no new history manager or assistant-only reversal is added.
 
 Plain same-value assignments skip setter, publication and history only after the original fit/readiness/retirement fences. A numeric equality shortcut is allowed only within the original declared admissible range, so an already-invalid value still reaches the original validator/refusal. A refused operation creates no surviving history step; existing pre-write capture/reservation, actual applied-versus-published handling and ordinary dirty/calculation behavior remain authoritative for actual changes. Parameter identity is retained. The native exact-input matching/consumption/outcome branches, batch semantics and all unrelated apply/Undo paths remain unchanged. This source correction does not diagnose a particular human key/focus/Return delivery failure.
+
+
+## Window-centered Free header menu
+
+Prior implementation: Analysis ParametersGroup opens its existing FreeHeaderMenu
+from the header; the menu owns the exact eligible-row set and ordinary batch
+free action. Anchor that same popup in the current window overlay, using the
+original Qt Popup center anchor, so opening location does not depend on cursor
+position. Keep its QObject owner, filter, choices, normal dismissal and Undo.
+The assistant still opens and cues this same menu before the ordinary setter.

@@ -13,7 +13,7 @@ EaElements.Label {
     readonly property bool working: assistant !== null && assistant.state === "agent_active"
     visible: presented && working
     clip: true
-    text: qsTr("AI working...")
+    text: qsTr("Agent working...")
     textFormat: Text.PlainText
     color: EaStyle.Colors.themeAccent
     Accessible.name: text

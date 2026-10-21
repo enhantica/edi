@@ -2076,3 +2076,11 @@ and the status-bar outline/content-fill requirement. The two original cancel
 receivers, control identities, enabled/visible and manual-takeover rules, keyboard
 and accessibility, hit/layout slots, spacing/separators and Working animation
 remain unchanged. Only paint differs; no new component or lifecycle is added.
+
+
+## Shared Agent working wording
+
+Prior implementation: AssistantWorking supplies the same busy label to StatusBar
+and AssistantPanel, with its accessible name bound to that text. Its label is now
+"Agent working...". This changes wording only; busy state, animation, layout,
+visibility and cancellation ownership remain the original shared implementation.
