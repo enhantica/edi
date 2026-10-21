@@ -9,3 +9,15 @@ Python's tokeniser and an explicit list of their physical parameter fields.
 It imports neither engine nor app. `expected.json` records every identity and
 free flag, rather than copying app counts. Background order, polynomial origin,
 peak cutoff and measured samples are settings or observations, not fit parameters.
+
+The file parser yields the following counts (`expected.json`, reproduced by the
+command above). Each structure has six cell parameters plus five per site. Each
+experiment has five peak coefficients, two instrument parameters, two structure
+scales and its declared background coefficients.
+
+| Datablock | Parameters | Free |
+| --------- | ---------: | ---: |
+| amber     |         11 |    2 |
+| violet    |         16 |    3 |
+| east      |         11 |    4 |
+| west      |         12 |    5 |

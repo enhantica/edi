@@ -67,6 +67,16 @@ TestCase {
         verify(match !== null, "Every selector entry must show its parameter count: " + text);
         return Number(match[1]);
     }
+    function iconSegments(entry) {
+        const result = [];
+        for (const item of View.descendants(entry)) {
+            if (item.segments === undefined)
+                continue;
+            for (let i = 0; i < item.segments.length; ++i)
+                result.push(item.segments[i]);
+        }
+        return result;
+    }
     function choose(picker, index, heading) {
         Ui.scrollIntoView(picker);
         const hit = Ui.clickPoint(picker);
@@ -79,13 +89,13 @@ TestCase {
         const entry = list.itemAtIndex(index);
         verify(entry !== null, "Every offered filter must have an actual menu delegate");
         if (typeof heading === "boolean") {
-            const labels = View.descendants(entry).filter(item => item.segments !== undefined);
-            const segments = labels.flatMap(item => Array.from(item.segments));
+            const segments = iconSegments(entry);
             verify(segments.some(segment => segment.text && !!segment.bold === heading), "Category group headings must be bold and ordinary categories must use normal text");
         }
         const point = Ui.clickPoint(entry);
         verify(point !== null, "Every filter option must be reachable through the menu viewport");
         mouseClick(entry, point.x, point.y);
+        tryVerify(() => !picker.popup.visible, 500, "Selecting a filter must close the actual popup before the next input");
         compare(picker.currentIndex, index, "Pointer selection must update the actual filter selector");
     }
     function select(picker, text, heading) {
@@ -99,7 +109,9 @@ TestCase {
         const hit = Ui.clickPoint(field);
         verify(hit !== null, "The name filter must accept actual user input");
         mouseClick(field, hit.x, hit.y);
+        appWindow.requestActivate();
         field.forceActiveFocus();
+        tryCompare(field, "activeFocus", true, 1000, "The actual name field must receive keyboard focus");
         if (query.length) {
             verify(SettingsProof.type(field, query), "Name filtering must receive real keyboard text");
         } else {
@@ -165,6 +177,11 @@ TestCase {
         });
         return result;
     }
+    function checkCounts(block, category, variability, wanted, selectedRows) {
+        options(variability).forEach((entry, choice) => compare(count(entry), selectedRows.filter(r => choice === 0 || r.free === (choice === 1)).length, "Every parameter count must remain scoped to its upper selections"));
+        options(category).forEach(entry => compare(count(entry), wanted.find(group => group.title === caption(entry)).rows.length, "Downstream filters must not change category membership counts"));
+        options(block).forEach(entry => compare(count(entry), expected.filter(r => caption(entry) === "All datablocks" || r.block === caption(entry)).length, "Downstream filters must not change datablock parameter counts"));
+    }
     function test_file_oracle() {
         open("tests/fixtures/analysis_filters/project");
         const actual = Probe.rows(Session.project.parameters);
@@ -213,8 +230,7 @@ TestCase {
             verify(waitForPolish(list), "Datablock icons must finish actual menu layout");
             const entry = list.itemAtIndex(i);
             verify(entry !== null, "Each datablock must have a real menu delegate");
-            const lines = View.descendants(entry).filter(item => item.segments !== undefined);
-            const segments = lines.flatMap(line => Array.from(line.segments));
+            const segments = iconSegments(entry);
             const icon = segments.find(segment => segment.icon === (i < 3 ? "layer-group" : "microscope"));
             verify(icon !== undefined && String(icon.color) !== String(Style.Colors.themeForegroundMinor), "Every datablock entry must show its usual coloured structure or experiment icon");
             palette.push(String(icon.color));
@@ -249,11 +265,13 @@ TestCase {
                 const rows = g.rows.filter(r => index === 0 || r.free === (index === 1));
                 compare(count(value), rows.length, "Parameter menu counts must respect both upstream selectors");
                 choose(variability, index);
+                checkCounts(block, category, variability, wanted, g.rows);
                 sameRows(rows, "Every datablock/category/variability combination must show exactly its independent parameter identities");
                 ["COEF", "amber", "east", "absent_parameter"].forEach(query => {
                     typeName(query);
-                    const matching = rows.filter(r => query === "COEF" ? r.category === "background" : r.block === query);
+                    const matching = rows.filter(r => query === "COEF" ? r.category === "background" : r.block === query || r.label === query);
                     sameRows(matching, "Case-insensitive name search must return every matching row and only that upstream subset");
+                    checkCounts(block, category, variability, wanted, g.rows);
                     typeName("");
                     sameRows(rows, "Clearing the name must restore exactly the upstream-selected subset");
                 });
