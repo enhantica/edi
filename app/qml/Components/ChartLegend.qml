@@ -26,6 +26,15 @@ Rectangle {
     // Each row's height.
     property real rowHeight: AppSizes.legendRowHeight
 
+    // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
+    // title is, never by the line's gaps between pieces.
+    function richLabel(pieces) {
+        return pieces.map(piece => {
+            const text = String(piece.text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return legend.labelInColor && piece.color ? "<font color=\"" + piece.color + "\">" + text + "</font>" : text;
+        }).join("");
+    }
+
     // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
     function markPiece(mark, width, color) {
         return mark === "atom" ? {
@@ -79,15 +88,18 @@ Rectangle {
                     {
                         "text": label
                     }
-                ] : [legend.markPiece(mark, markWidth, color)].concat((labelSegments.length > 0 ? labelSegments : [
-                        {
-                            "text": label,
-                            "color": color
-                        }
-                    ]).map(piece => ({
-                            "text": piece.text,
-                            "color": legend.labelInColor && piece.color ? piece.color : legend.colors.themeForeground
-                        })))
+                ] : [legend.markPiece(mark, markWidth, color),
+                    {
+                        "text": legend.richLabel(labelSegments.length > 0 ? labelSegments : [
+                            {
+                                "text": label,
+                                "color": color
+                            }
+                        ]),
+                        "rich": true,
+                        "color": legend.colors.themeForeground
+                    }
+                ]
             }
         }
     }

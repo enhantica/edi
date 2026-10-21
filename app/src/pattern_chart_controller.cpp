@@ -555,8 +555,7 @@ void PatternChartController::refresh() {
                                                                       ? QVariant()
                                                                       : QVariant(color(QString::fromStdString(segment.style)))}});
         }
-        QColor mark = color(QString::fromStdString(series.style));
-        mark.setAlphaF(1.0F);  // a structure curve's outline, not its fill
+        const QColor mark = color(QString::fromStdString(series.style));
         legend.append({QString::fromStdString(series.label), mark,
                        bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width, segments});
     };
@@ -567,7 +566,10 @@ void PatternChartController::refresh() {
             case edi::SeriesKind::Calculated: calculated = &series; break;
             case edi::SeriesKind::Background: background = &series; break;
             case edi::SeriesKind::Residual: residual = &series; break;
-            case edi::SeriesKind::StructureCurve: structure_curves.push_back(&series); break;
+            case edi::SeriesKind::StructureCurve:
+                // A structure is in the legend once, as its Bragg peaks.
+                structure_curves.push_back(&series);
+                continue;
             case edi::SeriesKind::BraggTicks: {
                 // A structure's ticks join the series of its colour, its own row kept.
                 if (const std::size_t place = bragg_place(series.style); place < ticks.size()) {
