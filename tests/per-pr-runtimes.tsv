@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T14:03:46Z
+# measured_utc = 2026-10-21T17:05:40Z
 #
-# Recorded from: scoped calc facade stand-in with a false estimate preflight; existing output and dry persistence assertions unchanged
-# Collected tests: 16148; with a reported duration: 9468
-# Module-scoped fixture costs recorded: 60
+# Recorded from: measured test run (44 node(s) measured once, 14412 banked, 0 stale row(s) dropped)
+# Collected tests: 15803; with a reported duration: 9468
+# Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15759
+# inventory_python = 15803
 # inventory_cpp = 389
-# inventory_measured = 14412
-# inventory_unmeasured = 1736
+# inventory_measured = 14414
+# inventory_unmeasured = 1778
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -250,6 +250,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[immediate-pdf]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-cubic]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-hexagonal]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-monoclinic]
@@ -2111,6 +2114,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
+UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
@@ -6804,6 +6809,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Experiment/MeasuredRangeGroup.qml]
 0.000	tests/integration/py/test_status_columns.py::test_status_columns_use_shared_icons_with_word_tooltips[Project/RecentProjectsGroup.qml]
 0.000	tests/integration/py/test_status_columns.py::test_status_header_census_ignores_comment_quotes_and_balances_literal_braces
+UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_about_has_no_tabbed_or_explanatory_licence_pages
+UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_dependency_matrix_declares_all_distribution_surfaces
+UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_every_table_instantiates_the_one_row_type
+UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_gui_component_pin_moves_with_all_listview_cell_kinds
+UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_no_old_tableview_type_in_any_qml_file
+0.000	tests/integration/py/test_table_and_about_contract.py::test_qml_census_observer_catches_nested_cells_but_ignores_comments
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[data]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[duplicate]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[extra]
@@ -7031,6 +7042,33 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-browser-selector]
 0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-screen]
 0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-selector]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Coast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Contrast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Garden]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Studio]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Coast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Contrast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Garden]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Studio]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Coast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Contrast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Garden]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Studio]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Coast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Contrast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Garden]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Studio]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Coast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Contrast]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Garden]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Studio]
+UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
+0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-rounded-special]
@@ -10481,6 +10519,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[cli-EDI_CLI_BUNDLE]
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[web-EDI_WEB_BUNDLE]
 0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-disabled-bridge]
 0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-each-component]
 0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-foreign-component]
@@ -14160,6 +14202,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link
 UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[hard-core]
 UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[symbolic-api]
 UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[symbolic-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_component_curves.py::test_two_structure_curves_match_independent_scale_zero_controls[expt_n2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_component_curves.py::test_two_structure_curves_match_independent_scale_zero_controls[expt_s2]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
@@ -16206,6 +16250,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
+# module-cost: 1.628	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
