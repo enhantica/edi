@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls
 import QtTest
 import edi.app
+import EdiAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
 
@@ -48,17 +50,32 @@ Item {
             for (const entry of [
                 {
                     label: bsd,
-                    prefix: "BSD 3-Clause License"
+                    expected: Probe.readFile("LICENSE")
                 },
                 {
                     label: gpl,
-                    prefix: "GNU GENERAL PUBLIC LICENSE"
+                    expected: Probe.readFile("COPYING")
                 }
             ]) {
                 mouseClick(entry.label, entry.label.width / 2, entry.label.height / 2);
-                tryVerify(() => Render.descendants(surface).some(item => item.visible && typeof item.text === "string" && item.text.includes(entry.prefix) && item.readOnly === true && item.textFormat === TextEdit.PlainText), 1000, "Each identifier opens its real licence as read-only plain text");
+                tryVerify(() => Render.descendants(surface.Window.window.contentItem).some(item => item.visible && typeof item.text === "string" && item.text === entry.expected && item.readOnly === true && item.textFormat === TextEdit.PlainText), 1000, "Each identifier opens its real licence as read-only plain text");
                 keyClick(Qt.Key_Escape);
             }
+            mouseClick(dependencies, dependencies.width / 2, dependencies.height / 2);
+            const table = findChild(surface.Window.window.contentItem, "about.components");
+            verify(table !== null && table.visible && table.count > 0, "The third-party link opens the actual dependency table");
+            table.forceLayout();
+            const header = Render.cells(table.headerItem);
+            const row = table.itemAtIndex(0);
+            verify(row !== null && row.enabled && row.opacity === 1, "Dependency rows look enabled");
+            const cells = Render.cells(row);
+            compare(header.length, 3, "The dependency popup has only component, version and licence columns");
+            compare(cells.length, 3, "Each dependency row has the same three columns as its header");
+            const left = item => item.mapToItem(table, 0, 0).x;
+            verify(Math.abs(left(header[0]) - left(cells[0])) < 1, "The first dependency cell and header share their left margin");
+            verify(Math.abs(left(header[2]) + header[2].width - left(cells[2]) - cells[2].width) < 1, "The last dependency cell and header share their right margin");
+            mouseClick(cells[0], cells[0].width / 2, cells[0].height / 2);
+            compare(table.selectedIndexes.length, 0, "Clicking an enabled-looking dependency never selects its row");
         }
         function texts() {
             return Render.texts(dialog.contentItem);
