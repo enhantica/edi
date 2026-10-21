@@ -106,12 +106,9 @@ WorkflowPage {
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): its chart's y scale, and how a followed scan redraws.
+    // The page's view options (edi ADR-0031 §2): how a followed scan redraws. The chart's own choices are on the chart.
     settingsItem: Component {
         EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "analysis"
-            }
             PatternUpdatesGroup {}
         }
     }

@@ -81,14 +81,6 @@ WorkflowPage {
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): its chart's y scale and x axis.
-    settingsItem: Component {
-        EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "experiment"
-            }
-        }
-    }
     textItem: Component {
         TextTab {
             source: page.experiment ? page.experiment.text : null

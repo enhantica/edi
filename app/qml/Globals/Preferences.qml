@@ -87,8 +87,8 @@ QtObject {
     }
 
     // ADR-0031 §2: the pages' settings, each kept under its page's name: the pattern charts' y scale ("linear",
-    // "sqrt" or "log"), the Experiment chart's x axis ("native" or "d_spacing"; the Analysis chart's is the project's),
-    // and how a followed scan redraws.
+    // "sqrt" or "log") and the Experiment chart's x axis ("native" or "d_spacing"; the Analysis chart's is the
+    // project's), both chosen on the chart, and how a followed scan redraws.
     property string analysisYScale: "linear"
     property string experimentYScale: "linear"
     property string experimentXAxis: "native"
