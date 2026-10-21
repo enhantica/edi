@@ -27,7 +27,10 @@ EaElements.Label {
     readonly property real naturalTextInkCenter: textMetrics.ascent + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
     topPadding: Math.max(0, rotationExtent / 2 - naturalTextInkCenter)
     bottomPadding: Math.max(0, rotationExtent / 2 - (contentHeight - naturalTextInkCenter))
-    FontMetrics { id: textMetrics; font: workStatus.font }
+    FontMetrics {
+        id: textMetrics
+        font: workStatus.font
+    }
     // IconLine aligns inline symbols to capital ink, excluding descenders.
     TextMetrics {
         id: textInk
@@ -35,7 +38,8 @@ EaElements.Label {
         renderType: workStatus.renderType
         text: "H"
     }
-    onWorkingChanged: if (working) variant = Math.floor(Math.random() * 3)
+    onWorkingChanged: if (working)
+        variant = Math.floor(Math.random() * 3)
     Item {
         width: workStatus.rotationExtent
         height: width
@@ -85,7 +89,8 @@ EaElements.Label {
     RotationAnimator {
         target: workGlyph
         running: workStatus.animating
-        onStopped: if (!workStatus.animating) workGlyph.rotation = 0
+        onStopped: if (!workStatus.animating)
+            workGlyph.rotation = 0
         loops: Animation.Infinite
         from: 0
         to: workStatus.variant === 0 ? 360 : 360 * 6
