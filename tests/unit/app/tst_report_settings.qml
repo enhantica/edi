@@ -346,7 +346,7 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             if (typeof item.count === "number" && typeof item.textAt === "function" && typeof item.currentIndex === "number") {
                 for (let index = 0; index < item.count; ++index)
                     result.push(normalizedChoice(item.textAt(index)));
-            } else if (item.checkable === true && typeof item.checked === "boolean") {
+            } else if (typeof item.checked === "boolean" && typeof item.clicked === "function") {
                 const title = item.toolTip || item.text || item.ToolTip.text;
                 if (title)
                     result.push(normalizedChoice(title));
