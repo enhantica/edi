@@ -408,6 +408,12 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   base `ContentPage`'s two containers (reached as the parents of the main content and the sidebar) and moves the
   sidebar's border to its edge towards the main area. Nothing is mirrored: text, icons and the order of numbers
   and columns stay as they are. The base is unmodified.
+- **The sidebar's width** (the owner, 2026-10-22): the sidebar reaches from the window's edge to the centre of the
+  Experiment button in the top bar, so its edge sits under that button on every page that has one. The width is read
+  from the top bar's layout (the centred tabs' position and the button's), not a fixed number, so it follows the window
+  and any change to the buttons: 609 px at the 1280 px minimum window width, 929 px at 1920 px (the base's own was
+  584 px). The sidebar on the left keeps the same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
+  with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
 
 ### 13. Saving
 
