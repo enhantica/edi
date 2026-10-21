@@ -870,7 +870,7 @@
         "AlPO₄ [C222₁]",
         "AlPO₄ [P6₃mc]"
       ],
-      "origin": "Unknown instrument @ SNBL",
+      "origin": "BM01 @ ESRF",
       "detail": "3 phases · 4 synchrotron patterns · Linked displacement parameters",
       "values": {
         "sampleForm": [
@@ -892,10 +892,10 @@
           "sequential"
         ],
         "facilities": [
-          "SNBL"
+          "ESRF"
         ],
         "instruments": [
-          ""
+          "BM01"
         ],
         "dimensionality": [
           "1D"
@@ -906,7 +906,7 @@
       },
       "searchAliases": [
         "pd-xray-cwl_latp_scan-4f",
-        "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · Unknown instrument @ SNBL",
+        "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF",
         "3 phases · 4 synchrotron patterns · Linked displacement parameters"
       ],
       "sources": [
