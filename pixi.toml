@@ -109,6 +109,8 @@ nodejs = "==22.23.2"
 # coherent Clang/libc++23, shared by default and app. No generic cxx-compiler
 # metapackage may force19/21. The lock supplies real versions/build identities.
 [target.osx-arm64.dependencies]
+# SDK27 arm64e.x1 stub support: conda-forge/tapi-feedstock#21.
+tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
 clang_osx-arm64 = "23.*"
 clangxx_osx-arm64 = "23.*"
 compiler-rt = "23.*"

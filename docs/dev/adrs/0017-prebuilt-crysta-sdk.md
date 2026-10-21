@@ -182,3 +182,9 @@ not bypass them or relabel old archives. Local paired development rebuilds cryst
 and edi with matching environments. A new released SDK/pin needs its ordinary
 qualified producer/review route. Preserve original Linux/Windows lock records
 and old environments/objects; do not update them as a side effect of a Mac solve.
+
+The SDK27 linker also requires the patched TAPI1600.0.11.8 build4
+(`hb561403_4` on arm64), per [upstream fix21](https://github.com/conda-forge/tapi-feedstock/pull/21).
+Older builds reject `arm64e.x1` slices in system TBD stubs even with Clang23.
+Select the patched reader in the shared Mac dependency table; preserve real
+linker/SDK diagnostics and never edit SDK stubs or ignore missing system symbols.
