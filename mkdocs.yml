@@ -71,6 +71,7 @@ nav:
           - dev/adrs/0037-exact-fractions-and-constrained-values-on-screen.md
           - dev/adrs/0038-colour-schemes-and-their-rules.md
           - dev/adrs/0039-project-output.md
+          - dev/adrs/0044-pattern-charts-and-excluded-regions.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

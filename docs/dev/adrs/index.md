@@ -63,6 +63,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0037](0037-exact-fractions-and-constrained-values-on-screen.md) | Exact fractions and constrained values on screen | Accepted | ⏳ | Medium | a value fixed by symmetry is shown as its exact fraction (`1/3`), recognised from the space group, never from the digits; a constrained value shows its propagated s.u. by the IUCr rule; files keep decimals |
 | [0038](0038-colour-schemes-and-their-rules.md) | Colour schemes and their rules | Accepted | 🟡 | Medium | eighteen schemes, Coast the default; measured data out of the calculated curve's hue range; 3:1 contrast; two-colour gradients with rising lightness; muted structure colours; reports in light colours |
 | [0039](0039-project-output.md) | Project output | Accepted | ✅ | High | every project write goes through the engine's project-output functions (C++) or `edi._project_output` (Python), keeping the engine's rules: folders owned, temporaries created new, atomic replacement, checked removals |
+| [0044](0044-pattern-charts-and-excluded-regions.md) | Pattern charts and excluded regions | Accepted | 🟡 | High | excluded rows carry the d-spacing and `.` for calculated and background values, and a file with anything else there is refused; curves break at excluded regions, which are tinted; a toolbar toggle shows only the included range; the x and y axis selectors match |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

@@ -1341,7 +1341,23 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     axis_values.reserve(loop->rows.size());
     intensity_meas.reserve(loop->rows.size());
     intensity_meas_su.reserve(loop->rows.size());
+    // An excluded row has no calculated or background value and writes `.` there (ADR-0044); a
+    // number, such as an older file's `0.`, would read as a real zero.
+    const int status_column = loop->column("_data.calc_status");
+    std::size_t row_number = 0;
     for (const std::vector<std::string>& row : loop->rows) {
+        ++row_number;
+        if (status_column >= 0 && row[static_cast<std::size_t>(status_column)] == "excl") {
+            for (const char* tag : {"_data.intensity_calc", "_data.intensity_bkg"}) {
+                const int column = loop->column(tag);
+                if (column >= 0 && row[static_cast<std::size_t>(column)] != ".") {
+                    fail_schema(where, "excluded-row-value",
+                                "_data row " + std::to_string(row_number) + " is excluded but has " + tag +
+                                    " '" + row[static_cast<std::size_t>(column)] +
+                                    "'; an excluded row writes '.' there");
+                }
+            }
+        }
         const double sigma = to_double(loop_cell(*loop, row, kDataSigma, where), where);
         // A non-positive sigma is an infinite (or negative) weight: it would poison the fit silently
         // rather than fail, so it is rejected at the boundary like any other unusable measurement.
