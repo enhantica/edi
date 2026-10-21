@@ -2201,3 +2201,23 @@ Scientific prior art is Young (ed.), The Rietveld Method (OUP/IUCr 1993), chapte
 FIRST is ExcludedRegionsGroup's Start then End columns and the ordinary ExcludedRegionListModel.setStart/setEnd methods through PVM.apply_creation_control and Edit::excluded_region_bound. Those setters do not require changing End before Start when an appended row begins at its ordinary default. The shared complete-target CIF/mapped visible planner now always emits append, Start, End for each original row, rather than conditionally reversing fields from their values. Already-equal fields still skip their setter/cue/Undo through the existing canonical check.
 
 The final recipe remains finite and ordered before execution. No endpoint is sorted, clamped or rewritten; ordinary append defaults/IDs, literal field values, validation, setter receipts/history, partial/Stop/currentness and Undo remain authoritative. A stopped sequence reports the actual requested Start-before-End prefix; this is not a combined or atomic GUI setter. Normal candidate population and standalone explicit caller order are unchanged. The original pattern evaluator already normalizes bound orientation while evaluating inclusion; no crossing guard, engine change or new executor is introduced.
+
+
+## Closed mapped-target and conditional refinement guidance
+
+Prior implementations: native_mapped_structure_schema and mapped_structure
+validate one closed typed target; native tool descriptions and the shared
+developer instructions route ordinary setup/refinement actions. Add exact
+field-spelling help beside the existing schema without accepting aliases or
+changing validation. Parent-level refusal remains truthful and never proves
+setup completion. Constraint append retains its disabled editable draft and
+ordinary explicit validated activation. Background naming receipts are unchanged.
+
+Refinement instructions distinguish GUI setup order from conditional scientific
+alignment. McCusker et al. (1999), section 5, requires peak-position agreement
+before detailed profile/structure fitting and warns that cell and two-theta
+corrections correlate (https://journals.iucr.org/j/issues/1999/01/00/gl0561/).
+The possibility of an intensity-scale collapse under displaced peaks is a
+least-squares inference, not a diagnosis of a particular run. Use actual
+inspection and eligible ordinary Undo; keep known wavelength/calibration and
+chemical constraints. No new solver, flag override or automatic retry is added.
