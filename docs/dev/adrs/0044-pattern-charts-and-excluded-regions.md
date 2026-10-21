@@ -21,12 +21,14 @@ is fitted.
    anything but `.` in those two cells of an excluded row, naming the row. Every committed project, fixture and
    example was rewritten to this form; there is no fallback for the older `0.`.
 2. **Curves break at excluded regions.** On every pattern chart (Experiment, Analysis, scans) the calculated,
-   background and difference curves stop at an excluded region and start again after it. Measured points stay
-   visible inside excluded regions, and each region has a faint tint just off the chart background.
+   background and difference curves stop at an excluded region and start again after it, and no Bragg tick is drawn
+   inside one (the owner, 2026-10-21). A reflection centred in an excluded region stays in the calculation, since its
+   tails reach included points; only its tick is hidden. Measured points stay visible inside excluded regions, and each
+   region has a faint tint just off the chart background.
 3. **A toggle shows only the included range.** A button in the chart toolbar's group with the legend and tooltip
    buttons, with the eraser icon of the Excluded regions group and the tooltip "Show only the included range". When it
    is on, the x axis runs from the first to the last included point, interior excluded regions are empty tinted gaps
-   with no measured points, curves or reflection ticks, and reset view returns to that range. When it is off the chart
+   with no measured points or curves, and reset view returns to that range. When it is off the chart
    shows the full measured range with the tint. The choice is an app setting kept between sessions.
 4. **The axis selectors match.** The x-axis selector has the width of the y-axis selector, and reads `x: d-spacing`
    once d-spacing is chosen.

@@ -637,9 +637,9 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         std::vector<char> taken(binned ? static_cast<std::size_t>(view.columns) : 0, 0);
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];
-            // A tick is drawn inside the view's x range or not at all.
-            if (std::isnan(position) || position < out.x.min || position > out.x.max ||
-                (view.included_only && excluded(position))) {
+            // A tick is drawn inside the view's x range or not at all, and never inside an excluded region; the
+            // reflection stays in the calculation, since its tails reach included points (edi ADR-0044).
+            if (std::isnan(position) || position < out.x.min || position > out.x.max || excluded(position)) {
                 continue;
             }
             if (binned) {
