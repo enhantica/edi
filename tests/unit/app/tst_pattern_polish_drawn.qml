@@ -64,6 +64,7 @@ TestCase {
         capture("initial-" + kind + "-" + name);
     }
     function capture(name) {
+        appWindow.update();
         verify(waitForRendering(appWindow.contentItem), "Look checks wait for the actual rendered frame");
         const result = PatternProof.capture(appWindow, name);
         verify(result.openGL === true, "Look checks must use the real OpenGL renderer rather than the offscreen software path");
