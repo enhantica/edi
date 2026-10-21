@@ -466,8 +466,15 @@ void FitViewModel::sync() {
         scan_mode_ = scan;
         emit scanModeChanged();
     }
+    const bool measured = has_measured_data(project_);
+    if (measured != measured_) {
+        measured_ = measured;
+        emit measuredChanged();
+    }
     QString reason;
-    if (scan) {
+    if (!measured) {
+        reason = tr("A fit needs measured data: no experiment in this project has any");
+    } else if (scan) {
         reason = owner_.scanRefusal();
         if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
             reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");

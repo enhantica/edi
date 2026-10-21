@@ -29,12 +29,20 @@ structure or one experiment, or to undo every filter at once.
    name filter searches only that subset. A selection that no longer exists after a change returns to "All".
 5. **Counts are parameters.** Every number in brackets, in every picker and its list, is the number of parameters the
    entry covers under the selections above it, never a count of datablocks or categories.
+6. **No fit without measured data** (the owner, 2026-10-21). When no experiment in the project holds measured data (a
+   calculation-only project), Start fitting is disabled with a tooltip saying a fit needs measured data, and every
+   "free" toggle is disabled: the parameter table's checkboxes, its "free" header menu, and the free boxes of the
+   parameter fields and cells on the other pages. The app's model refuses a free toggle that reaches it anyway. Values
+   stay editable and the calculated pattern follows them. Loading measured data enables all of these at once; removing
+   the last experiment that holds it, or undoing its load, disables them again. Undo still restores free flags it
+   recorded, since it returns the project to an earlier state.
 
 ## Consequences
 
 - A single or joint fit no longer shows controls it cannot use.
 - Narrowing a large project to one structure or one dataset takes one choice, and undoing every filter takes one
   click.
+- A calculation-only project no longer offers a fit that can only fail.
 
 ## Alternatives considered
 

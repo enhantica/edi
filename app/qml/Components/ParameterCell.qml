@@ -35,6 +35,14 @@ EaComponents.TableViewParameter {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
+    readonly property bool measured: Session.project === null || Session.project.fit.measured
+    Binding {
+        target: cell.fitCheckBox
+        when: cell.fitCheckBox !== null
+        property: "enabled"
+        value: cell.measured
+    }
 
     // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
     // the end, without an ellipsis (ADR-0029).

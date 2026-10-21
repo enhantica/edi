@@ -23,6 +23,9 @@ EaElements.GroupBox {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
+    // Some experiment holds measured data: without any, the free toggles and the free header are disabled, as Start
+    // fitting is (edi ADR-0046); values stay editable.
+    readonly property bool measured: project !== null && project.fit.measured
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
@@ -30,7 +33,7 @@ EaElements.GroupBox {
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
-    readonly property color freeTitleColor: freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+    readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
 
     TextMetrics {
@@ -396,6 +399,7 @@ EaElements.GroupBox {
                         y: freeTitle.y
                         width: freeTitle.width
                         height: freeTitle.height
+                        enabled: group.measured
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onContainsMouseChanged: group.freeTitleHovered = containsMouse
@@ -479,6 +483,7 @@ EaElements.GroupBox {
                 EaComponents.TableViewCheckBox {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `parameters.free.${row.index}`
+                    enabled: group.measured
                     checked: row.parameter ? row.parameter.free : false
                     onToggled: row.parameter.free = checked
                 }

@@ -116,6 +116,9 @@ class FitViewModel : public QObject {
     // The patterns a scan has drawn since it started, and the file drawn last.
     Q_PROPERTY(int scanPatternUpdates READ scanPatternUpdates NOTIFY scanPatternUpdatesChanged)
     Q_PROPERTY(QString scanShownFile READ scanShownFile NOTIFY scanShownFileChanged)
+    // Some experiment holds measured data. Without any, nothing can be fitted: Start fitting and every "free" toggle
+    // are disabled, while values stay editable and the calculated pattern follows them (edi ADR-0046).
+    Q_PROPERTY(bool measured READ measured NOTIFY measuredChanged)
     // The project's fitting mode is one Start fitting runs (single, joint); otherwise `unavailableReason`.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString unavailableReason READ unavailableReason NOTIFY unavailableReasonChanged)
@@ -184,6 +187,7 @@ class FitViewModel : public QObject {
     // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
     // `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
     void followRendered(std::uint64_t token, const std::string& file, bool drawn);
+    bool measured() const { return measured_; }
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }
     bool canUndo() const { return can_undo_; }
@@ -230,6 +234,7 @@ class FitViewModel : public QObject {
     void patternUpdatesChanged();
     void scanPatternUpdatesChanged();
     void scanShownFileChanged();
+    void measuredChanged();
     void availableChanged();
     void unavailableReasonChanged();
     void canUndoChanged();
@@ -317,7 +322,7 @@ class FitViewModel : public QObject {
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;
-    bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
+    bool running_ = false, available_ = false, can_undo_ = false, following_ = true, measured_ = false;
     bool can_reset_ = false;
     bool scan_mode_ = false;
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
