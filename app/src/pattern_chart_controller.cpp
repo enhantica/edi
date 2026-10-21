@@ -74,9 +74,12 @@ double round_within(double reach) {
 constexpr double kFitPadding = 0.1;  // a fitted main y range has this share of its span beyond each end
 constexpr double kLogDecades = 6.0;  // a fitted log range with no measured value spans this many decades
 
+// A series emptied keeps its last drawing in Qt Graphs, colour changes included (a scan's first structure outline
+// stayed on screen): an empty list is given as one point the chart cannot draw, which redraws it as nothing.
 void replace(const QPointer<QXYSeries>& target, const QList<QPointF>& list) {
     if (target) {
-        target->replace(list);
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        target->replace(list.isEmpty() ? QList<QPointF>{QPointF(nan, nan)} : list);
     }
 }
 

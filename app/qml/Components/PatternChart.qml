@@ -675,9 +675,13 @@ Item {
             braggView.addSeries(series);
             controller.setBraggSeries(index, series);
         }
+        // A series removed or emptied can keep its last drawing, so it holds one undrawable point first.
         onObjectRemoved: (index, series) => {
             controller.setBraggSeries(index, null);
-            braggView.removeSeries(series);
+            const ticks = series as LineSeries;
+            ticks.clear();
+            ticks.append(NaN, NaN);
+            braggView.removeSeries(ticks);
         }
     }
 
