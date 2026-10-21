@@ -160,3 +160,25 @@ is not proof of their sole cause. CI refusal remains before this local preflight
 non-Darwin paths, clean allowlist, source/argument isolation, pinned CI/release
 SDK and ordinary app build remain as before. Actual Mac recovery requires the
 user's ready selected installation and a subsequent genuine build.
+
+
+## Selected macOS SDK compatibility and coupled compiler family
+
+FIRST is this ADR's version-and-build SDK fingerprint, the app's explicit Mac ABI
+package constraints, and the isolated local-crysta launcher. The selected Apple
+SDK is also a compiler-header input: the observed SDK27/Clang19 failure remains
+after licence acceptance. [FreeCAD's platform declarations](https://github.com/FreeCAD/FreeCAD/blob/main/pixi.toml)
+identify the SDK27 math-header protocol and use direct Mac Clang23 drivers.
+The Mac proposal therefore selects coherent Clang/libc++23 for both default and
+app, removing Mac paths through older cxx-compiler metapackages. Linux compiler
+constraints and LLVM22 coverage retain their original meaning; deployment13.4,
+scientific source and the released SDK pin do not change.
+
+A family constraint is not ABI evidence. Independently resolve in isolated
+worktrees; record real lock package versions/builds and couple every app ABI entry
+to the actual tested Mac SDK fingerprint before publication. Existing fingerprint
+checks must reject an old SDK incompatible with a new compiler environment; do
+not bypass them or relabel old archives. Local paired development rebuilds crysta
+and edi with matching environments. A new released SDK/pin needs its ordinary
+qualified producer/review route. Preserve original Linux/Windows lock records
+and old environments/objects; do not update them as a side effect of a Mac solve.

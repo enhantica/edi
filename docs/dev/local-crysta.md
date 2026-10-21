@@ -49,3 +49,13 @@ EDI_CRYSTA_PREFIX="$(cd ../crysta/build/edi-local/prefix && pwd)" pixi run -e de
 That separate binding command does not enable bindings in the app graph or change the app's native tool catalog.
 A local crysta checkout is required only by this development launcher; the normal packaged app uses its pinned
 native SDK and bundled helper resources. This note does not claim a packaged installer/platform runtime proof.
+
+
+For the SDK27/older-Clang header incompatibility, prerequisite readiness alone is
+insufficient. Both crysta's `default`/`cpp`/`cpp-ci`/`oracle` and edi's `default`/`app`
+Mac dependencies must resolve the coordinated Clang/libc++23 family; see
+[ADR-0017](adrs/0017-prebuilt-crysta-sdk.md#selected-macos-sdk-compatibility-and-coupled-compiler-family).
+Use reviewed matching lockfiles and a fresh isolated local build. Do not patch
+`NAN`/`INFINITY`, mix an old SDK archive with new headers, or infer a successful
+Mac build from dependency declarations. The actual selected SDK and resolved
+compiler/header/ABI identities still require a genuine build check.
