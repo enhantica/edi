@@ -25,6 +25,8 @@ def _calc_project() -> tuple[SimpleNamespace, list[str]]:
     project = SimpleNamespace(
         analysis=SimpleNamespace(calculate=lambda: calls.append('calculate')),
         experiments=[experiment],
+        # These saved rows are current, so calc has no automatic estimate to save.
+        _background_estimates_due=lambda: False,
     )
     return project, calls
 

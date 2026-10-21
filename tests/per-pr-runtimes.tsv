@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T13:40:40Z
+# measured_utc = 2026-10-21T14:03:46Z
 #
-# Recorded from: scoped implicit default environment, full registry reachability and exact Linux coverage dependency contract
-# Collected tests: 16148; with a reported duration: 9465
+# Recorded from: scoped calc facade stand-in with a false estimate preflight; existing output and dry persistence assertions unchanged
+# Collected tests: 16148; with a reported duration: 9468
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 15759
 # inventory_cpp = 389
-# inventory_measured = 14411
-# inventory_unmeasured = 1737
+# inventory_measured = 14412
+# inventory_unmeasured = 1736
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -14717,9 +14717,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t51_cli_vocabulary.py::test
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_non_calc_exceptions_must_name_the_boundary_issue
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_parser_help_checker_rejects_a_suppressed_option
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_superset_checker_rejects_unregistered_duplicate_and_stale_exceptions
-0.000	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_dry_runs_the_facade_but_leaves_the_tree_byte_identical
-UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_parser_exposes_the_project_dry_and_machine_record_contract
-0.000	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_runs_the_facade_writes_the_crysta_block_and_reports_its_values
+0.003	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_dry_runs_the_facade_but_leaves_the_tree_byte_identical
+0.003	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_parser_exposes_the_project_dry_and_machine_record_contract
+0.004	tests/unit/py/test_c11_t52_calc_cli_structure.py::test_calc_runs_the_facade_writes_the_crysta_block_and_reports_its_values
 0.090	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_all_owned_metadata_matches_live_project_after_each_save_route[_save_silent]
 0.090	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_all_owned_metadata_matches_live_project_after_each_save_route[save]
 0.090	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_all_owned_metadata_matches_live_project_after_each_save_route[save_as]
