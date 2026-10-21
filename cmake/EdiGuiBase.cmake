@@ -14,8 +14,8 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA 2d9e3c4a2997eec05088f7372e5415be88319480)  # head of the edi branch, ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 3aebde35ff5f714f83b5f76c03e4a54d40a84c196d766f020d6ce4eb683200e1)
+set(EDI_GUI_COMPONENTS_SHA a69bef27ad8bedf579a7a09c18b4ab0434813d7b)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 0277c2f5f064a739e9e4e065ada0411526f105f1e76a409b076e7ff06f496f17)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
 set(EDI_GUI_COMPONENTS_SRC_SHA256 ab3768e1064c1c8ea69793d3e1dd1962c72795f7aba205e01b311a7876147237)
 
