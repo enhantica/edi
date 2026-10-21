@@ -101,7 +101,8 @@ EaComponents.TableViewParameter {
     }
     onTextChanged: if (!activeFocus)
         cursorPosition = 0
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+    // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     EaElements.ToolTip {
         text: cell.shownValue !== cell.valueText ? cell.valueText : cell.text

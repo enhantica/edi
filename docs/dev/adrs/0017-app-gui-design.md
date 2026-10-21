@@ -414,6 +414,10 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   and any change to the buttons: 609 px at the 1280 px minimum window width, 929 px at 1920 px (the base's own was
   584 px). The sidebar on the left keeps the same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
   with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
+- **One green** (the owner, 2026-10-22): a free parameter's bold value, the status bar's Success and its ✓ count, a
+  succeeded fit's outcome, an included dataset's mark and an available recent project's mark all draw the base's
+  `Colors.green`, in both themes. The report figures' light palette keeps its own copy of the light value, and the
+  residual curve its own lighter green (ADR-0038).
 
 ### 13. Saving
 
