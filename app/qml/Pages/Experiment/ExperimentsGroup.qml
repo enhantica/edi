@@ -61,21 +61,21 @@ EaElements.GroupBox {
             columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     text: qsTr("Fit")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Datablock")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Data file")
                 }
@@ -95,7 +95,7 @@ EaElements.GroupBox {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.TableViewLabel {
+                                EaComponents.ListViewLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: column.horizontalAlignment
                                     text: column.modelData
@@ -104,7 +104,7 @@ EaElements.GroupBox {
                         }
                     }
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     visible: !group.scan
                 }
@@ -125,9 +125,9 @@ EaElements.GroupBox {
                     onTapped: group.project.currentExperimentIndex = row.index
                 }
 
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
@@ -172,14 +172,14 @@ EaElements.GroupBox {
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !loadData.visible
 
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
                             text: row.file
                         }
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             id: templateTag
                             objectName: `experiments.template.${row.index}`
                             visible: group.scan && row.isTemplate
@@ -193,7 +193,7 @@ EaElements.GroupBox {
                     // The file name as left-aligned text that loads another file in its place: the accent blue and a
                     // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
                     // 2026-10-11). Every experiment but a scan's dataset can load data.
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         id: loadData
 
                         readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
@@ -239,7 +239,7 @@ EaElements.GroupBox {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.TableViewLabel {
+                                EaComponents.ListViewLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: value.horizontalAlignment
                                     text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
@@ -248,7 +248,7 @@ EaElements.GroupBox {
                         }
                     }
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.remove.${row.index}`
                     visible: !group.scan

@@ -377,8 +377,10 @@ tint: the Experiments and Structures tables' current block and the parameter tab
 its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
 logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
 the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
-limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
-(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. Every table marks its
+current row the same way (the owner, 2026-10-21): the bar, which the base ListView draws for its `currentRow` or its
+one selected row, and the row's number in the first column, bold in the accent colour. Every table's rows are
+`Components/TableRow.qml` (ADR-0029); `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 

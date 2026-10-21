@@ -487,6 +487,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
+    // The Structure page's tables, the current structure's row marked, in both themes. Run only when asked
+    // (`--demo-only tables-`).
+    if (only.startsWith(QLatin1String("tables-"))) {
+        steps_.push_back({"tables-1-structure-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{"appBar.tab.structure", basic, "group.atom_site_aniso"}});
+        steps_.push_back({"tables-2-structure-dark", {"theme:dark"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {

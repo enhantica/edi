@@ -166,7 +166,7 @@ AppDialog {
 
         LicenceText {
             anchors.fill: parent
-            textObjectName: "about.licencePopup.text"
+            textObjectName: "about.licence.text"
             text: licencePopup.licence
         }
     }
@@ -208,15 +208,15 @@ AppDialog {
             columnWidths: [textColumnWidth("component", qsTr("Component")), textColumnWidth("version", qsTr("Version")), -1]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Component")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Version")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Licence")
                 }
@@ -229,16 +229,16 @@ AppDialog {
                 required property string version
                 required property string licence
 
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: row.component
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.version
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: row.licence
                 }

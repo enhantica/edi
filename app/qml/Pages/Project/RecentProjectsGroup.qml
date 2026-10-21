@@ -26,24 +26,23 @@ EaElements.GroupBox {
             sourceModel: RecentProjects.rows
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 4.5, AppSizes.iconColumnWidth]
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     text: qsTr("Project directory")
                     horizontalAlignment: Text.AlignLeft
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     text: qsTr("Status")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
-                required property int index
                 required property string path
                 required property bool available
 
@@ -57,12 +56,13 @@ EaElements.GroupBox {
                             Session.openProject(Session.projectDirectoryUrl(row.path));
                     }
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
                     text: row.index + 1
                     color: EaStyle.Colors.themeForegroundMinor
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     objectName: `recentProjects.path.${row.index}`
                     text: row.path
                     horizontalAlignment: Text.AlignLeft
@@ -76,7 +76,7 @@ EaElements.GroupBox {
                     iconColor: String(row.available ? EaStyle.Colors.green : EaStyle.Colors.red)
                     toolTip: row.available ? qsTr("Found") : qsTr("Missing")
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `recentProjects.remove.${row.index}`
                     fontIcon: "minus-circle"

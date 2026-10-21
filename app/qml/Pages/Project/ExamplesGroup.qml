@@ -70,17 +70,16 @@ EaElements.GroupBox {
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name / description")
                 }
             }
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
-                required property int index
                 required property string exampleId
                 required property string sample
                 required property string origin
@@ -100,9 +99,9 @@ EaElements.GroupBox {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Session.openExample(row.exampleId)
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 Item {

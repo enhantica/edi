@@ -81,18 +81,29 @@ row cells; numeric consumers receive their existing bounds-only snapshot.
 The adapter carries both IDs and values into crysta's writer (ADR-0083); the
 public Python exclusion property keeps its existing tuple-of-pairs interface.
 
-The upstream ListView selection model binds an undefined model during page construction in
-Qt 6.11. edi replaces that one component at the module seam with the pinned source plus
-`model: listView.model ?? null` on ItemSelectionModel and a typed ListViewHeader
-cast for the column-width lookup, allowing the replacement to pass edi's lint gate. The upstream checkout stays untouched;
+The upstream ListView selection model bound an undefined model during page construction in
+Qt 6.11. The fix, `model: listView.model ?? null` on ItemSelectionModel and a typed ListViewHeader
+cast for the column-width lookup, is now in the gui-components `edi` branch, so edi builds its ListView unmodified;
 the app lifecycle gate covers direct undefined initialization and attach/detach transitions.
+
+## One row and cell design (2026-10-21)
+
+Every table uses ListView cells only: `ListViewLabel` for text (headers and rows alike, so both have the same
+margins), `ListViewButton`, `ListViewCheckBox`, `ListViewComboBox`, `ListViewParameter` and `ListViewTextInput`, from
+the gui-components `edi` branch; no `TableView*` type is left in edi's QML (the owner, 2026-10-21). Every table's rows
+are `Components/TableRow.qml`, the base's ListViewDelegate. The list's moving accent marker shows the current row, and
+the row's number, a `ListViewLabel` with `marksCurrentRow`, turns bold in the accent colour on that row (ADR-0017
+§11). A table that has a current row selects no row (`DataTable.marksCurrentRow`).
+
+The report preview's tables (`Pages/Report/ReportTable.qml`) are document tables that mirror the HTML report's, with
+decimal-aligned numbers and no row interaction, so they are not ListViews.
 
 ## Parameter menus
 
 The field and table-cell parameter menus use the same s.u./free terminology as
-Analysis and show a units column whenever the parameter has units. Both pinned
-parameter controls are replaced through ADR-0015's declared host seam; their edit
-and fit-toggle behavior stays shared with the original controls.
+Analysis and show a units column whenever the parameter has units. The field control is
+replaced through ADR-0015's declared host seam; the table cell is the base's `ListViewParameter`, which carries the
+units column and the lazy menu and takes the s.u. and free titles as properties.
 
 A menu is made the first time it opens, never with its control: a page holds
 hundreds of parameters, and building every menu up front was most of a large

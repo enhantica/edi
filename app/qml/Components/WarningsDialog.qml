@@ -72,21 +72,20 @@ AppDialog {
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property string message
                 required property string severity
                 readonly property bool isError: severity === "error"
@@ -101,7 +100,7 @@ AppDialog {
                     iconColor: String(row.isError ? EaStyle.Colors.red : row.isInformation ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.orange)
                     toolTip: row.isError ? qsTr("Error") : row.isInformation ? qsTr("Information") : qsTr("Warning")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     id: messageCell
                     objectName: `warnings.message.${row.index}`
                     // Wrapping determines the row height, so its initial width must not depend on that height.
@@ -112,7 +111,7 @@ AppDialog {
                     color: row.isError ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
                     text: row.message
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.dismiss.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter
