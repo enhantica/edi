@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -265,6 +266,58 @@ class Edit {
     static Edit background_point_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
         return Edit([&experiment, ids = std::move(ids)] { set_background_point_ids(experiment, ids); });
     }
+    static Edit background_term_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
+        return Edit([&experiment, ids = std::move(ids)] { set_background_term_ids(experiment, ids); });
+    }
+    // ADR-0040: an estimate's points, recorded as what the estimate with `options` wrote (the estimate is
+    // computed before the Edit exists); and the points with the mode and their record as they were, which its
+    // Undo puts back. Each is one collection assignment, which checks the ids first, then assignments.
+    static Edit background_estimate(ExperimentBase& experiment, BackgroundEstimate estimate,
+                                    BackgroundEstimateOptions options) {
+        return Edit([&experiment, estimate = std::make_shared<BackgroundEstimate>(std::move(estimate)),
+                     options = std::move(options)] { apply_background_estimate(experiment, *estimate, options); });
+    }
+    static Edit restore_background(ExperimentBase& experiment, BackgroundState state) {
+        return Edit([&experiment, state = std::make_shared<BackgroundState>(std::move(state))] {
+            edi::restore_background(experiment, *state);
+        });
+    }
+    // The estimate settings, each under its rule (ADR-0040).
+    static Edit background_estimate_mode(ExperimentBase& experiment, std::string mode) {
+        return Edit([&experiment, mode = std::move(mode)] { set_background_estimate_mode(experiment, mode); });
+    }
+    static Edit background_estimate_method(ExperimentBase& experiment, std::string method) {
+        return Edit([&experiment, method = std::move(method)] { set_background_estimate_method(experiment, method); });
+    }
+    static Edit background_estimate_width(ExperimentBase& experiment, std::optional<double> width) {
+        return Edit([&experiment, width] { set_background_estimate_width(experiment, width); });
+    }
+    static Edit background_estimate_smoothness(ExperimentBase& experiment, std::optional<double> smoothness) {
+        return Edit([&experiment, smoothness] { set_background_estimate_smoothness(experiment, smoothness); });
+    }
+    static Edit background_estimate_n_points(ExperimentBase& experiment, std::optional<int> n_points) {
+        return Edit([&experiment, n_points] { set_background_estimate_n_points(experiment, n_points); });
+    }
+    static Edit background_estimate_tolerance(ExperimentBase& experiment, std::optional<double> tolerance) {
+        return Edit([&experiment, tolerance] { set_background_estimate_tolerance(experiment, tolerance); });
+    }
+    static Edit background_estimate_in_peaks(ExperimentBase& experiment, std::string in_peaks) {
+        return Edit([&experiment, in_peaks = std::move(in_peaks)] { set_background_estimate_in_peaks(experiment, in_peaks); });
+    }
+    static Edit background_estimate_max_terms(ExperimentBase& experiment, std::optional<int> max_terms) {
+        return Edit([&experiment, max_terms] { set_background_estimate_max_terms(experiment, max_terms); });
+    }
+    static Edit background_estimate_use_model(ExperimentBase& experiment, std::string use_model) {
+        return Edit([&experiment, use_model = std::move(use_model)] {
+            set_background_estimate_use_model(experiment, use_model);
+        });
+    }
+    // Every auto-mode experiment brought up to date (refresh_background_estimates): an estimate the engine
+    // refuses throws before its experiment is written.
+    static Edit refresh_background_estimates(Project& project,
+                                             std::vector<std::pair<std::string, std::string>>* reasons = nullptr) {
+        return Edit([&project, reasons] { edi::refresh_background_estimates(project, reasons); });
+    }
     static Edit append_background_term(ExperimentBase& experiment) {
         return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
     }
@@ -420,6 +473,9 @@ class Edit {
     /// Rename a background row under its collection's uniqueness rule.
     static Edit background_id(LineSegment& point, std::string id) {
         return Edit([&point, id = std::move(id)] { point.id = id; });
+    }
+    static Edit background_id(PolynomialTerm& term, std::string id) {
+        return Edit([&term, id = std::move(id)] { term.id = id; });
     }
     /// Rename an exclusion row under its collection's uniqueness rule.
     static Edit excluded_region_id(ExcludedRegion& region, std::string id) {

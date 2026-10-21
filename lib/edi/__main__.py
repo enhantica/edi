@@ -665,7 +665,13 @@ def run_calc(args: argparse.Namespace) -> int:
         if args.dry
         else [_calc_target(args.project, experiment) for experiment in project.experiments]
     )
+    # ADR-0040: an experiment in auto background mode estimates its points or terms first when
+    # its data or settings changed; the estimate, with what it came from, is saved with the
+    # project unless --dry, as crysta's calc saves it.
+    estimating = project._background_estimates_due()
     project.analysis.calculate()
+    if not args.dry and estimating:
+        project.save()
     total_points = 0
     checksum = 0.0
     for index, experiment in enumerate(project.experiments):

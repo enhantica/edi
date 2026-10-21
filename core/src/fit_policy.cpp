@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "crysta/model.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
@@ -246,6 +247,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
         for (const auto& source : measured.experiments) {
             if (source->name.value() == target->name.value()) {
                 copy_fit_share(*target, *source);
+                record_fitted_background(*target);  // the fitted values are its background now (ADR-0040)
             }
         }
     }
@@ -257,6 +259,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
 
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // A sequential project reaching the single-bank one-call form would silently fit the
     // TEMPLATE's embedded data once and write no results.csv — a plausible-looking answer to a
     // different question. Refuse by name; the sequential mode has exactly one entry point.
@@ -296,6 +299,7 @@ FitResultBase Project::fit() { return fit(IterationCallback{}); }
 FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
                                  const PreambleCallback& on_start,
                                  const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
     // results.csv — the same wrong-answer-to-a-different-question, one function along.

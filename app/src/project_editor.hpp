@@ -8,9 +8,19 @@
 #include <functional>
 #include <string>
 
+#include "edi/background_estimate.hpp"
 #include "edi/edit.hpp"
 
 namespace edi_app {
+
+// Why the user may not edit the experiment's background points or terms: in auto mode the estimate owns them
+// (ADR-0040), so the pages show them locked and a write that reaches the model anyway refuses before anything changes.
+// Freeing or fixing one stays allowed. Empty in manual mode.
+inline QString estimated_background_refusal(const edi::ExperimentBase& experiment) {
+    return edi::background_estimate_mode(experiment) == "auto"
+               ? QObject::tr("the background is estimated automatically; choose the manual estimation mode to edit it")
+               : QString();
+}
 
 // The one door every write goes through: run a core call, then publish what it changed. The call is
 // an edi::Edit (edi ADR-0020 §8): one core operation that refuses before it writes, or completes. The
@@ -28,6 +38,16 @@ class ProjectEditor {
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }
+    // Why a user may not set this parameter's value, before anything is written: empty when they may. An auto-mode
+    // background's point intensities and term coefficients refuse (estimated_background_refusal).
+    virtual QString value_refusal(const edi::Parameter& /*parameter*/) const { return {}; }
+    // An edit of an experiment's background rows (an id, position or order, a row added or removed, the rows named):
+    // refused in auto mode (estimated_background_refusal), else applied as `apply` does.
+    virtual QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
+                                          bool structural) {
+        const QString refusal = estimated_background_refusal(experiment);
+        return refusal.isEmpty() ? apply(change, structural) : refusal;
+    }
     // A structure's or an experiment's name, which every name of its parameters follows: applied as `apply` does, and
     // recorded, so Undo names it back the same way.
     virtual QString rename_structure(edi::Structure& structure, const std::string& name) {

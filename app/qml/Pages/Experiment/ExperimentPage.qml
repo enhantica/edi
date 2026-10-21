@@ -33,7 +33,8 @@ WorkflowPage {
         })
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
-        "peak": peakExtrasContent
+        "peak": peakExtrasContent,
+        "background": backgroundExtrasContent
     })
 
     pageName: "experiment"
@@ -135,6 +136,12 @@ WorkflowPage {
     Component {
         id: peakExtrasContent
         PeakExtrasGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: backgroundExtrasContent
+        BackgroundExtrasGroup {
             experiment: page.experiment
         }
     }

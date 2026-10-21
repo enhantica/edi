@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "edi/validation.hpp"
@@ -639,6 +640,12 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.setup_wavelength_2_to_1_ratio",
         // _data_source (the plain-data file the measured data was read from)
         "_data_source.file_name",
+        // _background_estimate (the automatic background estimate's settings, ADR-0040)
+        "_background_estimate.in_peaks", "_background_estimate.inputs_digest", "_background_estimate.max_terms",
+        "_background_estimate.method", "_background_estimate.mode", "_background_estimate.n_points",
+        "_background_estimate.points_digest",
+        "_background_estimate.smoothness", "_background_estimate.tolerance", "_background_estimate.use_model",
+        "_background_estimate.width",
         // _linked_structure
         "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
         // The derived Hill-Howard weight fraction crysta's writer adds: never read back.
@@ -1239,9 +1246,13 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
                                    : "chebyshev background cannot declare the polynomial "
                                      "_background.origin");
         }
+        // An automatic estimate derives an absent origin or domain end from the data on its first
+        // calculation (ADR-0040), so only a manual background must declare them.
+        const std::string* estimate_mode = block.find("_background_estimate.mode");
+        const bool derived = estimate_mode != nullptr && *estimate_mode == "auto";
         const char* const required[] = {"_background.origin", "_background.x_min", "_background.x_max"};
         for (const char* tag : polynomial ? std::span(required, 1) : std::span(required + 1, 2)) {
-            if (block.find(tag) == nullptr) {
+            if (!derived && block.find(tag) == nullptr) {
                 fail_schema(where, "missing-background-constant",
                             *background_type + " background requires " + tag);
             }
@@ -1388,6 +1399,106 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
+// ADR-0040: the `_background_estimate` settings. A blank (absent, `.` or `?`) item is the default; any other
+// value is checked as the Python setters check it.
+void read_background_estimate(const Block& block, ExperimentBase& experiment, const std::string& where) {
+    const auto item = [&block](const char* tag) -> std::optional<std::string> {
+        const std::string* value = block.find(tag);
+        if (value == nullptr || *value == "." || *value == "?") {
+            return std::nullopt;
+        }
+        return *value;
+    };
+    const auto refuse = [&where](const char* tag, const std::string& value, const char* need) {
+        throw IoError(std::string(tag) + " is '" + value + "' (need " + need + "): " + where);
+    };
+    const auto positive = [&](const char* tag) -> std::optional<double> {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return std::nullopt;
+        }
+        char* end = nullptr;
+        const double number = std::strtod(value->c_str(), &end);
+        if (end == value->c_str() || *end != '\0' || !(number > 0.0) || !std::isfinite(number)) {
+            refuse(tag, *value, "a positive number");
+        }
+        return number;
+    };
+    if (const std::optional<std::string> mode = item("_background_estimate.mode")) {
+        if (*mode != "manual" && *mode != "auto") {
+            refuse("_background_estimate.mode", *mode, "manual or auto");
+        }
+        experiment.background_estimate_mode = *mode;
+    }
+    if (const std::optional<std::string> method = item("_background_estimate.method")) {
+        const std::vector<std::string> methods = background_estimator_methods();
+        if (std::find(methods.begin(), methods.end(), *method) == methods.end()) {
+            refuse("_background_estimate.method", *method, "auto, snip, arpls or fabc");
+        }
+        experiment.background_estimate_method = *method;
+    }
+    // Then the setters' checks: finite, and a width every window computed from it can hold.
+    const auto setting = [&](const char* tag, const auto& set) {
+        try {
+            set();
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(tag) + ": " + error.what() + ": " + where);
+        }
+    };
+    const std::optional<double> width = positive("_background_estimate.width");
+    setting("_background_estimate.width", [&] { set_background_estimate_width(experiment, width); });
+    const std::optional<double> smoothness = positive("_background_estimate.smoothness");
+    setting("_background_estimate.smoothness",
+            [&] { set_background_estimate_smoothness(experiment, smoothness); });
+    const std::optional<double> tolerance = positive("_background_estimate.tolerance");
+    setting("_background_estimate.tolerance", [&] { set_background_estimate_tolerance(experiment, tolerance); });
+    if (const std::optional<std::string> in_peaks = item("_background_estimate.in_peaks")) {
+        if (*in_peaks != "move" && *in_peaks != "drop") {
+            refuse("_background_estimate.in_peaks", *in_peaks, "move or drop");
+        }
+        experiment.background_estimate_in_peaks = *in_peaks;
+    }
+    if (const std::optional<std::string> n_points = item("_background_estimate.n_points")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(n_points->c_str(), &end, 10);
+        if (end == n_points->c_str() || *end != '\0' || count < 2 || count > std::numeric_limits<int>::max()) {
+            refuse("_background_estimate.n_points", *n_points, "an integer of at least 2");
+        }
+        experiment.background_estimate_n_points = static_cast<int>(count);
+    }
+    if (const std::optional<std::string> max_terms = item("_background_estimate.max_terms")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(max_terms->c_str(), &end, 10);
+        if (end == max_terms->c_str() || *end != '\0' || count < 1 || count > 30) {
+            refuse("_background_estimate.max_terms", *max_terms, "an integer from 1 to 30");
+        }
+        experiment.background_estimate_max_terms = static_cast<int>(count);
+    }
+    // auto, subtract or ignore; a file saved when the item was a boolean reads true as subtract and false as ignore.
+    if (const std::optional<std::string> use_model = item("_background_estimate.use_model")) {
+        const std::string choice = *use_model == "true" ? "subtract" : *use_model == "false" ? "ignore" : *use_model;
+        if (choice != "auto" && choice != "subtract" && choice != "ignore") {
+            refuse("_background_estimate.use_model", *use_model, "auto, subtract or ignore");
+        }
+        experiment.background_estimate_use_model = choice;
+    }
+    // What the points came from and were; settle_loaded_background_estimate reads them once the points are loaded.
+    const auto digest = [&](const char* tag) -> std::uint64_t {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return 0;
+        }
+        try {
+            return parse_background_digest(*value);
+        } catch (const std::invalid_argument&) {
+            refuse(tag, *value, "16 lowercase hex digits");
+        }
+        return 0;
+    };
+    experiment.background_estimate_inputs = digest("_background_estimate.inputs_digest");
+    experiment.background_estimate_points = digest("_background_estimate.points_digest");
+}
+
 BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
@@ -1465,6 +1576,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
     if (const std::string* file = block.find("_data_source.file_name")) {
         experiment.data_file = *file;
     }
+    read_background_estimate(block, experiment, where);
     validate_experiment_selectors(block, resolved.peak_type, resolved.mode, where);
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);
 
@@ -1895,6 +2007,11 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                     "_background.x_min must be below _background.x_max");
     }
     if (const Loop* terms = block.loop_with("_background.coef"); terms != nullptr) {
+        // Every term row carries its id, as every loop row does; the id names the coefficient.
+        if (terms->column("_background.id") < 0) {
+            fail_domain(where, "background-term-id-missing",
+                        "the background term loop declares no _background.id: an id is required on every term row");
+        }
         std::set<int> orders;
         for (const auto& row : terms->rows) {
             PolynomialTerm term;
@@ -1917,9 +2034,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             read_into(term.coef,
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
-            // The term's id names its coefficient; a file without ids gives each its ordinal, as crysta's reader does.
-            term.id = terms->column("_background.id") >= 0 ? loop_cell(*terms, row, "_background.id", where)
-                                                            : std::to_string(experiment.background_terms.size() + 1);
+            term.id = loop_cell(*terms, row, "_background.id", where);
             experiment.background_terms.push_back(std::move(term));
         }
     }
@@ -1993,6 +2108,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             experiment.calculation_only = true;
         }
     }
+    settle_loaded_background_estimate(experiment);  // ADR-0040: once the points and data are loaded
     return experiment;
 }
 
@@ -4156,6 +4272,9 @@ UndoFitOutcome undo_fit(Project& project) {
         // Measured before the fix (LBCO/HRPT, 8 parameters restored): the stored pattern
         // disagreed with a fresh calculate by 2.679e+03 counts. Inside the was_no_op guard and
         // last, exactly as the fit tail: an undo that restores NOTHING still changes nothing.
+        for (const auto& experiment : project.experiments) {
+            record_fitted_background(*experiment);  // the restored points are the background again
+        }
         project.refresh_calculated_pattern();
     }
     return outcome;
@@ -4202,6 +4321,7 @@ void copy_fit_result(Project& to, const Project& from) {
     to.fit_result = from.fit_result;
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
+        record_fitted_background(*to.experiments[index]);  // the fitted points, written before (ADR-0040)
     }
 }
 
@@ -4368,6 +4488,19 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         if (parameter.uncertainty != found->second->uncertainty.get()) {
             parameter.uncertainty = found->second->uncertainty.get();
             changed = true;
+        }
+    }
+    // An auto background's record of its points follows the rounded values the file holds, so the saved points are
+    // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            if (held->name.value() == experiment->name.value() &&
+                (experiment->background_estimate_inputs != held->background_estimate_inputs ||
+                 experiment->background_estimate_points != held->background_estimate_points)) {
+                experiment->background_estimate_inputs = held->background_estimate_inputs;
+                experiment->background_estimate_points = held->background_estimate_points;
+                changed = true;
+            }
         }
     }
     // The correlation rows a save wrote, by their two parameters and file, take the saved coefficients. A scan's

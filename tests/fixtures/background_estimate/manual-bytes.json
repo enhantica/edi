@@ -1,0 +1,15 @@
+{
+  "after": {
+    "input_sha256": "4214162683d0cd5e15696b3bfbcd203a185f3dda159c02799a77c1253801cde8",
+    "saved_sha256": "ca41fbd871355f424631192f0a0ce9bada902f9cbffb83d2689e72b4125412fa"
+  },
+  "before": {
+    "input_sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+    "saved_sha256": "04ae0d49d5677813da42190c8e9935ab34cf34f407ef6eda3170d19ae5f23740"
+  },
+  "claim": "REGRESSION PIN: manual estimate settings serialization; no physics oracle",
+  "command": "python -m tests.fixtures.background_estimate.manual_bytes --record",
+  "crysta_commit": "9183e57974cfe07cb0c49a97f047088fdbd87b60",
+  "repository": "https://github.com/enhantica/edi",
+  "source_commit": "74d6311c74cdba65431dbe8cfe4c9be4e46233b4"
+}

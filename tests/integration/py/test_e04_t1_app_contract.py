@@ -671,6 +671,8 @@ def test_adr_records_the_decision_and_comparison_plan():
 
 
 def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
+    # Before: pre-category LBCO input. After: exact manual/arpls addition, with
+    # the original numerical/display expectations retained by adapt_oracles.py.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     assert oracle['corpus'], 'I7: the independent frozen category corpus cannot be empty'
@@ -700,6 +702,8 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
 
 
 def test_existing_projects_oracle_covers_the_registry_without_filters():
+    # The manual estimate extension changes only the LBCO experiment source hash;
+    # all project-block values, other files and the complete registry stay pinned.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())

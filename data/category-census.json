@@ -1376,6 +1376,90 @@
       "owner": "ExperimentBase"
     },
     {
+      "name": "_background_estimate",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExperimentBase::background_estimate_mode",
+          "type": "std::optional<std::string>",
+          "items": [
+            "mode"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_method",
+          "type": "std::optional<std::string>",
+          "items": [
+            "method"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_width",
+          "type": "std::optional<double>",
+          "items": [
+            "width"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_smoothness",
+          "type": "std::optional<double>",
+          "items": [
+            "smoothness"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_n_points",
+          "type": "std::optional<int>",
+          "items": [
+            "n_points"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_tolerance",
+          "type": "std::optional<double>",
+          "items": [
+            "tolerance"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_in_peaks",
+          "type": "std::optional<std::string>",
+          "items": [
+            "in_peaks"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_use_model",
+          "type": "std::optional<std::string>",
+          "items": [
+            "use_model"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_max_terms",
+          "type": "std::optional<int>",
+          "items": [
+            "max_terms"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_inputs",
+          "type": "std::uint64_t",
+          "items": [
+            "inputs_digest"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_points",
+          "type": "std::uint64_t",
+          "items": [
+            "points_digest"
+          ]
+        }
+      ],
+      "owner": "ExperimentBase"
+    },
+    {
       "name": "_joint_fit",
       "form": "one row",
       "columns": [
@@ -3865,6 +3949,61 @@
       "category": "_data_source"
     },
     {
+      "member": "ExperimentBase::background_estimate_mode",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_method",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_width",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_smoothness",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_n_points",
+      "type": "std::optional<int>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_tolerance",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_in_peaks",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_use_model",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_max_terms",
+      "type": "std::optional<int>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_inputs",
+      "type": "std::uint64_t",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_points",
+      "type": "std::uint64_t",
+      "category": "_background_estimate"
+    },
+    {
       "member": "ExperimentBase::fit_n_data_points",
       "type": "std::optional<int>",
       "category": "_fit_result_bank"
@@ -4674,6 +4813,9 @@
     ],
     "_background": [
       "_background"
+    ],
+    "_background_estimate": [
+      "_background_estimate"
     ],
     "_calculator": [
       "_calculator"

@@ -1,0 +1,46 @@
+{
+  "claim": "REGRESSION INPUT: independently executed calculate/save state; no physics oracle",
+  "repository": "https://github.com/enhantica/edi",
+  "engine_commit": "3a2f73b1b99cc3b4548c32bc40c20bdde1a0d971",
+  "command": "python -m tests.fixtures.background_estimate.generate_saved_lifecycle --engine-writer ../background-reference/build/save_auto --engine-commit 3a2f73b1b99cc3b4548c32bc40c20bdde1a0d971",
+  "source": "tests/fixtures/background_estimate/projects/lifecycle-auto",
+  "source_sha256": {
+    "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
+    "experiments/hrpt.edi": "27227c6af4d23013eb807ff308b4b0cb72d6f94baf9ee47bb080147fc3563bed",
+    "project.edi": "960b6626b39b9363052b3ac36cfc4a95d6b70830550bc1392571cbf0f7e7b68c",
+    "structures/lbco.edi": "6621c0fa15c69d3bb315f8fdca9a34ce723efbaec2d1cba7e4e4a66549dafcb4"
+  },
+  "project": "tests/fixtures/background_estimate/projects/lifecycle-saved-auto",
+  "saved_digests": {
+    "inputs_digest": "832034c16106e28e",
+    "points_digest": "76092315e4fcc33f"
+  },
+  "points": [
+    [
+      10.0,
+      154.25
+    ],
+    [
+      64.85,
+      156.10220027990928
+    ],
+    [
+      78.2,
+      174.31426414570706
+    ],
+    [
+      81.95,
+      167.18279045187305
+    ],
+    [
+      164.85,
+      108.99567148073145
+    ]
+  ],
+  "sha256": {
+    "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
+    "experiments/hrpt.edi": "2cfd1ab0c5b86537ee641a5a3d9c346b94611c0879a98d7e33449becaab996e0",
+    "project.edi": "960b6626b39b9363052b3ac36cfc4a95d6b70830550bc1392571cbf0f7e7b68c",
+    "structures/lbco.edi": "6621c0fa15c69d3bb315f8fdca9a34ce723efbaec2d1cba7e4e4a66549dafcb4"
+  }
+}

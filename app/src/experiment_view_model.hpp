@@ -12,6 +12,7 @@
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/presentation.hpp"
 #include "experiment_models.hpp"
@@ -55,6 +56,35 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(double backgroundXMin READ backgroundXMin WRITE setBackgroundXMin NOTIFY backgroundXMinChanged)
     Q_PROPERTY(double backgroundXMax READ backgroundXMax WRITE setBackgroundXMax NOTIFY backgroundXMaxChanged)
     Q_PROPERTY(edi_app::OptionListModel* backgroundTypeOptions READ backgroundTypeOptions CONSTANT)
+    // ADR-0040: the background estimate's settings (`_background_estimate`): the mode in force (manual or auto,
+    // edi::background_estimate_mode) and its options; the method and its options; each override as declared (NaN,
+    // or 0 points, when blank) and the value the estimate derives for it, which a blank field shows; whether to
+    // subtract the calculated peaks; and the core's warning or refusal for the derived values (empty when none).
+    Q_PROPERTY(QString backgroundEstimateMode READ backgroundEstimateMode WRITE setBackgroundEstimateMode NOTIFY backgroundEstimateModeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* backgroundEstimateModes READ backgroundEstimateModes CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* backgroundEstimateMethods READ backgroundEstimateMethods CONSTANT)
+    Q_PROPERTY(QString backgroundEstimateMethod READ backgroundEstimateMethod WRITE setBackgroundEstimateMethod NOTIFY backgroundEstimateMethodChanged)
+    Q_PROPERTY(double backgroundEstimateWidth READ backgroundEstimateWidth WRITE setBackgroundEstimateWidth NOTIFY backgroundEstimateWidthChanged)
+    Q_PROPERTY(double backgroundEstimateSmoothness READ backgroundEstimateSmoothness WRITE setBackgroundEstimateSmoothness NOTIFY backgroundEstimateSmoothnessChanged)
+    Q_PROPERTY(int backgroundEstimatePoints READ backgroundEstimatePoints WRITE setBackgroundEstimatePoints NOTIFY backgroundEstimatePointsChanged)
+    // The tolerance in noise units as declared (NaN when blank), and the one a blank field means.
+    Q_PROPERTY(double backgroundEstimateTolerance READ backgroundEstimateTolerance WRITE setBackgroundEstimateTolerance NOTIFY backgroundEstimateToleranceChanged)
+    Q_PROPERTY(double estimateTolerance READ estimateTolerance CONSTANT)
+    // The calculated peaks (`use_model`: auto, subtract or ignore), their choices, and what an estimate now does
+    // with them and why (for auto, what it measured).
+    Q_PROPERTY(edi_app::OptionListModel* backgroundEstimateModels READ backgroundEstimateModels CONSTANT)
+    Q_PROPERTY(QString backgroundEstimateUseModel READ backgroundEstimateUseModel WRITE setBackgroundEstimateUseModel NOTIFY backgroundEstimateUseModelChanged)
+    Q_PROPERTY(QString estimateModelChoice READ estimateModelChoice NOTIFY estimateModelChoiceChanged)
+    Q_PROPERTY(QString estimateModelReason READ estimateModelReason NOTIFY estimateModelReasonChanged)
+    Q_PROPERTY(QString estimateMethod READ estimateMethod NOTIFY estimateMethodChanged)
+    Q_PROPERTY(double estimateWidth READ estimateWidth NOTIFY estimateWidthChanged)
+    Q_PROPERTY(double estimateSmoothness READ estimateSmoothness NOTIFY estimateSmoothnessChanged)
+    // How many points Estimate places with the settings as they stand, when the most points is blank (else 0).
+    Q_PROPERTY(int estimatePoints READ estimatePoints NOTIFY estimatePointsChanged)
+    // A polynomial's or Chebyshev's most terms (0 when blank), and how many terms Estimate uses now.
+    Q_PROPERTY(int backgroundEstimateMaxTerms READ backgroundEstimateMaxTerms WRITE setBackgroundEstimateMaxTerms NOTIFY backgroundEstimateMaxTermsChanged)
+    Q_PROPERTY(int estimateTerms READ estimateTerms NOTIFY estimateTermsChanged)
+    Q_PROPERTY(QString estimateNote READ estimateNote NOTIFY estimateNoteChanged)
     Q_PROPERTY(double cutoffFwhm READ cutoffFwhm WRITE setCutoffFwhm NOTIFY cutoffFwhmChanged)
     Q_PROPERTY(QString linkedStructureId READ linkedStructureId WRITE setLinkedStructureId NOTIFY linkedStructureIdChanged)
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
@@ -131,6 +161,34 @@ class ExperimentViewModel : public QObject {
     double backgroundXMax() const { return background_x_max_; }
     void setBackgroundXMax(double value);
     OptionListModel* backgroundTypeOptions() const { return background_type_options_; }
+    QString backgroundEstimateMode() const { return estimate_.mode; }
+    void setBackgroundEstimateMode(const QString& mode);
+    OptionListModel* backgroundEstimateModes() const { return background_estimate_modes_; }
+    OptionListModel* backgroundEstimateModels() const { return background_estimate_models_; }
+    OptionListModel* backgroundEstimateMethods() const { return background_estimate_methods_; }
+    QString backgroundEstimateMethod() const { return estimate_.method; }
+    void setBackgroundEstimateMethod(const QString& method);
+    double backgroundEstimateWidth() const { return estimate_.width; }
+    void setBackgroundEstimateWidth(double width);
+    double backgroundEstimateSmoothness() const { return estimate_.smoothness; }
+    void setBackgroundEstimateSmoothness(double smoothness);
+    int backgroundEstimatePoints() const { return estimate_.points; }
+    double backgroundEstimateTolerance() const { return estimate_.tolerance; }
+    static double estimateTolerance() { return edi::kDefaultBackgroundTolerance; }
+    QString estimateModelChoice() const { return estimate_.model_choice; }
+    QString estimateModelReason() const { return estimate_.model_reason; }
+    void setBackgroundEstimatePoints(int points);
+    void setBackgroundEstimateTolerance(double tolerance);
+    QString backgroundEstimateUseModel() const { return estimate_.use_model; }
+    void setBackgroundEstimateUseModel(const QString& useModel);
+    QString estimateMethod() const { return estimate_.derived_method; }
+    double estimateWidth() const { return estimate_.derived_width; }
+    double estimateSmoothness() const { return estimate_.derived_smoothness; }
+    int estimatePoints() const { return estimate_.derived_points; }
+    int backgroundEstimateMaxTerms() const { return estimate_.max_terms; }
+    void setBackgroundEstimateMaxTerms(int maxTerms);
+    int estimateTerms() const { return estimate_.derived_terms; }
+    QString estimateNote() const { return estimate_.note; }
     double cutoffFwhm() const { return cutoff_fwhm_; }
     void setCutoffFwhm(double cutoff);
     QString linkedStructureId() const { return linked_structure_id_; }
@@ -201,6 +259,9 @@ class ExperimentViewModel : public QObject {
 
     const edi::ExperimentBase* experiment() const { return &experiment_; }
     void sync();
+    // The estimate settings and what they derive, re-read: after an edit (sync) and after a calculation, which
+    // changes the calculated pattern use_model reads.
+    void syncEstimate();
 
    signals:
     void nameChanged();
@@ -209,6 +270,22 @@ class ExperimentViewModel : public QObject {
     void peakTypeChanged();
     void absorptionTypeChanged();
     void backgroundTypeChanged();
+    void backgroundEstimateModeChanged();
+    void backgroundEstimateMethodChanged();
+    void backgroundEstimateWidthChanged();
+    void backgroundEstimateSmoothnessChanged();
+    void backgroundEstimatePointsChanged();
+    void backgroundEstimateMaxTermsChanged();
+    void estimateTermsChanged();
+    void backgroundEstimateToleranceChanged();
+    void estimateModelChoiceChanged();
+    void estimateModelReasonChanged();
+    void backgroundEstimateUseModelChanged();
+    void estimateMethodChanged();
+    void estimateWidthChanged();
+    void estimateSmoothnessChanged();
+    void estimatePointsChanged();
+    void estimateNoteChanged();
     void backgroundOriginChanged();
     void backgroundXMinChanged();
     void backgroundXMaxChanged();
@@ -244,6 +321,19 @@ class ExperimentViewModel : public QObject {
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
     OptionListModel* background_type_options_;
+    OptionListModel* background_estimate_methods_;
+    OptionListModel* background_estimate_modes_;
+    OptionListModel* background_estimate_models_;
+    // What the estimate settings read now, compared at each sync; NaN never equals itself, so equal() compares them.
+    struct EstimateSettings {
+        QString mode, method, derived_method, note;
+        double width = qQNaN(), smoothness = qQNaN(), tolerance = qQNaN(), derived_width = qQNaN(),
+               derived_smoothness = qQNaN();
+        int points = 0, derived_points = 0, max_terms = 0, derived_terms = 0;
+        QString use_model = QStringLiteral("auto"), model_choice, model_reason;
+    };
+    EstimateSettings estimate_;
+    EstimateSettings read_estimate_settings() const;
     CategoryListModel* categories_;
     ParameterListModel* instrument_;
     ParameterListModel* peak_;

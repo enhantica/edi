@@ -178,8 +178,14 @@ def _observe(path, source, scenario, failure=''):
 
 
 def platform_source(path, source):
-    """Ignore the added macOS app alias, keeping the rest of each source protected."""
+    """Normalize correct retired aliases, preserving every other source operation."""
     if path == 'tools/ci/build-crysta.sh':
+        source = re.sub(
+            r'(?m)^(  linux-64 \| )linux-64-app \| '
+            r'(?=Linux-X64 \| Linux-x86_64\) PLATFORM=linux-64 ;;$)',
+            r'\1',
+            source,
+        )
         source = re.sub(
             r'(?m)^(  osx-arm64 \| )osx-arm64-app \| '
             r'(?=macOS-ARM64 \| Darwin-arm64\) PLATFORM=osx-arm64 ;;$)',
@@ -227,9 +233,9 @@ def platform_source(path, source):
         for key, value in entries
         if not (
             isinstance(key, ast.Constant)
-            and key.value == 'osx-arm64-app'
             and isinstance(value, ast.Constant)
-            and value.value == 'osx-arm64'
+            and (key.value, value.value)
+            in {('linux-64-app', 'linux-64'), ('osx-arm64-app', 'osx-arm64')}
         )
     ]
     function.body[start].value = ast.Dict(

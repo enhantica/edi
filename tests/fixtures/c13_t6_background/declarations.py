@@ -45,13 +45,15 @@ def damage_declaration(text, kind, damage):
         return text + loop((tags[index],), '0' if index == 0 else '20')
     if damage.startswith('duplicate-'):
         tag = first if damage == 'duplicate-first-column' else second
-        marker = f'loop_\n_background.{first}\n_background.{second}\n'
+        # Required ids precede both series columns in the current format.
+        prefix = '_background.id\n' if kind != 'line-segment' else ''
+        marker = f'loop_\n{prefix}_background.{first}\n_background.{second}\n'
         start = text.index(marker)
         end = text.index('\nloop_', start + len(marker))
         # order,coef,coef -> 0,10,20 changes the constant; order,coef,order
         # -> 0,10,1 changes the power. The point analogue changes x or y.
         value = '1' if tag == first else '20'
-        body = '0 10 ' + value + '\n'
+        body = ('witness ' if prefix else '') + '0 10 ' + value + '\n'
         if kind == 'line-segment':
             body += '100 35 ' + ('90' if tag == first else '45') + '\n'
         return text[:start] + marker + f'_background.{tag}\n' + body + text[end:]

@@ -20,6 +20,11 @@ EaComponents.TableViewParameter {
     id: cell
 
     property ParameterItem item: null
+    // The value shown as usual, free in green bold, with its context menu (free or fixed), but not typed into: an
+    // auto-estimated background's points or terms (the owner, 2026-10-20). readOnly would grey it and hide the toggle.
+    property bool locked: false
+    activeFocusOnPress: !locked
+    activeFocusOnTab: !locked
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
@@ -114,6 +119,10 @@ EaComponents.TableViewParameter {
     function commit() {
         if (item === null)
             return;
+        if (locked) {
+            text = Qt.binding(() => cell.value);
+            return;
+        }
         if (text !== cell.value && text !== cell.editText) {
             typedRefusal = TypedInput.refusal(text, "number");
             if (typedRefusal === "") {
