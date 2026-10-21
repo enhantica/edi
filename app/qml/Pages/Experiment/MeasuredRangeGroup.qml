@@ -147,30 +147,37 @@ Column {
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.shown(row.model.x)
+                full: NumberText.plainFull(row.model.x)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.intensity(row.model.intensityMeas)
+                full: NumberText.plainFull(row.model.intensityMeas)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.intensity(row.model.intensityMeasSu)
+                full: NumberText.plainFull(row.model.intensityMeasSu)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.intensity(row.model.intensityCalc)
+                full: NumberText.plainFull(row.model.intensityCalc)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.shown(row.model.dSpacing)
+                full: NumberText.plainFull(row.model.dSpacing)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.intensity(row.model.intensityBkg)
+                full: NumberText.plainFull(row.model.intensityBkg)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
                 number: group.intensity(row.model.residual)
+                full: NumberText.plainFull(row.model.residual)
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {

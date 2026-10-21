@@ -52,7 +52,7 @@ EaComponents.ListViewTextInput {
         font: cell.font
     }
     EaElements.ToolTip {
-        text: cell.written
+        text: NumberText.plainFull(cell.value)
         visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
     }
     onValueChanged: refusal = ""

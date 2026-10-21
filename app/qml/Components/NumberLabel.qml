@@ -17,6 +17,9 @@ EaComponents.TableViewLabel {
     // shows when that does not fit (its scientific notation, unless the column gives another: an s.u.'s own).
     property string number: ""
     property string narrow: NumberText.compact(number)
+    // What hovering shows when the cell shows the number shorter: the number in full (NumberText.plainFull) where the
+    // column has it, else as written.
+    property string full: number
     readonly property string shown: NumberText.fitted(number, width - leftPadding - rightPadding, metrics, narrow)
 
     text: shown
@@ -26,7 +29,7 @@ EaComponents.TableViewLabel {
         font: label.font
     }
     EaElements.ToolTip {
-        text: label.number
+        text: label.full
         visible: label.shown !== label.number && label.hovered && EaGlobals.Vars.showToolTips
     }
 }

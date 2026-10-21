@@ -470,16 +470,19 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignRight
                     number: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
+                    full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
                 }
                 NumberLabel {
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.minimum)
+                    full: NumberText.plainFull(row.minimum)
                 }
                 NumberLabel {
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.maximum)
+                    full: NumberText.plainFull(row.maximum)
                 }
                 EaComponents.TableViewCheckBox {
                     horizontalAlignment: Text.AlignHCenter

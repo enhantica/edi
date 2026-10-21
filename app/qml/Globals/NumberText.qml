@@ -37,6 +37,23 @@ QtObject {
         return String(value);
     }
 
+    // Every digit `value` holds, written plainly, never with an exponent: what hovering a cell that shows the number
+    // shorter or in scientific notation reveals (the owner, 2026-10-22). 8.3e-9 is `0.0000000083`.
+    function plainFull(value) {
+        if (typeof value !== "number" || !isFinite(value))
+            return String(value);
+        const text = String(value);
+        const parts = /^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$/.exec(text);
+        if (!parts)
+            return text;
+        const digits = parts[2] + (parts[3] ?? "");
+        const power = Number(parts[4]);
+        if (power < 0)
+            return parts[1] + "0." + "0".repeat(-power - 1) + digits;
+        const point = power + 1;
+        return parts[1] + (digits.length <= point ? digits + "0".repeat(point - digits.length) : digits.slice(0, point) + "." + digits.slice(point));
+    }
+
     // A parameter's `value` with its uncertainty `error` (0 or absent: none). `digits` caps the significant digits
     // of a value without an uncertainty (6 by default; the ADP table asks for 5, so a beta component fits its cell).
     function parameter(value, error, digits) {
@@ -206,13 +223,12 @@ QtObject {
     }
 
     // A number's text as a cell `room` pixels wide shows it, measured with `metrics` (a FontMetrics in the cell's
-    // font): as it is when it fits, else in scientific notation (compact) when that is narrower, so no number is cut.
-    // `narrow` is the form to fall back to, compact(text) unless given.
+    // font): as it is when it fits, else in scientific notation with the same significant digits. `narrow` is that
+    // form, compact(text) unless given.
     function fitted(text, room, metrics, narrow) {
         if (!(room > 0) || metrics.advanceWidth(text) <= room)
             return text;
-        const short = narrow ?? compact(text);
-        return metrics.advanceWidth(short) < metrics.advanceWidth(text) ? short : text;
+        return narrow ?? compact(text);
     }
 
     // An uncertainty in its own shortest scientific form, for an s.u. cell too narrow for the column's form (the

@@ -58,11 +58,19 @@ EaComponents.TableViewParameter {
     // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
     // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
     readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
-    readonly property string shownValue: fitDigits ? valueText : NumberText.fitted(valueText, room, shownMetrics)
+    // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
+    // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
+    property string shownValue: valueText
+    function refit() {
+        const sized = Math.abs(width - implicitWidth) >= 0.5;
+        shownValue = fitDigits || !sized ? valueText : NumberText.fitted(valueText, room, shownMetrics);
+    }
+    onRoomChanged: refit()
+    onValueTextChanged: refit()
+    onFontChanged: refit()
+    Component.onCompleted: refit()
     readonly property FontMetrics shownMetrics: FontMetrics {
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        font.bold: cell.item !== null && cell.item.free && cell.canFit
+        font: cell.font
     }
     readonly property string fullText: fitDigits ? valueText : ""
     readonly property FontMetrics fullMetrics: FontMetrics {
@@ -105,7 +113,7 @@ EaComponents.TableViewParameter {
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     EaElements.ToolTip {
-        text: cell.shownValue !== cell.valueText ? cell.valueText : cell.text
+        text: cell.shownValue !== cell.valueText ? NumberText.plainFull(cell.item.value) : cell.text
         visible: (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width) && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 

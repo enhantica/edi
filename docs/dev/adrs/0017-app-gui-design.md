@@ -986,7 +986,7 @@ projects (the owner, 2026-10-13).
 
 A number that does not fit its table cell is never cut short (the owner, 2026-10-22). When the text the rule writes is
 wider than the cell, the cell shows the same number in scientific notation with the same significant digits
-(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows it as written. An s.u. that does not fit takes
+(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows every digit the number holds, written plainly. An s.u. that does not fit takes
 its own shortest scientific form, with the one or two significant digits the rule gives, never its value's exponent:
 beside 3.700e-6 the column's `0.008e-6` becomes `8e-9`. A number that fits keeps its
 form, and the check runs again whenever the column's width changes. It applies to every numeric table cell: the

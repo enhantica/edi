@@ -67,10 +67,12 @@ DataTable {
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
             number: table.shown(row.model.startValue)
+            full: NumberText.plainFull(row.model.startValue)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
             number: table.shown(row.model.startUncertainty)
+            full: NumberText.plainFull(row.model.startUncertainty)
         }
     }
 }

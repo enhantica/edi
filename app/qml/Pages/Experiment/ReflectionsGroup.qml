@@ -69,14 +69,17 @@ DataTable {
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
             number: table.shown(row.model.dSpacing)
+            full: NumberText.plainFull(row.model.dSpacing)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
             number: table.shown(row.model.position)
+            full: NumberText.plainFull(row.model.position)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
             number: table.shown(row.model.fSquaredCalc)
+            full: NumberText.plainFull(row.model.fSquaredCalc)
         }
     }
 }
