@@ -40,11 +40,12 @@ QtObject {
     property bool patternLegendShown: false
     property bool patternHoverShown: true
     property string patternPointerMode: "zoom"
-    // A project opened, reset or closed starts with its full view; the toolbar's choices stay.
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
+    // choices stay.
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
-            AppState.patternViewRanges = [];
+            AppState.patternViewRanges = [undefined, undefined, undefined, undefined];
         }
     }
 
