@@ -6,6 +6,9 @@ It uses the existing structure icon (`layer-group`) and the tooltip
 off in a fresh app-settings store. Pointer input shows and hides the actual
 per-structure area series. Each series starts at the background, rather than
 at a preceding structure, and has a soft fill with a more opaque outline.
+The outline may be the area's own border or a visible line of the same colour
+following every point of its upper curve; the test does not dictate either
+rendering representation.
 The view choice does not modify the scientific project.
 
 The on and off settings are tested separately. After real input writes the

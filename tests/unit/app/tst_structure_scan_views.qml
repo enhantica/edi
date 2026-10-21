@@ -17,8 +17,7 @@ Item {
     Component {
         id: pageFactory
 
-        AnalysisPage {
-        }
+        AnalysisPage {}
     }
     Component {
         id: emptyChartFactory
@@ -44,6 +43,31 @@ Item {
             const label = JSON.stringify("Show each structure's curve");
             const present = requireControl ? " && savedCurveToggle.count === 1" : "";
             return SettingsProof.restart('import QtQuick; import QtQuick.Window; import edi.app; QtObject {' + ' property Window sourceWindow: Window { width: 1400; height: 1000; visible: true;' + ' AnalysisPage { id: analysis; anchors.fill: parent; current: true }' + ' Component.onCompleted: Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"); }' + ' property bool acceptanceReady: Session.project !== null && !Session.project.calculating' + present + ';' + ' property var savedCurveToggle: {' + ' const walk = item => { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; };' + ' const found = walk(analysis).filter(item => item.toolTip === ' + label + ' && typeof item.checked === "boolean" && item.visible);' + ' return {count: found.length, checked: found.length === 1 ? found[0].checked : null}; } }');
+        }
+        function hasClearOutline(fill) {
+            const sameHue = colour => colour.r === fill.color.r && colour.g === fill.color.g && colour.b === fill.color.b;
+            if (fill.borderWidth > 0 && fill.borderColor.a > fill.color.a && sameHue(fill.borderColor))
+                return true;
+            for (const item of Render.descendants(page)) {
+                if (!item.visible || item.seriesList === undefined)
+                    continue;
+                for (const series of item.seriesList) {
+                    if (series.upperSeries !== undefined || !series.visible || !(series.width > 0) || !(series.opacity > 0) || !sameHue(series.color) || series.color.a * series.opacity <= fill.color.a * fill.opacity || series.count !== fill.upperSeries.count)
+                        continue;
+                    let matches = true;
+                    for (let index = 0; index < series.count; ++index) {
+                        const outline = series.at(index);
+                        const upper = fill.upperSeries.at(index);
+                        if (outline.x !== upper.x || outline.y !== upper.y) {
+                            matches = false;
+                            break;
+                        }
+                    }
+                    if (matches)
+                        return true;
+                }
+            }
+            return false;
         }
         function openAnalysis() {
             verify(Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"), "The Analysis actor uses the two-structure BEER project");
@@ -113,7 +137,7 @@ Item {
                         if (series.objectName === "chart.series.bkg")
                             background = series;
             verify(background !== null && background.count > 0, "The fill baseline is the chart's actual nonempty background curve");
-            tryVerify(() => visibleFills().length === 2 && visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared");
+            tryVerify(() => visibleFills().length === 2 && visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared; initial background points=" + background.count + ", initial upper/lower points=" + JSON.stringify(visibleFills().map(fill => [fill.upperSeries.count, fill.lowerSeries.count])));
             for (const fill of visibleFills()) {
                 verify(fill.lowerSeries !== null && fill.upperSeries !== null, "Every unstacked structure fill retains its own curve over a background baseline");
                 compare(fill.lowerSeries.count, background.count, "Each structure fill spans the same grid as the background");
@@ -122,7 +146,7 @@ Item {
                     const expected = background.at(index);
                     verify(actual.x === expected.x && actual.y === expected.y, "Every structure fill starts at the background rather than stacking on another structure");
                 }
-                verify(fill.color.a > 0 && fill.color.a * fill.opacity < 1 && fill.borderColor.a > fill.color.a && fill.borderWidth > 0, "Each structure has a soft fill and a visible outline");
+                verify(fill.color.a > 0 && fill.color.a * fill.opacity < 1 && hasClearOutline(fill), "Each structure has a soft fill and a visible outline");
             }
             tryVerify(() => settingsText() !== before, 2000, "Turning the toolbar toggle on writes the actual app settings file");
             compare(Session.project.modified, modified, "Showing structure curves is an app setting and does not modify the project");
