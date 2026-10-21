@@ -2258,3 +2258,31 @@ authentication/retirement/required-reply/currentness behavior is unchanged.
 The actual account/read adapter exposes no proven stable account identity;
 therefore cross-epoch automatic task replay remains guarded, with no email or
 plan comparison, epoch reset, file-grant replay or unsupported thread resume.
+
+
+## Invocation-local official event failure diagnostic
+
+FIRST is ServerRequestFailure, native_failure_class and the non-Qt terminal
+failure convention at the original official server-request receiver. Official
+events now own the same fixed method-family/current-stage/first-catch-class facts
+on one synchronous stack, shared by generic_event and both generic_item callers.
+Nested events have independent stack records; no State-global first cause is
+borrowed and no event payload or exception text is retained.
+
+Both original catch owners emit at their unchanged publication guards: outer
+input_current and account/updated inner publication_current after retirement.
+First stage/class is latched before item restoration or account fallback.
+Successful restoration resets the current stage before rethrowing the original
+exception, so propagation is not mislabeled as a second failure. A new exception
+during restoration keeps its distinct cleanup stage as secondary. Successful
+terminal-item return explicitly restores its caller's next phase.
+
+The fixed terminal line contains only closed method-family/stage/class labels.
+It uses the original C stdio convention, without callback-capable Qt logging,
+raw method/what()/IDs/paths/account/provider/scientific data, heap trace storage
+or a new wire field. No new notice suffix is required; the original visible
+sentence and all original fail/return/currentness/receipt/limits remain.
+CAPACITY is an exception class, not proof of a particular exhausted byte budget.
+This observes a future occurrence; it does not diagnose or fix a reported run,
+retry an action, change a cap or recover an account/thread. Existing657 open
+reasoning-retention and cross-epoch continuity limits remain explicit.

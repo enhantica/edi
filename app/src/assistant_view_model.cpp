@@ -4750,6 +4750,32 @@ struct AssistantViewModel::State {
         const char* first_stage = nullptr;
         const char* first_class = nullptr;
     };
+    // One synchronous event invocation; nested events own independent stacks.
+    // All fields borrow closed source literals, never event or exception text.
+    struct EventFailure {
+        const char* method = "OTHER";
+        const char* stage = "BINDING";
+        const char* first_stage = nullptr;
+        const char* first_class = nullptr;
+    };
+    static const char* event_method_family(const QString& method) noexcept {
+        if (method == "thread/settings/updated") return "THREAD_SETTINGS";
+        if (method == "account/rateLimits/updated") return "USAGE_UPDATE";
+        if (method == "account/login/completed") return "LOGIN_COMPLETE";
+        if (method == "account/updated") return "ACCOUNT_UPDATE";
+        if (method == "serverRequest/resolved") return "REQUEST_RESOLVE";
+        if (method == "turn/started") return "TURN_START";
+        if (method == "item/started") return "ITEM_START";
+        if (method == "item/completed") return "ITEM_COMPLETE";
+        if (method == "item/agentMessage/delta") return "TEXT_DELTA";
+        if (method == "item/commandExecution/outputDelta" || method == "item/plan/delta" ||
+            method == "item/reasoning/summaryTextDelta" || method == "item/reasoning/textDelta") return "PROGRESS_DELTA";
+        if (method == "item/mcpToolCall/progress") return "MCP_PROGRESS";
+        if (method == "item/reasoning/summaryPartAdded") return "REASONING_PART";
+        if (method == "turn/plan/updated") return "PLAN_UPDATE";
+        if (method == "turn/completed") return "TURN_COMPLETE";
+        return "OTHER";
+    }
     static const char* native_failure_class() noexcept {
         // Called only by an active catch. Never inspect exception text.
         try { throw; }
@@ -4759,6 +4785,21 @@ struct AssistantViewModel::State {
         catch (const std::runtime_error&) { return "STATE"; }
         catch (const std::exception&) { return "EXCEPTION"; }
         catch (...) { return "NONSTANDARD"; }
+    }
+    static void capture_event_failure(EventFailure& diagnostic) noexcept {
+        if (diagnostic.first_class) return;
+        diagnostic.first_stage = diagnostic.stage;
+        diagnostic.first_class = native_failure_class(); // Active catch only; no what().
+    }
+    static void print_event_failure(EventFailure& diagnostic) noexcept {
+        const char* const caught = native_failure_class(); // Active catch only.
+        const bool secondary = diagnostic.first_class && diagnostic.stage != diagnostic.first_stage;
+        const char* const secondary_stage = secondary ? diagnostic.stage : "NONE";
+        const char* const secondary_class = secondary ? caught : "NONE";
+        capture_event_failure(diagnostic);
+        // FIRST ServerRequestFailure convention: bounded non-Qt terminal facts.
+        std::fprintf(stderr, "Edi assistant event failure method=%s first_stage=%s first_class=%s secondary_stage=%s secondary_class=%s\n",
+            diagnostic.method, diagnostic.first_stage, diagnostic.first_class, secondary_stage, secondary_class);
     }
     void native_failure(const char* stage, const char* role, quint64 bound, const char* reason,
                         const NativeCall* call = nullptr, const Object* outcome = nullptr, int retired_fact = -1,
@@ -10317,16 +10358,26 @@ struct AssistantViewModel::State {
         QObject::connect(agent.get(), &CodexAgent::event, &owner, [this,originalTransport](const QString& method, const Object& params) {
             const auto publication = file_projection();
             const auto transportGeneration = originalTransport ? originalTransport->outputGeneration() : 0;
+            EventFailure diagnostic;
             try {
-                generic_event(method, params);
+                diagnostic.method = event_method_family(method);
+                generic_event(method, params, diagnostic);
                 if (!publication.input_current() || !originalTransport || agent.get() != originalTransport.data() ||
                     (method != "item/completed" && method != "turn/completed")) return;
                 // All generic_item local copies have unwound. The original
                 // transport still charges its parsed/current input owners.
+                diagnostic.stage = "SETTLED_RELEASE";
                 generic_release_settled();
+                diagnostic.stage = "RELEASE_CHARGE";
                 native_release_charge(publication, originalTransport, transportGeneration);
             }
-            catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits.")); }
+            catch (...) {
+                capture_event_failure(diagnostic);
+                if (publication.input_current()) {
+                    print_event_failure(diagnostic);
+                    generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits."));
+                }
+            }
         });
         QObject::connect(agent.get(), &CodexAgent::serverRequest, &owner,
             [this,originalTransport](const QJsonValue& id, const QString& method, const Object& params) {
@@ -10963,9 +11014,10 @@ struct AssistantViewModel::State {
             ((type == "commandExecution" || type == "fileChange") && status == "declined") ||
             (type == "collabAgentToolCall" && status == "interrupted");
     }
-    bool generic_item(const Object& item, bool completed, bool snapshot = false) {
+    bool generic_item(const Object& item, bool completed, bool snapshot, EventFailure& diagnostic) {
         const auto publication = file_projection();
-        const char* stage = "ITEM_VALIDATE";
+        const char*& stage = diagnostic.stage;
+        stage = "ITEM_VALIDATE";
         const char* role = "ITEM";
         quint64 bound = Limits::stream_retained_bytes;
         std::shared_ptr<NativeRecord> record;
@@ -11032,19 +11084,26 @@ struct AssistantViewModel::State {
                 generic_items[id] = item;
                 generic_item_bytes = nextBytes;
             } catch (...) {
+                capture_event_failure(diagnostic); // Before any restoration/notification.
                 if (!publication.input_current()) return false;
                 if (record && native_records.value(record->key) == record)
                     native_failure(stage, role, bound, native_failure_class(), native_call && native_call->record == record ? &*native_call : nullptr, record->outcome_ready ? &record->outcome : nullptr);
+                const char* const original_stage = stage;
+                stage = "ITEM_RESTORE";
                 if (record) {
                     record->canonical = std::move(previousCanonical); record->row_bytes = previousLimit;
                 }
                 // Registration may have changed before a map allocation failed.
                 // Restore the still-owned old state; never silently uncharge it.
-                native_restore_charge(); throw;
+                native_restore_charge();
+                stage = original_stage; // A bare rethrow is not a secondary failure.
+                throw;
             }
+            stage = "ITEM_FINALIZE";
             if (completed) { generic_final_items.insert(id); if (generic_question_item == id && !generic_retire_question()) return false; }
             if (!publication.input_current()) return false;
             if (type == "userMessage" || type == "reasoning") return true;
+            stage = "ITEM_ROW_PREPARE";
             if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
             const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
             Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
@@ -11070,6 +11129,7 @@ struct AssistantViewModel::State {
             }
             return true;
         } catch (...) {
+            capture_event_failure(diagnostic);
             if (publication.input_current() && record && native_records.value(record->key) == record)
                 native_failure(stage, role, bound, native_failure_class(), native_call && native_call->record == record ? &*native_call : nullptr, record->outcome_ready ? &record->outcome : nullptr);
             throw;
@@ -11145,9 +11205,10 @@ struct AssistantViewModel::State {
         }
     }
 
-    void generic_event(const QString& method, const Object& params) {
+    void generic_event(const QString& method, const Object& params, EventFailure& diagnostic) {
         if (!publishing) return;
         if (method == "thread/settings/updated") {
+            diagnostic.stage = "THREAD_SETTINGS_VALIDATE";
             const auto publication=file_projection();
             if (!generic_authenticated || generic_retiring || generic_revoke_pending || generic_blocked ||
                 generic_thread.isEmpty() || params.value("threadId")!=generic_thread) return;
@@ -11157,6 +11218,7 @@ struct AssistantViewModel::State {
                 settings.value("approvalPolicy")!="never" || settings.value("approvalsReviewer")!="user" ||
                 !readonly_policy(settings.value("sandboxPolicy")))
                 throw std::runtime_error("The thread's effective settings changed outside its admitted read-only policy");
+            diagnostic.stage = "THREAD_SETTINGS_PUBLISH";
             invalidate_policy();
             generic_policy_model=model; generic_policy_effort=effective_effort(); generic_policy_verified=true;
             if (generic_connecting && !generic_busy) {
@@ -11170,15 +11232,19 @@ struct AssistantViewModel::State {
         if (!publishing) return;
         const auto publication = file_projection();
         if (method == "account/rateLimits/updated") {
+            diagnostic.stage = "USAGE_UPDATE";
             if (usage_account_ready && !generic_retiring) usage_updated();
             return;
         }
         if (method == "account/login/completed") {
+            diagnostic.stage = "LOGIN_VALIDATE";
             if (params.value("loginId") != generic_login) return;
             if (!params.value("success").toBool()) throw std::runtime_error("Agent sign-in was not completed");
+            diagnostic.stage = "LOGIN_ACCOUNT_READ";
             generic_login.clear(); generic_request("account/read", {{"refreshToken", false}}); return;
         }
         if (method == "account/updated") {
+            diagnostic.stage = "ACCOUNT_PREPARE";
             const auto login=login_scope;
             const bool pending_login=generic_connecting && !generic_authenticated && generic_thread.isEmpty() &&
                 params.value("authMode")=="chatgpt" && login;
@@ -11189,8 +11255,10 @@ struct AssistantViewModel::State {
             auto next_update = requested_login ? std::make_shared<DisclosureScope>(*login_scope) : nullptr;
             auto approval = std::move(login_scope);
             auto projection = file_projection();
+            diagnostic.stage = "ACCOUNT_RETIRE";
             if (!usage_retire(projection, true)) return;
             try {
+                diagnostic.stage = "ACCOUNT_TRANSFER";
                 if (requested_login && !usage_epoch_exhausted) {
                     approval->account = usage_epoch;
                     next_update->account = usage_epoch;
@@ -11200,20 +11268,27 @@ struct AssistantViewModel::State {
                         approved_scope = std::move(approval); login_scope = std::move(next_update);
                     }
                 }
+                diagnostic.stage = "ACCOUNT_FALLBACK";
                 if (!requested_login || !approved_scope)
                     generic_fail(QObject::tr("The agent account changed. Reconnect to approve the current account and a fresh conversation."));
             } catch (...) {
-                if (projection.publication_current()) generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits."));
+                capture_event_failure(diagnostic);
+                if (projection.publication_current()) {
+                    print_event_failure(diagnostic);
+                    generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits."));
+                }
             }
             return;
         }
         if (method == "serverRequest/resolved") {
+            diagnostic.stage = "REQUEST_RESOLVE";
             if (native_call && native_call->rpc == params.value("requestId") &&
                 params.value("threadId").isString() && params.value("threadId") == native_call->record->thread) {
                 agent->resolved(params.value("requestId"));
                 native_call->receipt->retired = true; native_call->record->retired = true;
                 native_call->record->reserved = false;
                 native_call->resolved = true; native_call->retiring = true;
+                diagnostic.stage = "REQUEST_CANCEL";
                 if (native_fit) native_fit->cancel();
                 if (!publication.input_current()) return;
                 native_cancel_creation();
@@ -11224,13 +11299,16 @@ struct AssistantViewModel::State {
             if (!generic_authenticated || params.value("threadId") != generic_thread) return;
             agent->resolved(params.value("requestId"));
             if (params.value("requestId") == generic_question_rpc) (void)generic_detach_question();
+            diagnostic.stage = "REQUEST_PRESENT";
             notify(); return;
         }
         if (method == "turn/started") {
+            diagnostic.stage = "TURN_START_VALIDATE";
             if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || !generic_busy) return;
             const auto id = generic_id(params.value("turn").toObject().value("id"));
             if (!generic_turn.isEmpty() && generic_turn != id) throw std::runtime_error("Agent turn changed");
             if (id == generic_terminal_turn || id == generic_turn) return;
+            diagnostic.stage = "TURN_START_PRESENT";
             generic_turn = id; agent->activity();
             if (!publication.input_current()) return;
             generic_advance_clear();
@@ -11241,16 +11319,20 @@ struct AssistantViewModel::State {
             if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || generic_turn.isEmpty()) return;
         } else if (!generic_bound(params)) return;
         if (method == "item/started" || method == "item/completed") {
-            const bool changed = generic_item(params.value("item").toObject(), method == "item/completed");
+            diagnostic.stage = "ITEM_ENTER";
+            const bool changed = generic_item(params.value("item").toObject(), method == "item/completed", false, diagnostic);
+            diagnostic.stage = "ITEM_ACTIVITY";
             if (!publication.input_current()) return;
             if (changed) agent->activity();
         } else if (method == "item/agentMessage/delta") {
+            diagnostic.stage = "TEXT_VALIDATE";
             const auto id = generic_id(params.value("itemId"));
             if (!params.value("delta").isString()) throw std::runtime_error("Agent delta is invalid");
             if (!generic_item_rows.contains(id) || generic_item_snapshot(id).value("type") != "agentMessage" || generic_final_items.contains(id)) throw std::runtime_error("Agent text has no current unfinished original item");
             for (const auto& value : history) if (value.toObject().value("id") == generic_item_rows.value(id)) {
                 auto row = value.toObject(); const auto delta = params.value("delta").toString();
                 const auto old = row.value("text").toString();
+                diagnostic.stage = "TEXT_SIZE";
                 if (old.size() > static_cast<qsizetype>(Limits::message_bytes) || delta.size() > static_cast<qsizetype>(Limits::message_bytes) - old.size()) throw std::length_error("Agent text exceeds message limit");
                 quint64 prospective = 0;
                 if (!codex_encoded_size(old, Limits::message_bytes, prospective) || prospective < 2)
@@ -11260,6 +11342,7 @@ struct AssistantViewModel::State {
                     throw std::length_error("Agent text exceeds message limit");
                 row["text"] = old + delta;
                 generic_size(row, Limits::message_bytes);
+                diagnostic.stage = "TEXT_HISTORY";
                 const bool retained = generic_present(row);
                 if (!publication.input_current()) return;
                 if (!retained) generic_fail(storage_error);
@@ -11268,28 +11351,35 @@ struct AssistantViewModel::State {
             }
         } else if (method == "item/commandExecution/outputDelta" || method == "item/plan/delta" ||
                    method == "item/reasoning/summaryTextDelta" || method == "item/reasoning/textDelta") {
+            diagnostic.stage = "PROGRESS_VALIDATE";
             const auto id = generic_id(params.value("itemId"));
             const auto expected = method == "item/commandExecution/outputDelta" ? QString("commandExecution") : method == "item/plan/delta" ? QString("plan") : QString("reasoning");
             if (!generic_items.contains(id) || generic_final_items.contains(id) || generic_item_snapshot(id).value("type") != expected || !params.value("delta").isString())
                 throw std::runtime_error("Agent progress has no current original item");
             if (expected == "reasoning") {
+                diagnostic.stage = "REASONING_INDEX";
                 const auto index = params.value(method.endsWith("/textDelta") ? "contentIndex" : "summaryIndex");
                 if (!index.isDouble() || index.toDouble() < 0 || index.toDouble() > 9007199254740991.0 || std::floor(index.toDouble()) != index.toDouble()) throw std::runtime_error("Agent reasoning progress index is invalid");
             }
             // Deltas are genuine appends even when consecutive text is equal.
             // Private reasoning is neither displayed nor copied into the archive.
+            diagnostic.stage = "PROGRESS_ACTIVITY";
             if (!params.value("delta").toString().isEmpty()) agent->activity();
         } else if (method == "item/mcpToolCall/progress") {
+            diagnostic.stage = "MCP_VALIDATE";
             const auto id = generic_id(params.value("itemId"));
             const auto message = params.value("message");
             if (!generic_items.contains(id) || generic_final_items.contains(id) ||
                 generic_item_snapshot(id).value("type") != "mcpToolCall" || !message.isString())
                 throw std::runtime_error("Agent MCP progress has no current unfinished original item");
+            diagnostic.stage = "MCP_SIZE";
             generic_size(message, Limits::message_bytes);
             // The transport already charges complete wire/event/record bytes.
             // No additional retained copy or private tool text is published.
+            diagnostic.stage = "PROGRESS_ACTIVITY";
             if (!message.toString().isEmpty()) agent->activity();
         } else if (method == "item/reasoning/summaryPartAdded") {
+            diagnostic.stage = "REASONING_PART_VALIDATE";
             const auto id = generic_id(params.value("itemId")); const auto index = params.value("summaryIndex");
             if (!generic_items.contains(id) || generic_final_items.contains(id) || generic_item_snapshot(id).value("type") != "reasoning" ||
                 !index.isDouble() || index.toDouble() < 0 || index.toDouble() > 9007199254740991.0 || std::floor(index.toDouble()) != index.toDouble())
@@ -11299,12 +11389,15 @@ struct AssistantViewModel::State {
                 const auto old = generic_summary_parts.contains(id) ? generic_size(Object{{id, static_cast<double>(generic_summary_parts.value(id))}}, Limits::stream_retained_bytes) - 2 : 0;
                 const auto next = generic_size(Object{{id, static_cast<double>(part)}}, Limits::stream_retained_bytes) - 2;
                 const auto separator = generic_summary_parts.contains(id) || generic_summary_parts.isEmpty() ? 0 : 1;
+                diagnostic.stage = "REASONING_PART_CHARGE";
                 if (next + separator > Limits::stream_retained_bytes - (generic_progress_bytes - old) ||
                     !agent->retainOutput(generic_item_bytes + generic_progress_bytes - old + next + separator + native_bytes())) throw std::length_error("Agent progress exceeds retained capacity");
+                diagnostic.stage = "REASONING_PART_STORE";
                 generic_summary_parts[id] = part; generic_progress_bytes = generic_progress_bytes - old + next + separator;
                 agent->activity();
             }
         } else if (method == "turn/plan/updated") {
+            diagnostic.stage = "PLAN_VALIDATE";
             if (!params.value("plan").isArray() || params.value("plan").toArray().size() > static_cast<qsizetype>(Limits::stream_items) ||
                 (params.contains("explanation") && !params.value("explanation").isString() && !params.value("explanation").isNull())) throw std::runtime_error("Agent plan progress is invalid");
             QJsonArray steps;
@@ -11317,15 +11410,19 @@ struct AssistantViewModel::State {
             if (plan != generic_plan_progress) {
                 const auto old = generic_plan_progress.isEmpty() ? 0 : generic_size(generic_plan_progress, Limits::stream_retained_bytes);
                 const auto next = generic_size(plan, Limits::stream_retained_bytes);
+                diagnostic.stage = "PLAN_CHARGE";
                 if (next > Limits::stream_retained_bytes - (generic_progress_bytes - old) ||
                     !agent->retainOutput(generic_item_bytes + generic_progress_bytes - old + next + native_bytes())) throw std::length_error("Agent plan exceeds retained capacity");
+                diagnostic.stage = "PLAN_STORE";
                 generic_plan_progress = plan; generic_progress_bytes = generic_progress_bytes - old + next; agent->activity();
             }
         } else if (method == "turn/completed") {
+            diagnostic.stage = "TURN_END_VALIDATE";
             const auto turn = params.value("turn").toObject();
             if (generic_id(turn.value("id")) != generic_turn) return;
             const auto status = turn.value("status").toString();
             if (status != "completed" && status != "interrupted" && status != "failed") throw std::runtime_error("Agent terminal status is invalid");
+            diagnostic.stage = "TURN_END_NATIVE";
             if (native_fit || native_worker_admitted()) {
                 if (status == "completed") throw std::runtime_error("Agent completed before its native action result");
                 native_retire(true);
@@ -11333,19 +11430,25 @@ struct AssistantViewModel::State {
                 generic_revoke_pending = true; agent->beginOperation(Limits::revoke_ms, 0);
                 if (!publication.input_current()) return;
             }
+            diagnostic.stage = "TURN_END_ITEMS";
             if (turn.contains("items")) {
                 if (!turn.value("items").isArray()) throw std::runtime_error("Agent terminal snapshot is invalid");
                 for (const auto& value : turn.value("items").toArray()) {
+                    diagnostic.stage = "TURN_END_ITEM_VALIDATE";
                     const auto item = value.toObject(); const auto type = generic_id(item.value("type"));
                     const bool final = status == "completed" || generic_final_items.contains(generic_id(item.value("id"))) ||
                         (generic_status_item(type) && generic_final_status(type, item.value("status")));
-                    generic_item(item, final, true);
+                    diagnostic.stage = "TURN_END_ITEM_ENTER";
+                    generic_item(item, final, true, diagnostic);
+                    diagnostic.stage = "TURN_END_ITEMS";
                     if (!publication.input_current() || !generic_authenticated) return;
                 }
             }
+            diagnostic.stage = "TURN_END_UNFINISHED";
             if (status == "completed") for (auto it = generic_items.constBegin(); it != generic_items.constEnd(); ++it)
                 if (generic_item_snapshot(it.key()).value("type") != "userMessage" && generic_item_snapshot(it.key()).value("type") != "reasoning" && !generic_final_items.contains(it.key()))
                     throw std::runtime_error("Agent terminal omitted an unfinished activity outcome");
+            diagnostic.stage = "TURN_END_HISTORY";
             auto next = history;
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
@@ -11356,6 +11459,7 @@ struct AssistantViewModel::State {
             const bool retained = !discarded && publish(std::move(next));
             if (!publication.input_current()) return;
             if (!discarded && !retained) { generic_fail(storage_error); return; }
+            diagnostic.stage = "TURN_END_RECEIPTS";
             if (retained && status == "completed" && !generic_revoke_pending) {
                 for (auto it = generic_item_rows.constBegin(); it != generic_item_rows.constEnd(); ++it)
                     if (generic_item_snapshot(it.key()).value("type") == "agentMessage" && generic_final_items.contains(it.key()))
@@ -11373,6 +11477,7 @@ struct AssistantViewModel::State {
             }
             generic_terminal_turn = generic_turn;
             generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); /* Explicit Stop remains the only input-caused revoke latch. */
+            diagnostic.stage = "TURN_END_SETTLE";
             if (!generic_retire_question()) return;
             if (native_receipt) native_receipt->retired = true;
             native_receipt.reset();
@@ -11383,6 +11488,7 @@ struct AssistantViewModel::State {
             if (!publication.input_current()) return;
             if (status != "completed") { if (!generic_clear_pending) error = QObject::tr("The official agent turn was interrupted or failed. Retained work is preserved."); }
         }
+        diagnostic.stage = "EVENT_PRESENT";
         if (!publication.input_current()) return;
         generic_advance_clear();
         if (!publication.input_current()) return;
