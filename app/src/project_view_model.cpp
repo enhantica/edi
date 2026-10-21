@@ -2492,7 +2492,20 @@ void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterIn
 QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
     const PublicationScope publication(*this);
     const auto input = widget_input_;
-    if (!input) return ProjectEditor::assign_parameter_value(parameter, value);
+    if (!input) {
+        const QString pending = fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())
+            ? tr("The project cannot be edited while a fit is running") : editReadinessRefusal(false);
+        if (!pending.isEmpty()) {
+            if (!retired_) setLastError(pending);
+            return pending;
+        }
+        // Equal values outside the admissible range must still reach the original refusal.
+        if (parameter.value.get() == value && (!parameter.spec ||
+            !(value < parameter.spec->range.min || value > parameter.spec->range.max))) return {};
+        const EditOutcome result = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+        if (!retired_ && !result.applied) setLastError(result.message);
+        return result.applied ? QString{} : result.message;
+    }
     if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Value || input->value != value)
         return tr("A different parameter input cannot enter the current native event");
     input->consumed = true;
@@ -2505,7 +2518,18 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
 QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool free) {
     const PublicationScope publication(*this);
     const auto input = widget_input_;
-    if (!input) return ProjectEditor::assign_parameter_free(parameter, free);
+    if (!input) {
+        const QString pending = fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())
+            ? tr("The project cannot be edited while a fit is running") : editReadinessRefusal(false);
+        if (!pending.isEmpty()) {
+            if (!retired_) setLastError(pending);
+            return pending;
+        }
+        if (parameter.free.get() == free) return {};
+        const EditOutcome result = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+        if (!retired_ && !result.applied) setLastError(result.message);
+        return result.applied ? QString{} : result.message;
+    }
     if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Free || input->free != free)
         return tr("A different free-flag input cannot enter the current native event");
     input->consumed = true;
