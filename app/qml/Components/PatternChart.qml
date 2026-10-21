@@ -610,11 +610,12 @@ Item {
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
-        }
-        onObjectAdded: (index, area) => {
-            mainView.insertSeries(0, area.outline);
-            mainView.insertSeries(0, area);
-            controller.setStructureSeries(index, area.upperSeries, area.lowerSeries, area.outline);
+
+            Component.onCompleted: {
+                mainView.insertSeries(0, area.outline);
+                mainView.insertSeries(0, area);
+                controller.setStructureSeries(area.index, area.upperSeries, area.lowerSeries, area.outline);
+            }
         }
     }
 
