@@ -1275,7 +1275,7 @@
       "samples": [
         "Y₂O₃ [Ia-3]"
       ],
-      "origin": "Unknown instrument",
+      "origin": "SPODI @ FRM II",
       "detail": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
       "values": {
         "sampleForm": [
@@ -1297,10 +1297,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "FRM II"
         ],
         "instruments": [
-          ""
+          "SPODI"
         ],
         "dimensionality": [
           "1D"
@@ -1311,7 +1311,7 @@
       },
       "searchAliases": [
         "pd-neut-cwl_y2o3_beta-adp",
-        "Y₂O₃ [Ia-3] · Unknown instrument",
+        "Y₂O₃ [Ia-3] · SPODI @ FRM II",
         "Symmetry-constrained anisotropic β tensors · Scale-only refinement"
       ],
       "sources": [
