@@ -4796,6 +4796,10 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
                                       view.refln.index_h.values(), view.refln.index_k.values(),
                                       view.refln.index_l.values(), names);
+    // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
+    const crysta::ComputedData& computed = fitted.experiment().computed().data();
+    source.components = structure_components(computed.component_order, computed.component_intensities_net.values(),
+                                             view.data.axis.size(), names);
     return source;
 }
 

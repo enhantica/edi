@@ -84,6 +84,13 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
                                                     std::span<const std::int32_t> index_l,
                                                     std::span<const std::string> structure_names);
 
+// Each structure's curve above the background out of crysta's row-major table (`net`, one value per point and
+// structure in `order`), one component per structure, placed as group_reflections places phases. None when the
+// table does not hold one value per point and structure.
+std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
+                                                           std::span<const double> net, std::size_t points,
+                                                           std::span<const std::string> structure_names);
+
 // What the renderer asks for.
 struct PatternView {
     std::optional<double> x_min, x_max;  // absent: the data's full range

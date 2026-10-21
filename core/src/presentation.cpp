@@ -413,33 +413,39 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names);
-    // The structure curves, one column each out of crysta's row-major table.
-    const std::vector<std::string>& order = data.component_order.values();
-    const std::vector<double>& net = data.component_intensities_net.values();
-    const std::size_t points = data.axis().size();
-    if (!order.empty() && net.size() == points * order.size()) {
-        for (std::size_t k = 0; k < order.size(); ++k) {
-            PatternSource::Component component;
-            component.structure_id = order[k];
-            component.label = order[k];
-            component.place = k;
-            for (std::size_t place = 0; place < names.size(); ++place) {
-                if (names[place] == order[k]) {
-                    component.place = place;
-                }
-            }
-            std::vector<double> values(points);
-            for (std::size_t row = 0; row < points; ++row) {
-                values[row] = net[row * order.size() + k];
-            }
-            component.net = std::make_shared<const std::vector<double>>(std::move(values));
-            source.components.push_back(std::move(component));
-        }
-    }
+    source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
+                                              data.axis().size(), names);
     if (axis == PatternAxis::DSpacing) {
         to_d_axis(source, data, refln);
     }
     return source;
+}
+
+std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
+                                                           std::span<const double> net, std::size_t points,
+                                                           std::span<const std::string> structure_names) {
+    std::vector<PatternSource::Component> components;
+    if (order.empty() || net.size() != points * order.size()) {
+        return components;
+    }
+    for (std::size_t k = 0; k < order.size(); ++k) {
+        PatternSource::Component component;
+        component.structure_id = order[k];
+        component.label = order[k];
+        component.place = k;
+        for (std::size_t place = 0; place < structure_names.size(); ++place) {
+            if (structure_names[place] == order[k]) {
+                component.place = place;
+            }
+        }
+        std::vector<double> values(points);
+        for (std::size_t row = 0; row < points; ++row) {
+            values[row] = net[row * order.size() + k];
+        }
+        component.net = std::make_shared<const std::vector<double>>(std::move(values));
+        components.push_back(std::move(component));
+    }
+    return components;
 }
 
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
