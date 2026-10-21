@@ -132,6 +132,7 @@ void PatternChartController::animateTo(std::optional<double> x_min, std::optiona
     x_max_ = x_max;
     y_min_ = y_min;
     y_max_ = y_max;
+    emit viewRangesChanged();
     if (!active_ || animation_duration_ <= 0 || plot_width_ <= 0.0) {
         invalidate();
         return;
@@ -152,6 +153,36 @@ void PatternChartController::animateTo(std::optional<double> x_min, std::optiona
     animationFrame(0.0);
     animation_.setDuration(animation_duration_);
     animation_.start();
+}
+
+QVariantList PatternChartController::viewRanges() const {
+    QVariantList out;
+    for (int i = 0; i < 4; ++i) {
+        const std::optional<double>& value = animating_ ? target_[i] : i == 0 ? x_min_ : i == 1 ? x_max_ : i == 2 ? y_min_ : y_max_;
+        out.append(value ? QVariant(*value) : QVariant());
+    }
+    return out;
+}
+
+void PatternChartController::setViewRanges(const QVariantList& ranges) {
+    if (ranges == viewRanges()) {
+        return;
+    }
+    std::optional<double> values[4];
+    for (int i = 0; i < 4 && i < ranges.size(); ++i) {
+        bool number = false;
+        const double value = ranges[i].toDouble(&number);
+        if (ranges[i].isValid() && !ranges[i].isNull() && number && std::isfinite(value)) {
+            values[i] = value;
+        }
+    }
+    finishAnimation();
+    x_min_ = values[0];
+    x_max_ = values[1];
+    y_min_ = values[2];
+    y_max_ = values[3];
+    emit viewRangesChanged();
+    invalidate();
 }
 
 void PatternChartController::animationFrame(double progress) {
@@ -262,6 +293,7 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
     y_min_.reset();
     y_max_.reset();
     emit experimentChanged();
+    emit viewRangesChanged();
     invalidate();
 }
 
@@ -745,6 +777,7 @@ void PatternChartController::panBy(double dx) {
     const double shift = dx / plot_width_ * (shown_x_max_ - shown_x_min_);
     x_min_ = shown_x_min_ - shift;
     x_max_ = shown_x_max_ - shift;
+    emit viewRangesChanged();
     invalidate();
 }
 

@@ -34,34 +34,12 @@ QtObject {
         value: AppState.platformColorScheme
     }
 
-    // The place on the shown page that holds the one pattern chart: a PatternChartSlot, or null when no page shows it.
-    property PatternChartSlot patternChartSlot: null
-    // The one pattern chart the Structure, Experiment and Analysis pages show (edi ADR-0017 §15). This object owns it,
-    // so moving it into a page's place never ties it to that page; out of every place it has no window and draws
-    // nothing.
-    readonly property ProjectPatternChart patternChart: ProjectPatternChart {
-        visible: false
-        anchors.fill: parent
-        experiment: Session.project ? Session.project.currentExperiment : null
-        axisProject: Session.project
-        settingsPage: "pattern"
-        shown: AppState.patternChartSlot !== null && AppState.patternChartSlot.shown
-    }
-
-    // The chart goes into a shown place, and is hidden before it leaves its last one: a chart out of every window
-    // with its views still visible logged a critical message for each pending update.
-    function placePatternChart(slot) {
-        AppState.patternChartSlot = slot;
-        AppState.patternChart.parent = slot;
-        AppState.patternChart.visible = true;
-    }
-    function releasePatternChart(slot) {
-        if (AppState.patternChartSlot !== slot)
-            return;
-        AppState.patternChart.visible = false;
-        AppState.patternChart.parent = null;
-        AppState.patternChartSlot = null;
-    }
+    // The pattern charts' one view (edi ADR-0017 §15): the Structure, Experiment and Analysis pages each show a chart,
+    // and every one follows these: the view's ranges (PatternChartController.viewRanges) and the toolbar's choices.
+    property var patternViewRanges: []
+    property bool patternLegendShown: false
+    property bool patternHoverShown: true
+    property string patternPointerMode: "zoom"
 
     // The furthest page the user has opened with Start or Continue; an open project opens every page
     // (easydiffractionbeta: loading a project enables the workflow pages together).

@@ -155,7 +155,9 @@ Item {
             mainAxisHeight = under(mainView);
         const mainAxis = mainView.plotArea.x - mainView.marginLeft;
         const residualAxis = residualView.visible ? residualView.plotArea.x - residualView.marginLeft : 0;
-        const edge = Math.round(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom));
+        // Far enough right for the y titles and labels, and for the longest structure name of the tick rows (4.8).
+        const edge = Math.round(Math.max(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom),
+                                         sideMargin + braggLabelsRoom + braggLabelGap));
         const set = (view, margin) => {
             if (Math.abs(view.marginLeft - margin) > 0.5)
                 view.marginLeft = margin;
@@ -529,6 +531,54 @@ Item {
         }
     }
 
+    // A page's chart follows the app's one pattern view (edi ADR-0017 §15): its ranges and its toolbar's choices. Only
+    // the shown chart writes them, so a chart being made or a hidden one never moves the others.
+    readonly property bool followsSharedView: chart.settingsPage === "pattern"
+    Binding {
+        target: controller
+        property: "viewRanges"
+        value: AppState.patternViewRanges
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "legendShown"
+        value: AppState.patternLegendShown
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "hoverShown"
+        value: AppState.patternHoverShown
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "pointerMode"
+        value: AppState.patternPointerMode
+        when: chart.followsSharedView
+    }
+    Connections {
+        target: controller
+        enabled: chart.followsSharedView && chart.shown
+        function onViewRangesChanged() {
+            AppState.patternViewRanges = controller.viewRanges;
+        }
+    }
+    Connections {
+        target: toolbar
+        enabled: chart.followsSharedView && chart.shown
+        function onLegendShownChanged() {
+            AppState.patternLegendShown = toolbar.legendShown;
+        }
+        function onHoverShownChanged() {
+            AppState.patternHoverShown = toolbar.hoverShown;
+        }
+        function onPointerModeChanged() {
+            AppState.patternPointerMode = toolbar.pointerMode;
+        }
+    }
+
     // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
     // its structure's colour, drawn under the other series and not stacked. The chart keeps one area per structure it
     // has drawn and hides those not drawn now: an area removed from a Qt Graphs view kept its last drawing on screen.
@@ -685,8 +735,21 @@ Item {
         text: controller.yTitle
         visible: controller.hasData
     }
-    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour.
+    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour. The widest
+    // label sets how far right the panes' shared left edge must be (alignPanes), so a long name never runs into them.
+    readonly property real braggLabelGap: Math.round(chart.em * 0.4)
+    readonly property real braggLabelsRoom: {
+        let widest = 0;
+        for (let i = 0; i < braggLabelRepeater.count; ++i) {
+            const label = braggLabelRepeater.itemAt(i);
+            if (label && label.visible)
+                widest = Math.max(widest, label.width);
+        }
+        return Math.ceil(widest);
+    }
+    onBraggLabelsRoomChanged: Qt.callLater(alignPanes)
     Repeater {
+        id: braggLabelRepeater
         model: controller.braggLabels
         delegate: IconLine {
             required property var modelData
@@ -704,7 +767,7 @@ Item {
                     "text": modelData.text
                 }
             ]
-            x: Math.max(0, braggView.x + braggView.plotArea.x - width - Math.round(chart.em * 0.4))
+            x: Math.max(0, braggView.x + braggView.plotArea.x - width - chart.braggLabelGap)
             y: braggView.y + braggView.plotArea.y + (1 - modelData.centre / Math.max(1, controller.braggRows)) * braggView.plotArea.height - height / 2
         }
     }

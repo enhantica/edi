@@ -515,19 +515,21 @@ Saving is active:
 
 ### 15. The pattern chart
 
-**One chart on every page** (the owner, 2026-10-21). The app owns a single pattern chart (`AppState.patternChart`)
-and moves it, by reparenting, into the page being shown: the Experiment page, the Analysis page, and the Structure
-page's second main-area tab, *Pattern*, beside *Structure*, disabled until an experiment exists. Each page gives it a
-place (`PatternChartSlot`); the shown place takes it. Being one object, it is in full sync everywhere: the experiment
-and dataset selector (on the Structure page's Pattern tab the block selector lists the experiments), the axis
-selectors, zoom and pan, and every toolbar toggle. Only the shown page holds it, so hidden pages draw nothing. Its view
-settings are one set: the y scale and the structure-curves switch are app settings (ADR-0031 §7), and the x axis is
-the project's own, which the report follows. The chart is hidden before it leaves its last place, as a chart out of
-every window logged a critical message for each pending update. Reparenting works in Qt Graphs 6.11 on the desktop's
-OpenGL renderer, so the fallback (one chart per page sharing one view state) was not needed; the offscreen software
-renderer left stale pixels of the moved chart in its captures, which an OpenGL capture does not show. A Qt Graphs area
-removed from its view kept its last drawing, so the chart keeps one area per structure it has drawn and hides those
-it does not draw. The Report page's charts stay separate.
+**One pattern view on every page** (the owner, 2026-10-21). The Experiment page, the Analysis page and the Structure
+page's second main-area tab, *Pattern*, beside *Structure* and disabled until an experiment exists, show the same chart
+in full sync: the experiment and dataset selector (on the Structure page's Pattern tab the block selector lists the
+experiments), the axis selectors, zoom and pan, and every toolbar toggle. Its view settings are one set: the y scale
+and the structure-curves switch are app settings (ADR-0031 §7), and the x axis is the project's own, which the report
+follows. The first build moved one app-owned chart into the shown page by reparenting; the owner's Mac then showed a
+stale copy of the pattern after a zoom and kept the structure fills after the switch went off, neither of which an
+OpenGL capture on Linux shows. So the fallback is taken: each page has its own chart, and every one follows one shared
+view (`AppState.patternViewRanges` and the toolbar's choices; only the shown chart writes them). A hidden chart draws
+nothing and is drawn once when shown. Switching the structure curves makes each chart anew, as Qt Graphs kept an area's
+last drawing when the area was hidden or removed; the new chart takes the shared view, so the zoom stays. The Report
+page's charts stay separate.
+
+**Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
+widest tick-row label (the structure's icon and name), so a name never runs into the plot.
 
 The Experiment and Analysis pages draw the pattern on Qt Graphs, from the core's one description (ADR-0021). The
 chart computes nothing: it draws the series, bands and axes `edi::present_pattern` returns. Its proportions,

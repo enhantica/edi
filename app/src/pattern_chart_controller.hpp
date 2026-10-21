@@ -124,6 +124,9 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QVariantList structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
     // Whether the chart presents a calculated pattern, which the structure curves need.
     Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
+    // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or null for the data's own
+    // range. Several charts that follow one view share it (edi ADR-0017 §15); setting it draws without an animation.
+    Q_PROPERTY(QVariantList viewRanges READ viewRanges WRITE setViewRanges NOTIFY viewRangesChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -193,6 +196,8 @@ class PatternChartController : public QObject {
     void setStructureCurves(bool on);
     QVariantList structureCurveColors() const { return structure_curve_colors_; }
     bool hasCalculated() const { return has_calculated_; }
+    QVariantList viewRanges() const;
+    void setViewRanges(const QVariantList& ranges);
     // The area (filled between its upper and lower series) and the outline of the structure curve at `index`, in
     // presentation order: the chart makes them as `structureCurveColors` grows and hands each over here.
     Q_INVOKABLE void setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline);
@@ -275,6 +280,7 @@ class PatternChartController : public QObject {
     void structureCurvesChanged();
     void structureCurveColorsChanged();
     void hasCalculatedChanged();
+    void viewRangesChanged();
 
    private:
     void invalidate();

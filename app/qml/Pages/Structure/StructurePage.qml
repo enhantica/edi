@@ -49,8 +49,11 @@ WorkflowPage {
             options: page.project ? page.project.structureViewOptions : null
             shown: page.current && SwipeView.isCurrentItem
         },
-        PatternChartSlot {
+        ProjectPatternChart {
             id: chartView
+            experiment: page.project ? page.project.currentExperiment : null
+            axisProject: page.project
+            settingsPage: "pattern"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]

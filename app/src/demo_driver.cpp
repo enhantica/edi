@@ -522,6 +522,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"onechart-4-structure-view", {"mainArea.structure.tab.view"}});
         steps_.push_back({"onechart-5-analysis-again", {analysis, "chart.toolbar.structureCurves"}});
     }
+    // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
+    // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
+    if (only.startsWith(QLatin1String("latp-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic}});
+        steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
+        steps_.push_back({"latp-3-curves-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
