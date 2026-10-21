@@ -137,10 +137,21 @@ TestCase {
     function test_included_range_data() {
         return test_curve_gaps_data();
     }
+    function reflectionPoints() {
+        const points = [];
+        for (const row of PatternProof.series(chart, "chart.series.bragg"))
+            for (const point of row.points)
+                if (isFinite(point.x) && isFinite(point.y))
+                    points.push({
+                        x: point.x,
+                        y: point.y
+                    });
+        return points;
+    }
     function test_included_range(data) {
         pattern(data.kind, data.page);
         setIncluded(false);
-        const originalTicks = PatternProof.series(chart, "chart.series.bragg").flatMap(row => row.points).filter(p => isFinite(p.x) && isFinite(p.y));
+        const originalTicks = reflectionPoints();
         verify(originalTicks.some(p => p.x >= reference.regions[1][0] && p.x <= reference.regions[1][1]), "The fixture contains a genuine reflection inside the interior excluded gap before filtering");
         const button = setIncluded(true);
         compare(button.fontIcon, "eraser", "The included-range button uses the Excluded regions eraser icon");
@@ -153,7 +164,7 @@ TestCase {
         compare(measured.length, reference.included.filter(Boolean).length, "Toggle on retains every included measured point and removes all excluded ones");
         verify(measured.every(p => !inRegion(p.x)), "Interior excluded regions contain no measured point with the toggle on");
         curvesHaveGaps();
-        const ticks = PatternProof.series(chart, "chart.series.bragg").flatMap(row => row.points).filter(p => isFinite(p.x) && isFinite(p.y));
+        const ticks = reflectionPoints();
         verify(ticks.length > 0, "Reflection filtering retains genuine included Bragg ticks");
         verify(ticks.every(p => !inRegion(p.x)), "Toggle on hides reflection ticks inside excluded regions");
         compare(ticks.map(p => p.x).sort().join(","), originalTicks.filter(p => !inRegion(p.x)).map(p => p.x).sort().join(","), "The filtered reflection series retains exactly the included original ticks");
@@ -169,7 +180,7 @@ TestCase {
         pattern("cw", "experiment");
         setIncluded(true);
         // The actual preference singleton is re-created in a separate QML engine.
-        const source = 'import QtQuick; import edi.app; PatternChart { width: 900; height: 500; settingsPage: "experiment"; function choice(root) { if (root.toolTip === "Show only the included range") return root.checked; for (const child of root.children || []) { const found = choice(child); if (found !== undefined) return found; } return undefined; } property var included: choice(this) }';
+        const source = 'import QtQuick; import edi.app; QtObject { property PatternChart chart: PatternChart { width: 900; height: 500; settingsPage: "experiment"; function choice(root) { if (root.toolTip === "Show only the included range") return root.checked; for (const child of root.children || []) { const found = choice(child); if (found !== undefined) return found; } return undefined; } } property var included: chart.choice(chart) }';
         const restarted = SettingsProof.restart(source);
         verify(!restarted.error, "A new app engine can read the persisted included-range preference");
         compare(restarted.included, true, "The included-range choice is remembered across application engines");
@@ -303,10 +314,46 @@ TestCase {
         }
         verify(Render.texts(table.headerItem).some(item => item.text === "ncaf"), "Phase columns name their linked structure under the factor headers");
         verify(Render.descendants(table.headerItem).some(item => item.iconColor && item.icon && String(item.iconColor) === String(AppColors.structure(0))), "The phase header has its coloured structure icon");
-        const top = dialog.mapToItem(appWindow.contentItem, 0, 0);
+        const popupItem = dialog.contentItem.parent;
+        compare(popupItem.height, dialog.height, "The geometry check covers the entire dialog including its header and footer");
+        const top = popupItem.mapToItem(appWindow.contentItem, 0, 0);
         verify(top.y >= 0 && top.y + dialog.height <= appWindow.contentItem.height, "The five-dataset dialog stays within the visible application window");
-        verify(table.clip && table.interactive, "Long dataset lists scroll inside the agreement table");
+        verify(table.clip, "The agreement table clips its scrolling rows inside the dialog");
         capture("fit-agreement-" + data.tag);
+    }
+    function test_long_agreement_list_scrolls() {
+        const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fit_tables/one"));
+        const experiment = SettingsProof.text(location, "experiments/wish_1_10.edi");
+        const names = ["wish_1_10"];
+        for (let i = 1; i < 10; ++i) {
+            const name = "extra_bank_" + i;
+            names.push(name);
+            verify(SettingsProof.write(location, "experiments/" + name + ".edi", experiment.replace(/wish_1_10/g, name)), "The long-list fixture copies a real saved experiment under a distinct identity");
+        }
+        let analysis = SettingsProof.text(location, "analysis/analysis.edi").replace("_fitting_mode.type single", "_fitting_mode.type joint");
+        analysis = analysis.replace(/^wish_1_10 .+$/gm, row => names.map(name => row.replace("wish_1_10", name)).join("\n"));
+        analysis += "\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\n" + names.map(name => name + " 1.0").join("\n") + "\n";
+        verify(SettingsProof.write(location, "analysis/analysis.edi", analysis), "The long-list fixture retains each copied bank's saved result and joint-fit membership");
+        verify(Session.openProject(location), "The long-list fixture opens through the real project loader: " + Session.lastError);
+        tryCompare(Session.project, "calculating", false, 10000, "The long-list project finishes calculating before the dialog is inspected");
+        const dialog = findChild(appWindow, "fit.results");
+        dialog.open();
+        tryCompare(dialog, "opened", true, 3000, "The long-list result dialog opens before scrolling");
+        const views = tables(dialog);
+        compare(views.length, 2, "Long dataset lists retain both the summary and agreement tables");
+        const table = views[1];
+        tryCompare(table, "count", names.length + 1, 3000, "Every saved dataset and the global result populate the long agreement table");
+        verify(waitForPolish(table), "The long agreement table finishes layout before overflow is measured");
+        verify(table.contentHeight > table.height, "The long-list fixture actually overflows the agreement viewport");
+        verify(table.clip && table.interactive, "Long dataset lists scroll inside the agreement table");
+        table.positionViewAtBeginning();
+        const before = table.contentY;
+        mouseDrag(table, table.width / 2, table.height * .8, 0, -table.height * .6);
+        tryVerify(() => table.contentY > before, 3000, "Real pointer input scrolls the overflowing agreement rows");
+        table.positionViewAtIndex(names.length, ListView.Contain);
+        verify(waitForPolish(table), "Scrolling to the final dataset materializes its agreement row");
+        verify(table.itemAtIndex(names.length) !== null, "The final dataset remains reachable inside the scrolling agreement table");
+        capture("fit-agreement-long-list");
     }
     function test_factor_subscripts_in_chart_and_report() {
         open("tests/fixtures/fit_tables/five");
