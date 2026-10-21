@@ -476,7 +476,8 @@ TestCase {
             Ui.click(test, Probe, appWindow, "fitting.start");
             tryVerify(() => !Session.project.fit.running && Session.project.fit.iterations !== "" && Session.project.fit.canUndo, 15000, "A real fit completion rebuilds the parameter projection and provides undo");
             const dialog = findChild(appWindow, "fit.results");
-            verify(dialog !== null && dialog.opened, "The fitting rebuild witness reaches its completed result dialog");
+            verify(dialog !== null, "The fitting rebuild witness has its real result dialog");
+            tryCompare(dialog, "opened", true, 2000, "The fitting rebuild witness waits for its completed result dialog to open");
             mouseClick(dialog.standardButton(Dialog.Ok));
         } else if (data.action === "load") {
             open("tests/fixtures/fit_tables/five");
