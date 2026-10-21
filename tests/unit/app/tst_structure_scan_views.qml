@@ -137,7 +137,7 @@ Item {
                         if (series.objectName === "chart.series.bkg")
                             background = series;
             verify(background !== null && background.count > 0, "The fill baseline is the chart's actual nonempty background curve");
-            tryVerify(() => visibleFills().length === 2 && visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared; initial background points=" + background.count + ", initial upper/lower points=" + JSON.stringify(visibleFills().map(fill => [fill.upperSeries.count, fill.lowerSeries.count])));
+            tryVerify(() => visibleFills().length === 2 && visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared");
             for (const fill of visibleFills()) {
                 verify(fill.lowerSeries !== null && fill.upperSeries !== null, "Every unstacked structure fill retains its own curve over a background baseline");
                 compare(fill.lowerSeries.count, background.count, "Each structure fill spans the same grid as the background");
