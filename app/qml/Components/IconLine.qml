@@ -36,13 +36,18 @@ Item {
         const marked = segments.findIndex(segment => segment.elides === true);
         return marked >= 0 ? marked : segments.length - 1;
     }
+    // A piece's width uncut. otherWidth sums these, never the pieces' `width`, so the elided piece's cut cannot feed
+    // back into the room it is given while the segments change.
+    function naturalWidth(segment, piece) {
+        return segment && segment.slot ? pixelSize * 1.15 : segment && (segment.mark ?? "") !== "" ? pixelSize * 0.6 : piece.implicitWidth;
+    }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
     readonly property real otherWidth: {
         let width = 0;
         for (let i = 0; i < pieces.count; ++i) {
             const piece = pieces.itemAt(i);
             if (i !== elidedIndex)
-                width += piece ? piece.width + spacing : 0;
+                width += piece ? line.naturalWidth(segments[i], piece) + spacing : 0;
         }
         return width;
     }
@@ -95,7 +100,7 @@ Item {
                 readonly property bool factors: !isIcon && modelData.factors === true && FactorText.has(modelData.text)
                 textFormat: factors ? Text.RichText : Text.AutoText
                 text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.naturalWidth(modelData, piece)
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 

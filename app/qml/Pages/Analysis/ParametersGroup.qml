@@ -56,11 +56,11 @@ EaElements.GroupBox {
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
     function ensureSelection() {
-        if (group.selected === null || !filter.shows(group.selected))
-            group.selected = filter.parameterAt(0);
-        group.selectedRow = filter.rowOf(group.selected);
+        if (group.selected === null || !parameterFilter.shows(group.selected))
+            group.selected = parameterFilter.parameterAt(0);
+        group.selectedRow = parameterFilter.rowOf(group.selected);
     }
-    onSelectedChanged: selectedRow = filter.rowOf(selected)
+    onSelectedChanged: selectedRow = parameterFilter.rowOf(selected)
 
     onProjectChanged: {
         group.selected = null;
@@ -69,7 +69,7 @@ EaElements.GroupBox {
     Component.onCompleted: group.ensureSelection()
 
     Connections {
-        target: filter
+        target: parameterFilter
         function onRowsInserted() {
             group.ensureSelection();
         }
@@ -88,6 +88,45 @@ EaElements.GroupBox {
         function onCurrentExperimentIndexChanged() {
             group.ensureSelection();
         }
+    }
+    // Whatever changed the shown rows (a filter, a free or fixed edit, a fit, an Undo), the selection follows them.
+    Connections {
+        target: table
+        function onCountChanged() {
+            group.ensureSelection();
+        }
+    }
+
+    // A picker entry's line: a datablock's icon in its colour, a category's icon in the minor colour, a kind heading in
+    // bold, and the title with its parameter count.
+    function datablockSegments(entry) {
+        if (!entry)
+            return [];
+        const title = {
+            "text": entry.title,
+            "elides": true
+        };
+        return entry.icon === "" ? [title] : [
+            {
+                "icon": entry.icon,
+                "color": group.datablockColor(entry.blockKind, entry.blockName)
+            },
+            title];
+    }
+    function categorySegments(entry) {
+        if (!entry)
+            return [];
+        const title = {
+            "text": entry.title,
+            "bold": entry.datablock,
+            "elides": true
+        };
+        return entry.icon === "" ? [title] : [
+            {
+                "icon": entry.icon,
+                "color": EaStyle.Colors.themeForegroundMinor
+            },
+            title];
     }
 
     // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
@@ -130,19 +169,41 @@ EaElements.GroupBox {
             Row {
                 spacing: AppSizes.inputSpacing
 
+                // Each picker shows the filter the table applies: its index, its closed text with the icon and the
+                // parameter count, all read from the filter model. A rebuilt list resets a combo box's index, so the
+                // index follows the filter again after every rebuild and every choice (the owner, 2026-10-21).
                 SearchableComboBox {
                     id: datablockPicker
+                    readonly property int selectedIndex: Math.max(0, parameterFilter.datablocks.indexOf(parameterFilter.datablockFilter))
+                    readonly property var selected: parameterFilter.datablockGroups[selectedIndex] ?? null
+                    function follow() {
+                        currentIndex = Qt.binding(() => datablockPicker.selectedIndex);
+                    }
                     objectName: "parameters.datablock"
                     width: filters.third
-                    model: filter.datablockGroups
+                    model: parameterFilter.datablockGroups
                     textRole: "title"
                     searchThreshold: 1000
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
-                    currentIndex: Math.max(0, filter.datablocks.indexOf(filter.datablockFilter))
-                    // The box follows the filter again after a choice, so a reset or a datablock that goes away shows.
+                    currentIndex: selectedIndex
+                    displayText: selected ? selected.title : ""
+                    onModelChanged: {
+                        datablockPicker.follow();
+                        Qt.callLater(datablockPicker.follow);
+                    }
                     onActivated: index => {
-                        filter.datablockFilter = filter.datablocks[index];
-                        currentIndex = Qt.binding(() => Math.max(0, filter.datablocks.indexOf(filter.datablockFilter)));
+                        parameterFilter.datablockFilter = parameterFilter.datablocks[index];
+                        datablockPicker.follow();
+                    }
+                    contentItem: Item {
+                        clip: true
+                        IconLine {
+                            x: EaStyle.Sizes.fontPixelSize * 0.75
+                            anchors.verticalCenter: parent.verticalCenter
+                            maximumWidth: Math.max(1, parent.width - x)
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: group.datablockSegments(datablockPicker.selected)
+                        }
                     }
                     delegate: EaElements.MenuItem {
                         id: datablockEntry
@@ -159,35 +220,43 @@ EaElements.GroupBox {
                                 anchors.verticalCenter: parent.verticalCenter
                                 maximumWidth: parent.width
                                 textColor: EaStyle.Colors.themeForeground
-                                segments: datablockEntry.modelData.icon === "" ? [
-                                    {
-                                        text: datablockEntry.modelData.title
-                                    }
-                                ] : [
-                                    {
-                                        icon: datablockEntry.modelData.icon,
-                                        color: group.datablockColor(datablockEntry.modelData.blockKind, datablockEntry.modelData.blockName)
-                                    },
-                                    {
-                                        text: datablockEntry.modelData.title
-                                    }
-                                ]
+                                segments: group.datablockSegments(datablockEntry.modelData)
                             }
                         }
                     }
                 }
                 SearchableComboBox {
                     id: categoryPicker
+                    readonly property int selectedIndex: Math.max(0, parameterFilter.categories.indexOf(parameterFilter.categoryFilter))
+                    readonly property var selected: parameterFilter.categoryGroups[selectedIndex] ?? null
+                    function follow() {
+                        currentIndex = Qt.binding(() => categoryPicker.selectedIndex);
+                    }
                     objectName: "parameters.category"
                     width: filters.third
-                    model: filter.categoryGroups
+                    model: parameterFilter.categoryGroups
                     textRole: "title"
                     searchThreshold: 1000
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
-                    currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
+                    currentIndex: selectedIndex
+                    displayText: selected ? selected.title : ""
+                    onModelChanged: {
+                        categoryPicker.follow();
+                        Qt.callLater(categoryPicker.follow);
+                    }
                     onActivated: index => {
-                        filter.categoryFilter = filter.categories[index];
-                        currentIndex = Qt.binding(() => Math.max(0, filter.categories.indexOf(filter.categoryFilter)));
+                        parameterFilter.categoryFilter = parameterFilter.categories[index];
+                        categoryPicker.follow();
+                    }
+                    contentItem: Item {
+                        clip: true
+                        IconLine {
+                            x: EaStyle.Sizes.fontPixelSize * 0.75
+                            anchors.verticalCenter: parent.verticalCenter
+                            maximumWidth: Math.max(1, parent.width - x)
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: group.categorySegments(categoryPicker.selected)
+                        }
                     }
                     delegate: EaElements.MenuItem {
                         id: categoryEntry
@@ -204,33 +273,29 @@ EaElements.GroupBox {
                                 anchors.verticalCenter: parent.verticalCenter
                                 maximumWidth: parent.width
                                 textColor: EaStyle.Colors.themeForeground
-                                segments: categoryEntry.modelData.icon === "" ? [
-                                    {
-                                        text: categoryEntry.modelData.title,
-                                        bold: categoryEntry.modelData.datablock
-                                    }
-                                ] : [
-                                    {
-                                        icon: categoryEntry.modelData.icon,
-                                        color: EaStyle.Colors.themeForegroundMinor
-                                    },
-                                    {
-                                        text: categoryEntry.modelData.title,
-                                        bold: categoryEntry.modelData.datablock
-                                    }
-                                ]
+                                segments: group.categorySegments(categoryEntry.modelData)
                             }
                         }
                     }
                 }
                 SearchableComboBox {
+                    id: variabilityPicker
+                    readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2])]
+                    function follow() {
+                        currentIndex = Qt.binding(() => parameterFilter.variability);
+                    }
                     objectName: "parameters.variability"
                     width: filters.third
-                    model: [qsTr("All parameters (%1)").arg(filter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(filter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(filter.variabilityCounts[2])]
-                    currentIndex: filter.variability
+                    model: titles
+                    currentIndex: parameterFilter.variability
+                    displayText: titles[parameterFilter.variability]
+                    onModelChanged: {
+                        variabilityPicker.follow();
+                        Qt.callLater(variabilityPicker.follow);
+                    }
                     onActivated: index => {
-                        filter.variability = index;
-                        currentIndex = Qt.binding(() => filter.variability);
+                        parameterFilter.variability = index;
+                        variabilityPicker.follow();
                     }
                 }
             }
@@ -242,8 +307,8 @@ EaElements.GroupBox {
                     objectName: "parameters.nameFilter"
                     width: EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing - clearButton.width
                     placeholderText: qsTr("Filter by name")
-                    text: filter.nameFilter
-                    onTextEdited: filter.nameFilter = text
+                    text: parameterFilter.nameFilter
+                    onTextEdited: parameterFilter.nameFilter = text
                 }
                 EaElements.SideBarButton {
                     id: clearButton
@@ -254,7 +319,7 @@ EaElements.GroupBox {
                     fontIcon: "eraser"
                     text: ""
                     ToolTip.text: toolTip
-                    onClicked: filter.clearFilters()
+                    onClicked: parameterFilter.clearFilters()
                 }
             }
         }
@@ -266,7 +331,7 @@ EaElements.GroupBox {
             maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
             sourceModel: ParameterFilterModel {
-                id: filter
+                id: parameterFilter
                 sourceModel: group.project ? group.project.parameters : null
             }
             marksCurrentRow: true
@@ -339,7 +404,7 @@ EaElements.GroupBox {
                     FreeHeaderMenu {
                         id: freeMenu
                         project: group.project
-                        filter: filter
+                        filter: parameterFilter
                     }
                 }
             }
@@ -427,13 +492,19 @@ EaElements.GroupBox {
         Row {
             id: sliderRow
 
-            readonly property ParameterItem selected: group.selected
+            // The current row's parameter, and none while the table shows no row (the owner, 2026-10-21): the slider
+            // and its limits are then disabled and empty, and come back for the parameter that becomes current. The row
+            // comes from the filter model, which changes at once; the table's own count follows a frame later.
+            readonly property ParameterItem selected: group.selectedRow >= 0 ? group.selected : null
             property real lower: 0
             property real upper: 1
 
             function updateLimits() {
-                if (!selected)
+                if (!selected) {
+                    lower = 0;
+                    upper = 1;
                     return;
+                }
                 const span = selected.sliderHalfWidth();
                 lower = selected.value - span;
                 upper = selected.value + span;
@@ -465,8 +536,13 @@ EaElements.GroupBox {
                 enabled: sliderRow.selected !== null && !sliderRow.selected.estimated
                 from: sliderRow.lower
                 to: sliderRow.upper
-                value: sliderRow.selected ? sliderRow.selected.value : 0
-                toolTipText: EaLogic.Utils.toDefaultPrecision(value)
+                // Clamped here to the limits, so the value is read again when they move: the slider clamps to the
+                // range it has at the time, and a value read before a newly current parameter's limits would stay
+                // clamped to the old ones.
+                value: sliderRow.selected ? Math.min(Math.max(sliderRow.selected.value, sliderRow.lower), sliderRow.upper) : 0
+                // No thumb while no parameter is current, so the empty slider shows no value.
+                handle.visible: sliderRow.selected !== null
+                toolTipText: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(value) : ""
                 onMoved: sliderRow.selected.value = value
                 onPressedChanged: if (!pressed)
                     sliderRow.updateLimits()
