@@ -6,6 +6,8 @@ import QtQuick
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // One line of icons and text on one visual centre line (edi ADR-0017 §10): every place an icon precedes a name
 // draws it through this, so icon and name cannot sit at different heights. The text pieces share the line's
 // baseline; each icon is placed so the middle of its drawn glyph lies on the middle of a capital's height of
@@ -15,7 +17,7 @@ import EasyApplication.Gui.Elements as EaElements
 Item {
     id: line
 
-    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring}, {text, color, bold, elides} or {mark,
+    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring}, {text, color, bold, elides, factors} or {mark,
     // color, width}; a piece without a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not
     // (a fit-outcome column), and one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not
     // fitted"). A mark is a drawn shape, never a character, so it looks the same on every platform (edi ADR-0033):
@@ -89,7 +91,10 @@ Item {
                 font.styleName: !isIcon && modelData.bold ? "Bold" : ""
                 font.pixelSize: line.pixelSize
                 color: modelData.color ?? line.textColor
-                text: isIcon ? modelData.icon : mark !== "" ? "" : modelData.text
+                // A piece with `factors` writes its agreement factors with their subscripts (FactorText).
+                readonly property bool factors: !isIcon && modelData.factors === true && FactorText.has(modelData.text)
+                textFormat: factors ? Text.RichText : Text.AutoText
+                text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text
                 width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset

@@ -721,7 +721,8 @@ Item {
         x: mainView.x + mainView.plotArea.x
         y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
         color: chart.colors.chartLabels
-        text: chart.reliability
+        textFormat: Text.RichText
+        text: FactorText.rich(chart.reliability)
     }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,

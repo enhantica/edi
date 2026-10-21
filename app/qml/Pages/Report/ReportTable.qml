@@ -144,8 +144,9 @@ Flickable {
             anchors.verticalCenter: parent.verticalCenter
             font: metrics.font
             color: EaStyle.Colors.themeForeground
-            textFormat: Text.PlainText
-            text: cell.text
+            // An agreement factor with its subscript (FactorText).
+            textFormat: FactorText.has(cell.text) ? Text.RichText : Text.PlainText
+            text: FactorText.has(cell.text) ? FactorText.rich(cell.text) : cell.text
         }
         Row {
             visible: cell.parts !== null

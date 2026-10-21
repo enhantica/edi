@@ -45,13 +45,41 @@ struct ScanSummary {
     QString outcome;
 };
 
+// The agreement factors of the fit the project records (edi ADR-0045): one row per dataset, after an "All datasets"
+// row when there are several, and one column per factor: Rp, Rwp, Rexp, cRp, cRwp, then R_Bragg and R_F for each
+// linked structure. Roles `label`, `place` (the experiment's colour place, -1 for the global row) and `values` (the
+// columns' texts, in per cent; empty where a factor is not defined for the row).
+class FitAgreementModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the fit results")
+    // Each column as a map: `factor` (its name in Qt rich text, with the subscript), `structure` (the structure's
+    // name, empty for a profile factor) and `place` (the structure's colour place, -1 for none).
+    Q_PROPERTY(QVariantList columns READ columns NOTIFY columnsChanged)
+
+   public:
+    explicit FitAgreementModel(QObject* parent);
+    void setRecord(const edi::Project& project);
+    void clear();
+    QVariantList columns() const { return columns_; }
+
+   signals:
+    void columnsChanged();
+
+   private:
+    QVariantList columns_;
+};
+
 class FitResultListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the fit")
+    // The second table of the fit results: the agreement factors (empty for a scan's summary).
+    Q_PROPERTY(edi_app::FitAgreementModel* agreement READ agreement CONSTANT)
 
    public:
     explicit FitResultListModel(QObject* parent);
+    FitAgreementModel* agreement() const { return agreement_; }
     // The rows of the result the project records (`_fit_result`): after a fit and after a project that holds
     // one is opened alike.
     void setRecord(const edi::Project& project);
@@ -59,6 +87,9 @@ class FitResultListModel : public RowTableModel {
     // range, from `analysis/results.csv`.
     void setScan(const ScanSummary& summary);
     void clear();
+
+   private:
+    FitAgreementModel* agreement_;
 };
 
 // Start fitting (edi ADR-0020 §9): the fit of the open project runs on its worker (edi::FitJob); its
