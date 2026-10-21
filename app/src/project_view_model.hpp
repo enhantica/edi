@@ -32,6 +32,7 @@
 #include "edi/worker.hpp"
 #include "correlation_view_model.hpp"
 #include "evolution_view_model.hpp"
+#include "scan_view_model.hpp"
 #include "scan_session.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
@@ -176,6 +177,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // A scan's stacked patterns and 2D map (edi ADR-0041).
+    Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
     // The Correlations tab: the last fit's parameter correlations for the shown experiment.
     Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -247,6 +250,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    ScanViewModel* scanViews() const { return scan_views_; }
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
@@ -540,6 +544,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan_ = false;
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
+    ScanViewModel* scan_views_ = nullptr;
     CorrelationViewModel* correlations_ = nullptr;
     // ADR-0034: each file's results as the run reports them go into the fit record (the model's, and the template's
     // while a dataset is shown), where the Correlations tab, Undo and a save find them; nothing keeps a second copy.

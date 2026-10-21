@@ -1064,6 +1064,7 @@ bool ProjectViewModel::duplicateStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    scan_views_ = new ScanViewModel(this);
     connect(evolution_, &EvolutionViewModel::refused, this, [this](const QString& message) {
         setLastError(message);
         emit refused(message);
@@ -1636,6 +1637,7 @@ void ProjectViewModel::reloadScanResults() {
 void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
+    scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
     if (!scan_session_->index().error.empty()) {
         // A refused read has no rows to summarise: no summary is built from it, the refusal is shown instead.

@@ -49,6 +49,17 @@ WorkflowPage {
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
             enabled: page.project !== null && page.project.scan
+        },
+        // Every pattern of a scan, one above another, and the same as a 2D map (edi ADR-0041); a scan project's only.
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.stacked"
+            text: qsTr("Stacked")
+            enabled: page.project !== null && page.project.scan
+        },
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.map"
+            text: qsTr("Map")
+            enabled: page.project !== null && page.project.scan
         }
     ]
     mainItems: [
@@ -66,6 +77,16 @@ WorkflowPage {
         EvolutionChart {
             id: evolutionChart
             project: page.project
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        ScanViewChart {
+            project: page.project
+            mode: "stacked"
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        ScanViewChart {
+            project: page.project
+            mode: "map"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
