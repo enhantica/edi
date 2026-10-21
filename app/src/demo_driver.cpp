@@ -494,6 +494,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
                               + QStringList{"appBar.tab.structure", basic, "group.atom_site_aniso"}});
         steps_.push_back({"tables-2-structure-dark", {"theme:dark"}});
+        steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
+        steps_.push_back({"tables-4-report-light", {"theme:light"}});
+        steps_.push_back({"tables-5-report-again", {"theme:light"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
