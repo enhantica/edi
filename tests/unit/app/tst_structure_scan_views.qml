@@ -40,9 +40,10 @@ Item {
             page = null;
             Session.closeProject();
         }
-        function freshToolbarState() {
+        function freshToolbarState(requireControl) {
             const label = JSON.stringify("Show each structure's curve");
-            return SettingsProof.restart('import QtQuick; import QtQuick.Window; import edi.app; QtObject {' + ' property Window sourceWindow: Window { width: 1400; height: 1000; visible: true;' + ' AnalysisPage { id: analysis; anchors.fill: parent; current: true }' + ' Component.onCompleted: Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"); }' + ' property bool acceptanceReady: Session.project !== null && !Session.project.calculating;' + ' property var savedCurveToggle: {' + ' const walk = item => { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; };' + ' const found = walk(analysis).filter(item => item.toolTip === ' + label + ' && typeof item.checked === "boolean" && item.visible);' + ' return {count: found.length, checked: found.length === 1 ? found[0].checked : null}; } }');
+            const present = requireControl ? " && savedCurveToggle.count === 1" : "";
+            return SettingsProof.restart('import QtQuick; import QtQuick.Window; import edi.app; QtObject {' + ' property Window sourceWindow: Window { width: 1400; height: 1000; visible: true;' + ' AnalysisPage { id: analysis; anchors.fill: parent; current: true }' + ' Component.onCompleted: Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"); }' + ' property bool acceptanceReady: Session.project !== null && !Session.project.calculating' + present + ';' + ' property var savedCurveToggle: {' + ' const walk = item => { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; };' + ' const found = walk(analysis).filter(item => item.toolTip === ' + label + ' && typeof item.checked === "boolean" && item.visible);' + ' return {count: found.length, checked: found.length === 1 ? found[0].checked : null}; } }');
         }
         function openAnalysis() {
             verify(Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"), "The Analysis actor uses the two-structure BEER project");
@@ -112,7 +113,7 @@ Item {
                         if (series.objectName === "chart.series.bkg")
                             background = series;
             verify(background !== null && background.count > 0, "The fill baseline is the chart's actual nonempty background curve");
-            tryVerify(() => visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared");
+            tryVerify(() => visibleFills().length === 2 && visibleFills().every(fill => fill.lowerSeries && fill.upperSeries && fill.lowerSeries.count === background.count && fill.upperSeries.count === background.count), 2000, "Every visible structure's real data finishes loading before its baseline is compared");
             for (const fill of visibleFills()) {
                 verify(fill.lowerSeries !== null && fill.upperSeries !== null, "Every unstacked structure fill retains its own curve over a background baseline");
                 compare(fill.lowerSeries.count, background.count, "Each structure fill spans the same grid as the background");
@@ -133,7 +134,7 @@ Item {
                 tryVerify(() => settingsText() !== savedOn, 2000, "Turning the toolbar toggle off also writes the actual app settings file");
             }
             compare(Session.project.modified, modified, "Hiding structure curves also leaves the scientific project unchanged");
-            const restored = freshToolbarState();
+            const restored = freshToolbarState(true);
             verify(!restored.error, "A fresh production chart and Preferences engine reload the actual app store");
             compare(restored.savedCurveToggle.count, 1, "The reloaded calculated chart contains its one structure-curve control");
             compare(restored.savedCurveToggle.checked, data.enabled, "A fresh engine restores the selected on or off curve setting from disk");
