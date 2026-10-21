@@ -31,8 +31,8 @@ Item {
     // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
     // an undoable edit saved with the project; else the chart's own choice.
     property ProjectViewModel axisProject: null
-    // The page whose settings keep the chart's view options (edi ADR-0031 §2): "analysis" (the y scale) or
-    // "experiment" (the y scale and the x axis); none for a report figure, whose options are its own.
+    // "pattern" for the app's one pattern chart, whose y scale is an app setting (edi ADR-0031 §2); none for a report
+    // figure, whose options are its own.
     property string settingsPage: ""
     // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
     readonly property var scaleTokens: ["linear", "sqrt", "log"]
@@ -322,8 +322,9 @@ Item {
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
-        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
-        yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
+        // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
+        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
@@ -437,10 +438,8 @@ Item {
                 closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
                 currentIndex: controller.yScale
                 onActivated: index => {
-                    if (chart.settingsPage === "analysis")
-                        Preferences.analysisYScale = chart.scaleTokens[index];
-                    else if (chart.settingsPage === "experiment")
-                        Preferences.experimentYScale = chart.scaleTokens[index];
+                    if (chart.settingsPage === "pattern")
+                        Preferences.patternYScale = chart.scaleTokens[index];
                     else
                         controller.yScale = index;
                 }
@@ -455,8 +454,6 @@ Item {
                 onActivated: index => {
                     if (chart.axisProject)
                         chart.axisProject.patternDSpacing = index === 1;
-                    else if (chart.settingsPage === "experiment")
-                        Preferences.experimentXAxis = index === 1 ? "d_spacing" : "native";
                     else
                         controller.dSpacing = index === 1;
                 }
@@ -533,22 +530,32 @@ Item {
     }
 
     // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
-    // its structure's colour, drawn under the other series and not stacked. Made as curves are presented and handed
-    // to the controller to fill.
+    // its structure's colour, drawn under the other series and not stacked. The chart keeps one area per structure it
+    // has drawn and hides those not drawn now: an area removed from a Qt Graphs view kept its last drawing on screen.
+    property int structureCurveSlots: 0
+    Connections {
+        target: controller
+        function onStructureCurveColorsChanged() {
+            chart.structureCurveSlots = Math.max(chart.structureCurveSlots, controller.structureCurveColors.length);
+        }
+    }
     Instantiator {
-        model: controller.structureCurveColors.length
+        model: chart.structureCurveSlots
         delegate: AreaSeries {
             id: area
 
             required property int index
+            readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
             readonly property var colours: controller.structureCurveColors[index] ?? ({})
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
+                visible: area.drawn
                 color: area.colours.color ?? "transparent"
                 width: 1.5
             }
 
             objectName: "chart.series.structure." + area.index
+            visible: area.drawn
             color: area.colours.fill ?? "transparent"
             borderWidth: 0
             upperSeries: LineSeries {}
@@ -558,11 +565,6 @@ Item {
             mainView.insertSeries(0, area.outline);
             mainView.insertSeries(0, area);
             controller.setStructureSeries(index, area.upperSeries, area.lowerSeries, area.outline);
-        }
-        onObjectRemoved: (index, area) => {
-            controller.setStructureSeries(index, null, null, null);
-            mainView.removeSeries(area.outline);
-            mainView.removeSeries(area);
         }
     }
 

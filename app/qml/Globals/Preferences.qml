@@ -52,10 +52,8 @@ QtObject {
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
-        preferences.analysisYScale = "linear";
+        preferences.patternYScale = "linear";
         preferences.structureCurves = false;
-        preferences.experimentYScale = "linear";
-        preferences.experimentXAxis = "native";
     }
 
     property Settings settings: Settings {
@@ -86,29 +84,26 @@ QtObject {
         property alias engineThreads: preferences.engineThreads
     }
 
-    // ADR-0031 §2: the pages' settings, each kept under its page's name: the pattern charts' y scale ("linear",
-    // "sqrt" or "log"), the Experiment chart's x axis ("native" or "d_spacing"; the Analysis chart's is the project's),
-    // and how a followed scan redraws.
-    property string analysisYScale: "linear"
-    // Whether the pattern charts draw each structure's curve over the background (the chart toolbar's switch; off by
-    // default, the owner, 2026-10-21).
+    // ADR-0031 §2: the one pattern chart's settings (every page shows the same chart): its y scale ("linear", "sqrt"
+    // or "log"; the x axis is the project's), whether it draws each structure's curve over the background (the chart
+    // toolbar's switch; off by default, the owner, 2026-10-21), and how a followed scan redraws.
+    property string patternYScale: "linear"
+    // The two pages' former names of the one y scale.
+    property alias analysisYScale: preferences.patternYScale
+    property alias experimentYScale: preferences.patternYScale
     property bool structureCurves: false
-    property string experimentYScale: "linear"
-    property string experimentXAxis: "native"
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Analysis"
         property alias scanPatternUpdates: preferences.scanPatternUpdates
-        property alias yScale: preferences.analysisYScale
-        property alias structureCurves: preferences.structureCurves
     }
 
-    property Settings experimentSettings: Settings {
+    property Settings patternChartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
-        category: "Experiment"
-        property alias yScale: preferences.experimentYScale
-        property alias xAxis: preferences.experimentXAxis
+        category: "PatternChart"
+        property alias yScale: preferences.patternYScale
+        property alias structureCurves: preferences.structureCurves
     }
 
     property Binding fitPatternUpdates: Binding {

@@ -510,6 +510,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"curves-4-data-table", {"theme:light", experiment, extras, "group.data"}});
         steps_.push_back({"curves-5-analysis-off", {analysis, "chart.toolbar.structureCurves"}});
     }
+    // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
+    // Run only when asked (`--demo-only onechart-`).
+    if (only.startsWith(QLatin1String("onechart-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"onechart-1-analysis-zoomed",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"onechart-2-experiment", {experiment}});
+        steps_.push_back({"onechart-3-structure-pattern", {"appBar.tab.structure", "mainArea.structure.tab.pattern"}});
+        steps_.push_back({"onechart-4-structure-view", {"mainArea.structure.tab.view"}});
+        steps_.push_back({"onechart-5-analysis-again", {analysis, "chart.toolbar.structureCurves"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {

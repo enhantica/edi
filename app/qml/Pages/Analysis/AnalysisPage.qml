@@ -52,11 +52,8 @@ WorkflowPage {
         }
     ]
     mainItems: [
-        ProjectPatternChart {
+        PatternChartSlot {
             id: chartView
-            experiment: page.experiment
-            axisProject: page.project
-            settingsPage: "analysis"
             shown: page.current && SwipeView.isCurrentItem
         },
         CorrelationChart {
@@ -99,9 +96,7 @@ WorkflowPage {
     // The page's view options (edi ADR-0031 §2): its chart's y scale, and how a followed scan redraws.
     settingsItem: Component {
         EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "analysis"
-            }
+            ChartSettingsGroup {}
             PatternUpdatesGroup {}
         }
     }
