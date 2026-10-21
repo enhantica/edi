@@ -22,6 +22,7 @@ from pathlib import Path
 from tests.conftest import crysta_reference_source
 from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
 from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
+from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.report_units.iucr_reference import without_default_rule
 
@@ -53,10 +54,14 @@ def inputs(root=ROOT):
     return sources
 
 
-def hashes(directory):
+def hashes(directory, *, excluded=False):
     return {
         p.relative_to(directory).as_posix(): hashlib.sha256(
-            original_tokens(p.read_bytes())
+            original_tokens(
+                historical_excluded_bytes(p.relative_to(directory).as_posix(), p.read_bytes())
+                if excluded
+                else p.read_bytes()
+            )
         ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()
@@ -105,8 +110,8 @@ CALCULATOR_INPUTS = {
 }
 
 
-def legacy_input_hashes(directory, case):
-    result = hashes(directory)
+def legacy_input_hashes(directory, case, *, excluded=False):
+    result = hashes(directory, excluded=excluded)
     for name in CALCULATOR_INPUTS.get(case, ()):
         contents = (directory / name).read_bytes()
         declaration = b'_calculator.type crysta\n'
@@ -116,12 +121,16 @@ def legacy_input_hashes(directory, case):
         assert len(re.findall(rb'(?m)^_calculator\.', contents)) == 1, (
             ' I22 no additional seed calculator field may escape the input oracle'
         )
-        old = original_tokens(contents).replace(declaration, b'_calculator.type cryspy\n', 1)
+        old = original_tokens(
+            historical_excluded_bytes(name, contents) if excluded else contents
+        ).replace(declaration, b'_calculator.type cryspy\n', 1)
         result[name] = hashlib.sha256(old).hexdigest()
     return result
 
 
-def without_saved_calculator(name, contents):
+def without_saved_calculator(name, contents, *, excluded=False):
+    if excluded:
+        contents = historical_excluded_bytes(name, contents)
     # Exact canonical block from 's independent CIF contract and retained
     # main-tree byte witness; this is not a new engine-output regression pin.
     if not (name.startswith('experiments/') and name.endswith('.edi')):
@@ -136,10 +145,12 @@ def without_saved_calculator(name, contents):
     return original_tokens(contents.replace(declaration, b'', 1))
 
 
-def saved_hashes(directory):
+def saved_hashes(directory, *, excluded=False):
     return {
         p.relative_to(directory).as_posix(): hashlib.sha256(
-            without_saved_calculator(p.relative_to(directory).as_posix(), p.read_bytes())
+            without_saved_calculator(
+                p.relative_to(directory).as_posix(), p.read_bytes(), excluded=excluded
+            )
         ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()

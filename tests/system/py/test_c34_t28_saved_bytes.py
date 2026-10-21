@@ -9,12 +9,18 @@ and compare every other byte and the full file inventory to the same pins.
 import hashlib
 import importlib.util
 import json
+import math
 import shutil
 import zipfile
 from pathlib import Path
 
 import pytest
 
+from tests.fixtures.excluded_display.historical_bytes import (
+    current_excluded_bytes,
+    historical_excluded_bytes,
+    retained_hashes,
+)
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
 from tests.fixtures.report_units.iucr_reference import without_default_rule
@@ -44,12 +50,27 @@ def restored_source(source, tmp_path):
         REFERENCE.observe(source, new_saved)
         metadata_bytes.check_saved(source, old_saved, new_saved)
     else:
+        restored = source
+    return current_source(restored, tmp_path)
+
+
+def current_source(source, tmp_path):
+    changes = {}
+    for path in (source / 'experiments').glob('*.edi'):
+        changed = current_excluded_bytes('experiments/' + path.name, path.read_bytes())
+        if changed != path.read_bytes():
+            changes[path.name] = changed
+    if not changes:
         return source
-    return restored
+    destination = tmp_path / 'current-input'
+    shutil.copytree(source, destination)
+    for name, contents in changes.items():
+        (destination / 'experiments' / name).write_bytes(contents)
+    return destination
 
 
-def historical_input_hashes(source):
-    result = REFERENCE.hashes(source)
+def historical_input_hashes(source, *, excluded=False):
+    result = REFERENCE.hashes(source, excluded=excluded)
     analysis = source / 'analysis/analysis.edi'
     if analysis.is_file():
         result['analysis/analysis.edi'] = hashlib.sha256(
@@ -58,7 +79,8 @@ def historical_input_hashes(source):
     return result
 
 
-def observe_legacy_pin(source, destination, *, calculator=False):
+def observe_legacy_pin(source, destination, *, calculator=False, excluded=False):
+    destination.parent.mkdir(parents=True, exist_ok=True)
     REFERENCE.observe(source, destination, calculator=calculator)
     legacy = stored_id_bytes.ordinal_copy(
         source, destination, destination.with_name('ordinal-pin')
@@ -73,7 +95,11 @@ def observe_legacy_pin(source, destination, *, calculator=False):
     if not calculator:
         record = legacy / 'project.edi'
         record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
-    return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
+    return (
+        REFERENCE.saved_hashes(legacy, excluded=excluded)
+        if calculator
+        else REFERENCE.hashes(legacy, excluded=excluded)
+    )
 
 
 #  projects postdate the immutable  pre-move source closure.
@@ -210,6 +236,48 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         REFERENCE.saved_hashes(tmp_path)['experiments/d20.edi'] != old_saved['experiments/d20.edi']
     ), ' I22 a non-calculator change still refuses the retained output oracle'
 
+    check_excluded_transition()
+
+
+def check_excluded_transition():
+    d = 1.54 / (2 * math.sin(math.radians(15)))
+    header = (
+        b'_instrument.setup_wavelength 1.54\nloop_\n_data.two_theta\n'
+        b'_data.d_spacing\n_data.intensity_meas\n_data.intensity_calc\n'
+        b'_data.intensity_bkg\n_data.calc_status\n'
+    )
+    row = f'30 {d:.17g} 123 . . excl\n'.encode()
+    included = b'31 2.9 124 125 126 incl\n'
+    modern = header + row + included
+    legacy = header + b'30 0. 123 0. 0. excl\n' + included
+    assert historical_excluded_bytes('experiments/d20.edi', modern) == legacy, (
+        'ADR-0096 historical comparison changes only the three authorized excluded tokens'
+    )
+    assert (
+        historical_excluded_bytes(
+            'experiments/d20.edi', current_excluded_bytes('experiments/d20.edi', legacy)
+        )
+        == legacy
+    ), 'The copy-only current-input conversion retains the complete original byte pin'
+    with pytest.raises(ValueError, match='Only old excluded zeros'):
+        current_excluded_bytes(
+            'experiments/d20.edi', legacy.replace(b'0. 0. excl', b'7.75 0. excl')
+        )
+    for damaged in (
+        row.replace(f'{d:.17g}'.encode(), b'9.75'),
+        row.replace(b'. . excl', b'0. . excl'),
+    ):
+        with pytest.raises(ValueError, match=r'conversion|dots'):
+            historical_excluded_bytes('experiments/d20.edi', header + damaged + included)
+    for damaged in (
+        modern.replace(b'123', b'124'),
+        modern.replace(b'125', b'127'),
+        modern + b'# changed companion byte\n',
+    ):
+        assert historical_excluded_bytes('experiments/d20.edi', damaged) != legacy, (
+            'The excluded-cell transition cannot mask measured, included or unrelated byte changes'
+        )
+
 
 @pytest.mark.parametrize('case', sorted(BASELINE['cases']))
 def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
@@ -255,12 +323,23 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'input_sha256': extension['after_input_sha256'],
             'saved_sha256': extension['after_saved_sha256'],
         }
-        assert historical_input_hashes(source) == expected['input_sha256'], (
-            'the current model must match the explicitly labelled post-change regression pin'
+        assert (
+            retained_hashes(
+                historical_input_hashes(source),
+                historical_input_hashes(source, excluded=True),
+                expected['input_sha256'],
+            )
+            == expected['input_sha256']
+        ), 'the current model must match the explicitly labelled post-change regression pin'
+        assert retained_hashes(
+            observe_legacy_pin(source, tmp_path / 'saved', calculator=True),
+            observe_legacy_pin(
+                source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
+            ),
+            rounded_pins(expected['saved_sha256']),
+        ) == rounded_pins(expected['saved_sha256']), (
+            'the complete saved project must match the labelled model-change regression pin'
         )
-        assert observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == rounded_pins(
-            expected['saved_sha256']
-        ), 'the complete saved project must match the labelled model-change regression pin'
         return
     if case == 'repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
         first, second = tmp_path / 'first', tmp_path / 'second'
@@ -302,15 +381,27 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
             'changed live example bytes must equal the complete reviewed pre-catalogue input, '
             'independently of the position of main'
         )
-        source = REFERENCE.committed_input(
-            ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'
+        source = current_source(
+            REFERENCE.committed_input(ROOT / case.removeprefix('repo:'), tmp_path / 'pre-move'),
+            tmp_path / 'history',
         )
-    assert REFERENCE.legacy_input_hashes(source, case) == expected['input_sha256'], (
-        ' I22 the storage move cannot alter inputs to hide a serialization regression'
+    assert (
+        retained_hashes(
+            REFERENCE.legacy_input_hashes(source, case),
+            REFERENCE.legacy_input_hashes(source, case, excluded=True),
+            expected['input_sha256'],
+        )
+        == expected['input_sha256']
+    ), ' I22 the storage move cannot alter inputs to hide a serialization regression'
+    assert retained_hashes(
+        observe_legacy_pin(source, tmp_path / 'saved', calculator=True),
+        observe_legacy_pin(
+            source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
+        ),
+        rounded_pins(expected['saved_sha256']),
+    ) == rounded_pins(expected['saved_sha256']), (
+        ' I22 save must retain the pre-move bytes of every file in this project'
     )
-    assert observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == rounded_pins(
-        expected['saved_sha256']
-    ), ' I22 save must retain the pre-move bytes of every file in this project'
 
 
 @pytest.mark.parametrize('case', sorted(EXTENSION['cases']))
