@@ -26,25 +26,54 @@ def view_receipts():
     assert binary is not None, 'Rendered acceptance requires the current edi Qt Quick Test host'
     receipts = {}
     for file, suite in ACTORS:
-        try:
-            receipts[suite] = subprocess.run(
-                [str(binary), '-input', str(ROOT / 'tests/unit/app' / file), '-o', '-,txt'],
-                env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=20,
-            )
-        except subprocess.TimeoutExpired as error:
-            # A blocked actor must not suppress the independent actors' receipts.
-            receipts[suite] = subprocess.CompletedProcess(
-                error.cmd,
-                124,
-                (error.stdout or b'').decode(errors='replace'),
-                (error.stderr or b'').decode(errors='replace')
-                + '\nThe actor exceeded its watchdog',
-            )
+        phases = (
+            [
+                'StructureScanViews::test_fresh_engine_observer_loads_the_actual_calculated_page',
+                'StructureScanViews::test_scan_tabs',
+                'StructureScanViews::test_structure_toolbar_toggle_and_saved_state:on',
+                'StructureScanViews::test_structure_toolbar_toggle_and_saved_state:off',
+            ]
+            if suite == 'StructureScanViews'
+            else [None]
+        )
+        parts = [run_view_phase(binary, file, phase) for phase in phases]
+        receipts[suite] = subprocess.CompletedProcess(
+            args=[str(binary), file],
+            returncode=next((part.returncode for part in parts if part.returncode), 0),
+            stdout='\n'.join(part.stdout for part in parts),
+            stderr='\n'.join(part.stderr for part in parts),
+        )
     return receipts
+
+
+def run_view_phase(binary, file, phase):
+    command = [str(binary), '-input', str(ROOT / 'tests/unit/app' / file), '-o', '-,txt']
+    if phase:
+        command.append(phase)
+    try:
+        return subprocess.run(
+            command,
+            env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=20,
+        )
+    except subprocess.TimeoutExpired as error:
+        # Each reload phase has its own bound and cannot suppress other receipts.
+        return subprocess.CompletedProcess(
+            error.cmd,
+            124,
+            (error.stdout or b'').decode(errors='replace'),
+            (error.stderr or b'').decode(errors='replace') + '\nThe actor exceeded its watchdog',
+        )
+    except OSError as error:
+        return subprocess.CompletedProcess(
+            command,
+            127,
+            '',
+            'The required Qt Quick Test host became unavailable: ' + str(error),
+        )
 
 
 @pytest.mark.parametrize('suite', [suite for _, suite in ACTORS])

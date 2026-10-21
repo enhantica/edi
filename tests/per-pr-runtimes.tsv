@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T18:53:56Z
+# measured_utc = 2026-10-21T19:39:30Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 14415 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (3 node(s) measured once, 14416 banked, 0 stale row(s) dropped)
 # Collected tests: 15803; with a reported duration: 9470
 # Module-scoped fixture costs recorded: 62
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 15803
 # inventory_cpp = 389
-# inventory_measured = 14417
-# inventory_unmeasured = 1775
+# inventory_measured = 14416
+# inventory_unmeasured = 1776
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -250,7 +250,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[immediate-pdf]
-0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-cubic]
@@ -16241,7 +16241,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 26.761	tests/integration/app/test_table_about_and_scan_views.py
+# module-cost: 20.027	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
