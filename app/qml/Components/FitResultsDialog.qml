@@ -35,6 +35,30 @@ AppDialog {
     readonly property real factorWidth: EaStyle.Sizes.fontPixelSize * 4.5
     readonly property bool structureHeaders: dialog.factorColumns.some(column => column.structure !== "")
 
+    // The summary table is as wide as its content (the owner, 2026-10-21): each text column its widest entry.
+    property int resultsRevision: 0
+    Connections {
+        target: dialog.results
+        function onDataChanged() {
+            dialog.resultsRevision++;
+        }
+        function onCountChanged() {
+            dialog.resultsRevision++;
+        }
+    }
+    function widestSummaryText(title, cell) {
+        const revision = dialog.resultsRevision;
+        let widest = table.advance(title);
+        for (let row = 0; dialog.results && row < dialog.results.count; ++row)
+            widest = Math.max(widest, table.advance(cell(row)));
+        return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
+    }
+    readonly property real metricColumnWidth: widestSummaryText(qsTr("Metric"), row => dialog.results.text(row, "metric"))
+    readonly property real valueColumnWidth: widestSummaryText(qsTr("Value"), row => {
+        const outcome = dialog.results.text(row, "outcome");
+        return outcome !== "" ? FitOutcomes.word(outcome) : dialog.results.text(row, "value");
+    }) + EaStyle.Sizes.fontPixelSize
+
     EaElements.SideBarButton {
         id: evolutionButton
 
@@ -54,7 +78,7 @@ AppDialog {
     Item {
         id: listArea
 
-        width: AppSizes.messagesDialogContentWidth
+        width: table.numberColumnWidth + AppSizes.iconOnlyColumnWidth + dialog.metricColumnWidth + dialog.valueColumnWidth + 3 * EaStyle.Sizes.tableColumnSpacing + 2 * table.rowPadding
         height: table.contentHeight
 
         DataTable {
@@ -66,7 +90,7 @@ AppDialog {
             defaultInfoText: ""
             sourceModel: dialog.results
 
-            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 10]
+            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, dialog.metricColumnWidth, dialog.valueColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.TableViewLabel {
@@ -97,6 +121,10 @@ AppDialog {
                 required property string value
                 required property string outcome
 
+                // Read-only (the owner, 2026-10-21): no hover, no selection, no click; the colours are set, not the
+                // disabled ones.
+                enabled: false
+
                 EaComponents.TableViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
@@ -110,6 +138,7 @@ AppDialog {
                 EaComponents.TableViewLabel {
                     objectName: `fit.results.metric.${row.index}`
                     horizontalAlignment: Text.AlignLeft
+                    color: EaStyle.Colors.themeForeground
                     text: row.metric
                 }
                 EaComponents.TableViewLabel {
@@ -200,6 +229,8 @@ AppDialog {
                                 height: parent.height
                                 width: Math.min(implicitWidth, dialog.factorWidth - EaStyle.Sizes.fontPixelSize * 1.5)
                                 elide: Text.ElideRight
+                                // The structure's chart colour, as its icon (the owner, 2026-10-21).
+                                color: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : EaStyle.Colors.themeForeground
                                 text: factorHeader.modelData.structure
                             }
                         }
@@ -215,10 +246,13 @@ AppDialog {
                 required property int place
                 required property var values
 
+                // Read-only, as the summary (no hover, no selection, no click).
+                enabled: false
+
+                // The global row keeps an empty icon cell, so its cells stay in the dataset rows' columns.
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
-                    visible: datasetRow.place >= 0
-                    icon: "microscope"
+                    icon: datasetRow.place >= 0 ? "microscope" : ""
                     iconColor: datasetRow.place >= 0 ? AppColors.experiment(datasetRow.place) : ""
                 }
                 EaComponents.TableViewLabel {
@@ -227,6 +261,7 @@ AppDialog {
                     objectName: `fit.results.agreement.dataset.${datasetRow.index}`
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
+                    color: EaStyle.Colors.themeForeground
                     text: datasetRow.label
                 }
                 Instantiator {
@@ -240,6 +275,7 @@ AppDialog {
                         width: dialog.factorWidth
                         height: datasetName.height
                         horizontalAlignment: Text.AlignHCenter
+                        color: EaStyle.Colors.themeForeground
                         text: modelData
                     }
                 }
