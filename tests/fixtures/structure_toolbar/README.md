@@ -3,7 +3,10 @@
 The control belongs to the pattern-chart toolbar's legend/coordinates group.
 It uses the existing structure icon (`layer-group`) and the tooltip
 `Show each structure's curve`. It is hidden without a calculated pattern and
-off in a fresh app-settings store. Pointer input shows and hides the actual
+on in a fresh app-settings store with no saved choice. The real toggle first
+turns that default off and then on; either saved value overrides the default.
+The actual off override must reach disk before the next on/off choice is tested.
+Pointer input shows and hides the actual
 per-structure area series. Each series starts at the background, rather than
 at a preceding structure, and has a soft fill with a more opaque outline.
 The outline may be the area's own border or a visible line of the same colour

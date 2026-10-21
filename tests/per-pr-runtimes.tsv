@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T21:23:16Z
+# measured_utc = 2026-10-21T21:40:48Z
 #
-# Recorded from: measured test run (27 node(s) measured once, 14425 banked, 0 stale row(s) dropped)
-# Collected tests: 15823; with a reported duration: 9493
-# Module-scoped fixture costs recorded: 65
+# Recorded from: measured test run (2 node(s) measured once, 14451 banked, 0 stale row(s) dropped)
+# Collected tests: 15826; with a reported duration: 9495
+# Module-scoped fixture costs recorded: 66
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15823
+# inventory_python = 15826
 # inventory_cpp = 389
-# inventory_measured = 14452
-# inventory_unmeasured = 1760
+# inventory_measured = 14451
+# inventory_unmeasured = 1764
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -255,13 +255,16 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[immediate-pdf]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[current]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[fills]
+0.002	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[observer]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[hidden_work]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[identity]
 0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[observer_control]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[state]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[structure_tab]
-0.000	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
-0.002	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
 0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
@@ -7074,8 +7077,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Studio]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Coast]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Contrast]
-0.000	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Garden]
-0.020	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Garden]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Natural]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Studio]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Coast]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Contrast]
@@ -7087,7 +7090,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Garden]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Natural]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Studio]
-0.000	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
+0.011	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
@@ -16262,8 +16265,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
+# module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 67.290	tests/integration/app/test_shared_pattern_chart.py
-# module-cost: 10.448	tests/integration/app/test_structure_toolbar.py
+# module-cost: 8.531	tests/integration/app/test_structure_toolbar.py
 # module-cost: 37.517	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
@@ -16274,7 +16278,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 1.984	tests/system/py/test_approved_palettes.py
+# module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py

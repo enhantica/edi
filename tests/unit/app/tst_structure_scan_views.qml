@@ -142,8 +142,13 @@ Item {
             const members = [legend, hover, toggle];
             const positions = members.map(item => siblings.indexOf(item));
             verify(siblings.slice(Math.min(...positions), Math.max(...positions) + 1).every(item => members.includes(item)), "No spacer separates the structure toggle from its legend and tooltip group");
-            compare(toggle.checked, false, "Each structure's curve is off by default in a fresh app settings store");
+            compare(toggle.checked, true, "Each structure's curve is on by default when the fresh app store has no saved choice");
+            tryVerify(() => visibleFills().length === Session.project.structures.count, 2000, "The fresh default draws every structure before a choice is saved");
+            const defaultSettings = settingsText();
+            clickToggle(toggle);
+            tryCompare(toggle, "checked", false, 1000, "Real pointer input can turn the default structure fills off");
             compare(visibleFills().length, 0, "Structure fills are absent while their toolbar toggle is off");
+            tryVerify(() => settingsText() !== defaultSettings, 2000, "Turning the fresh default off must persist the actual user override before another choice is tested");
             const modified = Session.project.modified;
             const before = settingsText();
             clickToggle(toggle);

@@ -1,5 +1,5 @@
 {
-  "source_sha256": "920aa84778761a9b534f67a1e8b4d1f1494376a221ded4e8f92a198ce9c35846",
+  "source_sha256": "d4862efd8430ac0ec7f650bfaba3a544109aef7bf53716af379005e9a4bb47fb",
   "palettes": [
     {
       "name": "Edi Natural",
@@ -14,10 +14,10 @@
         ],
         "measured": [
           "#039EDC",
+          "#829DB9",
           "#6EA163",
-          "#8989F7",
-          "#D475AD",
-          "#479F93"
+          "#479F93",
+          "#8989F7"
         ],
         "total_calculation": "#CA5C6E",
         "background": "#8A8A8A",
@@ -33,10 +33,10 @@
         ],
         "measured": [
           "#71CBFE",
+          "#B2C8E0",
           "#A1CD97",
-          "#C0B6E8",
-          "#FDA8CB",
-          "#81CAC2"
+          "#81CAC2",
+          "#C0B6E8"
         ],
         "total_calculation": "#EE8795",
         "background": "#969696",
@@ -56,10 +56,10 @@
         ],
         "measured": [
           "#2C90D7",
+          "#849BB3",
           "#3CA059",
-          "#8978D7",
-          "#CC79A7",
-          "#079E92"
+          "#079E92",
+          "#8978D7"
         ],
         "total_calculation": "#CC6677",
         "background": "#8A8A8A",
@@ -75,10 +75,10 @@
         ],
         "measured": [
           "#71BFFF",
+          "#C7D6E7",
           "#7CCD8E",
-          "#B6AAFF",
-          "#F5C2E7",
-          "#44D0C1"
+          "#44D0C1",
+          "#B6AAFF"
         ],
         "total_calculation": "#F38BA8",
         "background": "#969696",
@@ -98,10 +98,10 @@
         ],
         "measured": [
           "#3D84A0",
+          "#6D7C8D",
           "#668558",
-          "#7172B6",
-          "#9F6683",
-          "#42897C"
+          "#42897C",
+          "#7172B6"
         ],
         "total_calculation": "#A57B7C",
         "background": "#8A8A8A",
@@ -117,10 +117,10 @@
         ],
         "measured": [
           "#7CC3E0",
+          "#A9B9CB",
           "#A2C393",
-          "#ACAFF8",
-          "#E0A2C1",
-          "#80C8B9"
+          "#80C8B9",
+          "#ACAFF8"
         ],
         "total_calculation": "#EBA0AC",
         "background": "#969696",
@@ -140,10 +140,10 @@
         ],
         "measured": [
           "#1E66F5",
+          "#87AACF",
           "#40A02B",
-          "#8839EF",
-          "#EA76CB",
-          "#179299"
+          "#179299",
+          "#8839EF"
         ],
         "total_calculation": "#D20F39",
         "background": "#7C7F93",
@@ -159,10 +159,10 @@
         ],
         "measured": [
           "#89B4FA",
+          "#C7D6E7",
           "#A6E3A1",
-          "#CBA6F7",
-          "#F5C2E7",
-          "#94E2D5"
+          "#94E2D5",
+          "#CBA6F7"
         ],
         "total_calculation": "#F38BA8",
         "background": "#9399B2",
@@ -182,10 +182,10 @@
         ],
         "measured": [
           "#009DE2",
+          "#7C9AB9",
           "#6FA065",
-          "#7264D0",
-          "#D66CAC",
-          "#2D9894"
+          "#2D9894",
+          "#7264D0"
         ],
         "total_calculation": "#C6647F",
         "background": "#8A8A8A",
@@ -201,10 +201,10 @@
         ],
         "measured": [
           "#91D4FF",
+          "#B7CEE6",
           "#A4D89A",
-          "#9E96F8",
-          "#FFAEDD",
-          "#60D1BD"
+          "#60D1BD",
+          "#9E96F8"
         ],
         "total_calculation": "#EC8594",
         "background": "#969696",
