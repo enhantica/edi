@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Window
+import QtQml.Models
 import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
@@ -334,11 +335,6 @@ Item {
         calculatedSeries: calculatedLine
         backgroundSeries: backgroundLine
         residualSeries: residualLine
-        braggSeries0: bragg0
-        braggSeries1: bragg1
-        braggSeries2: bragg2
-        braggSeries3: bragg3
-        braggSeries4: bragg4
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -573,36 +569,25 @@ Item {
             gridVisible: false
             subGridVisible: false
         }
+    }
 
-        LineSeries {
-            id: bragg0
-            objectName: "chart.series.bragg.0"
-            color: controller.braggColor0
-            width: 1  // edi::pattern_style_table's `bragg.0` (ADR-0017 §15)
+    // One tick series per structure (edi::pattern_style_table's `bragg.<place>` rows, 1 px; ADR-0017 §15), each in
+    // its structure's colour, made as structures are added and handed to the controller to fill.
+    Instantiator {
+        model: controller.braggColors.length
+        delegate: LineSeries {
+            required property int index
+            objectName: "chart.series.bragg." + index
+            color: controller.braggColors[index] ?? "transparent"
+            width: 1
         }
-        LineSeries {
-            id: bragg1
-            objectName: "chart.series.bragg.1"
-            color: controller.braggColor1
-            width: 1  // edi::pattern_style_table's `bragg.1` (ADR-0017 §15)
+        onObjectAdded: (index, series) => {
+            braggView.addSeries(series);
+            controller.setBraggSeries(index, series);
         }
-        LineSeries {
-            id: bragg2
-            objectName: "chart.series.bragg.2"
-            color: controller.braggColor2
-            width: 1  // edi::pattern_style_table's `bragg.2` (ADR-0017 §15)
-        }
-        LineSeries {
-            id: bragg3
-            objectName: "chart.series.bragg.3"
-            color: controller.braggColor3
-            width: 1  // edi::pattern_style_table's `bragg.3` (ADR-0017 §15)
-        }
-        LineSeries {
-            id: bragg4
-            objectName: "chart.series.bragg.4"
-            color: controller.braggColor4
-            width: 1  // edi::pattern_style_table's `bragg.4` (ADR-0017 §15)
+        onObjectRemoved: (index, series) => {
+            controller.setBraggSeries(index, null);
+            braggView.removeSeries(series);
         }
     }
 

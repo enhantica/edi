@@ -79,11 +79,6 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QXYSeries* calculatedSeries MEMBER calculated_series_ NOTIFY calculatedSeriesChanged)
     Q_PROPERTY(QXYSeries* backgroundSeries MEMBER background_series_ NOTIFY backgroundSeriesChanged)
     Q_PROPERTY(QXYSeries* residualSeries MEMBER residual_series_ NOTIFY residualSeriesChanged)
-    Q_PROPERTY(QXYSeries* braggSeries0 MEMBER bragg_series_0_ NOTIFY braggSeries0Changed)
-    Q_PROPERTY(QXYSeries* braggSeries1 MEMBER bragg_series_1_ NOTIFY braggSeries1Changed)
-    Q_PROPERTY(QXYSeries* braggSeries2 MEMBER bragg_series_2_ NOTIFY braggSeries2Changed)
-    Q_PROPERTY(QXYSeries* braggSeries3 MEMBER bragg_series_3_ NOTIFY braggSeries3Changed)
-    Q_PROPERTY(QXYSeries* braggSeries4 MEMBER bragg_series_4_ NOTIFY braggSeries4Changed)
     // What the three panes show.
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
@@ -121,11 +116,8 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QColor excludedColor READ excludedColor NOTIFY excludedColorChanged)
     // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
     // structure's place in the project taken round the scheme's colours, as the structure lists take them.
-    Q_PROPERTY(QColor braggColor0 READ braggColor0 NOTIFY braggColor0Changed)
-    Q_PROPERTY(QColor braggColor1 READ braggColor1 NOTIFY braggColor1Changed)
-    Q_PROPERTY(QColor braggColor2 READ braggColor2 NOTIFY braggColor2Changed)
-    Q_PROPERTY(QColor braggColor3 READ braggColor3 NOTIFY braggColor3Changed)
-    Q_PROPERTY(QColor braggColor4 READ braggColor4 NOTIFY braggColor4Changed)
+    // Each structure's tick colour, by its place: one per `bragg.<place>` row of the style table.
+    Q_PROPERTY(QVariantList braggColors READ braggColors NOTIFY braggColorsChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -190,11 +182,10 @@ class PatternChartController : public QObject {
     QColor backgroundColor() const { return color(QStringLiteral("bkg")); }
     QColor residualColor() const { return color(QStringLiteral("resid")); }
     QColor excludedColor() const { return color(QStringLiteral("excluded")); }
-    QColor braggColor0() const { return color(QStringLiteral("bragg.0")); }
-    QColor braggColor1() const { return color(QStringLiteral("bragg.1")); }
-    QColor braggColor2() const { return color(QStringLiteral("bragg.2")); }
-    QColor braggColor3() const { return color(QStringLiteral("bragg.3")); }
-    QColor braggColor4() const { return color(QStringLiteral("bragg.4")); }
+    QVariantList braggColors() const;
+    // The structures' tick series, one per `bragg.<place>` row of the style table, in place order: the chart makes
+    // them as `braggColors` grows and hands each over here.
+    Q_INVOKABLE void setBraggSeries(int place, QXYSeries* series);
     int revision() const { return revision_; }
 
     // A style key's colour in the current theme, with the table's opacity.
@@ -241,11 +232,6 @@ class PatternChartController : public QObject {
     void calculatedSeriesChanged();
     void backgroundSeriesChanged();
     void residualSeriesChanged();
-    void braggSeries0Changed();
-    void braggSeries1Changed();
-    void braggSeries2Changed();
-    void braggSeries3Changed();
-    void braggSeries4Changed();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -272,11 +258,7 @@ class PatternChartController : public QObject {
     void backgroundColorChanged();
     void residualColorChanged();
     void excludedColorChanged();
-    void braggColor0Changed();
-    void braggColor1Changed();
-    void braggColor2Changed();
-    void braggColor3Changed();
-    void braggColor4Changed();
+    void braggColorsChanged();
 
    private:
     void invalidate();
@@ -333,8 +315,8 @@ class PatternChartController : public QObject {
     bool animating_ = false;
     double from_[4] = {}, to_[4] = {};
     std::optional<double> target_[4];
-    QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_,
-        bragg_series_0_, bragg_series_1_, bragg_series_2_, bragg_series_3_, bragg_series_4_;
+    QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_;
+    QList<QPointer<QXYSeries>> bragg_series_;
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;
@@ -344,6 +326,7 @@ class PatternChartController : public QObject {
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
     std::size_t colour_count_ = 0;
+    qsizetype bragg_colour_count_ = 0;
     QList<BraggLabel> bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
