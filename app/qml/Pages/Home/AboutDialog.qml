@@ -64,10 +64,15 @@ AppDialog {
     title: qsTr("About")
     standardButtons: Dialog.Ok
 
-    contentWidth: AppSizes.aboutWidth
+    // Only as wide as its content, with a margin of the base's font size either side (the owner, 2026-10-21).
+    contentWidth: aboutColumn.implicitWidth
 
     Column {
-        width: parent.width
+        id: aboutColumn
+
+        width: implicitWidth
+        leftPadding: EaStyle.Sizes.fontPixelSize
+        rightPadding: EaStyle.Sizes.fontPixelSize
         spacing: EaStyle.Sizes.fontPixelSize * 2.0
         topPadding: EaStyle.Sizes.fontPixelSize
 
@@ -109,21 +114,33 @@ AppDialog {
                 IconLine {
                     segments: [{
                             "icon": "balance-scale",
-                            "color": EaStyle.Colors.link
+                            "color": EaStyle.Colors.themeForeground
                         }]
                 }
+                // The identifiers, a dot in the text colour between them: "BSD-3-Clause · GPL-3.0-only".
                 Repeater {
                     model: ApplicationInfo.appLicences
 
-                    LinkLabel {
-                        required property var modelData
+                    Row {
+                        id: licenceEntry
 
-                        objectName: "about.licence." + modelData.id
-                        text: modelData.id
-                        onActivated: {
-                            licencePopup.title = modelData.id;
-                            licencePopup.licence = ApplicationInfo.licenceText(modelData.url);
-                            licencePopup.open();
+                        required property var modelData
+                        required property int index
+
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                        EaElements.Label {
+                            visible: licenceEntry.index > 0
+                            text: "·"
+                        }
+                        LinkLabel {
+                            objectName: "about.licence." + licenceEntry.modelData.id
+                            text: licenceEntry.modelData.id
+                            onActivated: {
+                                licencePopup.title = licenceEntry.modelData.id;
+                                licencePopup.licence = ApplicationInfo.licenceText(licenceEntry.modelData.url);
+                                licencePopup.open();
+                            }
                         }
                     }
                 }
@@ -135,7 +152,7 @@ AppDialog {
                 IconLine {
                     segments: [{
                             "icon": "balance-scale",
-                            "color": EaStyle.Colors.link
+                            "color": EaStyle.Colors.themeForeground
                         }]
                 }
                 LinkLabel {
@@ -181,6 +198,8 @@ AppDialog {
         title: qsTr("Third-party licences")
         standardButtons: Dialog.Ok
         contentWidth: AppSizes.aboutWidth
+        // The table sets its height, not an implicit one, so the popup is told how tall its content is.
+        contentHeight: components.height
 
         ListModel {
             id: componentRows
@@ -199,7 +218,9 @@ AppDialog {
 
             objectName: "about.components"
             width: parent.width
-            maxRowCountShow: 10
+            // As many rows as fit in the window with the popup's title and OK button, so the popup is never taller than
+            // the window and stays centred in it; the rest scroll.
+            maxRowCountShow: Math.max(3, Math.floor(((thirdPartyPopup.parent ? thirdPartyPopup.parent.height : 0) - EaStyle.Sizes.fontPixelSize * 14) / tableRowHeight) - 1)
             maximumTextColumnShare: 0.5
             defaultInfoText: ""
             selectable: false
@@ -224,6 +245,8 @@ AppDialog {
 
             delegate: TableRow {
                 id: row
+
+                highlightsHover: false
 
                 required property string component
                 required property string version
