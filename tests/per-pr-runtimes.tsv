@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T18:48:57Z
+# measured_utc = 2026-10-21T18:53:56Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 14416 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (4 node(s) measured once, 14415 banked, 0 stale row(s) dropped)
 # Collected tests: 15803; with a reported duration: 9470
 # Module-scoped fixture costs recorded: 62
 #
@@ -10520,8 +10520,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[cli-EDI_CLI_BUNDLE]
-0.010	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
-0.010	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
+0.050	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
+0.020	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[web-EDI_WEB_BUNDLE]
 0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-disabled-bridge]
 0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-each-component]

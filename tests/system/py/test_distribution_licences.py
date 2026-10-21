@@ -1,5 +1,6 @@
 """Check the licence material in real install trees and an unpacked Python wheel."""
 
+import json
 import os
 import re
 from pathlib import Path
@@ -29,6 +30,45 @@ def section_texts(text):
     }
 
 
+def require_actual_artifact(root, surface):
+    if surface in {'desktop', 'cli'}:
+        executable = 'edi_app' if surface == 'desktop' else 'easydiffraction'
+        binaries = [
+            path
+            for path in root.rglob('*')
+            if path.name in {executable, executable + '.exe'} and path.is_file()
+        ]
+        assert binaries and all(path.stat().st_size > 0 for path in binaries), (
+            'The actual distribution contains its built executable, not only copied licence files'
+        )
+    elif surface == 'web':
+        build_file = root / 'build.json'
+        assert build_file.is_file(), 'The web distribution carries its real two-kit site manifest'
+        builds = json.loads(build_file.read_text())
+        for kit in ('singlethread', 'multithread'):
+            assert isinstance(builds.get(kit), str), 'The delivered site names both Qt web kits'
+            folder = (root / builds[kit]).resolve()
+            assert folder.is_relative_to(root.resolve()), (
+                'The delivered kit path remains inside its actual distribution'
+            )
+            wasm = folder / 'edi_app.wasm'
+            assert wasm.is_file() and wasm.read_bytes().startswith(b'\0asm'), (
+                'Each delivered kit contains a real WebAssembly module'
+            )
+            assert (folder / 'edi_app.js').is_file(), (
+                'Each delivered WebAssembly module retains its matching JavaScript loader'
+            )
+        for source in (ROOT / 'data/report/vendor').glob('*.js'):
+            target = root / 'report/vendor' / source.name
+            assert target.is_file() and target.read_bytes() == source.read_bytes(), (
+                'The delivered report libraries retain their actual vendored bytes: ' + source.name
+            )
+    else:
+        assert list(root.glob('*.dist-info/WHEEL')) and list(root.glob('*.dist-info/RECORD')), (
+            'The Python input is an unpacked built wheel, not the source licence directory'
+        )
+
+
 @pytest.mark.parametrize(
     ('surface', 'variable'),
     [
@@ -45,6 +85,7 @@ def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
         'Build the licence packages with tests/fixtures/distribution_licences/stage.py; '
         'the licence-surfaces CI job supplies ' + variable + ': ' + str(root)
     )
+    require_actual_artifact(root, surface)
     required = {name for name, row in matrix.items() if row[surface].casefold() not in ABSENT}
     assert 'diffraction-lib' not in required, (
         'A reference-only project does not appear among any delivered surface components'

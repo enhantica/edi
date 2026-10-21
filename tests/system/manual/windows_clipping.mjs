@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
-import {mkdir, writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 const require = createRequire(new URL('../../fixtures/web_parallel/package.json', import.meta.url));
 const {chromium} = require('playwright-core');
 const [origin, output] = process.argv.slice(2);
+const root = fileURLToPath(new URL('../../../', import.meta.url));
 assert.equal(process.platform, 'win32', 'The clipping acceptance requires a Windows browser');
 assert(origin && output && process.env.EDI_BROWSER,
   'The actor needs the delivered site, evidence directory and Windows browser');
@@ -29,12 +33,24 @@ try {
   assert.equal(build.contract, 1, 'The delivered test host implements the declared observation contract');
   for (const name of ['ediCommit', 'guiComponentsCommit'])
     assert.match(build[name] || '', /^[a-f0-9]{40}$/, 'The host records complete source commit identities');
+  const expectedHead = process.env.GITHUB_SHA || execFileSync('git', ['rev-parse', 'HEAD'],
+    {cwd: root, encoding: 'utf8'}).trim();
+  assert.equal(build.ediCommit, expectedHead, 'The web artifact was built from this exact checked-out head');
+  const pin = (await readFile(resolve(root, 'cmake/EdiGuiBase.cmake'), 'utf8'))
+    .match(/set\(EDI_GUI_COMPONENTS_SHA\s+([a-f0-9]{40})\)/);
+  assert(pin, 'The checked-out app declares its full shared-components pin');
+  assert.equal(build.guiComponentsCommit, pin[1], "The fixture uses this head's exact shared-components pin");
   assert.deepEqual(build.kits?.slice().sort(), ['multithread', 'singlethread'],
     'The host identity covers both actual Qt kits');
   assert(build.qt && build.emscripten && build.sources && Object.keys(build.sources).length > 0,
     'The host identity records toolchain versions and fixture source hashes');
-  for (const hash of Object.values(build.sources))
+  for (const [name, hash] of Object.entries(build.sources)) {
+    assert(name.startsWith('tests/fixtures/windows_clipping/') && !name.split('/').includes('..') &&
+      !name.includes('\\'), 'The host records only source files inside its committed fixture');
     assert.match(hash, /^[a-f0-9]{64}$/, 'Each fixture source has a complete content hash');
+    assert.equal(createHash('sha256').update(await readFile(resolve(root, name))).digest('hex'), hash,
+      'The delivered fixture source bytes match the checked-out test source');
+  }
 
   for (const mode of ['singlethread', 'multithread']) {
     await page.goto(`${origin}/?build=${mode}&acceptance=clipping`);
