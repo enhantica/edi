@@ -12,6 +12,11 @@ SPEC = importlib.util.spec_from_file_location('iucr_reference', REFERENCE)
 iucr = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(iucr)
 FIELDS = ('rise_alpha_0', 'rise_alpha_1', 'decay_beta_0', 'decay_beta_1')
+LATP = (
+    ('latp', '0.000003700(0.00000000809)'),
+    ('alpo4_c2221', '0.000004779(0.000000227)'),
+    ('alpo4_p63mc', '0.000003748(0.000000419)'),
+)
 
 
 def scientific(number):
@@ -20,7 +25,7 @@ def scientific(number):
 
 
 def expectation(token, rule):
-    match = re.fullmatch(r'(-?\d+(?:\.\d+)?)(?:\((\d+)\))?', token)
+    match = re.fullmatch(r'(-?\d+(?:\.\d+)?)(?:\((\d+(?:\.\d+)?)\))?', token)
     if match is None:
         raise ValueError(f'Unexpected authored NCAF decimal: {token}')
     value = Decimal(match[1])
@@ -35,7 +40,9 @@ def expectation(token, rule):
             'su_scientific': '',
             'saved': plain,
         }
-    su = Decimal(match[2]).scaleb(value.as_tuple().exponent)
+    su = Decimal(match[2])
+    if '.' not in match[2]:
+        su = su.scaleb(value.as_tuple().exponent)
     rounded_value, rounded_su = iucr.rounded_pair(value, su, rule)
     error = Decimal(str(rounded_su))
     leading = error.scaleb(-error.adjusted())
@@ -55,7 +62,12 @@ def expectation(token, rule):
 
 
 def generate():
-    result = {'definition': 'ADR-0017 §21; report_units/iucr_reference.py', 'rules': {}}
+    result = {
+        'definition': 'ADR-0017 §21; report_units/iucr_reference.py',
+        'latp_input': 'Owner-provided scale magnitudes; authored uncertainties, not fit pins',
+        'rules': {},
+        'latp': {},
+    }
     for rule in ('iucr_19', 'iucr_99'):
         rows = []
         for file in sorted((HERE.parent / 'fit_tables/five/experiments').glob('*.edi')):
@@ -71,6 +83,16 @@ def generate():
                     **expectation(match[1], rule),
                 })
         result['rules'][rule] = rows
+        latp = []
+        for phase, token in LATP:
+            row = {'phase': phase, 'token': token, **expectation(token, rule)}
+            value = Decimal(token.split('(')[0])
+            su = Decimal(token.split('(')[1].removesuffix(')'))
+            row['value_display'] = scientific(value.quantize(Decimal('1e-9')))
+            row['legacy_su'] = f'{su.scaleb(6):.3f}e-6'
+            row['full_su'] = format(su, 'f')
+            latp.append(row)
+        result['latp'][rule] = latp
     return result
 
 

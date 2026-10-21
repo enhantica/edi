@@ -1,5 +1,6 @@
 {
   "definition": "ADR-0017 \u00a721; report_units/iucr_reference.py",
+  "latp_input": "Owner-provided scale magnitudes; authored uncertainties, not fit pins",
   "rules": {
     "iucr_19": [
       {
@@ -483,6 +484,96 @@
         "value_scientific": "1.000e-2",
         "su_scientific": "2.0e-4",
         "saved": "0.01000(20)"
+      }
+    ]
+  },
+  "latp": {
+    "iucr_19": [
+      {
+        "phase": "latp",
+        "token": "0.000003700(0.00000000809)",
+        "value": 3.7e-06,
+        "su": 8.09e-09,
+        "value_text": "0.000003700",
+        "su_text": "0.000000009",
+        "value_scientific": "3.700e-6",
+        "su_scientific": "9e-9",
+        "saved": "0.000003700(9)",
+        "value_display": "3.700e-6",
+        "legacy_su": "0.008e-6",
+        "full_su": "0.00000000809"
+      },
+      {
+        "phase": "alpo4_c2221",
+        "token": "0.000004779(0.000000227)",
+        "value": 4.779e-06,
+        "su": 2.27e-07,
+        "value_text": "0.0000048",
+        "su_text": "0.0000003",
+        "value_scientific": "4.8e-6",
+        "su_scientific": "3e-7",
+        "saved": "0.0000048(3)",
+        "value_display": "4.779e-6",
+        "legacy_su": "0.227e-6",
+        "full_su": "0.000000227"
+      },
+      {
+        "phase": "alpo4_p63mc",
+        "token": "0.000003748(0.000000419)",
+        "value": 3.748e-06,
+        "su": 4.19e-07,
+        "value_text": "0.0000037",
+        "su_text": "0.0000005",
+        "value_scientific": "3.7e-6",
+        "su_scientific": "5e-7",
+        "saved": "0.0000037(5)",
+        "value_display": "3.748e-6",
+        "legacy_su": "0.419e-6",
+        "full_su": "0.000000419"
+      }
+    ],
+    "iucr_99": [
+      {
+        "phase": "latp",
+        "token": "0.000003700(0.00000000809)",
+        "value": 3.7e-06,
+        "su": 8.09e-09,
+        "value_text": "0.0000037000",
+        "su_text": "0.0000000081",
+        "value_scientific": "3.7000e-6",
+        "su_scientific": "8.1e-9",
+        "saved": "0.0000037000(81)",
+        "value_display": "3.700e-6",
+        "legacy_su": "0.008e-6",
+        "full_su": "0.00000000809"
+      },
+      {
+        "phase": "alpo4_c2221",
+        "token": "0.000004779(0.000000227)",
+        "value": 4.779e-06,
+        "su": 2.27e-07,
+        "value_text": "0.00000478",
+        "su_text": "0.00000023",
+        "value_scientific": "4.78e-6",
+        "su_scientific": "2.3e-7",
+        "saved": "0.00000478(23)",
+        "value_display": "4.779e-6",
+        "legacy_su": "0.227e-6",
+        "full_su": "0.000000227"
+      },
+      {
+        "phase": "alpo4_p63mc",
+        "token": "0.000003748(0.000000419)",
+        "value": 3.748e-06,
+        "su": 4.19e-07,
+        "value_text": "0.00000375",
+        "su_text": "0.00000042",
+        "value_scientific": "3.75e-6",
+        "su_scientific": "4.2e-7",
+        "saved": "0.00000375(42)",
+        "value_display": "3.748e-6",
+        "legacy_su": "0.419e-6",
+        "full_su": "0.000000419"
       }
     ]
   }

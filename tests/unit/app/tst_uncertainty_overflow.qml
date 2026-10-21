@@ -17,6 +17,7 @@ TestCase {
     property var expected
     property var location
     property var table
+    property var originalTheme
     Component {
         id: application
         Main {}
@@ -26,6 +27,7 @@ TestCase {
     }
 
     function init() {
+        originalTheme = Style.Colors.theme;
         Session.closeProject();
         expected = JSON.parse(Probe.readFile("tests/fixtures/uncertainty_display/expected.json"));
         appWindow = application.createObject(null);
@@ -37,9 +39,17 @@ TestCase {
     function cleanup() {
         table = null;
         Session.closeProject();
+        Style.Colors.theme = originalTheme;
         appWindow.destroy();
         appWindow = null;
         Probe.releaseScratchProjects();
+    }
+    function showAnalysis() {
+        Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "Analysis reaches the real viewport before inspecting numeric columns");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        table = Ui.find(Ui.page(appWindow), "parameters.list", true);
+        verify(table !== null && table.sourceModel !== null, "The real Analysis table exposes its production parameter filter");
     }
     function open(rule) {
         location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fit_tables/five"));
@@ -47,11 +57,7 @@ TestCase {
         Session.project.suRule = rule;
         compare(Session.project.suRule, rule, "The live project selects the independently specified standard-uncertainty rule");
         tryCompare(Session.project, "calculating", false, 15000, "The real NCAF calculation settles before numeric cells are observed");
-        Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
-        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "Analysis reaches the real viewport before inspecting numeric columns");
-        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
-        table = Ui.find(Ui.page(appWindow), "parameters.list", true);
-        verify(table !== null && table.sourceModel !== null, "The real Analysis table exposes its production parameter filter");
+        showAnalysis();
         const picker = Ui.find(Ui.page(appWindow), "parameters.category", true);
         verify(picker !== null, "The actual category selector exposes Peak asymmetry");
         let index = -1;
@@ -78,7 +84,7 @@ TestCase {
         const found = expected.rules[rule].find(row => row.block === parameter.blockName && "peak." + row.name === parameter.uid);
         verify(found !== undefined, "Every shown TOF asymmetry parameter has an independent saved-decimal reference");
         compare(parameter.value, found.value, "The numeric reference addresses the actual saved parameter value");
-        compare(parameter.hasUncertainty, found.su !== null, "The numeric reference independently distinguishes present and absent uncertainties");
+        compare(parameter.hasUncertainty && parameter.uncertainty > 0, found.su !== null, "The numeric reference independently distinguishes positive uncertainties from blank uncertainty cells");
         if (found.su !== null)
             fuzzyCompare(parameter.uncertainty, found.su, Math.abs(found.su) * 1e-12, "The observed uncertainty agrees with the independently decoded saved bracket");
         return found;
@@ -239,5 +245,156 @@ TestCase {
         compare(reportTexts(data.rule), before, "The Report retains identical rule text after a live numeric-column resize");
         verify(Session.save(), "A project with narrow numeric columns remains saveable through the real application writer");
         savedTexts(data.rule);
+    }
+    function openLatp(rule) {
+        location = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-xray-cwl_latp_scan-4f/project"));
+        let text = SettingsProof.text(location, "experiments/latp.edi");
+        for (const ref of expected.latp[rule]) {
+            const pattern = new RegExp("^" + ref.phase + " (\\S+)$", "m");
+            verify(pattern.test(text), "The actual LATP scan declares each of the three linked-structure scales");
+            text = text.replace(pattern, ref.phase + " " + ref.token);
+        }
+        verify(SettingsProof.write(location, "experiments/latp.edi", text), "The LATP scan receives the owner's three value magnitudes and independently authored uncertainty seams");
+        verify(Session.openProject(location), "The actual LATP scan with authored scale uncertainties loads through Session");
+        Session.project.suRule = rule;
+        tryCompare(Session.project, "calculating", false, 15000, "The LATP scan finishes its real initial calculation");
+        showAnalysis();
+        table.sourceModel.nameFilter = "scale";
+        tryCompare(table, "count", expected.latp[rule].length, 2000, "The actual Analysis filter retains exactly the three LATP phase scales");
+    }
+    function latpReference(parameter, rule) {
+        compare(parameter.uid, "linked_structure.scale", "The LATP witness addresses actual linked-structure scale parameters");
+        const found = expected.latp[rule].find(ref => ref.phase === parameter.rowLabel);
+        verify(found !== undefined, "Every shown LATP scale belongs to its independently named structure");
+        fuzzyCompare(parameter.value, found.value, found.value * 1e-12, "The actual LATP scale has the owner-supplied value magnitude");
+        fuzzyCompare(parameter.uncertainty, found.su, found.su * 1e-12, "The LATP uncertainty is the authored rounding seam rather than a fitted-output pin");
+        return found;
+    }
+    function test_latp_own_exponent_data() {
+        const cases = [];
+        for (const rule of ["iucr_19", "iucr_99"])
+            for (const layout of ["default", "narrow"])
+                cases.push({
+                    tag: rule + "-" + layout,
+                    rule,
+                    layout
+                });
+        return cases;
+    }
+    function test_latp_own_exponent(data) {
+        openLatp(data.rule);
+        if (data.layout === "narrow") {
+            const columns = table.columnWidths.slice();
+            columns[4] = 42;
+            table.columnWidths = columns;
+            verify(waitForPolish(table), "The actual LATP uncertainty column finishes its narrower live layout");
+        }
+        const rows = Probe.rows(table.sourceModel), failures = [];
+        let compact = 0;
+        rows.forEach((row, index) => {
+            const ref = latpReference(row.parameter, data.rule);
+            const cell = cellAt(index, "su");
+            const exceeds = ordinaryWidth(cell, ref.legacy_su) > room(cell) + 0.5;
+            if (exceeds)
+                compact++;
+            const wanted = exceeds ? ref.su_scientific : ref.legacy_su;
+            if (String(cell.text).replace(/e\+/, "e") !== wanted)
+                failures.push(ref.phase + ": " + cell.text + " expected " + wanted);
+            const value = cellAt(index, "value");
+            if (value.text !== ref.value_display)
+                failures.push(ref.phase + ": value lost its retained four-digit magnitude notation");
+            for (const number of [cell, value])
+                if (number.truncated === true || /…|\.\./.test(number.text) || number.contentWidth > room(number) + 0.5)
+                    failures.push(ref.phase + ": LATP numeric glyphs exceed their actual column");
+        });
+        verify(compact > 0, "The LATP witness reaches the reported shared-exponent overflow rather than a wide-column identity");
+        compare(failures.length, 0, "Every overflowing LATP uncertainty uses its own shortest exponent with the rule's independent significant digits and no elision: " + failures.join("; "));
+    }
+    function test_latp_full_hover_data() {
+        return ["iucr_19", "iucr_99"].map(rule => ({
+                    tag: rule,
+                    rule
+                }));
+    }
+    function test_latp_full_hover(data) {
+        openLatp(data.rule);
+        const rows = Probe.rows(table.sourceModel);
+        for (let index = 0; index < rows.length; ++index) {
+            const ref = latpReference(rows[index].parameter, data.rule);
+            const cell = cellAt(index, "su");
+            Ui.scrollIntoView(cell);
+            const point = Ui.clickPoint(cell);
+            verify(point !== null, "Every actual LATP uncertainty exposes a real hover target");
+            mouseMove(cell, point.x, point.y);
+            tryVerify(() => Probe.visiblePopups(appWindow).some(popup => popup.visible && (popup.text === ref.full_su || popup.text === String(ref.su))), 3000, "Hovering compact LATP uncertainties exposes their full authored values beyond the rule-rounded mantissa");
+            mouseMove(appWindow.contentItem, 1, 1);
+        }
+    }
+    function sidebarContainer() {
+        const contents = Ui.page(appWindow).sideBar;
+        verify(contents !== undefined, "Every tested workflow page exposes its actual sidebar content");
+        for (let index = 0; index < contents.length; ++index)
+            if (contents[index].continueButton !== undefined && contents[index].parent)
+                return contents[index].parent;
+        fail("Every workflow sidebar has its actual rendered container");
+    }
+    function alignedSidebar() {
+        const sidebar = sidebarContainer();
+        const experiment = Ui.control(Probe, appWindow, "appBar.tab.experiment");
+        verify(experiment !== null && experiment.visible, "The top bar exposes the actual Experiment button as the sidebar alignment reference");
+        const left = sidebar.mapToItem(appWindow.contentItem, 0, 0).x;
+        const centre = experiment.mapToItem(appWindow.contentItem, experiment.width / 2, 0).x;
+        verify(Math.abs(left - centre) <= 1, "The rendered sidebar left edge coincides with the rendered Experiment button centre within one pixel: " + left + " versus " + centre);
+    }
+    function test_sidebar_alignment_data() {
+        return ["project", "structure", "experiment", "analysis", "report"].map(page => ({
+                    tag: page,
+                    page
+                }));
+    }
+    function test_sidebar_alignment(data) {
+        open("iucr_19");
+        Ui.click(test, Probe, appWindow, "appBar.tab." + data.page);
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "Each workflow page enters the real viewport before measuring its sidebar");
+        verify(waitForPolish(appWindow.contentItem), "The workflow page completes actual layout before alignment measurement");
+        alignedSidebar();
+        appWindow.width = 1500;
+        verify(waitForPolish(appWindow.contentItem), "A real window resize updates both the top bar and the page layout");
+        alignedSidebar();
+    }
+    function test_free_success_colour_data() {
+        return ["Light", "Dark"].map(theme => ({
+                    tag: theme,
+                    theme
+                }));
+    }
+    function test_free_success_colour(data) {
+        Style.Colors.theme = data.theme === "Light" ? Style.Colors.LightTheme : Style.Colors.DarkTheme;
+        open("iucr_19");
+        verify(SettingsProof.publishScanSummary(Session.project), "An authored successful scan summary reaches the real status bar with a nonzero successful-file count");
+        const rows = Probe.rows(table.sourceModel);
+        const index = rows.findIndex(row => row.parameter.free && row.parameter.refinable && !row.parameter.outsideRange);
+        verify(index >= 0, "The real Analysis table contains a free parameter whose value is not a warning");
+        const cell = cellAt(index, "value");
+        const outcome = findChild(appWindow, "statusBar.fit.outcome");
+        verify(outcome !== null && outcome.visible, "The actual status bar displays its successful outcome");
+        const success = Render.texts(outcome).find(item => item.text === "Success");
+        const tick = outcome.contentItem.children[0];
+        verify(success !== undefined && tick.visible && typeof tick.text === "string", "The Success word and its tick are actual visible rendered text items");
+        const values = findChild(appWindow, "statusBar.fit.values");
+        verify(values !== null, "The real status bar exposes the scan's rendered counts");
+        const ok = Render.descendants(values).find(item => item.visible && item.keyText === "OK");
+        verify(ok !== undefined && Number(ok.valueText) > 0, "The successful-file count really displays a nonzero supplied result");
+        const check = ok.contentItem.children[0];
+        const digits = Render.texts(ok).filter(item => /^\d$/.test(item.text));
+        verify(check.visible && digits.length > 0, "The successful-file check and count digits are actually drawn");
+        verify(cell.font.bold, "A real free parameter retains its bold value style in each theme");
+        const ink = item => String(item.color).toLowerCase();
+        const rendered = [tick, success, check].concat(digits);
+        tryVerify(() => rendered.every(item => ink(item) === ink(cell)), 2000, "The bold free value shares the rendered Success tick, label and successful-file count colour in " + data.theme + ": free=" + ink(cell) + " status=" + rendered.map(ink).join(","));
+        appWindow.update();
+        verify(waitForRendering(appWindow.contentItem), "The shared-green witness reaches a real completed frame");
+        const capture = PatternProof.capture(appWindow, "free-success-green-" + data.theme);
+        verify(capture.openGL && capture.saved, "Both shared-green themes retain actual OpenGL captures");
     }
 }
