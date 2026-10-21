@@ -371,8 +371,13 @@ tint: the Experiments and Structures tables' current block and the parameter tab
 its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
 logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
 the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
-limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
-(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. This is the shared
+`EaComponents.ListView`/`ListViewDelegate` default, including ordinary consumers without an Edi wrapper.
+Its optional `currentRow` input supplies the backend presentation row without changing Qt currentIndex,
+selection, focus or scroll position. DataTable inherits it; TableRow is only a compatibility type. Neither
+adds a second bar or color override. The original ordinary hover remains unchanged for every row; only
+selected-specific fill/hover is removed. Ctrl/Shift multi-selection and its anchor remain genuine and use
+individual accent markers when several rows are selected. `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 
@@ -1564,3 +1569,28 @@ or automatic cutoff implementation is invented.
 The first selection implementation is `ProjectViewModel::setCurrentStructureIndex` / `setCurrentExperimentIndex`, used by the Structure/Experiment page selector and table rows. The assistant's existing `edit_structure` / `edit_experiment` gain only a closed `select` operation with an actual canonical member ID. Both modes call that same setter once; Show actions reveals the original row and gives its visual-only cue first. The preselection guard proves the original list source model, exact native member/view and retained row/window before the scientific editor's already-selected guard would apply. Scientific controls retain that original selected-owner guard.
 
 Selection is UI state: the ordinary setter persists selection preferences and refreshes views, but creates no scientific Edit, Undo, modified flag or fabricated applied receipt. A real already-selected member is a no-op without navigation or cue. Changed selection respects manual drafts and original Stop/current-owner fences. The existing call frame records entry immediately before the void setter, with a preowned uncertain terminal; completion requires the same Session/epoch/project/native call and actual selected member after synchronous callbacks. Unknown UI completion is not replayed or rolled back into a newer user's choice. Scan selection can load data/stop following and is excluded from these new branches. Existing scientific/noncurrent and qualified parameter access is unchanged.
+
+
+## Shared list-row selection presentation
+
+Prior art is the original GUI ListView/ListViewDelegate, Edi's null-safe Base
+ListView replacement and TableRow/DataTable marker, and the tab underline.
+The shared component now owns the single moving marker using the actual realized
+delegate y/height in content coordinates. The overlay header's original z3
+occludes its z2 marker and the viewport retains clipping; no row-index times
+row-height geometry remains. Initial appearance snaps, between-row movement uses
+the original 250ms/two-pixel accent convention. Multi-selection and the original
+unselected anchor retain their individual bars. Marker items receive no input.
+
+Edi's Base replacement carries exactly the same shared marker behavior while
+retaining its null model and typed optional header protections. DataTable's
+measurement/model/reveal/full-row/lifetime code and all actual backend selection,
+manual-takeover, scientific setter, Undo and input handlers are unchanged. The
+ordinary hover palette and actual text-selection accent remain; selection adds
+no persistent blue row fill. No consumer needs a per-table visual declaration.
+
+This source requires the separately reviewed real GUI commit carrying the shared
+Delegate change. The actual GUI archive/commit/tree pin is intentionally not
+invented here; root must materialize that real commit, obtain original archive
+facts, then elect the normal dependency update before a consuming build. No
+native/render/Mac/scientific/task qualification follows from this QML proposal.

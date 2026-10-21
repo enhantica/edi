@@ -2,7 +2,6 @@
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -60,32 +59,40 @@ EaComponents.ListView {
     function revealRow(index: int): bool {
         const view = table, originalModel = table.sourceModel;
         const modelObject = Qt.isQtObject(originalModel);
-        if (originalModel === null || originalModel === undefined || index < 0 || index >= view.count) return false;
+        if (originalModel === null || originalModel === undefined || index < 0 || index >= view.count)
+            return false;
         view.forceLayout();
-        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count)
+            return false;
         view.positionViewAtIndex(index, ListView.Contain);
-        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count)
+            return false;
         view.forceLayout();
-        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count)
+            return false;
         const row = view.itemAtIndex(index);
-        if (!Qt.isQtObject(row)) return false;
+        if (!Qt.isQtObject(row))
+            return false;
         const header = view.headerItem;
         const top = header ? Math.max(0, header.mapToItem(view, 0, 0).y + header.height) : 0;
         let bounds = row.mapToItem(view, 0, 0, row.width, row.height);
-        if (!isFinite(bounds.y) || !isFinite(bounds.height) || bounds.height <= 0 || bounds.height > view.height - top) return false;
+        if (!isFinite(bounds.y) || !isFinite(bounds.height) || bounds.height <= 0 || bounds.height > view.height - top)
+            return false;
         // Contain owns the ordinary positioning; an OverlayHeader is an actual
         // occlusion within that viewport, not permission to expose half a row.
-        if (bounds.y < top) view.contentY -= top - bounds.y;
-        else if (bounds.y + bounds.height > view.height) view.contentY += bounds.y + bounds.height - view.height;
-        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row) return false;
+        if (bounds.y < top)
+            view.contentY -= top - bounds.y;
+        else if (bounds.y + bounds.height > view.height)
+            view.contentY += bounds.y + bounds.height - view.height;
+        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row)
+            return false;
         view.forceLayout();
-        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row) return false;
+        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row)
+            return false;
         bounds = row.mapToItem(view, 0, 0, row.width, row.height);
         const currentHeader = view.headerItem;
         const currentTop = currentHeader ? Math.max(0, currentHeader.mapToItem(view, 0, 0).y + currentHeader.height) : 0;
-        return isFinite(bounds.x) && isFinite(bounds.y) && isFinite(bounds.width) && isFinite(bounds.height)
-            && bounds.width > 0 && bounds.height > 0 && bounds.x >= 0 && bounds.x + bounds.width <= view.width
-            && bounds.y >= currentTop && bounds.y + bounds.height <= view.height;
+        return isFinite(bounds.x) && isFinite(bounds.y) && isFinite(bounds.width) && isFinite(bounds.height) && bounds.width > 0 && bounds.height > 0 && bounds.x >= 0 && bounds.x + bounds.width <= view.width && bounds.y >= currentTop && bounds.y + bounds.height <= view.height;
     }
     // A retained control can exist just outside this table's clipping viewport.
     // Only an actual delegate owned by this view supplies its row index.
@@ -95,64 +102,31 @@ EaComponents.ListView {
             if (child === view.headerItem) {
                 const originalModel = view.sourceModel;
                 const modelObject = Qt.isQtObject(originalModel);
-                if (originalModel === null || originalModel === undefined) return false;
+                if (originalModel === null || originalModel === undefined)
+                    return false;
                 view.forceLayout();
-                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel) return false;
+                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel)
+                    return false;
                 view.positionViewAtBeginning();
-                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel) return false;
+                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel)
+                    return false;
                 view.forceLayout();
                 return Qt.isQtObject(view) && (!modelObject || Qt.isQtObject(originalModel)) && view.sourceModel === originalModel;
             }
-            const index = child.index;
+            const row = child as EaComponents.ListViewDelegate;
+            const index = row ? row.rowIndex : -1;
             if (Number.isInteger(index) && index >= 0 && index < view.count && view.itemAtIndex(index) === child)
                 return view.revealRow(index);
         }
         return false;
     }
 
-    // The current row, -1 for none: an accent bar at its left edge marks it, and moves to a new current row as the
-    // tab bar's underline moves (edi ADR-0017 §11). Its rows are TableRows, which keep their alternating background.
-    property int currentRow: -1
-    // Set by a table with a current row: it then selects no row, since the base draws its own bar on a selected
-    // (clicked) row, which would show at once beside this one sliding in (the owner, 2026-10-13).
+    // Backend currentRow is inherited from the shared ListView presentation.
+    // These tables select their real member through the original backend controls.
     property bool marksCurrentRow: false
     selectable: !marksCurrentRow
-    // The row the bar is on. It moves between two shown rows, and appears on or leaves a row in place.
-    property int markedRow: -1
-    function markCurrentRow() {
-        barMove.enabled = markedRow >= 0 && currentRow >= 0;
-        markedRow = currentRow;
-    }
-    onCurrentRowChanged: markCurrentRow()
-    Component.onCompleted: markCurrentRow()
 
     onModelChanged: forgetWidths()
-
-    Rectangle {
-        objectName: "currentRowBar"
-        parent: table.contentItem
-        // Over the rows' hover tint, under the header.
-        z: 2
-        x: EaStyle.Sizes.borderThickness
-        y: Math.max(0, table.markedRow) * table.tableRowHeight
-        // The tab bar underline's thickness.
-        width: 2
-        height: table.tableRowHeight
-        visible: table.markedRow >= 0
-        color: EaStyle.Colors.themeAccent
-        Behavior on y {
-            id: barMove
-            // The tab bar's underline motion (a ListView highlight with highlightMoveDuration 250). A row is
-            // shorter than a tab, so the speed limit is off and every move takes the underline's 250 ms.
-            SmoothedAnimation {
-                duration: 250
-                velocity: -1
-            }
-        }
-        Behavior on color {
-            EaAnimations.ThemeChange {}
-        }
-    }
 
     FontMetrics {
         id: metrics
@@ -163,7 +137,8 @@ EaComponents.ListView {
     Connections {
         target: {
             const view = table;
-            if (!Qt.isQtObject(view)) return null;
+            if (!Qt.isQtObject(view))
+                return null;
             const source = view.model;
             return Qt.isQtObject(source) ? source : null;
         }
