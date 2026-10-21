@@ -4273,7 +4273,27 @@ struct AssistantViewModel::State {
                         throw std::length_error("The actual constraint Draft preparation exceeds its owned role");
                     run->constraint_commit = model->prepareDraftCommit(run->constraint_draft);
                     run->relation_field = 1; run->step_counted = false; run->relation_input.reset();
-                    widget_constraint_step(run); return;
+                    // Like the original alias/post-commit path, let the Add cue and
+                    // model presentation unwind before resolving its next control.
+                    auto next = [this,run,receiver,target,model,row,draft=run->constraint_draft,commit=run->constraint_commit] {
+                        if (!receiver || receiver->state_.get()!=this || !widget_owned(run)) return;
+                        try {
+                            if (!widget_relation_current(run)) { if (receiver && receiver->state_.get()==this && widget_owned(run)) widget_refuse(run,widget_outcome_error); return; }
+                            if (!receiver || receiver->state_.get()!=this || !widget_owned(run)) return;
+                            if (!target || !model || run->project!=target || run->constraint_model!=model ||
+                                !target->analysis() || target->analysis()->constraints()!=model || run->relation_row!=row || run->relation_field!=1 ||
+                                run->constraint_draft.serial!=draft.serial || run->constraint_commit!=commit ||
+                                !model->draftCommitCurrent(commit) || model->draftRow(draft)<0) {
+                                widget_refuse(run,widget_outcome_error); return;
+                            }
+                            widget_constraint_step(run);
+                        } catch (...) { if (receiver && receiver->state_.get()==this && widget_owned(run)) widget_refuse(run,widget_outcome_error); }
+                    };
+                    const auto continuation_role = reserve_disclosure(2 * sizeof(next));
+                    run->callback_bytes = std::max<quint64>(run->callback_bytes, 2 * sizeof(next));
+                    native_charge();
+                    if (!receiver || receiver->state_.get()!=this || !widget_owned(run)) return;
+                    QTimer::singleShot(500, &owner, std::move(next)); return;
                 }
                 const auto input = run->relation_input; const auto scope = run->edit_scope;
                 const auto cleanup = qScopeGuard([this,run,receiver,target,input,scope]() noexcept {

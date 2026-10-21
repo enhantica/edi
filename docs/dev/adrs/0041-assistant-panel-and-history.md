@@ -2340,3 +2340,51 @@ presence without guessed letters. This is strategy routing, not a second schema
 implementation or a claim that staged skills contain the full tool contract.
 Project-assistance advances to 1.5.53 and its explicit index version/SHA follows
 the exact body; prior Draft/default/post-save guidance remains intact.
+
+### Held native Draft presentation continuation candidate (2026-10-21)
+
+Manual constraint Append creates/syncs its model-local Draft, then requests
+focus; ConstraintsGroup's original handler first calls DataTable.revealRow,
+which forces layout/positions the exact row before focus. Native Add instead
+begins its complete Draft, prepares its immutable commit and immediately
+recurses into Confirm reach in that same completed-callback stack. Original
+alias post-edit and constraint post-commit paths already yield through the
+owned 500ms presentation continuation. Qt's ListView contract permits model
+updates/delegate layout to remain pending until frame work; forceLayout applies
+outstanding layout in both actual Qt6.11.1 and6.11.2 implementations.
+
+A held minimal candidate replaces only native post-Draft immediate recursion
+with that existing 500ms owned presentation continuation. The original request,
+project/window/account, constraint model, exact Draft identity, immutable commit
+and row/field must still own the return. Its local/Qt closure roles are admitted
+before scheduling with the existing callback_bytes sizeof-based accounting.
+It then invokes the same original Confirm/reveal path; it adds no focus change,
+force-layout primitive, geometry rule, scientific setter, timer framework,
+interval tuning, retry or alternate backend. Draft preparation remains local,
+not a scientific step/Undo; Stop/manual takeover uses unchanged exact-Draft
+cleanup and old callbacks cannot act on a successor.
+
+This source asymmetry is not proof of the owner's actual viewport cause. The
+original genuine869 base run must identify whether failure precedes Add, follows
+Draft insertion or reaches Confirm before this candidate can be elected for
+application/review. A pre-Add failure cannot be repaired by this continuation,
+and one existing 500ms interval is not a guarantee that arbitrary hidden/disabled
+geometry becomes valid. No original-control visibility/identity guard is relaxed
+or success claimed without actual native evidence.
+
+### Application after genuine post-Draft refusal (2026-10-21)
+
+The independently executed original Main869 case on clean ce8d reproduced the
+reported partial six-step relation failure. Existing diagnostics identify
+viewport_absent at constraint row0/field1, after native Draft preparation and
+before Confirm: the new row delegates were absent and the fallback table was
+visible but disabled. The original call was not retried. Full current17 and
+historical17 before/after maps stayed equal and all owned host processes closed.
+This establishes the held candidate's application precondition.
+
+Apply the reviewed owned presentation continuation while preserving all existing
+control/currentness/once/commit checks. Exact candidate C++ passes its original
+owning compiler syntax context. The failing ce8d artifacts and build identities
+are preserved separately as OLD evidence before shared-source application.
+Corrected compile/link and native behavior remain separate pending validations;
+this source change and the prior failure do not establish Mac or whole-task success.
