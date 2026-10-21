@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.test_production_licence_scope import require_production_components
 from tests.integration.py.test_table_and_about_contract import ROOT, dependency_matrix
 
 # Positive filename witnesses are independent of the overview. Compiled-in
@@ -80,6 +81,7 @@ def require_actual_artifact(root, surface):
 )
 def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
     matrix = dependency_matrix()
+    require_production_components(matrix)
     root = Path(os.environ.get(variable, ROOT / 'build/distribution-licences' / surface))
     assert root.is_dir(), (
         'Build the licence packages with tests/fixtures/distribution_licences/stage.py; '
@@ -101,6 +103,7 @@ def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
         reference = section_texts((ROOT / 'THIRD-PARTY-NOTICES').read_text())
         for notice in notices:
             sections = section_texts(notice.read_text())
+            require_production_components(sections)
             for name in required:
                 assert name in sections and sections[name] == reference[name], (
                     'Every carried component retains its complete licence text: '
@@ -120,6 +123,7 @@ def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
         notices = list(root.rglob('THIRD-PARTY-NOTICES'))
         for notice in notices:
             listed.update(section_texts(notice.read_text()))
+        require_production_components(listed)
         assert listed == required, (
             'The delivered package carries exactly its own component licences: '
             + surface

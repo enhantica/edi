@@ -155,6 +155,7 @@ def test_actual_colour_assignment_matches_approved_order_and_oklab(
         timeout=2,
     )
     seen = []
+    mismatches = []
     for line in result.stdout.splitlines():
         count, place, actual = line.split('\t')
         count, place = int(count), int(place)
@@ -167,13 +168,15 @@ def test_actual_colour_assignment_matches_approved_order_and_oklab(
             if count <= 5
             else gradient(colours[0], colours[1], min(place, count - 1) / (count - 1))
         )
-        assert actual.upper() == expected, (
-            'Both groups use their own five approved colours, then a whole-group Oklab gradient; '
-            f'{palette["name"]}/{theme}/{role}, count={count}, place={place}'
-        )
+        if actual.upper() != expected:
+            mismatches.append((count, place, actual.upper(), expected))
         seen.append((count, place))
     assert {count for count, _ in seen} == {0, 1, 2, 5, 6, 17}, (
         'The core assignment must reach empty, categorical, threshold and larger groups'
+    )
+    assert not mismatches, (
+        'Both groups use their own approved order and whole-group Oklab endpoints at every size; '
+        f'{palette["name"]}/{theme}/{role}, (count, index, actual, expected)={mismatches}'
     )
 
 
@@ -185,7 +188,8 @@ def test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls():
     assert gradient('#000000', '#FFFFFF', 0.5) == '#636363', (
         'A half-lightness Oklab grey is not the encoded-sRGB midpoint'
     )
-    assert gradient('#039EDC', '#8989F7', 0.4) != gradient('#039EDC', '#8989F7', 0.5), (
+    first, second = PALETTES[0]['light']['measured'][:2]
+    assert gradient(first, second, 0.4) != gradient(first, second, 0.5), (
         'A nontrivial sampling control distinguishes the required t from a fixed midpoint'
     )
 

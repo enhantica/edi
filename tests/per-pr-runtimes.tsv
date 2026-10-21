@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T21:02:10Z
+# measured_utc = 2026-10-21T21:23:16Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 14418 banked, 0 stale row(s) dropped)
-# Collected tests: 15810; with a reported duration: 9471
-# Module-scoped fixture costs recorded: 64
+# Recorded from: measured test run (27 node(s) measured once, 14425 banked, 0 stale row(s) dropped)
+# Collected tests: 15823; with a reported duration: 9493
+# Module-scoped fixture costs recorded: 65
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,11 +29,16 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15810
+# inventory_python = 15823
 # inventory_cpp = 389
-# inventory_measured = 14420
-# inventory_unmeasured = 1779
+# inventory_measured = 14452
+# inventory_unmeasured = 1760
 
+UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[columns_fit_content:dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[columns_fit_content:light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[component_list_excludes_development_sources]
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
 0.300	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Uani-labels]
@@ -5967,6 +5972,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
 0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
 0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
+0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
+0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
+0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[diffraction-lib]
+0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[easydiffractionbeta]
+0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[pytest]
+0.000	tests/integration/py/test_production_licence_scope.py::test_source_component_lists_exclude_development_only_entries[notices]
+0.000	tests/integration/py/test_production_licence_scope.py::test_source_component_lists_exclude_development_only_entries[overview]
+0.000	tests/integration/py/test_production_licence_scope.py::test_source_component_lists_exclude_development_only_entries[python]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[example-ExamplesGroup.qml-openExample]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[open-GetStartedGroup.qml-openProject]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[recent-RecentProjectsGroup.qml-openProject]
@@ -7049,32 +7062,32 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-browser-selector]
 0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-screen]
 0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-selector]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Coast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Contrast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Garden]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Studio]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Coast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Contrast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Garden]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Studio]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Coast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Contrast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Garden]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Studio]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Coast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Contrast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Garden]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Studio]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Coast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Contrast]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Garden]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Studio]
-UNMEASURED:failed-in-this-run	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Coast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Contrast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Garden]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Edi Studio]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Coast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Contrast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Garden]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Edi Studio]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Coast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Contrast]
+0.000	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Garden]
+0.020	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Edi Studio]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Coast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Contrast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Garden]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Edi Studio]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Coast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Contrast]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Garden]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Natural]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Edi Studio]
+0.000	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
@@ -10527,8 +10540,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[cli-EDI_CLI_BUNDLE]
-0.050	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
-0.020	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
+UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[web-EDI_WEB_BUNDLE]
 0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-disabled-bridge]
 0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-each-component]
@@ -16240,6 +16253,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
+# module-cost: 5.172	tests/integration/app/test_about_components.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
@@ -16260,7 +16274,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 1.804	tests/system/py/test_approved_palettes.py
+# module-cost: 1.984	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
