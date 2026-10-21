@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T21:40:48Z
+# measured_utc = 2026-10-21T23:12:46Z
 #
 # Recorded from: measured test run (2 node(s) measured once, 14451 banked, 0 stale row(s) dropped)
-# Collected tests: 15826; with a reported duration: 9495
+# Collected tests: 15826; with a reported duration: 9496
 # Module-scoped fixture costs recorded: 66
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 15826
 # inventory_cpp = 389
-# inventory_measured = 14451
-# inventory_unmeasured = 1764
+# inventory_measured = 14453
+# inventory_unmeasured = 1762
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -263,8 +263,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py
 0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[observer_control]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[state]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[structure_tab]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
+0.000	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
+0.002	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
 0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
@@ -16267,7 +16267,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 67.290	tests/integration/app/test_shared_pattern_chart.py
-# module-cost: 8.531	tests/integration/app/test_structure_toolbar.py
+# module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
 # module-cost: 37.517	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py

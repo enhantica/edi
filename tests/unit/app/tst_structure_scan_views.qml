@@ -72,23 +72,33 @@ Item {
             const sameHue = colour => colour.r === fill.color.r && colour.g === fill.color.g && colour.b === fill.color.b;
             if (fill.borderWidth > 0 && fill.borderColor.a > fill.color.a && sameHue(fill.borderColor))
                 return true;
+            const chart = Render.descendants(page).find(item => item.objectName === "chart" && item.report === null);
+            const rows = Probe.rows(Session.project.currentExperiment.pattern);
+            const expected = new Map(rows.map(row => [chart.xAxis === "dSpacing" ? row.dSpacing : row.x, row.componentIntensities.map(net => row.intensityBkg + net)]));
             for (const item of Render.descendants(page)) {
                 if (!item.visible || item.seriesList === undefined)
                     continue;
                 for (const series of item.seriesList) {
-                    if (series.upperSeries !== undefined || !series.visible || !(series.width > 0) || !(series.opacity > 0) || !sameHue(series.color) || series.color.a * series.opacity <= fill.color.a * fill.opacity || series.count !== fill.upperSeries.count)
+                    if (series.upperSeries !== undefined || !series.visible || !(series.width > 0) || !(series.opacity > 0) || !sameHue(series.color) || series.color.a * series.opacity <= fill.color.a * fill.opacity)
                         continue;
-                    let matches = true;
-                    for (let index = 0; index < series.count; ++index) {
-                        const outline = series.at(index);
-                        const upper = fill.upperSeries.at(index);
-                        if (outline.x !== upper.x || outline.y !== upper.y) {
-                            matches = false;
-                            break;
+                    // Area polygons may add gap-closing vertices and a subpixel
+                    // separation at the baseline. The outline represents the
+                    // physical curve, not the area's triangulation vertices.
+                    for (let column = 0; column < Session.project.structures.count; ++column) {
+                        let finite = 0, matches = true;
+                        for (let index = 0; index < series.count; ++index) {
+                            const point = series.at(index);
+                            if (!Number.isFinite(point.x) || !Number.isFinite(point.y))
+                                continue;
+                            ++finite;
+                            if (!expected.has(point.x) || point.y !== expected.get(point.x)[column]) {
+                                matches = false;
+                                break;
+                            }
                         }
+                        if (matches && finite >= 2)
+                            return true;
                     }
-                    if (matches)
-                        return true;
                 }
             }
             return false;
@@ -121,6 +131,15 @@ Item {
             verify(tabs.some(item => /stack/i.test(item.text)) && tabs.some(item => /map/i.test(item.text)), "Analysis offers both stacked patterns and the 2D intensity map beside its existing views");
         }
         function test_structure_toolbar_toggle_and_saved_state(data) {
+            // Data rows share the process's test-owned store and Preferences singleton.
+            // Remove only the saved choice, then ask a fresh production engine for
+            // its default before normalising the old engine for the pointer exercise.
+            SettingsProof.erase(Globals.Vars.settingsFile, "PatternChart", "structureCurves");
+            compare(SettingsProof.value(Globals.Vars.settingsFile, "PatternChart", "structureCurves"), undefined, "The fresh-default witness has no saved structure-curve choice");
+            const fresh = freshToolbarState(true);
+            verify(!fresh.error && fresh.savedCurveToggle.count === 1, "The default witness loads the actual production toolbar in a fresh engine");
+            compare(fresh.savedCurveToggle.checked, true, "The actual toolbar defaults to showing each structure when no choice is saved");
+            Preferences.structureCurves = fresh.savedCurveToggle.checked;
             openWindow();
             verify(Session.createProject("Empty pattern", "Toolbar visibility witness"), "The empty-chart witness creates a real unsaved project");
             verify(Session.project.createStructure(), "The real Experiment page is available before any experiment is created");
@@ -147,7 +166,7 @@ Item {
             const defaultSettings = settingsText();
             clickToggle(toggle);
             tryCompare(toggle, "checked", false, 1000, "Real pointer input can turn the default structure fills off");
-            compare(visibleFills().length, 0, "Structure fills are absent while their toolbar toggle is off");
+            tryVerify(() => visibleFills().length === 0, 2000, "No finite painted structure area remains while the toolbar toggle is off");
             tryVerify(() => settingsText() !== defaultSettings, 2000, "Turning the fresh default off must persist the actual user override before another choice is tested");
             const modified = Session.project.modified;
             const before = settingsText();
@@ -191,7 +210,7 @@ Item {
             if (!data.enabled) {
                 clickToggle(toggle);
                 tryCompare(toggle, "checked", false, 1000, "Real pointer input hides each structure's curve again");
-                tryVerify(() => visibleFills().length === 0, 2000, "Turning the toggle off removes every visible structure fill");
+                tryVerify(() => visibleFills().length === 0, 2000, "Turning the toggle off leaves no finite painted structure area");
                 tryVerify(() => settingsText() !== savedOn, 2000, "Turning the toolbar toggle off also writes the actual app settings file");
             }
             compare(Session.project.modified, modified, "Hiding structure curves also leaves the scientific project unchanged");
@@ -221,13 +240,80 @@ Item {
                 }
             ];
         }
+        function drawableArea(series) {
+            if (!series || !series.visible || series.opacity <= 0 || !series.color || series.color.a <= 0 || !series.upperSeries || !series.lowerSeries)
+                return false;
+            const upper = series.upperSeries, lower = series.lowerSeries;
+            for (let i = 1; i < Math.min(upper.count, lower.count); ++i) {
+                const a = upper.at(i - 1), b = upper.at(i), c = lower.at(i - 1), d = lower.at(i);
+                if ([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y].every(Number.isFinite) && a.x === c.x && b.x === d.x && a.x !== b.x && (a.y !== c.y || b.y !== d.y))
+                    return true;
+            }
+            return false;
+        }
+        function test_drawable_area_observer() {
+            const line = points => ({
+                        count: points.length,
+                        at: i => points[i]
+                    });
+            const area = (upper, lower, alpha) => ({
+                        visible: true,
+                        opacity: 1,
+                        color: {
+                            a: alpha
+                        },
+                        upperSeries: line(upper),
+                        lowerSeries: line(lower)
+                    });
+            const upper = [
+                {
+                    x: 0,
+                    y: 1
+                },
+                {
+                    x: 1,
+                    y: 2
+                }
+            ], lower = [
+                {
+                    x: 0,
+                    y: 0
+                },
+                {
+                    x: 1,
+                    y: 0
+                }
+            ];
+            verify(drawableArea(area(upper, lower, 0.2)), "The area observer accepts finite painted geometry");
+            verify(!drawableArea(area([
+                {
+                    x: NaN,
+                    y: NaN
+                }
+            ], [
+                {
+                    x: NaN,
+                    y: NaN
+                }
+            ], 0.2)), "Retained one-point NaN placeholders cannot draw an area");
+            verify(!drawableArea(area(upper, lower, 0)), "Transparent retained geometry cannot draw a fill");
+            verify(!drawableArea(area(upper, upper, 0.2)), "A zero-height outline cannot count as a painted interior");
+            verify(!drawableArea(area([], [], 0.2)), "Empty series cannot count as drawn fills");
+            verify(!drawableArea(area([upper[0]], [lower[0]], 0.2)), "A single finite point cannot enclose a painted area");
+            const hidden = area(upper, lower, 0.2);
+            hidden.visible = false;
+            verify(!drawableArea(hidden), "A hidden retained series cannot count as a drawn fill");
+            hidden.visible = true;
+            hidden.opacity = 0;
+            verify(!drawableArea(hidden), "Zero effective opacity cannot count as a drawn fill");
+        }
         function visibleFills() {
             const fills = [];
             for (const item of Render.descendants(page)) {
                 if (!item.visible || item.seriesList === undefined)
                     continue;
                 for (const series of item.seriesList)
-                    if (series.upperSeries !== undefined && series.lowerSeries !== undefined && series.visible && series.opacity > 0)
+                    if (drawableArea(series))
                         fills.push(series);
             }
             return fills;
