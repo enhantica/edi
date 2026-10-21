@@ -585,6 +585,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                              QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
         steps_.push_back({"legend-2-dark", {"theme:dark"}});
     }
+    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, before a fit, while one runs and
+    // in the dark theme. Run only when asked (`--demo-only scanviews-`).
+    if (only.startsWith(QLatin1String("scanviews-"))) {
+        steps_.push_back({"scanviews-1-stacked", QStringList{"resize:1280x960", "theme:light"} + start
+                                                     + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                     + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-2-map", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-3-map-log", {"mainArea.analysis.tab.fitting", "chart.toolbar.yscale", "choose:log",
+                                                  "mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-4-map-running", {"reveal:fitting.start", "fitting.start", "wait-files:40", "capture-now"}});
+        steps_.push_back({"scanviews-5-stacked-dark", {"wait-fit", "choose:OK", "theme:dark", "mainArea.analysis.tab.stacked"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
