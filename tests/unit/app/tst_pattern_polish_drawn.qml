@@ -153,7 +153,16 @@ TestCase {
         pattern(data.kind, data.page);
         setIncluded(false);
         const originalTicks = reflectionPoints();
-        verify(originalTicks.some(p => p.x >= reference.regions[1][0] && p.x <= reference.regions[1][1]), "The fixture contains a genuine reflection inside the interior excluded gap before filtering");
+        const gapReflection = data.kind === "tof" ? 37 + 5000 * 2 + 2.5 * 4 : 2 * Math.asin(1.54 * Math.sqrt(3) / 8) * 180 / Math.PI + .29;
+        verify(inRegion(gapReflection), "The cubic fixture has a closed-form Bragg reflection inside an excluded region");
+        verify(originalTicks.length > 0, "Toggle off retains genuine included Bragg ticks");
+        verify(originalTicks.every(p => !inRegion(p.x)), "Toggle off hides every reflection tick inside an excluded region");
+        const includedReflection = data.kind === "tof" ? 37 + 5000 * Math.sqrt(8) + 2.5 * 8 : 2 * Math.asin(1.54 / 8) * 180 / Math.PI + .29;
+        verify(!inRegion(includedReflection), "The independent cubic reflection witness lies in the included range");
+        verify(originalTicks.some(p => Math.abs(p.x - includedReflection) < 1e-6), "Toggle off retains the independently predicted included reflection");
+        const fullMeasured = PatternProof.measured(chart).filter(p => isFinite(p.x) && isFinite(p.y));
+        compare(fullMeasured.length, reference.x.length, "Hiding excluded ticks with toggle off retains every measured point");
+        verify(fullMeasured.some(p => inRegion(p.x)), "Measured observations inside exclusions remain visible with toggle off");
         const button = setIncluded(true);
         compare(button.fontIcon, "eraser", "The included-range button uses the Excluded regions eraser icon");
         const legend = Review.find(chart, "chart.toolbar.legend"), hover = Review.find(chart, "chart.toolbar.hover");
@@ -168,7 +177,7 @@ TestCase {
         const ticks = reflectionPoints();
         verify(ticks.length > 0, "Reflection filtering retains genuine included Bragg ticks");
         verify(ticks.every(p => !inRegion(p.x)), "Toggle on hides reflection ticks inside excluded regions");
-        compare(ticks.map(p => p.x).sort().join(","), originalTicks.filter(p => !inRegion(p.x)).map(p => p.x).sort().join(","), "The filtered reflection series retains exactly the included original ticks");
+        compare(ticks.map(p => p.x).sort().join(","), originalTicks.map(p => p.x).sort().join(","), "Both toggle states retain exactly the same included reflection ticks");
         const pointer = Review.find(chart, "chart.pointer");
         mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .3, pointer.height * .4);
         const reset = Review.find(chart, "chart.toolbar.reset");

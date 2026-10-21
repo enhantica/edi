@@ -3,6 +3,7 @@
 import json
 import math
 import shlex
+import shutil
 from pathlib import Path
 
 import edi as library
@@ -65,8 +66,62 @@ def canonical_saved_rows(root, oracle, *, old_column=None):
     path.write_text(prefix + old + body + suffix)
 
 
+def check_excluded_reflection_tail(tmp_path):
+    centre = math.degrees(2 * math.asin(1.54 / (2 * 4))) + 0.29
+    positions = [centre - 0.04, centre, centre + 0.04]
+    region = (centre - 0.01, centre + 0.01)
+    assert region[0] < centre < region[1] < positions[-1], (
+        'The closed-form cubic 100 peak is just inside the exclusion beside an included point'
+    )
+    source = (FIXTURES / 'cw/experiments/pattern.edi').read_text()
+    prefix, rest = source.split('loop_\n_excluded_region.id', 1)
+    _, data = rest.split('loop_\n_data.two_theta', 1)
+    headers = data.split('_data.intensity_meas_su\n', 1)[0]
+    rows = ''.join(f'{x:.15g} 100 2\n' for x in positions)
+    curves = {}
+    for name, scale, excluded in (
+        ('full', 1, False),
+        ('excluded', 1, True),
+        ('background', 0, True),
+    ):
+        folder = tmp_path / name
+        shutil.copytree(FIXTURES / 'cw', folder)
+        exclusion = (
+            'loop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n'
+            f'1 {region[0]:.15g} {region[1]:.15g}\n'
+            if excluded
+            else ''
+        )
+        text = prefix.replace('phase 1\n', f'phase {scale}\n') + exclusion
+        text += 'loop_\n_data.two_theta' + headers + '_data.intensity_meas_su\n' + rows
+        (folder / 'experiments/pattern.edi').write_text(text)
+        project = library.Project.load(folder)
+        project.analysis.calculate()
+        curves[name] = np.asarray(project.experiment.data.intensity_calc).copy()
+    assert np.isfinite(curves['full']).all(), (
+        'The control calculates the Bragg peak at every observation before exclusion'
+    )
+    assert np.isnan(curves['excluded'][1]), (
+        'The excluded peak centre has no calculated display value'
+    )
+    assert curves['full'][1] > max(curves['full'][0], curves['full'][2]), (
+        'The Bragg-law centre is a real peak above its adjacent included tails'
+    )
+    for side in (0, 2):
+        assert curves['excluded'][side] > curves['background'][side] + 1, (
+            'A reflection centred inside an exclusion still raises calc above '
+            'background outside it'
+        )
+        assert curves['excluded'][side] == pytest.approx(curves['full'][side], rel=1e-12), (
+            'Excluding a peak centre preserves its whole contribution at '
+            'neighbouring included points'
+        )
+
+
 @pytest.mark.parametrize('kind', ['cw', 'tof'])
 def test_excluded_writer_keeps_real_d_and_absent_derived_values(tmp_path, kind):
+    if kind == 'cw':
+        check_excluded_reflection_tail(tmp_path)
     oracle = json.loads((FIXTURES / f'{kind}.json').read_text())
     project, saved = calculated(tmp_path, kind)
     _, rows = data_loop((saved / 'experiments/pattern.edi').read_text())
