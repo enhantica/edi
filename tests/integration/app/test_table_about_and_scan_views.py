@@ -28,10 +28,8 @@ def view_receipts():
     for file, suite in ACTORS:
         phases = (
             [
-                'StructureScanViews::test_fresh_engine_observer_loads_the_actual_calculated_page',
+                'StructureScanViews::test_fresh_toolbar_observer_loads_actual_control',
                 'StructureScanViews::test_scan_tabs',
-                'StructureScanViews::test_structure_toolbar_toggle_and_saved_state:on',
-                'StructureScanViews::test_structure_toolbar_toggle_and_saved_state:off',
             ]
             if suite == 'StructureScanViews'
             else [None]

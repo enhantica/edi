@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T20:33:09Z
+# measured_utc = 2026-10-21T21:02:10Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 14417 banked, 0 stale row(s) dropped)
-# Collected tests: 15808; with a reported duration: 9470
-# Module-scoped fixture costs recorded: 63
+# Recorded from: measured test run (2 node(s) measured once, 14418 banked, 0 stale row(s) dropped)
+# Collected tests: 15810; with a reported duration: 9471
+# Module-scoped fixture costs recorded: 64
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15808
+# inventory_python = 15810
 # inventory_cpp = 389
-# inventory_measured = 14418
+# inventory_measured = 14420
 # inventory_unmeasured = 1779
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -255,6 +255,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py
 0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[observer_control]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[state]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[structure_tab]
+0.000	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
+0.002	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
 0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
@@ -16247,6 +16249,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 67.290	tests/integration/app/test_shared_pattern_chart.py
+# module-cost: 10.448	tests/integration/app/test_structure_toolbar.py
 # module-cost: 37.517	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
