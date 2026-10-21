@@ -1994,8 +1994,8 @@
       "inputs_sha256": {
         "README.md": "a79092fbb580c912355b5d49ae975b3934c0ce303e89c1a6d5e5e977b9076ff4",
         "analysis/analysis.edi": "362967ebcac29cd81a538ba27f01b70d61eb04bfcbf8d2de0ba4e13bb271e428",
-        "experiments/wish_4_7.edi": "15a16d72f02eb93f4aa0eda13b5cfb77a05c2abcee6689821caba5b47f37636d",
-        "experiments/wish_5_6.edi": "936b75830a0eb724abc277846c574328b303f95568fa74b067bfc812b3224bfc",
+        "experiments/wish_4_7.edi": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+        "experiments/wish_5_6.edi": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
         "project.edi": "a838c66c59d1fcdefbe49aa1d0724cdb22605510c0824952049e9a138af753aa",
         "structures/ncaf.edi": "f61f4922cf075908b47b4fd3b14c32f7aefef8e339d6161a5fece184396f865b"
       },

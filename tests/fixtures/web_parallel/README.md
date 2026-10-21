@@ -208,3 +208,9 @@ five-bank dialog and falsely rejected the actually drawn popup. The margin
 background retains gui-components' declared light-theme color and tolerance;
 actual Success, real popup drawing, completed fit and saved native parity are
 still required, and the same witness must observe closure after Escape.
+
+**Excluded rows rewritten ([ADR-0044](../../../docs/dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** The NCAF
+capture's excluded rows had `.` for the d-spacing; they now have the real d. The fitted calibration is not in the
+capture, so it was solved from each bank's included rows (time of flight is linear in the three constants), which it
+reproduces to 1e-11 relative, and each excluded d is the physical root, written as the shortest round trip.
+`scientific_sha256` in `ncaf-conditioning.json` was updated to match.
