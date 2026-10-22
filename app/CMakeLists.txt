@@ -337,7 +337,7 @@ target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
-# The demo opens a verification project the app does not bundle from the source tree (ADR-0031).
+# The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
 set_source_files_properties(src/demo_driver.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
