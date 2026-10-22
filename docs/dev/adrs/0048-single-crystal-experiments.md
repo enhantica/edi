@@ -2,9 +2,9 @@
 
 - **Status:** Proposed
 - **Date:** 2026-10-22
-- **Implementation:** 🟡 Partially implemented — constant-wavelength single crystals load, calculate, fit, save and
-  show their chart and table; loading reflection files into a new experiment, the Python surface and time of flight
-  are pending
+- **Implementation:** 🟡 Partially implemented — constant-wavelength single crystals load, calculate, fit, save, show
+  their chart and table and appear in the report; a new experiment loads reflection files; the Python surface and
+  time of flight are pending
 - **Priority:** High
 
 ## Context
@@ -26,6 +26,10 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 4. **Views.** For a single crystal the Experiment and Analysis pages show, where the pattern chart was, a chart of
    F²calc against F²meas (each reflection a point with its su bar, and the y = x line) over a table of h, k, l,
    F²meas, su, F²calc and (F²meas − F²calc)/su. The sidebar shows Extinction and leaves out the pattern-only groups.
+5. **Report.** The report model carries a single crystal's reflections for its chart instead of a pattern, so the
+   Report page, the HTML and the PDF draw the same chart, with R(F²) and wR(F²) in its title and in the fit result.
+   The experiment's section lists the reflection file and count, the extinction, and every reflection with its
+   calculated F² and normalised residual.
 
 ## Consequences
 

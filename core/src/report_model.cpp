@@ -383,6 +383,22 @@ ReportPattern pattern_of(const Project& project, std::size_t index, const Report
     return out;
 }
 
+// A single crystal's chart: its reflections' measured F² and s.u., and their calculated F² once calculated.
+ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment) {
+    const ReflnDataBase& reflections = *experiment.reflections;
+    ReportSingleCrystal out;
+    out.h.assign(reflections.index_h.begin(), reflections.index_h.end());
+    out.k.assign(reflections.index_k.begin(), reflections.index_k.end());
+    out.l.assign(reflections.index_l.begin(), reflections.index_l.end());
+    out.meas = reflections.intensity_meas;
+    out.su = reflections.intensity_meas_su;
+    const std::vector<double>& calc = reflections.intensity_calc.values();
+    if (experiment.computed_current() && calc.size() == reflections.size()) {
+        out.calc = calc;
+    }
+    return out;
+}
+
 // A subsection of the report: a category and the title its page shows.
 ReportCategory category(const std::string& id) { return {id, category_title(id), {}, {}}; }
 
@@ -568,6 +584,13 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             }
         } else if (listed.id == "instrument" || listed.id == "absorption") {
             add_fields(next.rows, listed.fields, rule);
+        } else if (listed.id == "extinction") {
+            // Becker-Coppens, with a Gaussian or a Lorentzian mosaic spread (edi ADR-0048).
+            next.rows.push_back({"Type", "Becker-Coppens", ""});
+            next.rows.push_back(
+                {"Mosaic spread", experiment.extinction.model.value_or("gauss") == "lorentz" ? "Lorentzian" : "Gaussian",
+                 ""});
+            add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "peak") {
             next.rows.push_back({"Type", effective_peak_type(experiment), ""});
             add_fields(next.rows, listed.fields, rule);
@@ -615,6 +638,32 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         if (!next.rows.empty() || !next.table.rows.empty()) {
             out.categories.push_back(std::move(next));
         }
+    }
+    // A single crystal's measured reflections: where they were read from and how many, after the experiment type;
+    // then each reflection with its calculated F² and normalised residual, as the app's reflection group writes them
+    // (edi ADR-0048).
+    if (experiment.reflections.has_value()) {
+        const ReflnDataBase& reflections = *experiment.reflections;
+        ReportCategory measured{"measured_reflections", "Measured reflections", {}, {}};
+        measured.rows = {{"File", experiment.data_file.empty() ? own_file(experiment) : experiment.data_file, ""},
+                         {"Reflections", std::to_string(reflections.size()), ""}};
+        out.categories.insert(out.categories.empty() ? out.categories.end() : out.categories.begin() + 1,
+                              std::move(measured));
+        const std::vector<double>& calc = reflections.intensity_calc.values();
+        const bool current = experiment.computed_current() && calc.size() == reflections.size();
+        ReportCategory next = category("refln");
+        next.table.columns = {"h", "k", "l", "F² meas", "s.u.", "F² calc", "(F² meas \xE2\x88\x92 F² calc)/s.u."};
+        for (std::size_t row = 0; row < reflections.size(); ++row) {
+            const double meas = reflections.intensity_meas[row];
+            const double su = reflections.intensity_meas_su[row];
+            next.table.rows.push_back(
+                {std::to_string(reflections.index_h[row]), std::to_string(reflections.index_k[row]),
+                 std::to_string(reflections.index_l[row]), display_text(meas), display_text(su),
+                 current ? display_text(calc[row]) : std::string(),
+                 current && su > 0.0 ? column_text((meas - calc[row]) / su, 2) : std::string()});
+        }
+        out.categories.push_back(std::move(next));
+        return out;
     }
     // The reflections the calculation made, as the reference report lists them, each column to the decimals its
     // quantity is worth: d and sinθ/λ to 4, F and F² to 3, 2θ to 3 and TOF to 1.
@@ -669,10 +718,23 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
         result.rows = {{"Overall status", status_word(record), ""},
                        {"Fitting time", duration_text(record.fitting_time), "s"},
                        {"Iterations", std::to_string(record.iterations), ""},
-                       {"Goodness-of-fit (reduced χ²)", fixed(record.reduced_chi_square, 2), ""},
-                       {"Weighted profile R-factor (Rwp)", fixed(record.prof_wr_factor * 100.0, 2), "%"}};
+                       {"Goodness-of-fit (reduced χ²)", fixed(record.reduced_chi_square, 2), ""}};
+        // A single crystal's fit is over F²: its factors are R(F²) and wR(F²), which crysta records as the profile
+        // pair.
+        const bool single_crystal =
+            !project.experiments.empty() &&
+            std::all_of(project.experiments.begin(), project.experiments.end(),
+                        [](const auto& experiment) { return experiment->reflections.has_value(); });
+        if (single_crystal) {
+            if (record.prof_r_factor) {
+                result.rows.push_back({"R-factor R(F²)", fixed(*record.prof_r_factor * 100.0, 2), "%"});
+            }
+            result.rows.push_back({"Weighted R-factor wR(F²)", fixed(record.prof_wr_factor * 100.0, 2), "%"});
+        } else {
+            result.rows.push_back({"Weighted profile R-factor (Rwp)", fixed(record.prof_wr_factor * 100.0, 2), "%"});
+        }
         for (const auto& experiment : project.experiments) {
-            if (experiment->fit_prof_wr_factor.has_value()) {
+            if (!single_crystal && experiment->fit_prof_wr_factor.has_value()) {
                 result.rows.push_back(
                     {"Rwp, " + experiment->name.value(), fixed(*experiment->fit_prof_wr_factor * 100.0, 2), "%"});
             }
@@ -765,6 +827,15 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
     double rwp = project.fit_result.prof_wr_factor;
     if (experiment < project.experiments.size() && project.experiments[experiment]->fit_prof_wr_factor) {
         rwp = *project.experiments[experiment]->fit_prof_wr_factor;
+    }
+    // crysta records a single crystal's R(F²) and wR(F²) as the profile pair.
+    if (experiment < project.experiments.size() && project.experiments[experiment]->reflections.has_value()) {
+        const ExperimentBase& crystal = *project.experiments[experiment];
+        const std::optional<double> r =
+            crystal.fit_prof_r_factor ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor;
+        return (r ? "R(F\xC2\xB2) " + fixed(*r * 100.0, 2) + " % \xC2\xB7 " : std::string()) + "wR(F\xC2\xB2) " +
+               fixed(rwp * 100.0, 2) + " % \xC2\xB7 \xCF\x87\xC2\xB2 " +
+               fixed(project.fit_result.reduced_chi_square, 2);
     }
     return "Rwp " + fixed(rwp * 100.0, 2) + " % \xC2\xB7 \xCF\x87\xC2\xB2 " +
            fixed(project.fit_result.reduced_chi_square, 2);
@@ -879,7 +950,10 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         std::erase_if(built.categories, [reflections, data](const ReportCategory& part) {
             return (part.id == "refln" && !reflections) || (part.id == "data" && !data);
         });
-        if (charts) {
+        if (charts && project.experiments[index]->reflections.has_value()) {
+            built.single_crystal = single_crystal_of(*project.experiments[index]);
+            built.single_crystal->title = reliability_text(project, index);
+        } else if (charts) {
             built.pattern = pattern_of(project, index, options, scan && scan->place ? *scan->place : index);
             built.pattern.title = reliability_text(project, index);
         }

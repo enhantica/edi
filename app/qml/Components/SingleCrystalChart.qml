@@ -12,7 +12,8 @@ import edi.app
 // A single crystal's F²calc against F²meas, or Fcalc against Fmeas (the toolbar's choice, kept in the preferences):
 // each reflection a point with its su as an error bar, drawn as the pattern chart draws measured points
 // (MeasuredLayer), and the y = x line a perfect model would put them on. A drag zooms to its box, the wheel about the
-// pointer, a right click or the reset button shows every reflection again.
+// pointer, a right click or the reset button shows every reflection again. A report figure draws the report model's
+// `single_crystal` as it is, in F², with its reliability above the plot and no toolbar or pointer.
 Item {
     id: chart
 
@@ -22,6 +23,28 @@ Item {
     readonly property SingleCrystalReflectionModel reflections: experiment ? experiment.singleCrystalReflections : null
     property FigureColors colors: FigureColors {}
     property bool shown: true
+    // The report's input (edi ADR-0036): an experiment's `single_crystal` from the report model's JSON.
+    property var reportData: null
+    readonly property bool reportMode: reportData !== null
+    readonly property bool calculated: reportMode ? reportData.calc.length > 0 : (reflections ? reflections.calculatedShown : false)
+    // The report's range: every bar end and every F²calc, padded as the app pads its own.
+    readonly property list<real> reportRange: {
+        if (!reportMode)
+            return [0, 1];
+        let low = Infinity, high = -Infinity;
+        for (let i = 0; i < reportData.meas.length; ++i) {
+            for (const end of [reportData.meas[i] - reportData.su[i], reportData.meas[i] + reportData.su[i], reportData.calc[i]]) {
+                if (isFinite(end)) {
+                    low = Math.min(low, end);
+                    high = Math.max(high, end);
+                }
+            }
+        }
+        if (!(high > low))
+            return [0, 1];
+        const pad = (high - low) * 0.05;
+        return [Math.min(0, low - pad), high + pad];
+    }
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The pattern chart's layout: the toolbar line a gap below the page's block selector row, centred over the plot,
@@ -36,12 +59,12 @@ Item {
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     // F² or F on both axes.
-    readonly property bool squared: Preferences.singleCrystalQuantity !== "f"
+    readonly property bool squared: reportMode || Preferences.singleCrystalQuantity !== "f"
     readonly property string quantity: squared ? "F²" : "F"
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
-    readonly property real fullLow: !reflections ? 0 : squared ? reflections.low : reflections.lowF
-    readonly property real fullHigh: !reflections ? 1 : squared ? reflections.high : reflections.highF
+    readonly property real fullLow: reportMode ? reportRange[0] : !reflections ? 0 : squared ? reflections.low : reflections.lowF
+    readonly property real fullHigh: reportMode ? reportRange[1] : !reflections ? 1 : squared ? reflections.high : reflections.highF
     readonly property real xLow: zoom.length === 4 ? zoom[0] : fullLow
     readonly property real xHigh: zoom.length === 4 ? zoom[1] : fullHigh
     readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
@@ -57,6 +80,13 @@ Item {
     }
 
     function redraw() {
+        if (chart.reportMode) {
+            if (chart.calculated)
+                layer.setPoints(chart.reportData.calc, chart.reportData.meas, chart.reportData.su);
+            else
+                layer.setPoints([], [], []);
+            return;
+        }
         if (!chart.reflections || !chart.shown)
             return;
         // Points only once F²calc is calculated: a reflection is placed by it.
@@ -88,6 +118,7 @@ Item {
         redraw();
     }
     onReflectionsChanged: redraw()
+    onReportDataChanged: redraw()
     Connections {
         target: chart.reflections
         function onPointsChanged() {
@@ -104,13 +135,23 @@ Item {
         x: chart.toolbarLeft
         y: chart.topMargin + (toolbar.height - height) / 2
         color: chart.colors.chartLabels
-        text: chart.reflections && !chart.reflections.calculatedShown ? qsTr("Not calculated yet") : ""
+        text: (chart.reportMode || chart.reflections) && !chart.calculated ? qsTr("Not calculated yet") : ""
+    }
+    // A report figure's reliability (edi::reliability_text), above its plot at the left, as the pattern chart's.
+    EaElements.Label {
+        objectName: "singleCrystal.reliability"
+        visible: chart.reportMode && text !== ""
+        x: view.x + view.plotArea.x
+        y: Math.max(0, view.y + view.plotArea.y - height - Math.round(chart.em * 0.25))
+        color: chart.colors.chartLabels
+        text: chart.reportMode ? chart.reportData.title : ""
     }
 
     // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
     Row {
         id: toolbar
 
+        visible: !chart.reportMode
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
@@ -141,7 +182,7 @@ Item {
     GraphsView {
         id: view
 
-        y: chart.topMargin + toolbar.height + chart.belowToolbar
+        y: chart.reportMode ? chart.topMargin + Math.round(chart.em * 1.5) : chart.topMargin + toolbar.height + chart.belowToolbar
         width: parent.width
         height: parent.height - y - chart.xTitleHeight - chart.em
         marginLeft: chart.sideMargin + chart.titleGutter
@@ -342,6 +383,8 @@ Item {
 
             objectName: "singleCrystal.pointer"
             anchors.fill: parent
+            // A report figure has no pointer, so the wheel scrolls the report.
+            enabled: !chart.reportMode
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             hoverEnabled: Preferences.chartHoverShown
             onPressed: mouse => {

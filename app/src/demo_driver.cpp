@@ -295,7 +295,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // A single crystal (Tb2Ti2O7 on HEiDi): the reflections chart and table on Experiment and Analysis, in both themes,
     // before and after a fit of its scale.
     steps_.push_back({"sc-01-tb2ti2o7-experiment-light",
-                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7_basic")
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
     steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
@@ -307,16 +307,30 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", {"singleCrystal.toolbar.quantity", "choose:F²", "resize:960x768"}});
     steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
     steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
-                                                                  + open_example("sc-neut-cwl_tb2ti2o7_isotropic-extinction")
+                                                                  + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7_isotropic-extinction"}
                                                                   + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
     steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sc-06-pr2nio4-experiment-light",
-                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4_basic")
+                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
-    steps_.push_back({"sc-07b-pr2nio4-zoomed", {"drag:singleCrystal.pointer:0.05,0.6,0.4,0.95"}});
+    steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-07a2-pr2nio4-fitted-dark", {"choose:OK"}});
+    steps_.push_back({"sc-07a3-pr2nio4-correlations-dark", {"mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"sc-07b-pr2nio4-zoomed",
+                      {"mainArea.analysis.tab.fitting", "drag:singleCrystal.pointer:0.05,0.6,0.4,0.95"}});
     steps_.push_back({"sc-07c-pr2nio4-panned", {"chart.toolbar.pan", "drag:singleCrystal.pointer:0.5,0.5,0.3,0.3",
                                                 "chart.toolbar.zoom"}});
+    // The report of the fit: its chart and reflections on the Report page, then saved as HTML and PDF where
+    // EDI_DEMO_REPORT_DIR names, else in the run's own folder.
+    steps_.push_back({"sc-07r1-pr2nio4-report-chart", {QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"}});
+    const QString sc_report = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
+    steps_.push_back({"sc-07r2-pr2nio4-report-saved",
+                      {"save-as:" + (sc_report.isEmpty() ? QStringLiteral("report-sc") : sc_report), "report.writesPdf",
+                       "report.save"}});
+    steps_.push_back({"sc-07d-pr2nio4-created", {experiment, basic, "expand:group.experiments", "experiments.create"}});
+    steps_.push_back({"sc-07e-pr2nio4-created-single-crystal", {"experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sc-07f-pr2nio4-created-loaded", {"load-reflections"}});
     steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
     steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
@@ -854,6 +868,17 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         session->project()->pinTimestamps(action.mid(9));
+        return true;
+    }
+    if (action == QLatin1String("load-reflections")) {
+        // Load data into the current experiment from the reflection file EDI_DEMO_REFLECTIONS names, through the
+        // call the file dialog's accept makes; without it the step only captures what is shown.
+        const QString path = qEnvironmentVariable("EDI_DEMO_REFLECTIONS");
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
+            session->project()->loadData(session->project()->currentExperimentIndex(), QUrl::fromLocalFile(path));
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("load-experiments:"))) {
