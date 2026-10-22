@@ -8,7 +8,7 @@ description: >-
 
 Co<sub>2</sub>SiO<sub>4</sub> (olivine, *P n m a*) against D20 (ILL) constant-wavelength neutron powder data: a single-experiment Rietveld fit of 43 parameters — the three cell edges, atomic positions, isotropic ADPs and three site occupancies, the pseudo-Voigt profile (U, V, W, Y), the 2θ offset, the scale and 14 background points.
 
-The start is **start-4** — rung 4 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_cosio-d20_start-1`](../pd-neut-cwl_cosio-d20_start-1/index.md) fits the same model from a
+The start is **start-4** — rung 4 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_cosio-d20_start-1`](../pd-neut-cwl_cosio-d20_start-1/README.md) fits the same model from a
 different start, so the pair exercises the descent from two different distances to the minimum.
 
 ## Run it

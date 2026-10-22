@@ -8,7 +8,7 @@ description: >-
 
 La<sub>0.5</sub>Ba<sub>0.5</sub>CoO<sub>3</sub> (cubic perovskite) against HRPT (PSI) constant-wavelength neutron powder data: 16 parameters — the cell edge, four isotropic ADPs, the pseudo-Voigt profile (U, V, W, Y), the 2θ offset, the scale and five background points.
 
-The start is **start-4** — rung 4 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_lbco-hrpt_start-2`](../pd-neut-cwl_lbco-hrpt_start-2/index.md) fits the same model from a
+The start is **start-4** — rung 4 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_lbco-hrpt_start-2`](../pd-neut-cwl_lbco-hrpt_start-2/README.md) fits the same model from a
 different start, so the pair exercises the descent from two different distances to the minimum.
 
 ## Run it
