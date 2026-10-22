@@ -291,16 +291,25 @@ void ScanLayer::paint(QPainter* painter) {
             const std::vector<float>& a = values[pair.first];
             const std::vector<float>& b = values[pair.second];
             const double f = pair.share;
+            // The blending zone straddles the edge between the two bands, a quarter of each band's own height on its
+            // side (the owner, 2026-10-22), so uneven rows and the outer bands, which run to the extent, take theirs.
+            const edi::ScanRowSpan& lower = spans[order[pair.first]];
+            const edi::ScanRowSpan& upper = spans[order[pair.second]];
+            const double edge_y = lower.high;
+            const double below = (lower.high - lower.low) / 4.0;
+            const double above = (upper.high - upper.low) / 4.0;
+            const double edge = pair.first == pair.second || !(below + above > 0.0)
+                                    ? (f < 0.5 ? 0.0 : 1.0)
+                                    : std::clamp((y - (edge_y - below)) / (below + above), 0.0, 1.0);
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const double va = a[static_cast<std::size_t>(i)], vb = b[static_cast<std::size_t>(i)];
                 // A band is its own dataset's, out to halfway to each neighbouring row, empty where that dataset has no
-                // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in a zone a quarter of
-                // the way between the two rows either side of their edge, and never into or out of an empty column, so
-                // no band shows a neighbour's data. One rule for scan values, files and datablocks (the owner,
-                // 2026-10-22): blending from row to row had invented patterns between a sparse scan's rows.
+                // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in the zone above,
+                // and never into or out of an empty column, so no band shows a neighbour's data. One rule for scan
+                // values, files and datablocks (the owner, 2026-10-22): blending from row to row had invented patterns
+                // between a sparse scan's rows.
                 const double own = f < 0.5 ? va : vb;
-                const double edge = std::clamp((f - 0.25) / 0.5, 0.0, 1.0);
                 const double value =
                     !smooth_rows_ || !std::isfinite(va) || !std::isfinite(vb) ? own : va + (vb - va) * edge;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
