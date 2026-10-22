@@ -864,56 +864,6 @@
         "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/structures/diamond.edi"
       ]
     },
-    "pd-neut-cwl_lab6-11b-echidna_basic": {
-      "samples": [
-        "LaB₆ [Pm-3m]"
-      ],
-      "origin": "ECHIDNA @ ANSTO",
-      "detail": "¹¹B-enriched standard · TCH × FCJ · Wavelength and sample position from a standard",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "ANSTO"
-        ],
-        "instruments": [
-          "ECHIDNA"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_lab6-11b-echidna_basic",
-        "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
-        "¹¹B-enriched standard · TCH × FCJ · Wavelength and sample position from a standard"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/experiments/echidna.edi",
-        "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/structures/lab6.edi"
-      ]
-    },
     "pd-neut-tof_cecoal-polaris_basic": {
       "samples": [
         "CeCoAl₃ [Pmma]"
