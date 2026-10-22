@@ -12,8 +12,8 @@ when:
   ``PROVENANCE.md`` with a ``## Sources`` section, its tutorial ``docs/user/tutorials/<id>.py``,
   its notebook, or its one entry in ``docs/user/tutorials/execution-exclusions.yml``;
 - a tutorial or its notebook loads anything but ``../cli/<id>/project``, loads it more than once,
-  or the two disagree (a load is a ``Project.load`` call in the parsed code with a literal path, so
-  a commented-out or quoted load does not count);
+  or the two disagree. A load is a top-level statement whose whole value is
+  ``Project.load('<path>')``; any other mention of ``Project.load`` in the code fails;
 - a file under a case's ``data/`` is not named in its Sources with its sha256;
 - a tutorial, notebook or exclusion entry names something that is not a case, or a fixture has an
   ``index.md`` page (a fixture's page is its ``README.md``).
@@ -86,53 +86,41 @@ def metadata_value(project_edi: Path, key: str) -> str | None:
     return None
 
 
-# A load runs when the tutorial runs if it sits in a top-level simple statement and every node
-# between the statement and the call is evaluated whenever the statement is (no lambda, function
-# body, branch, short circuit or lazy generator).
-SIMPLE_STATEMENTS = (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Expr)
-EAGER_NODES = (
-    ast.Call,
-    ast.Attribute,
-    ast.Subscript,
-    ast.Starred,
-    ast.keyword,
-    ast.Tuple,
-    ast.List,
-    ast.Dict,
-    ast.Set,
-    ast.BinOp,
-    ast.UnaryOp,
-    ast.Compare,
-    ast.JoinedStr,
-    ast.FormattedValue,
-    ast.Await,
-)
+# The one supported placement of a load: a top-level statement whose whole value is the call,
+# ``project = edi.Project.load('<path>')`` or ``edi.Project.load('<path>')``. Python always runs
+# such a call once, so the check need not reason about evaluation order anywhere else.
+SUPPORTED_STATEMENTS = (ast.Assign, ast.AnnAssign, ast.Expr)
 
 
-def executed_calls(node: ast.AST) -> list[ast.Call]:
-    if not isinstance(node, EAGER_NODES):
-        return []
-    calls = [node] if isinstance(node, ast.Call) else []
-    for child in ast.iter_child_nodes(node):
-        calls.extend(executed_calls(child))
-    return calls
-
-
-def is_project_load(call: ast.Call) -> bool:
-    func = call.func
-    if not (isinstance(func, ast.Attribute) and func.attr == 'load'):
+def is_project_load(node: ast.AST) -> bool:
+    """Whether ``node`` names ``Project.load``, called or not."""
+    if not (isinstance(node, ast.Attribute) and node.attr == 'load'):
         return False
-    owner = func.value
+    owner = node.value
     return (isinstance(owner, ast.Name) and owner.id == 'Project') or (
         isinstance(owner, ast.Attribute) and owner.attr == 'Project'
     )
 
 
-def loads(code: list[str]) -> list[str]:
-    """The path of every ``Project.load(...)`` that runs when the code runs, in order.
+def supported_loads(tree: ast.Module) -> dict[int, str]:
+    """The supported loads' paths by the ``id`` of their ``Project.load`` node."""
+    found = {}
+    for statement in tree.body:
+        call = statement.value if isinstance(statement, SUPPORTED_STATEMENTS) else None
+        if isinstance(call, ast.Call) and is_project_load(call.func):
+            first = call.args[0] if len(call.args) == 1 and not call.keywords else None
+            literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
+            found[id(call.func)] = first.value if literal else '<not a literal>'
+    return found
 
-    A path that is not a string literal reads as ``<not a literal>``, code that does not parse as
-    ``<no parse>``; a load in a comment, a string, a function, a lambda or a branch is not counted.
+
+def loads(code: list[str]) -> list[str]:
+    """The path of every ``Project.load`` in the code, in order.
+
+    A load in the supported placement gives its literal path, or ``<not a literal>``. Any other
+    mention of ``Project.load``, wherever it sits, reads as ``<unsupported placement>``, and code
+    that does not parse as ``<no parse>``, so either fails the one-load rule. A load in a comment
+    or a string is no load.
     """
     paths: list[str] = []
     for source in code:
@@ -141,16 +129,10 @@ def loads(code: list[str]) -> list[str]:
         except SyntaxError:
             paths.append('<no parse>')
             continue
-        for statement in tree.body:
-            if not isinstance(statement, SIMPLE_STATEMENTS):
-                continue
-            if statement.value is None:
-                continue
-            calls = [call for call in executed_calls(statement.value) if is_project_load(call)]
-            for call in sorted(calls, key=lambda node: (node.lineno, node.col_offset)):
-                first = call.args[0] if len(call.args) == 1 and not call.keywords else None
-                literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
-                paths.append(first.value if literal else '<not a literal>')
+        supported = supported_loads(tree)
+        mentions = [node for node in ast.walk(tree) if is_project_load(node)]
+        mentions.sort(key=lambda node: (node.lineno, node.col_offset))
+        paths.extend(supported.get(id(node), '<unsupported placement>') for node in mentions)
     return paths
 
 
