@@ -15,6 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from capture_logs import public_log
 from fullprof_inputs import ROOT, Writer
 
 
@@ -84,7 +85,7 @@ def execute(executable, directory, stem, logs):
     print(time.strftime('%H:%M:%S'), name, 'started', flush=True)
     output = logs / f'{name}.log'
     with output.open('w') as stream:
-        stream.write(f'{directory}: {stem}.pcr through {executable}\n')
+        stream.write(f'{directory.name}: {stem}.pcr through {Path(executable).name}\n')
         stream.flush()
         try:
             result = subprocess.run(
@@ -100,6 +101,9 @@ def execute(executable, directory, stem, logs):
             status = result.returncode
         except subprocess.TimeoutExpired:
             status = 124
+    text = output.read_text(errors='replace')
+    text = text.replace(str(directory), '.').replace(str(executable), Path(executable).name)
+    output.write_text(public_log(text))
     (logs / f'{name}.exit').write_text(str(status) + '\n')
     print(time.strftime('%H:%M:%S'), name, 'exit', status, flush=True)
     return status
