@@ -7,7 +7,7 @@ description: >-
 # Co2SiO4 on D20, 162-file cooling scan
 
 A **sequential** fit of Co<sub>2</sub>SiO<sub>4</sub> over 162 D20 patterns measured while cooling from 497.4 K to
-50.4 K: the first half of the [324-file scan](../pd-neut-cwl_cosio-d20_scan-324f/index.md). The same 39-parameter model
+50.4 K: the first half of the [324-file scan](../pd-neut-cwl_cosio-d20_scan-324f/README.md). The same 39-parameter model
 (cell, positions, ADPs, pseudo-Voigt profile, 2θ offset, scale, background) is fitted file by file, each fit starting
 from the previous successful one. It is also an example in the desktop and web apps.
 
