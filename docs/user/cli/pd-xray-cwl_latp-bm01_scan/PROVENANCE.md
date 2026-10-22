@@ -7,8 +7,7 @@ made it in edi's app and gave it to edi for its examples on 2026-10-22.
 ## Sources
 
 - **Data and model:** the 73 patterns (`experiments/bm01_scan/*.dat`) and the edi project fitted to them, measured on
-  BM01 at SNBL and given to edi for its examples by their author with the project; no licence is recorded for
-  them.
+  BM01 at SNBL and provided by the project owner with the project; licence not recorded.
 
 ## What changed from the owner's project
 

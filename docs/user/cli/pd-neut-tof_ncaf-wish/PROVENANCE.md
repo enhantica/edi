@@ -13,7 +13,7 @@ catalogue's NCAF case, started the way a user's own measurement would be.
   `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`, sha256
   `e24493511795e5dc3390ad055ea43d346ef39c63dab68349a9deba00dfde2671` and
   `bcbb403374e705e2864d48b2dc803778252da9320ac5dc33bce4e94a225ef9dc`), licence BSD-3-Clause. Banks 1+10, 2+9 and
-  3+8 come with that project's FullProf five-bank input; no licence is recorded for them.
+  3+8 are WISH (ISIS) measurements from that project's FullProf five-bank input; licence not recorded.
 - **Model:** the same project and diffraction-lib's NCAF WISH tutorial (`docs/docs/tutorials/` at develop
   `cb2cda7b`), which fits two of the five banks only to keep its run short. I2₁3, cell 10.250256 Å fixed (each
   bank's DIFC is free), cut-off 8 FWHM, joint weights 1.

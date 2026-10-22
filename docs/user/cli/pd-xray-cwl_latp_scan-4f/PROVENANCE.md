@@ -7,7 +7,8 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_latp_fixtu
 
 - **Data and model:** `pd-xray-cwl_latp-bm01_scan`'s project, its `.edi` files unchanged except the name and the
   description, and four of its patterns, `latp_312.dat`, `latp_304.dat`, `latp_296.dat` and `latp_288.dat`, copied
-  byte for byte. That project's `PROVENANCE.md` names where they come from; no licence is recorded for them.
+  byte for byte. That project's `PROVENANCE.md` names where they come from: provided by the project owner;
+  licence not recorded.
 
 ## Why these four
 
