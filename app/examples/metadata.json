@@ -814,56 +814,6 @@
         "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/YAlO3.edi"
       ]
     },
-    "pd-neut-tof_diamond-dream_mcstas": {
-      "samples": [
-        "Diamond [Fd-3m]"
-      ],
-      "origin": "DREAM @ ESS",
-      "detail": "McStas-simulated 90° bank · Jorgensen profile · Structure and profile fit",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "time-of-flight"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "ESS"
-        ],
-        "instruments": [
-          "DREAM"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-tof_diamond-dream_mcstas",
-        "Diamond [Fd-3m] · DREAM @ ESS",
-        "McStas-simulated 90° bank · Jorgensen profile · Structure and profile fit"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/project.edi",
-        "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/experiments/dream.edi",
-        "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/structures/diamond.edi"
-      ]
-    },
     "pd-neut-tof_cecoal-polaris_basic": {
       "samples": [
         "CeCoAl₃ [Pmma]"
