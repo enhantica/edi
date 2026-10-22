@@ -1,0 +1,9 @@
+_edi.schema_version 3
+
+_metadata.name pd_xray_cwl_lam7o3_p021_basic
+_metadata.title "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III"
+_metadata.description "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "P02.1"
+_metadata.facility "PETRA III"

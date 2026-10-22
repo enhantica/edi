@@ -661,6 +661,56 @@
         "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/austenite.edi",
         "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/ferrite.edi"
       ]
+    },
+    "pd-xray-cwl_lam7o3-p021_basic": {
+      "samples": [
+        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma]"
+      ],
+      "origin": "P02.1 @ PETRA III",
+      "detail": "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "PETRA III"
+        ],
+        "instruments": [
+          "P02.1"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_lam7o3-p021_basic",
+        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III",
+        "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/experiments/p021.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/structures/lam7o3.edi"
+      ]
     }
   }
 }
