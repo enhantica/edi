@@ -49,6 +49,10 @@ def test_default_variant_is_also_bound_to_the_independent_fullprof_reference():
     assert expected['program'] == 'FullProf' and expected['same_start'], (
         'The physical minimum claim must come from FullProf at the committed project start'
     )
+    assert expected['converged'], 'The independent default-descent reference must have converged'
+    assert expected['parameters'], (
+        'The independent reference must include fitted oxygen coordinates'
+    )
     _project, fields = fitted()
     assert float(fields['rwp']) == pytest.approx(expected['r_wp'], rel=0.05), (
         'The default descent must fit within the FullProf agreement-factor tolerance'

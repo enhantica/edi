@@ -1,0 +1,88 @@
+COMM pd-xray-cwl_lam7o3-p021
+! Current global Chi2 (Bragg contrib.) =     0.2331    
+! Files => DAT-file: fit.dat,  PCR-file: fit
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+   0   7   1  20   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1
+!
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+   2   2   1   0   2   0   4   0   0   2  10   1   1   0   0   1   1
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1
+ 0.207109 0.207109  0.00000    8.497  60.000  0.0000  0.0000  180.00    0.0000  0.0000
+!
+!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0
+1 0.10 0.20 0.20 0.20 0.20 2.0033 0.010525 14.9909 0.000 0.000
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+2.0033 581.5649 0
+2.2978 687.0148 0
+2.7079 945.8704 0
+2.8762 990.9332 0
+2.9813 975.9084 0
+3.1181 887.4581 0
+3.7175 604.8409 0
+4.1381 553.4596 0
+4.2748 513.5079 0
+4.3905 511.0599 0
+4.5483 491.1819 0
+4.9268 453.6032 0
+5.1372 428.9309 0
+7.4087 411.2777 0
+8.0922 439.4527 0
+9.7748 446.1642 0
+10.9106 348.5184 0
+12.4985 342.0365 0
+14.7069 291.1624 0
+14.9909 258.1635 0
+! 
+!
+0 !Number of refined parameters
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1
+-0.00071 0 0.00000 0 0.00000 0 0.000000 0 0
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000
+!-------------------------------------------------------------------------------
+lam7o3
+!
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More
+  10   0   0 0.0 0.0 1.0   0   0   0   0   0        971.521   0   7   0
+!
+!
+P n m a                  <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+La     LA      0.47688  0.25000  0.00421  0.55326   0.50000   0   0   0    0  
+0 0 0 0 0
+Ti     TI      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Cr     CR      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Mn     MN      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Fe     FE      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Co     CO      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Ni     NI      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+Cu     CU      0.00000  0.00000  0.00000  0.56367   0.07143   0   0   0    0  
+0 0 0 0 0
+O1     O       0.50802  0.25000  0.56967  0.30700   0.50000   0   0   0    0  
+0 0 0 0 0
+O2     O       0.22298  0.03526  0.27734  0.30700   1.00000   0   0   0    0  
+0 0 0 0 0
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model
+ 0.3719905E-05   0.00000   0.00000   0.00000   0.00000   0.00000       0
+0 0 0 0 0 0
+!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model
+     0.038993    -0.006057     0.001177     0.167260     0.000000     0.000000     0.000000       0
+0 0 0 0 0 0 0
+!     a          b         c        alpha      beta       gamma      # Cell Info
+   5.462158   7.732976   5.490175  90.000000  90.000000  90.000000   
+0 0 0 0 0 0
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L
+  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+0 0 0 0 0 0 0 0
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+       2.003      14.991       1

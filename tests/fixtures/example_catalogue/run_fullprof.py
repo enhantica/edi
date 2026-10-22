@@ -66,9 +66,8 @@ def fixed_twin(source, destination):  # noqa: PLR0912 - FullProf record families
         elif header[0] in {'Background', 'BACK'}:
             cursor = start
             while cursor < len(lines) and not lines[cursor].startswith('!'):
-                cursor = following[cursor]
-                zero(cursor)
-                cursor = following[cursor]
+                zero(cursor + 1)
+                cursor += 2
         elif header[0].startswith('Absorption'):
             zero(start, [1, 3])
     # FullProf's emitted absorption record has its own inline ABS label.
@@ -94,7 +93,7 @@ def execute(executable, directory, stem, logs):
                 stdout=stream,
                 stderr=subprocess.STDOUT,
                 check=False,
-                timeout=240,
+                timeout=1800,
             )
             status = result.returncode
         except subprocess.TimeoutExpired:
@@ -108,6 +107,11 @@ def run_case(case, executable, logs):
     simulation = case.endswith('_simulation')
     home = ROOT / 'knowledge' / ('verification' if simulation else 'fitting') / 'fullprof' / case
     home.mkdir(parents=True, exist_ok=True)
+    # A failed new run must never inherit a previous run's output as evidence.
+    for stem in ['start', 'fit']:
+        for old in home.glob(stem + '*'):
+            if old.is_file() and old.suffix not in {'.pcr', '.dat'}:
+                old.unlink()
     start = Writer(case, True)
     start.write(home / 'start.pcr')
     execute(executable, home, 'start', logs)
@@ -133,6 +137,9 @@ def run_case(case, executable, logs):
         record['exit'] = execute(executable, home, 'fit', logs)
         twin = ROOT / 'knowledge/verification/fullprof' / case
         twin.mkdir(parents=True, exist_ok=True)
+        for old in twin.glob('fixed*'):
+            if old.is_file():
+                old.unlink()
         if (home / 'fit.new').exists():
             fixed_twin(home / 'fit.new', twin / 'fixed.pcr')
             for data in home.glob('fit*.dat'):

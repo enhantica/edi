@@ -1,0 +1,116 @@
+<checkout>/knowledge/verification/fullprof/pd-neut-tof_ncaf-wish: fixed.pcr through <applications>/fullprof/fp2k
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 21:09:41.455
+ => Reading control file *.PCR ... fixed
+ => Reading intensity file of pattern  1  fixed_1.dat
+ => Reading intensity file of pattern  2  fixed_2.dat
+ => Reading intensity file of pattern  3  fixed_3.dat
+ => Reading intensity file of pattern  4  fixed_4.dat
+ => Reading intensity file of pattern  5  fixed_5.dat
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       3
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       4
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       5
+ =>                       Phase number:       1
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: fixed
+ => Pattern:   1  fixed_1
+ => Pattern:   2  fixed_2
+ => Pattern:   3  fixed_3
+ => Pattern:   4  fixed_4
+ => Pattern:   5  fixed_5
+ => Ordering reflections contributing to each point for pattern:       1
+ => Ordering reflections contributing to each point for pattern:       2
+ => Ordering reflections contributing to each point for pattern:       3
+ => Ordering reflections contributing to each point for pattern:       4
+ => Ordering reflections contributing to each point for pattern:       5
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Calculation for pattern:       2
+ => Calculation for pattern:       3
+ => Calculation for pattern:       4
+ => Calculation for pattern:       5
+ => Writing results for cycle       1
+ => R-Factors:   12.1      4.65     Chi2:  1.04     DW-Stat.:  1.0468   Patt#:  1
+ => Expected :            4.57                                1.8987
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  30.7     Rwp:  15.3     Rexp:   15.06                        Chi2:  1.04
+ => R-Factors:   10.5      6.45     Chi2:  4.97     DW-Stat.:  0.2783   Patt#:  2
+ => Expected :            2.89                                1.9015
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  23.3     Rwp:  10.9     Rexp:    4.87                        Chi2:  4.97
+ => R-Factors:   8.10      7.89     Chi2:  12.0     DW-Stat.:  0.2045   Patt#:  3
+ => Expected :            2.28                                1.8979
+ => Conventional Rietveld R-factors for Pattern:       3
+ => Rp:  18.4     Rwp:  11.8     Rexp:    3.41                        Chi2:  12.0
+ => R-Factors:   7.20      8.10     Chi2:  14.0     DW-Stat.:  0.2480   Patt#:  4
+ => Expected :            2.16                                1.8985
+ => Conventional Rietveld R-factors for Pattern:       4
+ => Rp:  17.0     Rwp:  12.2     Rexp:    3.25                        Chi2:  14.0
+ => R-Factors:   7.41      8.28     Chi2:  15.3     DW-Stat.:  0.3451   Patt#:  5
+ => Expected :            2.12                                1.8991
+ => Conventional Rietveld R-factors for Pattern:       5
+ => Rp:  17.9     Rwp:  12.6     Rexp:    3.21                        Chi2:  15.3
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.685
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   12.1      4.65     Chi2:  1.04     DW-Stat.:  1.0468   Patt#:  1
+ => Expected :            4.57                                1.8987
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  30.7     Rwp:  15.3     Rexp:   15.06                        Chi2:  1.04
+ => R-Factors:   10.5      6.45     Chi2:  4.97     DW-Stat.:  0.2783   Patt#:  2
+ => Expected :            2.89                                1.9015
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  23.3     Rwp:  10.9     Rexp:    4.87                        Chi2:  4.97
+ => R-Factors:   8.10      7.89     Chi2:  12.0     DW-Stat.:  0.2045   Patt#:  3
+ => Expected :            2.28                                1.8979
+ => Conventional Rietveld R-factors for Pattern:       3
+ => Rp:  18.4     Rwp:  11.8     Rexp:    3.41                        Chi2:  12.0
+ => R-Factors:   7.20      8.10     Chi2:  14.0     DW-Stat.:  0.2480   Patt#:  4
+ => Expected :            2.16                                1.8985
+ => Conventional Rietveld R-factors for Pattern:       4
+ => Rp:  17.0     Rwp:  12.2     Rexp:    3.25                        Chi2:  14.0
+ => R-Factors:   7.41      8.28     Chi2:  15.3     DW-Stat.:  0.3451   Patt#:  5
+ => Expected :            2.12                                1.8991
+ => Conventional Rietveld R-factors for Pattern:       5
+ => Rp:  17.9     Rwp:  12.6     Rexp:    3.21                        Chi2:  15.3
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.788
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       1
+  
+  
+ =>               CPU Time:     6.234 seconds
+ =>                             0.104 minutes
+  
+ => END   Date:22/10/2026  Time => 21:09:47.693
+  
+ => Data Files :
+ =>             - fixed_1.dat
+ =>             - fixed_2.dat
+ =>             - fixed_3.dat
+ =>             - fixed_4.dat
+ =>             - fixed_5.dat
+ => PCR  File  : fixed
+ => Do you want to continue (<cr>=N)? 
+         (s:same, a:another problem):  => END

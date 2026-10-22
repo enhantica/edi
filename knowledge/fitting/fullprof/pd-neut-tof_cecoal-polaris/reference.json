@@ -1,0 +1,250 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/pd-neut-tof_cecoal-polaris/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+    "experiments/polaris.edi": "f76663b87db3b3356426a1fd3be25a2e26a8b10fd808978897a4bf15b77df789",
+    "project.edi": "2d3fd04ef008e237bf6c9b7595ea87ba870b86b91f0aa2523bdc9295e5d3c7fb",
+    "structures/cecoal.edi": "def09ded57c181a601e481deef7bf49b135374646e4b05a7e6939e44a5a6acf4"
+  },
+  "banks": [
+    "polaris"
+  ],
+  "scope": "fit",
+  "staging": "none",
+  "cycles": 200,
+  "n_free": 32,
+  "exit": 24,
+  "twin_exit": 24,
+  "fit_output_complete": true,
+  "artifacts_sha256": {
+    "fit.dat": "1d58043fe62ba1a4461394509b5f7b5d7928a620f4badae7bfaf166fa750ba97",
+    "fit.log": "653668d0262db4584b5b5f48e6d0500ce838f07c85854a3e2c454d0137271c97",
+    "fit.new": "d5133c68483c8bd8384f9767c11bd0729b077ea4396e250ed4de318d533d142d",
+    "fit.out": "c5629f1133e97ae249d46db48f9f859b3887f2feda33e1b228ba5699e20b9ce4",
+    "fit.pcr": "2e4588eefcfaccc8abebfb747541dea20970ab4115893033c257c035d9271977",
+    "fit.prf": "5a79771b3e11094f5fe38bb5cda8578f75d6a5f21e26e54e98ca2dfc6640f55b",
+    "fit.sum": "3df6a55b23f219d44e0d59fa23ebf60ccdff6caff21cd73e70bbee73f5345ad0",
+    "start.dat": "1d58043fe62ba1a4461394509b5f7b5d7928a620f4badae7bfaf166fa750ba97",
+    "start.log": "8d6c6da666498673098c2054f181541f6af0870d8ab160e4433ddb2cae759c3c",
+    "start.new": "c9d8374b599a313df5b52b4bf7b099c7a9af9cbbf11cdacdf6f105acd70142aa",
+    "start.out": "5e0665d8d9b5f530aec4077e85ded337efeaf884b28c6b8cb5c42c7580352ffc",
+    "start.pcr": "4c825a18f329047e0a89b7a6082261a90adada0776645bfe0b6ff16831922eec",
+    "start.prf": "f0236705effdf3ce70b84997346a1a642bb0ed02f41a4a1ca73ac2e53f0cf6c1",
+    "start.sum": "9ab1c62f89d2839a0a81111fd8bb72573d059060593e4be88464e3583b229034"
+  },
+  "finite_fit": true,
+  "converged": true,
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Zero_pat1",
+      "value": 3.6130304,
+      "uncertainty": 0.32208693
+    },
+    "2": {
+      "symbol": "Dtt2_pat1",
+      "value": -2.0164514,
+      "uncertainty": 0.18069176
+    },
+    "3": {
+      "symbol": "Bck_0_pat1",
+      "value": 26627.338,
+      "uncertainty": 147.1149
+    },
+    "4": {
+      "symbol": "Bck_1_pat1",
+      "value": 4495.0112,
+      "uncertainty": 270.44659
+    },
+    "5": {
+      "symbol": "Bck_2_pat1",
+      "value": 2934.7935,
+      "uncertainty": 250.00925
+    },
+    "6": {
+      "symbol": "Bck_3_pat1",
+      "value": -178.35898,
+      "uncertainty": 236.00911
+    },
+    "7": {
+      "symbol": "Bck_4_pat1",
+      "value": 589.25031,
+      "uncertainty": 222.97388
+    },
+    "8": {
+      "symbol": "Bck_5_pat1",
+      "value": 355.56177,
+      "uncertainty": 212.9782
+    },
+    "9": {
+      "symbol": "Bck_6_pat1",
+      "value": 362.44992,
+      "uncertainty": 203.02687
+    },
+    "10": {
+      "symbol": "Bck_7_pat1",
+      "value": 184.40764,
+      "uncertainty": 189.81633
+    },
+    "11": {
+      "symbol": "Bck_8_pat1",
+      "value": 357.61752,
+      "uncertainty": 169.50694
+    },
+    "12": {
+      "symbol": "Bck_9_pat1",
+      "value": 618.5531,
+      "uncertainty": 142.16411
+    },
+    "13": {
+      "symbol": "Bck_10_pat1",
+      "value": 469.22302,
+      "uncertainty": 98.17437
+    },
+    "14": {
+      "symbol": "Bck_11_pat1",
+      "value": 129.32323,
+      "uncertainty": 44.878292
+    },
+    "15": {
+      "symbol": "Z_Ce_ph1",
+      "value": 0.38224962,
+      "uncertainty": 0.00016277586
+    },
+    "16": {
+      "symbol": "Biso_Ce_ph1",
+      "value": 0.49094579,
+      "uncertainty": 0.019964512
+    },
+    "17": {
+      "symbol": "Z_Co_ph1",
+      "value": 0.81556106,
+      "uncertainty": 0.00032580065
+    },
+    "18": {
+      "symbol": "Biso_Co_ph1",
+      "value": 0.3730377,
+      "uncertainty": 0.025383482
+    },
+    "19": {
+      "symbol": "Biso_Al1_ph1",
+      "value": 0.65786201,
+      "uncertainty": 0.023437753
+    },
+    "20": {
+      "symbol": "Z_Al2_ph1",
+      "value": 0.043080457,
+      "uncertainty": 0.00021963973
+    },
+    "21": {
+      "symbol": "Biso_Al2_ph1",
+      "value": 0.61978561,
+      "uncertainty": 0.024258157
+    },
+    "22": {
+      "symbol": "X_Al3_ph1",
+      "value": 0.069581993,
+      "uncertainty": 0.00013973212
+    },
+    "23": {
+      "symbol": "Z_Al3_ph1",
+      "value": 0.70167929,
+      "uncertainty": 0.00016134715
+    },
+    "24": {
+      "symbol": "Biso_Al3_ph1",
+      "value": 0.57305837,
+      "uncertainty": 0.022608234
+    },
+    "25": {
+      "symbol": "Occ_Al3_ph1",
+      "value": 0.50988573,
+      "uncertainty": 0.0018573096
+    },
+    "26": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 16894.691,
+      "uncertainty": 296.60864
+    },
+    "27": {
+      "symbol": "Sig-1_ph1_pat1",
+      "value": 45.480793,
+      "uncertainty": 2.1273408
+    },
+    "28": {
+      "symbol": "Gam-1_ph1_pat1",
+      "value": 4.4540887,
+      "uncertainty": 0.31214938
+    },
+    "29": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 7.6513314,
+      "uncertainty": 0.00064799911
+    },
+    "30": {
+      "symbol": "Cell_B_ph1_pat1",
+      "value": 4.0514765,
+      "uncertainty": 0.00034496628
+    },
+    "31": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 6.905611,
+      "uncertainty": 0.00058666739
+    },
+    "32": {
+      "symbol": "TOF_Abs1_ph1_pat1",
+      "value": 0.017285794,
+      "uncertainty": 0.0026740055
+    }
+  },
+  "parameter_codes": {
+    "polaris.instrument.calib_d_to_tof_offset": 1,
+    "polaris.instrument.calib_d_to_tof_quadratic": 2,
+    "polaris.background.1.coef": 3,
+    "polaris.background.2.coef": 4,
+    "polaris.background.3.coef": 5,
+    "polaris.background.4.coef": 6,
+    "polaris.background.5.coef": 7,
+    "polaris.background.6.coef": 8,
+    "polaris.background.7.coef": 9,
+    "polaris.background.8.coef": 10,
+    "polaris.background.9.coef": 11,
+    "polaris.background.10.coef": 12,
+    "polaris.background.11.coef": 13,
+    "polaris.background.12.coef": 14,
+    "cecoal.atom_site.Ce.fract_z": 15,
+    "cecoal.atom_site.Ce.adp_iso": 16,
+    "cecoal.atom_site.Co.fract_z": 17,
+    "cecoal.atom_site.Co.adp_iso": 18,
+    "cecoal.atom_site.Al1.adp_iso": 19,
+    "cecoal.atom_site.Al2.fract_z": 20,
+    "cecoal.atom_site.Al2.adp_iso": 21,
+    "cecoal.atom_site.Al3.fract_x": 22,
+    "cecoal.atom_site.Al3.fract_z": 23,
+    "cecoal.atom_site.Al3.adp_iso": 24,
+    "cecoal.atom_site.Al3.occupancy": 25,
+    "polaris.linked_structure.cecoal.scale": 26,
+    "polaris.peak.broad_gauss_sigma_1": 27,
+    "polaris.peak.broad_lorentz_gamma_1": 28,
+    "cecoal.cell.length_a": 29,
+    "cecoal.cell.length_b": 30,
+    "cecoal.cell.length_c": 31,
+    "polaris.absorption.abscor1": 32
+  },
+  "r_wp_by_bank": {
+    "polaris": 0.0209
+  },
+  "parameters": {},
+  "twin_artifacts_sha256": {
+    "fixed.dat": "1d58043fe62ba1a4461394509b5f7b5d7928a620f4badae7bfaf166fa750ba97",
+    "fixed.log": "33ca1cb23164ab334d6fe262c1a42f670f9f7966e0724565c43de3e7ab7cfe62",
+    "fixed.new": "b9cb6383f1c5c2c4a1c9214f7ec19c73e2f4f8dcc8be2e921181ef5cc17782d8",
+    "fixed.out": "add7b7dd602d821b24ec303ecb6a1179449cb14386c9edfe26b0ae19d8582fb0",
+    "fixed.pcr": "db5088f4c82b63c0117809cfc0ed65b51f87a3cafbd94183e962ccee0586e7d0",
+    "fixed.prf": "093161e74d02554e130f57fcb708f1031ac0b8360c8f85607a3b3cff9688b67e",
+    "fixed.sum": "4180bd032c999fccbe2f37c200402bddcc641fdc6b4e4b4a41190030ad59c21d"
+  },
+  "r_wp": 0.0209
+}
