@@ -963,6 +963,56 @@
         "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/experiments/polaris.edi",
         "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/structures/cecoal.edi"
       ]
+    },
+    "pd-neut-tof_ceo2-pearl_basic": {
+      "samples": [
+        "CeO₂ [Fm-3m]"
+      ],
+      "origin": "PEARL @ ISIS",
+      "detail": "NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ISIS"
+        ],
+        "instruments": [
+          "PEARL"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ceo2-pearl_basic",
+        "CeO₂ [Fm-3m] · PEARL @ ISIS",
+        "NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/experiments/pearl.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/structures/ceo2.edi"
+      ]
     }
   }
 }

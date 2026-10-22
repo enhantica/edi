@@ -136,3 +136,6 @@ projects:
   - id: pd-neut-tof_cecoal-polaris_basic
     executing: false
     user-facing: true
+  - id: pd-neut-tof_ceo2-pearl_basic
+    executing: false
+    user-facing: true
