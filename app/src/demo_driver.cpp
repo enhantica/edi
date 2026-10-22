@@ -392,6 +392,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                      "hover:extinction.mosaicity:0.5,0.5"}});
     steps_.push_back({"sccheck-11b-mosaicity-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
                                                         "choose:OK", experiment, basic, "hover:extinction.mosaicity:0.5,0.5"}});
+    // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
+    steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
+                                                            + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
+    steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
