@@ -61,6 +61,7 @@ QtObject {
         preferences.scanMapColours = "viridis";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
+        preferences.scanExcludedShown = true;
     }
 
     property Settings settings: Settings {
@@ -112,6 +113,8 @@ QtObject {
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
     property bool scanMapReversed: false
+    // Whether the Stacked and Map views mark the excluded regions, as the pattern chart does.
+    property bool scanExcludedShown: true
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -136,6 +139,7 @@ QtObject {
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
+        property alias excludedShown: preferences.scanExcludedShown
     }
 
     property Binding fitPatternUpdates: Binding {

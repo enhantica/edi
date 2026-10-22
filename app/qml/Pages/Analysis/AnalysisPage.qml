@@ -17,6 +17,8 @@ WorkflowPage {
     readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
+    readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -50,16 +52,17 @@ WorkflowPage {
             text: qsTr("Evolution")
             enabled: page.project !== null && page.project.scan
         },
-        // Every pattern of a scan, one above another, and the same as a 2D map (edi ADR-0041); a scan project's only.
+        // Every pattern of a scan, or every experiment of a joint fit, one above another, and the same as a 2D map
+        // (edi ADR-0041; the joint fit's, the owner, 2026-10-22).
         IconTabButton {
             objectName: "mainArea.analysis.tab.stacked"
             text: qsTr("Stacked")
-            enabled: page.project !== null && page.project.scan
+            enabled: page.patternViews
         },
         IconTabButton {
             objectName: "mainArea.analysis.tab.map"
             text: qsTr("Map")
-            enabled: page.project !== null && page.project.scan
+            enabled: page.patternViews
         }
     ]
     mainItems: [

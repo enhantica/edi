@@ -13,11 +13,13 @@
 namespace edi_app {
 
 // The scan views' drawing (edi ADR-0041), laid over a chart's plot area and mapping the ranges it is given onto its
-// size: "stacked" draws every dataset's columns as a line from its row upwards, in the dataset's measured colour,
-// the shown dataset last and wider; "map" colours the plot from the colour map, each pixel row taking the intensity
-// between the two datasets whose rows it lies between, in proportion to its distance from each, so the colour changes
-// smoothly from one dataset to the next. Intensity is taken on the chart's y scale and spread over every dataset's
-// lowest to highest value.
+// size: "stacked" draws every dataset as a line from its row upwards, in the dataset's measured colour, the shown
+// dataset last and wider; "map" colours the plot from the colour map, each pixel row taking the intensity between the
+// two datasets whose rows it lies between, in proportion to its distance from each, so the colour changes smoothly from
+// one dataset to the next. Both reduce each dataset's measured points for the range shown at the plot's own pixel
+// columns every time they draw, so a zoomed view shows the points themselves (the owner, 2026-10-22). Intensity is
+// taken on the chart's y scale and spread over every dataset's lowest to highest value. Each dataset's excluded ranges
+// are marked over its row, as the pattern chart marks them, when `excludedShown` is on.
 class ScanLayer : public QQuickPaintedItem {
     Q_OBJECT
     QML_ELEMENT
@@ -39,6 +41,7 @@ class ScanLayer : public QQuickPaintedItem {
     // The map's colours run from their high end at the lowest intensity, reversed.
     Q_PROPERTY(bool reversed MEMBER reversed_ WRITE setReversed NOTIFY reversedChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
+    Q_PROPERTY(bool excludedShown MEMBER excluded_shown_ WRITE setExcludedShown NOTIFY excludedShownChanged)
     // The shown dataset, drawn over the others in the stacked view.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
@@ -63,6 +66,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setReversed(bool reversed);
     void setDark(bool dark);
     void setCurrent(int dataset);
+    void setExcludedShown(bool shown);
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     // The colour map's colour at `t` in [0, 1].
@@ -85,6 +89,7 @@ class ScanLayer : public QQuickPaintedItem {
     void reversedChanged();
     void darkChanged();
     void currentChanged();
+    void excludedShownChanged();
     void displayMinChanged();
     void displayMaxChanged();
 
@@ -111,6 +116,7 @@ class ScanLayer : public QQuickPaintedItem {
     bool reversed_ = false;
     bool dark_ = false;
     int current_ = -1;
+    bool excluded_shown_ = true;
     double display_min_ = 0.0, display_max_ = 1.0;
 };
 

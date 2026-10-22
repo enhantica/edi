@@ -10,10 +10,10 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// A scan's two pattern views (edi ADR-0041), each a tab of the Analysis page: "stacked" draws every dataset's measured
-// pattern above its row, "map" colours the plot by intensity, smoothly from one dataset's row to the next, with a
-// colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract rule's) or, without
-// one, the file index. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
+// A scan's two pattern views (edi ADR-0041), each a tab of the Analysis page, and a joint fit's: "stacked" draws every
+// dataset's measured pattern above its row, "map" colours the plot by intensity, smoothly from one dataset's row to the
+// next, with a colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract
+// rule's) or, without one, the file index; a joint fit's experiments are rows in the project's order, each named. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
 // patterns' palette or the map's colour map (the owner, 2026-10-22). The datasets are read in the background the first
 // time either view shows; a dataset that cannot be read is named above the plot. A line marks the shown dataset at all
 // times and follows it as a running scan moves on; a click on a row shows that dataset, here and on the Pattern tab.
@@ -25,7 +25,8 @@ Item {
     property string mode: "stacked"
     property bool shown: true
     readonly property ScanViewModel scan: project ? project.scanViews : null
-    readonly property bool scanProject: project !== null && project.scan
+    readonly property bool scanProject: project !== null && (project.scan || (scan !== null && scan.joint))
+    readonly property bool joint: scan !== null && scan.joint
     readonly property bool hasData: scan !== null && scan.loaded - scan.failed > 0
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
@@ -158,6 +159,8 @@ Item {
             max: chart.yMax
             tickInterval: chart.niceStep(chart.zoomY.length === 2 ? max - min : chart.scan ? chart.scan.rowMax - chart.scan.rowMin : 1, chart.yTicks)
             tickAnchor: 0
+            // A joint fit's rows are its experiments, named at each row instead of numbered.
+            labelsVisible: !chart.joint
             lineVisible: false
             gridVisible: false
             subGridVisible: false
@@ -220,6 +223,7 @@ Item {
             background: chart.colors.chartBackground
             smoothRows: Preferences.scanMapSmooth
             reversed: chart.mode === "map" && Preferences.scanMapReversed
+            excludedShown: Preferences.scanExcludedShown
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
@@ -233,6 +237,28 @@ Item {
             objectName: "scanView." + chart.mode + ".current"
             dark: chart.colors.isDarkPalette
             position: (axisY.max - at) / (axisY.max - axisY.min) * plot.height
+        }
+        // A joint fit's experiments, each named at the left of its row, over a half-transparent ground so the name reads
+        // on the patterns and on every colour of the map.
+        Repeater {
+            model: chart.joint ? chart.scan.rowLabels : []
+            delegate: EaElements.Label {
+                required property string modelData
+                required property int index
+                readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+
+                objectName: "scanView." + chart.mode + ".rowLabel." + index
+                visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
+                x: chart.em * 0.4
+                y: Math.max(0, Math.min(plot.height - height, (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height - 2))
+                leftPadding: chart.em * 0.2
+                rightPadding: chart.em * 0.2
+                color: chart.colors.chartLabels
+                text: modelData
+                background: Rectangle {
+                    color: chart.colors.mainContentBackgroundHalfTransparent
+                }
+            }
         }
         Rectangle {
             anchors.fill: parent
@@ -412,6 +438,8 @@ Item {
             }
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.rows"
+                // A joint fit's rows are its experiments, in the project's order: nothing to choose.
+                visible: !chart.joint
                 enabled: chart.scan !== null && chart.scan.valueTitle !== ""
                 toolTip: qsTr("Y axis: the rows' places")
                 readonly property var entries: [chart.scan !== null && chart.scan.valueTitle !== "" ? chart.scan.valueTitle : qsTr("scan value"), qsTr("file index")]
@@ -478,6 +506,14 @@ Item {
                 checked: Preferences.scanMapReversed
                 onClicked: Preferences.scanMapReversed = !Preferences.scanMapReversed
             }
+            // The excluded regions, marked as the pattern chart marks them (the owner, 2026-10-22), or not.
+            ChartToolButton {
+                objectName: "scanView." + chart.mode + ".toolbar.excluded"
+                fontIcon: "ban"
+                toolTip: Preferences.scanExcludedShown ? qsTr("Hide the excluded regions") : qsTr("Show the excluded regions")
+                checked: Preferences.scanExcludedShown
+                onClicked: Preferences.scanExcludedShown = !Preferences.scanExcludedShown
+            }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
                 fontIcon: "expand"
@@ -533,6 +569,6 @@ Item {
         anchors.centerIn: parent
         visible: !chart.hasData
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
-        text: !chart.scanProject ? qsTr("A sequential fit's patterns show here") : chart.scan !== null && chart.scan.count > 0 && chart.scan.failed === chart.scan.count ? qsTr("None of the scan's patterns could be read. %1").arg(chart.scan.error) : qsTr("Reading the scan's patterns")
+        text: !chart.scanProject ? qsTr("A sequential or joint fit's patterns show here") : chart.scan !== null && chart.scan.count > 0 && chart.scan.failed === chart.scan.count ? qsTr("None of the scan's patterns could be read. %1").arg(chart.scan.error) : qsTr("Reading the scan's patterns")
     }
 }

@@ -12,25 +12,34 @@ Analysis page shows one dataset's pattern at a time, and the Evolution tab one f
 (ADR-0017 §19). What changes along the scan, a peak appearing, shifting or splitting, is easiest to see with every
 pattern in one picture. The owner asked on 2026-10-14 for two such views beside the existing ones: all patterns one
 above another in one chart, and a 2D map with x across, the scan parameter up and intensity as colour. A scan's
-patterns are files read when asked for, never all held at once (ADR-0026), so the views must not keep them either.
+patterns are files read when asked for (ADR-0026), so the views read them in the background. On 2026-10-22 the owner
+asked for the same views for a joint fit, where the WISH banks line up on the d axis.
 
 ## Decision
 
-1. **Two tabs.** The Analysis page gains *Stacked* and *Map* after *Evolution*, enabled for a scan project only.
-2. **What they draw.** Every dataset's measured pattern. x across is the pattern's axis (§7) over the first
-   dataset's range. Up is the dataset's first extracted value (the scan parameter, titled as the extract rule's
-   column) once every dataset has one; until then, in a scan without an extract rule, and when the file index is
-   chosen (§7), the file index. Each dataset's row spans halfway to its neighbours.
-3. **Kept small.** The datasets are read in the background, a few at a time, the first time either tab shows, and
-   each is kept only as 1024 columns across the x range: the lowest and highest intensity in each. The views fill in
+1. **Two tabs.** The Analysis page gains *Stacked* and *Map* after *Evolution*, enabled for a scan project and for a
+   joint fit of several experiments (the owner, 2026-10-22). Evolution and Follow stay a scan's.
+2. **What they draw.** Every dataset's measured pattern; for a joint fit, every experiment's. x across is the
+   pattern's axis (§7) over every dataset's range together. Up is a scan dataset's first extracted value (the scan
+   parameter, titled as the extract rule's column) once every dataset has one; until then, in a scan without an
+   extract rule, and when the file index is chosen (§7), the file index. A joint fit's experiments are rows in the
+   project's order, each labelled with its name at the left of its row. Each row spans halfway to its neighbours.
+3. **What is kept.** A scan's datasets are read in the background, a few at a time, the first time either tab shows;
+   a joint fit's experiments are taken from the project after each edit and calculation. Each dataset keeps its
+   measured points (x and intensity). Every time the views draw, each dataset is reduced for the range shown at the
+   plot's own pixel columns: while the range holds no more points than columns the points themselves are drawn,
+   with more each column's lowest and highest intensity (`scan_trace`, `scan_pixel_values`). A zoomed view is drawn
+   from the measured points of its range, never by stretching or smoothing a reduction made for the whole range (the
+   owner, 2026-10-22: the first build kept 1024 columns of the whole range and showed them as steps when zoomed). The views fill in
    as the reads arrive, with a count of how many are read. Results read again over the same files (after a run or an
    undo) keep what was read. A dataset that cannot be read is not drawn, and the views say so above the plot: how many
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
    a dataset gives none, the rows stay by file index and the views name that dataset.
-4. **Stacked.** Each dataset is drawn as a line rising from its row, joining each column's lowest and highest value,
-   so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The datasets take
+4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
+   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones.
-5. **Map.** Each column takes the colour of its highest value. Between two datasets' rows the value is interpolated
+5. **Map.** Each pixel column takes the colour of its highest value, or, with no more points than columns, of the
+   line joining the points at the column's centre. Between two datasets' rows the value is interpolated
    linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next (the
    owner, 2026-10-22); a toolbar toggle switches to stepped colour, each dataset one band out to halfway to its
    neighbours, and back, smooth being the default. Beyond the first and the last row, out to their extent, the colour
@@ -57,7 +66,8 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
 7. **Axes and toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has (the owner,
    2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d
-   column through its own axis, the pattern chart's rule, ADR-0017 §15), y places the rows by the scan value or the
+   column through its own axis, the pattern chart's rule, ADR-0017 §15; a joint fit's experiment by its own d column,
+   d offered once every experiment has one), y places the rows by the scan value or the
    file index as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
    pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
    can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
@@ -66,7 +76,12 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    when the chart is too narrow for one toolbar line, the buttons take a second line, each line centred as the
    pattern chart's. An axis box names its choice as its list does (`x: d` for the list's `d`; the owner, 2026-10-22),
    on the pattern chart too, and d can be chosen only once a calculation has given a current d column: until then
-   the box is off and shows the axis drawn. The colours are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
+   the box is off and shows the axis drawn. A switch on the toolbar marks the excluded regions as the pattern chart does (ADR-0021 §4; the owner, 2026-10-22):
+   the pattern chart's grey band under the Stacked patterns, a wash towards the plot's background over the Map's
+   colours, each on whole pixels so two rows' bands meet without a line. A scan's datasets share the template's
+   regions, so its bands run the plot's height; a joint fit's experiment's run over its own row. The pattern chart
+   has no such switch: it always draws its bands, and on these views a band hides colours worth seeing. The colours
+   and the switches are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
 8. **Following a running scan.** A line marks the shown dataset's row at all times, the same line as the Evolution
    tab's mark of the shown dataset (the owner, 2026-10-22): 2 px, edged on each side by 1 px of half-transparent
    colour, black edged in white in the light theme and white edged in black in the dark one, so it shows on the plot
@@ -77,7 +92,10 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
 
 ## Consequences
 
-- A long scan costs about 8 kB per dataset in these views, whatever its pattern length.
+- Each dataset costs 24 bytes per measured point in these views (x, intensity and x on the axis shown, in double
+  precision): about 12 MB for 162 datasets of 3 000 points, 120 MB for 500 of 10 000.
+- Drawing reduces every dataset again, one pass over its points, so a redraw costs time in proportion to the scan's
+  points.
 - The views show measured data only. Calculated patterns of a finished scan are not read back for them.
 - Both views draw from the same reads; opening the second costs nothing more.
 
@@ -85,7 +103,8 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
 
 | Alternative | Verdict |
 | --- | --- |
-| Each pattern as its own chart series | Rejected: hundreds of series made the chart slow, and every pattern would be held in full. |
+| Each pattern as its own chart series | Rejected: hundreds of series made the chart slow. |
+| Keeping 1024 columns of the whole range per dataset | Replaced (the owner, 2026-10-22): a zoomed view showed the columns as steps, not the measured points. |
 | A rainbow (jet) colour map | Rejected: not perceptually uniform; it shows edges the data do not have and fails in grey. |
 | Rows at equal heights, labelled with the scan value | Rejected while every dataset has a value: unequal steps along the scan would read as equal. |
 | Reading the calculated patterns too | Deferred: a finished scan does not keep them, and recalculating each would cost a calculation per dataset. |
