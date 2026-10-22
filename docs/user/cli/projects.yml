@@ -142,3 +142,6 @@ projects:
   - id: pd-neut-cwl_y2o3_aniso-adp
     executing: false
     user-facing: true
+  - id: pd-xray-cwl_latp-bm01_scan-73f
+    executing: false
+    user-facing: true

@@ -1063,6 +1063,60 @@
         "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/experiments/y2o3.edi",
         "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/structures/y2o3.edi"
       ]
+    },
+    "pd-xray-cwl_latp-bm01_scan-73f": {
+      "samples": [
+        "LATP [R-3c]",
+        "AlPO₄ [C222₁]",
+        "AlPO₄ [P6₃mc]"
+      ],
+      "origin": "BM01 @ SNBL",
+      "detail": "3 phases · 73 synchrotron patterns · Linked displacement parameters",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "sequential"
+        ],
+        "facilities": [
+          "SNBL"
+        ],
+        "instruments": [
+          "BM01"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_latp-bm01_scan-73f",
+        "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL",
+        "3 phases · 73 synchrotron patterns · Linked displacement parameters"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/experiments/bm01.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/alpo4_c2221.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/alpo4_p63mc.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/latp.edi"
+      ]
     }
   }
 }
