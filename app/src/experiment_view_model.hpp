@@ -202,9 +202,8 @@ class ExperimentViewModel : public QObject {
     void setDatasetWeight(double weight);
     bool calculationOnly() const { return experiment_.calculation_only; }
     bool canLoadData() const { return can_load_data_; }
-    bool typeEditable() const {
-        return experiment_.calculation_only || (experiment_.reflections.has_value() && experiment_.reflections->size() == 0);
-    }
+    // An experiment without measured data, a single crystal without reflections included, can change its type.
+    bool typeEditable() const { return experiment_.calculation_only; }
     QString dataFile() const { return QString::fromStdString(experiment_.data_file); }
     // Set by the project, which knows how the experiment was made.
     void setCanLoadData(bool can_load_data);

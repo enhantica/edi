@@ -149,7 +149,7 @@ int default_max_iterations() { return detail::bounded_max_iterations(0); }
 namespace {
 
 bool has_measured_data(const ExperimentBase& experiment) {
-    return experiment.data.has_value() && !experiment.calculation_only;
+    return (experiment.data.has_value() || experiment.reflections.has_value()) && !experiment.calculation_only;
 }
 
 // Experiments with measured data beside experiments without (a simulation made with Create experiment).
