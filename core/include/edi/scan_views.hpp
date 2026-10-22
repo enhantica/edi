@@ -14,13 +14,32 @@
 
 namespace edi {
 
-/// One dataset's measured pattern over the views' x range, cut into `columns` equal columns: each column's lowest and
-/// highest intensity, NaN where no measured point falls. A long scan keeps only these, never its patterns.
+/// One dataset's measured pattern over an x range, cut into `columns` equal columns: each column's lowest and highest
+/// intensity, NaN where no measured point falls. The points may come in any order along x.
 struct ScanColumns {
     std::vector<float> low, high;
 };
 ScanColumns scan_columns(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
                          std::size_t columns);
+
+/// What the Stacked view draws of one pattern over [x_min, x_max] at `columns` pixel columns, always from the measured
+/// points (never from a reduction made for another range): while the range holds no more points than columns, the
+/// points themselves, with the nearest one beyond each end so the line reaches the plot's edges; with more, each
+/// column's lowest and highest intensity at the column's centre (scan_columns). A vertex is drawn from `low` to `high`
+/// and joined to the next one; the two are equal for a point. Points are taken in the order given (x rising or
+/// falling); a point with no finite x or intensity breaks the line.
+struct ScanTrace {
+    std::vector<double> x;
+    std::vector<float> low, high;
+};
+ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                     std::size_t columns);
+
+/// What the Map colours one pattern's pixel columns by over [x_min, x_max]: with more points than columns, each
+/// column's highest intensity; with no more, the line joining the measured points read at each column's centre, so a
+/// zoomed map follows the points and not a reduction. NaN where the pattern has no value.
+std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const double> intensity, double x_min,
+                                     double x_max, std::size_t columns);
 
 /// Where each dataset's row sits on the vertical axis: at its scan value when every dataset has a finite one, else at
 /// its place in the scan, from 0.

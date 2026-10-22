@@ -98,6 +98,99 @@ ScanColumns scan_columns(std::span<const double> x, std::span<const double> inte
     return out;
 }
 
+namespace {
+
+// The points of a pattern inside [x_min, x_max], counted, and the first and last place of a point inside.
+struct Inside {
+    std::size_t count = 0, first = 0, last = 0;
+};
+Inside points_inside(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max) {
+    Inside inside;
+    const std::size_t points = std::min(x.size(), intensity.size());
+    for (std::size_t i = 0; i < points; ++i) {
+        if (std::isfinite(x[i]) && std::isfinite(intensity[i]) && x[i] >= x_min && x[i] <= x_max) {
+            if (inside.count == 0) {
+                inside.first = i;
+            }
+            inside.last = i;
+            ++inside.count;
+        }
+    }
+    return inside;
+}
+
+}  // namespace
+
+ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                     std::size_t columns) {
+    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    ScanTrace trace;
+    if (columns == 0 || !(x_max > x_min)) {
+        return trace;
+    }
+    const Inside inside = points_inside(x, intensity, x_min, x_max);
+    if (inside.count > columns) {
+        const ScanColumns reduced = scan_columns(x, intensity, x_min, x_max, columns);
+        const double width = (x_max - x_min) / static_cast<double>(columns);
+        trace.x.reserve(columns);
+        for (std::size_t c = 0; c < columns; ++c) {
+            trace.x.push_back(x_min + (static_cast<double>(c) + 0.5) * width);
+        }
+        trace.low = reduced.low;
+        trace.high = reduced.high;
+        return trace;
+    }
+    const std::size_t points = std::min(x.size(), intensity.size());
+    // The points inside, and the one beyond each end of the run inside, so the line leaves the plot at its edges.
+    const std::size_t from = inside.count == 0 ? 0 : inside.first > 0 ? inside.first - 1 : 0;
+    const std::size_t to = inside.count == 0 ? 0 : std::min(points, inside.last + 2);
+    for (std::size_t i = from; i < to; ++i) {
+        const bool finite = std::isfinite(x[i]) && std::isfinite(intensity[i]);
+        trace.x.push_back(finite ? x[i] : std::numeric_limits<double>::quiet_NaN());
+        const float value = finite ? static_cast<float>(intensity[i]) : kNaN;
+        trace.low.push_back(value);
+        trace.high.push_back(value);
+    }
+    return trace;
+}
+
+std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const double> intensity, double x_min,
+                                     double x_max, std::size_t columns) {
+    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    std::vector<float> out(columns, kNaN);
+    if (columns == 0 || !(x_max > x_min)) {
+        return out;
+    }
+    if (points_inside(x, intensity, x_min, x_max).count > columns) {
+        return scan_columns(x, intensity, x_min, x_max, columns).high;
+    }
+    // Each pair of neighbouring finite points, in the order given, covers the column centres between them.
+    const std::size_t points = std::min(x.size(), intensity.size());
+    const double width = (x_max - x_min) / static_cast<double>(columns);
+    for (std::size_t i = 0; i + 1 < points; ++i) {
+        const double xa = x[i], xb = x[i + 1], ya = intensity[i], yb = intensity[i + 1];
+        if (!std::isfinite(xa) || !std::isfinite(xb) || !std::isfinite(ya) || !std::isfinite(yb) || xa == xb) {
+            continue;
+        }
+        const double low = std::min(xa, xb), high = std::max(xa, xb);
+        const double first = std::ceil((low - x_min) / width - 0.5), last = std::floor((high - x_min) / width - 0.5);
+        for (double c = std::max(0.0, first); c <= std::min(static_cast<double>(columns) - 1.0, last); c += 1.0) {
+            const double centre = x_min + (c + 0.5) * width;
+            out[static_cast<std::size_t>(c)] = static_cast<float>(ya + (yb - ya) * (centre - xa) / (xb - xa));
+        }
+    }
+    // A lone point inside, with no neighbour to join, colours its own column.
+    for (std::size_t i = 0; i < points; ++i) {
+        if (std::isfinite(x[i]) && std::isfinite(intensity[i]) && x[i] >= x_min && x[i] <= x_max) {
+            const auto c = std::min(columns - 1, static_cast<std::size_t>((x[i] - x_min) / width));
+            if (std::isnan(out[c])) {
+                out[c] = static_cast<float>(intensity[i]);
+            }
+        }
+    }
+    return out;
+}
+
 std::vector<double> scan_row_positions(std::span<const double> values) {
     std::vector<double> out(values.begin(), values.end());
     if (std::any_of(out.begin(), out.end(), [](double value) { return !std::isfinite(value); })) {
