@@ -47,7 +47,10 @@ matched neither. A user could not tell which example showed a technique, and a f
    when the registry reads differently as YAML and as the app's CMake reads it, when a case lacks its project, page,
    provenance, tutorial, notebook or execution-exclusion entry, when a tutorial loads anything but its own project or
    loads more than one, when a notebook's load differs from its source's, when a data file is not in the provenance,
-   and when a tutorial, page or exclusion names a project that is not a case.
+   and when a tutorial, page or exclusion names a project that is not a case. A tutorial and each of its notebook's
+   code cells load in one form only: a top-level statement of its own, `project = edi.Project.load('<path>')`, with
+   a literal path. Any other mention of `Project.load`, in an expression, a branch, a function, a lambda, a target
+   or an alias, fails the check, so whether a load runs never has to be inferred.
 10. **References.** Each fitted case has a FullProf fit from the same start, committed with its inputs and outputs, and
     the catalogue's comparison page sets edi beside FullProf and diffraction-lib with the agreement factors recomputed
     from the committed curves. Rows whose models differ are marked as such, never presented as agreement.

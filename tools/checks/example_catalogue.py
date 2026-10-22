@@ -12,8 +12,8 @@ when:
   ``PROVENANCE.md`` with a ``## Sources`` section, its tutorial ``docs/user/tutorials/<id>.py``,
   its notebook, or its one entry in ``docs/user/tutorials/execution-exclusions.yml``;
 - a tutorial or its notebook loads anything but ``../cli/<id>/project``, loads it more than once,
-  or the two disagree. A load is a top-level statement whose whole value is
-  ``Project.load('<path>')``; any other mention of ``Project.load`` in the code fails;
+  or the two disagree. A load is one top-level statement of one form,
+  ``project = edi.Project.load('<path>')``; any other mention of ``Project.load`` fails;
 - a file under a case's ``data/`` is not named in its Sources with its sha256;
 - a tutorial, notebook or exclusion entry names something that is not a case, or a fixture has an
   ``index.md`` page (a fixture's page is its ``README.md``).
@@ -86,10 +86,10 @@ def metadata_value(project_edi: Path, key: str) -> str | None:
     return None
 
 
-# The one supported placement of a load: a top-level statement whose whole value is the call,
-# ``project = edi.Project.load('<path>')`` or ``edi.Project.load('<path>')``. Python always runs
-# such a call once, so the check need not reason about evaluation order anywhere else.
-SUPPORTED_STATEMENTS = (ast.Assign, ast.AnnAssign, ast.Expr)
+# The one form a tutorial loads its project in (ADR-0048): a top-level statement of its own,
+# ``project = edi.Project.load('<path>')``. Python runs it exactly once, so the check needs no
+# reasoning about evaluation; every other mention of ``Project.load`` fails.
+LOAD_FORM = "project = edi.Project.load('<path>')"
 
 
 def is_project_load(node: ast.AST) -> bool:
@@ -102,13 +102,37 @@ def is_project_load(node: ast.AST) -> bool:
     )
 
 
+def is_load_statement(statement: ast.stmt) -> bool:
+    """Whether a top-level statement is exactly ``project = edi.Project.load(<one argument>)``."""
+    if not (
+        isinstance(statement, ast.Assign)
+        and len(statement.targets) == 1
+        and isinstance(statement.targets[0], ast.Name)
+        and statement.targets[0].id == 'project'
+        and isinstance(statement.value, ast.Call)
+    ):
+        return False
+    call = statement.value
+    func = call.func
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == 'load'
+        and isinstance(func.value, ast.Attribute)
+        and func.value.attr == 'Project'
+        and isinstance(func.value.value, ast.Name)
+        and func.value.value.id == 'edi'
+        and len(call.args) == 1
+        and not call.keywords
+    )
+
+
 def supported_loads(tree: ast.Module) -> dict[int, str]:
-    """The supported loads' paths by the ``id`` of their ``Project.load`` node."""
+    """The paths of the loads in the one form, by the ``id`` of their ``Project.load`` node."""
     found = {}
     for statement in tree.body:
-        call = statement.value if isinstance(statement, SUPPORTED_STATEMENTS) else None
-        if isinstance(call, ast.Call) and is_project_load(call.func):
-            first = call.args[0] if len(call.args) == 1 and not call.keywords else None
+        if is_load_statement(statement):
+            call = statement.value
+            first = call.args[0]
             literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
             found[id(call.func)] = first.value if literal else '<not a literal>'
     return found
@@ -117,10 +141,10 @@ def supported_loads(tree: ast.Module) -> dict[int, str]:
 def loads(code: list[str]) -> list[str]:
     """The path of every ``Project.load`` in the code, in order.
 
-    A load in the supported placement gives its literal path, or ``<not a literal>``. Any other
-    mention of ``Project.load``, wherever it sits, reads as ``<unsupported placement>``, and code
-    that does not parse as ``<no parse>``, so either fails the one-load rule. A load in a comment
-    or a string is no load.
+    A load in the one form (``LOAD_FORM``) gives its literal path, or ``<not a literal>``. Any
+    other mention of ``Project.load``, in any expression or position, reads as
+    ``<unsupported placement>``, and code that does not parse as ``<no parse>``, so either fails
+    the one-load rule. A load in a comment or a string is no load.
     """
     paths: list[str] = []
     for source in code:
