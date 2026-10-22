@@ -203,7 +203,11 @@ def fullprof_gap(case: str, banks: list[str], grids: dict, fp_curves: dict) -> s
             raise ValueError(f'{case}: FullProf and edi observed counts differ in {bank}')
     if not lacking:
         return None
-    return "FullProf's profile lacks included points: " + '; '.join(lacking) + '.'
+    return (
+        "FullProf's profile has no single matching row for included points: "
+        + '; '.join(lacking)
+        + '.'
+    )
 
 
 def diffraction_lib_curves(root: Path, case: str, grids: dict) -> dict[str, np.ndarray]:
