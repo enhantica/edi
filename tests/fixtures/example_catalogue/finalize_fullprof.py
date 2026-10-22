@@ -32,11 +32,11 @@ def parameters(home, case):
     return result, codes
 
 
-def cycle_budget(control):
-    budget = re.search(r'^!NCY[^\n]*\n\s*(\d+)', control.read_text(), re.MULTILINE)
+def stopping_settings(control):
+    budget = re.search(r'^!NCY[^\n]*\n\s*(\d+)\s+([\d.Ee+-]+)', control.read_text(), re.MULTILINE)
     if budget is None:
         raise ValueError(f'Missing FullProf cycle budget in {control}')
-    return int(budget[1])
+    return int(budget[1]), float(budget[2])
 
 
 def refresh_project_inputs(record, home, case):
@@ -51,7 +51,9 @@ def refresh_project_inputs(record, home, case):
         for fixed, stem in [(True, 'start'), (False, 'fit')]:
             if stem == 'fit' and record['scope'] == 'calculation':
                 continue
-            Writer(case, fixed, cycles=record['cycles']).write(scratch / f'{stem}.pcr')
+            Writer(case, fixed, cycles=record['cycles'], epsilon=record['epsilon']).write(
+                scratch / f'{stem}.pcr'
+            )
             for generated in scratch.glob(stem + '*'):
                 if generated.read_bytes() != (home / generated.name).read_bytes():
                     raise ValueError(
@@ -62,9 +64,39 @@ def refresh_project_inputs(record, home, case):
 
 def prepare_record(path, home, simulation, case):
     record = json.loads(path.read_text())
-    record['cycles'] = cycle_budget(home / ('start.pcr' if simulation else 'fit.pcr'))
+    record['cycles'], record['epsilon'] = stopping_settings(
+        home / ('start.pcr' if simulation else 'fit.pcr')
+    )
+    dispersion = Path(__file__).with_name('synchrotron-dispersion.json')
+    if json.loads(dispersion.read_text())['case'] == case:
+        record['dispersion_reference'] = str(dispersion.relative_to(ROOT))
+        record['dispersion_reference_sha256'] = digest(dispersion)
     refresh_project_inputs(record, home, case)
     return record
+
+
+def dispersion_notes(record, home):
+    if 'dispersion_reference' not in record:
+        return []
+    notes = [
+        'The explicit type-2 dispersion records use Sasaki (1989), KEK Report 88-14.',
+        'The independent table brackets and their source digest are frozen in',
+        f'`{record["dispersion_reference"]}`; the receipt binds that file.',
+        'Interpolation is linear in photon energy at the committed 0.207109 A wavelength.',
+        'FullProf retains its normal form factors; only Dfp and Dfpp are supplied.',
+        '[FullProf manual, line 12, ITY=2](https://www.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf)',
+        'documents the lower-case symbols and the synchrotron correction route.',
+        '[Sasaki tables](https://www2.kek.jp/imss/pf/tools/sasaki/scatfac/scatfac.html).',
+        '',
+    ]
+    if (home / 'strict-shift-attempt').is_dir():
+        notes += [
+            'The archived `strict-shift-attempt` used epsilon 0.001 and 1000 cycles',
+            'from the same start but did not converge. The primary reference uses',
+            'the established epsilon 0.1; no fitted result seeds another fit.',
+            '',
+        ]
+    return notes
 
 
 def finish(case, directories):  # noqa: PLR0914 - complete external output receipt
@@ -137,7 +169,9 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
     notes = [
         '# FullProf authoring record',
         '',
-        'FullProf fp2k 8.40 (Feb2026, ILL) was run at authoring time on 22 October 2026.',
+        'FullProf fp2k 8.40 (Feb2026, ILL) was run at authoring time: '
+        + record.get('authored_utc', '22 October 2026')
+        + '.',
         'Tests read these committed outputs and never invoke fp2k.',
         '',
         f'Start: `{record["start_project"]}`. `reference.json` binds every input and output byte.',
@@ -148,6 +182,7 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
         (
             'Reproduce with `python tests/fixtures/example_catalogue/run_fullprof.py '
             f'--case {case} --cycles {record["cycles"]} '
+            f'--epsilon {record["epsilon"]} '
             '--executable /path/to/fp2k --logs /persistent/logs`.'
         ),
         'The executable receives the PCR basename and blank responses on standard input.',
@@ -159,7 +194,10 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
             '`fit.pcr` uses Pcr=2. `fit.new` is the independent fitted model.',
             'Its fixed twin zeros every value/code field in that emitted file.',
             f'Finite output: {record["finite_fit"]}. Converged: {record["converged"]}.',
-            f'Fitting cycle budget: {record["cycles"]}. Convergence settings are unchanged.',
+            (
+                f'Fitting cycle budget: {record["cycles"]}; '
+                f'shift tolerance epsilon: {record["epsilon"]}.'
+            ),
             'The output parameter table and its code-index mapping are retained.',
             'Rwp uses all-point least-squares factors, pooled with observed weighted sums.',
             'The scan rows claim only their single template fit.',
@@ -171,6 +209,7 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
                 'converged fit from this start. These outputs document the attempt.',
                 '',
             ]
+        notes += dispersion_notes(record, home)
         if any(
             e['values']['_peak.type'] == 'cwl-pseudo-voigt-berar-baldinozzi'
             for e in Writer(case, True).experiments
