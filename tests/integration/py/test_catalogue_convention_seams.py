@@ -1,5 +1,6 @@
 """Non-identity values from previously verified FullProf project pairs."""
 
+import json
 import math
 import re
 from pathlib import Path
@@ -9,10 +10,47 @@ import numpy as np
 import pytest
 from edi import verification
 
-from tests.fixtures.example_catalogue.fullprof_inputs import read_cif, rows
+from tests.fixtures.example_catalogue.fullprof_inputs import Writer, read_cif, rows
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / 'docs/user/cli'
+
+
+@pytest.mark.parametrize('form', ['start', 'fit', 'fixed', 'generated-start', 'generated-fit'])
+def test_synchrotron_fullprof_inputs_state_the_independent_dispersion(tmp_path, form):
+    reference = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/synchrotron-dispersion.json').read_text()
+    )
+    case = 'pd-xray-cwl_lam7o3-p021'
+    if form.startswith('generated-'):
+        path = tmp_path / 'probe.pcr'
+        Writer(case, form == 'generated-start').write(path)
+    else:
+        kind = 'verification' if form == 'fixed' else 'fitting'
+        path = ROOT / 'knowledge' / kind / 'fullprof' / case / f'{form}.pcr'
+    text = path.read_text()
+    nsc = re.search(r'^!\s*Job[^\n]+\n([^\n]+)', text, re.MULTILINE)
+    assert nsc and int(nsc[1].split()[5]) == 9, (
+        'The synchrotron FullProf input must declare all nine wavelength-specific scatterers'
+    )
+    assert reference['brackets']['La']['f_prime'] == [-0.4505, -0.5011], (
+        'The frozen lanthanum brackets must be the independent Sasaki 0.20 and 0.21 A entries'
+    )
+    for element, bracket in reference['brackets'].items():
+        low, high = bracket['wavelength_angstrom']
+        fraction = (1 / 0.207109 - 1 / low) / (1 / high - 1 / low)
+        expected = [
+            values[0] + fraction * (values[1] - values[0])
+            for values in [bracket['f_prime'], bracket['f_double_prime']]
+        ]
+        row = re.search(
+            rf'^{element.lower()}\s+([-+\d.Ee]+)\s+([-+\d.Ee]+)\s+2\s*$', text, re.MULTILINE
+        )
+        assert row, 'FullProf must receive each explicit dispersion pair through its type-2 record'
+        assert [float(value) for value in row.groups()] == pytest.approx(expected, abs=5e-6), (
+            'The PCR must retain the independent Sasaki corrections within '
+            'its five-decimal output precision'
+        )
 
 
 def loaded(case):

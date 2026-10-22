@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T21:36:14Z
+# measured_utc = 2026-10-22T22:15:45Z
 #
-# Recorded from: measured test run (52 node(s) measured once, 14507 banked, 22 stale row(s) dropped)
-# Collected tests: 16009; with a reported duration: 9536
+# Recorded from: measured test run (5 node(s) measured once, 14535 banked, 0 stale row(s) dropped)
+# Collected tests: 16014; with a reported duration: 9538
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16009
+# inventory_python = 16014
 # inventory_cpp = 389
-# inventory_measured = 14535
+# inventory_measured = 14540
 # inventory_unmeasured = 1863
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -2127,6 +2127,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.050	tests/integration/py/test_catalogue_convention_seams.py::test_nonconstant_background_uses_the_declared_domain_and_origin[pd-neut-tof_ceo2-pearl_polynomial]
 0.010	tests/integration/py/test_catalogue_convention_seams.py::test_occupancy_and_beta_tensors_keep_the_independent_crystallographic_units
 0.010	tests/integration/py/test_catalogue_convention_seams.py::test_signed_zero_displacement_and_transparency_survive_the_cw_boundary
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_synchrotron_fullprof_inputs_state_the_independent_dispersion[fit]
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_synchrotron_fullprof_inputs_state_the_independent_dispersion[fixed]
+0.040	tests/integration/py/test_catalogue_convention_seams.py::test_synchrotron_fullprof_inputs_state_the_independent_dispersion[generated-fit]
+0.050	tests/integration/py/test_catalogue_convention_seams.py::test_synchrotron_fullprof_inputs_state_the_independent_dispersion[generated-start]
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_synchrotron_fullprof_inputs_state_the_independent_dispersion[start]
 0.010	tests/integration/py/test_catalogue_convention_seams.py::test_tch_widths_and_fcj_lengths_retain_the_independent_units
 0.000	tests/integration/py/test_catalogue_convention_seams.py::test_tof_sigma_is_variance_and_calibration_retains_its_quadratic_term
 0.010	tests/integration/py/test_catalogue_convention_seams.py::test_xray_doublet_and_monochromator_polarization_are_nontrivial

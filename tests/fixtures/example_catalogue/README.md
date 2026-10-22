@@ -43,3 +43,16 @@ The authoring runner accepts `--cycles N` to increase the computational budget f
 the default 200 cycles without changing the start, free flags or convergence settings.
 The receipt reads that budget from the actual PCR input. A fresh run always starts
 from the committed project; no previous `.new` seeds a fitting run.
+
+The synchrotron LaM7O3 reference supplies explicit type-2 anomalous corrections.
+`freeze_dispersion.py --table /path/to/cctbx/reference/sasaki/fpwide.tbl` freezes
+the original Sasaki (1989), KEK Report 88-14 table brackets and their source hash.
+The independent input checks reconstruct energy-linear interpolation at 0.207109 A;
+FullProf receives lower-case species, Dfp, Dfpp and ITY=2 as its manual specifies.
+No crysta dispersion function supplies these reference values. Other references
+keep their established FullProf table settings.
+
+`--epsilon` records an explicit FullProf shift tolerance when diagnosing a reference.
+The LaM7O3 tighter-tolerance attempt is retained under `strict-shift-attempt` in both
+reference homes; it exhausted its budget and is not the converged minimum reference.
+The primary run retains the established epsilon 0.1, with all starts and free flags unchanged.

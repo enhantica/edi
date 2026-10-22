@@ -14,224 +14,226 @@
   ],
   "scope": "fit",
   "staging": "none",
-  "cycles": 200,
+  "cycles": 1000,
+  "epsilon": 0.1,
+  "authored_utc": "2026-10-22T22:11:09.226467+00:00",
   "n_free": 39,
   "exit": 24,
   "twin_exit": 24,
   "fit_output_complete": true,
   "artifacts_sha256": {
     "fit.dat": "ed8a9c0c8f0896e4cdbd1c27d1aa548e134d8f2ca37887ca920bf666424d2b54",
-    "fit.log": "0354e20ead0d1807e2a8a0a888ee651bf5b9f53e9b78431f27d0b6445c842894",
-    "fit.new": "98ae7f01e17b02fedbdc4a960a4eed8ecc3a200080bdce54871a6c0929d5435e",
-    "fit.out": "58406b459534fbdbcbc0045ea79cba05b5ab066ba680433628e810e957d94974",
-    "fit.pcr": "73e37e20f0dd0c9d9b25393d9adfdaf72ed512c9eab912b85be92643346e48a3",
-    "fit.prf": "034561a02b5e645192a6ed7d2a62a9ad94cf686b8adfc06566c938d2117fbec8",
-    "fit.sum": "2350741d42887fc8ae31986377c6d12537fd27420eb1784297847bb371b81e4b",
+    "fit.log": "adbc1dc1f4a8befd1bba82f6ff26954a235a0a735183a0e746e248e12f18b25a",
+    "fit.new": "83edcda8761fee1aeaba0ab97add9758d356b6b91edc9bd7d02511c929dbad61",
+    "fit.out": "190f7b4324266b7c8ef5bcd1990081accb994cdab7a975986c35b9862127a1a5",
+    "fit.pcr": "577e8281fc984f9a9075a3574624137441b90a2e1ac1017e57cd4ae4fdc70f02",
+    "fit.prf": "c7849e3966d33969da5ca0e4dac8538d952048be291ab1d115a0d2f13f5bd95e",
+    "fit.sum": "2c11f8f187ead64bdff782176cecb2700ba7c5a16f9efda85a1d38158d602316",
     "start.dat": "ed8a9c0c8f0896e4cdbd1c27d1aa548e134d8f2ca37887ca920bf666424d2b54",
-    "start.log": "6405618ccb892ed5c544a0c8b10dab53f1551f2271aa0df94fb6f795aa754429",
-    "start.new": "fa99f9bde3b6def6204618e9b7c5862ca5486ff1e8124e22ee9fa4ef034c628e",
-    "start.out": "2fa71fd82e7fcb83c229242349130fbe5b6e47426132f429282f20633c142478",
-    "start.pcr": "ba8b093c8ad2b071395146edf9f81a6bdc94258d5f08ebef2bfbbb06894baf9b",
-    "start.prf": "d11b203ae5bbdfd21c062943fb39940cbc1f6c31daf274b0fa24060769cc0873",
-    "start.sum": "247466ed20ffea7d4e8eb3b5aa8c11ec6c73c8445bd944ed5a72fe792788dfd2"
+    "start.log": "c0596fa63acc7c17bccd833e3666f828ff4aca1257a12ed5f517f63fced91a36",
+    "start.new": "646479bfe4caf1756bcb3a1dcfa17057db22cb4fc96018e7d68b2438848918e7",
+    "start.out": "d24b5050cbcb3b06fae9c2c30ba3c8c9ed1f316c842e209ad7a7f07d2af8463a",
+    "start.pcr": "0bc95837ff7a4c656e26fa7bb27641b79f0f652ecaa1d0acd565b9f1b2914957",
+    "start.prf": "d43ab26b76b98188382b3f481a297b66220abba85ea6f27e5a5e6c05d370587f",
+    "start.sum": "57f17cc5ba52959eef241f8ac24db987bd92f54136e51de07ac0de7b4738effd"
   },
   "finite_fit": true,
   "converged": true,
   "fullprof_parameters": {
     "1": {
       "symbol": "Bck_0_pat1",
-      "value": 581.56494,
-      "uncertainty": 8.3647223
+      "value": 581.52277,
+      "uncertainty": 8.3647242
     },
     "2": {
       "symbol": "Bck_1_pat1",
-      "value": 687.01483,
-      "uncertainty": 6.34484
+      "value": 687.09381,
+      "uncertainty": 6.3448496
     },
     "3": {
       "symbol": "Bck_2_pat1",
-      "value": 945.87042,
-      "uncertainty": 7.6951847
+      "value": 945.54456,
+      "uncertainty": 7.6954913
     },
     "4": {
       "symbol": "Bck_3_pat1",
-      "value": 990.93323,
-      "uncertainty": 11.179881
+      "value": 992.74249,
+      "uncertainty": 11.180059
     },
     "5": {
       "symbol": "Bck_4_pat1",
-      "value": 975.90845,
-      "uncertainty": 12.215801
+      "value": 966.07495,
+      "uncertainty": 12.224177
     },
     "6": {
       "symbol": "Bck_5_pat1",
-      "value": 887.45813,
-      "uncertainty": 6.7902398
+      "value": 882.43549,
+      "uncertainty": 6.7942014
     },
     "7": {
       "symbol": "Bck_6_pat1",
-      "value": 604.84088,
-      "uncertainty": 5.0599217
+      "value": 606.08289,
+      "uncertainty": 5.0600853
     },
     "8": {
       "symbol": "Bck_7_pat1",
-      "value": 553.45959,
-      "uncertainty": 6.2432194
+      "value": 552.92902,
+      "uncertainty": 6.2432809
     },
     "9": {
       "symbol": "Bck_8_pat1",
-      "value": 513.50793,
-      "uncertainty": 13.295979
+      "value": 516.52905,
+      "uncertainty": 13.281993
     },
     "10": {
       "symbol": "Bck_9_pat1",
-      "value": 511.05988,
-      "uncertainty": 13.283578
+      "value": 514.41302,
+      "uncertainty": 13.268836
     },
     "11": {
       "symbol": "Bck_10_pat1",
-      "value": 491.18188,
-      "uncertainty": 6.4592137
+      "value": 490.15894,
+      "uncertainty": 6.463582
     },
     "12": {
       "symbol": "Bck_11_pat1",
-      "value": 453.60321,
-      "uncertainty": 5.4873405
+      "value": 454.52756,
+      "uncertainty": 5.4857287
     },
     "13": {
       "symbol": "Bck_12_pat1",
-      "value": 428.93088,
-      "uncertainty": 2.9474666
+      "value": 428.65878,
+      "uncertainty": 2.9482102
     },
     "14": {
       "symbol": "Bck_13_pat1",
-      "value": 411.27768,
-      "uncertainty": 2.9100749
+      "value": 411.34802,
+      "uncertainty": 2.9107537
     },
     "15": {
       "symbol": "Bck_14_pat1",
-      "value": 439.4527,
-      "uncertainty": 2.8086545
+      "value": 439.52914,
+      "uncertainty": 2.8093128
     },
     "16": {
       "symbol": "Bck_15_pat1",
-      "value": 446.16425,
-      "uncertainty": 2.9128866
+      "value": 446.47891,
+      "uncertainty": 2.9141159
     },
     "17": {
       "symbol": "Bck_16_pat1",
-      "value": 348.51837,
-      "uncertainty": 2.6061394
+      "value": 348.96399,
+      "uncertainty": 2.6069429
     },
     "18": {
       "symbol": "Bck_17_pat1",
-      "value": 342.03647,
-      "uncertainty": 2.2853143
+      "value": 342.68781,
+      "uncertainty": 2.2829499
     },
     "19": {
       "symbol": "Bck_18_pat1",
-      "value": 291.16241,
-      "uncertainty": 2.5624902
+      "value": 291.87015,
+      "uncertainty": 2.558429
     },
     "20": {
       "symbol": "Bck_19_pat1",
-      "value": 258.16351,
-      "uncertainty": 5.6538267
+      "value": 258.04572,
+      "uncertainty": 5.6535959
     },
     "21": {
       "symbol": "Zero_pat1",
-      "value": -0.00071409094,
-      "uncertainty": 0.00014531908
+      "value": -0.00070903532,
+      "uncertainty": 0.00014488991
     },
     "22": {
       "symbol": "X_La_ph1",
-      "value": 0.47687703,
-      "uncertainty": 0.00019166413
+      "value": 0.47683463,
+      "uncertainty": 0.00019191387
     },
     "23": {
       "symbol": "Z_La_ph1",
-      "value": 0.0042063319,
-      "uncertainty": 0.00070878922
+      "value": 0.004245495,
+      "uncertainty": 0.0007090522
     },
     "24": {
       "symbol": "Biso_La_ph1",
-      "value": 0.55325669,
-      "uncertainty": 0.022830367
+      "value": 0.60778999,
+      "uncertainty": 0.023024172
     },
     "25": {
       "symbol": "Biso_Ti_ph1",
-      "value": 0.56366819,
-      "uncertainty": 0.03123153
+      "value": 0.39013162,
+      "uncertainty": 0.03104843
     },
     "26": {
       "symbol": "X_O1_ph1",
-      "value": 0.50801867,
-      "uncertainty": 0.0023038692
+      "value": 0.50787765,
+      "uncertainty": 0.0023164786
     },
     "27": {
       "symbol": "Z_O1_ph1",
-      "value": 0.56967384,
-      "uncertainty": 0.0038114544
+      "value": 0.56959093,
+      "uncertainty": 0.0038393424
     },
     "28": {
       "symbol": "Biso_O1_ph1",
-      "value": 0.30700094,
-      "uncertainty": 0.15337239
+      "value": 0.30796376,
+      "uncertainty": 0.15514658
     },
     "29": {
       "symbol": "X_O2_ph1",
-      "value": 0.22297701,
-      "uncertainty": 0.0032451851
+      "value": 0.22397308,
+      "uncertainty": 0.0033223457
     },
     "30": {
       "symbol": "Y_O2_ph1",
-      "value": 0.035257857,
-      "uncertainty": 0.0021336533
+      "value": 0.035070218,
+      "uncertainty": 0.0021629471
     },
     "31": {
       "symbol": "Z_O2_ph1",
-      "value": 0.27733606,
-      "uncertainty": 0.0030602831
+      "value": 0.27659789,
+      "uncertainty": 0.0031283232
     },
     "32": {
       "symbol": "Scale_ph1_pat1",
-      "value": 3.7199052e-06,
-      "uncertainty": 1.6265721e-08
+      "value": 3.6753167e-06,
+      "uncertainty": 1.6062224e-08
     },
     "33": {
       "symbol": "U-Cagl_ph1_pat1",
-      "value": 0.038993135,
-      "uncertainty": 0.018572016
+      "value": 0.045385603,
+      "uncertainty": 0.018509956
     },
     "34": {
       "symbol": "V-Cagl_ph1_pat1",
-      "value": -0.0060573844,
-      "uncertainty": 0.0023919127
+      "value": -0.0069578611,
+      "uncertainty": 0.0023782204
     },
     "35": {
       "symbol": "W-Cagl_ph1_pat1",
-      "value": 0.0011765893,
-      "uncertainty": 6.7075598e-05
+      "value": 0.0012072958,
+      "uncertainty": 6.6601351e-05
     },
     "36": {
       "symbol": "X-tan_ph1_pat1",
-      "value": 0.16725987,
-      "uncertainty": 0.0054289233
+      "value": 0.16643704,
+      "uncertainty": 0.0054359282
     },
     "37": {
       "symbol": "Cell_A_ph1_pat1",
-      "value": 5.4621582,
-      "uncertainty": 0.00012302758
+      "value": 5.4621844,
+      "uncertainty": 0.00012287816
     },
     "38": {
       "symbol": "Cell_B_ph1_pat1",
-      "value": 7.732976,
-      "uncertainty": 0.00018898744
+      "value": 7.7329421,
+      "uncertainty": 0.00018884841
     },
     "39": {
       "symbol": "Cell_C_ph1_pat1",
-      "value": 5.4901748,
-      "uncertainty": 0.00012565583
+      "value": 5.490181,
+      "uncertainty": 0.00012558144
     }
   },
   "parameter_codes": {
@@ -276,19 +278,21 @@
     "lam7o3.cell.length_c": 39
   },
   "r_wp_by_bank": {
-    "p021": 0.0184
+    "p021": 0.017
   },
   "parameters": {
-    "O1.fract_x": 0.50801867
+    "O1.fract_x": 0.50787765
   },
   "twin_artifacts_sha256": {
     "fixed.dat": "ed8a9c0c8f0896e4cdbd1c27d1aa548e134d8f2ca37887ca920bf666424d2b54",
-    "fixed.log": "fa7655f7f49647b0daa61479c551a2cb92351af8664504ca942be22996f2b65d",
-    "fixed.new": "a04f82e131e4f8c4c4af415357d0210abd4c555f3d7f84bde74b9a11ba931c70",
-    "fixed.out": "8a4549c746e4fff50e21f1ad9ac3e6826395538e17e5eb2c95a31a6dc7c079a8",
-    "fixed.pcr": "b33a115afa5b4686c9d793541d92e5701cb04fdef7b6afff911231b6f469cf8e",
-    "fixed.prf": "dc4667550252c0e109955b547539773a264cd76b6bd8cd81fb8cdf950bf01501",
-    "fixed.sum": "bf6f9bcb3452ae24c507d5dba7cfbf1a34f2e93dce4bdfe6a1bc00c54ebf9efc"
+    "fixed.log": "543a6432d61e4848399e8dad6d53ce77a3404a671137fb164d4b8cde6b9c5d76",
+    "fixed.new": "afb04d0a90e6d75892f3c94193550aa59144e8cac47cf3778ca26aa0cc922e2d",
+    "fixed.out": "459aa019ac57ecddd37a41c4dfa2a6ed9cb0338c1c41e00b2eed4cb3ae0d96c1",
+    "fixed.pcr": "48cd2a79be56c1d9ee32d47031a35ff8c8821c4cd7e26178fee043eb9bcb15b2",
+    "fixed.prf": "648e89dbc6fe89309a1eb7afcf3da88e10f2bb51f2a40384f085cd383ee97e14",
+    "fixed.sum": "563a2a66fa81085ecb4d2f25dc8c17e03871d48e054c13c0d4fead99b4477149"
   },
-  "r_wp": 0.0184
+  "dispersion_reference": "tests/fixtures/example_catalogue/synchrotron-dispersion.json",
+  "dispersion_reference_sha256": "28edcbd153f860aae6963f128d1d4ad58a90925d18f29dd705d74617c05d4377",
+  "r_wp": 0.017
 }

@@ -8,7 +8,7 @@
                  Refinement of X-ray and/or Neutron Data
 
 
-    Date: 22/10/2026  Time: 21:13:43.569                              
+    Date: 23/10/2026  Time: 00:11:09.277                              
 
  => PCR file code: fit
  => DAT file code: fit                  -> Relative contribution: 1.0000                                                            
@@ -32,7 +32,7 @@
  =>-------> Pattern#  1
  => Crystal Structure Refinement for phase: 1
  => The density (volumic mass) of phase 1 is:    6.926 g/cm3
- => Scor: 1.7332
+ => Scor: 1.6603
 
  ==> RESULTS OF REFINEMENT:
 
@@ -50,40 +50,40 @@
  ==> ATOM PARAMETERS:
 
   Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
- La      0.47688(  19)  0.25000(   0)  0.00421(  70)  0.553( 22)  0.500(  0)    4
- Ti      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Cr      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Mn      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Co      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Ni      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- Cu      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.564( 31)  0.071(  0)    4
- O1      0.50802( 230)  0.25000(   0)  0.56967( 381)  0.307(153)  0.500(  0)    4
- O2      0.22298( 324)  0.03526( 213)  0.27734( 306)  0.307(153)  1.000(  0)    8
+ La      0.47683(  19)  0.25000(   0)  0.00425(  70)  0.608( 23)  0.500(  0)    4
+ Ti      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Cr      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Mn      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Co      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Ni      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ Cu      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.390( 31)  0.071(  0)    4
+ O1      0.50788( 231)  0.25000(   0)  0.56959( 383)  0.308(155)  0.500(  0)    4
+ O2      0.22397( 332)  0.03507( 216)  0.27660( 312)  0.308(155)  1.000(  0)    8
 
  ==> PROFILE PARAMETERS FOR PATTERN#  1
 
  => Cell parameters      :
-                              5.46216   0.00012
-                              7.73298   0.00019
-                              5.49017   0.00013
+                              5.46218   0.00012
+                              7.73294   0.00019
+                              5.49018   0.00013
                              90.00000   0.00000
                              90.00000   0.00000
                              90.00000   0.00000
  
- => overall scale factor :  0.3719905E-05 0.1626572E-07
+ => overall scale factor :  0.3675317E-05 0.1606222E-07
  => Eta(p-v) or m(p-vii) :    0.00000   0.00000
  => Overall tem. factor  :    0.00000   0.00000
- => Halfwidth parameters :    0.03899   0.01857
-                             -0.00606   0.00239
-                              0.00118   0.00007
+ => Halfwidth parameters :    0.04539   0.01851
+                             -0.00696   0.00238
+                              0.00121   0.00007
  => Preferred orientation:    0.00000   0.00000
                               0.00000   0.00000
  => Asymmetry parameters :    0.00000   0.00000
                               0.00000   0.00000
                               0.00000   0.00000
                               0.00000   0.00000
- => X and y parameters   :    0.16726   0.00543
+ => X and y parameters   :    0.16644   0.00544
                               0.00000   0.00000
  => Strain parameters    :    0.00000   0.00000
                               0.00000   0.00000
@@ -102,61 +102,61 @@
 
  => Zero-point:    -0.0007    0.0001
  => Background Parameters (linear interpolation)  ==>
-                                 581.565        8.36472    
-                                 687.015        6.34484    
-                                 945.870        7.69518    
-                                 990.933        11.1799    
-                                 975.908        12.2158    
-                                 887.458        6.79024    
-                                 604.841        5.05992    
-                                 553.460        6.24322    
-                                 513.508        13.2960    
-                                 511.060        13.2836    
-                                 491.182        6.45921    
-                                 453.603        5.48734    
-                                 428.931        2.94747    
-                                 411.278        2.91007    
-                                 439.453        2.80865    
-                                 446.164        2.91289    
-                                 348.518        2.60614    
-                                 342.036        2.28531    
-                                 291.162        2.56249    
-                                 258.164        5.65383    
+                                 581.523        8.36472    
+                                 687.094        6.34485    
+                                 945.545        7.69549    
+                                 992.742        11.1801    
+                                 966.075        12.2242    
+                                 882.435        6.79420    
+                                 606.083        5.06009    
+                                 552.929        6.24328    
+                                 516.529        13.2820    
+                                 514.413        13.2688    
+                                 490.159        6.46358    
+                                 454.528        5.48573    
+                                 428.659        2.94821    
+                                 411.348        2.91075    
+                                 439.529        2.80931    
+                                 446.479        2.91412    
+                                 348.964        2.60694    
+                                 342.688        2.28295    
+                                 291.870        2.55843    
+                                 258.046        5.65360    
  => Cos( theta)-shift parameter :   0.0000  0.0000
  => Sin(2theta)-shift parameter :   0.0000  0.0000
 
  ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
 
-  => Cycle:115 => MaxCycle:200
+  => Cycle:113 => MaxCycle:***
  => N-P+C:  1197
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  1.35     Rwp:  1.84     Rexp:    3.80 Chi2: 0.233      L.S. refinement
+ => Rp:  1.24     Rwp:  1.70     Rexp:    3.80 Chi2: 0.200      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  4.12     Rwp:  3.77     Rexp:    7.82 Chi2: 0.233    
- => Deviance:   280.         Dev*  :  0.2337    
- => DW-Stat.:    0.4195     DW-exp:     1.8878
- => N-sigma of the GoF:      -18.762
+ => Rp:  3.79     Rwp:  3.50     Rexp:    7.82 Chi2: 0.200    
+ => Deviance:   239.         Dev*  :  0.1997    
+ => DW-Stat.:    0.4713     DW-exp:     1.8878
+ => N-sigma of the GoF:      -19.574
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
  => N-P+C:  1197
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  1.35     Rwp:  1.84     Rexp:    3.80 Chi2: 0.233      L.S. refinement
+ => Rp:  1.24     Rwp:  1.70     Rexp:    3.80 Chi2: 0.200      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  4.12     Rwp:  3.77     Rexp:    7.82 Chi2: 0.233    
- => Deviance:   280.         Dev*  :  0.2337    
- => DW-Stat.:    0.4195     DW-exp:     1.8878
- => N-sigma of the GoF:      -18.762
+ => Rp:  3.79     Rwp:  3.50     Rexp:    7.82 Chi2: 0.200    
+ => Deviance:   239.         Dev*  :  0.1997    
+ => DW-Stat.:    0.4713     DW-exp:     1.8878
+ => N-sigma of the GoF:      -19.574
 
- => Global user-weigthed Chi2 (Bragg contrib.):  0.233    
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.200    
 
      -----------------------------------------------------
      BRAGG R-Factors and weight fractions for Pattern #  1
      -----------------------------------------------------
 
  => Phase:  1     lam7o3
- => Bragg R-factor:   2.12       Vol:  231.898( 0.009)  Fract(%):  100.00( 0.62)
- => Rf-factor=  2.15             ATZ:         971.521   Brindley:  1.0000
+ => Bragg R-factor:   1.82       Vol:  231.898( 0.009)  Fract(%):  100.00( 0.62)
+ => Rf-factor=  1.94             ATZ:         971.521   Brindley:  1.0000
 
 
        ----------------------------------------------------
@@ -171,25 +171,25 @@
     s (angstroms-1) =>     0.2234    1.4514
     D (angstroms  ) =>     4.4767    0.6890
     sin(theta/lamb) =>     0.1117    0.7257
-    Q (angstroms-1) =>     2.8071   18.2391
+    Q (angstroms-1) =>     2.8071   18.2392
 
-    The average FWHM is:   0.0432  Fwhm(av)/step =   4.1082
+    The average FWHM is:   0.0434  Fwhm(av)/step =   4.1246
 
- => Sum(Yiobs-Yical):     -977.14    1234.66     274.70    -262.68 <- Four regions
-            Total ->       269.54
+ => Sum(Yiobs-Yical):     -944.60    1198.00     249.61    -274.90 <- Four regions
+            Total ->       228.11
 
-  Expected Rp (background uncorrected):     2.80 Observed->     1.35
-  Expected cRp(background   corrected):     8.57 Observed->     4.12
-  -> Ratio Rp/Exp=cRp/cExp:     0.48
-  Weighted Average Bragg R-factor:     2.12
-  Weighted Average      RF-factor:     2.15
-  Reduced Chi-square :     0.23
+  Expected Rp (background uncorrected):     2.98 Observed->     1.24
+  Expected cRp(background   corrected):     9.13 Observed->     3.79
+  -> Ratio Rp/Exp=cRp/cExp:     0.41
+  Weighted Average Bragg R-factor:     1.82
+  Weighted Average      RF-factor:     1.94
+  Reduced Chi-square :     0.20
 
  => Total number of "independent" reflections:    396
     Effective number (account for resolution) of reflections: 
-                      at level p=1.00  : 105.8
-                      at level p=0.50  : 160.2
-                      at level p=0.25  : 247.2
+                      at level p=1.00  : 105.5
+                      at level p=0.50  : 159.3
+                      at level p=0.25  : 247.1
 
     A reflection contributes as x/(x+nearest), where "x"  
     is the fraction of the total area of the current phase and 
@@ -207,7 +207,7 @@
  => (Effective Number of reflections)/(Number of intensity parameters)= refni
       Ratio ( Optimistic view,p=0.25):   24.7
       Ratio (Pessimistic view,p=1.00):   10.6
-      Ratio (   Eclectic view,p=0.50):   16.0
+      Ratio (   Eclectic view,p=0.50):   15.9
 
  => PHASE DEPENDENT INDICATORS:
 
@@ -215,15 +215,15 @@
 
      Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
 
-       1       2.65   0.0346   1.4035  0.01831  0.17284  1.305
+       1       2.65   0.0348   1.4035  0.01841  0.17284  1.312
 
    Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
  Delta is the expected step between consecutive reflections at Q
 
  Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
                                          R:p=1  R:p=1/2  R:p=1/4
-     1  100.00      10       8     396  105.75  160.19  247.25
-                                         10.58   16.02   24.72
+     1  100.00      10       8     396  105.54  159.29  247.08
+                                         10.55   15.93   24.71
   Where:
   %Cont: percentage of the total integrated intensity (100x)
  Nintdp: Number of intensity-affecting refined parameters
@@ -235,19 +235,19 @@ R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index"
 
  => ANALYSIS OF STANDARD DEVIATIONS
 
-    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:            95.75          150.19          237.25
-              Chi2 based on integrated intensities:             2.54            1.62            1.03
-              Calculated with Scott'S FORMULA     :     8.68    5.17    2.91
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:            95.54          149.29          237.08
+              Chi2 based on integrated intensities:             2.19            1.40            0.88
+              Calculated with Scott'S FORMULA     :     9.12    5.48    3.08
 
  => Standard deviations concern the PRECISION of parameters and
     represent ACCURACY only if there is no systematic errors
     A better estimate of the accuracy of structural parameters
     is obtained multiplying sigmas by the parameter SCOR
- -> SCOR =   1.7332 { Berar'S FORMULA}
- -> SCOR =   2.0269 {Pawley'S FORMULA}
+ -> SCOR =   1.6603 { Berar'S FORMULA}
+ -> SCOR =   2.0309 {Pawley'S FORMULA}
  -> Application of modified Scott'S FORMULA
-    SCOR(p=1,1/2,1/4) =             3.30            2.64            2.10
-    SCOR(expected Si) =       6.1028      4.7106      3.5317
+    SCOR(p=1,1/2,1/4) =             3.31            2.65            2.10
+    SCOR(expected Si) =       6.7552      5.2348      3.9246
    Warning! Do not take into account Scott'S SCOR
             These indicators are under test....
 
@@ -263,7 +263,7 @@ R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index"
   number of parameters
 
  
-              CPU Time:     9.312 seconds
-                            0.155 minutes
+              CPU Time:    13.594 seconds
+                            0.227 minutes
 
- => Run finished at:     Date: 22/10/2026  Time: 21:13:52.893                              
+ => Run finished at:     Date: 23/10/2026  Time: 00:11:22.874                              

@@ -218,14 +218,42 @@ def register_parameters(codes, structures, experiments):  # noqa: PLR0912 - expl
     return parameters
 
 
+def dispersion_records(case, structures, experiments):
+    reference = json.loads(Path(__file__).with_name('synchrotron-dispersion.json').read_text())
+    if case != reference['case']:
+        return {}
+    symbols = {
+        atom['_atom_site.type_symbol']
+        for structure in structures
+        for atom in rows(structure['loops'], '_atom_site')
+    }
+    experiment = next(exp for exp in experiments if exp['id'] == reference['experiment'])
+    values = experiment['values']
+    if (
+        values['_scattering_source.xray_dispersion'] != reference['dispersion_source']
+        or number(values['_instrument.setup_wavelength']) != reference['wavelength_angstrom']
+        or symbols != set(reference['values'])
+    ):
+        raise ValueError('The independent dispersion record does not describe this project')
+    return {
+        experiment['id']: [
+            f'{element.lower()} {line(pair)} 2' for element, pair in reference['values'].items()
+        ]
+    }
+
+
 class Writer:
     """Write the documented PCR records with their value/code pairs together."""
 
-    def __init__(self, case, fixed, cycles=200):
+    def __init__(self, case, fixed, cycles=200, epsilon=0.1):
         if cycles < 1:
             raise ValueError('The FullProf cycle budget must be positive')
         self.cycles = cycles
+        if not math.isfinite(epsilon) or epsilon <= 0:
+            raise ValueError('The FullProf shift tolerance must be finite and positive')
+        self.epsilon = epsilon
         self.project, self.structures, self.experiments = load_case(case)
+        self.dispersion = dispersion_records(case, self.structures, self.experiments)
         self.codes = Codes(self.project / 'analysis/analysis.edi', fixed)
         self.parameters = register_parameters(self.codes, self.structures, self.experiments)
         self.fixed = fixed
@@ -285,9 +313,10 @@ class Writer:
             tof = exp['tof']
             job = -1 if tof else int(values['_experiment_type.radiation_probe'] != 'xray')
             npr, nba, nex = self.profile_number(exp), self.background_number(exp), 0
+            nsc = len(self.dispersion.get(exp['id'], []))
             if multi:
                 self.put(
-                    line([job, npr, nba, nex, 0, 0, 0, 0, 0, 0, int(tof), 0, 0, 0])
+                    line([job, npr, nba, nex, nsc, 0, 0, 0, 0, 0, int(tof), 0, 0, 0])
                     + f' !-> Patt#: {index}'
                 )
             else:
@@ -299,7 +328,7 @@ class Writer:
                         len(self.structures),
                         nba,
                         nex,
-                        0,
+                        nsc,
                         0,
                         0,
                         0,
@@ -363,7 +392,7 @@ class Writer:
                         0,
                     ]),
                 )
-        cycles = [1 if self.fixed else self.cycles, 0.1, 0.2, 0.2, 0.2, 0.2]
+        cycles = [1 if self.fixed else self.cycles, self.epsilon, 0.2, 0.2, 0.2, 0.2]
         self.put('!NCY Eps R_at R_an R_pr R_gl')
         if multi:
             self.put(line(cycles))
@@ -394,6 +423,12 @@ class Writer:
                     )
             self.put(f'! Excluded regions (LowT HighT) for Pattern# {i}')
             # Masked data omit exclusions while retaining background anchors and their codes.
+        for i, exp in enumerate(self.experiments, 1):
+            if exp['id'] in self.dispersion:
+                self.put(
+                    f'! Additional scattering factors for Pattern# {i}',
+                    *self.dispersion[exp['id']],
+                )
         self.count_index = len(self.out)
         self.put('COUNT')
         for i, exp in enumerate(self.experiments, 1):
