@@ -466,46 +466,20 @@ Item {
                 }
             }
         }
-        // How the measured pattern is drawn (the owner, 2026-10-22), one choice of four: the band of measured ± s.u.,
-        // the default, with the residual drawn the same way; the line; the points with their error bars; or both.
-        Row {
+        // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
+        // name theirs: the band of measured ± s.u., the default, with the residual drawn the same way; the line; the
+        // points with their error bars; or both.
+        ToolbarComboBox {
+            readonly property var tokens: ["band", "line", "points", "linePoints"]
+            readonly property var entries: [qsTr("band"), qsTr("line"), qsTr("points"), qsTr("line + points")]
+
             objectName: "chart.toolbar.measuredStyle"
             visible: !chart.report
-            spacing: AppSizes.toolbarSpacing
-
-            Repeater {
-                model: [
-                    {
-                        "token": "band",
-                        "icon": "chart-area",
-                        "tip": qsTr("Measured ± s.u. as a band, the residual too")
-                    },
-                    {
-                        "token": "line",
-                        "icon": "chart-line",
-                        "tip": qsTr("Measured as a line")
-                    },
-                    {
-                        "token": "points",
-                        "icon": "braille",
-                        "tip": qsTr("Measured as points with error bars")
-                    },
-                    {
-                        "token": "linePoints",
-                        "icon": "bezier-curve",
-                        "tip": qsTr("Measured as a line and points with error bars")
-                    }
-                ]
-                delegate: ChartToolButton {
-                    required property var modelData
-
-                    objectName: "chart.toolbar.measuredStyle." + modelData.token
-                    fontIcon: modelData.icon
-                    toolTip: modelData.tip
-                    checked: controller.measuredStyle === modelData.token
-                    onClicked: Preferences.patternMeasuredStyle = modelData.token
-                }
-            }
+            toolTip: qsTr("How the measured data are drawn")
+            model: entries
+            closedTexts: entries.map(text => qsTr("meas: %1").arg(text))
+            currentIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
+            onActivated: index => Preferences.patternMeasuredStyle = tokens[index]
         }
         ChartToolbar {
             id: toolbar

@@ -36,7 +36,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
    a dataset gives none, the rows stay by file index and the views name that dataset.
 4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
-   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The datasets take
+   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The scan-value
+   axis labels only the values the rows cover, from the lowest row's to the highest's: the height the patterns rise
+   into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones.
 5. **Map.** Each pixel column takes the colour of its highest value, or, with no more points than columns, of the
    line joining the points at the column's centre. Between two datasets' rows the value is interpolated

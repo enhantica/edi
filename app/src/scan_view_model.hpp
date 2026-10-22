@@ -55,6 +55,9 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double rowMin READ rowMin NOTIFY rowMinChanged)
     Q_PROPERTY(double rowMax READ rowMax NOTIFY rowMaxChanged)
+    // The lowest and the highest row itself (not its extent): the range of scan values the rows stand for.
+    Q_PROPERTY(double rowLowest READ rowLowest NOTIFY rowLowestChanged)
+    Q_PROPERTY(double rowHighest READ rowHighest NOTIFY rowHighestChanged)
     // How far up the stacked view draws a pattern's highest point above its row: four rows' height.
     Q_PROPERTY(double stackHeight READ stackHeight NOTIFY stackHeightChanged)
     // A joint fit's experiments rather than a scan's datasets: rows by place, each labelled with its experiment's name.
@@ -105,6 +108,8 @@ class ScanViewModel : public QObject {
     void setRowsByIndex(bool on);
     double rowMin() const { return row_min_; }
     double rowMax() const { return row_max_; }
+    double rowLowest() const { return row_lowest_; }
+    double rowHighest() const { return row_highest_; }
     double stackHeight() const { return stack_height_; }
     QString error() const { return error_; }
     QString rowNote() const { return row_note_; }
@@ -143,6 +148,8 @@ class ScanViewModel : public QObject {
     void xMaxChanged();
     void rowMinChanged();
     void rowMaxChanged();
+    void rowLowestChanged();
+    void rowHighestChanged();
     void stackHeightChanged();
     void errorChanged();
     void rowNoteChanged();
@@ -196,7 +203,7 @@ class ScanViewModel : public QObject {
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;
     QString value_problem_;  // the first dataset with no value to place its row by
-    double row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;
+    double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0, stack_height_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true;

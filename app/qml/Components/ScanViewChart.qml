@@ -127,6 +127,34 @@ Item {
         when: chart.scan !== null
     }
 
+    // A y tick's label. On the Stacked view only the scan values the rows cover are labelled (the owner, 2026-10-22):
+    // above the top row the patterns rise into height that stands for no scan value.
+    Component {
+        id: yLabel
+
+        Item {
+            id: tick
+
+            property string text: ""
+            readonly property real value: parseFloat(text.replace(/[^0-9eE+\-.]/g, ""))
+            readonly property real slack: chart.scan ? 1e-9 * Math.max(1, Math.abs(chart.scan.rowHighest - chart.scan.rowLowest)) : 0
+
+            implicitWidth: tickText.implicitWidth
+            implicitHeight: tickText.implicitHeight
+
+            EaElements.Label {
+                id: tickText
+
+                anchors.fill: parent
+                visible: chart.mode !== "stacked" || chart.scan === null || (tick.value >= chart.scan.rowLowest - tick.slack && tick.value <= chart.scan.rowHighest + tick.slack)
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: tick.text
+            }
+        }
+    }
+
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
         if (!(span > 0))
@@ -186,6 +214,7 @@ Item {
             tickAnchor: 0
             // A joint fit's rows are its experiments, named at each row instead of numbered.
             labelsVisible: !chart.joint
+            labelDelegate: yLabel
             lineVisible: false
             gridVisible: false
             subGridVisible: false

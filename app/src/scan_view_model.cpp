@@ -364,6 +364,13 @@ void ScanViewModel::placeRows() {
     publish(row_title_, title, &ScanViewModel::rowTitleChanged);
     publish(row_min_, low, &ScanViewModel::rowMinChanged);
     publish(row_max_, high, &ScanViewModel::rowMaxChanged);
+    double lowest = 0.0, highest = 0.0;
+    if (!rows_.empty()) {
+        lowest = *std::min_element(rows_.begin(), rows_.end());
+        highest = *std::max_element(rows_.begin(), rows_.end());
+    }
+    publish(row_lowest_, lowest, &ScanViewModel::rowLowestChanged);
+    publish(row_highest_, highest, &ScanViewModel::rowHighestChanged);
     // Four rows' height: how far up the stacked view draws a pattern's highest point above its row.
     publish(stack_height_, 4.0 * (high - low) / std::max<double>(1.0, static_cast<double>(patterns_.size())),
             &ScanViewModel::stackHeightChanged);

@@ -636,14 +636,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("mstyle-"))) {
         steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
                                                      + open_example("pd-neut-cwl_lbco-hrpt_start-2")
-                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle.band"}});
-        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle.line"}});
-        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle.points"}});
-        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle.linePoints", "chart.toolbar.legend"}});
+                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:band"}});
+        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle", "choose:line + points", "chart.toolbar.legend"}});
         steps_.push_back({"mstyle-5-linepoints-dark", {"theme:dark"}});
-        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle.points"}});
-        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle.line"}});
-        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle.band", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle", "choose:band", "chart.toolbar.legend"}});
         steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
         steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
     }
@@ -663,6 +663,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                            "choose:Edi Contrast", "choose:OK", "mainArea.experiment.tab.chart"}});
         steps_.push_back({"colours-5-dark", {"theme:dark"}});
         steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
+    }
+    // A three-dataset scan's Stacked view, its scan-value axis labelled only over the rows (the owner, 2026-10-22), in
+    // both themes. Run only when asked (`--demo-only stackrange-`).
+    if (only.startsWith(QLatin1String("stackrange-"))) {
+        steps_.push_back({"stackrange-1-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                    + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                    + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"stackrange-2-dark", {"theme:dark"}});
+        steps_.push_back({"stackrange-3-map-dark", {"mainArea.analysis.tab.map"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).

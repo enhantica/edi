@@ -638,8 +638,9 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   every marker and bar into one image, which every Qt Quick renderer draws, the offscreen platform's software one
   included. The benchmark that chose it over Qt Graphs' scatter series is `pixi run -e app app-chart-bench`; its
   table is under *The measured layer's benchmark* below.
-- **The measured style** (the owner, 2026-10-22): a group of four buttons between the axis boxes and the legend
-  button chooses how the measured pattern is drawn, one app setting for every pattern chart (ADR-0031 §7,
+- **The measured style** (the owner, 2026-10-22): one box between the axis boxes and the legend button, its four
+  entries named as the axis boxes name theirs (`meas: band`, `meas: line`, `meas: points`, `meas: line + points`;
+  first four buttons, made one box the same day), chooses how the measured pattern is drawn, one app setting for every pattern chart (ADR-0031 §7,
   `PatternChart`): **band**, the default, two 1 px lines at measured + s.u. and measured − s.u. with a fill of 0.3
   opacity between them, the residual then drawn the same way, (meas − calc) ± s.u., in its pane; **line**, the 2 px
   line; **points**, the markers with their bars; **line and points**, all three, as the chart drew before. A point
