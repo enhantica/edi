@@ -185,7 +185,7 @@ TestCase {
         } else if (data.route === "header" || data.route === "header-pointer") {
             const header = control("parameters.freeHeader");
             if (data.route === "header") {
-                verify(!header.enabled, "The free header is disabled when the project has no measured data");
+                compare(header.interactionEnabled, false, "The exported header interaction state follows the disabled bulk pointer actor without measured data");
             } else {
                 noFreeChange(() => input(header), "Clicking the disabled free header cannot change parameter flags");
                 verify(!Probe.visiblePopups(appWindow).some(popup => findChild(popup, "parameters.freeHeader.free") !== null), "The disabled free header cannot open its bulk-free menu");
@@ -279,7 +279,7 @@ TestCase {
     function measuredControls(edit) {
         verify(control("fitting.start").enabled && Session.project.fit.available, "At least one measured experiment enables Start fitting without a restart");
         scaleRow();
-        verify(control("parameters.free.0").enabled && control("parameters.freeHeader").enabled, "Measured data enables both the free column and its bulk header");
+        verify(control("parameters.free.0").enabled && control("parameters.freeHeader").interactionEnabled === true, "Measured data enables both the free column and its bulk header");
         if (!edit)
             return;
         const before = scale().free;
@@ -325,7 +325,7 @@ TestCase {
             return;
         verify(!control("fitting.start").enabled && !project.fit.available, "Removing the last measured data disables fitting again in the same application project");
         scaleRow();
-        verify(!control("parameters.free.0").enabled && !control("parameters.freeHeader").enabled, "Removing the last measured data disables free edits again without a restart");
+        verify(!control("parameters.free.0").enabled && control("parameters.freeHeader").interactionEnabled === false, "Removing the last measured data disables free edits again without a restart");
     }
     function test_measured_and_mixed_projects() {
         open(true);
