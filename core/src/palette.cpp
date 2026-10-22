@@ -153,6 +153,34 @@ std::string mix_colours(const std::string& from, const std::string& to, double t
     return hex_of({a.l + (b.l - a.l) * at, a.a + (b.a - a.a) * at, a.b + (b.b - a.b) * at});
 }
 
+double contrast_ratio(const std::string& a, const std::string& b) {
+    const auto luminance = [](const std::string& hex) {
+        const auto channel = [&hex](std::size_t at) { return to_linear(std::stoi(hex.substr(at, 2), nullptr, 16) / 255.0); };
+        return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+    };
+    const double one = luminance(a), other = luminance(b);
+    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+}
+
+std::string readable_colour(const std::string& colour, const std::string& background, double ratio) {
+    if (contrast_ratio(colour, background) >= ratio) {
+        return colour;
+    }
+    const Lab lab = oklab(colour);
+    const double end = contrast_ratio("#000000", background) >= contrast_ratio("#FFFFFF", background) ? 0.0 : 1.0;
+    const auto at = [&lab, end](double t) { return hex_of({lab.l + (end - lab.l) * t, lab.a, lab.b}); };
+    if (contrast_ratio(at(1.0), background) < ratio) {
+        return at(1.0);
+    }
+    // The least move that reaches the ratio, to well under one step of 8-bit colour.
+    double low = 0.0, high = 1.0;
+    for (int step = 0; step < 32; ++step) {
+        const double middle = (low + high) / 2.0;
+        (contrast_ratio(at(middle), background) >= ratio ? high : low) = middle;
+    }
+    return at(high);
+}
+
 std::span<const std::string_view> colour_scheme_names() { return kNames; }
 
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {

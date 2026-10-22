@@ -65,4 +65,13 @@ std::string role_colour(ColourScheme scheme, ChartRole role, bool dark);
 /// to [0, 1] and the ends are the colours themselves.
 std::string mix_colours(const std::string& from, const std::string& to, double t);
 
+/// The WCAG 2 contrast ratio of two `#RRGGBB` colours, from 1 to 21.
+double contrast_ratio(const std::string& a, const std::string& b);
+
+/// `colour` as it is drawn on `background` (both `#RRGGBB`) in 2D: with at least `ratio` contrast against it (edi
+/// ADR-0046). Its Oklab lightness moves towards black or white, whichever the background contrasts with more, by as
+/// little as reaches the ratio; hue and chroma stay. A colour with enough contrast is returned as it is. If even black
+/// or white falls short, that end is returned.
+std::string readable_colour(const std::string& colour, const std::string& background, double ratio = 3.0);
+
 }  // namespace edi

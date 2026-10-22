@@ -73,6 +73,7 @@ nav:
           - dev/adrs/0039-project-output.md
           - dev/adrs/0040-automatic-background-estimation.md
           - dev/adrs/0041-scan-pattern-views.md
+          - dev/adrs/0046-element-colours-readable-in-2d.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

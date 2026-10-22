@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "edi/palette.hpp"
 #include "edi/report_model.hpp"
 #include "json.hpp"
 
@@ -476,8 +477,10 @@ Value scene_json(const StructureScene& scene) {
         labels.emplace_back(
             Object{{"atom", whole(label.atom)}, {"anchor", vec_json(label.anchor)}, {"text", label.text}});
     }
+    // The legend is drawn flat on the report's white paper, so its colours are made readable there (ADR-0046).
     for (const SceneLegendEntry& entry : scene.legend) {
-        legend.emplace_back(Object{{"element", entry.element}, {"color", color_json(entry.color)}});
+        const std::string colour = color_json(entry.color).string("color");
+        legend.emplace_back(Object{{"element", entry.element}, {"color", readable_colour(colour, "#FFFFFF")}});
     }
     const SceneFrame& frame = scene.frame;
     return Object{{"current", scene.current},
