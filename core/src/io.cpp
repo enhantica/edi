@@ -2482,6 +2482,13 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
         }
+        // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
+        if (experiment.extinction.radius) {
+            add(prefix + "radius", prefix + "extinction.radius", &*experiment.extinction.radius);
+        }
+        if (experiment.extinction.mosaicity) {
+            add(prefix + "mosaicity", prefix + "extinction.mosaicity", &*experiment.extinction.mosaicity);
+        }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
             const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
