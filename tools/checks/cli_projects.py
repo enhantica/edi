@@ -23,8 +23,9 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``. Every non-null ``tol_abs``/``tol_rel`` bound must hold; the record must say
-``status=done``. Every deviation is reported, never only the first, and any deviation is red.
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
+non-null ``tol_abs``/``tol_rel`` bound must hold; the record must say ``status=done``. Every
+deviation is reported, never only the first, and any deviation is red.
 
 ``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
 check reads a project's settings through edi's own loader this way, never by scanning text.
@@ -53,8 +54,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CLI_DIR = Path('docs') / 'user' / 'cli'
 REGISTRY = CLI_DIR / 'projects.yml'
-# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only when it tells the
-# user something, such as simulation or scan.
+# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only
+# when it tells the user something, such as simulation or scan.
 PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}')
 RESULTS_KEY = re.compile(r'results\[(?P<key>[^\]]+)\]\.(?P<column>.+)')
 FIT_TIMEOUT_S = 900
@@ -263,7 +264,13 @@ def _results_row(project: Path, key: str) -> dict[str, str]:
     path = project / 'analysis' / 'results.csv'
     with path.open(encoding='utf-8', newline='') as handle:
         rows = list(csv.DictReader(handle))
-    target = float(key)
+    target = _float_or_none(key)
+    if target is None:
+        # A scan whose files carry no diffrn.* value names its row by the data file.
+        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        if len(matches) != 1:
+            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+        return matches[0]
     matches = [
         row
         for row in rows
