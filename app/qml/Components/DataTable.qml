@@ -13,6 +13,9 @@ EaComponents.ListView {
     property var sourceModel: null
     model: sourceModel ?? null
     multiSelection: false
+    // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
+    // focus selects its row, as a click on the row's background does.
+    selectOnEdit: true
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
     // the background, and a page's tables kept laying out for about a second after a project opened.
     cacheBuffer: 0

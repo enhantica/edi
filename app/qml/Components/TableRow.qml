@@ -15,6 +15,16 @@ EaComponents.ListViewDelegate {
     property bool highlightsHover: true
 
     Component.onCompleted: {
+        // Every control in the row takes focus when clicked, a check box or a combo box too (some platforms give a
+        // button focus only from the keyboard), so the click makes the row current as an editor's does.
+        const focusOnClick = item => {
+            if ("focusPolicy" in item)
+                item.focusPolicy = Qt.StrongFocus;
+            for (const child of item.children ?? [])
+                focusOnClick(child);
+        };
+        for (const cell of row.contentRowData)
+            focusOnClick(cell);
         if (row.highlightsHover)
             return;
         for (const child of row.data) {

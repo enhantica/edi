@@ -758,6 +758,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"elements-3-structure-dark", {"theme:dark", "appBar.tab.structure", basic}});
         steps_.push_back({"elements-4-analysis-dark", {analysis, basic}});
     }
+    // A click on any cell makes its row current, an editable cell's too, and every table marks the current row the
+    // same way (the owner, 2026-10-22): Atom sites and the parameter table. Run only when asked (`--demo-only rows-`).
+    if (only.startsWith(QLatin1String("rows-"))) {
+        steps_.push_back({"rows-1-atom-sites", {"resize:1280x960", "theme:light",
+                                                "open-cli-project:pd-neut-cwl_lbco-hrpt_start-2", "appBar.tab.structure",
+                                                basic}});
+        steps_.push_back({"rows-2-atom-sites-edit-row-3", {"atomSite.fractX.2"}});
+        steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "parameters.value.4"}});
+        steps_.push_back({"rows-4-parameters-free-row-2", {"key:Escape", "parameters.free.1"}});
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
