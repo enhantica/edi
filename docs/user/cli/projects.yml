@@ -121,3 +121,6 @@ projects:
   - id: pd-xray-cwl_lam7o3-p021_basic
     executing: false
     user-facing: true
+  - id: pd-neut-cwl_lmo-echidna_site-mixing
+    executing: false
+    user-facing: true

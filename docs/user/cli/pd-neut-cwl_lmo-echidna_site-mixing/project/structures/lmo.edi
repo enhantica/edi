@@ -1,0 +1,29 @@
+data_lmo
+
+_edi.schema_version 3
+
+_cell.length_a 2.88()
+_cell.length_b 2.88
+_cell.length_c 14.18()
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 120
+
+_space_group.name_h_m "R -3 m"
+_space_group.coord_system_code h
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+O O 0 0 0.26() c 1 0.5() Biso
+Ni1 Ni 0 0 0.5 b 0 0.5 Biso
+Li1 Li 0 0 0.5 b 1() 0.5() Biso
+Li2 Li 0 0 0 a 0 0.5 Biso
+Ni2 Ni 0 0 0 a 1 0.5() Biso

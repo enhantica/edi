@@ -1,0 +1,10 @@
+_edi.schema_version 3
+
+_metadata.name pd_neut_cwl_lmo_echidna_site_mixing
+_metadata.title "LiNiO₂ [R-3m] · ECHIDNA @ ANSTO"
+_metadata.description "Layered oxide · Li/Ni site mixing · Occupancy constraints · TCH × FCJ asymmetry"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "ECHIDNA"
+_metadata.facility "ANSTO"
+_metadata.polarisation "none"

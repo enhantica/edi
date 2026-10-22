@@ -711,6 +711,56 @@
         "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/experiments/p021.edi",
         "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/structures/lam7o3.edi"
       ]
+    },
+    "pd-neut-cwl_lmo-echidna_site-mixing": {
+      "samples": [
+        "LiNiO₂ [R-3m]"
+      ],
+      "origin": "ECHIDNA @ ANSTO",
+      "detail": "Layered oxide · Li/Ni site mixing · Occupancy constraints · TCH × FCJ asymmetry",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ANSTO"
+        ],
+        "instruments": [
+          "ECHIDNA"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_lmo-echidna_site-mixing",
+        "LiNiO₂ [R-3m] · ECHIDNA @ ANSTO",
+        "Layered oxide · Li/Ni site mixing · Occupancy constraints · TCH × FCJ asymmetry"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/experiments/echidna.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/structures/lmo.edi"
+      ]
     }
   }
 }
