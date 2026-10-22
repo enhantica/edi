@@ -60,7 +60,7 @@ def line_background(points: list[tuple[float, float]]) -> list[str]:
     ]
 
 
-def pd_neut_cwl_lbco_hrpt_calculation() -> dict[str, str]:
+def pd_neut_cwl_lbco_simulation() -> dict[str, str]:
     # diffraction-lib's struct-lbco CIF on the HRPT instrument of the fitted case.
     sites = [
         'La La 0 0 0 a 0.5 0.5 Biso',
@@ -70,9 +70,9 @@ def pd_neut_cwl_lbco_hrpt_calculation() -> dict[str, str]:
     ]
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_lbco_hrpt_calculation',
+            'pd-neut-cwl_lbco_simulation',
             'La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI',
-            'Cubic perovskite · Calculated pattern without measured data',
+            'Cubic perovskite · Simulated pattern without measured data',
             purpose='simulation',
             instrument='HRPT',
             facility='PSI',
@@ -97,13 +97,13 @@ def pd_neut_cwl_lbco_hrpt_calculation() -> dict[str, str]:
     }
 
 
-def pd_neut_tof_si_sepd_calculation() -> dict[str, str]:
+def pd_neut_tof_si_simulation() -> dict[str, str]:
     # Silicon on the SEPD bank of the fitted Si case: diffraction-lib's simulate-si-tof settings.
     return {
         'project.edi': project_record(
-            'pd_neut_tof_si_sepd_calculation',
+            'pd-neut-tof_si_simulation',
             'Silicon [Fd-3m] · SEPD @ Argonne',
-            'Silicon standard · Calculated time-of-flight pattern without measured data',
+            'Silicon standard · Simulated time-of-flight pattern without measured data',
             purpose='simulation',
             instrument='SEPD',
             facility='Argonne',
@@ -149,14 +149,14 @@ def pd_neut_tof_si_sepd_calculation() -> dict[str, str]:
     }
 
 
-def pd_xray_cwl_nacl_calculation() -> dict[str, str]:
+def pd_xray_cwl_nacl_simulation() -> dict[str, str]:
     # Rock salt with a laboratory Cu K-alpha1 source and a graphite monochromator's polarization.
     sites = ['Na Na 0 0 0 a 1 0.5 Biso', 'Cl Cl 0.5 0.5 0.5 b 1 0.5 Biso']
     return {
         'project.edi': project_record(
-            'pd_xray_cwl_nacl_calculation',
+            'pd-xray-cwl_nacl_simulation',
             'NaCl [Fm-3m] · Laboratory X-ray',
-            'Rock salt · Calculated Cu Kα₁ pattern without measured data'  # noqa: RUF001
+            'Rock salt · Simulated Cu Kα₁ pattern without measured data'  # noqa: RUF001
             ' · Monochromator polarization',
             purpose='simulation',
             neutron=False,
@@ -190,7 +190,7 @@ def pd_xray_cwl_nacl_calculation() -> dict[str, str]:
 
 
 SCAN_SOURCE = CLI / 'pd-neut-cwl_cosio-d20_scan-162f' / 'project' / 'experiments' / 'd20_scan'
-SCAN_ID = 'pd-neut-cwl_cosio-d20_scan-155f'
+SCAN_ID = 'pd-neut-cwl_cosio-d20_scan'
 # The last seven frames of the cooling run (51.86 K down to 50.41 K) carry Co2SiO4's magnetic
 # peaks: (100) and (001) stand 3 to 60 standard deviations above their level in the paramagnetic
 # frames. The nuclear model cannot fit them, so the case keeps the 155 frames down to 52.34 K.
@@ -204,7 +204,7 @@ def scan_frames() -> list:
     return frames[:SCAN_FRAMES]
 
 
-def pd_neut_cwl_cosio_d20_scan_155f() -> dict[str, str]:
+def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
     template = scan_frames()[0]
     rows = read_points(template)
     excluded = [(0, 8), (150, 180)]
@@ -220,7 +220,7 @@ def pd_neut_cwl_cosio_d20_scan_155f() -> dict[str, str]:
     ]
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_cosio_d20_scan_155f',
+            'pd-neut-cwl_cosio-d20_scan',
             'Co₂SiO₄ [Pnma] · D20 @ ILL',
             'Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out',
             instrument='D20',
@@ -293,10 +293,10 @@ def copy_scan_frames(project) -> None:
 
 
 CASES = {
-    'pd-neut-cwl_lbco-hrpt_calculation': pd_neut_cwl_lbco_hrpt_calculation,
-    'pd-neut-tof_si-sepd_calculation': pd_neut_tof_si_sepd_calculation,
-    'pd-xray-cwl_nacl_calculation': pd_xray_cwl_nacl_calculation,
-    SCAN_ID: pd_neut_cwl_cosio_d20_scan_155f,
+    'pd-neut-cwl_lbco_simulation': pd_neut_cwl_lbco_simulation,
+    'pd-neut-tof_si_simulation': pd_neut_tof_si_simulation,
+    'pd-xray-cwl_nacl_simulation': pd_xray_cwl_nacl_simulation,
+    SCAN_ID: pd_neut_cwl_cosio_d20_scan,
 }
 
 # Files a case adds after its project files are written.

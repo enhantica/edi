@@ -85,63 +85,63 @@ projects:
     executing: false
   # The example catalogue: its user-facing cases in the order the app lists them, simplest first:
   # calculations, constant-wavelength neutron, time-of-flight neutron, X-ray, joint, scans.
-  - id: pd-neut-cwl_lbco-hrpt_calculation
+  - id: pd-neut-cwl_lbco_simulation
     executing: false
     user-facing: true
-  - id: pd-neut-tof_si-sepd_calculation
+  - id: pd-neut-tof_si_simulation
     executing: false
     user-facing: true
-  - id: pd-xray-cwl_nacl_calculation
+  - id: pd-xray-cwl_nacl_simulation
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_lbco-hrpt_basic
+  - id: pd-neut-cwl_lbco-hrpt
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_hs-hrpt_basic
+  - id: pd-neut-cwl_hs-hrpt
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_cosio-d20_basic
+  - id: pd-neut-cwl_cosio-d20
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_lmo-echidna_site-mixing
+  - id: pd-neut-cwl_lmo-echidna
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_y2o3-spodi_aniso-adp
+  - id: pd-neut-cwl_y2o3-spodi
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_yap-spodi_two-phase
+  - id: pd-neut-cwl_yalo3-al2o3-spodi
     executing: false
     user-facing: true
-  - id: pd-neut-tof_si-sepd_basic
+  - id: pd-neut-tof_si-sepd
     executing: false
     user-facing: true
-  - id: pd-neut-tof_cecoal-polaris_basic
+  - id: pd-neut-tof_cecoal-polaris
     executing: false
     user-facing: true
-  - id: pd-neut-tof_ceo2-pearl_basic
+  - id: pd-neut-tof_ceo2-pearl
     executing: false
     user-facing: true
-  - id: pd-neut-tof_lbco-si-mcstas_two-phase
+  - id: pd-neut-tof_lbco-si-mcstas
     executing: false
     user-facing: true
-  - id: pd-neut-tof_ncaf-wish_basic
+  - id: pd-neut-tof_ncaf-wish
     executing: false
     user-facing: true
-  - id: pd-neut-tof_ferrite-austenite-beer_calibration
+  - id: pd-neut-tof_ferrite-austenite-beer
     executing: false
     user-facing: true
-  - id: pd-xray-cwl_pbso4-lab_basic
+  - id: pd-xray-cwl_pbso4-lab
     executing: false
     user-facing: true
-  - id: pd-xray-cwl_lam7o3-p021_basic
+  - id: pd-xray-cwl_lam7o3-p021
     executing: false
     user-facing: true
-  - id: pd-neut-xray-cwl_pbso4-d1a-lab_joint
+  - id: pd-neut-xray-cwl_pbso4-d1a-lab
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_cosio-d20_scan-155f
+  - id: pd-neut-cwl_cosio-d20_scan
     executing: false
     user-facing: true
-  - id: pd-xray-cwl_latp-bm01_scan-73f
+  - id: pd-xray-cwl_latp-bm01_scan
     executing: false
     user-facing: true

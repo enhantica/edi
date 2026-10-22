@@ -61,8 +61,8 @@ def aliases_and_constraints(aliases, constraints) -> list[str]:
 # ----------------------------------------------------------------------
 
 
-def pd_neut_cwl_hs_hrpt_basic() -> dict[str, str]:
-    pid = 'pd-neut-cwl_hs-hrpt_basic'
+def pd_neut_cwl_hs_hrpt() -> dict[str, str]:
+    pid = 'pd-neut-cwl_hs-hrpt'
     rows = read_points(CLI / pid / 'data' / 'hs-hrpt.xye')
     level = flat_level(rows)
     # R-3m, hexagonal axes; O and H on 18h (x, -x, z), Cl on 6c (0, 0, z).
@@ -101,7 +101,7 @@ def pd_neut_cwl_hs_hrpt_basic() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_hs_hrpt_basic',
+            'pd-neut-cwl_hs-hrpt',
             'ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI',
             'Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry',
             instrument='HRPT',
@@ -122,8 +122,8 @@ def pd_neut_cwl_hs_hrpt_basic() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def pd_neut_cwl_lmo_echidna_site_mixing() -> dict[str, str]:
-    pid = 'pd-neut-cwl_lmo-echidna_site-mixing'
+def pd_neut_cwl_lmo_echidna() -> dict[str, str]:
+    pid = 'pd-neut-cwl_lmo-echidna'
     rows = read_points(CLI / pid / 'data' / 'ech_lmo.dat')
     excluded = [(0, 12), (162, 180)]
     level = flat_level(rows, excluded)
@@ -194,7 +194,7 @@ def pd_neut_cwl_lmo_echidna_site_mixing() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_lmo_echidna_site_mixing',
+            'pd-neut-cwl_lmo-echidna',
             'LiNiO₂ [R-3m] · ECHIDNA @ ANSTO',
             'Layered oxide · Li/Ni site mixing · Occupancy constraints · '
             'TCH \N{MULTIPLICATION SIGN} FCJ asymmetry',
@@ -214,8 +214,8 @@ def pd_neut_cwl_lmo_echidna_site_mixing() -> dict[str, str]:
 B_CATIONS = ['Ti', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu']
 
 
-def pd_xray_cwl_lam7o3_p021_basic() -> dict[str, str]:
-    pid = 'pd-xray-cwl_lam7o3-p021_basic'
+def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
+    pid = 'pd-xray-cwl_lam7o3-p021'
     rows = read_points(CLI / pid / 'data' / 'hep7c-xray-synchrotron.dat')
     excluded = [(0, 2), (15, 20)]
     level = flat_level(rows, excluded)
@@ -265,7 +265,7 @@ def pd_xray_cwl_lam7o3_p021_basic() -> dict[str, str]:
     constraints = [f'biso_{m} = biso_Ti' for m in B_CATIONS[1:]] + ['biso_O2 = biso_O1']
     return {
         'project.edi': project_record(
-            'pd_xray_cwl_lam7o3_p021_basic',
+            'pd-xray-cwl_lam7o3-p021',
             'La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III',
             'High-entropy perovskite · Seven cations on one site · Synchrotron X-ray',
             instrument='P02.1',
@@ -288,8 +288,8 @@ def pd_xray_cwl_lam7o3_p021_basic() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def pd_neut_tof_lbco_si_mcstas_two_phase() -> dict[str, str]:
-    pid = 'pd-neut-tof_lbco-si-mcstas_two-phase'
+def pd_neut_tof_lbco_si_mcstas() -> dict[str, str]:
+    pid = 'pd-neut-tof_lbco-si-mcstas'
     rows = read_points(CLI / pid / 'data' / 'lbco-si-mcstas.xye')
     excluded = [(0, 40000), (108000, 200000)]
     level = flat_level(rows, excluded)
@@ -343,9 +343,9 @@ def pd_neut_tof_lbco_si_mcstas_two_phase() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_tof_lbco_si_mcstas_two_phase',
+            'pd-neut-tof_lbco-si-mcstas',
             'La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation',
-            'Two phases · Simulated TOF pattern · Jorgensen profile',
+            '2 phases · Simulated TOF pattern · Jorgensen profile',
             instrument='McStas',
         ),
         'analysis/analysis.edi': text(
@@ -364,8 +364,8 @@ def pd_neut_tof_lbco_si_mcstas_two_phase() -> dict[str, str]:
 
 
 CASES = {
-    'pd-neut-cwl_hs-hrpt_basic': pd_neut_cwl_hs_hrpt_basic,
-    'pd-neut-cwl_lmo-echidna_site-mixing': pd_neut_cwl_lmo_echidna_site_mixing,
-    'pd-xray-cwl_lam7o3-p021_basic': pd_xray_cwl_lam7o3_p021_basic,
-    'pd-neut-tof_lbco-si-mcstas_two-phase': pd_neut_tof_lbco_si_mcstas_two_phase,
+    'pd-neut-cwl_hs-hrpt': pd_neut_cwl_hs_hrpt,
+    'pd-neut-cwl_lmo-echidna': pd_neut_cwl_lmo_echidna,
+    'pd-xray-cwl_lam7o3-p021': pd_xray_cwl_lam7o3_p021,
+    'pd-neut-tof_lbco-si-mcstas': pd_neut_tof_lbco_si_mcstas,
 }

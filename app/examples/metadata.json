@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "examples": {
-    "pd-neut-cwl_lbco-hrpt_calculation": {
+    "pd-neut-cwl_lbco_simulation": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
       ],
       "origin": "HRPT @ PSI",
-      "detail": "Cubic perovskite · Calculated pattern without measured data",
+      "detail": "Cubic perovskite · Simulated pattern without measured data",
       "values": {
         "sampleForm": [
           "powder"
@@ -40,23 +40,23 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_lbco-hrpt_calculation",
+        "pd-neut-cwl_lbco_simulation",
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
-        "Cubic perovskite · Calculated pattern without measured data"
+        "Cubic perovskite · Simulated pattern without measured data"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/experiments/hrpt.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/structures/lbco.edi"
+        "docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lbco_simulation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi"
       ]
     },
-    "pd-neut-tof_si-sepd_calculation": {
+    "pd-neut-tof_si_simulation": {
       "samples": [
         "Silicon [Fd-3m]"
       ],
       "origin": "SEPD @ Argonne",
-      "detail": "Silicon standard · Calculated time-of-flight pattern without measured data",
+      "detail": "Silicon standard · Simulated time-of-flight pattern without measured data",
       "values": {
         "sampleForm": [
           "powder"
@@ -90,23 +90,23 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_si-sepd_calculation",
+        "pd-neut-tof_si_simulation",
         "Silicon [Fd-3m] · SEPD @ Argonne",
-        "Silicon standard · Calculated time-of-flight pattern without measured data"
+        "Silicon standard · Simulated time-of-flight pattern without measured data"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/project.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/experiments/sepd.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/structures/si.edi"
+        "docs/user/cli/pd-neut-tof_si_simulation/project/project.edi",
+        "docs/user/cli/pd-neut-tof_si_simulation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_si_simulation/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si_simulation/project/structures/si.edi"
       ]
     },
-    "pd-xray-cwl_nacl_calculation": {
+    "pd-xray-cwl_nacl_simulation": {
       "samples": [
         "NaCl [Fm-3m]"
       ],
       "origin": "Laboratory X-ray",
-      "detail": "Rock salt · Calculated Cu Kα₁ pattern without measured data · Monochromator polarization",
+      "detail": "Rock salt · Simulated Cu Kα₁ pattern without measured data · Monochromator polarization",
       "values": {
         "sampleForm": [
           "powder"
@@ -140,18 +140,18 @@
         ]
       },
       "searchAliases": [
-        "pd-xray-cwl_nacl_calculation",
+        "pd-xray-cwl_nacl_simulation",
         "NaCl [Fm-3m] · Laboratory X-ray",
-        "Rock salt · Calculated Cu Kα₁ pattern without measured data · Monochromator polarization"
+        "Rock salt · Simulated Cu Kα₁ pattern without measured data · Monochromator polarization"
       ],
       "sources": [
-        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/experiments/lab.edi",
-        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/structures/nacl.edi"
+        "docs/user/cli/pd-xray-cwl_nacl_simulation/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_simulation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_simulation/project/experiments/lab.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_simulation/project/structures/nacl.edi"
       ]
     },
-    "pd-neut-cwl_lbco-hrpt_basic": {
+    "pd-neut-cwl_lbco-hrpt": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
       ],
@@ -190,18 +190,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_lbco-hrpt_basic",
+        "pd-neut-cwl_lbco-hrpt",
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
         "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/experiments/hrpt.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/structures/lbco.edi"
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/structures/lbco.edi"
       ]
     },
-    "pd-neut-cwl_hs-hrpt_basic": {
+    "pd-neut-cwl_hs-hrpt": {
       "samples": [
         "ZnCu₃(OD)₆Cl₂ [R-3m]"
       ],
@@ -240,18 +240,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_hs-hrpt_basic",
+        "pd-neut-cwl_hs-hrpt",
         "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI",
         "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/experiments/hrpt.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/structures/hs.edi"
+        "docs/user/cli/pd-neut-cwl_hs-hrpt/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt/project/structures/hs.edi"
       ]
     },
-    "pd-neut-cwl_cosio-d20_basic": {
+    "pd-neut-cwl_cosio-d20": {
       "samples": [
         "Co₂SiO₄ [Pnma]"
       ],
@@ -290,18 +290,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_cosio-d20_basic",
+        "pd-neut-cwl_cosio-d20",
         "Co₂SiO₄ [Pnma] · D20 @ ILL",
         "Olivine · Coordinates, displacements and oxygen occupancies"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/structures/cosio.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20/project/structures/cosio.edi"
       ]
     },
-    "pd-neut-cwl_lmo-echidna_site-mixing": {
+    "pd-neut-cwl_lmo-echidna": {
       "samples": [
         "LiNiO₂ [R-3m]"
       ],
@@ -340,18 +340,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_lmo-echidna_site-mixing",
+        "pd-neut-cwl_lmo-echidna",
         "LiNiO₂ [R-3m] · ECHIDNA @ ANSTO",
         "Layered oxide · Li/Ni site mixing · Occupancy constraints · TCH × FCJ asymmetry"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/experiments/echidna.edi",
-        "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/structures/lmo.edi"
+        "docs/user/cli/pd-neut-cwl_lmo-echidna/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna/project/experiments/echidna.edi",
+        "docs/user/cli/pd-neut-cwl_lmo-echidna/project/structures/lmo.edi"
       ]
     },
-    "pd-neut-cwl_y2o3-spodi_aniso-adp": {
+    "pd-neut-cwl_y2o3-spodi": {
       "samples": [
         "Y₂O₃ [Ia-3]"
       ],
@@ -390,18 +390,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_y2o3-spodi_aniso-adp",
+        "pd-neut-cwl_y2o3-spodi",
         "Y₂O₃ [Ia-3] · SPODI @ FRM II",
         "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/experiments/spodi.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/structures/y2o3.edi"
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/structures/y2o3.edi"
       ]
     },
-    "pd-neut-cwl_yap-spodi_two-phase": {
+    "pd-neut-cwl_yalo3-al2o3-spodi": {
       "samples": [
         "YAlO₃ [Pbnm]",
         "Al₂O₃ [R-3c]"
@@ -441,19 +441,19 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_yap-spodi_two-phase",
+        "pd-neut-cwl_yalo3-al2o3-spodi",
         "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II",
         "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/experiments/spodi.edi",
-        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/Al2O3.edi",
-        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/YAlO3.edi"
+        "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/structures/Al2O3.edi",
+        "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/structures/YAlO3.edi"
       ]
     },
-    "pd-neut-tof_si-sepd_basic": {
+    "pd-neut-tof_si-sepd": {
       "samples": [
         "Silicon [Fd-3m]"
       ],
@@ -492,18 +492,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_si-sepd_basic",
+        "pd-neut-tof_si-sepd",
         "Silicon [Fd-3m] · SEPD @ Argonne",
         "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/experiments/sepd.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/structures/si.edi"
+        "docs/user/cli/pd-neut-tof_si-sepd/project/project.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd/project/structures/si.edi"
       ]
     },
-    "pd-neut-tof_cecoal-polaris_basic": {
+    "pd-neut-tof_cecoal-polaris": {
       "samples": [
         "CeCoAl₃ [Pmma]"
       ],
@@ -542,18 +542,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_cecoal-polaris_basic",
+        "pd-neut-tof_cecoal-polaris",
         "CeCoAl₃ [Pmma] · POLARIS @ ISIS",
         "Structure and time-of-flight profile fit · 24-term Chebyshev background"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/experiments/polaris.edi",
-        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/structures/cecoal.edi"
+        "docs/user/cli/pd-neut-tof_cecoal-polaris/project/project.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris/project/experiments/polaris.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris/project/structures/cecoal.edi"
       ]
     },
-    "pd-neut-tof_ceo2-pearl_basic": {
+    "pd-neut-tof_ceo2-pearl": {
       "samples": [
         "CeO₂ [Fm-3m]"
       ],
@@ -592,24 +592,24 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_ceo2-pearl_basic",
+        "pd-neut-tof_ceo2-pearl",
         "CeO₂ [Fm-3m] · PEARL @ ISIS",
         "NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/experiments/pearl.edi",
-        "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/structures/ceo2.edi"
+        "docs/user/cli/pd-neut-tof_ceo2-pearl/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl/project/experiments/pearl.edi",
+        "docs/user/cli/pd-neut-tof_ceo2-pearl/project/structures/ceo2.edi"
       ]
     },
-    "pd-neut-tof_lbco-si-mcstas_two-phase": {
+    "pd-neut-tof_lbco-si-mcstas": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
         "Silicon [Fd-3m]"
       ],
       "origin": "McStas simulation",
-      "detail": "Two phases · Simulated TOF pattern · Jorgensen profile",
+      "detail": "2 phases · Simulated TOF pattern · Jorgensen profile",
       "values": {
         "sampleForm": [
           "powder"
@@ -643,19 +643,19 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_lbco-si-mcstas_two-phase",
+        "pd-neut-tof_lbco-si-mcstas",
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation",
-        "Two phases · Simulated TOF pattern · Jorgensen profile"
+        "2 phases · Simulated TOF pattern · Jorgensen profile"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/project.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/experiments/mcstas.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/lbco.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/si.edi"
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/project.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/experiments/mcstas.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/structures/lbco.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/structures/si.edi"
       ]
     },
-    "pd-neut-tof_ncaf-wish_basic": {
+    "pd-neut-tof_ncaf-wish": {
       "samples": [
         "Na₂Ca₃Al₂F₁₄ [I2₁3]"
       ],
@@ -694,22 +694,22 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_ncaf-wish_basic",
+        "pd-neut-tof_ncaf-wish",
         "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
         "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_1_10.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_2_9.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_3_8.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_5_6.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/structures/ncaf.edi"
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish/project/structures/ncaf.edi"
       ]
     },
-    "pd-neut-tof_ferrite-austenite-beer_calibration": {
+    "pd-neut-tof_ferrite-austenite-beer": {
       "samples": [
         "Ferrite [Im-3m]",
         "Austenite [Fm-3m]"
@@ -749,20 +749,20 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-tof_ferrite-austenite-beer_calibration",
+        "pd-neut-tof_ferrite-austenite-beer",
         "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
         "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/project.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_n2.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_s2.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/austenite.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/ferrite.edi"
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_n2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_s2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/structures/austenite.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/structures/ferrite.edi"
       ]
     },
-    "pd-xray-cwl_pbso4-lab_basic": {
+    "pd-xray-cwl_pbso4-lab": {
       "samples": [
         "PbSO₄ [Pnma]"
       ],
@@ -801,18 +801,18 @@
         ]
       },
       "searchAliases": [
-        "pd-xray-cwl_pbso4-lab_basic",
+        "pd-xray-cwl_pbso4-lab",
         "PbSO₄ [Pnma] · Laboratory X-ray",
         "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
       ],
       "sources": [
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/experiments/lab.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/structures/pbso4.edi"
+        "docs/user/cli/pd-xray-cwl_pbso4-lab/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab/project/experiments/lab.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab/project/structures/pbso4.edi"
       ]
     },
-    "pd-xray-cwl_lam7o3-p021_basic": {
+    "pd-xray-cwl_lam7o3-p021": {
       "samples": [
         "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma]"
       ],
@@ -851,18 +851,18 @@
         ]
       },
       "searchAliases": [
-        "pd-xray-cwl_lam7o3-p021_basic",
+        "pd-xray-cwl_lam7o3-p021",
         "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III",
         "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
       ],
       "sources": [
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/experiments/p021.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/structures/lam7o3.edi"
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/structures/lam7o3.edi"
       ]
     },
-    "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
+    "pd-neut-xray-cwl_pbso4-d1a-lab": {
       "samples": [
         "PbSO₄ [Pnma]"
       ],
@@ -902,19 +902,19 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-xray-cwl_pbso4-d1a-lab_joint",
+        "pd-neut-xray-cwl_pbso4-d1a-lab",
         "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray",
         "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/project.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/d1a.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/lab.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/structures/pbso4.edi"
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi"
       ]
     },
-    "pd-neut-cwl_cosio-d20_scan-155f": {
+    "pd-neut-cwl_cosio-d20_scan": {
       "samples": [
         "Co₂SiO₄ [Pnma]"
       ],
@@ -953,18 +953,18 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_cosio-d20_scan-155f",
+        "pd-neut-cwl_cosio-d20_scan",
         "Co₂SiO₄ [Pnma] · D20 @ ILL",
         "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/structures/cosio.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi"
       ]
     },
-    "pd-xray-cwl_latp-bm01_scan-73f": {
+    "pd-xray-cwl_latp-bm01_scan": {
       "samples": [
         "LATP [R-3c]",
         "AlPO₄ [C222₁]",
@@ -1005,17 +1005,17 @@
         ]
       },
       "searchAliases": [
-        "pd-xray-cwl_latp-bm01_scan-73f",
+        "pd-xray-cwl_latp-bm01_scan",
         "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL",
         "3 phases · 73 synchrotron patterns · Linked displacement parameters"
       ],
       "sources": [
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/experiments/bm01.edi",
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/alpo4_c2221.edi",
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/alpo4_p63mc.edi",
-        "docs/user/cli/pd-xray-cwl_latp-bm01_scan-73f/project/structures/latp.edi"
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_c2221.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_p63mc.edi",
+        "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/latp.edi"
       ]
     }
   }

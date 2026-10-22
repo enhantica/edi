@@ -201,7 +201,7 @@ def analysis(mode: str = 'single', *, weights=(), aliases=(), constraints=(), ex
 # ----------------------------------------------------------------------
 
 
-def si_sepd() -> dict[str, str]:
+def pd_neut_tof_si_sepd() -> dict[str, str]:
     source = 'pd-neut-tof_si-sepd_start-2'
     rows = source_rows(source, 'sepd')
     positions = [
@@ -234,7 +234,7 @@ def si_sepd() -> dict[str, str]:
     }
     return {
         'project.edi': project_record(
-            'pd_neut_tof_si_sepd_basic',
+            'pd-neut-tof_si-sepd',
             'Silicon [Fd-3m] · SEPD @ Argonne',
             'Silicon standard · Jorgensen\N{EN DASH}Von Dreele profile · '
             'Time-of-flight neutron powder data',
@@ -390,7 +390,7 @@ def ncaf_bank(name: str, spec: dict) -> str:
     )
 
 
-def ncaf_wish() -> dict[str, str]:
+def pd_neut_tof_ncaf_wish() -> dict[str, str]:
     # I 21 3, the positions of the source's structure rounded to two decimals.
     sites = [
         f'Ca1 Ca {free(0.47)} 0 0.25 b 1 {free(BISO)} Biso',
@@ -402,7 +402,7 @@ def ncaf_wish() -> dict[str, str]:
     ]
     files = {
         'project.edi': project_record(
-            'pd_neut_tof_ncaf_wish_basic',
+            'pd-neut-tof_ncaf-wish',
             'Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS',
             'All five detector bank pairs fitted jointly · '
             'Jorgensen\N{EN DASH}Von Dreele profile · '
@@ -480,7 +480,7 @@ def diamond_dream() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def cecoal_polaris() -> dict[str, str]:
+def pd_neut_tof_cecoal_polaris() -> dict[str, str]:
     rows = source_rows('pd-neut-tof_cecoal-polaris_chebyshev', 'polaris')
     excluded = [(2000.1, 3000.0), (19000.0, 20000.0)]
     profile = {
@@ -505,7 +505,7 @@ def cecoal_polaris() -> dict[str, str]:
     ]
     return {
         'project.edi': project_record(
-            'pd_neut_tof_cecoal_polaris_basic',
+            'pd-neut-tof_cecoal-polaris',
             'CeCoAl₃ [Pmma] · POLARIS @ ISIS',
             'Structure and time-of-flight profile fit · 24-term Chebyshev background',
             instrument='POLARIS',
@@ -538,7 +538,7 @@ def cecoal_polaris() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def ceo2_pearl() -> dict[str, str]:
+def pd_neut_tof_ceo2_pearl() -> dict[str, str]:
     rows = source_rows('pd-neut-tof_ceo2-pearl_polynomial', 'pearl')
     excluded = [(1000.1, 2000.0), (18700.0, 20000.0)]
     profile = {
@@ -555,7 +555,7 @@ def ceo2_pearl() -> dict[str, str]:
     }
     return {
         'project.edi': project_record(
-            'pd_neut_tof_ceo2_pearl_basic',
+            'pd-neut-tof_ceo2-pearl',
             'CeO₂ [Fm-3m] · PEARL @ ISIS',
             'NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background',
             instrument='PEARL',
@@ -630,7 +630,7 @@ def beer_difc(name: str) -> float:
     raise ValueError(f'{path}: no DIFC')
 
 
-def ferrite_austenite_beer() -> dict[str, str]:
+def pd_neut_tof_ferrite_austenite_beer() -> dict[str, str]:
     def iron(name: str, a: float, group: str, biso: str) -> str:
         return structure(
             name, cell_lines(a, a, a), group, [f'Fe Fe 0 0 0 a 1 {biso} Biso'], system='1'
@@ -638,7 +638,7 @@ def ferrite_austenite_beer() -> dict[str, str]:
 
     return {
         'project.edi': project_record(
-            'pd_neut_tof_ferrite_austenite_beer_calibration',
+            'pd-neut-tof_ferrite-austenite-beer',
             'Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS',
             'Instrument calibration · 2 McStas-simulated banks fitted jointly · '
             'Per-bank zero and resolution',
@@ -671,10 +671,10 @@ def ferrite_austenite_beer() -> dict[str, str]:
 
 
 CASES = {
-    'pd-neut-tof_si-sepd_basic': si_sepd,
-    'pd-neut-tof_ncaf-wish_basic': ncaf_wish,
+    'pd-neut-tof_si-sepd': pd_neut_tof_si_sepd,
+    'pd-neut-tof_ncaf-wish': pd_neut_tof_ncaf_wish,
     'pd-neut-tof_diamond-dream_mcstas': diamond_dream,
-    'pd-neut-tof_cecoal-polaris_basic': cecoal_polaris,
-    'pd-neut-tof_ceo2-pearl_basic': ceo2_pearl,
-    'pd-neut-tof_ferrite-austenite-beer_calibration': ferrite_austenite_beer,
+    'pd-neut-tof_cecoal-polaris': pd_neut_tof_cecoal_polaris,
+    'pd-neut-tof_ceo2-pearl': pd_neut_tof_ceo2_pearl,
+    'pd-neut-tof_ferrite-austenite-beer': pd_neut_tof_ferrite_austenite_beer,
 }

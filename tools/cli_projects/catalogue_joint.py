@@ -126,11 +126,11 @@ def pbso4_lab(rows) -> str:
     )
 
 
-def pd_neut_xray_cwl_pbso4_d1a_lab_joint() -> dict[str, str]:
-    data = CLI / 'pd-neut-xray-cwl_pbso4-d1a-lab_joint' / 'data'
+def pd_neut_xray_cwl_pbso4_d1a_lab() -> dict[str, str]:
+    data = CLI / 'pd-neut-xray-cwl_pbso4-d1a-lab' / 'data'
     return {
         'project.edi': project_record(
-            'pd_neut_xray_cwl_pbso4_d1a_lab_joint',
+            'pd-neut-xray-cwl_pbso4-d1a-lab',
             'PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray',
             'Rietveld round-robin data · Neutron and X-ray patterns fitted jointly',
             instrument='D1A',
@@ -150,5 +150,5 @@ def pd_neut_xray_cwl_pbso4_d1a_lab_joint() -> dict[str, str]:
 
 
 CASES = {
-    'pd-neut-xray-cwl_pbso4-d1a-lab_joint': pd_neut_xray_cwl_pbso4_d1a_lab_joint,
+    'pd-neut-xray-cwl_pbso4-d1a-lab': pd_neut_xray_cwl_pbso4_d1a_lab,
 }

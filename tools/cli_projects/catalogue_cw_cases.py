@@ -101,7 +101,7 @@ def biso_tie(structure_id: str, first: str, second: str) -> list[list[str]]:
 # ----------------------------------------------------------------------
 
 
-def lbco_hrpt_basic() -> dict[str, str]:
+def pd_neut_cwl_lbco_hrpt() -> dict[str, str]:
     rows = source_rows('pd-neut-cwl_lbco-hrpt_start-4', 'hrpt')
     excluded = [(0, 5), (165, 180)]
     level = flat_level(rows, excluded)
@@ -133,7 +133,7 @@ def lbco_hrpt_basic() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_lbco_hrpt_basic',
+            'pd-neut-cwl_lbco-hrpt',
             'La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI',
             'Cubic perovskite · La and Ba sharing one site · Profile, background, displacements',
             instrument='HRPT',
@@ -152,7 +152,7 @@ def lbco_hrpt_basic() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def cosio_d20_basic() -> dict[str, str]:
+def pd_neut_cwl_cosio_d20() -> dict[str, str]:
     rows = source_rows('pd-neut-cwl_cosio-d20_start-4', 'd20')
     level = flat_level(rows)
     sites = [
@@ -182,7 +182,7 @@ def cosio_d20_basic() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_cosio_d20_basic',
+            'pd-neut-cwl_cosio-d20',
             'Co₂SiO₄ [Pnma] · D20 @ ILL',
             'Olivine · Coordinates, displacements and oxygen occupancies',
             instrument='D20',
@@ -204,11 +204,11 @@ def cosio_d20_basic() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def pbso4_lab_basic() -> dict[str, str]:
+def pd_xray_cwl_pbso4_lab() -> dict[str, str]:
     rows = source_rows('pd-xray-cwl_pbso4-lab_round-robin', 'pbsox')
     return {
         'project.edi': project_record(
-            'pd_xray_cwl_pbso4_lab_basic',
+            'pd-xray-cwl_pbso4-lab',
             'PbSO₄ [Pnma] · Laboratory X-ray',
             'Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry',  # noqa: RUF001
             neutron=False,
@@ -224,7 +224,7 @@ def pbso4_lab_basic() -> dict[str, str]:
 # ----------------------------------------------------------------------
 
 
-def yap_spodi_two_phase() -> dict[str, str]:
+def pd_neut_cwl_yalo3_al2o3_spodi() -> dict[str, str]:
     source = 'pd-neut-cwl_yap-spodi_3k'
     rows = source_rows(source, 'spodi')
     excluded = [(0, 4), (153.95, 180)]
@@ -270,7 +270,7 @@ def yap_spodi_two_phase() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_yap_spodi_two_phase',
+            'pd-neut-cwl_yalo3-al2o3-spodi',
             'YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II',
             '2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption',
             instrument='SPODI',
@@ -381,7 +381,7 @@ Y2O3_FREE_BETAS = {
 }
 
 
-def y2o3_aniso_adp() -> dict[str, str]:
+def pd_neut_cwl_y2o3_spodi() -> dict[str, str]:
     source = 'pd-neut-cwl_y2o3_beta-adp'
     rows = source_rows(source, 'y2o3')
     excluded = [(0, 12), (137.5, 180)]
@@ -425,7 +425,7 @@ def y2o3_aniso_adp() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_y2o3_spodi_aniso_adp',
+            'pd-neut-cwl_y2o3-spodi',
             'Y₂O₃ [Ia-3] · SPODI @ FRM II',
             'Anisotropic β tensors tied by site symmetry · Coordinates, profile and background',
             instrument='SPODI',
@@ -445,10 +445,10 @@ def y2o3_aniso_adp() -> dict[str, str]:
 
 
 CASES = {
-    'pd-neut-cwl_lbco-hrpt_basic': lbco_hrpt_basic,
-    'pd-neut-cwl_cosio-d20_basic': cosio_d20_basic,
-    'pd-xray-cwl_pbso4-lab_basic': pbso4_lab_basic,
-    'pd-neut-cwl_yap-spodi_two-phase': yap_spodi_two_phase,
+    'pd-neut-cwl_lbco-hrpt': pd_neut_cwl_lbco_hrpt,
+    'pd-neut-cwl_cosio-d20': pd_neut_cwl_cosio_d20,
+    'pd-xray-cwl_pbso4-lab': pd_xray_cwl_pbso4_lab,
+    'pd-neut-cwl_yalo3-al2o3-spodi': pd_neut_cwl_yalo3_al2o3_spodi,
     'pd-neut-cwl_lab6-11b-echidna_basic': lab6_echidna_basic,
-    'pd-neut-cwl_y2o3-spodi_aniso-adp': y2o3_aniso_adp,
+    'pd-neut-cwl_y2o3-spodi': pd_neut_cwl_y2o3_spodi,
 }
