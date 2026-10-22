@@ -105,6 +105,9 @@ TestCase {
             menu = Probe.objectsWithProperty(header, "shown").find(item => item.visible && item.contentItem !== undefined);
             return menu !== undefined;
         }, 1000, "The actual header interaction opens its own production bulk menu");
+        verify(waitForPolish(menu.contentItem), "The actual bulk menu finishes binding and layout before inspecting its state");
+        appWindow.update();
+        verify(waitForRendering(appWindow.contentItem), "The opened bulk menu reaches a settled rendered frame before its captions are checked");
         return menu;
     }
     function radio(menu, state) {
@@ -130,6 +133,10 @@ TestCase {
         const project = Session.project;
         const original = parameters();
         verify(project.setParametersFree(original, !data.makeFree), "The authored target state supplies a genuine opposite-state bulk transition");
+        if (data.transition === "east-west" || data.transition === "west-east") {
+            const first = data.transition === "east-west" ? "east" : "west";
+            verify(project.setParametersFree(original.filter(item => item.blockName === first && item.category === "peak"), data.makeFree), "Equal-size banks start in opposite free states before a datablock-only switch");
+        }
         if (data.transition === "replace-same-free-count") {
             verify(project.setParametersFree(original.filter(item => item.blockName === "west"), false), "The replaced bank starts fixed so its removal does not change the project's free count");
         }
@@ -200,6 +207,8 @@ TestCase {
         }
         if (data.transition !== "clear-all")
             compare(control("parameters.list").sourceModel.categoryFilter, originalCategory, "The membership transition leaves the category unchanged instead of refreshing through another filter");
+        if (data.transition !== "replace-same-free-count")
+            compare(same(snapshot(), beforePrime), true, "Changing only user filters preserves every free flag and value before applying the bulk action");
         const wanted = targets(state);
         const shown = Probe.rows(control("parameters.list").sourceModel).map(row => key(row.parameter)).sort();
         compare(shown, wanted, "The user's selections independently predict every visible parameter identity");
@@ -216,7 +225,10 @@ TestCase {
         const fixed = wanted.length - free;
         const freeAction = radio(menu, "free"), fixedAction = radio(menu, "fixed"), mixed = radio(menu, "mixed");
         if (freeAction.text !== "Free · all " + wanted.length || fixedAction.text !== "Fixed · all " + wanted.length || mixed.text !== "Mixed · " + free + " free · " + fixed + " fixed")
-            failures.push("menu state describes stale membership");
+            failures.push("menu state describes stale membership: " + [freeAction.text, fixedAction.text, mixed.text].join(" / ") + " expected " + wanted.length + " targets, " + free + " free, " + fixed + " fixed");
+        const isMixed = free > 0 && fixed > 0;
+        if (freeAction.checked !== (fixed === 0) || fixedAction.checked !== (free === 0) || mixed.checked !== isMixed || mixed.enabled !== isMixed || mixed.checkable)
+            failures.push("menu selected state describes stale filter members");
         const action = data.makeFree ? freeAction : fixedAction;
         mouseClick(action, action.width / 2, action.height / 2);
         verify(waitForPolish(appWindow.contentItem), "The actual bulk menu action finishes its ordinary publication");

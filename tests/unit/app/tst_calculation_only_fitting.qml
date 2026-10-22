@@ -105,6 +105,9 @@ TestCase {
     }
     function input(item, button) {
         Ui.scrollIntoView(item);
+        verify(waitForPolish(appWindow.contentItem), "Attempted fitting and free-control pointer targets finish their actual layout");
+        appWindow.update();
+        verify(waitForRendering(appWindow.contentItem), "Attempted fitting and free-control pointer targets reach a settled frame");
         const point = Ui.clickPoint(item);
         verify(point !== null, "The attempted fitting route has a real pointer target");
         mouseClick(item, point.x, point.y, button === undefined ? Qt.LeftButton : button);
