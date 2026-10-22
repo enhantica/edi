@@ -379,8 +379,11 @@ Rectangle {
             verify(waitForPolish(control.Window.window.contentItem), "The selector is laid out after scrolling its real viewport");
             control.Window.window.update();
             verify(waitForRendering(control.Window.window.contentItem), "The actual selector window has rendered before input");
-            const at = Ui.clickPoint(control);
-            verify(at !== null, "The real selector is exposed inside its viewport before input");
+            let at;
+            tryVerify(() => {
+                at = Ui.clickPoint(control);
+                return at !== null;
+            }, 2000, "The real selector finishes its tab transition inside the input viewport");
             mouseClick(control, at.x, at.y);
             tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector");
             const windowRoot = control.Window.window.contentItem;
@@ -1690,6 +1693,16 @@ Rectangle {
                 visible: true
             }
         }
+        function fullyExposed(item) {
+            for (let parent = item.parent; parent; parent = parent.parent) {
+                if (!parent.clip)
+                    continue;
+                const bounds = item.mapToItem(parent, 0, 0, item.width, item.height);
+                if (bounds.x < -1 || bounds.y < -1 || bounds.x + bounds.width > parent.width + 1 || bounds.y + bounds.height > parent.height + 1)
+                    return false;
+            }
+            return true;
+        }
         function showSharedScan(pageName, mode) {
             Ui.click(test, Probe, applicationWindow, "appBar.tab." + pageName);
             let page;
@@ -1710,6 +1723,7 @@ Rectangle {
             const found = Render.descendants(page).filter(item => item.objectName === "scanView." + mode && item.visible && item.shown);
             compare(found.length, 1, "The shown page contains exactly one eligible actual scan chart");
             chart = found[0];
+            tryVerify(() => fullyExposed(named("pointer")), 2000, "The shown scan plot finishes its SwipeView transition inside every actual clip before capture");
             tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "Shared measured views finish their real asynchronous data reads");
             verify(waitForRendering(chart), "The shown shared scan drawing reaches a completed actual frame");
             return chart;
@@ -1814,9 +1828,18 @@ Rectangle {
                 tryVerify(() => !Ui.moving(applicationWindow.contentItem), 2000, "Actual page navigation finishes before observing its colour controls");
                 const page = Render.descendants(applicationWindow.contentItem).find(item => item.pageName === pageName && item.current);
                 verify(page !== undefined, "Every colour-consuming page is reached in the actual application");
-                const controls = Render.descendants(page).filter(item => item.visible && typeof item.textAt === "function" && String(item.objectName).includes("toolbar"));
-                const colours = controls.filter(item => /colour|color|palette/i.test(String(item.objectName) + " " + item.toolTip));
-                compare(colours.length, 0, "Pattern and Structure chart toolbars contain no colour selectors after the four choices move to Preferences");
+                for (const text of (pageName === "structure" ? ["Structure", "Pattern"] : ["Pattern"])) {
+                    const tab = Array.from(page.mainTabs).find(item => item.text === text);
+                    verify(tab !== undefined && tab.enabled, "Colour placement reaches the actual Structure and Pattern tabs, rather than a retained scan tab");
+                    tryVerify(() => fullyExposed(tab) && Ui.clickPoint(tab) !== null, 2000, "The intended colour-view tab finishes its page transition inside every actual input clip");
+                    if (!tab.checked)
+                        Ui.click(test, Probe, applicationWindow, tab.objectName);
+                    tryCompare(tab, "checked", true, 1000, "Real input opens the intended colour-consuming view");
+                    tryVerify(() => !Ui.moving(page), 2000, "The intended colour view finishes moving before its toolbar census");
+                    const controls = Render.descendants(page).filter(item => Ui.rendered(item) && typeof item.textAt === "function" && String(item.objectName).includes("toolbar"));
+                    const colours = controls.filter(item => item.objectName !== "structure.toolbar.colors" && /colour|color|palette/i.test(String(item.objectName) + " " + item.toolTip));
+                    compare(colours.length, 0, "Categorical palette choices leave the Pattern and Structure toolbars while the independent element scheme stays");
+                }
             }
             for (const pageName of ["experiment", "analysis"])
                 for (const mode of ["stacked", "map"]) {
