@@ -27,7 +27,8 @@ Item {
     readonly property ScanViewModel scan: project ? project.scanViews : null
     readonly property bool scanProject: project !== null && (project.scan || (scan !== null && scan.joint))
     readonly property bool joint: scan !== null && scan.joint
-    readonly property bool hasData: scan !== null && scan.loaded - scan.failed > 0
+    // Experiments on different native axes show on d only, so not before a calculation gives it.
+    readonly property bool hasData: scan !== null && scan.loaded - scan.failed > 0 && (scan.nativeShared || scan.dAvailable)
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
@@ -404,35 +405,71 @@ Item {
         id: scanToolbar
 
         readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
-        // On one line when the chart is wide enough; when it is not, the buttons on a second line, each line centred
-        // as the pattern chart's are (the owner, 2026-10-22).
-        readonly property real oneLine: selectors.width + spacing + buttons.width
-        readonly property bool wrapped: oneLine > chart.width - 2 * chart.sideMargin
+        readonly property real available: chart.width - 2 * chart.sideMargin
+        // The boxes that show, then the buttons as one group: what is laid out, and every width it depends on.
+        readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([buttons])
+        readonly property string measure: available + ":" + units.map(unit => unit.width).join(",")
+
+        // As many as fit on a line, the buttons a group's spacing after the boxes, each line centred as the pattern
+        // chart's are (the owner, 2026-10-22); the toolbar is as wide as its widest line.
+        function layout() {
+            const lines = [];
+            let line = null;
+            for (const unit of units) {
+                const gap = line === null ? 0 : unit === buttons ? spacing : AppSizes.toolbarSpacing;
+                if (line === null || line.width + gap + unit.width > available) {
+                    line = {
+                        "units": [unit],
+                        "width": unit.width,
+                        "gaps": [0]
+                    };
+                    lines.push(line);
+                } else {
+                    line.units.push(unit);
+                    line.gaps.push(gap);
+                    line.width += gap + unit.width;
+                }
+            }
+            const widest = Math.max(0, ...lines.map(each => each.width));
+            let top = 0;
+            for (const each of lines) {
+                let left = Math.round((widest - each.width) / 2);
+                for (let i = 0; i < each.units.length; ++i) {
+                    left += each.gaps[i];
+                    each.units[i].x = left;
+                    each.units[i].y = top;
+                    left += each.units[i].width;
+                }
+                top += AppSizes.toolbarControlSize + AppSizes.toolbarSpacing;
+            }
+            width = widest;
+            height = Math.max(0, top - AppSizes.toolbarSpacing);
+        }
 
         objectName: "scanView." + chart.mode + ".toolbar"
-        width: wrapped ? Math.max(selectors.width, buttons.width) : oneLine
-        height: wrapped ? selectors.height + AppSizes.toolbarSpacing + buttons.height : Math.max(selectors.height, buttons.height)
         // Centred over the plot, and kept inside the chart when the view is narrow.
         x: Math.round(Math.max(chart.sideMargin, Math.min(chart.width - width - chart.sideMargin, view.x + view.plotArea.x + (view.plotArea.width - width) / 2)))
         y: chart.toolbarTop
+        height: AppSizes.toolbarControlSize
+        onMeasureChanged: Qt.callLater(layout)
+        Component.onCompleted: layout()
 
-        Row {
+        Item {
             id: selectors
-
-            x: scanToolbar.wrapped ? Math.round((scanToolbar.width - width) / 2) : 0
-            spacing: AppSizes.toolbarSpacing
 
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.xaxis"
                 // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
                 enabled: chart.scan !== null && chart.scan.dAvailable
                 toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-                readonly property var entries: [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("d")]
+                // A joint fit whose experiments share no native axis has d only.
+                readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
+                readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("d")] : [qsTr("d")]
                 model: entries
                 closedTexts: entries.map(text => qsTr("x: %1").arg(text))
-                currentIndex: chart.scan !== null && chart.scan.dShown ? 1 : 0
+                currentIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
                 onActivated: index => {
-                    if (chart.project)
+                    if (chart.project && nativeOffered)
                         chart.project.patternDSpacing = index === 1;
                 }
             }
@@ -486,8 +523,6 @@ Item {
         Row {
             id: buttons
 
-            x: scanToolbar.wrapped ? Math.round((scanToolbar.width - width) / 2) : selectors.width + scanToolbar.spacing
-            y: scanToolbar.wrapped ? selectors.height + AppSizes.toolbarSpacing : 0
             spacing: AppSizes.toolbarSpacing
 
             ChartToolButton {
@@ -569,6 +604,6 @@ Item {
         anchors.centerIn: parent
         visible: !chart.hasData
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
-        text: !chart.scanProject ? qsTr("A sequential or joint fit's patterns show here") : chart.scan !== null && chart.scan.count > 0 && chart.scan.failed === chart.scan.count ? qsTr("None of the scan's patterns could be read. %1").arg(chart.scan.error) : qsTr("Reading the scan's patterns")
+        text: !chart.scanProject ? qsTr("A sequential or joint fit's patterns show here") : chart.scan !== null && !chart.scan.nativeShared && !chart.scan.dAvailable ? qsTr("These experiments have different x axes: they show on d-spacing after a calculation") : chart.scan !== null && chart.scan.count > 0 && chart.scan.failed === chart.scan.count ? qsTr("None of the scan's patterns could be read. %1").arg(chart.scan.error) : qsTr("Reading the scan's patterns")
     }
 }

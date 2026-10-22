@@ -107,6 +107,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     }
     clear();
     publish(joint_, false, &ScanViewModel::jointChanged);
+    publish(native_shared_, true, &ScanViewModel::nativeSharedChanged);
     publish(row_labels_, QStringList(), &ScanViewModel::rowLabelsChanged);
     if (session != nullptr && project != nullptr && !project->experiments.empty()) {
         files_ = session->datasets().files;
@@ -144,9 +145,14 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     emit valueTitleChanged();
     QStringList labels;
     // Every experiment's points as they are now; one without data draws nothing and counts as not read.
+    bool shared = true;
     if (joint) {
         mode_ = project->experiment().effective_beam_mode();
         emit timeOfFlightChanged();
+        for (const auto& experiment : project->experiments) {
+            shared = shared && (experiment->effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH) ==
+                                   (mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH);
+        }
         bool every_d = true;
         for (const auto& experiment : project->experiments) {
             Pattern pattern;
@@ -183,6 +189,7 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     } else {
         publish(d_available_, false, &ScanViewModel::dAvailableChanged);
     }
+    publish(native_shared_, shared, &ScanViewModel::nativeSharedChanged);
     publish(row_labels_, labels, &ScanViewModel::rowLabelsChanged);
     placeAxis();
     placeRows();
@@ -405,6 +412,11 @@ void ScanViewModel::setRowsByIndex(bool on) {
 // their ends clamped to the conversion's.
 void ScanViewModel::placePattern(Pattern& pattern) const {
     pattern.excluded_shown.clear();
+    // Experiments on different native axes have no x to share until d is given: nothing is placed.
+    if (!d_shown_ && !native_shared_) {
+        pattern.shown.assign(pattern.x.size(), kNaN);
+        return;
+    }
     if (!d_shown_) {
         pattern.shown = pattern.x;
         pattern.excluded_shown = pattern.excluded;
@@ -462,14 +474,15 @@ void ScanViewModel::placeAxis() {
     if (!joint_) {
         publish(d_available_, template_x_.size() >= 2, &ScanViewModel::dAvailableChanged);
     }
-    const bool d = d_spacing_ && d_available_;
+    // d when asked for, and always for experiments that share no native axis, once it is given.
+    const bool d = (d_spacing_ || !native_shared_) && d_available_;
     publish(d_shown_, d, &ScanViewModel::dShownChanged);
     for (Pattern& pattern : patterns_) {
         placePattern(pattern);
     }
     placeRange();
     publish(x_title_,
-            d ? QStringLiteral("d (Å)")
+            d || !native_shared_ ? QStringLiteral("d (Å)")
               : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),
             &ScanViewModel::xTitleChanged);
 }

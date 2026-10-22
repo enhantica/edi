@@ -59,6 +59,9 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(double stackHeight READ stackHeight NOTIFY stackHeightChanged)
     // A joint fit's experiments rather than a scan's datasets: rows by place, each labelled with its experiment's name.
     Q_PROPERTY(bool joint READ joint NOTIFY jointChanged)
+    // Whether every dataset has the same native axis (2θ or TOF): a joint fit of a 2θ and a TOF experiment does not,
+    // and is shown on d only, once a calculation has given it.
+    Q_PROPERTY(bool nativeShared READ nativeShared NOTIFY nativeSharedChanged)
     Q_PROPERTY(QStringList rowLabels READ rowLabels NOTIFY rowLabelsChanged)
     // The first refusal of a read, if any (the other datasets are still read).
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
@@ -88,6 +91,7 @@ class ScanViewModel : public QObject {
     QString xTitle() const { return x_title_; }
     bool timeOfFlight() const { return mode_ != edi::BeamModeEnum::CONSTANT_WAVELENGTH; }
     bool joint() const { return joint_; }
+    bool nativeShared() const { return native_shared_; }
     QStringList rowLabels() const { return row_labels_; }
     QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
     QString rowTitle() const { return row_title_; }
@@ -143,6 +147,7 @@ class ScanViewModel : public QObject {
     void errorChanged();
     void rowNoteChanged();
     void jointChanged();
+    void nativeSharedChanged();
     void rowLabelsChanged();
 
    private:
@@ -194,6 +199,7 @@ class ScanViewModel : public QObject {
     double row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
+    bool native_shared_ = true;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's

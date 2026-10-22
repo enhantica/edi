@@ -67,7 +67,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d
    column through its own axis, the pattern chart's rule, ADR-0017 §15; a joint fit's experiment by its own d column,
-   d offered once every experiment has one), y places the rows by the scan value or the
+   d offered once every experiment has one; a joint fit's experiments on different native axes, 2θ beside TOF, are
+   shown on d only, since no one native scale holds them, and wait for a calculation to give it; the owner,
+   2026-10-22, confirmed every joint fit and every axis the user picks), y places the rows by the scan value or the
    file index as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
    pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
    can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
