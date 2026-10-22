@@ -610,12 +610,10 @@ Item {
         }
     }
 
-    // An end of the colour bar as an intensity: the y scale's value taken back to counts, to four significant digits
-    // as a key needs no more.
+    // An end of the colour bar as an intensity: the y scale's value taken back to counts.
     function intensityCounts(value: real): real {
         const scale = Preferences.patternYScale;
-        const counts = scale === "log" ? Math.pow(10, value) : scale === "sqrt" ? Math.sign(value) * value * value : value;
-        return isFinite(counts) ? Number(counts.toPrecision(4)) : counts;
+        return scale === "log" ? Math.pow(10, value) : scale === "sqrt" ? Math.sign(value) * value * value : value;
     }
     // The ends are written as the pattern chart writes its intensity ticks, so large ones take the same short
     // exponent form (the owner, 2026-10-22).
