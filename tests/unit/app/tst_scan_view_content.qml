@@ -1147,23 +1147,29 @@ Rectangle {
                 activate(index, false);
             }
             activate(active, false);
+            named("current").opacity = 0;
+            verify(waitForRendering(chart), "The excluded-data observer captures the real plot without its separate selection outline");
             const layer = named("layer"), axes = named("axes");
             const x = value => Math.round((value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * (layer.width - 1));
             const traceY = 100 + 64 / 255 * scan.stackHeight;
             const y = Math.round((axes.axisY.max - (data.mode === "map" ? 175 : traceY)) / (axes.axisY.max - axes.axisY.min) * (layer.height - 1));
-            const full = grabImage(layer), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
+            function sample(image, x, y) {
+                const at = layer.mapToItem(chart, x, y);
+                return image.pixel(Math.floor(at.x), Math.floor(at.y));
+            }
+            const full = grabImage(chart), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
             if (data.mode === "map")
-                verify(String(full.pixel(x(36), y)) !== String(full.pixel(x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
+                verify(String(sample(full, x(36), y)) !== String(sample(full, x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
             activate(active, true);
-            const gap = grabImage(layer), blank = gap.pixel(x(41), y - 6);
+            const gap = grabImage(chart), blank = sample(gap, x(41), y - 6);
             verify(blank.a > 0, "On draws a visible tint in the otherwise empty excluded gap");
             if (data.mode === "stacked")
-                verify([-2, -1, 0, 1, 2].some(dy => ink(full.pixel(x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(full.pixel(x(42), y + dy))));
+                verify([-2, -1, 0, 1, 2].some(dy => ink(sample(full, x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(sample(full, x(42), y + dy))));
             for (let px = x(40); px <= x(44); ++px)
                 for (let dy = -2; dy <= 2; ++dy)
-                    compare(String(gap.pixel(px, y + dy)), String(blank), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap");
+                    compare(String(sample(gap, px, y + dy)), String(sample(gap, px, Math.floor(layer.height * .15))), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap");
             const outside = Math.round(layer.height * .8);
-            verify(String(gap.pixel(x(30), outside)) === String(full.pixel(x(30), outside)), "The included-range toggle preserves drawable data outside the independent excluded interval");
+            verify(String(sample(gap, x(30), outside)) === String(sample(full, x(30), outside)), "The included-range toggle preserves drawable data outside the independent excluded interval");
             compare(SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi"), original, "A display toggle preserves the independently specified excluded scientific ranges");
         }
         Component {
@@ -2033,11 +2039,12 @@ Rectangle {
             }
         }
         function boxPixels(marker, dark) {
-            marker.visible = false;
+            const priorOpacity = marker.opacity;
+            marker.opacity = 0;
             surface.Window.window.update();
             verify(waitForRendering(chart), "The minimum-box witness captures the underlying data without the selected border");
             const background = grabImage(chart);
-            marker.visible = true;
+            marker.opacity = priorOpacity;
             surface.Window.window.update();
             verify(waitForRendering(chart), "The selected minimum box has a completed visible frame");
             const frame = grabImage(chart), origin = marker.mapToItem(chart, 0, 0), ratio = frame.width / chart.width;
@@ -2267,6 +2274,141 @@ Rectangle {
             shown = visibleIndices();
             for (let i = selected - 2; i <= selected + 2; ++i)
                 verify(shown.includes(i), "Every independently in-range row label reappears once zoom makes its spacing readable");
+        }
+
+        function test_clipped_selected_box_data() {
+            return test_joint_labels_outside_axis_data();
+        }
+        function test_clipped_selected_box(data) {
+            const scan = open(data.mode, "rows");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            Session.project.currentExperimentIndex = 1;
+            const marker = named("current"), layer = named("layer");
+            const low = data.mode === "map" ? 175 : 250;
+            const high = data.mode === "map" ? 475 : 250 + 128 / 255 * scan.stackHeight;
+            const span = (high - low) * 2;
+            for (const edge of ["upper", "lower"]) {
+                const sliver = span / layer.height / 4;
+                chart.setZoom([20, 80], edge === "upper" ? [high - sliver, high - sliver + span] : [low + sliver - span, low + sliver]);
+                verify(waitForRendering(chart), "A zoom leaving only a quarter-pixel of the natural selected band completes rendering");
+                verify(marker.visible && marker.height >= 8, "A partly intersecting selected band retains eight pixels for its borders and open interior in both views");
+                const top = marker.mapToItem(layer, 0, 0).y;
+                verify(top >= 0 && top + marker.height <= layer.height + .01, "The minimum selected rectangle stays within the zoomed plot at either edge");
+                boxPixels(marker, data.dark);
+                chart.setZoom([20, 80], edge === "upper" ? [high + 1, high + 1 + span] : [low - 1 - span, low - 1]);
+                verify(waitForRendering(chart), "The control zoom moves the selected natural band fully outside the viewport");
+                verify(!marker.visible, "Minimum height never manufactures a marker for a wholly offscreen selected dataset");
+            }
+            chart.resetZoom();
+            verify(waitForRendering(chart), "Reset restores the fully visible natural selection");
+            verify(marker.visible && marker.height > 8, "An ordinary tall selected band keeps its natural height after the edge zoom resets");
+        }
+        function test_failed_middle_map_band_data() {
+            return [
+                {
+                    tag: "stepped",
+                    smooth: false
+                },
+                {
+                    tag: "smooth",
+                    smooth: true
+                }
+            ];
+        }
+        function test_failed_middle_map_band(data) {
+            const scan = open("map", "broken");
+            ready(scan);
+            compare(scan.failed, 1, "Exactly the independently malformed middle dataset is refused");
+            compare([scan.rowOf(0), scan.rowOf(1), scan.rowOf(2)], [0, 1, 2], "An unreadable extracted value retains its reserved file-index band");
+            const toggle = interpolationToggle(chart);
+            if (toggle.checked !== data.smooth)
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+            named("current").opacity = 0;
+            verify(waitForRendering(chart), "The failed-middle ownership witness captures the real Map without a selection overlay");
+            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            function pixel(x, y) {
+                const at = layer.mapToItem(chart, (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                return frame.pixel(Math.floor(at.x), Math.floor(at.y));
+            }
+            for (const y of [.55, .75, 1, 1.25, 1.45])
+                for (const x of [25, 55, 85])
+                    compare(String(pixel(x, y)), String(chart.colors.chartBackground), "Every interior column of a failed middle dataset's band stays empty in stepped and smooth Map modes");
+            for (const y of [0, 2])
+                verify(String(pixel(55, y)) !== String(chart.colors.chartBackground), "Both healthy neighbours retain actual Map data beside the refused middle band");
+            const texts = Render.texts(chart).map(item => item.text).join(" ");
+            verify(texts.includes("all594791.dat"), "Empty-band ownership retains the failed dataset's visible read diagnostic");
+        }
+        function test_unsampled_and_reduced_excluded_gaps_data() {
+            const rows = [];
+            for (const mode of ["map", "stacked"])
+                for (const kind of ["sparse", "reduced", "subpixel"])
+                    for (const falling of [false, true])
+                        rows.push({
+                            tag: mode + "-" + kind + (falling ? "-d" : ""),
+                            mode,
+                            kind,
+                            falling
+                        });
+            return rows;
+        }
+        function test_unsampled_and_reduced_excluded_gaps(data) {
+            Preferences.resetToDefaults();
+            Preferences.patternYScale = "linear";
+            Preferences.scanMapColours = "viridis";
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            Input.gap(SettingsProof, root, data.kind !== "sparse", data.kind === "subpixel");
+            verify(Session.openProject(root), "The gap actor opens independently authored endpoints and excluded intervals");
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode
+            });
+            const scan = Session.project.scanViews;
+            ready(scan);
+            named("current").opacity = 0;
+            const button = excludedButton(chart);
+            verify(button !== undefined, "Each scan view exposes its ordinary included-only control");
+            const layer = named("layer"), axes = named("axes");
+            function shown(x) {
+                return data.falling ? 1.87 / (2 * Math.sin((x - .29) * Math.PI / 360)) : x;
+            }
+            if (data.falling) {
+                const selector = axisControl("x");
+                tryVerify(() => selector.enabled, 8000, "The actual calculated nontrivial Bragg conversion enables the falling d grid");
+                choose(selector, 1);
+                tryCompare(scan, "dShown", true, 1000, "Real x-axis input selects the measured pattern's falling d coordinates");
+            }
+            function setIncluded(on) {
+                if (button.checked !== on)
+                    mouseClick(button, button.width / 2, button.height / 2);
+                tryCompare(button, "checked", on, 1000, "Real toolbar input changes the included-only drawing choice");
+                if (data.kind === "sparse")
+                    chart.setZoom([shown(12), shown(18)].sort((a, b) => a - b), []);
+                verify(waitForPolish(chart) && waitForRendering(chart), "Each included-range choice and fine zoom reach the completed production frame");
+            }
+            function pixel(image, x, y) {
+                const at = layer.mapToItem(chart, x, y);
+                return image.pixel(Math.floor(at.x), Math.floor(at.y));
+            }
+            setIncluded(false);
+            const full = grabImage(chart);
+            const gapX = shown(data.kind === "subpixel" ? 14.125 : 15);
+            const x = Math.floor((gapX - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width);
+            setIncluded(true);
+            const included = grabImage(chart);
+            // Capture the chart and map the plot origin explicitly: a Qt item grab
+            // uses the requested size but can retain the window's pixel origin.
+            const blank = pixel(included, x, Math.floor(layer.height * .1));
+            let offInk = false;
+            for (let y = Math.floor(layer.height * .12); y < layer.height * .88; ++y) {
+                offInk = offInk || String(pixel(full, x, y)) !== String(blank);
+                compare(String(pixel(included, x, y)), String(blank), "Included-only leaves no Stacked segment, reduced-bin stroke or Map interpolation across an excluded interval; y=" + y + " x=" + x);
+            }
+            verify(offInk, "Full-range control retains real measured ink at the same excluded x column");
+            setIncluded(false);
+            const restored = grabImage(chart);
+            for (const y of [.2, .4, .6, .8])
+                compare(String(pixel(restored, x, Math.floor(layer.height * y))), String(pixel(full, x, Math.floor(layer.height * y))), "Switching back to full range restores the same measured drawing");
         }
     }
 }

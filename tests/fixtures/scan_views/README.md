@@ -52,3 +52,23 @@ The Map default witness removes the actual ScanViews/mapColours key, restarts th
 Owner decisions 62d2c7401 and 1f6bd79e6 replace the Stacked numeric y-scale witness with named, coloured icon rows. The sparse temperatures remain 100, 250 and 700 K, so they distinguish physical spacing from equal file/datablock bands. The font witness compares real Pattern tick/title fonts with all three scan charts and the Map key. The dense generator writes 48 distinct private files (temperatures 100.345 + 7*i K) or 48 distinct joint datablocks; real plot selection must reveal a previously thinned label, and actual drag zoom must restore every interior label that now fits. The Map keeps its numeric scan-value scale and a separately rendered edge tick per measured dataset.
 
 Rectangle geometry allows the three-pixel stroke envelope around a Stacked curve, with only raster rounding beyond it; Map bounds follow the independent midpoint band edges. Pixel tests separately require the exact one-pixel core, inner/outer half-alpha stripes, and untouched open interior. Settings restart observes the real Preferences singleton in a fresh engine; actual selectors and their input bindings are checked in the rendered chart engine, avoiding unsupported headless Qt Graphs teardown in the restart observer.
+
+The viewport-edge selection actor leaves a quarter logical pixel of an independently
+specified natural band visible at either y edge, checks the full open box, then
+moves that band wholly offscreen and resets it. The minimum is eight logical pixels.
+The failed-middle-file actor checks every interior part of its reserved index band
+against the plot background in both Map modes, retaining healthy-neighbour ink and
+the read diagnostic. Uneven-row edge colours retain their midpoint/quarter-height
+oracle above.
+
+`gap()` supplies either two endpoints (10 and 20) around the excluded interval
+[14, 16], or 10001 samples on that same domain. The dense subpixel interval is
+[14.1249, 14.1251], centred on an actual measured sample, to exercise a masked point
+inside a pixel bin. Row intensities are independently fixed at 64, 128 and 255.
+The template includes exact conversion knots at the interval bounds and centre;
+falling d coordinates use wavelength 1.87 and offset 0.29 in Bragg's formula.
+The actors use the ordinary included-only control, fine zoom between sparse
+endpoints, positive full-range ink and restored full-range drawing. Captures map
+plot coordinates into a chart image explicitly; the sampled-column reference
+retains the chart's own grid underlay. Selection outlines are transparent during
+these data-only observations.

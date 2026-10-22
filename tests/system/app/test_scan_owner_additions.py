@@ -122,6 +122,20 @@ CASES += tuple(
 )
 
 
+CASES += tuple(
+    'test_clipped_selected_box:' + mode + '-' + theme
+    for mode in ('stacked', 'map')
+    for theme in ('light', 'dark')
+)
+CASES += tuple('test_failed_middle_map_band:' + mode for mode in ('stepped', 'smooth'))
+CASES += tuple(
+    'test_unsampled_and_reduced_excluded_gaps:' + mode + '-' + kind + suffix
+    for mode in ('stacked', 'map')
+    for kind in ('sparse', 'reduced', 'subpixel')
+    for suffix in ('', '-d')
+)
+
+
 @pytest.fixture(scope='module')
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))

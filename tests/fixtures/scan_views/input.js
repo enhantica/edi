@@ -84,3 +84,27 @@ function edgeBanks(proof, root) {
         if(!proof.write(root,file,text)) throw Error("The independent unequal-support bank could not be written");
     }
 }
+
+// Gaps with no measured endpoint inside, or many samples per screen column.
+function gap(proof, root, dense, narrow = false) {
+    const names = ["all594687.dat", "all594791.dat", "all594842.dat"];
+    const file = "experiments/d20.edi";
+    const limits = narrow ? [14.1249, 14.1251] : [14, 16];
+    const previous = proof.text(root, file);
+    let template = previous.slice(0, previous.indexOf("loop_\n_data.two_theta"));
+    template = template.replace("1 0. 8", "1 " + limits.join(" "));
+    template += "loop_\n_data.two_theta\n_data.intensity_meas\n_data.intensity_meas_su\n";
+    // These exact conversion knots include the narrow interval and its centre.
+    for (const x of [10, 12, 14, 14.1249, 14.125, 14.1251, 16, 18, 20])
+        template += x + " 128 1\n";
+    if (!proof.write(root, file, template))
+        throw Error("The analytic excluded interval could not be written");
+    for (let row = 0; row < names.length; ++row) {
+        let text = "XYDATA independent gap\nTEMP " + [100, 250, 700][row] + "\n";
+        const count = dense ? 10000 : 1;
+        for (let i = 0; i <= count; ++i)
+            text += (10 + 10 * i / count).toFixed(4) + " " + [64, 128, 255][row] + " 1\n";
+        if (!proof.write(root, "experiments/d20_scan/" + names[row], text))
+            throw Error("The independent sparse or dense gap dataset could not be written");
+    }
+}
