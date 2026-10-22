@@ -201,6 +201,56 @@
         "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/structures/hs.edi"
       ]
     },
+    "pd-neut-tof_si-sepd_basic": {
+      "samples": [
+        "Silicon [Fd-3m]"
+      ],
+      "origin": "SEPD @ Argonne",
+      "detail": "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "Argonne"
+        ],
+        "instruments": [
+          "SEPD"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_si-sepd_basic",
+        "Silicon [Fd-3m] · SEPD @ Argonne",
+        "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/structures/si.edi"
+      ]
+    },
     "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
       "samples": [
         "PbSO₄ [Pnma]"
