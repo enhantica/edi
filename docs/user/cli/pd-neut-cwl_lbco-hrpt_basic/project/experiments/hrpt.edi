@@ -16,7 +16,7 @@ _peak.broad_lorentz_y 0.08()
 _peak.cutoff_fwhm 30
 
 _instrument.setup_wavelength 1.494
-_instrument.calib_twotheta_offset 0()
+_instrument.calib_twotheta_offset 0.6()
 
 loop_
 _excluded_region.id

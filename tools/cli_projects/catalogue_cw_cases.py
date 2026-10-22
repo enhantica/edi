@@ -123,7 +123,9 @@ def lbco_hrpt_basic() -> dict[str, str]:
             f'_peak.broad_lorentz_y {free(0.08)}',
             '_peak.cutoff_fwhm 30',
         ],
-        ['_instrument.setup_wavelength 1.494', f'_instrument.calib_twotheta_offset {free(0)}'],
+        # HRPT's own 2θ zero, as its calibration gives it: from 0 the low-angle peaks sit more than a
+        # width away and the fit settles in a wrong minimum.
+        ['_instrument.setup_wavelength 1.494', f'_instrument.calib_twotheta_offset {free(0.6)}'],
         excluded_loop(excluded),
         loop(['_linked_structure.structure_id', '_linked_structure.scale'], [['lbco', free(9)]]),
         flat_background([10, 30, 50, 110, 165], level),
