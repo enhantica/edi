@@ -53,10 +53,16 @@ function(edi_core_sources root out)
     endforeach()
     configure_file(${root}/core/src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
-    # ADR-0041: the 2D map's colour map (data/colormaps/viridis.tsv, PROVENANCE.md beside it), embedded the same way.
-    set(EDI_VIRIDIS_TSV ${root}/data/colormaps/viridis.tsv)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_VIRIDIS_TSV})
-    file(READ ${EDI_VIRIDIS_TSV} EDI_VIRIDIS)
+    # ADR-0041: the 2D map's colour maps (data/colormaps, PROVENANCE.md beside them), embedded the same way, one per
+    # edi::ScanColourMap in its order.
+    set(EDI_COLOUR_MAPS viridis magma inferno plasma)
+    set(EDI_COLOUR_MAP_TABLES "")
+    foreach(map IN LISTS EDI_COLOUR_MAPS)
+        set(map_tsv ${root}/data/colormaps/${map}.tsv)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${map_tsv})
+        file(READ ${map_tsv} colour_map)
+        string(APPEND EDI_COLOUR_MAP_TABLES "    R\"edi_colour_map(${colour_map})edi_colour_map\",\n")
+    endforeach()
     configure_file(${root}/core/src/colour_map_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/colour_map_data.cpp @ONLY)
 
     # ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes

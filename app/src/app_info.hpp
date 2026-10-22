@@ -140,6 +140,10 @@ class ApplicationInfo : public QObject {
     QStringList colourSchemes() const;
     QStringList colourSchemeTitles() const;
     Q_INVOKABLE QString colourSchemeOrDefault(const QString& scheme) const;
+    // A scan map's colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for.
+    Q_PROPERTY(QStringList scanColourMaps READ scanColourMaps CONSTANT)
+    QStringList scanColourMaps() const;
+    Q_INVOKABLE QString scanColourMapOrDefault(const QString& name) const;
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;

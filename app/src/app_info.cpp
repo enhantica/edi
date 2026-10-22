@@ -4,6 +4,7 @@
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
 #include "edi/palette.hpp"
+#include "edi/scan_views.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/threading.hpp"
 
@@ -215,6 +216,19 @@ QStringList ApplicationInfo::colourSchemeTitles() const {
 QString ApplicationInfo::colourSchemeOrDefault(const QString& scheme) const {
     const std::string_view name = edi::colour_scheme_names()[static_cast<std::size_t>(colour_scheme(scheme))];
     return QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size()));
+}
+
+QStringList ApplicationInfo::scanColourMaps() const {
+    QStringList names;
+    for (const std::string& name : edi::scan_colour_map_names()) {
+        names.append(QString::fromStdString(name));
+    }
+    return names;
+}
+
+QString ApplicationInfo::scanColourMapOrDefault(const QString& name) const {
+    return QString::fromStdString(
+        edi::scan_colour_map_names()[static_cast<std::size_t>(edi::scan_colour_map_or_default(name.toStdString()))]);
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {

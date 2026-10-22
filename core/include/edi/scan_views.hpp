@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 // The two views of a sequential fit's patterns (edi ADR-0041): every dataset's measured pattern one above another,
@@ -31,11 +33,19 @@ struct ScanRowSpan {
 };
 std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions);
 
-/// The 2D map's colour of `t` in [0, 1] (viridis, data/colormaps/PROVENANCE.md), clamped to the ends; none (alpha 0)
-/// for a value that is not finite.
+/// The 2D map's colour maps (data/colormaps/PROVENANCE.md), in the order the app offers them; viridis is the default.
+enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
+/// The maps' names ("viridis", "magma", "inferno", "plasma"), in the enum's order.
+const std::vector<std::string>& scan_colour_map_names();
+/// The map a saved name stands for; viridis for a name that is none of them.
+ScanColourMap scan_colour_map_or_default(std::string_view name);
+
+/// A colour map's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
 struct ScanMapColour {
     std::uint8_t r = 0, g = 0, b = 0, a = 0;
 };
+ScanMapColour scan_map_colour(ScanColourMap map, double t);
+/// viridis's colour of `t`.
 ScanMapColour scan_map_colour(double t);
 
 }  // namespace edi
