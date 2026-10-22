@@ -144,33 +144,40 @@ Column {
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.x)
+                number: group.shown(row.model.x)
+                full: NumberText.plainFull(row.model.x)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeas)
+                number: group.intensity(row.model.intensityMeas)
+                full: NumberText.plainFull(row.model.intensityMeas)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeasSu)
+                number: group.intensity(row.model.intensityMeasSu)
+                full: NumberText.plainFull(row.model.intensityMeasSu)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityCalc)
+                number: group.intensity(row.model.intensityCalc)
+                full: NumberText.plainFull(row.model.intensityCalc)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.dSpacing)
+                number: group.shown(row.model.dSpacing)
+                full: NumberText.plainFull(row.model.dSpacing)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityBkg)
+                number: group.intensity(row.model.intensityBkg)
+                full: NumberText.plainFull(row.model.intensityBkg)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.residual)
+                number: group.intensity(row.model.residual)
+                full: NumberText.plainFull(row.model.residual)
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {

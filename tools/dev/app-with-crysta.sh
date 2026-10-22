@@ -30,6 +30,18 @@ for name in USER LANG LC_ALL PIXI_CACHE_DIR RATTLER_CACHE_DIR XDG_CACHE_HOME CCA
     http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY SSL_CERT_FILE; do
     [ -z "${!name:-}" ] || clean+=("$name=${!name}")
 done
+# On a Mac, stop early when the selected SDK or Apple's C++ tools are not ready (Xcode setup or licence not done,
+# Command Line Tools missing), with Apple's own message, before anything is installed or built.
+if [ "$(uname -s)" = Darwin ]; then
+    if ! macos_sdk="$("${clean[@]}" /usr/bin/xcrun --sdk macosx --show-sdk-path)" ||
+        [ -z "$macos_sdk" ] || [ ! -d "$macos_sdk" ] ||
+        ! "${clean[@]}" /usr/bin/xcrun --sdk macosx clang++ --version >/dev/null; then
+        echo "app-with-crysta: the selected macOS developer tools are not ready (see Apple's message above)." >&2
+        echo "app-with-crysta: open Xcode to finish its setup, or install the Command Line Tools; if Apple asks for" >&2
+        echo "app-with-crysta: a licence review, run 'sudo xcodebuild -license' yourself." >&2
+        exit 1
+    fi
+fi
 echo "app-with-crysta: building crysta from $src ($(git -C "$src" describe --always --dirty 2>/dev/null || echo 'no git')); crysta's tests are not run"
 # The `cpp-ci` environment is brought to crysta's lock file first, so an environment made before a pin
 # moved is updated. Where crysta's own Python package is not installed yet, it stays out: its editable

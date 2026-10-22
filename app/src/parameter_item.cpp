@@ -111,6 +111,10 @@ void ParameterItem::setFree(bool free) {
         setLastError(tr("this is a fixed setting, never fitted"));
         return;
     }
+    if (const QString refusal = editor_.free_refusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return;
+    }
     edi::Parameter* parameter = parameter_;
     setLastError(editor_.apply(edi::Edit::assign(parameter->free, free), false));
 }

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import PatternPolishAcceptance 1.0
 import "RenderedTable.js" as Render
 
 Item {
@@ -132,41 +133,50 @@ Item {
         function test_reopened_powder_results_display_percent_and_bank_phase_identity() {
             Session.closeProject();
             verify(Session.openProject(Qt.resolvedUrl("../../fixtures/fit_quality/gui")), "The independent result fixture opens");
-            const rows = Probe.rows(Session.project.fit.results);
-            function label(index) {
-                return Probe.plainText(String(rows[index].metric));
-            }
-            function ownership(index, bank, phase) {
-                if (phase && !label(index).includes(phase)) return false;
-                if (label(index).includes(bank)) return true;
-                for (let prior = index - 1; prior >= 0; --prior)
-                    if (label(prior).includes("hrpt") || label(prior).includes("aux"))
-                        return label(prior).includes(bank);
-                return false;
-            }
-            function metric(pattern, value, bank, phase, percentage) {
-                const found = rows.map((row, index) => index).filter(index => pattern.test(label(index)) && ownership(index, bank, phase));
-                verify(found.length > 0, "The displayed metric retains its experiment and phase ownership: " + String(pattern) + " / " + bank + " / " + phase);
-                const matching = found.filter(index => Math.abs(Number(String(rows[index].value).replace("%", "")) - value) < 0.0051);
-                verify(matching.length > 0, "The displayed value uses the required percent or dimensionless convention");
-                if (!percentage)
-                    verify(!String(rows[matching[0]].value).includes("%"), "Chi square is dimensionless and never rendered as a percentage");
-                return matching[0];
-            }
+            const summary = Probe.rows(Session.project.fit.results);
+            const agreement = Session.project.fit.results.agreement;
+            const rows = Probe.rows(agreement);
+            const columns = agreement.columns;
+            compare(rows.length, 3, "The saved joint result retains its global row and both named datasets");
+            compare(columns.map(column => column.factor).join("|"), "R<sub>p</sub>|R<sub>wp</sub>|R<sub>exp</sub>|cR<sub>p</sub>|cR<sub>wp</sub>|R<sub>Bragg</sub>|R<sub>F</sub>", "Agreement columns follow the owner-approved conventional, corrected and phase factor order");
+            compare(columns[5].structure, "lbco", "The Bragg column names its actual linked structure");
+            compare(columns[6].structure, "lbco", "The amplitude column names the same linked structure");
+            const chi = PatternProof.fitRecord(Session.project).bankChi;
             for (const expected of [
-                {bank: "hrpt", rwp: 12.34, rp: 8.76, rexp: 6.54, crp: 18.76, cwrp: 22.34, chi: 3.56, bragg: 4.32, amplitude: 2.10},
-                {bank: "aux", rwp: 31.23, rp: 21.54, rexp: 9.87, crp: 41.56, cwrp: 51.23, chi: 7.89, bragg: 14.32, amplitude: 12.10}
+                {
+                    bank: "hrpt",
+                    rwp: 12.34,
+                    rp: 8.76,
+                    rexp: 6.54,
+                    crp: 18.76,
+                    cwrp: 22.34,
+                    chi: 3.56,
+                    bragg: 4.32,
+                    amplitude: 2.10
+                },
+                {
+                    bank: "aux",
+                    rwp: 31.23,
+                    rp: 21.54,
+                    rexp: 9.87,
+                    crp: 41.56,
+                    cwrp: 51.23,
+                    chi: 7.89,
+                    bragg: 14.32,
+                    amplitude: 12.10
+                }
             ]) {
-                const rwp = metric(/\bRwp\b/, expected.rwp, expected.bank, "", true);
-                const rp = metric(/\bRp\b/, expected.rp, expected.bank, "", true);
-                metric(/Rexp/, expected.rexp, expected.bank, "", true);
-                metric(/cRp|Rp.*(?:corr|background)|(?:corr|background).*Rp/i, expected.crp, expected.bank, "", true);
-                metric(/c(?:Rw|wR)p|Rwp.*(?:corr|background)|(?:corr|background).*Rwp/i, expected.cwrp, expected.bank, "", true);
-                metric(/χ²|chi.?square|chi.?2/i, expected.chi, expected.bank, "", false);
-                metric(/Bragg/, expected.bragg, expected.bank, "lbco", true);
-                metric(/R.?F|amplitude/, expected.amplitude, expected.bank, "lbco", true);
-                verify(rwp < rp, "Rwp precedes the other profile factors for each experiment");
+                const matching = rows.filter(row => row.label === expected.bank);
+                compare(matching.length, 1, "Every independent bank has exactly one agreement row with its own identity");
+                const row = matching[0];
+                compare(row.values.length, 7, "Every bank retains all profile, corrected and linked-phase factors");
+                const values = [expected.rp, expected.rwp, expected.rexp, expected.crp, expected.cwrp, expected.bragg, expected.amplitude];
+                values.forEach((value, column) => verify(Math.abs(Number(row.values[column]) - value) < .0051, "Every independently declared bank and phase factor is displayed as a percentage"));
+                verify(Math.abs(Number(chi[expected.bank]) - expected.chi) < 1e-12, "The retired bank chi-square display remains checked in the loaded result with its dimensionless value");
             }
+            const globalChi = summary.find(row => /χ/.test(row.metric));
+            verify(globalChi !== undefined && !globalChi.value.includes("%"), "The summary's reduced chi-square stays dimensionless rather than a percentage");
+            compare(globalChi.value, "5.56", "The summary retains the independently saved global reduced chi-square");
         }
         function test_latest_fit_clears_visible_uncertainty_and_undo_restores_it_data() {
             return ["single", "sequential", "independent"].map(mode => ({tag: mode, mode: mode}));

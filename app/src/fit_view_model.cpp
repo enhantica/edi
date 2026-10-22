@@ -59,6 +59,8 @@ QString status_text(edi::FitStatus status) {
 // A fit's time as the status bar shows it: two significant digits, never fewer than the whole seconds (0.41s, 3.2s,
 // 127s; edi::duration_text).
 QString duration(double seconds) { return QString::fromStdString(edi::duration_text(seconds)) + QStringLiteral("s"); }
+// The same time as the fit results table writes it, with a space before the unit: 1.3 s (the owner, 2026-10-21).
+QString seconds(double value) { return QString::fromStdString(edi::duration_text(value)) + QStringLiteral(" s"); }
 
 }  // namespace
 
@@ -68,11 +70,13 @@ QString recorded_outcome(const edi::FitResultRecord& result) {
 
 // ---- FitResultListModel --------------------------------------------------------------------------
 
-FitResultListModel::FitResultListModel(QObject* parent) : RowTableModel({"icon", "metric", "value", "outcome"}, parent) {}
+FitResultListModel::FitResultListModel(QObject* parent)
+    : RowTableModel({"icon", "metric", "value", "outcome"}, parent), agreement_(new FitAgreementModel(this)) {}
 
 void FitResultListModel::setRecord(const edi::Project& project) {
-    // diffraction-lib's rows (analysis/fit_helpers/reporting.py, _build_fit_results_rows), from the result the
-    // project records: crysta computes χ² and the R factors, the powder ones in place of diffraction-lib's.
+    // diffraction-lib's rows (analysis/fit_helpers/reporting.py, _build_fit_results_rows) down to the global reduced
+    // χ², from the result the project records; the agreement factors are the second table (edi ADR-0045). The
+    // status bar names the minimizer, so the table does not.
     const edi::FitResultRecord& result = project.fit_result;
     if (!result.held()) {
         clear();
@@ -85,55 +89,130 @@ void FitResultListModel::setRecord(const edi::Project& project) {
         rows.append(
             {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
     };
-    // The descent that produced the result, never the one selected since; a record written before it was kept
-    // names the engine only.
-    const QString descent = QString::fromStdString(result.descent);
-    row(QStringLiteral("flask"), tr("Minimizer"),
-        descent.isEmpty() ? QStringLiteral("crysta") : QStringLiteral("crysta (%1)").arg(descent));
     const edi::FitStatus status = status_of(result);
     row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
-    row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(result.fitting_time)));
+    row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(result.fitting_time));
     row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
     row(QStringLiteral("ruler"), tr("Goodness-of-fit (reduced χ²)"), chi(result.reduced_chi_square));
-    // crysta's R factors are fractions; diffraction-lib's table shows its R-factors in per cent. Rwp comes first; a
-    // factor a result written before it does not hold has no row.
-    const auto percent = [&row](const QString& metric, const std::optional<double>& value) {
-        if (value.has_value()) {
-            row(QStringLiteral("ruler"), metric, QString::number(*value * 100.0, 'f', 2));
-        }
+    setTableRows(rows);
+    agreement_->setRecord(project);
+}
+
+// ---- FitAgreementModel ---------------------------------------------------------------------------
+
+FitAgreementModel::FitAgreementModel(QObject* parent) : RowTableModel({"label", "place", "values"}, parent) {}
+
+void FitAgreementModel::setRecord(const edi::Project& project) {
+    const edi::FitResultRecord& result = project.fit_result;
+    if (!result.held()) {
+        clear();
+        return;
+    }
+    // crysta's R factors are fractions; the table shows them in per cent, as FullProf and diffraction-lib do.
+    const auto percent = [](const std::optional<double>& value) {
+        return value.has_value() ? QString::number(*value * 100.0, 'f', 2) : QString();
     };
-    percent(tr("Weighted profile R-factor (Rwp, %)"), result.prof_wr_factor);
-    percent(tr("Profile R-factor (Rp, %)"), result.prof_r_factor);
-    percent(tr("Expected R-factor (Rexp, %)"), result.prof_wr_expected);
-    percent(tr("Background-corrected Rwp (cRwp, %)"), result.prof_cwr_factor);
-    percent(tr("Background-corrected Rp (cRp, %)"), result.prof_cr_factor);
-    // Each experiment's own factors when the fit covered several; one experiment's are the ones above.
-    const auto fitted =
-        std::count_if(project.experiments.begin(), project.experiments.end(),
-                      [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
+    // 2026-10-21).
+    QList<AgreementColumn> columns;
+    const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
+        columns.append(AgreementColumn{factor, structure, place});
+    };
+    column(QStringLiteral("R<sub>p</sub>"));
+    column(QStringLiteral("R<sub>wp</sub>"));
+    column(QStringLiteral("R<sub>exp</sub>"));
+    column(QStringLiteral("cR<sub>p</sub>"));
+    column(QStringLiteral("cR<sub>wp</sub>"));
+    // A link with no structure id names the project's first structure.
+    const auto structure_of = [&project](const edi::LinkedStructure& link) {
+        const std::string& linked = link.structure_id.value();
+        return linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked;
+    };
+    std::vector<std::string> structures;
     for (const auto& experiment : project.experiments) {
-        const QString name = QString::fromStdString(experiment->name);
-        if (fitted > 1) {
-            percent(tr("Rwp, %1 (%)").arg(name), experiment->fit_prof_wr_factor);
-            percent(tr("Rp, %1 (%)").arg(name), experiment->fit_prof_r_factor);
-            percent(tr("Rexp, %1 (%)").arg(name), experiment->fit_prof_wr_expected);
-            percent(tr("cRwp, %1 (%)").arg(name), experiment->fit_prof_cwr_factor);
-            percent(tr("cRp, %1 (%)").arg(name), experiment->fit_prof_cr_factor);
-            if (experiment->fit_chi_square.has_value()) {  // its own χ², dimensionless, beside the global reduced one
-                row(QStringLiteral("ruler"), tr("χ², %1").arg(name), chi(*experiment->fit_chi_square));
+        for (const auto& link : experiment->linked_structures) {
+            const std::string name = structure_of(*link);
+            if (std::find(structures.begin(), structures.end(), name) == structures.end()) {
+                structures.push_back(name);
             }
         }
-        // Each phase's, named by its structure (and its experiment when there are several).
-        for (const auto& link : experiment->linked_structures) {
-            const std::string& linked = link->structure_id.value();
-            const QString phase = QString::fromStdString(
-                linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked);
-            const QString label = fitted > 1 ? QStringLiteral("%1 / %2").arg(name, phase) : phase;
-            percent(tr("Bragg R-factor (R_Bragg), %1 (%)").arg(label), link->fit_bragg_r_factor);
-            percent(tr("Structure-factor R-factor (R_F), %1 (%)").arg(label), link->fit_f_r_factor);
+    }
+    // In the project's structure order.
+    std::vector<std::pair<std::string, int>> ordered;
+    for (std::size_t i = 0; i < project.structures.size(); ++i) {
+        const std::string& name = project.structures[i]->name.value();
+        if (std::find(structures.begin(), structures.end(), name) != structures.end()) {
+            ordered.emplace_back(name, static_cast<int>(i));
         }
     }
+    for (const auto& [name, place] : ordered) {
+        column(QStringLiteral("R<sub>Bragg</sub>"), QString::fromStdString(name), place);
+        column(QStringLiteral("R<sub>F</sub>"), QString::fromStdString(name), place);
+    }
+
+    QList<Row> rows;
+    int key = 0;
+    const auto row = [&rows, &key](const QString& label, int place, const QStringList& values) {
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {label, place, values}});
+    };
+    // The datasets of the fit: those holding their own factors, or, in a record with no per-dataset factors, the
+    // first experiment, as the experiment selector reads it (ExperimentListModel).
+    const bool shares =
+        std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    const auto in_fit = [&](std::size_t i) {
+        return shares ? project.experiments[i]->fit_prof_wr_factor.has_value() : i == 0;
+    };
+    std::size_t datasets = 0;
+    for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+        datasets += in_fit(i) ? 1 : 0;
+    }
+    const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
+    const QStringList global{percent(result.prof_r_factor), percent(result.prof_wr_factor),
+                             percent(result.prof_wr_expected), percent(result.prof_cr_factor),
+                             percent(result.prof_cwr_factor)};
+    // The global row only when it does not repeat a single dataset's own (the owner, 2026-10-21); a phase factor is
+    // not defined over several datasets.
+    if (datasets != 1) {
+        row(tr("All datasets"), -1, global + blank_structures);
+    }
+    for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+        if (!in_fit(i)) {
+            continue;
+        }
+        const edi::ExperimentBase& experiment = *project.experiments[i];
+        // Without its own factors the one dataset's are the global ones.
+        QStringList values = shares ? QStringList{percent(experiment.fit_prof_r_factor),
+                                                  percent(experiment.fit_prof_wr_factor),
+                                                  percent(experiment.fit_prof_wr_expected),
+                                                  percent(experiment.fit_prof_cr_factor),
+                                                  percent(experiment.fit_prof_cwr_factor)}
+                                    : global;
+        for (const auto& [name, place] : ordered) {
+            QString bragg, f;
+            for (const auto& link : experiment.linked_structures) {
+                if (structure_of(*link) == name) {
+                    bragg = percent(link->fit_bragg_r_factor);
+                    f = percent(link->fit_f_r_factor);
+                }
+            }
+            values << bragg << f;
+        }
+        row(QString::fromStdString(experiment.name), static_cast<int>(i), values);
+    }
+    if (columns != columns_) {
+        columns_ = columns;
+        emit columnsChanged();
+    }
     setTableRows(rows);
+}
+
+void FitAgreementModel::clear() {
+    setTableRows({});
+    if (!columns_.isEmpty()) {
+        columns_.clear();
+        emit columnsChanged();
+    }
 }
 
 namespace {
@@ -157,6 +236,7 @@ QString outcome_word(const QString& key) {
 }  // namespace
 
 void FitResultListModel::setScan(const ScanSummary& summary) {
+    agreement_->clear();  // a scan's agreement factors are in the Evolution tab
     if (summary.processed() == 0 && summary.outcome.isEmpty()) {
         clear();
         return;
@@ -168,11 +248,10 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
         rows.append(
             {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
     };
-    row(QStringLiteral("flask"), tr("Minimizer"), QStringLiteral("crysta"));
     row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
     // The run's time when this app ran it; the driver's results record none.
     if (summary.seconds >= 0.0) {
-        row(QStringLiteral("stopwatch"), tr("Fitting time (seconds)"), QString::fromStdString(edi::duration_text(summary.seconds)));
+        row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(summary.seconds));
     }
     row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
     row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
@@ -190,7 +269,10 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     setTableRows(rows);
 }
 
-void FitResultListModel::clear() { setTableRows({}); }
+void FitResultListModel::clear() {
+    setTableRows({});
+    agreement_->clear();
+}
 
 // ---- FitViewModel ---------------------------------------------------------------------------------
 
@@ -380,8 +462,19 @@ void FitViewModel::sync() {
     const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
     const bool scan = edi::is_scan_fitting_mode(mode.toStdString());
     const bool declared = project_.sequential_fit.declared();
+    if (scan != scan_mode_) {
+        scan_mode_ = scan;
+        emit scanModeChanged();
+    }
+    const bool measured = has_measured_data(project_);
+    if (measured != measured_) {
+        measured_ = measured;
+        emit measuredChanged();
+    }
     QString reason;
-    if (scan) {
+    if (!measured) {
+        reason = tr("A fit needs measured data: no experiment in this project has any");
+    } else if (scan) {
         reason = owner_.scanRefusal();
         if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
             reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");

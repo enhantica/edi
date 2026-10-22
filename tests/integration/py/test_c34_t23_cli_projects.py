@@ -1,6 +1,6 @@
 #  adaptation: seed inputs/pins were byte-identical and three seeds non-executing.
 #  additionally requires the seven declared imported minimizers to be crysta.
-# Only those declarations, analysis descent/tolerance additions and scan pins may change;
+# Only those declarations, analysis settings, scan pins and validated excluded cells may change;
 # all seeds execute. Every other original blob and every deferred-seed expected.json stay pinned.
 """CLI project plane: independent source identity and consumed-model semantics.
 
@@ -26,6 +26,7 @@ from mkdocs.config import load_config
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,11 +37,21 @@ IDS = json.loads((FIXTURES / 'project-ids.json').read_text())
 PROJECT_IDS = IDS['source_to_project']
 
 
-def blob_id(path):
-    raw = original_tokens(path.read_bytes())
+def content_id(raw):
     return hashlib.sha1(
         b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
     ).hexdigest()
+
+
+def blob_id(path):
+    return content_id(original_tokens(path.read_bytes()))
+
+
+def retained_seed_bytes(name, raw, expected):
+    # Keep the imported blob pins; validate excluded cells before reversing their new spelling.
+    if content_id(raw) == expected:
+        return raw
+    return historical_excluded_bytes(name.removeprefix('project/'), raw)
 
 
 def require_estimate_cli_extension(path, name, live_directory):
@@ -196,11 +207,9 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
             raw = original_tokens(path.read_bytes()).replace(
                 b'_calculator.type crysta', b'_calculator.type cryspy'
             )
-            restored = hashlib.sha1(
-                b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
-            ).hexdigest()
-            assert restored == expected[name], (
-                ' calculator adaptation retains every other byte of the original seed'
+            raw = retained_seed_bytes(name, raw, expected[name])
+            assert content_id(raw) == expected[name], (
+                'Calculator and validated excluded-cell adaptations retain every other seed byte'
             )
             continue
         if (project_id, name) in {
@@ -217,8 +226,10 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                 'only the declared Co Biso or NCAF follower flags may alter a seed structure'
             )
             continue
-        assert blob_id(path) == expected[name], (
-            ' seed bytes must retain source blob ids and regression-pin kinds'
+        raw = retained_seed_bytes(name, original_tokens(path.read_bytes()), expected[name])
+        assert content_id(raw) == expected[name], (
+            'Seed bytes retain source blob ids and regression-pin kinds after the validated '
+            'excluded-cell convention reversal'
         )
 
 

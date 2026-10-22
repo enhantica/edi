@@ -169,6 +169,8 @@ AppDialog {
         clip: true
         // A gap between the pages, so no tab's controls reach into the shown one.
         spacing: EaStyle.Sizes.fontPixelSize * 2
+        // A tab shows at once, without the swipe's slide, so its columns are where every other tab has them.
+        Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
         // Prompts, as the base's
         RowGrid {

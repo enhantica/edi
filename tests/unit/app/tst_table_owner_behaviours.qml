@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import EasyApplication.Gui.Elements as Elements
 import EasyApplication.Gui.Globals as Globals
@@ -68,9 +69,14 @@ TestCase {
     function pane(page, tier) {
         Ui.click(test, Probe, appWindow, "appBar.tab." + page);
         tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 2000, "The selected page reaches the real viewport");
-        const tab = Ui.control(Probe, appWindow, "sideBar.tab." + tier);
-        if (tab && !tab.checked)
-            Ui.click(test, Probe, appWindow, "sideBar.tab." + tier);
+        Ui.click(test, Probe, appWindow, "sideBar.tab." + tier);
+        const root = Ui.page(appWindow);
+        const pageItem = root.item ?? root;
+        const source = tier === "extras" ? pageItem.extrasItem : pageItem.basicItem;
+        tryVerify(() => {
+            const loader = Review.descendants(pageItem).find(item => item.sourceComponent === source);
+            return loader !== undefined && loader.SwipeView.isCurrentItem && Math.abs(loader.mapToItem(loader.SwipeView.view, 0, 0).x) < 1;
+        }, 2000, "The selected sidebar content reaches its actual horizontal viewport");
         verify(waitForPolish(appWindow), "The selected sidebar completes actual layout");
     }
     function named(root, name) {
@@ -114,18 +120,22 @@ TestCase {
         verify(index > 0, "The independent olivine input exposes a coordinates subset");
         mouseClick(picker, picker.width / 2, picker.height / 2);
         tryCompare(picker.popup, "visible", true, 2000, "The real category picker opens through input");
-        keyClick(Qt.Key_Home);
+        appWindow.requestActivate();
+        picker.forceActiveFocus();
+        tryCompare(picker, "activeFocus", true, 2000, "The actual category picker receives keyboard focus");
+        verify(SettingsProof.key(picker, Qt.Key_Home), "The category picker receives the first-entry key");
         for (let i = 0; i < index; ++i)
-            keyClick(Qt.Key_Down);
-        keyClick(Qt.Key_Return);
+            verify(SettingsProof.key(picker, Qt.Key_Down), "The category picker receives each next-entry key");
+        verify(SettingsProof.key(picker, Qt.Key_Return), "The category picker receives the activation key");
         tryVerify(() => table.count > 0 && table.count < total, 2000, "Activating the real category choice narrows the visible table");
         const rows = Probe.rows(table.model);
-        verify(rows.every(row => /\.atom_site\.[^.]+\.fract_[xyz]$/.test(row.path)), "The visible rows contain only the independently declared coordinate family");
+        verify(rows.every(row => row.category === "atom_site" && ["fract_x", "fract_y", "fract_z"].includes(row.name)), "The visible rows contain only the independently declared coordinate family");
         table.forceLayout();
         verify(table.itemAtIndex(0) !== null, "The filtered family has a real visible parameter delegate");
         mouseClick(picker, picker.width / 2, picker.height / 2);
-        keyClick(Qt.Key_Home);
-        keyClick(Qt.Key_Return);
+        picker.forceActiveFocus();
+        verify(SettingsProof.key(picker, Qt.Key_Home), "The category picker receives the All-entry key");
+        verify(SettingsProof.key(picker, Qt.Key_Return), "The category picker receives the restore activation key");
         tryCompare(table, "count", total, 2000, "Choosing All through the same picker restores every visible parameter row");
     }
     function assertBetaDelegateAlignment(body, expected) {
@@ -166,11 +176,16 @@ TestCase {
         for (const height of [760, 1060]) {
             appWindow.height = height;
             verify(waitForPolish(appWindow), "A changed real window height relays out the Analysis sidebar");
-            table.contentY = 0;
+            appWindow.update();
+            verify(waitForRendering(appWindow.contentItem), "The resized application renders before table geometry is inspected");
+            if (heights.length)
+                tryVerify(() => table.height > heights[heights.length - 1], 2000, "The taller window lays out its larger Analysis table before inspection");
+            table.positionViewAtBeginning();
             table.forceLayout();
             const fitting = named(Ui.page(appWindow), "group.fitting");
             const group = named(Ui.page(appWindow), "group.parameters");
             const sidebar = group.parent;
+            tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01, 2000, "The Analysis group finishes resizing before its ancestor clip is inspected");
             const bottom = fitting.mapToItem(sidebar, 0, fitting.height).y;
             verify(Math.abs(sidebar.height - bottom) <= Style.Sizes.tableRowHeight + Style.Sizes.fontPixelSize * 2, "The Analysis controls fill the actual available sidebar height to within one row");
             const first = table.itemAtIndex(0);
@@ -209,7 +224,7 @@ TestCase {
         const a = named(chart, "chart.toolbar.legend"), b = named(chart, "chart.toolbar.hover");
         const expected = b.x - a.x - a.width;
         verify(expected >= 0, "The real chart buttons expose their within-group gap");
-        const cases = [["project", "basic", "examples", ["examples.search", "examples.property", "examples.value"]], ["experiment", "extras", "data", ["range.minimum", "range.maximum", "range.step", "range.points"]], ["analysis", "basic", "parameters", ["parameters.nameFilter", "parameters.category", "parameters.variability"]]];
+        const cases = [["project", "basic", "examples", ["examples.search", "examples.property", "examples.value"]], ["experiment", "extras", "data", ["range.minimum", "range.maximum", "range.step", "range.points"]], ["analysis", "basic", "parameters", ["parameters.datablock", "parameters.category", "parameters.variability"]], ["analysis", "basic", "parameters", ["parameters.nameFilter", "parameters.clearFilters"]]];
         for (const data of cases) {
             pane(data[0], data[1]);
             const group = data[2] === "parameters" ? named(Ui.page(appWindow), "group.parameters") : expand(data[2]);
@@ -267,7 +282,7 @@ TestCase {
             verify(waitForPolish(appWindow), "Changing parameter freedom updates both actual consumers");
             for (const input of [cell, field]) {
                 compare(input.font.bold, free, "Both consumers change weight with parameter freedom");
-                compare(input.color, free ? Style.Colors.chartForegroundsExtra[1] : Style.Colors.themeForeground, "Both consumers change residual green with parameter freedom");
+                tryCompare(input, "color", free ? Style.Colors.green : Style.Colors.themeForeground, 2000, "Both consumers share the status green for free parameters and restore foreground when fixed");
             }
         }
     }
@@ -312,21 +327,29 @@ TestCase {
             outcomeRole: "fitOutcome"
         });
         verify(selector !== null && waitForPolish(selector), "The real block selector consumes independent template metadata");
+        appWindow.update();
+        verify(waitForRendering(selector), "The selector lays out and renders its actual text before spacing is inspected");
         markerAfterName(selector);
         const box = Render.descendants(selector).find(item => item.popup && typeof item.currentText === "string" && item !== selector);
         verify(box !== undefined, "The actual selector choice control exists");
         mouseClick(box, box.width / 2, box.height / 2);
         tryCompare(selector.popup, "visible", true, 2000, "A real click opens the template selector popup");
+        tryCompare(selector.popup, "opened", true, 2000, "The actual selector popup finishes opening before text geometry is inspected");
+        verify(waitForPolish(selector.popup.contentItem), "The actual selector popup finishes its text layout");
+        verify(waitForRendering(selector.popup.contentItem), "The actual selector popup renders its settled text geometry");
         markerAfterName(selector.popup.contentItem);
         selector.popup.close();
     }
     function test_example_description_has_visible_identity_facets_and_detail() {
+        Ui.click(test, Probe, appWindow, "home.start");
         pane("project", "basic");
         const group = expand("examples");
         const search = named(group, "examples.search");
+        Ui.scrollIntoView(search);
+        appWindow.requestActivate();
         search.forceActiveFocus();
-        for (const character of "cosio-d20_start-1")
-            keyClick(character.charCodeAt(0));
+        tryCompare(search, "activeFocus", true, 2000, "The actual example search receives keyboard focus");
+        verify(SettingsProof.type(search, "cosio-d20_start-1"), "The actual example search receives its independently named input");
         const table = named(group, "examples.list");
         tryCompare(table, "count", 1, 2000, "The actual search isolates the independently named olivine example");
         const row = table.itemAtIndex(0);
@@ -335,7 +358,8 @@ TestCase {
         const identity = text.find(item => item.text.includes("Co₂SiO₄") && item.text.includes("D20 @ ILL"));
         const detail = text.find(item => item.text.includes("Starting model 1"));
         verify(identity !== undefined && detail !== undefined, "The example shows the independent sample, facility and starting-model identities");
-        verify(identity.font.bold && !detail.font.bold, "The visible example identity is distinguished from its secondary detail");
+        compare(identity.color, Style.Colors.themeForeground, "The example identity uses the app foreground for its complete chemical formula");
+        compare(detail.color, Style.Colors.themeForegroundMinor, "The example detail remains secondary to its scientific identity");
         const facets = text.filter(item => ["Fitting", "Single", "powder", "pd", "neut", "cwl", "Bragg"].includes(item.text));
         verify(facets.length > 0, "The example's scientific and workflow facets have their own visible line");
         const identityY = identity.mapToItem(row, 0, 0).y, detailY = detail.mapToItem(row, 0, 0).y;
@@ -350,6 +374,7 @@ TestCase {
             dialog = Probe.visibleDialogs(appWindow).find(item => item.title === "About");
             return dialog !== undefined;
         }, 2000, "The actual Home action opens About");
+        tryCompare(dialog, "opened", true, 2000, "The actual About dialog finishes opening before navigation");
         return dialog;
     }
     function singleAbout(dialog) {
@@ -358,8 +383,18 @@ TestCase {
         compare(dialogs[0], dialog, "Licence and notices remain in the original About window");
     }
     function textInDialog(dialog, name) {
-        const item = Review.find(dialog.contentItem, name);
-        verify(item !== null && Ui.rendered(item), "The selected About view has its actual visible text consumer: " + name);
+        let item = null;
+        tryVerify(() => {
+            item = Review.find(dialog.contentItem, name);
+            if (item === null || !Ui.rendered(item))
+                return false;
+            for (let parent = item.parent; parent; parent = parent.parent) {
+                const view = parent.SwipeView.view;
+                if (view && (!parent.SwipeView.isCurrentItem || Math.abs(parent.mapToItem(view, 0, 0).x) >= 1))
+                    return false;
+            }
+            return true;
+        }, 2000, "The selected About view has its actual visible text consumer: " + name);
         return item;
     }
     function formatted(text) {
@@ -384,14 +419,15 @@ TestCase {
         verify(summary.text.length < 650 && /GNU General Public License/.test(summary.text) && /BSD/.test(summary.text), "About provides a short user-facing licence summary for both distribution terms");
         verify(!/ADR-\d|app\/|DISTRIBUTION-LICENSE|source repo/i.test(summary.text), "The short licence summary has no developer file or decision references");
         verify(formatted(summary), "The user licence summary renders as formatted text");
-        for (const data of [["gpl", "COPYING"], ["bsd", "LICENSE"]]) {
+        for (const data of [["gpl", "app/DISTRIBUTION-LICENSE.md", TextEdit.MarkdownText], ["copying", "COPYING", TextEdit.PlainText], ["bsd", "LICENSE", TextEdit.PlainText]]) {
             const link = textInDialog(dialog, "about.licence." + data[0]);
             mouseClick(link, link.width / 2, link.height / 2);
             verify(waitForPolish(appWindow), "A real licence request lays out the inline full text");
             singleAbout(original);
             const full = textInDialog(dialog, "about.licence.text");
-            verify(formatted(full), "The requested full licence uses consistent formatted text rendering");
-            compare(normalized(full.getText(0, full.length)), normalized(Probe.readFile(data[1])), "The complete independent bundled licence text remains reachable inside About");
+            compare(full.textFormat, data[2], "Each complete licence uses the format of its independent bundled file");
+            const completeText = data[2] === TextEdit.MarkdownText ? full.text : full.getText(0, full.length);
+            compare(normalized(completeText), normalized(Probe.readFile(data[1])), "The complete independent bundled licence text remains reachable inside About");
             verify(full.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "Licence body text uses the app text size instead of oversized headings");
             verify(full.readOnly, "The complete licence remains a read-only text view");
         }
@@ -435,7 +471,7 @@ TestCase {
             mouseClick(row, row.width / 2, row.height / 2);
             const text = textInDialog(dialog, "about.components.licence");
             tryVerify(() => normalized(text.getText(0, text.length)) === normalized(licenceTexts[component]), 2000, "Selecting different real components shows each complete independent licence below the table");
-            verify(formatted(text), "Selected third-party licence text uses consistent formatted rendering");
+            compare(text.textFormat, TextEdit.PlainText, "The complete component licence retains its original plain text");
             verify(text.mapToItem(dialog.contentItem, 0, 0).y >= table.mapToItem(dialog.contentItem, 0, table.height).y, "The selected component licence is rendered below the structured table");
             singleAbout(original);
         }

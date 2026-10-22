@@ -32,7 +32,7 @@ endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FactorText.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/RecentProjects.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -94,7 +94,6 @@ qt_add_qml_module(edi_app_module
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
-        qml/Components/ChartSettingsGroup.qml
         qml/Components/FigureColors.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
@@ -102,6 +101,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/NumberLabel.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
@@ -127,6 +127,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/WordmarkWithVersion.qml
         qml/Components/WorkflowPage.qml
         qml/Globals/AppState.qml
+        qml/Globals/FactorText.qml
         qml/Globals/FieldTitles.qml
         qml/Globals/FitOutcomes.qml
         qml/Globals/NumberText.qml

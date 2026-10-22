@@ -29,11 +29,78 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15759
+# inventory_python = 15777
 # inventory_cpp = 389
-# inventory_measured = 14412
-# inventory_unmeasured = 1736
+# inventory_measured = 14426
+# inventory_unmeasured = 1740
 
+
+# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
+# paid ONCE per module by whichever test triggers them, so they cannot be
+# per-test rows (and are spelled as comments so per-test consumers are
+# unaffected; excluding one test only moves the cost to the next sibling).
+# These rows mark and deselect NOTHING - kept for visibility
+# and the stale-module integrity refusal.
+# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
+# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
+# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 10.317	tests/integration/app/test_legend_marks.py
+# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
+# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
+# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
+# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
+# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
+# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
+# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
+# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
+# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
+# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
+# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
+# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
+# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
+# module-cost: 1.201	tests/system/py/test_correlation_selection.py
+# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
+# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
+# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
+# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
+# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
+# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
+# module-cost: 2.346	tests/system/py/test_report_index_width.py
+# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
+# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
+# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
+# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
+# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
+# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
+# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
+# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
+# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
+# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
+# module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
+# module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
+# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
 0.300	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Uani-labels]
@@ -5513,6 +5580,23 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[cw]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[tof]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[cw]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[tof]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[d_spacing-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[d_spacing-tof]
+0.020	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_bkg-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_bkg-tof]
+0.020	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-cw]
+0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-tof]
+0.020	tests/integration/py/test_fit_tables_reference.py::test_ncaf_bank_one_retains_the_external_brief_values
+0.080	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[All datasets]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_1_10]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_2_9]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_3_8]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_4_7]
+0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_5_6]
 0.020	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[independent]
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
@@ -11816,6 +11900,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+1.390	tests/system/py/test_excluded_examples.py::test_committed_examples_do_not_claim_excluded_zero_calculations
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
@@ -16182,70 +16267,3 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-public-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-outside/edi-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_unknown_condition_cannot_invent_reachability
-
-# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
-# paid ONCE per module by whichever test triggers them, so they cannot be
-# per-test rows (and are spelled as comments so per-test consumers are
-# unaffected; excluding one test only moves the cost to the next sibling).
-# These rows mark and deselect NOTHING - kept for visibility
-# and the stale-module integrity refusal.
-# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
-# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
-# module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
-# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
-# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
-# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
-# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
-# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
-# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
-# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
-# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
-# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
-# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
-# module-cost: 1.201	tests/system/py/test_correlation_selection.py
-# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
-# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
-# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
-# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
-# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
-# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
-# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
-# module-cost: 179.025	tests/system/py/test_plain_data_app.py
-# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
-# module-cost: 2.346	tests/system/py/test_report_index_width.py
-# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
-# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
-# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
-# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
-# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
-# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
-# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
-# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
-# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
-# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 0.058	tests/system/py/test_scan_screen.py
-# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
-# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 6.259	tests/system/py/test_thread_selector.py
-# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
-# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py

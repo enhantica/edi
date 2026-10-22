@@ -18,6 +18,9 @@ Here `../crysta` is a crysta checkout next to edi. When a change spans both, che
 - Arguments after the checkout go to the app, for example `--demo <dir>`.
 - The first run installs both pixi environments and takes several minutes; later runs rebuild only what
   changed. Set `CMAKE_BUILD_PARALLEL_LEVEL` to limit the crysta build's parallel jobs.
+- On a Mac the command first checks that the selected macOS SDK and Apple's C++ tools work, and stops with
+  Apple's message when they do not: finish Xcode's setup or install the Command Line Tools first. Both
+  products build with Clang 23 on a Mac, which the macOS 27 SDK needs ([ADR-0017](adrs/0017-prebuilt-crysta-sdk.md)).
 
 This is for local development only. CI and releases always link the pinned SDK, and the command refuses
 to run in CI.

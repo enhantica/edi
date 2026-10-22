@@ -227,31 +227,35 @@ TestCase {
         verify(selected !== null && selected.name === "length_a", " O2 requested-state reference is the selected first cell parameter");
         // Keep the pointer down so slider limits stay fixed throughout each burst.
         const baselineLength = selected.value;
+        const targetOffset = (slider.to - slider.from) * .2;
         ["S1", "S2"].forEach(scenario => {
             const samples = [], calculationBaselines = [];
             for (let sample = 0; sample < 55; ++sample) {
                 // Alternate two distinct physical targets; S2 starts opposite S1's final value.
                 // QtTest dispatches integer mouse coordinates, so derive the reference from
                 // the requested pixel before input rather than from a subpixel movement.
-                const value = baselineLength + .1 * ((sample + (scenario === "S2" ? 1 : 0)) % 2 === 0 ? 1 : -1);
+                const value = baselineLength + targetOffset * ((sample + (scenario === "S2" ? 1 : 0)) % 2 === 0 ? 1 : -1);
                 const fraction = (value - slider.from) / (slider.to - slider.from);
                 const handle = slider.handle ? slider.handle.width : 0;
                 const x = Math.round(slider.leftPadding + handle / 2 + fraction * (slider.availableWidth - handle));
                 const requested = slider.from + ((x - slider.leftPadding - handle / 2) / (slider.availableWidth - handle)) * (slider.to - slider.from);
+                verify(fraction > 0 && fraction < 1, " O1 both alternating physical targets stay inside the current slider bounds");
+                verify(Math.abs(selected.value - requested) > targetOffset / 2, " O1 each precomputed pointer target differs from the currently selected value");
+                const startX = Math.round(slider.leftPadding + handle / 2 + slider.visualPosition * (slider.availableWidth - handle));
                 const expected = ChartOracle.reference(data.path, requested);
                 verify(ChartOracle.arm(appWindow, chart, expected.maximum), " O2 independent frame observer attaches to actual Qt series and shared axis");
                 verify(ChartOracle.publicationThreadIsGui(Session.project), " I5 observer connects directly to actual publication signal");
                 ChartOracle.start();
 
-                mousePress(slider, x, slider.height / 2);
+                mousePress(slider, startX, slider.height / 2);
+                verify(slider.pressed, " O1 real pointer input grabs the current slider handle before moving it");
                 if (scenario === "S2") {
                     mouseMove(slider, slider.leftPadding + handle / 2 + .3 * (slider.availableWidth - handle), slider.height / 2);
                     mouseMove(slider, slider.leftPadding + handle / 2 + .7 * (slider.availableWidth - handle), slider.height / 2);
                 }
                 mouseMove(slider, x, slider.height / 2);
                 const finalValue = selected.value;
-                // Qt's handle geometry determines the exact value of real input. Compute its
-                // independent reference before releasing, then use that final requested state.
+                // Check the precomputed pointer value before release re-centres the bounds.
                 mouseRelease(slider, x, slider.height / 2);
                 verify(Math.abs(finalValue - requested) < 1e-8, " O1 real pointer dispatch reaches the precomputed distinct requested slider value");
                 tryVerify(() => ChartOracle.result().complete, 15000, " O2 completion is the swapped frame that synchronised the requested calculated maximum");
