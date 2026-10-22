@@ -92,27 +92,27 @@ EaComponents.ApplicationWindow {
     ]
 
     appBarCentralTabs.contentData: [
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.home"
             fontIcon: "home"
             text: qsTr("Home")
             ToolTip.text: qsTr("Home page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.project"
             enabled: AppState.projectPageEnabled
             fontIcon: "archive"
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.structure"
             enabled: AppState.structurePageEnabled
             fontIcon: "layer-group"
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             id: experimentTab
             objectName: "appBar.tab.experiment"
             enabled: AppState.experimentPageEnabled
@@ -120,14 +120,14 @@ EaComponents.ApplicationWindow {
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.analysis"
             enabled: AppState.analysisPageEnabled
             fontIcon: "calculator"
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.report"
             enabled: AppState.reportPageEnabled
             fontIcon: "clipboard-list"

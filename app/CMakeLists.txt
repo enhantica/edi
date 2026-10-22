@@ -126,6 +126,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/Wordmark.qml
         qml/Components/WordmarkWithVersion.qml
         qml/Components/WorkflowPage.qml
+        qml/Components/WorkflowTabButton.qml
         qml/Globals/AppState.qml
         qml/Globals/FactorText.qml
         qml/Globals/FieldTitles.qml
