@@ -23,13 +23,14 @@ The start a user's own measurement would have, built by `tools/cli_projects/buil
 zero shift 0; U, V, W and X at the tutorial's values, already one significant figure (0.04, −0.01, 0.001,
 0.1); Biso 0.5 on every site; the tutorial's free coordinates to two decimals (La z 0.004 becomes 0.0);
 a flat line-segment background at the 10th percentile of the counts; scale 0.000005; the tutorial's cell
-(5.5, 7.7, 5.5 Å). Free: the cell, scale, zero shift, U, V, W, X, the fifteen background points, La x/z,
-O1 x/z, O2 x/y/z and the Biso of La, Ti and O1 (34 parameters).
+(5.5, 7.7, 5.5 Å). Free: the cell, scale, zero shift, U, V, W, X, the 53 background points, La x/z,
+O1 x/z, O2 x/y/z and the Biso of La, Ti and O1 (72 parameters).
 
-**One stated change.** The background points are denser below 5° (2, 2.5, 2.8, 3.3, 3.6, 4, 4.5, 5°, then
-every 1.5° to 15°), where capillary and air scattering make a hump under the first peaks. With ten
-evenly spaced points the fit reached the tutorial's cell and scale but stopped at R<sub>wp</sub> 6.87 %,
-86 % of its χ² below 4°.
+**The background.** The tutorial's automatic estimate is not capped in its number of points, so its
+background follows the capillary and air scattering under the first peaks closely. Here a flat point every
+0.25° from 2 to 15° (53 points) stands in for it. With 15 points the fit stopped at R<sub>wp</sub> 2.72 %
+(reduced χ² 0.51), and with 27 at 2.81 %; with 40 it reached 1.60 % and with 53 1.49 %. With 79 points it
+needs 580 iterations and stops at 2.58 %.
 
 ## Differences from the tutorial
 
@@ -40,8 +41,7 @@ evenly spaced points the fit reached the tutorial's cell and scale but stopped a
 
 ## Result from this start (local diagnostic)
 
-From this start edi converges in 76 iterations to R<sub>wp</sub> 2.72 % and reduced χ² 0.51, with
-a 5.46228, b 7.73265, c 5.49045 Å, O1 x 0.5078 and scale 3.638 × 10⁻⁶. diffraction-lib's own tutorial
+From this start edi converges in 26 iterations to R<sub>wp</sub> 1.49 % and reduced χ² 0.157, with
+a 5.46216, b 7.73301, c 5.49025 Å, O1 x 0.5078 and scale 3.670 × 10⁻⁶. diffraction-lib's own tutorial
 record reports R<sub>wp</sub> 1.51 %, reduced χ² 0.16, a 5.46225, b 7.73307, c 5.49024 Å, O1 x 0.50828
-and scale 3.653 × 10⁻⁶. The structure agrees; the remaining misfit sits mostly at the strongest
-reflection near 4.25°, a peak-shape difference.
+and scale 3.653 × 10⁻⁶.
