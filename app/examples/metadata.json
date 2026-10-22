@@ -251,6 +251,56 @@
         "docs/user/cli/pd-neut-tof_si-sepd_basic/project/structures/si.edi"
       ]
     },
+    "pd-xray-cwl_pbso4-lab_basic": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "Laboratory X-ray",
+      "detail": "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_pbso4-lab_basic",
+        "PbSO₄ [Pnma] · Laboratory X-ray",
+        "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/experiments/lab.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/structures/pbso4.edi"
+      ]
+    },
     "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
       "samples": [
         "PbSO₄ [Pnma]"
