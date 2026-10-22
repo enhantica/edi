@@ -210,3 +210,6 @@ sites:
 
   - file: tests/system/py/test_background_estimate_review3_cli.py
     case: cosio-d20-s4
+
+  - file: tests/integration/py/test_single_crystal_reader_fit.py
+    case: single-crystal-cwl-pr2nio4-basic
