@@ -502,6 +502,60 @@
         "docs/user/cli/pd-xray-cwl_nacl_calculation/project/experiments/lab.edi",
         "docs/user/cli/pd-xray-cwl_nacl_calculation/project/structures/nacl.edi"
       ]
+    },
+    "pd-neut-tof_ncaf-wish_basic": {
+      "samples": [
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
+      ],
+      "origin": "WISH @ ISIS",
+      "detail": "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ISIS"
+        ],
+        "instruments": [
+          "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ncaf-wish_basic",
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_1_10.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_2_9.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_3_8.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_4_7.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/structures/ncaf.edi"
+      ]
     }
   }
 }

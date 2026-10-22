@@ -109,3 +109,6 @@ projects:
   - id: pd-xray-cwl_nacl_calculation
     executing: false
     user-facing: true
+  - id: pd-neut-tof_ncaf-wish_basic
+    executing: false
+    user-facing: true
