@@ -304,10 +304,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
     steps_.push_back({"sc-05b-tb2ti2o7-reflections-dark", {extras, "expand:group.refln"}});
     steps_.push_back({"sc-05c-tb2ti2o7-f-dark", {basic, "singleCrystal.toolbar.quantity", "choose:F"}});
+    steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", {"singleCrystal.toolbar.quantity", "choose:F²", "resize:960x768"}});
+    steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
+    steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
+                                                                  + open_example("sc-neut-cwl_tb2ti2o7_isotropic-extinction")
+                                                                  + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sc-06-pr2nio4-experiment-light",
                       QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4_basic")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
+    steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
+    steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
@@ -794,6 +802,23 @@ bool DemoDriver::perform(const QString& action) {
         QMouseEvent release(QEvent::MouseButtonRelease, to, window_.mapToGlobal(to), button, Qt::NoButton,
                             Qt::NoModifier);
         QCoreApplication::sendEvent(&window_, &release);
+        return true;
+    }
+    if (action.startsWith(QLatin1String("hover:"))) {
+        // hover:<name>:<x>,<y> moves the pointer over the item, at fractions of its size, with no button down.
+        const QStringList parts = action.mid(6).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, QStringLiteral("0.5,0.5")).split(QLatin1Char(','));
+        if (item == nullptr || at.size() != 2) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const QPointF to = item->mapToScene(QPointF(at[0].toDouble() * item->width(), at[1].toDouble() * item->height()));
+        for (const QPointF& point : {to + QPointF(1.0, 1.0), to}) {
+            QMouseEvent move(QEvent::MouseMove, point, window_.mapToGlobal(point), Qt::NoButton, Qt::NoButton,
+                             Qt::NoModifier);
+            QCoreApplication::sendEvent(&window_, &move);
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("expand:"))) {

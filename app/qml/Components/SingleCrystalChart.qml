@@ -24,8 +24,13 @@ Item {
     property bool shown: true
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
+    // The pattern chart's layout: the toolbar line a gap below the page's block selector row, centred over the plot,
+    // and the plot the main area's margin below it.
     readonly property real sideMargin: AppSizes.mainAreaMargin
-    readonly property real toolbarRightInset: sideMargin
+    readonly property real topMargin: em
+    readonly property real belowToolbar: AppSizes.mainAreaMargin
+    readonly property real toolbarLeft: AppSizes.mainAreaMargin
+    readonly property real toolbarRightInset: width - (view.x + view.plotArea.x + view.plotArea.width)
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
@@ -87,8 +92,8 @@ Item {
     }
 
     EaElements.Label {
-        x: chart.sideMargin
-        y: chart.em * 0.5 + (toolbar.height - height) / 2
+        x: chart.toolbarLeft
+        y: chart.topMargin + (toolbar.height - height) / 2
         color: chart.colors.chartLabels
         text: chart.reflections && !chart.reflections.calculatedShown ? qsTr("Not calculated yet") : ""
     }
@@ -97,8 +102,8 @@ Item {
     Row {
         id: toolbar
 
-        x: Math.round((chart.width - width) / 2)
-        y: chart.em * 0.5
+        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
+        y: chart.topMargin
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         ToolbarComboBox {
@@ -131,7 +136,7 @@ Item {
     GraphsView {
         id: view
 
-        y: chart.em * 2.75
+        y: chart.topMargin + toolbar.height + chart.belowToolbar
         width: parent.width
         height: parent.height - y - chart.xTitleHeight - chart.em
         marginLeft: chart.sideMargin + chart.titleGutter
@@ -212,10 +217,7 @@ Item {
                 hide();
                 return;
             }
-            const number = value => NumberText.plain(value, 6);
-            hoverText.text = `${model.text(best, "h")} ${model.text(best, "k")} ${model.text(best, "l")}<br>`
-                + `${chart.quantity} meas: ${number(ys[best])} ± ${number(sus[best])}<br>`
-                + `${chart.quantity} calc: ${number(xs[best])}`;
+            hoverText.text = model.hoverText(best, chart.squared);
             const atX = plot.x + (xs[best] - axisX.min) / span * plot.width;
             const atY = plot.y + (1 - (ys[best] - axisY.min) / (axisY.max - axisY.min)) * plot.height;
             x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
@@ -323,6 +325,7 @@ Item {
                 return axisX.min + px / width * (axisX.max - axisX.min);
             }
 
+            objectName: "singleCrystal.pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             hoverEnabled: Preferences.chartHoverShown

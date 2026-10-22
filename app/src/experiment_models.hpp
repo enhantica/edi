@@ -136,7 +136,7 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
 
    public:
-    SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent);
+    SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, const edi::Project& project, QObject* parent);
     void sync();
     QList<double> calculated() const { return calculated_; }
     QList<double> measured() const { return measured_; }
@@ -144,6 +144,9 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double low() const { return low_; }
     double high() const { return high_; }
     bool calculatedShown() const { return calculated_shown_; }
+    // The hover read-out of one reflection: h k l, the measured value with its su by the project's IUCr rule and the
+    // calculated value to the same decimals, in F² or F; rich text, one line each.
+    Q_INVOKABLE QString hoverText(int row, bool squared) const;
     QList<double> calculatedF() const { return calculated_f_; }
     QList<double> measuredF() const { return measured_f_; }
     QList<double> measuredFSu() const { return measured_f_su_; }
@@ -155,6 +158,7 @@ class SingleCrystalReflectionModel : public RowTableModel {
 
    private:
     const edi::ExperimentBase& experiment_;
+    const edi::Project& project_;
     QList<double> calculated_;
     QList<double> measured_;
     QList<double> measured_su_;
