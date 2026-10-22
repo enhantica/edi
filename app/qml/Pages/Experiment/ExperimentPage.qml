@@ -33,6 +33,10 @@ WorkflowPage {
             "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal
                      ? singleCrystalReflectionsContent : reflectionsContent
         })
+    // The Extras column's height and the height of its content, so a single crystal's reflection table can take
+    // the room left under the groups above it.
+    property real extrasViewportHeight: 0
+    property real extrasContentHeight: 0
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent,
@@ -74,6 +78,17 @@ WorkflowPage {
     }
     extrasItem: Component {
         EaComponents.SideBarColumn {
+            id: extrasColumn
+            Binding {
+                target: page
+                property: "extrasViewportHeight"
+                value: extrasColumn.height
+            }
+            Binding {
+                target: page
+                property: "extrasContentHeight"
+                value: extrasColumn.contentHeight
+            }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
@@ -124,7 +139,24 @@ WorkflowPage {
     Component {
         id: singleCrystalReflectionsContent
         SingleCrystalTable {
+            id: reflectionTable
+
+            // Set after the column has laid out, not bound: the content's height follows the table's own.
+            function place() {
+                spareHeight = page.extrasViewportHeight - (page.extrasContentHeight - height);
+            }
+
             experiment: page.experiment
+            Component.onCompleted: Qt.callLater(place)
+            Connections {
+                target: page
+                function onExtrasViewportHeightChanged() {
+                    Qt.callLater(reflectionTable.place);
+                }
+                function onExtrasContentHeightChanged() {
+                    Qt.callLater(reflectionTable.place);
+                }
+            }
         }
     }
     Component {

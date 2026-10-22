@@ -14,6 +14,9 @@ DataTable {
     id: table
 
     property ExperimentViewModel experiment: null
+    // The height the table may take: its own and the room the sidebar leaves under it. Its rows fill it, with half
+    // a row as a scroll cue; without it the table keeps the default number of rows.
+    property real spareHeight: 0
 
     function shown(value) {
         return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
@@ -24,6 +27,7 @@ DataTable {
     }
 
     objectName: "singleCrystal.reflections"
+    maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
     defaultInfoText: qsTr("No reflections")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
