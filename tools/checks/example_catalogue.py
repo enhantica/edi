@@ -12,7 +12,8 @@ when:
   ``PROVENANCE.md`` with a ``## Sources`` section, its tutorial ``docs/user/tutorials/<id>.py``,
   its notebook, or its one entry in ``docs/user/tutorials/execution-exclusions.yml``;
 - a tutorial or its notebook loads anything but ``../cli/<id>/project``, loads it more than once,
-  or the two disagree;
+  or the two disagree (a load is a ``Project.load`` call in the parsed code with a literal path, so
+  a commented-out or quoted load does not count);
 - a file under a case's ``data/`` is not named in its Sources with its sha256;
 - a tutorial, notebook or exclusion entry names something that is not a case, or a fixture has an
   ``index.md`` page (a fixture's page is its ``README.md``).
@@ -23,6 +24,7 @@ Every problem is reported. With none, it prints each case's title, tutorial and 
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import re
@@ -40,7 +42,6 @@ EXCLUSIONS = TUTORIALS_DIR / 'execution-exclusions.yml'
 CMAKE_LINE = re.compile(r'^  - id: |^    user-facing: ')
 CMAKE_ID = re.compile(r'^  - id: *(.+)$')
 CMAKE_CASE = re.compile(r'^    user-facing: *true$')
-LOAD = re.compile(r"""Project\.load\(\s*(['"])(?P<path>.*?)\1\s*\)""")
 SOURCES = re.compile(r'^## Sources\s*$(?P<body>.*?)(?=^## |\Z)', re.MULTILINE | re.DOTALL)
 # Files in the tutorials folder that are not tutorials.
 NOT_TUTORIALS = {'index.md', 'execution-exclusions.yml'}
@@ -85,17 +86,81 @@ def metadata_value(project_edi: Path, key: str) -> str | None:
     return None
 
 
-def loads(text: str) -> list[str]:
-    return [match.group('path') for match in LOAD.finditer(text)]
+# A load runs when the tutorial runs if it sits in a top-level simple statement and every node
+# between the statement and the call is evaluated whenever the statement is (no lambda, function
+# body, branch, short circuit or lazy generator).
+SIMPLE_STATEMENTS = (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Expr)
+EAGER_NODES = (
+    ast.Call,
+    ast.Attribute,
+    ast.Subscript,
+    ast.Starred,
+    ast.keyword,
+    ast.Tuple,
+    ast.List,
+    ast.Dict,
+    ast.Set,
+    ast.BinOp,
+    ast.UnaryOp,
+    ast.Compare,
+    ast.JoinedStr,
+    ast.FormattedValue,
+    ast.Await,
+)
 
 
-def notebook_code(notebook: Path) -> str:
+def executed_calls(node: ast.AST) -> list[ast.Call]:
+    if not isinstance(node, EAGER_NODES):
+        return []
+    calls = [node] if isinstance(node, ast.Call) else []
+    for child in ast.iter_child_nodes(node):
+        calls.extend(executed_calls(child))
+    return calls
+
+
+def is_project_load(call: ast.Call) -> bool:
+    func = call.func
+    if not (isinstance(func, ast.Attribute) and func.attr == 'load'):
+        return False
+    owner = func.value
+    return (isinstance(owner, ast.Name) and owner.id == 'Project') or (
+        isinstance(owner, ast.Attribute) and owner.attr == 'Project'
+    )
+
+
+def loads(code: list[str]) -> list[str]:
+    """The path of every ``Project.load(...)`` that runs when the code runs, in order.
+
+    A path that is not a string literal reads as ``<not a literal>``, code that does not parse as
+    ``<no parse>``; a load in a comment, a string, a function, a lambda or a branch is not counted.
+    """
+    paths: list[str] = []
+    for source in code:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            paths.append('<no parse>')
+            continue
+        for statement in tree.body:
+            if not isinstance(statement, SIMPLE_STATEMENTS):
+                continue
+            if statement.value is None:
+                continue
+            calls = [call for call in executed_calls(statement.value) if is_project_load(call)]
+            for call in sorted(calls, key=lambda node: (node.lineno, node.col_offset)):
+                first = call.args[0] if len(call.args) == 1 and not call.keywords else None
+                literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
+                paths.append(first.value if literal else '<not a literal>')
+    return paths
+
+
+def notebook_code(notebook: Path) -> list[str]:
     cells = json.loads(read(notebook))['cells']
-    return '\n'.join(
+    return [
         ''.join(cell['source']) if isinstance(cell['source'], list) else cell['source']
         for cell in cells
         if cell.get('cell_type') == 'code'
-    )
+    ]
 
 
 def check_project(folder: Path, case: str, problems: list[str]) -> str | None:
@@ -150,7 +215,7 @@ def check_tutorial(root: Path, case: str, problems: list[str]) -> str | None:
     expected = [f'../cli/{case}/project']
     source = root / TUTORIALS_DIR / f'{case}.py'
     notebook = root / TUTORIALS_DIR / f'{case}.ipynb'
-    source_loads = loads(read(source)) if source.is_file() else None
+    source_loads = loads([read(source)]) if source.is_file() else None
     notebook_loads = loads(notebook_code(notebook)) if notebook.is_file() else None
     if source_loads is None:
         problems.append(f'{case}: no tutorial {source.relative_to(root)}')
