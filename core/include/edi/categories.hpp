@@ -188,6 +188,23 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
     std::vector<Category> categories;
     categories.push_back({"experiment_type"});
+    if (experiment.reflections.has_value()) {
+        // A single crystal: no profile, background, excluded regions or absorption; its extinction
+        // instead.
+        categories.push_back(instrument_category(experiment));
+        Category extinction{"extinction"};
+        detail::add_optional(extinction.fields, "radius", experiment.extinction.radius);
+        detail::add_optional(extinction.fields, "mosaicity", experiment.extinction.mosaicity);
+        categories.push_back(extinction);
+        Category linked{"linked_structure", true, experiment.linked_structures.size()};
+        for (const auto& link : experiment.linked_structures) {
+            linked.fields.push_back({"scale", &link->scale, true});
+        }
+        categories.push_back(linked);
+        categories.push_back({"scattering_source"});
+        detail::mark_dependents(categories);
+        return categories;
+    }
     if (experiment.data.has_value()) {  // D-h: the measured range, or the declared grid
         Category data{experiment.calculation_only ? "data_range" : "data"};
         data.rows = experiment.data->intensity_meas.size();
