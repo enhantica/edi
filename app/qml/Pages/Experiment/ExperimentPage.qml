@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -33,10 +34,8 @@ WorkflowPage {
             "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal
                      ? singleCrystalReflectionsContent : reflectionsContent
         })
-    // The Extras column's height and the height of its content, so a single crystal's reflection table can take
-    // the room left under the groups above it.
-    property real extrasViewportHeight: 0
-    property real extrasContentHeight: 0
+    // The Extras column, so a single crystal's reflection table can take the room left under the groups above it.
+    property Flickable extrasColumn: null
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent,
@@ -81,13 +80,8 @@ WorkflowPage {
             id: extrasColumn
             Binding {
                 target: page
-                property: "extrasViewportHeight"
-                value: extrasColumn.height
-            }
-            Binding {
-                target: page
-                property: "extrasContentHeight"
-                value: extrasColumn.contentHeight
+                property: "extrasColumn"
+                value: extrasColumn
             }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
@@ -141,19 +135,25 @@ WorkflowPage {
         SingleCrystalTable {
             id: reflectionTable
 
-            // Set after the column has laid out, not bound: the content's height follows the table's own.
+            // From the column's height and where the table starts in it, never from the table's own height, so a
+            // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
+            // Set after the column has laid out: the table's place is read, not bound.
             function place() {
-                spareHeight = page.extrasViewportHeight - (page.extrasContentHeight - height);
+                const column = page.extrasColumn;
+                if (!column || !column.contentItem)
+                    return;
+                const top = mapToItem(column.contentItem, 0, 0).y;
+                spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
             }
 
             experiment: page.experiment
             Component.onCompleted: Qt.callLater(place)
             Connections {
-                target: page
-                function onExtrasViewportHeightChanged() {
+                target: page.extrasColumn
+                function onHeightChanged() {
                     Qt.callLater(reflectionTable.place);
                 }
-                function onExtrasContentHeightChanged() {
+                function onContentHeightChanged() {
                     Qt.callLater(reflectionTable.place);
                 }
             }
