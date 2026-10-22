@@ -29,13 +29,13 @@ R -3 m <--Space group symbol
 !Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
 O O 0 0 0.26 0.5 0.1666666667 0 0 0 0
 0 0 131 141 0
-Ni1 NI 0 0 0.5 0.5 0 0 0 0 0
+Ni1 NI 0 0 0.5 0.5 0.004166666667 0 0 0 0
 0 0 0 151 -160.0833333
-Li1 LI 0 0 0.5 0.5 0.08333333333 0 0 0 0
+Li1 LI 0 0 0.5 0.5 0.07916666667 0 0 0 0
 0 0 0 151 160.0833333
-Li2 LI 0 0 0 0.5 0 0 0 0 0
+Li2 LI 0 0 0 0.5 0.004166666667 0 0 0 0
 0 0 0 171 -160.0833333
-Ni2 NI 0 0 0 0.5 0.08333333333 0 0 0 0
+Ni2 NI 0 0 0 0.5 0.07916666667 0 0 0 0
 0 0 0 171 160.0833333
 ! Profile Parameters for Pattern # 1 Phase lmo
 ! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
