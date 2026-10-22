@@ -269,7 +269,7 @@ AppDialog {
                 text: qsTr("Stacked") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps), Array.from(ApplicationInfo.scanColourRamps))
+                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
                 // Empty follows the patterns' scheme.
                 readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours
 
@@ -283,7 +283,7 @@ AppDialog {
                 text: qsTr("Map") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.scanColourMaps).concat(Array.from(ApplicationInfo.scanColourRamps))
+                readonly property var choices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
 
                 objectName: "preferences.mapColours"
                 model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))

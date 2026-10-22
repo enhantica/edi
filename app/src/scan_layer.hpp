@@ -13,10 +13,10 @@
 namespace edi_app {
 
 // The scan views' drawing (edi ADR-0041), laid over a chart's plot area and mapping the ranges it is given onto its
-// size: "stacked" draws every dataset as a line from its row upwards, in the dataset's measured colour, the shown
-// dataset last and wider; "map" colours the plot from the colour map, each pixel row taking the intensity between the
-// two datasets whose rows it lies between, in proportion to its distance from each, so the colour changes smoothly from
-// one dataset to the next. Both reduce each dataset's measured points for the range shown at the plot's own pixel
+// size: "stacked" draws every dataset as a line from its row upwards, in the dataset's colour, 2 px wide as the pattern
+// chart's measured line (narrower only for rows packed tighter); "map" colours the plot from the colour map, each
+// pixel row taking the intensity between the two datasets whose rows it lies between, in proportion to its distance
+// from each, so the colour changes smoothly from one dataset to the next. Both reduce each dataset's measured points for the range shown at the plot's own pixel
 // columns every time they draw, so a zoomed view shows the points themselves (the owner, 2026-10-22). Intensity is
 // taken on the chart's y scale and spread over every dataset's lowest to highest value. Each dataset's excluded ranges
 // are tinted over its row, as the pattern chart tints them; with `includedOnly` the points inside them are not drawn.
@@ -43,7 +43,7 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // Only the included range: the points inside an excluded region are not drawn, which leaves its tint as a gap.
     Q_PROPERTY(bool includedOnly MEMBER included_only_ WRITE setIncludedOnly NOTIFY includedOnlyChanged)
-    // The shown dataset, drawn over the others in the stacked view.
+    // The shown dataset; the chart marks it with its selected-pattern line.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
     Q_PROPERTY(double displayMin READ displayMin NOTIFY displayMinChanged)

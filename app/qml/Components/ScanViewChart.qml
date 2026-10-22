@@ -40,8 +40,10 @@ Item {
     // The colours, as the app settings hold them (the owner, 2026-10-22): for either view a colour scheme's token (the
     // stacked view only), one of the four colour maps, or a ramp from the pattern chart's plot background to a scheme's
     // first measured colour (`ramp:<scheme>`).
-    readonly property var stackedChoices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps), Array.from(ApplicationInfo.scanColourRamps))
-    readonly property var mapChoices: Array.from(ApplicationInfo.scanColourMaps).concat(Array.from(ApplicationInfo.scanColourRamps))
+    // The Stacked view takes the schemes' own colours or a colour map, never a one-colour ramp, whose neighbouring lines
+    // could not be told apart; the Map lists the Edi shades first (the owner, 2026-10-22).
+    readonly property var stackedChoices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+    readonly property var mapChoices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
     readonly property string stackedPalette: {
         const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours;
         return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(stored);
@@ -189,7 +191,8 @@ Item {
         y: chart.plotTop
         width: parent.width - chart.barWidth
         height: parent.height - y - chart.xTitleHeight - chart.em
-        marginLeft: chart.sideMargin + chart.titleGutter
+        // A joint fit's row labels stand left of the plot, where a scan's tick labels are.
+        marginLeft: chart.sideMargin + chart.titleGutter + (chart.joint ? chart.rowLabelsRoom + chart.rowLabelGap : 0)
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
@@ -303,28 +306,6 @@ Item {
             dark: chart.colors.isDarkPalette
             position: (axisY.max - at) / (axisY.max - axisY.min) * plot.height
         }
-        // A joint fit's experiments, each named at the left of its row, over a half-transparent ground so the name reads
-        // on the patterns and on every colour of the map.
-        Repeater {
-            model: chart.joint ? chart.scan.rowLabels : []
-            delegate: EaElements.Label {
-                required property string modelData
-                required property int index
-                readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
-
-                objectName: "scanView." + chart.mode + ".rowLabel." + index
-                visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
-                x: chart.em * 0.4
-                y: Math.max(0, Math.min(plot.height - height, (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height - 2))
-                leftPadding: chart.em * 0.2
-                rightPadding: chart.em * 0.2
-                color: chart.colors.chartLabels
-                text: modelData
-                background: Rectangle {
-                    color: chart.colors.mainContentBackgroundHalfTransparent
-                }
-            }
-        }
         Rectangle {
             anchors.fill: parent
             color: "transparent"
@@ -389,6 +370,46 @@ Item {
                 if (dataset >= 0)
                     chart.project.currentExperimentIndex = dataset;
             }
+        }
+    }
+
+    // A joint fit's rows, each labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22):
+    // the experiment's icon and name in its colour, at its row's height. The widest label sets the room left for them.
+    readonly property real rowLabelGap: Math.round(em * 0.4)
+    readonly property real rowLabelsRoom: {
+        let widest = 0;
+        for (let i = 0; i < rowLabelRepeater.count; ++i) {
+            const label = rowLabelRepeater.itemAt(i);
+            if (label)
+                widest = Math.max(widest, label.width);
+        }
+        return Math.ceil(widest);
+    }
+    Repeater {
+        id: rowLabelRepeater
+
+        model: chart.joint ? chart.scan.rowLabels : []
+        delegate: IconLine {
+            required property string modelData
+            required property int index
+            readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+            readonly property color colour: AppColors.experiment(index, chart.colors.isDarkPalette)
+
+            objectName: "scanView." + chart.mode + ".rowLabel." + index
+            visible: chart.hasData && !isNaN(at) && at >= axisY.min && at <= axisY.max
+            height: AppSizes.legendRowHeight
+            textColor: colour
+            segments: [
+                {
+                    "icon": "microscope",
+                    "color": colour
+                },
+                {
+                    "text": modelData
+                }
+            ]
+            x: Math.max(0, plot.x - width - chart.rowLabelGap)
+            y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
         }
     }
 

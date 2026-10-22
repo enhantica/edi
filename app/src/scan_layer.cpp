@@ -306,13 +306,19 @@ void ScanLayer::paint(QPainter* painter) {
         order[d] = d;
     }
     std::sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] > rows[b]; });
-    for (const std::size_t d : order) {
-        if (static_cast<int>(d) != current_) {
-            draw(d, 1.0);
+    // As wide as the pattern chart's measured line, 2 px (the owner, 2026-10-22), narrowing toward 1 px where
+    // neighbouring rows are closer than six pixels, so the lines of a dense scan never merge. The shown dataset is
+    // marked by the selected-pattern line, not by a wider curve.
+    double step_px = std::numeric_limits<double>::infinity();
+    for (std::size_t k = 1; k < order.size(); ++k) {
+        const double gap = std::abs(py(rows[order[k - 1]]) - py(rows[order[k]]));
+        if (gap > 0.0) {
+            step_px = std::min(step_px, gap);
         }
     }
-    if (current_ >= 0 && static_cast<std::size_t>(current_) < count) {
-        draw(static_cast<std::size_t>(current_), 2.0);
+    const qreal width_px = std::clamp(step_px / 3.0, 1.0, 2.0);
+    for (const std::size_t d : order) {
+        draw(d, width_px);
     }
 }
 

@@ -23,7 +23,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    pattern's axis (§7) over every dataset's range together. Up is a scan dataset's first extracted value (the scan
    parameter, titled as the extract rule's column) once every dataset has one; until then, in a scan without an
    extract rule, and when the file index is chosen (§7), the file index. A joint fit's experiments are rows in the
-   project's order, each labelled with its name at the left of its row. Each row spans halfway to its neighbours.
+   project's order, each labelled left of the plot as the pattern chart labels a Bragg row: the experiment's icon and
+   name in its colour, at its row's height, in place of a scan's tick labels (the owner, 2026-10-22). Each row spans halfway to its neighbours.
 3. **What is kept.** A scan's datasets are read in the background, a few at a time, the first time either tab shows;
    a joint fit's experiments are taken from the project after each edit and calculation. Each dataset keeps its
    measured points (x and intensity). Every time the views draw, each dataset is reduced for the range shown at the
@@ -39,7 +40,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The scan-value
    axis labels only the values the rows cover, from the lowest row's to the highest's: the height the patterns rise
    into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
-   the colours §6 describes. Lower rows are drawn over higher ones.
+   the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as the pattern chart's measured
+   line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
+   the shown dataset is marked by the selected-pattern line (§8), not by a wider curve (the owner, 2026-10-22).
 5. **Map.** Each pixel column takes the colour of its highest value, or, with no more points than columns, of the
    line joining the points at the column's centre. Between two datasets' rows the value is interpolated
    linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next (the
@@ -52,14 +55,16 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    stand for, each label centred on its end.
 6. **Colours** (the owner, 2026-10-22). The Stacked and Map colours are chosen in the app's Preferences with the
    structures' and patterns' (ADR-0038 §3); the Map keeps a box on its toolbar for the same setting, beside its
-   reverse and stepped or smooth switches. Both views offer the same choices beside their own: the colour maps viridis
+   reverse and stepped or smooth switches. The Map lists the ramps below first, then the colour maps; the Stacked view
+   offers no ramp, as one colour's shades make neighbouring lines hard to tell apart (the owner, 2026-10-22). The
+   choices: the colour maps viridis
    (the Map's default), magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
    provenance), all perceptually uniform, reading in grey and to the common colour-vision deficiencies, and in either
    app theme; and for each colour scheme a ramp from the pattern chart's plot background in the current theme to the
    scheme's first measured colour, mixed in Oklab (ADR-0038's gradients). The Stacked view also offers the five
    schemes' own colours (ADR-0038: by place, a gradient past five), its default the app's scheme. A pattern on the
-   Stacked view takes a map's colour at its place along the scan between a tenth and nine tenths of the map, or a
-   ramp's from a quarter of the way, so no line takes the background's colour. cividis and turbo were left out: their
+   Stacked view takes a map's colour at its place along the scan between a tenth and nine tenths of the map, so no line
+   takes the background's colour. cividis and turbo were left out: their
    tables come under other licences, and turbo is not perceptually uniform. On the owner's asking for more pleasing maps
    than matplotlib's (2026-10-22), candidates were added for the owner to choose from, each with its source table and
    licence (`data/colormaps/PROVENANCE.md`, DEPENDENCIES.md): six of Fabio Crameri's Scientific colour maps, five
