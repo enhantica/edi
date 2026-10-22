@@ -228,8 +228,8 @@ def pd_xray_cwl_lam7o3_p021_basic() -> dict[str, str]:
         f'O2 O {free(0.22)} {free(0.03)} {free(0.27)} d 1 {BISO} Biso',
     ]
     cell = cell_lines(free(5.5), free(7.7), free(5.5))
-    # A point every 0.25°, as dense as diffraction-lib's estimated background: the capillary and air
-    # scattering under the first peaks is not a smooth curve.
+    # A point every 0.25°, as dense as diffraction-lib's estimated background: the capillary and
+    # air scattering under the first peaks is not a smooth curve.
     background = [round(2 + 0.25 * i, 2) for i in range(53)]
     p021 = text(
         ['data_p021', '', '_edi.schema_version 3'],
