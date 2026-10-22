@@ -14,8 +14,10 @@ namespace edi_app {
 
 // The scan views' drawing (edi ADR-0041), laid over a chart's plot area and mapping the ranges it is given onto its
 // size: "stacked" draws every dataset's columns as a line from its row upwards, in the dataset's measured colour,
-// the shown dataset last and wider; "map" fills each dataset's row with its columns' colours from the colour map.
-// Intensity is taken on the chart's y scale and spread over every dataset's lowest to highest value.
+// the shown dataset last and wider; "map" colours the plot from the colour map, each pixel row taking the intensity
+// between the two datasets whose rows it lies between, in proportion to its distance from each, so the colour changes
+// smoothly from one dataset to the next. Intensity is taken on the chart's y scale and spread over every dataset's
+// lowest to highest value.
 class ScanLayer : public QQuickPaintedItem {
     Q_OBJECT
     QML_ELEMENT
@@ -28,6 +30,8 @@ class ScanLayer : public QQuickPaintedItem {
     // The chart's y scale: "linear", "sqrt" or "log".
     Q_PROPERTY(QString scale MEMBER scale_ WRITE setScale NOTIFY scaleChanged)
     Q_PROPERTY(QString colourScheme MEMBER colour_scheme_ WRITE setColourScheme NOTIFY colourSchemeChanged)
+    // The map's colour map, one of edi::scan_colour_map_names.
+    Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // The shown dataset, drawn over the others in the stacked view.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
@@ -47,11 +51,12 @@ class ScanLayer : public QQuickPaintedItem {
     void setYMax(double value);
     void setScale(const QString& scale);
     void setColourScheme(const QString& scheme);
+    void setColourMap(const QString& map);
     void setDark(bool dark);
     void setCurrent(int dataset);
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
-    // The colour map's colour at `t` in [0, 1], for a colour bar beside the map.
+    // The colour map's colour at `t` in [0, 1].
     Q_INVOKABLE QColor mapColour(double t) const;
 
     void paint(QPainter* painter) override;
@@ -65,6 +70,7 @@ class ScanLayer : public QQuickPaintedItem {
     void yMaxChanged();
     void scaleChanged();
     void colourSchemeChanged();
+    void colourMapChanged();
     void darkChanged();
     void currentChanged();
     void displayMinChanged();
@@ -87,11 +93,31 @@ class ScanLayer : public QQuickPaintedItem {
     double x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
     QString scale_ = QStringLiteral("linear");
     QString colour_scheme_;
+    QString colour_map_ = QStringLiteral("viridis");
     bool dark_ = false;
     int current_ = -1;
     double display_min_ = 0.0, display_max_ = 1.0;
 };
 
 }  // namespace edi_app
+
+// The map's colour bar: the colour map from its low end at the bottom to its high end at the top, each pixel row
+// coloured by the lookup the map's own pixels take (edi::scan_map_colour), so the key and the image agree.
+class ScanColourBar : public QQuickPaintedItem {
+    Q_OBJECT
+    QML_ELEMENT
+    Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
+
+   public:
+    explicit ScanColourBar(QQuickItem* parent = nullptr);
+    void setColourMap(const QString& map);
+    void paint(QPainter* painter) override;
+
+   signals:
+    void colourMapChanged();
+
+   private:
+    QString colour_map_ = QStringLiteral("viridis");
+};
 
 #endif  // EDI_APP_SCAN_LAYER_HPP

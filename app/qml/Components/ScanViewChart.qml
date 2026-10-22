@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
@@ -10,10 +11,12 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // A scan's two pattern views (edi ADR-0041), each a tab of the Analysis page: "stacked" draws every dataset's measured
-// pattern above its row, "map" colours each dataset's row by intensity (viridis), with a colour bar at the right. x is
-// the pattern's axis across; up is the scan value (the first extract rule's) or, without one, the file index. The
-// datasets are read in the background the first time either view shows. A line marks the shown dataset and follows
-// it as a running scan moves on; a click on a row shows that dataset, here and on the Pattern tab.
+// pattern above its row, "map" colours the plot by intensity, smoothly from one dataset's row to the next, with a
+// colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract rule's) or, without
+// one, the file index. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
+// patterns' palette or the map's colour map (the owner, 2026-10-22). The datasets are read in the background the first
+// time either view shows; a dataset that cannot be read is named above the plot. A line marks the shown dataset at all
+// times and follows it as a running scan moves on; a click on a row shows that dataset, here and on the Pattern tab.
 Item {
     id: chart
 
@@ -23,11 +26,18 @@ Item {
     property bool shown: true
     readonly property ScanViewModel scan: project ? project.scanViews : null
     readonly property bool scanProject: project !== null && project.scan
-    readonly property bool hasData: scan !== null && scan.loaded > 0
+    readonly property bool hasData: scan !== null && scan.loaded - scan.failed > 0
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
     readonly property real titleGutter: Math.round(em * 1.6)
+    // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
+    // and for the colour bar's top label, centred on the bar's end.
+    readonly property real toolbarTop: em
+    readonly property real plotTop: toolbarTop + AppSizes.toolbarControlSize + AppSizes.mainAreaMargin
+    // The stacked patterns' palette (a colour scheme's token) and the map's colour map, as the app settings hold them.
+    readonly property string stackedPalette: ApplicationInfo.colourSchemeOrDefault(Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme)
+    readonly property string mapColours: ApplicationInfo.scanColourMapOrDefault(Preferences.scanMapColours)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property real barWidth: mode === "map" ? em * 6 : 0
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
@@ -65,7 +75,7 @@ Item {
 
         objectName: "scanView." + chart.mode + ".axes"
         visible: chart.hasData
-        y: chart.em
+        y: chart.plotTop
         width: parent.width - chart.barWidth
         height: parent.height - y - chart.xTitleHeight - chart.em
         marginLeft: chart.sideMargin + chart.titleGutter
@@ -159,20 +169,34 @@ Item {
             yMin: axisY.min
             yMax: axisY.max
             scale: Preferences.patternYScale
-            colourScheme: Preferences.colourScheme
+            colourScheme: chart.stackedPalette
+            colourMap: chart.mapColours
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
-        // The shown dataset's row: it moves with the shown dataset, so with a followed scan as it runs.
+        // The shown dataset's row, at all times: it moves with the shown dataset, so with a followed scan as it runs,
+        // and with the rows when they are placed again (by scan value once every dataset is read). On the map a white
+        // line edged in black, which shows on every colour of every map; on the stacked view the accent colour.
         Rectangle {
-            readonly property real at: chart.scan && chart.project ? chart.scan.rowOf(chart.project.currentExperimentIndex) : NaN
+            readonly property real at: {
+                const revision = chart.scan ? chart.scan.revision : 0;  // the rows' placing
+                return chart.scan && chart.project ? chart.scan.rowOf(chart.project.currentExperimentIndex) : NaN;
+            }
 
             objectName: "scanView." + chart.mode + ".current"
             visible: !isNaN(at)
-            y: Math.round((axisY.max - at) / (axisY.max - axisY.min) * plot.height)
+            y: Math.round((axisY.max - at) / (axisY.max - axisY.min) * plot.height) - Math.floor(height / 2)
             width: plot.width
-            height: 1
-            color: chart.mode === "map" ? "white" : EaStyle.Colors.themeForegroundMinor
+            height: chart.mode === "map" ? 4 : 2
+            color: chart.mode === "map" ? "black" : EaStyle.Colors.themeAccent
+
+            Rectangle {
+                visible: chart.mode === "map"
+                y: 1
+                width: parent.width
+                height: 2
+                color: "white"
+            }
         }
         Rectangle {
             anchors.fill: parent
@@ -206,46 +230,34 @@ Item {
         width: chart.barWidth
         height: plot.height
 
-        Rectangle {
+        // Drawn by the lookup the map's pixels take, so the key is the map's own.
+        ScanColourBar {
             id: bar
 
+            objectName: "scanView.map.colourBar.colours"
             x: chart.em
             width: chart.em
             height: parent.height
+            colourMap: chart.mapColours
+        }
+        Rectangle {
+            anchors.fill: bar
+            color: "transparent"
             border.color: chart.colors.chartAxis
             border.width: 1
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: layer.mapColour(1.0)
-                }
-                GradientStop {
-                    position: 0.25
-                    color: layer.mapColour(0.75)
-                }
-                GradientStop {
-                    position: 0.5
-                    color: layer.mapColour(0.5)
-                }
-                GradientStop {
-                    position: 0.75
-                    color: layer.mapColour(0.25)
-                }
-                GradientStop {
-                    position: 1.0
-                    color: layer.mapColour(0.0)
-                }
-            }
         }
+        // Each end's label centred on it, as a tick label is.
         EaElements.Label {
+            objectName: "scanView.map.colourBar.max"
             x: bar.x + bar.width + chart.em * 0.3
-            y: 0
+            y: -height / 2
             color: chart.colors.chartLabels
             text: chart.intensityText(layer.displayMax)
         }
         EaElements.Label {
+            objectName: "scanView.map.colourBar.min"
             x: bar.x + bar.width + chart.em * 0.3
-            y: parent.height - height
+            y: parent.height - height / 2
             color: chart.colors.chartLabels
             text: chart.intensityText(layer.displayMin)
         }
@@ -275,21 +287,82 @@ Item {
         color: chart.colors.chartLabels
         text: chart.scan ? chart.scan.xTitle : ""
     }
-    // Reading the datasets: how far it has come, at the top right.
-    EaElements.Label {
-        objectName: "scanView." + chart.mode + ".progress"
-        visible: chart.scan !== null && chart.scan.wanted && chart.scan.loaded < chart.scan.count
+    // The toolbar line, centred above the plot as the pattern chart's: the y scale, shared with the pattern chart, and
+    // the colours, each view's own and kept as app settings.
+    Row {
+        objectName: "scanView." + chart.mode + ".toolbar"
+        x: Math.round(view.x + view.plotArea.x + (view.plotArea.width - width) / 2)
+        y: chart.toolbarTop
+        spacing: AppSizes.toolbarSpacing
+
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.yscale"
+            readonly property var tokens: ["linear", "sqrt", "log"]
+            toolTip: chart.mode === "map" ? qsTr("Colour scale") : qsTr("Y scale")
+            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            closedTexts: chart.mode === "map" ? [qsTr("colour: linear"), qsTr("colour: square root"), qsTr("colour: log")] : [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
+            currentIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
+            onActivated: index => Preferences.patternYScale = tokens[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView.stacked.toolbar.palette"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("The patterns' colours")
+            model: ApplicationInfo.colourSchemeTitles
+            currentIndex: Math.max(0, ApplicationInfo.colourSchemes.indexOf(chart.stackedPalette))
+            onActivated: index => Preferences.scanStackedPalette = ApplicationInfo.colourSchemes[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView.map.toolbar.colourMap"
+            visible: chart.mode === "map"
+            toolTip: qsTr("The map's colours")
+            model: ApplicationInfo.scanColourMaps
+            closedTexts: ApplicationInfo.scanColourMaps.map(name => qsTr("map: %1").arg(name))
+            currentIndex: Math.max(0, ApplicationInfo.scanColourMaps.indexOf(chart.mapColours))
+            onActivated: index => Preferences.scanMapColours = ApplicationInfo.scanColourMaps[index]
+        }
+    }
+
+    // Above the plot, under the toolbar: how far reading has come, then what could not be read, and why the rows are
+    // placed by file index when the scan extracts a value.
+    Column {
         anchors.right: parent.right
         anchors.rightMargin: chart.sideMargin
-        y: chart.em * 0.2
-        color: chart.colors.chartLabels
-        text: chart.scan ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : ""
+        y: chart.toolbarTop + AppSizes.toolbarControlSize + chart.em * 0.2
+        width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
+
+        EaElements.Label {
+            objectName: "scanView." + chart.mode + ".progress"
+            visible: chart.scan !== null && chart.scan.wanted && chart.scan.loaded < chart.scan.count
+            anchors.right: parent.right
+            color: chart.colors.chartLabels
+            text: chart.scan ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : ""
+        }
+        EaElements.Label {
+            objectName: "scanView." + chart.mode + ".refused"
+            visible: chart.scan !== null && chart.scan.failed > 0 && chart.hasData
+            anchors.right: parent.right
+            width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
+            elide: Text.ElideMiddle
+            color: EaStyle.Colors.red
+            text: chart.scan ? qsTr("%1 of %2 patterns could not be read and are not shown. %3").arg(chart.scan.failed).arg(chart.scan.count).arg(chart.scan.error) : ""
+            ToolTip.text: chart.scan ? chart.scan.error : ""
+        }
+        EaElements.Label {
+            objectName: "scanView." + chart.mode + ".rowNote"
+            visible: chart.scan !== null && chart.scan.rowNote !== "" && chart.hasData
+            anchors.right: parent.right
+            width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
+            elide: Text.ElideMiddle
+            color: chart.colors.chartLabels
+            text: chart.scan ? chart.scan.rowNote : ""
+        }
     }
     EmptyStateLabel {
         objectName: "scanView." + chart.mode + ".empty"
         anchors.centerIn: parent
         visible: !chart.hasData
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
-        text: chart.scanProject ? qsTr("Reading the scan's patterns") : qsTr("A sequential fit's patterns show here")
+        text: !chart.scanProject ? qsTr("A sequential fit's patterns show here") : chart.scan !== null && chart.scan.count > 0 && chart.scan.failed === chart.scan.count ? qsTr("None of the scan's patterns could be read. %1").arg(chart.scan.error) : qsTr("Reading the scan's patterns")
     }
 }

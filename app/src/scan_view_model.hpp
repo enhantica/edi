@@ -27,8 +27,9 @@ class ScanViewModel : public QObject {
     // A view shows the scan: its datasets are read, once.
     Q_PROPERTY(bool wanted READ wanted WRITE setWanted NOTIFY wantedChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
-    // How many datasets are read so far, and whether every one is.
+    // How many datasets are processed so far (read or refused); `failed` of them could not be read, and draw nothing.
     Q_PROPERTY(int loaded READ loaded NOTIFY loadedChanged)
+    Q_PROPERTY(int failed READ failed NOTIFY failedChanged)
     // Bumped whenever the columns or the rows change, for the views to draw again.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
@@ -41,6 +42,9 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(double stackHeight READ stackHeight NOTIFY stackHeightChanged)
     // The first refusal of a read, if any (the other datasets are still read).
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
+    // Why the rows are placed by file index although the scan has an extract rule: the first dataset without a number
+    // to place it by. Empty otherwise.
+    Q_PROPERTY(QString rowNote READ rowNote NOTIFY rowNoteChanged)
 
    public:
     // Each dataset reduced to this many columns across the x range.
@@ -57,6 +61,7 @@ class ScanViewModel : public QObject {
     void setWanted(bool wanted);
     int count() const { return static_cast<int>(files_.size()); }
     int loaded() const { return loaded_; }
+    int failed() const { return failed_; }
     int revision() const { return revision_; }
     QString xTitle() const { return x_title_; }
     QString rowTitle() const { return row_title_; }
@@ -66,6 +71,7 @@ class ScanViewModel : public QObject {
     double rowMax() const { return row_max_; }
     double stackHeight() const { return stack_height_; }
     QString error() const { return error_; }
+    QString rowNote() const { return row_note_; }
 
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
@@ -81,6 +87,7 @@ class ScanViewModel : public QObject {
     void wantedChanged();
     void countChanged();
     void loadedChanged();
+    void failedChanged();
     void revisionChanged();
     void xTitleChanged();
     void rowTitleChanged();
@@ -90,6 +97,7 @@ class ScanViewModel : public QObject {
     void rowMaxChanged();
     void stackHeightChanged();
     void errorChanged();
+    void rowNoteChanged();
 
    private:
     void start();
@@ -117,9 +125,11 @@ class ScanViewModel : public QObject {
     std::vector<edi::ScanRowSpan> spans_;
     std::size_t next_ = 0;  // the next dataset to read
     int loaded_ = 0;
+    int failed_ = 0;
     int revision_ = 0;
     bool has_values_ = false;  // the scan has an extract rule
-    QString x_title_, row_title_, extracted_title_, error_;
+    QString x_title_, row_title_, extracted_title_, error_, row_note_;
+    QString value_problem_;  // the first dataset with no value to place its row by
     double x_min_ = 0.0, x_max_ = 1.0, row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;
     std::uint64_t generation_ = 0;  // bumped by every listing; a read delivers only to its own
     std::shared_ptr<std::atomic<bool>> stop_;

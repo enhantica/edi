@@ -36,7 +36,9 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     started_ = false;
     next_ = 0;
     loaded_ = 0;
+    publish(failed_, 0, &ScanViewModel::failedChanged);
     publish(error_, QString(), &ScanViewModel::errorChanged);
+    value_problem_.clear();
     files_.clear();
     directory_.clear();
     source_.reset();
@@ -100,7 +102,7 @@ void ScanViewModel::readNext() {
         edi::ScanColumns columns;
         double value = std::numeric_limits<double>::quiet_NaN();
         double x_min = 0.0, x_max = 0.0;
-        QString error;
+        QString error, value_problem;
     };
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
@@ -134,6 +136,11 @@ void ScanViewModel::readNext() {
                     double value = 0.0;
                     if (!extracted.empty() && edi::parse_scan_number(extracted.front(), value)) {
                         read.value = value;
+                    } else {
+                        read.value_problem = QString::fromStdString(file) +
+                                             (extracted.empty() ? QStringLiteral(": nothing is extracted")
+                                                                : QStringLiteral(": '%1' is not a number")
+                                                                      .arg(QString::fromStdString(extracted.front())));
                     }
                 }
             } catch (const std::exception& refusal) {
@@ -150,8 +157,16 @@ void ScanViewModel::readNext() {
                 for (std::size_t i = 0; i < done.size(); ++i) {
                     Read& read = done[i];
                     const std::size_t dataset = first + i;
-                    if (!read.error.isEmpty() && self->error_.isEmpty()) {
-                        self->publish(self->error_, read.error, &ScanViewModel::errorChanged);
+                    if (!read.error.isEmpty()) {
+                        if (self->error_.isEmpty()) {
+                            self->publish(self->error_, read.error, &ScanViewModel::errorChanged);
+                        }
+                        self->publish(self->failed_, self->failed_ + 1, &ScanViewModel::failedChanged);
+                        if (self->value_problem_.isEmpty()) {
+                            self->value_problem_ = read.error;
+                        }
+                    } else if (!read.value_problem.isEmpty() && self->value_problem_.isEmpty()) {
+                        self->value_problem_ = read.value_problem;
                     }
                     if (dataset == 0 && read.x_max > read.x_min) {
                         self->publish(self->x_min_, read.x_min, &ScanViewModel::xMinChanged);
@@ -178,6 +193,12 @@ void ScanViewModel::placeRows() {
     rows_ = by_value ? edi::scan_row_positions(values_) : edi::scan_row_positions(std::vector<double>(files_.size(), std::numeric_limits<double>::quiet_NaN()));
     spans_ = edi::scan_row_spans(rows_);
     const QString title = by_value ? extracted_title_ : tr("file index");
+    // Every dataset read and still placed by file index although the scan extracts a value: say why.
+    publish(row_note_,
+            has_values_ && !by_value && loaded_ == count() && !value_problem_.isEmpty()
+                ? tr("Rows by file index: %1").arg(value_problem_)
+                : QString(),
+            &ScanViewModel::rowNoteChanged);
     double low = 0.0, high = 1.0;
     if (!spans_.empty()) {
         low = std::min_element(spans_.begin(), spans_.end(), [](const auto& a, const auto& b) { return a.low < b.low; })->low;

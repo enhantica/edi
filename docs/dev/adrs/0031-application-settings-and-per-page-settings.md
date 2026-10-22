@@ -66,8 +66,8 @@ to know where Qt puts it.
    position on no screen is moved onto the primary screen), one group per page (`Analysis`: `scanPatternUpdates`),
    `PatternChart` for the one pattern chart every page shows (`yScale`, `structureCurves`, `legendShown`,
    `hoverShown`, `pointerMode`; amended 2026-10-21: the Analysis and Experiment charts' y scales and the Experiment
-   chart's x axis merged into it, the x axis being the project's own for every page, edi ADR-0017 §15) and
-   `Selections` (each project's structure, experiment and
+   chart's x axis merged into it, the x axis being the project's own for every page, edi ADR-0017 §15), `ScanViews`
+   for a scan's Stacked and Map views (`stackedPalette`, `mapColours`; edi ADR-0041) and `Selections` (each project's structure, experiment and
    scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store
    holds is never overwritten, the keys that moved go to their groups, and a marker keeps a later start from carrying
    anything again.

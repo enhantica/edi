@@ -6,11 +6,13 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
 #include "edi/palette.hpp"
 #include "edi/presentation.hpp"
+#include "edi/scan_views.hpp"
 
 namespace edi_app {
 
@@ -51,6 +53,7 @@ void ScanLayer::setXMax(double value) { assign(x_max_, value, &ScanLayer::xMaxCh
 void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
 void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
 void ScanLayer::setColourScheme(const QString& scheme) { assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged); }
+void ScanLayer::setColourMap(const QString& map) { assign(colour_map_, map, &ScanLayer::colourMapChanged); }
 void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
 void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
 
@@ -95,7 +98,7 @@ void ScanLayer::measure() {
 }
 
 QColor ScanLayer::mapColour(double t) const {
-    const edi::ScanMapColour colour = edi::scan_map_colour(t);
+    const edi::ScanMapColour colour = edi::scan_map_colour(edi::scan_colour_map_or_default(colour_map_.toStdString()), t);
     return QColor(colour.r, colour.g, colour.b, colour.a);
 }
 
@@ -114,24 +117,57 @@ void ScanLayer::paint(QPainter* painter) {
     const std::size_t count = all.size();
 
     if (mode_ == QLatin1String("map")) {
-        // One image row per dataset, stretched over the dataset's row extent; a column with no point is left clear.
-        QImage image(static_cast<int>(ScanViewModel::kColumns), 1, QImage::Format_ARGB32);
-        painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
-        const QRectF source(0, 0, static_cast<qreal>(ScanViewModel::kColumns), 1);
-        const QRectF across(px(x_left), 0, px(model_->xMax()) - px(x_left), 0);
-        for (std::size_t d = 0; d < count && d < spans.size(); ++d) {
-            const edi::ScanColumns& columns = all[d];
-            if (columns.high.size() != ScanViewModel::kColumns) {
+        // The datasets read, in row order, each as its columns' values on the y scale.
+        std::vector<std::size_t> order;
+        for (std::size_t d = 0; d < count && d < rows.size() && d < spans.size(); ++d) {
+            if (all[d].high.size() == ScanViewModel::kColumns && std::isfinite(rows[d])) {
+                order.push_back(d);
+            }
+        }
+        std::sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] < rows[b]; });
+        if (order.empty()) {
+            return;
+        }
+        std::vector<std::vector<float>> values(order.size(), std::vector<float>(ScanViewModel::kColumns));
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            for (std::size_t c = 0; c < ScanViewModel::kColumns; ++c) {
+                values[i][c] = static_cast<float>(edi::to_display(all[order[i]].high[c], scale));
+            }
+        }
+        const edi::ScanColourMap map = edi::scan_colour_map_or_default(colour_map_.toStdString());
+        // One image row per pixel row of the plot: between two datasets' rows the value is interpolated linearly, so
+        // the colour changes smoothly; beyond the first or the last row, out to its extent, it is that dataset's. A
+        // column one of the two leaves empty takes the other's value, and one both leave empty stays clear.
+        const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
+        QImage image(static_cast<int>(ScanViewModel::kColumns), pixel_rows, QImage::Format_ARGB32);
+        image.fill(Qt::transparent);
+        const double low_edge = spans[order.front()].low, high_edge = spans[order.back()].high;
+        std::size_t below = 0;
+        for (int j = 0; j < pixel_rows; ++j) {
+            const double y = y_max_ - (static_cast<double>(j) + 0.5) / static_cast<double>(pixel_rows) * (y_max_ - y_min_);
+            if (y < low_edge || y > high_edge) {
                 continue;
             }
-            for (std::size_t c = 0; c < ScanViewModel::kColumns; ++c) {
-                const double value = edi::to_display(columns.high[c], scale);
-                const edi::ScanMapColour colour = edi::scan_map_colour((value - display_min_) / span);
-                image.setPixel(static_cast<int>(c), 0, qRgba(colour.r, colour.g, colour.b, colour.a));
+            while (below + 1 < order.size() && rows[order[below + 1]] <= y) {
+                ++below;
             }
-            const double top = py(spans[d].high), bottom = py(spans[d].low);
-            painter->drawImage(QRectF(across.x(), top, across.width(), std::max(1.0, bottom - top)), image, source);
+            std::size_t a = below, b = below;
+            double f = 0.0;
+            if (y > rows[order[below]] && below + 1 < order.size()) {
+                b = below + 1;
+                f = (y - rows[order[a]]) / (rows[order[b]] - rows[order[a]]);
+            }
+            QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
+            for (std::size_t c = 0; c < ScanViewModel::kColumns; ++c) {
+                const double va = values[a][c], vb = values[b][c];
+                const double value = !std::isfinite(va) ? vb : !std::isfinite(vb) ? va : va + (vb - va) * f;
+                const edi::ScanMapColour colour = edi::scan_map_colour(map, (value - display_min_) / span);
+                line[c] = qRgba(colour.r, colour.g, colour.b, colour.a);
+            }
         }
+        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter->drawImage(QRectF(px(x_left), 0, px(model_->xMax()) - px(x_left), static_cast<double>(pixel_rows)),
+                           image);
         return;
     }
 
@@ -186,6 +222,32 @@ void ScanLayer::paint(QPainter* painter) {
     if (current_ >= 0 && static_cast<std::size_t>(current_) < count) {
         draw(static_cast<std::size_t>(current_), 2.0);
     }
+}
+
+ScanColourBar::ScanColourBar(QQuickItem* parent) : QQuickPaintedItem(parent) {}
+
+void ScanColourBar::setColourMap(const QString& map) {
+    if (map != colour_map_) {
+        colour_map_ = map;
+        emit colourMapChanged();
+        update();
+    }
+}
+
+void ScanColourBar::paint(QPainter* painter) {
+    const int rows = static_cast<int>(std::ceil(height()));
+    if (rows <= 0 || width() <= 0.0) {
+        return;
+    }
+    const edi::ScanColourMap map = edi::scan_colour_map_or_default(colour_map_.toStdString());
+    QImage image(1, rows, QImage::Format_ARGB32);
+    for (int j = 0; j < rows; ++j) {
+        const double t = rows == 1 ? 1.0 : 1.0 - static_cast<double>(j) / static_cast<double>(rows - 1);
+        const edi::ScanMapColour colour = edi::scan_map_colour(map, t);
+        image.setPixel(0, j, qRgba(colour.r, colour.g, colour.b, colour.a));
+    }
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+    painter->drawImage(QRectF(0, 0, width(), static_cast<double>(rows)), image);
 }
 
 }  // namespace edi_app

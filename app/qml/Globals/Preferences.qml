@@ -57,6 +57,8 @@ QtObject {
         preferences.patternLegendShown = false;
         preferences.patternHoverShown = true;
         preferences.patternPointerMode = "zoom";
+        preferences.scanStackedPalette = "";
+        preferences.scanMapColours = "viridis";
     }
 
     property Settings settings: Settings {
@@ -99,6 +101,11 @@ QtObject {
     property bool patternLegendShown: false
     property bool patternHoverShown: true
     property string patternPointerMode: "zoom"
+    // A scan's Stacked and Map views (edi ADR-0041): the palette the stacked patterns take their colours from (one of
+    // ApplicationInfo.colourSchemes; empty follows colourScheme) and the map's colour map (one of
+    // ApplicationInfo.scanColourMaps).
+    property string scanStackedPalette: ""
+    property string scanMapColours: "viridis"
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -114,6 +121,13 @@ QtObject {
         property alias legendShown: preferences.patternLegendShown
         property alias hoverShown: preferences.patternHoverShown
         property alias pointerMode: preferences.patternPointerMode
+    }
+
+    property Settings scanViewSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "ScanViews"
+        property alias stackedPalette: preferences.scanStackedPalette
+        property alias mapColours: preferences.scanMapColours
     }
 
     property Binding fitPatternUpdates: Binding {
