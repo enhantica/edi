@@ -8,7 +8,7 @@ description: >-
 
 Si against SEPD (Argonne) time-of-flight neutron powder data with the Jorgensen-Von Dreele profile: 23 parameters — the cell edge, the isotropic ADP, the exponential decay (β₀, β₁), Gaussian (σ₀, σ₁) and Lorentzian (γ₁) widths, the TOF zero offset, the scale and 14 background points.
 
-The start is **start-2** — rung 2 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-tof_si-sepd_start-5`](../pd-neut-tof_si-sepd_start-5/index.md) fits the same model from a
+The start is **start-2** — rung 2 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-tof_si-sepd_start-5`](../pd-neut-tof_si-sepd_start-5/README.md) fits the same model from a
 different start, so the pair exercises the descent from two different distances to the minimum.
 
 ## Run it

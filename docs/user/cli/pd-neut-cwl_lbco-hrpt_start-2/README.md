@@ -8,7 +8,7 @@ description: >-
 
 La<sub>0.5</sub>Ba<sub>0.5</sub>CoO<sub>3</sub> (cubic perovskite) against HRPT (PSI) constant-wavelength neutron powder data: 17 parameters — the cell edge, four isotropic ADPs, the pseudo-Voigt profile (U, V, W, Y), the 2θ offset, the scale, five background points and the March–Dollase preferred-orientation coefficient r (axis [0 0 1]).
 
-The start is **start-2** — rung 2 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_lbco-hrpt_start-4`](../pd-neut-cwl_lbco-hrpt_start-4/index.md) fits the same model, without the preferred-orientation row, from a
+The start is **start-2** — rung 2 of the graded starting points recorded for the fitting corpus (1 is the farthest from the solution); the sibling project [`pd-neut-cwl_lbco-hrpt_start-4`](../pd-neut-cwl_lbco-hrpt_start-4/README.md) fits the same model, without the preferred-orientation row, from a
 different start, so the pair exercises the descent from two different distances to the minimum.
 
 **Preferred orientation.** The experiment carries one `_preferred_orientation` row, `march_r` free from 0.8. The data is
