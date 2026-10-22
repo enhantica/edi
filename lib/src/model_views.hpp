@@ -134,6 +134,25 @@ struct AbsorptionNode {
     std::vector<edi::Parameter*> parameters() const { return storage().parameters(); }
 };
 
+// A single crystal's reflections (diffraction-lib CwlReflnData / TofReflnData): the measured
+// columns of its `_refln` loop, beside the d, sin(theta)/lambda and F2calc its calculation
+// published, recalculated on a read when they are not current, as the powder reflections are.
+struct ScReflnView {
+    edi::ExperimentBase* experiment;
+    explicit ScReflnView(edi::ExperimentBase* experiment) : experiment(experiment) {}
+    const edi::ReflnDataBase& measured() const { return *experiment->reflections; }
+    const edi::ReflnDataBase& calculated() const {
+        experiment->ensure_computed();
+        return *experiment->reflections;
+    }
+};
+struct ScCwlReflnView : ScReflnView {
+    using ScReflnView::ScReflnView;
+};
+struct ScTofReflnView : ScReflnView {
+    using ScReflnView::ScReflnView;
+};
+
 // A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): its
 // mosaic model, crystal radius and mosaicity.
 struct ExtinctionNode {
