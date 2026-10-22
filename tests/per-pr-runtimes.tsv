@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T22:42:11Z
+# measured_utc = 2026-10-22T23:21:47Z
 #
-# Recorded from: measured test run (18 node(s) measured once, 14540 banked, 0 stale row(s) dropped)
-# Collected tests: 16032; with a reported duration: 9556
+# Recorded from: measured test run (2 node(s) measured once, 14558 banked, 0 stale row(s) dropped)
+# Collected tests: 16034; with a reported duration: 9558
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16032
+# inventory_python = 16034
 # inventory_cpp = 389
-# inventory_measured = 14558
+# inventory_measured = 14560
 # inventory_unmeasured = 1863
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -5736,6 +5736,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.350	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
 0.310	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
+0.020	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
+0.030	tests/integration/py/test_fullprof_public_logs.py::test_every_committed_fullprof_log_is_scrubbed_and_its_receipt_matches
 0.014	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-compact]
 0.016	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-public]
 0.015	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-point-remove-public]
