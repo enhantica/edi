@@ -19,6 +19,25 @@ EaComponents.ListView {
     // A row the user made current, by a click on any of its cells or by moving into one of its editors: a table whose
     // page holds its current row (marksCurrentRow) sets it from this.
     signal rowActivated(int row)
+
+    // Up and Down move the current row as a click does (the owner, 2026-10-22): the row is selected in a selectable
+    // table and reported as activated, so a page holding its current row moves too. A passive table (nothing
+    // selectable and no current row) keeps the keys, and a text editor keeps its own.
+    Keys.onPressed: event => {
+        if ((event.key !== Qt.Key_Up && event.key !== Qt.Key_Down) || table.count === 0 || (!table.selectable && !table.marksCurrentRow))
+            return;
+        const focused = table.Window.activeFocusItem;
+        if (focused !== null && "cursorPosition" in focused)
+            return;
+        const from = table.markerRow;
+        const row = Math.max(0, Math.min(table.count - 1, from < 0 ? 0 : from + (event.key === Qt.Key_Down ? 1 : -1)));
+        table.currentIndex = row;
+        table.positionViewAtIndex(row, ListView.Contain);
+        if (table.selectable)
+            table.selectWithModifiers(row, Qt.NoModifier);
+        table.rowActivated(row);
+        event.accepted = true;
+    }
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
     // the background, and a page's tables kept laying out for about a second after a project opened.
     cacheBuffer: 0
