@@ -425,6 +425,15 @@ void PatternChartController::setColourScheme(const QString& scheme) {
     }
 }
 
+void PatternChartController::setStructureColourScheme(const QString& scheme) {
+    if (scheme != structure_colour_scheme_) {
+        structure_colour_scheme_ = scheme;
+        emit structureColourSchemeChanged();
+        publishColors();
+        invalidate();  // the legend's colours
+    }
+}
+
 edi::ColourScheme PatternChartController::scheme() const {
     return edi::colour_scheme_or_default(colour_scheme_.toStdString());
 }
@@ -434,7 +443,8 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
         return report_->reportModel().pattern_styles;
     }
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
-    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0);
+    const std::optional<edi::ColourScheme> structural = edi::colour_scheme_from_name(structure_colour_scheme_.toStdString());
+    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0, structural);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {

@@ -464,13 +464,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             const std::string_view title = edi::colour_scheme_title(edi::colour_scheme_or_default(name));
             schemes.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
         }
+        // The structures and the patterns each take the scheme, as the one choice did before they were split.
         const auto pick = [](const QString& scheme) {
-            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colourScheme",
-                               "choose:" + scheme, "choose:OK"};
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.structureColours",
+                               "choose:" + scheme, "preferences.patternColours", "choose:" + scheme, "choose:OK"};
         };
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
-                                                              "preferences.colourScheme"}});
+                                                              "preferences.patternColours"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             for (int i = 0; i < schemes.size(); ++i) {
                 QStringList actions = i == 0 && theme == QLatin1String("light")
@@ -645,6 +646,23 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle.band", "chart.toolbar.legend"}});
         steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
         steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
+    }
+    // The Experiment page's Stacked and Map tabs on cosio's scan before any fit, and the Preferences' four colour
+    // choices (the owner, 2026-10-22), the structures and the patterns then in different schemes, in both themes.
+    // Run only when asked (`--demo-only colours-`).
+    if (only.startsWith(QLatin1String("colours-"))) {
+        steps_.push_back({"colours-1-experiment-stacked-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start
+                              + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                              + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
+                                            "mainArea.experiment.tab.stacked"}});
+        steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
+        steps_.push_back({"colours-3-preferences", {"appBar.button.preferences", "preferences.tab.appearance"}});
+        steps_.push_back({"colours-4-structures-coast-patterns-contrast",
+                          {"preferences.structureColours", "choose:Edi Coast", "preferences.patternColours",
+                           "choose:Edi Contrast", "choose:OK", "mainArea.experiment.tab.chart"}});
+        steps_.push_back({"colours-5-dark", {"theme:dark"}});
+        steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).

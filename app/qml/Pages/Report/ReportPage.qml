@@ -58,11 +58,17 @@ WorkflowPage {
     }
     continueVisible: false
 
-    // The report's charts take the app's colour scheme.
+    // The report's charts take the app's Patterns and Structures colours.
     Binding {
         target: page.report
         property: "colourScheme"
-        value: Preferences.colourScheme
+        value: Preferences.patternColours
+        when: page.report !== null
+    }
+    Binding {
+        target: page.report
+        property: "structureColourScheme"
+        value: Preferences.structureColours
         when: page.report !== null
     }
 

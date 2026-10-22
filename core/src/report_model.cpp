@@ -734,16 +734,22 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
         overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
     options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
     options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
-    if (overrides.colour_scheme) {
-        const std::optional<ColourScheme> scheme = colour_scheme_from_name(*overrides.colour_scheme);
+    const auto scheme_named = [](const std::string& name) {
+        const std::optional<ColourScheme> scheme = colour_scheme_from_name(name);
         if (!scheme) {
             std::string known;
-            for (const std::string_view name : colour_scheme_names()) {
-                known += (known.empty() ? "" : ", ") + std::string(name);
+            for (const std::string_view each : colour_scheme_names()) {
+                known += (known.empty() ? "" : ", ") + std::string(each);
             }
-            throw std::invalid_argument("unknown colour scheme '" + *overrides.colour_scheme + "': one of " + known);
+            throw std::invalid_argument("unknown colour scheme '" + name + "': one of " + known);
         }
-        options.colour_scheme = *scheme;
+        return *scheme;
+    };
+    if (overrides.colour_scheme) {
+        options.colour_scheme = scheme_named(*overrides.colour_scheme);
+    }
+    if (overrides.structure_colour_scheme) {
+        options.structure_colour_scheme = scheme_named(*overrides.structure_colour_scheme);
     }
     if (overrides.correlation_experiment) {
         const auto& experiments = project.experiments;
@@ -902,7 +908,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     // it there; the table has a measured row for each dataset.
     model.pattern_styles = pattern_style_table(options.colour_scheme,
                                                scan && scan->place ? scan->files : project.experiments.size(),
-                                               project.structures.size());
+                                               project.structures.size(), options.structure_colour_scheme);
     model.structure_styles = structure_style_table();
     return model;
 }

@@ -41,6 +41,14 @@ bool ReportViewModel::calculating() const {
     return project_.calculating() || (fit != nullptr && fit->running());
 }
 
+void ReportViewModel::setStructureColourScheme(const QString& scheme) {
+    if (scheme != structure_colour_scheme_) {
+        structure_colour_scheme_ = scheme;
+        emit structureColourSchemeChanged();
+        refresh();
+    }
+}
+
 void ReportViewModel::setColourScheme(const QString& scheme) {
     if (scheme != colour_scheme_) {
         colour_scheme_ = scheme;
@@ -114,6 +122,9 @@ bool ReportViewModel::build() const {
     edi::ReportOverrides choices;
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
+    }
+    if (edi::colour_scheme_from_name(structure_colour_scheme_.toStdString())) {
+        choices.structure_colour_scheme = structure_colour_scheme_.toStdString();
     }
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {

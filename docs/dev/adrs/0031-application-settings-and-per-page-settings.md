@@ -61,7 +61,9 @@ to know where Qt puts it.
    a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
 6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
    settings.
-7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme), `Projects`
+7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme, and since 2026-10-22 `structureColourScheme` and `patternColourScheme`,
+   empty until chosen and then following it; the Stacked and Map colours are chosen beside them in the dialog and kept
+   in `ScanViews`), `Projects`
    (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
    position on no screen is moved onto the primary screen), one group per page (`Analysis`: `scanPatternUpdates`),
    `PatternChart` for the one pattern chart every page shows (`yScale`, `structureCurves`, `legendShown`,

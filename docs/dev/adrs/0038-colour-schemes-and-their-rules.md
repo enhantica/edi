@@ -30,7 +30,10 @@ differ in hue in a perceptual space (Oklab).
    250°, as raspberry sat too close to the rose calculated curve); five structure colours in the order orange, gold, brown, amber, olive; and three role colours: total
    calculation, background and difference. The first colour and the whole order are the same in both themes.
 3. **Assignment.** Datasets and structures are assigned separately, each from its own group, by its place among its
-   own kind. Up to five items take the first colours of the group in order. More than five take a gradient over the
+   own kind. The app's Preferences choose the structures' scheme and the patterns' scheme apart (the owner,
+   2026-10-22): the structure colours come from the first, the measured and role colours from the second, and a
+   report follows both; until either is chosen it follows the one choice made before the split. The CLI and Python
+   take one scheme for both. Up to five items take the first colours of the group in order. More than five take a gradient over the
    whole group instead, from the group's first colour to its second: item i of N, counted from zero, takes
    t = i / (N − 1), mixed in Oklab (Björn Ottosson, 2020), with the two ends the stored colours themselves and every
    result a valid sRGB colour. The gradient never cycles through the five and never follows them. A place past the

@@ -43,7 +43,8 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
-    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' and structures' colours
+    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' colours, and the structures' unless...
+    std::optional<ColourScheme> structure_colour_scheme;  ///< ...the structures' are given apart (the app's choice)
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
@@ -58,6 +59,7 @@ struct ReportOverrides {
     std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
     std::optional<std::vector<std::string>> excluded;
     std::optional<std::string> colour_scheme;  ///< a token of colour_scheme_from_name; absent, the default scheme
+    std::optional<std::string> structure_colour_scheme;  ///< the structures' own; absent, colour_scheme's
     /// In a fit of several experiments, the name of the one whose parameters the correlation chart shows; absent, the
     /// first.
     std::optional<std::string> correlation_experiment;

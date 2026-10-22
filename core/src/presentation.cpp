@@ -260,7 +260,9 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
     return decimate(x, low, high, x_min, x_max, columns).rows;
 }
 
-std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures) {
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
+                                             std::optional<ColourScheme> structure_scheme) {
+    const ColourScheme structural = structure_scheme.value_or(scheme);
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the scheme's (ADR-0038): the
     // measured and tick colours by the block's place among its group, the calculated, background and residual
@@ -282,13 +284,13 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
                      0.0});
     // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour among them all).
     for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
-        table.push_back({"bragg." + std::to_string(place), structure_colour(scheme, place, structures, false),
-                         structure_colour(scheme, place, structures, true), "ticks", 1.0, 1.0, 0.0});
+        table.push_back({"bragg." + std::to_string(place), structure_colour(structural, place, structures, false),
+                         structure_colour(structural, place, structures, true), "ticks", 1.0, 1.0, 0.0});
     }
     // A structure's curve: an outline in its structure colour over a soft fill of the same colour (ADR-0038).
     for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
-        table.push_back({"structure." + std::to_string(place), structure_colour(scheme, place, structures, false),
-                         structure_colour(scheme, place, structures, true), "line+fill", 1.5, 0.25, 0.0});
+        table.push_back({"structure." + std::to_string(place), structure_colour(structural, place, structures, false),
+                         structure_colour(structural, place, structures, true), "line+fill", 1.5, 0.25, 0.0});
     }
     table.push_back({"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0});
     return table;

@@ -319,7 +319,8 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
-        colourScheme: Preferences.colourScheme
+        colourScheme: Preferences.patternColours
+        structureColourScheme: Preferences.structureColours
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.

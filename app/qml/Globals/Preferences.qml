@@ -38,6 +38,13 @@ QtObject {
     // default) or another of ApplicationInfo.colourSchemes; a stored token no longer offered reads as the default.
     // Every chart, icon and report the app draws follows it, a report in the scheme's light colours.
     property string colourScheme: "ediNatural"
+    // The colours split by what they colour (the owner, 2026-10-22): the structures' and the patterns' schemes, each
+    // empty until chosen and then following colourScheme, the one choice before the split, so a stored choice carries
+    // over. The Stacked and Map colours are scanStackedPalette and scanMapColours.
+    property string structureColourScheme: ""
+    property string patternColourScheme: ""
+    readonly property string structureColours: structureColourScheme !== "" ? structureColourScheme : colourScheme
+    readonly property string patternColours: patternColourScheme !== "" ? patternColourScheme : colourScheme
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
     // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.
     property string newReportLibraries: "online"
@@ -52,6 +59,8 @@ QtObject {
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
+        preferences.structureColourScheme = "";
+        preferences.patternColourScheme = "";
         preferences.patternYScale = "linear";
         preferences.structureCurves = true;
         preferences.patternLegendShown = false;
@@ -78,6 +87,8 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Appearance"
         property alias colourScheme: preferences.colourScheme
+        property alias structureColourScheme: preferences.structureColourScheme
+        property alias patternColourScheme: preferences.patternColourScheme
     }
 
     property Settings projectsSettings: Settings {

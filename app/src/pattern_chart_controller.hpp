@@ -59,6 +59,10 @@ class PatternChartController : public QObject {
     // The colour scheme, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures'
     // colours.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    // The structures' own colour scheme (the Bragg ticks and the structure curves), when the app's Structures colours
+    // differ from its Patterns colours (the owner, 2026-10-22); empty: colourScheme's.
+    Q_PROPERTY(QString structureColourScheme READ structureColourScheme WRITE setStructureColourScheme NOTIFY
+                   structureColourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)
     Q_PROPERTY(qreal plotHeight READ plotHeight WRITE setPlotHeight NOTIFY plotHeightChanged)
@@ -156,6 +160,8 @@ class PatternChartController : public QObject {
     bool dark() const { return dark_; }
     void setDark(bool dark);
     QString colourScheme() const { return colour_scheme_; }
+    QString structureColourScheme() const { return structure_colour_scheme_; }
+    void setStructureColourScheme(const QString& scheme);
     void setColourScheme(const QString& scheme);
     qreal plotWidth() const { return plot_width_; }
     void setPlotWidth(qreal width);
@@ -252,6 +258,7 @@ class PatternChartController : public QObject {
     void activeChanged();
     void darkChanged();
     void colourSchemeChanged();
+    void structureColourSchemeChanged();
     void plotWidthChanged();
     void plotHeightChanged();
     void residualPlotHeightChanged();
@@ -337,6 +344,7 @@ class PatternChartController : public QObject {
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
     QString colour_scheme_ = QStringLiteral("ediNatural");
+    QString structure_colour_scheme_;
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;

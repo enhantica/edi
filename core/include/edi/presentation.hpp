@@ -174,9 +174,11 @@ struct SeriesStyle {
 // `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least five), each
 // colour the scheme's for its place among its group (edi::pattern_colour, edi::structure_colour), and the role rows:
 // the calculated, background and residual styles in the scheme's role colours (edi::role_colour) and the
-// excluded-region style.
+// excluded-region style. With `structure_scheme`, the structures' rows take their colours from that scheme instead
+// (the app's separate Structures and Patterns colours, the owner, 2026-10-22).
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
-                                             std::size_t structures = 0);
+                                             std::size_t structures = 0,
+                                             std::optional<ColourScheme> structure_scheme = std::nullopt);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

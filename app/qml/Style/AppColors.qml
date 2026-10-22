@@ -20,7 +20,7 @@ QtObject {
     // the first ones in order, or past five a gradient along the order.
     function structure(index) {
         const count = Session.project ? Math.max(Session.project.structures.count, 1) : 1;
-        return index >= 0 ? ApplicationInfo.structureColour(Preferences.colourScheme, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
+        return index >= 0 ? ApplicationInfo.structureColour(Preferences.structureColours, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
     }
 
     // An experiment's colour by its place among the project's, from the colour scheme's measured colours: the first
@@ -29,7 +29,7 @@ QtObject {
     function experiment(index, dark) {
         const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
         const darkColour = dark === undefined ? EaStyle.Colors.isDarkPalette : dark;
-        return index >= 0 ? ApplicationInfo.patternColour(Preferences.colourScheme, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
+        return index >= 0 ? ApplicationInfo.patternColour(Preferences.patternColours, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.
