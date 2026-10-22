@@ -24,3 +24,17 @@ header records are present. The original range remains the Chebyshev domain.
 FullProf's fitted `.new` is projected to a calculation with all codes zero.
 Output presence alone is not success: non-finite output, missing convergence,
 and any failed start-pattern agreement leave the case open.
+
+The diffraction-lib comparison records use
+`knowledge/comparison/<case>/diffraction-lib/reference.json`: `program`,
+`model_compatible`, and a nonempty `reason` for incompatible models. The LBCO
+simulation witness also pins `start.npz` in `artifacts_sha256`; that array file
+contains `x` and `calculated`. It is calculated once by diffraction-lib at the
+committed simulation model. BeBa rows name their TCH-versus-mixing-eta mismatch;
+they cannot present their minima as agreement on one common model.
+
+`finalize_fullprof.py --logs <authoring-log-directory>` commits the actual
+convergence and finite-output evidence, parameter table, code-index mapping,
+all-point least-squares Rwp and fitted-twin digests. Repeat `--logs` for separate
+authoring batches. Missing convergence keeps the minimum gate open. A finite
+last cycle alone does not establish convergence.

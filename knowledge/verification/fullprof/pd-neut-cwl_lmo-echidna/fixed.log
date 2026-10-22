@@ -1,0 +1,21 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 21:32:26.939
+ => Reading control file *.PCR ... fixed
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =fixed):
+ =>  Error reading the PCR file:
+ =>  FindFMT: invalid character in a numeric field !
+ =>  '12.0000 NaN 0'
+ =>  ---------^
+ => Please check your input file at line:     17 !
+ =>  Program interrupted

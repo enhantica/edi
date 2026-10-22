@@ -1,0 +1,27 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/pd-neut-tof_si_simulation/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+    "experiments/sepd.edi": "93449e1da42b2bdd244727e0d11234a906f950691f431e2e7b9e54323ba8a4f3",
+    "project.edi": "e4e6788b1c5006848fd82e0f6e34a8afdad50dd53936b03fcf1b22dec3f7e150",
+    "structures/si.edi": "1923e98e340ce5c3a6eb8f1febb921014d10df79310fab98574e8c0b6bd68bbd"
+  },
+  "banks": [
+    "sepd"
+  ],
+  "scope": "calculation",
+  "staging": "none",
+  "cycles": 200,
+  "artifacts_sha256": {
+    "start.dat": "f939e93c8488c962cf50db38abf92711680d55d47d6864a70039ff21f6984661",
+    "start.log": "44ef2c77118720a7ab50184e6394aa53b309ee2bb09e518f3bda1902eccfb32d",
+    "start.new": "0a5231249e7505630e9ca784f28e36965ef1d051ed102d1ee9b4f4706611e827",
+    "start.out": "1369b1289d114ec295e2638ccc6a2532a025147cbd7206b66254d17a821123f2",
+    "start.pcr": "0e21e9cfd1cd7975ec6305d4aad4a0aaabe14f51325a573a0d8972ea86fc3445",
+    "start.prf": "0546187c327b426bb4da0a66cd5c42428d91d86e81cb1a91dec4412e3fc0545d",
+    "start.sum": "aa638b6b60155306d01e19e53c129e8e487e59e55687558b1dd56f3e36ee7d95"
+  }
+}

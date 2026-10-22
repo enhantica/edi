@@ -1,0 +1,67 @@
+COMM pd-neut-cwl_lmo-echidna
+! Current global Chi2 (Bragg contrib.) =      71.13    
+! Files => DAT-file: fit.dat,  PCR-file: fit
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+   1   7   1   9   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1
+!
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+   2   2   1   0   2   0   4   0   0   2  10   1   1   0   0   1   1
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1
+ 1.621500 1.621500  0.00000   87.004  48.000  0.0000  0.3000  180.00    0.0000  0.0000
+!
+!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0
+1 0.10 0.20 0.20 0.20 0.20 12.0242 0.049991 161.9968 0.000 0.000
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+12.0000 NaN 0
+30.0000 NaN 0
+50.0000 NaN 0
+70.0000 NaN 0
+90.0000 NaN 0
+110.0000 NaN 0
+130.0000 NaN 0
+150.0000 NaN 0
+162.0000 NaN 0
+! 
+!
+0 !Number of refined parameters
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1
+NaN 0 NaN 0 NaN 0 0.000000 0 0
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000
+!-------------------------------------------------------------------------------
+lmo
+!
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More
+   5   0   0 0.0 0.0 1.0   0   0   0   0   0            NaN   0   7   0
+!
+!
+R -3 m                   <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+O      O       0.00000  0.00000      NaN      NaN   0.16667   0   0   0    0  
+0 0 0 0 0
+Ni1    NI      0.00000  0.00000  0.50000      NaN       NaN   0   0   0    0  
+0 0 0 0 0
+Li1    LI      0.00000  0.00000  0.50000      NaN       NaN   0   0   0    0  
+0 0 0 0 0
+Li2    LI      0.00000  0.00000  0.00000      NaN       NaN   0   0   0    0  
+0 0 0 0 0
+Ni2    NI      0.00000  0.00000  0.00000      NaN       NaN   0   0   0    0  
+0 0 0 0 0
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model
+           NaN   0.00000   0.00000   0.00000   0.00000   0.00000       0
+0 0 0 0 0 0
+!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model
+          NaN          NaN          NaN     0.000000          NaN     0.000000     0.000000       0
+0 0 0 0 0 0 0
+!     a          b         c        alpha      beta       gamma      # Cell Info
+        NaN        NaN        NaN  90.000000  90.000000  90.000000   
+0 0 0 0 0 0
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L
+  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.08000  0.08000
+0 0 0 0 0 0 0 0
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+      12.024     161.997       1
