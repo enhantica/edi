@@ -34,11 +34,10 @@ EaElements.Menu {
         return rows;
     }
 
-    // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live.
-    readonly property var shown: {
-        void menu.membership;
-        return menu.fittableRows();
-    }
+    // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live. The
+    // count is used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with it
+    // the dependency.
+    readonly property var shown: menu.membership >= 0 ? menu.fittableRows() : []
     readonly property int freeCount: shown.filter(parameter => parameter.free).length
     readonly property int fixedCount: shown.length - freeCount
 
