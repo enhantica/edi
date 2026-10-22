@@ -14,6 +14,10 @@ def test_dat_and_int_produce_the_same_fit():
             FIXTURE / 'projects' / case / 'structures/structure.edi'
         )
         observed = imported(FIXTURE / 'fullprof' / case / f'prnio.{extension}')
+        wavelength = float(
+            (FIXTURE / 'fullprof' / case / 'prnio.int').read_text().splitlines()[2].split()[0]
+        )
+        observed.instrument.setup_wavelength.value = wavelength
         model = engine().Project(structure, observed)
         experiment = model.experiments[0]
         experiment.linked_structure.structure_id = 'structure'

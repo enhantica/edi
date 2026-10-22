@@ -109,6 +109,11 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
         if 'extinction' in case:
             text += '_extinction.type becker-coppens\n_extinction.model gauss\n'
             text += '_extinction.radius 10\n_extinction.mosaicity 35000\n'
+        else:
+            text += (
+                '_extinction.type becker-coppens\n_extinction.model gauss\n'
+                '_extinction.radius 0\n_extinction.mosaicity 0\n'
+            )
         text += 'loop_\n_linked_structure.structure_id\n_linked_structure.scale\n'
         text += f'structure {scale}\nloop_\n'
         text += ''.join(

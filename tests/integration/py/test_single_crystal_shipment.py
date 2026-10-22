@@ -28,19 +28,21 @@ def test_single_crystal_project_is_registered_and_executes(name):
     )
     expected = json.loads((directory / 'expected.json').read_text())
     assert expected, 'The single-crystal expected values must be nonempty'
-    oracle = json.loads((FITTING / 'fullprof' / name / 'expected.json').read_text())
+    family = 'becker-coppens' if 'extinction' in name else 'fullprof'
+    oracle = json.loads((FITTING / family / name / 'expected.json').read_text())
     for quantity, reference in oracle['quantities'].items():
         actual = expected.get('quantities', {}).get(quantity, {})
         assert actual.get('kind') == 'reference', (
             'CLI scale, objective and participation counts must be independent references'
         )
         assert actual.get('value') == pytest.approx(reference['value'], rel=0, abs=1e-12), (
-            'CLI expected values must equal the frozen measured-data FullProf fitting twin'
+            'CLI expected values must equal the frozen model-equivalent '
+            'measured-data fitting reference'
         )
         for bound in ('tol_abs', 'tol_rel'):
             if bound in reference:
                 assert actual.get(bound) is not None, (
-                    'CLI FullProf comparisons must retain every declared numerical bound'
+                    'CLI independent comparisons must retain every declared numerical bound'
                 )
                 assert 0 <= actual[bound] <= reference[bound], (
                     'CLI fitting tolerances must not exceed the independent oracle budget'

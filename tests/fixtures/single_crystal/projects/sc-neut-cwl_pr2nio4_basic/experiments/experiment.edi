@@ -6,6 +6,10 @@ _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
 _scattering_source.neutron_scattering_length sears1992
 _instrument.setup_wavelength 0.8302
+_extinction.type becker-coppens
+_extinction.model gauss
+_extinction.radius 0
+_extinction.mosaicity 0
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
