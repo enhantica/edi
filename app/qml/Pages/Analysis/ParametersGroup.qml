@@ -381,6 +381,10 @@ EaElements.GroupBox {
                     color: group.freeTitleColor
                     text: qsTr("free")
 
+                    // Whether the click area that takes the header's input is enabled: it is reparented over the
+                    // header, so the title's own `enabled` does not follow it.
+                    readonly property bool interactionEnabled: freeArea.enabled
+
                     EaElements.Label {
                         id: freeArrow
                         x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
