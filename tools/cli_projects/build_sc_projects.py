@@ -556,8 +556,10 @@ def write_references(root: Path, pid: str) -> None:
         else '\nFullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens '
         'radius this project frees, so its values do not describe the same model. diffraction-lib '
         'marks '
-        'the same difference on its page. This project stays out of the executing set until that '
-        'is settled.\n'
+        'the same difference on its page. FullProf 8.40 has no Becker-Coppens sphere model (only '
+        'model 1 and the anisotropic model 4), so no FullProf fit can be its reference: the '
+        'project stays out of the executing set until a reference from the Becker-Coppens '
+        'engine diffraction-lib uses (CrysPy) exists.\n'
     )
     (root / pid / 'PROVENANCE.md').write_text(
         f"""# {pid}: provenance

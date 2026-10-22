@@ -20,4 +20,4 @@ Every value comes from FullProf's own fit of the same parameters on the same ref
 The scale's tolerance is FullProf's own uncertainty plus half its last printed digit; the
 reduced chi-square is FullProf's residual sum over N - p.
 
-FullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens radius this project frees, so its values do not describe the same model. diffraction-lib marks the same difference on its page. This project stays out of the executing set until that is settled.
+FullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens radius this project frees, so its values do not describe the same model. diffraction-lib marks the same difference on its page. FullProf 8.40 has no Becker-Coppens sphere model (only model 1 and the anisotropic model 4), so no FullProf fit can be its reference: the project stays out of the executing set until a reference from the Becker-Coppens engine diffraction-lib uses (CrysPy) exists.
