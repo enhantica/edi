@@ -14,7 +14,9 @@
 
 TEST_CASE("Every structure count retains its approved Bragg colour") {
     for (const auto& expected : approved_palette::cases) {
-        CAPTURE(expected.scheme); CAPTURE(expected.count); CAPTURE(expected.dark);
+        CAPTURE(expected.scheme);
+        CAPTURE(expected.count);
+        CAPTURE(expected.dark);
         const auto scheme = edi::colour_scheme_from_name(expected.scheme);
         REQUIRE_MESSAGE(scheme.has_value(), "Every independently approved palette resolves through the public API");
         const auto styles = edi::pattern_style_table(*scheme, 1, expected.count);
