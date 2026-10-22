@@ -50,14 +50,14 @@ function joint(proof, root, independent, axes = "tof") {
     }
 }
 
-function dense(proof, root, jointRows) {
-    const count=48;
+function dense(proof, root, jointRows, count = 48, lowRows = []) {
     const pattern="XYDATA dense independent rows\n";
     if(!jointRows) {
         for(const name of ["all594687.dat","all594791.dat","all594842.dat"])
             if(!proof.remove(root,"experiments/d20_scan/"+name)) throw Error("The dense fixture replaces the original private scan files");
         for(let i=0;i<count;++i) {
-            const text=pattern+"TEMP "+(100+i*7+.345).toFixed(3)+"\n10 10 1\n40 20 1\n80 10 1\n";
+            const signal=lowRows.length ? "10 0 1\n40 "+(lowRows.indexOf(i)>=0 ? 1 : 1000)+" 1\n80 0 1\n" : "10 10 1\n40 20 1\n80 10 1\n";
+            const text=pattern+"TEMP "+(100+i*7+.345).toFixed(3)+"\n"+signal;
             if(!proof.write(root,"experiments/d20_scan/row_"+String(i).padStart(3,"0")+".dat",text)) throw Error("The dense independent scan file could not be written");
         }
     } else {

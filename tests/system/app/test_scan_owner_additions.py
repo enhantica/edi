@@ -97,6 +97,13 @@ CASES += tuple('test_dataset_ticks_survive_label_thinning:' + mode for mode in (
 CASES += ('test_stacked_height_default_and_memory',)
 CASES += tuple('test_stacked_height_changes_rise_not_rows:' + kind for kind in ('value', 'file'))
 
+CASES += tuple(
+    'test_dense_selected_box_minimum:' + mode + '-' + theme + '-' + part
+    for mode in ('stacked', 'map')
+    for theme in ('light', 'dark')
+    for part in ('geometry', 'pixels')
+)
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):

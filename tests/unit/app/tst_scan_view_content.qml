@@ -1939,6 +1939,92 @@ Rectangle {
                 verify(found, "The actual middle measured curve rises by the chosen factor above its unchanged row");
             }
         }
+        function boxPixels(marker, dark) {
+            marker.visible = false;
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "The minimum-box witness captures the underlying data without the selected border");
+            const background = grabImage(chart);
+            marker.visible = true;
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "The selected minimum box has a completed visible frame");
+            const frame = grabImage(chart), origin = marker.mapToItem(chart, 0, 0), ratio = frame.width / chart.width;
+            const core = dark ? 1 : 0, edge = 1 - core;
+            function pixel(image, x, y) {
+                return image.pixel(Math.floor((origin.x + x) * ratio), Math.floor((origin.y + y) * ratio));
+            }
+            function matches(x, y, target) {
+                const actual = pixel(frame, x, y), prior = pixel(background, x, y);
+                return ["r", "g", "b"].every(c => Math.abs(actual[c] - (target === "core" ? core : target === "edge" ? (edge + prior[c]) / 2 : prior[c])) <= 2 / 255);
+            }
+            for (const x of [marker.width * .25, marker.width * .5, marker.width * .75]) {
+                for (const y of [1.5, marker.height - 1.5])
+                    verify(matches(x, y, "core"), "Both horizontal borders retain their opaque one-pixel core on a dense selected row");
+                for (const y of [.5, 2.5, marker.height - 2.5, marker.height - .5])
+                    verify(matches(x, y, "edge"), "The inner and outer half-transparent lines remain distinct on both horizontal borders");
+                for (const y of [3.5, marker.height - 3.5])
+                    verify(matches(x, y, "inside"), "The minimum rectangle keeps empty interior pixels showing the unchanged underlying data");
+            }
+            const middle = marker.height / 2;
+            for (const x of [1.5, marker.width - 1.5])
+                verify(matches(x, middle, "core"), "The minimum rectangle retains its opaque vertical borders");
+            for (const x of [.5, 2.5, marker.width - 2.5, marker.width - .5])
+                verify(matches(x, middle, "edge"), "Both vertical borders retain their separate inner and outer translucent lines at x=" + x);
+        }
+        function test_dense_selected_box_minimum_data() {
+            const cases = [];
+            for (const row of test_joint_labels_outside_axis_data())
+                for (const pixels of [false, true])
+                    cases.push({
+                        tag: row.tag + (pixels ? "-pixels" : "-geometry"),
+                        mode: row.mode,
+                        dark: row.dark,
+                        pixels
+                    });
+            return cases;
+        }
+        function test_dense_selected_box_minimum(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            const count = Input.dense(SettingsProof, root, false, 162, [8, 80]);
+            verify(Session.openProject(root), "The minimum-box actor opens 162 independently authored measured patterns");
+            Preferences.resetToDefaults();
+            Preferences.scanMapColours = "viridis";
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode,
+                height: 500
+            });
+            ready(Session.project.scanViews);
+            compare(Session.project.scanViews.count, count, "The dense selected-box witness loads every authored dataset");
+            const marker = named("current"), axes = named("axes"), layer = named("layer");
+            for (const height of [500, 420]) {
+                chart.height = height;
+                for (const index of [8, 80]) {
+                    Session.project.currentExperimentIndex = index;
+                    surface.Window.window.update();
+                    verify(waitForRendering(chart), "The dense selected row is rendered at each chart size");
+                    const row = 100 + index * 7 + .345;
+                    const y = (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                    verify(marker.visible && marker.height >= 8 && marker.height <= 9, "A thin selected band reserves about eight logical pixels for both borders and an empty interior");
+                    fuzzyCompare(marker.mapToItem(layer, 0, marker.height / 2).y, y, 1, "A minimum-height rectangle is centred on its independent dataset row, not the old band's top or bottom");
+                    compare(marker.width, layer.width, "The minimum rectangle still spans the full measured plot");
+                    if (data.pixels)
+                        boxPixels(marker, data.dark);
+                }
+            }
+            const index = data.mode === "map" ? 80 : 81, row = 100 + index * 7 + .345;
+            Session.project.currentExperimentIndex = index;
+            chart.zoomY = data.mode === "map" ? [row - 21, row + 21] : [row - 7, row + 70];
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "A zoomed taller band retains its natural selected rectangle");
+            const low = data.mode === "map" ? row - 3.5 : row, high = data.mode === "map" ? row + 3.5 : row + 56;
+            const top = (axes.axisY.max - high) / (axes.axisY.max - axes.axisY.min) * layer.height;
+            const bottom = (axes.axisY.max - low) / (axes.axisY.max - axes.axisY.min) * layer.height;
+            const actual = marker.mapToItem(layer, 0, 0), allowance = data.mode === "map" ? 1 : 3.5;
+            verify(marker.height > 16 && Math.abs(actual.y - top) <= allowance && Math.abs(actual.y + marker.height - bottom) <= allowance, "A band taller than the minimum keeps its independently derived natural bounds");
+            if (data.pixels)
+                boxPixels(marker, data.dark);
+        }
         function test_row_label_thinning_data() {
             const cases = [];
             for (const mode of ["stacked", "map"])
