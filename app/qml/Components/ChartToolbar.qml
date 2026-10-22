@@ -41,19 +41,19 @@ Row {
         onClicked: toolbar.hoverShown = !toolbar.hoverShown
     }
     ChartToolButton {
-        objectName: "chart.toolbar.includedRange"
-        fontIcon: "eraser"
-        toolTip: qsTr("Show only the included range")
-        checked: toolbar.includedOnly
-        onClicked: toolbar.includedOnlyToggled()
-    }
-    ChartToolButton {
         objectName: "chart.toolbar.structureCurves"
         visible: toolbar.structureCurvesAvailable
         fontIcon: "layer-group"
         toolTip: qsTr("Show each structure's curve")
         checked: Preferences.structureCurves
         onClicked: Preferences.structureCurves = !Preferences.structureCurves
+    }
+    ChartToolButton {
+        objectName: "chart.toolbar.includedRange"
+        fontIcon: "eraser"
+        toolTip: qsTr("Show only the included range")
+        checked: toolbar.includedOnly
+        onClicked: toolbar.includedOnlyToggled()
     }
     Item {
         width: EaStyle.Sizes.fontPixelSize * 0.5
