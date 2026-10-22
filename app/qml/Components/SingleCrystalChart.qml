@@ -38,10 +38,14 @@ Item {
     // F² or F on both axes.
     readonly property bool squared: Preferences.singleCrystalQuantity !== "f"
     readonly property string quantity: squared ? "F²" : "F"
-    // The zoomed range, [min, max] on both axes; empty: every reflection.
+    // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
-    readonly property real low: zoom.length === 2 ? zoom[0] : !reflections ? 0 : squared ? reflections.low : reflections.lowF
-    readonly property real high: zoom.length === 2 ? zoom[1] : !reflections ? 1 : squared ? reflections.high : reflections.highF
+    readonly property real fullLow: !reflections ? 0 : squared ? reflections.low : reflections.lowF
+    readonly property real fullHigh: !reflections ? 1 : squared ? reflections.high : reflections.highF
+    readonly property real xLow: zoom.length === 4 ? zoom[0] : fullLow
+    readonly property real xHigh: zoom.length === 4 ? zoom[1] : fullHigh
+    readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
+    readonly property real yHigh: zoom.length === 4 ? zoom[3] : fullHigh
 
     function niceStep(span, count) {
         if (!(span > 0))
@@ -64,14 +68,19 @@ Item {
             layer.setPoints([], [], []);
     }
 
+    // The y = x line across whatever both axes show.
     function drawDiagonal() {
+        const from = Math.min(chart.xLow, chart.yLow);
+        const to = Math.max(chart.xHigh, chart.yHigh);
         diagonal.clear();
-        diagonal.append(chart.low, chart.low);
-        diagonal.append(chart.high, chart.high);
+        diagonal.append(from, from);
+        diagonal.append(to, to);
     }
 
-    onLowChanged: drawDiagonal()
-    onHighChanged: drawDiagonal()
+    onXLowChanged: drawDiagonal()
+    onXHighChanged: drawDiagonal()
+    onYLowChanged: drawDiagonal()
+    onYHighChanged: drawDiagonal()
     Component.onCompleted: drawDiagonal()
     onShownChanged: redraw()
     onSquaredChanged: {
@@ -98,7 +107,7 @@ Item {
         text: chart.reflections && !chart.reflections.calculatedShown ? qsTr("Not calculated yet") : ""
     }
 
-    // The toolbar line, centred as the pattern chart's: what both axes plot, then the tooltip and reset buttons.
+    // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
     Row {
         id: toolbar
 
@@ -114,22 +123,18 @@ Item {
             currentIndex: chart.squared ? 0 : 1
             onActivated: index => Preferences.singleCrystalQuantity = index === 0 ? "f_squared" : "f"
         }
-        Row {
-            spacing: AppSizes.toolbarSpacing
+        // The pattern chart's toolbar, without the legend and the included-range buttons, which have nothing to
+        // act on here; the tooltip toggle and the zoom or move mode are the same remembered settings.
+        ChartToolbar {
+            id: buttons
 
-            ChartToolButton {
-                objectName: "singleCrystal.toolbar.hover"
-                fontIcon: "comment-alt"
-                toolTip: qsTr("Show coordinates tooltip on hover")
-                checked: Preferences.chartHoverShown
-                onClicked: Preferences.chartHoverShown = !Preferences.chartHoverShown
-            }
-            ChartToolButton {
-                objectName: "singleCrystal.toolbar.reset"
-                fontIcon: "home"
-                toolTip: qsTr("Reset axes")
-                onClicked: chart.zoom = []
-            }
+            legendAvailable: false
+            includedRangeAvailable: false
+            hoverShown: Preferences.chartHoverShown
+            onHoverShownChanged: Preferences.chartHoverShown = hoverShown
+            pointerMode: Preferences.chartPointerMode
+            onPointerModeChanged: Preferences.chartPointerMode = pointerMode
+            onResetClicked: chart.zoom = []
         }
     }
 
@@ -159,8 +164,8 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.low
-            max: chart.high
+            min: chart.xLow
+            max: chart.xHigh
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
@@ -169,8 +174,8 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.low
-            max: chart.high
+            min: chart.yLow
+            max: chart.yHigh
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
@@ -317,50 +322,86 @@ Item {
             border.color: chart.colors.chartAxis
             border.width: 1
         }
+        // The pointer, as on the pattern chart: a box zoom or a move by dragging, by the toolbar's mode; a zoom about
+        // the pointer by the wheel; a reset by a right click; the nearest reflection's read-out while hovering.
         MouseArea {
+            id: pointer
+
             property real pressX: 0
             property real pressY: 0
+            property real lastX: 0
+            property real lastY: 0
+            readonly property bool zooming: pressed && (pressedButtons & Qt.LeftButton) && Preferences.chartPointerMode === "zoom"
 
-            function valueAtX(px: real): real {
+            function xAt(px: real): real {
                 return axisX.min + px / width * (axisX.max - axisX.min);
+            }
+            function yAt(py: real): real {
+                return axisY.max - py / height * (axisY.max - axisY.min);
             }
 
             objectName: "singleCrystal.pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             hoverEnabled: Preferences.chartHoverShown
+            onPressed: mouse => {
+                pressX = lastX = mouse.x;
+                pressY = lastY = mouse.y;
+                hoverLabel.hide();
+            }
             onPositionChanged: mouse => {
+                if (pressed && (pressedButtons & Qt.LeftButton) && Preferences.chartPointerMode === "pan") {
+                    const dx = (mouse.x - lastX) / width * (axisX.max - axisX.min);
+                    const dy = (mouse.y - lastY) / height * (axisY.max - axisY.min);
+                    chart.zoom = [axisX.min - dx, axisX.max - dx, axisY.min + dy, axisY.max + dy];
+                    lastX = mouse.x;
+                    lastY = mouse.y;
+                }
                 if (Preferences.chartHoverShown && !pressed)
                     hoverLabel.read(mouse.x, mouse.y);
                 else
                     hoverLabel.hide();
             }
             onExited: hoverLabel.hide()
-            onPressed: mouse => {
-                pressX = mouse.x;
-                pressY = mouse.y;
-            }
             onReleased: mouse => {
                 if (mouse.button === Qt.RightButton) {
                     chart.zoom = [];
                     return;
                 }
-                if (Math.abs(mouse.x - pressX) > chart.em * 0.3) {
-                    const a = valueAtX(Math.min(pressX, mouse.x));
-                    const b = valueAtX(Math.max(pressX, mouse.x));
-                    if (b > a && isFinite(b - a))
-                        chart.zoom = [a, b];
-                }
+                if (Preferences.chartPointerMode !== "zoom" || Math.abs(mouse.x - pressX) < chart.em * 0.3 || Math.abs(mouse.y - pressY) < chart.em * 0.3)
+                    return;
+                const box = [xAt(Math.min(pressX, mouse.x)), xAt(Math.max(pressX, mouse.x)), yAt(Math.max(pressY, mouse.y)), yAt(Math.min(pressY, mouse.y))];
+                if (box[1] > box[0] && box[3] > box[2] && isFinite(box[1] - box[0]) && isFinite(box[3] - box[2]))
+                    chart.zoom = box;
             }
             onWheel: wheel => {
                 if (wheel.angleDelta.y === 0)
                     return;
-                const anchor = valueAtX(wheel.x);
                 const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                const left = anchor - (anchor - axisX.min) * factor;
-                const right = anchor + (axisX.max - anchor) * factor;
-                if (isFinite(left) && isFinite(right) && right > left)
-                    chart.zoom = [left, right];
+                const ax = xAt(wheel.x), ay = yAt(wheel.y);
+                const box = [ax - (ax - axisX.min) * factor, ax + (axisX.max - ax) * factor, ay - (ay - axisY.min) * factor, ay + (axisY.max - ay) * factor];
+                if (box.every(isFinite) && box[1] > box[0] && box[3] > box[2])
+                    chart.zoom = box;
+            }
+
+            // The box being dragged, as the pattern chart draws it.
+            Rectangle {
+                objectName: "singleCrystal.zoom.box"
+                visible: pointer.zooming
+                x: Math.min(pointer.pressX, pointer.mouseX)
+                y: Math.min(pointer.pressY, pointer.mouseY)
+                width: Math.abs(pointer.mouseX - pointer.pressX)
+                height: Math.abs(pointer.mouseY - pointer.pressY)
+                color: "transparent"
+                border.color: chart.colors.appBorder
+                border.width: EaStyle.Sizes.borderThickness
+                opacity: 0.9
+
+                Rectangle {
+                    anchors.fill: parent
+                    opacity: 0.5
+                    color: chart.colors.appBorder
+                }
             }
         }
     }

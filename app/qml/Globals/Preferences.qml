@@ -58,6 +58,7 @@ QtObject {
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHoverShown = true;
+        preferences.chartPointerMode = "zoom";
     }
 
     property Settings settings: Settings {
@@ -100,6 +101,8 @@ QtObject {
     property string singleCrystalQuantity: "f_squared"
     // Every chart's hover read-out (the toolbar's tooltip button).
     property bool chartHoverShown: true
+    // Every chart's left drag: "zoom" (a box) or "pan" (the toolbar's zoom and move buttons).
+    property string chartPointerMode: "zoom"
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -107,6 +110,7 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
         property alias hoverShown: preferences.chartHoverShown
+        property alias pointerMode: preferences.chartPointerMode
     }
 
     property Settings analysisSettings: Settings {

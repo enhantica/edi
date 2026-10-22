@@ -472,6 +472,8 @@ Item {
             legendShown: false
             hoverShown: Preferences.chartHoverShown
             onHoverShownChanged: Preferences.chartHoverShown = hoverShown
+            pointerMode: Preferences.chartPointerMode
+            onPointerModeChanged: Preferences.chartPointerMode = pointerMode
             includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
