@@ -4,6 +4,7 @@ import QtQuick.Window
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
 
@@ -68,7 +69,7 @@ Item {
         }
         function test_component_list_excludes_development_sources() {
             const table = openTable(false);
-            const fixture = JSON.parse(Probe.readFile("tests/fixtures/distribution_licences/production_components.json"));
+            const fixture = JSON.parse(SettingsProof.text(Qt.resolvedUrl("../../fixtures/distribution_licences/"), "production_components.json"));
             const allowed = [];
             for (const group of fixture.groups)
                 for (const name of group.components)
@@ -78,6 +79,11 @@ Item {
                 const name = table.sourceModel.get(i).component;
                 verify(allowed.indexOf(name.toLowerCase()) >= 0, "The actual app list excludes development tools and design or porting sources: " + name);
             }
+            const names = [];
+            for (let i = 0; i < table.count; ++i)
+                names.push(table.sourceModel.get(i).component);
+            for (const name of ["Scientific colour maps", "cmocean", "Turbo", "ColorBrewer", "CET colour maps"])
+                verify(names.includes(name), "Each independently witnessed compiled colour-table origin appears in the actual licence list: " + name);
         }
         function test_columns_fit_content_data() {
             return themes();

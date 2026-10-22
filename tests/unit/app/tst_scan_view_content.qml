@@ -1091,14 +1091,27 @@ Rectangle {
             return Render.descendants(root).find(item => item.visible && typeof item.checked === "boolean" && /exclud.*region|region.*exclud|Show only the included range/i.test(String(item.objectName) + " " + item.toolTip));
         }
         function test_owner_excluded_regions_data() {
-            return test_current_row_tracks_async_coordinates_data();
+            const rows = [];
+            for (const mode of ["stacked", "map"]) {
+                rows.push({
+                    tag: mode,
+                    mode,
+                    scanOnly: false
+                });
+                rows.push({
+                    tag: mode + "-scan",
+                    mode,
+                    scanOnly: true
+                });
+            }
+            return rows;
         }
         function test_owner_excluded_regions(data) {
             const scan = open(data.mode, "excluded");
             ready(scan);
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment,
-                visible: true,
+                visible: !data.scanOnly,
                 shown: true
             });
             const other = createTemporaryObject(factory, surface, {
@@ -1107,13 +1120,16 @@ Rectangle {
                 shown: true
             });
             verify(pattern !== null && other !== null, "The excluded-range actor reaches all three actual chart implementations");
-            const roots = [pattern, chart, other], buttons = roots.map(excludedButton);
+            const roots = data.scanOnly ? [chart, other] : [pattern, chart, other], buttons = roots.map(excludedButton);
+            const active = data.scanOnly ? 0 : 1;
             verify(buttons.every(item => item !== undefined), "Pattern, Stacked and Map expose the same included-range toggle");
             for (let index = 0; index < roots.length; ++index) {
-                const control = buttons[index], legend = Render.descendants(roots[index]).find(item => /toolbar.legend$/.test(item.objectName));
+                const control = buttons[index];
+                const isPattern = roots[index] === pattern;
+                const peer = Render.descendants(roots[index]).find(item => isPattern ? /toolbar.legend$/.test(item.objectName) : /toolbar.zoom$/.test(item.objectName));
                 compare(control.fontIcon, "eraser", "Every included-range toggle uses the sidebar's eraser icon");
                 compare(control.toolTip, "Show only the included range", "All three charts use the owner's exact included-range tooltip");
-                verify(legend !== undefined && Math.abs(control.mapToItem(roots[index], 0, 0).y - legend.mapToItem(roots[index], 0, 0).y) < 1, "The included-range toggle belongs to the chart's legend/tooltip button group");
+                verify(peer !== undefined && control.parent === peer.parent && Math.abs(control.mapToItem(roots[index], 0, 0).y - peer.mapToItem(roots[index], 0, 0).y) < 1, "The included-range toggle shares the actual Pattern legend/tooltip group or scan zoom/reset group");
             }
             const original = SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi");
             function activate(index, wanted) {
@@ -1130,19 +1146,19 @@ Rectangle {
                 verify(!fresh.error && fresh.allOn, "The single included-range setting exercised by all three actual chart controls survives a fresh production engine");
                 activate(index, false);
             }
-            activate(1, false);
+            activate(active, false);
             const layer = named("layer"), axes = named("axes");
             const x = value => Math.round((value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * (layer.width - 1));
             const traceY = 100 + 64 / 255 * scan.stackHeight;
             const y = Math.round((axes.axisY.max - (data.mode === "map" ? 175 : traceY)) / (axes.axisY.max - axes.axisY.min) * (layer.height - 1));
             const full = grabImage(layer), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
-            if (data.mode === "stacked")
-                verify([-2, -1, 0, 1, 2].some(dy => ink(full.pixel(x(42), y + dy), expected, chart.colors.chartBackground)), "Off draws the independent measured trace through the excluded range beneath its tint");
-            else
+            if (data.mode === "map")
                 verify(String(full.pixel(x(36), y)) !== String(full.pixel(x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
-            activate(1, true);
+            activate(active, true);
             const gap = grabImage(layer), blank = gap.pixel(x(41), y - 6);
             verify(blank.a > 0, "On draws a visible tint in the otherwise empty excluded gap");
+            if (data.mode === "stacked")
+                verify([-2, -1, 0, 1, 2].some(dy => ink(full.pixel(x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(full.pixel(x(42), y + dy))));
             for (let px = x(40); px <= x(44); ++px)
                 for (let dy = -2; dy <= 2; ++dy)
                     compare(String(gap.pixel(px, y + dy)), String(blank), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap");

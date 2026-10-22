@@ -31,6 +31,8 @@ CASES = (
     'test_owner_zoom_samples:map',
     'test_owner_excluded_regions:stacked',
     'test_owner_excluded_regions:map',
+    'test_owner_excluded_regions:stacked-scan',
+    'test_owner_excluded_regions:map-scan',
     'test_owner_indicator:stacked-light',
     'test_owner_indicator:stacked-dark',
     'test_owner_indicator:map-light',
