@@ -50,7 +50,7 @@ are independent references.
 | [pd-neut-cwl_y2o3_beta-adp](pd-neut-cwl_y2o3_beta-adp/index.md) | Y2O3 (constant wavelength), anisotropic beta ADPs tied by site symmetry, scale only, against FullProf |
 | [pd-xray-cwl_latp_scan-4f](pd-xray-cwl_latp_scan-4f/index.md) | LATP with two AlPO4 phases, synchrotron X-ray sequential scan over four files, 54 parameters, against FullProf |
 
-The single-crystal projects below reproduce diffraction-lib's verification pages against FullProf's fits; all but the isotropic-extinction one execute, and the three app examples are registered without reference values.
+The single-crystal projects below reproduce diffraction-lib's verification pages against FullProf's fits; all five execute, and the three app examples are registered without reference values.
 
 | project | what it fits |
 | --- | --- |
