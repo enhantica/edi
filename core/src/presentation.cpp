@@ -334,7 +334,7 @@ double d_at(const std::vector<double>& native, const std::vector<double>& d, dou
 void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln) {
     const std::vector<double>& d = data.d_spacing.values();
     const std::vector<double> native = data.axis();
-    if (!source.current || d.size() != native.size() || d.size() < 2) {
+    if (!source.d_available) {
         return;
     }
     for (ExcludedBand& band : source.excluded) {
@@ -397,6 +397,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     if (!source.current) {
         return source;
     }
+    source.d_available = data.d_spacing.values().size() == data.axis().size() && data.axis().size() >= 2;
     const auto shared = [](const ComputedColumn<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();
     };

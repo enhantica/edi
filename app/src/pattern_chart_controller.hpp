@@ -70,6 +70,8 @@ class PatternChartController : public QObject {
     // The x axis: d-spacing, or the experiment's own (2θ or time-of-flight). On d the pattern is the d-spacing capture
     // (edi::capture_pattern), which needs a calculated pattern; until then the chart stays on the experiment's axis.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
+    // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
+    Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
     // How long a box zoom, a wheel zoom and a reset move the axis ranges (easydiffractionbeta's
     // ChartView.SeriesAnimations, EaStyle.Times.chartAnimation), in milliseconds; 0: at once.
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration NOTIFY animationDurationChanged)
@@ -161,6 +163,7 @@ class PatternChartController : public QObject {
     YScale yScale() const { return y_scale_; }
     void setYScale(YScale scale);
     bool dSpacing() const { return d_spacing_; }
+    bool dAvailable() const { return d_available_; }
     void setDSpacing(bool on);
     int animationDuration() const { return animation_duration_; }
     void setAnimationDuration(int milliseconds);
@@ -245,6 +248,7 @@ class PatternChartController : public QObject {
     void devicePixelRatioChanged();
     void yScaleChanged();
     void dSpacingChanged();
+    void dAvailableChanged();
     void animationDurationChanged();
     void measuredSeriesChanged();
     void measuredLayerChanged();
@@ -329,7 +333,7 @@ class PatternChartController : public QObject {
     edi::ColourScheme scheme() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
-    bool d_spacing_ = false;
+    bool d_spacing_ = false, d_available_ = false;
     edi::PatternAxis axis() const { return d_spacing_ ? edi::PatternAxis::DSpacing : edi::PatternAxis::Native; }
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;

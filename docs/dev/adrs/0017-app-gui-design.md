@@ -960,7 +960,8 @@ refuses to write its bank rows into it.
   datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
-  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the
+  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as the Stacked and Map
+  tabs' line of the shown dataset (ADR-0041 §8; owner, 2026-10-22). The pointer zooms as on the
   pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
   resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab

@@ -37,6 +37,8 @@ class ScanViewModel : public QObject {
     // (as the pattern chart: without one the views stay on their own axis). xMin and xMax are on the axis shown.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
     Q_PROPERTY(bool dShown READ dShown NOTIFY dShownChanged)
+    // Whether the template has a current d column, which d-spacing is read off: until then d cannot be chosen.
+    Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
     // Rows by file index although the scan extracts a value (the Map's y choice).
     Q_PROPERTY(bool rowsByIndex READ rowsByIndex WRITE setRowsByIndex NOTIFY rowsByIndexChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
@@ -85,6 +87,7 @@ class ScanViewModel : public QObject {
     bool dSpacing() const { return d_spacing_; }
     void setDSpacing(bool on);
     bool dShown() const { return d_shown_; }
+    bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
     void setRowsByIndex(bool on);
     // The columns' edges on the axis shown, kColumns + 1 of them, rising or falling; NaN where the axis has no value.
@@ -118,6 +121,7 @@ class ScanViewModel : public QObject {
     void valueTitleChanged();
     void dSpacingChanged();
     void dShownChanged();
+    void dAvailableChanged();
     void rowsByIndexChanged();
     void rowTitleChanged();
     void xMinChanged();
@@ -172,7 +176,7 @@ class ScanViewModel : public QObject {
     QString value_problem_;  // the first dataset with no value to place its row by
     double x_min_ = 0.0, x_max_ = 1.0, row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;  // x on the pattern's own axis
     double axis_min_ = 0.0, axis_max_ = 1.0;
-    bool d_spacing_ = false, d_shown_ = false, rows_by_index_ = false;
+    bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false;
     bool range_known_ = false;  // a readable dataset has given the x range
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<double> edges_;

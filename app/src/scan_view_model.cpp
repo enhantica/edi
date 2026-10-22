@@ -348,6 +348,7 @@ void ScanViewModel::placeAxis() {
     publish(axis_min_, low, &ScanViewModel::xMinChanged);
     publish(axis_max_, high, &ScanViewModel::xMaxChanged);
     publish(d_shown_, d, &ScanViewModel::dShownChanged);
+    publish(d_available_, template_x_.size() >= 2, &ScanViewModel::dAvailableChanged);
     publish(x_title_,
             d ? QStringLiteral("d (Å)")
               : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),

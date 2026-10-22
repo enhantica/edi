@@ -60,6 +60,7 @@ struct PatternSource {
     std::vector<ExcludedBand> excluded;
     std::size_t experiment_place = 0;  // the experiment's place in the project's list: its colour
     bool current = false;              // the computed columns describe the model now
+    bool d_available = false;          // a current d column, so the pattern can be shown on the d axis
 };
 
 // The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.

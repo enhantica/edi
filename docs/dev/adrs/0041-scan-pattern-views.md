@@ -61,10 +61,16 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    file index as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
    pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
    can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
-   reset, another scan, another x axis or another row placing returns to the whole range. The plot starts below the
-   toolbar, so nothing is cut at the top. The colours are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
-8. **Following a running scan.** A line marks the shown dataset's row at all times, white edged in black on the map
-   so it shows on every colour, in the accent colour on the stacked view; it moves when the rows are placed again (by
+   reset, a secondary click (a touchpad's two-finger click, as on the pattern chart), another scan, another x axis or
+   another row placing returns to the whole range. The plot starts below the toolbar, so nothing is cut at the top;
+   when the chart is too narrow for one toolbar line, the buttons take a second line, each line centred as the
+   pattern chart's. An axis box names its choice as its list does (`x: d` for the list's `d`; the owner, 2026-10-22),
+   on the pattern chart too, and d can be chosen only once a calculation has given a current d column: until then
+   the box is off and shows the axis drawn. The colours are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
+8. **Following a running scan.** A line marks the shown dataset's row at all times, the same line as the Evolution
+   tab's mark of the shown dataset (the owner, 2026-10-22): 2 px, edged on each side by 1 px of half-transparent
+   colour, black edged in white in the light theme and white edged in black in the dark one, so it shows on the plot
+   background and on every colour of every map; it moves when the rows are placed again (by
    scan value once every dataset is read). The shown dataset is the one the Pattern tab shows: with Follow on, a
    running scan moves it to each dataset as it is fitted, so the line moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
    shows that dataset, here and on the Pattern tab.

@@ -447,11 +447,14 @@ Item {
             }
             ToolbarComboBox {
                 objectName: "chart.toolbar.xaxis"
-                enabled: chart.experiment !== null
-                toolTip: qsTr("X axis")
-                model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
-                currentIndex: controller.dSpacing ? 1 : 0
+                // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
+                // the box shows the axis drawn, and names it as its list does.
+                enabled: chart.experiment !== null && controller.dAvailable
+                toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+                readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("d")]
+                model: entries
+                closedTexts: entries.map(text => qsTr("x: %1").arg(text))
+                currentIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
                 onActivated: index => {
                     if (chart.axisProject)
                         chart.axisProject.patternDSpacing = index === 1;

@@ -224,27 +224,15 @@ Item {
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
         // The shown dataset's row, at all times: it moves with the shown dataset, so with a followed scan as it runs,
-        // and with the rows when they are placed again (by scan value once every dataset is read). On the map a white
-        // line edged in black, which shows on every colour of every map; on the stacked view the accent colour.
-        Rectangle {
+        // and with the rows when they are placed again (by scan value once every dataset is read). The Evolution
+        // chart's line, which shows on the background and on every colour of every map.
+        SelectedPatternLine {
             // The revision is part of the expression, so the line moves when the rows are placed again.
             readonly property real at: chart.scan && chart.project && chart.scan.revision >= 0 ? chart.scan.rowOf(chart.project.currentExperimentIndex) : NaN
 
             objectName: "scanView." + chart.mode + ".current"
-            visible: !isNaN(at)
-            // Kept inside the plot, so the top and bottom rows' lines show too.
-            y: Math.max(0, Math.min(plot.height - height, Math.round((axisY.max - at) / (axisY.max - axisY.min) * plot.height) - Math.floor(height / 2)))
-            width: plot.width
-            height: chart.mode === "map" ? 4 : 2
-            color: chart.mode === "map" ? "black" : EaStyle.Colors.themeAccent
-
-            Rectangle {
-                visible: chart.mode === "map"
-                y: 1
-                width: parent.width
-                height: 2
-                color: "white"
-            }
+            dark: chart.colors.isDarkPalette
+            position: (axisY.max - at) / (axisY.max - axisY.min) * plot.height
         }
         Rectangle {
             anchors.fill: parent
@@ -262,19 +250,25 @@ Item {
             border.color: EaStyle.Colors.themeAccent
             border.width: 1
         }
-        // A drag zooms to the box it draws; a click shows the dataset whose row it falls in.
+        // A drag zooms to the box it draws; a click shows the dataset whose row it falls in; a secondary click (a
+        // touchpad's two-finger click) resets the axes, as on the pattern chart.
         MouseArea {
             property point start
 
             objectName: "scanView." + chart.mode + ".pointer"
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.CrossCursor
             onPressed: mouse => {
+                if (mouse.button === Qt.RightButton)
+                    return;
                 start = Qt.point(mouse.x, mouse.y);
                 zoomBox.width = 0;
                 zoomBox.height = 0;
             }
             onPositionChanged: mouse => {
+                if (!(mouse.buttons & Qt.LeftButton))
+                    return;
                 const x = Math.max(0, Math.min(width, mouse.x)), y = Math.max(0, Math.min(height, mouse.y));
                 zoomBox.x = Math.min(start.x, x);
                 zoomBox.y = Math.min(start.y, y);
@@ -283,6 +277,10 @@ Item {
                 zoomBox.visible = zoomBox.width > 4 || zoomBox.height > 4;
             }
             onReleased: mouse => {
+                if (mouse.button === Qt.RightButton) {
+                    chart.resetZoom();
+                    return;
+                }
                 const atX = share => axisX.min + share * (axisX.max - axisX.min);
                 const atY = share => axisY.max - share * (axisY.max - axisY.min);
                 if (zoomBox.visible) {
@@ -376,30 +374,36 @@ Item {
     // colours, then the zoom, always on here, and the reset. x is the project's axis, shared with the pattern chart; y
     // places the rows by the extracted value or by file index, shared with the Evolution tab's x; z, the intensity
     // scale, is the pattern chart's y scale. The colours are each view's own app setting.
-    Flow {
+    Item {
         id: scanToolbar
 
-        // On one line when the chart is wide enough, the buttons on a second line when it is not.
+        readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        // On one line when the chart is wide enough; when it is not, the buttons on a second line, each line centred
+        // as the pattern chart's are (the owner, 2026-10-22).
         readonly property real oneLine: selectors.width + spacing + buttons.width
+        readonly property bool wrapped: oneLine > chart.width - 2 * chart.sideMargin
 
         objectName: "scanView." + chart.mode + ".toolbar"
+        width: wrapped ? Math.max(selectors.width, buttons.width) : oneLine
+        height: wrapped ? selectors.height + AppSizes.toolbarSpacing + buttons.height : Math.max(selectors.height, buttons.height)
         // Centred over the plot, and kept inside the chart when the view is narrow.
-        width: Math.min(oneLine, chart.width - 2 * chart.sideMargin)
         x: Math.round(Math.max(chart.sideMargin, Math.min(chart.width - width - chart.sideMargin, view.x + view.plotArea.x + (view.plotArea.width - width) / 2)))
         y: chart.toolbarTop
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         Row {
             id: selectors
 
+            x: scanToolbar.wrapped ? Math.round((scanToolbar.width - width) / 2) : 0
             spacing: AppSizes.toolbarSpacing
 
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.xaxis"
-                readonly property string nativeName: chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ")
-                toolTip: qsTr("X axis")
-                model: [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [qsTr("x: %1").arg(nativeName), qsTr("x: d")]
+                // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
+                enabled: chart.scan !== null && chart.scan.dAvailable
+                toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+                readonly property var entries: [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("d")]
+                model: entries
+                closedTexts: entries.map(text => qsTr("x: %1").arg(text))
                 currentIndex: chart.scan !== null && chart.scan.dShown ? 1 : 0
                 onActivated: index => {
                     if (chart.project)
@@ -454,6 +458,8 @@ Item {
         Row {
             id: buttons
 
+            x: scanToolbar.wrapped ? Math.round((scanToolbar.width - width) / 2) : selectors.width + scanToolbar.spacing
+            y: scanToolbar.wrapped ? selectors.height + AppSizes.toolbarSpacing : 0
             spacing: AppSizes.toolbarSpacing
 
             ChartToolButton {

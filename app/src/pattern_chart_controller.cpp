@@ -749,6 +749,8 @@ void PatternChartController::refresh() {
     publish(has_residual_, residual != nullptr, &PatternChartController::hasResidualChanged);
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     publish(current_, shown_.current, &PatternChartController::currentChanged);
+    publish(d_available_, report_ != nullptr || (experiment_ && experiment_->patternSource().d_available),
+            &PatternChartController::dAvailableChanged);
     publish(x_title_, QString::fromStdString(shown_.x.title), &PatternChartController::xTitleChanged);
     // A y title as its coloured pieces, each series' word in its colour (the legend box being hidden by default);
     // the plain title when it has none.
