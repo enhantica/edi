@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <ctime>
 #include <filesystem>
 #include <limits>
@@ -345,6 +347,16 @@ ScanTemplate scan_template_of(const Project& scan) {
 void add_scene(ReportStructure& out, const Structure& structure) {
     const SceneSource source = capture_scene(structure);
     out.scene = present_structure(source, SceneOptions{});
+    // The element legend is drawn flat on the report's white paper, so its colours are made readable there
+    // (ADR-0046); the spheres keep the scheme's.
+    for (SceneLegendEntry& entry : out.scene.legend) {
+        char hex[8];
+        std::snprintf(hex, sizeof(hex), "#%02X%02X%02X", entry.color.r, entry.color.g, entry.color.b);
+        const std::string readable = readable_colour(hex, "#FFFFFF");
+        entry.color = {static_cast<std::uint8_t>(std::stoi(readable.substr(1, 2), nullptr, 16)),
+                       static_cast<std::uint8_t>(std::stoi(readable.substr(3, 2), nullptr, 16)),
+                       static_cast<std::uint8_t>(std::stoi(readable.substr(5, 2), nullptr, 16))};
+    }
     out.view = default_view(out.scene);
     out.drawing = scene_drawing(out.scene, kReportViewport);
     for (int axis = 0; axis != 3; ++axis) {
