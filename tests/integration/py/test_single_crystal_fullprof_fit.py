@@ -6,9 +6,25 @@ import shutil
 import numpy as np
 import pytest
 
+from tests.conftest import corpus_case_dir
 from tests.integration.py.test_single_crystal import FIXTURE, calculated, engine
 
 REFERENCES = json.loads((FIXTURE / 'fitting/fullprof.json').read_text())['cases']
+
+
+def _staged_reference_project(tmp_path, case, expected):
+    destination = tmp_path / 'project'
+    case_id = 'single-crystal-page-' + case.removeprefix('sc-neut-').replace('_', '-')
+    corpus = corpus_case_dir(case_id) / 'project'
+    assert json.loads((corpus.parent / 'expected.json').read_text())['quantities'] == {
+        key: dict(value, tol_abs=value.get('tol_abs'), tol_rel=value.get('tol_rel'))
+        for key, value in expected.items()
+    }, 'The shared selected-observation corpus must retain the independent reference quantities'
+    destination.mkdir()
+    for name in ('structures', 'experiments'):
+        (destination / name).symlink_to(corpus / name, target_is_directory=True)
+    shutil.copytree(corpus / 'analysis', destination / 'analysis')
+    return engine().Project.load(destination)
 
 
 @pytest.mark.parametrize('case', tuple(REFERENCES))
@@ -21,9 +37,7 @@ def test_fit_reaches_fullprof_scale_and_objective(tmp_path, case):
             reference, parameters=json.loads((source / 'reference.json').read_text())['parameters']
         )
     expected = json.loads((source / 'expected.json').read_text())['quantities']
-    destination = tmp_path / 'project'
-    shutil.copytree(source / 'project', destination)
-    model = engine().Project.load(destination)
+    model = _staged_reference_project(tmp_path, case, expected)
     experiment = model.experiments[0]
     scale = experiment.linked_structure.scale
     assert float(scale.value) == pytest.approx(reference['start_scale'], rel=0, abs=1e-12), (
