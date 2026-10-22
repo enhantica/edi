@@ -1,6 +1,6 @@
 _edi.schema_version 3
 
-_metadata.name             sc_neut_cwl_tb2ti2o7_isotropic_extinction
+_metadata.name             sc_neut_cwl_tb2ti2o7_heidi_isotropic_extinction
 _metadata.title "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)"
 _metadata.description "Single crystal · Becker-Coppens extinction · Scale and radius fit"
 _metadata.created          "22 Oct 2026 18:00:00"

@@ -1321,7 +1321,7 @@
         "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi"
       ]
     },
-    "sc-neut-cwl_pr2nio4_basic": {
+    "sc-neut-cwl_pr2nio4-5c2_basic": {
       "samples": [
         "Pr₂NiO₄ [Fmmm]"
       ],
@@ -1360,18 +1360,18 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_pr2nio4_basic",
+        "sc-neut-cwl_pr2nio4-5c2_basic",
         "Pr₂NiO₄ [Fmmm] · Unknown instrument",
         "Single crystal · Anisotropic β tensors · Scale-only fit"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/experiments/pr2nio4.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/structures/pr2nio4.edi"
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/experiments/pr2nio4.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/structures/pr2nio4.edi"
       ]
     },
-    "sc-neut-cwl_tb2ti2o7_basic": {
+    "sc-neut-cwl_tb2ti2o7-heidi_basic": {
       "samples": [
         "Tb₂Ti₂O₇ [Fd-3m]"
       ],
@@ -1410,18 +1410,18 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_tb2ti2o7_basic",
+        "sc-neut-cwl_tb2ti2o7-heidi_basic",
         "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
         "Single crystal · Isotropic ADPs · Scale-only fit"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/experiments/heidi.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/structures/tb2ti2o7.edi"
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/structures/tb2ti2o7.edi"
       ]
     },
-    "sc-neut-cwl_tb2ti2o7_isotropic-extinction": {
+    "sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction": {
       "samples": [
         "Tb₂Ti₂O₇ [Fd-3m]"
       ],
@@ -1460,18 +1460,18 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_tb2ti2o7_isotropic-extinction",
+        "sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction",
         "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
         "Single crystal · Becker-Coppens extinction · Scale and radius fit"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/experiments/heidi.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/structures/tb2ti2o7.edi"
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/structures/tb2ti2o7.edi"
       ]
     },
-    "sc-neut-cwl_tb2ti2o7_anisotropic-adp": {
+    "sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp": {
       "samples": [
         "Tb₂Ti₂O₇ [Fd-3m]"
       ],
@@ -1510,15 +1510,15 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_tb2ti2o7_anisotropic-adp",
+        "sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp",
         "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
         "Single crystal · Anisotropic β tensors · Scale-only fit"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/experiments/heidi.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/structures/tb2ti2o7.edi"
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/structures/tb2ti2o7.edi"
       ]
     },
     "sc-neut-cwl_tb2ti2o7-heidi_fit": {
@@ -1621,7 +1621,7 @@
         "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi"
       ]
     },
-    "sc-neut-tof_taurine_basic": {
+    "sc-neut-tof_taurine-unknown_basic": {
       "samples": [
         "Taurine [P2₁/c]"
       ],
@@ -1660,15 +1660,15 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-tof_taurine_basic",
+        "sc-neut-tof_taurine-unknown_basic",
         "Taurine [P2₁/c] · Unknown instrument",
         "Single crystal · Time of flight · Isotropic ADPs · Scale-only fit"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-tof_taurine_basic/project/project.edi",
-        "docs/user/cli/sc-neut-tof_taurine_basic/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-tof_taurine_basic/project/experiments/taurine.edi",
-        "docs/user/cli/sc-neut-tof_taurine_basic/project/structures/taurine.edi"
+        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/project.edi",
+        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/taurine.edi",
+        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/structures/taurine.edi"
       ]
     },
     "sc-neut-tof_taurine_fit": {

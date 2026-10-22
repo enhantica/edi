@@ -16,11 +16,15 @@ Usage (writes ``docs/user/cli/<id>/project/``, every project or the ids given)::
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FP = ROOT / 'tests' / 'fixtures' / 'single_crystal' / 'fullprof'
+# FullProf's fits of the same pages on their measured reflections, which the verification projects'
+# expected values come from.
+FITTED = ROOT / 'tests' / 'fixtures' / 'single_crystal' / 'fitting' / 'fullprof'
 
 PR2NIO4_SITES = [
     # id, type, x, y, z, wyckoff, occupancy, adp_type, adp_iso, beta (11 22 33 12 13 23)
@@ -166,7 +170,7 @@ TAURINE_SITES = [
 ]
 
 PROJECTS = {
-    'sc-neut-tof_taurine_basic': {
+    'sc-neut-tof_taurine-unknown_basic': {
         'source': 'sc-neut-tof_taurine_basic/taurine.int',
         'structure': 'taurine',
         'title': 'Taurine [P2₁/c] · Unknown instrument',
@@ -177,8 +181,10 @@ PROJECTS = {
         'scale': '2.711()',
         'extinction': ('gauss', '0', '0'),
         'tof': True,
+        # FullProf fits only the reflections it does not exclude (I > 3 sigma, and one more).
+        'select': 'sc-neut-tof_taurine-unknown_basic/taurine.out',
     },
-    'sc-neut-cwl_pr2nio4_basic': {
+    'sc-neut-cwl_pr2nio4-5c2_basic': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
         'structure': 'pr2nio4',
         'title': 'Pr₂NiO₄ [Fmmm] · Unknown instrument',
@@ -189,7 +195,7 @@ PROJECTS = {
         'scale': '4.031()',
         'extinction': ('gauss', '0', '0'),
     },
-    'sc-neut-cwl_tb2ti2o7_basic': {
+    'sc-neut-cwl_tb2ti2o7-heidi_basic': {
         'source': 'sc-neut-cwl_tbti_basic/tbti.int',
         'structure': 'tb2ti2o7',
         'experiment': 'heidi',
@@ -203,7 +209,7 @@ PROJECTS = {
         'scale': '3.653()',
         'extinction': ('gauss', '0', '0'),
     },
-    'sc-neut-cwl_tb2ti2o7_isotropic-extinction': {
+    'sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction': {
         'source': 'sc-neut-cwl_tbti_isotropic-extinction/tbti.int',
         'structure': 'tb2ti2o7',
         'experiment': 'heidi',
@@ -217,7 +223,7 @@ PROJECTS = {
         'scale': '4.1744()',
         'extinction': ('gauss', '10()', '35000'),
     },
-    'sc-neut-cwl_tb2ti2o7_anisotropic-adp': {
+    'sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp': {
         'source': 'sc-neut-cwl_tbti_anisotropic-adp/tbti.int',
         'structure': 'tb2ti2o7',
         'experiment': 'heidi',
@@ -371,6 +377,22 @@ def read_int(path: Path) -> tuple[float, list[tuple[int, int, int, str, str]]]:
     return wavelength, rows
 
 
+def included(path: Path) -> set[tuple[int, int, int]]:
+    """Return the reflections a FullProf .out lists without its `Excl` mark."""
+    lines = path.read_text(encoding='utf-8').splitlines()
+    start = next(n for n, line in enumerate(lines) if 'F2obs' in line and 'F2cal' in line)
+    kept = set()
+    for line in lines[start + 1 :]:
+        fields = line.split()
+        try:
+            key = (int(fields[0]), int(fields[1]), int(fields[2]))
+        except (ValueError, IndexError):
+            break
+        if 'Excl' not in line:
+            kept.add(key)
+    return kept
+
+
 def number(text: str) -> str:
     """A FullProf number as the .edi writes it (no leading-dot form)."""
     value = float(text)
@@ -386,6 +408,9 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     for sub in ('structures', 'experiments', 'analysis'):
         (project / sub).mkdir(parents=True, exist_ok=True)
     wavelength, rows = read_int(FP / spec['source'])
+    if 'select' in spec:
+        kept = included(FITTED / spec['select'])
+        rows = [row for row in rows if row[:3] in kept]
     name = spec['structure']
     experiment = spec.get('experiment', name)
     (project / 'project.edi').write_text(
@@ -507,6 +532,57 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     )
 
 
+def write_references(root: Path, pid: str) -> None:
+    """Write a verification project's expected.json and PROVENANCE.md from FullProf's fit."""
+    reference = json.loads((FITTED / pid / 'expected.json').read_text(encoding='utf-8'))
+    artifact = f'../../../../tests/fixtures/single_crystal/fitting/fullprof/{pid}/'
+    reference['source'] = {
+        'engine': reference['source']['engine'],
+        'artifact': artifact + reference['source']['artifact'],
+        'provenance': 'PROVENANCE.md',
+    }
+    (root / pid / 'expected.json').write_text(
+        json.dumps(reference, indent=2) + '\n', encoding='utf-8'
+    )
+    rows = '\n'.join(
+        f'| `{name}` | {item["kind"]} | {item["value"]} | '
+        + ', '.join(f'{key} {item[key]}' for key in ('tol_abs', 'tol_rel') if key in item)
+        + ' |'
+        for name, item in reference['quantities'].items()
+    )
+    caveat = (
+        ''
+        if reference.get('comparable_parameters', True)
+        else '\nFullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens '
+        'radius this project frees, so its values do not describe the same model. diffraction-lib '
+        'marks '
+        'the same difference on its page. This project stays out of the executing set until that '
+        'is settled.\n'
+    )
+    (root / pid / 'PROVENANCE.md').write_text(
+        f"""# {pid}: provenance
+
+Built by `tools/cli_projects/build_sc_projects.py` from FullProf's files for the matching
+diffraction-lib verification page (`tests/fixtures/single_crystal/fullprof/`). The structure,
+extinction and starting scale are the page's FullProf values; the measured reflections are its
+`.int` file. The parameters the page frees are free.
+
+## Which values are references
+
+Every value comes from FullProf's own fit of the same parameters on the same reflections
+(`{artifact}`, see the `README.md` there), never from edi or crysta.
+
+| quantity | kind | value | tolerance |
+| --- | --- | --- | --- |
+{rows}
+
+The scale's tolerance is FullProf's own uncertainty plus half its last printed digit; the
+reduced chi-square is FullProf's residual sum over N - p.
+{caveat}""",
+        encoding='utf-8',
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--out', type=Path, default=ROOT / 'docs' / 'user' / 'cli')
@@ -519,6 +595,8 @@ def main() -> int:
     for pid, spec in projects.items():
         if not args.ids or pid in args.ids:
             write_project(args.out, pid, spec)
+            if pid in PROJECTS:
+                write_references(args.out, pid)
             print('wrote', pid)
     return 0
 
