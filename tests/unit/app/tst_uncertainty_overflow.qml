@@ -351,9 +351,13 @@ TestCase {
             const ref = latpReference(rows[index].parameter, data.rule);
             const cell = cellAt(index, "su");
             Ui.scrollIntoView(cell);
+            verify(waitForPolish(appWindow.contentItem), "The scrolled LATP uncertainty target completes its actual layout");
+            appWindow.update();
+            verify(waitForRendering(appWindow.contentItem), "The LATP uncertainty target reaches a settled rendered frame");
             const point = Ui.clickPoint(cell);
             verify(point !== null, "Every actual LATP uncertainty exposes a real hover target");
             mouseMove(cell, point.x, point.y);
+            tryCompare(cell, "hovered", true, 2000, "Real pointer input reaches each LATP cell before inspecting its own tooltip");
             tryVerify(() => tooltipShows(cell, [ref.full_su, String(ref.su)]), 3000, "Hovering compact LATP uncertainties exposes their full authored values beyond the rule-rounded mantissa");
             mouseMove(appWindow.contentItem, 1, 1);
             tryVerify(() => !tooltipShows(cell, [ref.full_su, String(ref.su)]), 2000, "Leaving each LATP cell removes its own rendered full-uncertainty tooltip");
