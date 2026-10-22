@@ -1,0 +1,9 @@
+_edi.schema_version 3
+
+_metadata.name pd_xray_cwl_nacl_calculation
+_metadata.title "NaCl [Fm-3m] · Laboratory X-ray"
+_metadata.description "Rock salt · Calculated Cu Kα₁ pattern without measured data · Monochromator polarization"
+_metadata.purpose "simulation"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?

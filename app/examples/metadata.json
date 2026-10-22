@@ -452,6 +452,56 @@
         "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/experiments/sepd.edi",
         "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/structures/si.edi"
       ]
+    },
+    "pd-xray-cwl_nacl_calculation": {
+      "samples": [
+        "NaCl [Fm-3m]"
+      ],
+      "origin": "Laboratory X-ray",
+      "detail": "Rock salt · Calculated Cu Kα₁ pattern without measured data · Monochromator polarization",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "simulation"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_nacl_calculation",
+        "NaCl [Fm-3m] · Laboratory X-ray",
+        "Rock salt · Calculated Cu Kα₁ pattern without measured data · Monochromator polarization"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/experiments/lab.edi",
+        "docs/user/cli/pd-xray-cwl_nacl_calculation/project/structures/nacl.edi"
+      ]
     }
   }
 }
