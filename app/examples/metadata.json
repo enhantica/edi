@@ -1,358 +1,6 @@
 {
   "schema": 1,
   "examples": {
-    "pd-neut-cwl_lbco-hrpt_basic": {
-      "samples": [
-        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
-      ],
-      "origin": "HRPT @ PSI",
-      "detail": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "PSI"
-        ],
-        "instruments": [
-          "HRPT"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_lbco-hrpt_basic",
-        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
-        "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/experiments/hrpt.edi",
-        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/structures/lbco.edi"
-      ]
-    },
-    "pd-neut-cwl_cosio-d20_basic": {
-      "samples": [
-        "Co₂SiO₄ [Pnma]"
-      ],
-      "origin": "D20 @ ILL",
-      "detail": "Olivine · Coordinates, displacements and oxygen occupancies",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "ILL"
-        ],
-        "instruments": [
-          "D20"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_cosio-d20_basic",
-        "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "Olivine · Coordinates, displacements and oxygen occupancies"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/structures/cosio.edi"
-      ]
-    },
-    "pd-neut-cwl_cosio-d20_scan-155f": {
-      "samples": [
-        "Co₂SiO₄ [Pnma]"
-      ],
-      "origin": "D20 @ ILL",
-      "detail": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "sequential"
-        ],
-        "facilities": [
-          "ILL"
-        ],
-        "instruments": [
-          "D20"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_cosio-d20_scan-155f",
-        "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/structures/cosio.edi"
-      ]
-    },
-    "pd-neut-cwl_hs-hrpt_basic": {
-      "samples": [
-        "ZnCu₃(OD)₆Cl₂ [R-3m]"
-      ],
-      "origin": "HRPT @ PSI",
-      "detail": "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "PSI"
-        ],
-        "instruments": [
-          "HRPT"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_hs-hrpt_basic",
-        "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI",
-        "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/experiments/hrpt.edi",
-        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/structures/hs.edi"
-      ]
-    },
-    "pd-neut-tof_si-sepd_basic": {
-      "samples": [
-        "Silicon [Fd-3m]"
-      ],
-      "origin": "SEPD @ Argonne",
-      "detail": "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "time-of-flight"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          "Argonne"
-        ],
-        "instruments": [
-          "SEPD"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-tof_si-sepd_basic",
-        "Silicon [Fd-3m] · SEPD @ Argonne",
-        "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/experiments/sepd.edi",
-        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/structures/si.edi"
-      ]
-    },
-    "pd-xray-cwl_pbso4-lab_basic": {
-      "samples": [
-        "PbSO₄ [Pnma]"
-      ],
-      "origin": "Laboratory X-ray",
-      "detail": "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "xray"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          ""
-        ],
-        "instruments": [
-          ""
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "__not_applicable__"
-        ]
-      },
-      "searchAliases": [
-        "pd-xray-cwl_pbso4-lab_basic",
-        "PbSO₄ [Pnma] · Laboratory X-ray",
-        "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
-      ],
-      "sources": [
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/experiments/lab.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/structures/pbso4.edi"
-      ]
-    },
-    "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
-      "samples": [
-        "PbSO₄ [Pnma]"
-      ],
-      "origin": "D1A @ ILL and laboratory X-ray",
-      "detail": "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron",
-          "xray"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "joint"
-        ],
-        "facilities": [
-          "ILL"
-        ],
-        "instruments": [
-          "D1A"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "__not_applicable__"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-xray-cwl_pbso4-d1a-lab_joint",
-        "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray",
-        "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/project.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/d1a.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/lab.edi",
-        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/structures/pbso4.edi"
-      ]
-    },
     "pd-neut-cwl_lbco-hrpt_calculation": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
@@ -503,171 +151,12 @@
         "docs/user/cli/pd-xray-cwl_nacl_calculation/project/structures/nacl.edi"
       ]
     },
-    "pd-neut-tof_ncaf-wish_basic": {
+    "pd-neut-cwl_lbco-hrpt_basic": {
       "samples": [
-        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
       ],
-      "origin": "WISH @ ISIS",
-      "detail": "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "time-of-flight"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "joint"
-        ],
-        "facilities": [
-          "ISIS"
-        ],
-        "instruments": [
-          "WISH"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-tof_ncaf-wish_basic",
-        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
-        "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/project.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_1_10.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_2_9.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_3_8.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_4_7.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_5_6.edi",
-        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/structures/ncaf.edi"
-      ]
-    },
-    "pd-neut-tof_lbco-si-mcstas_two-phase": {
-      "samples": [
-        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
-        "Silicon [Fd-3m]"
-      ],
-      "origin": "McStas simulation",
-      "detail": "Two phases · Simulated TOF pattern · Jorgensen profile",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "time-of-flight"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          ""
-        ],
-        "instruments": [
-          "McStas"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-tof_lbco-si-mcstas_two-phase",
-        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation",
-        "Two phases · Simulated TOF pattern · Jorgensen profile"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/project.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/experiments/mcstas.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/lbco.edi",
-        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/si.edi"
-      ]
-    },
-    "pd-neut-tof_ferrite-austenite-beer_calibration": {
-      "samples": [
-        "Ferrite [Im-3m]",
-        "Austenite [Fm-3m]"
-      ],
-      "origin": "BEER @ ESS",
-      "detail": "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "time-of-flight"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "joint"
-        ],
-        "facilities": [
-          "ESS"
-        ],
-        "instruments": [
-          "BEER"
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "none"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-tof_ferrite-austenite-beer_calibration",
-        "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
-        "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/project.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_n2.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_s2.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/austenite.edi",
-        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/ferrite.edi"
-      ]
-    },
-    "pd-xray-cwl_lam7o3-p021_basic": {
-      "samples": [
-        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma]"
-      ],
-      "origin": "P02.1 @ PETRA III",
-      "detail": "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray",
+      "origin": "HRPT @ PSI",
+      "detail": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
       "values": {
         "sampleForm": [
           "powder"
@@ -676,7 +165,7 @@
           "constant wavelength"
         ],
         "probe": [
-          "xray"
+          "neutron"
         ],
         "scatteringType": [
           "bragg"
@@ -688,28 +177,128 @@
           "single"
         ],
         "facilities": [
-          "PETRA III"
+          "PSI"
         ],
         "instruments": [
-          "P02.1"
+          "HRPT"
         ],
         "dimensionality": [
           "1D"
         ],
         "polarisation": [
-          "__not_applicable__"
+          "none"
         ]
       },
       "searchAliases": [
-        "pd-xray-cwl_lam7o3-p021_basic",
-        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III",
-        "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+        "pd-neut-cwl_lbco-hrpt_basic",
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
       ],
       "sources": [
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/experiments/p021.edi",
-        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/structures/lam7o3.edi"
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/structures/lbco.edi"
+      ]
+    },
+    "pd-neut-cwl_hs-hrpt_basic": {
+      "samples": [
+        "ZnCu₃(OD)₆Cl₂ [R-3m]"
+      ],
+      "origin": "HRPT @ PSI",
+      "detail": "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "PSI"
+        ],
+        "instruments": [
+          "HRPT"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_hs-hrpt_basic",
+        "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI",
+        "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/structures/hs.edi"
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_basic": {
+      "samples": [
+        "Co₂SiO₄ [Pnma]"
+      ],
+      "origin": "D20 @ ILL",
+      "detail": "Olivine · Coordinates, displacements and oxygen occupancies",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_cosio-d20_basic",
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Olivine · Coordinates, displacements and oxygen occupancies"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_lmo-echidna_site-mixing": {
@@ -762,6 +351,56 @@
         "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/structures/lmo.edi"
       ]
     },
+    "pd-neut-cwl_y2o3-spodi_aniso-adp": {
+      "samples": [
+        "Y₂O₃ [Ia-3]"
+      ],
+      "origin": "SPODI @ FRM II",
+      "detail": "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "FRM II"
+        ],
+        "instruments": [
+          "SPODI"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_y2o3-spodi_aniso-adp",
+        "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+        "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/structures/y2o3.edi"
+      ]
+    },
     "pd-neut-cwl_yap-spodi_two-phase": {
       "samples": [
         "YAlO₃ [Pbnm]",
@@ -812,6 +451,56 @@
         "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/experiments/spodi.edi",
         "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/Al2O3.edi",
         "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/YAlO3.edi"
+      ]
+    },
+    "pd-neut-tof_si-sepd_basic": {
+      "samples": [
+        "Silicon [Fd-3m]"
+      ],
+      "origin": "SEPD @ Argonne",
+      "detail": "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "Argonne"
+        ],
+        "instruments": [
+          "SEPD"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_si-sepd_basic",
+        "Silicon [Fd-3m] · SEPD @ Argonne",
+        "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_basic/project/structures/si.edi"
       ]
     },
     "pd-neut-tof_cecoal-polaris_basic": {
@@ -914,12 +603,323 @@
         "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/structures/ceo2.edi"
       ]
     },
-    "pd-neut-cwl_y2o3-spodi_aniso-adp": {
+    "pd-neut-tof_lbco-si-mcstas_two-phase": {
       "samples": [
-        "Y₂O₃ [Ia-3]"
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
+        "Silicon [Fd-3m]"
       ],
-      "origin": "SPODI @ FRM II",
-      "detail": "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background",
+      "origin": "McStas simulation",
+      "detail": "Two phases · Simulated TOF pattern · Jorgensen profile",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          "McStas"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_lbco-si-mcstas_two-phase",
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation",
+        "Two phases · Simulated TOF pattern · Jorgensen profile"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/project.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/experiments/mcstas.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/lbco.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/si.edi"
+      ]
+    },
+    "pd-neut-tof_ncaf-wish_basic": {
+      "samples": [
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
+      ],
+      "origin": "WISH @ ISIS",
+      "detail": "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ISIS"
+        ],
+        "instruments": [
+          "WISH"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ncaf-wish_basic",
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_1_10.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_2_9.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_3_8.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_4_7.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/structures/ncaf.edi"
+      ]
+    },
+    "pd-neut-tof_ferrite-austenite-beer_calibration": {
+      "samples": [
+        "Ferrite [Im-3m]",
+        "Austenite [Fm-3m]"
+      ],
+      "origin": "BEER @ ESS",
+      "detail": "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ESS"
+        ],
+        "instruments": [
+          "BEER"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ferrite-austenite-beer_calibration",
+        "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
+        "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_n2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_s2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/austenite.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/ferrite.edi"
+      ]
+    },
+    "pd-xray-cwl_pbso4-lab_basic": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "Laboratory X-ray",
+      "detail": "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_pbso4-lab_basic",
+        "PbSO₄ [Pnma] · Laboratory X-ray",
+        "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/experiments/lab.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_basic/project/structures/pbso4.edi"
+      ]
+    },
+    "pd-xray-cwl_lam7o3-p021_basic": {
+      "samples": [
+        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma]"
+      ],
+      "origin": "P02.1 @ PETRA III",
+      "detail": "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "PETRA III"
+        ],
+        "instruments": [
+          "P02.1"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_lam7o3-p021_basic",
+        "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III",
+        "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/experiments/p021.edi",
+        "docs/user/cli/pd-xray-cwl_lam7o3-p021_basic/project/structures/lam7o3.edi"
+      ]
+    },
+    "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "D1A @ ILL and laboratory X-ray",
+      "detail": "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron",
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D1A"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-xray-cwl_pbso4-d1a-lab_joint",
+        "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray",
+        "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/project.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/d1a.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/lab.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/structures/pbso4.edi"
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_scan-155f": {
+      "samples": [
+        "Co₂SiO₄ [Pnma]"
+      ],
+      "origin": "D20 @ ILL",
+      "detail": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
       "values": {
         "sampleForm": [
           "powder"
@@ -937,13 +937,13 @@
           "refinement"
         ],
         "fittingMode": [
-          "single"
+          "sequential"
         ],
         "facilities": [
-          "FRM II"
+          "ILL"
         ],
         "instruments": [
-          "SPODI"
+          "D20"
         ],
         "dimensionality": [
           "1D"
@@ -953,15 +953,15 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_y2o3-spodi_aniso-adp",
-        "Y₂O₃ [Ia-3] · SPODI @ FRM II",
-        "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+        "pd-neut-cwl_cosio-d20_scan-155f",
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/experiments/spodi.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/structures/y2o3.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/structures/cosio.edi"
       ]
     },
     "pd-xray-cwl_latp-bm01_scan-73f": {
