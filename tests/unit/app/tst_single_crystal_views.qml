@@ -17,6 +17,7 @@ TestCase {
     property var appWindow
     property var originalTheme
     property var originalQuantity
+    property var originalPointer
     property var originalHover
     SignalSpy {
         id: recalculated
@@ -30,6 +31,8 @@ TestCase {
         originalTheme = Style.Colors.theme;
         originalQuantity = Preferences.singleCrystalQuantity;
         originalHover = Preferences.chartHoverShown;
+        originalPointer = Preferences.chartPointerMode;
+        Preferences.chartPointerMode = "zoom";
         Preferences.singleCrystalQuantity = "f_squared";
         Preferences.chartHoverShown = true;
         appWindow = application.createObject(null);
@@ -44,6 +47,7 @@ TestCase {
         Probe.releaseScratchProjects();
         Preferences.singleCrystalQuantity = originalQuantity;
         Preferences.chartHoverShown = originalHover;
+        Preferences.chartPointerMode = originalPointer;
         Style.Colors.theme = originalTheme;
         if (appWindow)
             appWindow.destroy();
@@ -111,7 +115,7 @@ TestCase {
         verify(!Ui.text(chart).includes("Not calculated yet"), "A complete single-crystal project must already be calculated on load");
         const initial = [layer.xMin, layer.xMax, layer.yMin, layer.yMax];
         const pointer = Review.descendants(chart).find(item => typeof item.pressX === "number" && typeof item.pressY === "number");
-        const reset = Review.find(chart, "singleCrystal.toolbar.reset");
+        const reset = toolbarControl(chart, "reset");
         verify(pointer !== undefined && reset !== null && Ui.exposed(reset), "The scatter chart must expose the shared zoom surface and reset control");
         verify(waitForPolish(chart), "The chart pointer geometry must finish layout before a real drag");
         verify(Ui.exposed(pointer), "The actual chart pointer must be exposed before a zoom drag");
@@ -245,6 +249,7 @@ TestCase {
     }
     function initTestCase() {
         compare(Preferences.singleCrystalQuantity, "f_squared", "Fresh chart preferences must default to F squared before a test writes them");
+        compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
         compare(Preferences.chartHoverShown, true, "Fresh chart preferences must default to showing reflection tooltips");
     }
     function expand(name) {
@@ -288,7 +293,7 @@ TestCase {
         return chart;
     }
     function selectQuantity(chart, index) {
-        const combo = Review.find(chart, "singleCrystal.toolbar.quantity");
+        const combo = toolbarControl(chart, "quantity");
         verify(combo !== null && Ui.exposed(combo), "The chart toolbar must expose the F squared or F selector");
         if (combo.currentIndex === index)
             return;
@@ -307,9 +312,9 @@ TestCase {
     }
     function test_toolbar_quantity_and_memory(data) {
         const chart = openSingle(data);
-        const combo = Review.find(chart, "singleCrystal.toolbar.quantity");
-        const reset = Review.find(chart, "singleCrystal.toolbar.reset");
-        const hover = Review.find(chart, "singleCrystal.toolbar.hover");
+        const combo = toolbarControl(chart, "quantity");
+        const reset = toolbarControl(chart, "reset");
+        const hover = toolbarControl(chart, "hover");
         verify(combo !== null && reset !== null && hover !== null, "The chart toolbar must offer quantity, tooltip and reset controls together");
         compare(combo.currentIndex, 0, "The single-crystal chart's initial quantity must be F squared");
         verify(/axes?:\s*F²/.test(combo.displayText), "The closed quantity selector must use the shared axis-colon-value form");
@@ -333,10 +338,10 @@ TestCase {
         Ui.click(test, Probe, appWindow, "appBar.tab." + (data.page === "experiment" ? "analysis" : "experiment"));
         const other = Review.find(Ui.page(appWindow), "singleCrystal.chart");
         verify(other !== null, "The other workflow page must expose its single-crystal chart");
-        compare(Review.find(other, "singleCrystal.toolbar.quantity").currentIndex, 1, "The selected quantity must be shared by both chart pages");
+        compare(toolbarControl(other, "quantity").currentIndex, 1, "The selected quantity must be shared by both chart pages");
         Session.closeProject();
         const reopened = openSingle(data);
-        compare(Review.find(reopened, "singleCrystal.toolbar.quantity").currentIndex, 1, "Closing and reopening the project must retain the remembered F selection");
+        compare(toolbarControl(reopened, "quantity").currentIndex, 1, "Closing and reopening the project must retain the remembered F selection");
         selectQuantity(reopened, 0);
         verify(/F² calc/.test(Ui.text(reopened)), "Choosing F squared again must restore its chart labels");
         const restored = SettingsProof.points(Review.find(reopened, "singleCrystal.points"));
@@ -377,7 +382,7 @@ TestCase {
         const layer = Review.find(chart, "singleCrystal.points");
         const pointer = Review.descendants(chart).find(item => typeof item.pressX === "number");
         verify(pointer !== undefined, "Hover acceptance must use the chart's actual pointer surface");
-        const toggle = Review.find(chart, "singleCrystal.toolbar.hover");
+        const toggle = toolbarControl(chart, "hover");
         verify(toggle !== null && toggle.checked, "Single-crystal tooltips must share the initially enabled chart setting");
         for (const amplitude of [false, true]) {
             selectQuantity(chart, amplitude ? 1 : 0);
@@ -411,9 +416,10 @@ TestCase {
         const patternToggle = Review.find(Ui.page(appWindow), "chart.toolbar.hover");
         verify(patternToggle !== null && !patternToggle.checked, "The powder chart's tooltip button must observe the same saved disabled setting");
         mouseClick(patternToggle, patternToggle.width / 2, patternToggle.height / 2);
+        compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
         compare(Preferences.chartHoverShown, true, "The powder tooltip button must update the same remembered setting");
         const restored = openSingle(data);
-        compare(Review.find(restored, "singleCrystal.toolbar.hover").checked, true, "Reopening single crystal must retain the tooltip choice made on the pattern chart");
+        compare(toolbarControl(restored, "hover").checked, true, "Reopening single crystal must retain the tooltip choice made on the pattern chart");
     }
     function test_calculation_after_edits_and_extinction_labels_data() {
         return [
@@ -550,5 +556,75 @@ TestCase {
             verify(label.truncated !== true && label.contentWidth <= label.width + 1, "The complete structure name must fit in its rendered result header without truncation");
             verify(Ui.rendered(label), "The untruncated structure name must remain inside the actual dialog viewport");
         }
+    }
+    function toolbarControl(chart, name) {
+        return Review.find(chart, "singleCrystal.toolbar." + name) || Review.find(chart, "chart.toolbar." + name);
+    }
+    function test_zoom_selection_and_shared_pointer_modes_data() {
+        return pageCases();
+    }
+    function test_zoom_selection_and_shared_pointer_modes(data) {
+        const chart = openSingle(data);
+        const pan = toolbarControl(chart, "pan"), zoom = toolbarControl(chart, "zoom"), reset = toolbarControl(chart, "reset");
+        verify(pan !== null && zoom !== null && reset !== null && Ui.exposed(pan) && Ui.exposed(zoom), "The single-crystal chart must expose working move, box zoom and reset buttons as the pattern chart does");
+        verify(zoom.checked && !pan.checked, "The shared initial chart pointer mode must enable box zoom and exclude move");
+        const layer = Review.find(chart, "singleCrystal.points");
+        const pointer = Review.find(chart, "singleCrystal.pointer") || Review.descendants(chart).find(item => typeof item.pressX === "number");
+        verify(pointer !== undefined && pointer !== null && Ui.exposed(pointer), "The zoom and move acceptance must reach the actual exposed chart pointer surface");
+        verify(waitForPolish(chart), "The chart's pointer and axis geometry must settle before a box gesture");
+        const initial = [layer.xMin, layer.xMax, layer.yMin, layer.yMax];
+        const x0 = Math.round(pointer.width * .17), x1 = Math.round(pointer.width * .61);
+        const y0 = Math.round(pointer.height * .23), y1 = Math.round(pointer.height * .77);
+        const edgeY = (y0 + y1) / 2;
+        const before = PatternProof.pixel(appWindow, pointer, x0, edgeY);
+        let box = null;
+        mousePress(pointer, x0, y0, Qt.LeftButton, Qt.NoModifier, 20);
+        try {
+            verify(pointer.pressed, "A real left press must grab the single-crystal box-zoom surface");
+            mouseMove(pointer, x1, y1, 20);
+            box = Review.find(chart, "singleCrystal.zoom.box") || Review.find(chart, "chart.zoom.box");
+            verify(box !== null && Ui.rendered(box), "A box-zoom drag must display a real selection rectangle before release");
+            const corner = box.mapToItem(pointer, 0, 0);
+            verify(Math.abs(corner.x - x0) <= 1 && Math.abs(corner.y - y0) <= 1 && Math.abs(box.width - (x1 - x0)) <= 1 && Math.abs(box.height - (y1 - y0)) <= 1, "The visible selection rectangle must follow the actual pointer endpoints in both dimensions");
+            verify(box.border.width > 0 && box.opacity > 0 && box.border.color.a > 0, "The selection rectangle must have a visible border as the pattern chart does");
+            appWindow.update();
+            verify(waitForRendering(chart), "The held selection rectangle must reach a rendered frame before release");
+            const after = PatternProof.pixel(appWindow, pointer, x0, edgeY);
+            verify(Math.abs(after.r - before.r) + Math.abs(after.g - before.g) + Math.abs(after.b - before.b) > .02, "The box border must change actual rendered pixels while the pointer is held down");
+            const capture = PatternProof.capture(appWindow, "single-crystal-selection-" + data.tag);
+            verify(capture.openGL && capture.saved, "The visible zoom selection must retain a real OpenGL capture in each theme and page");
+        } finally {
+            mouseRelease(pointer, x1, y1, Qt.LeftButton, Qt.NoModifier, 20);
+        }
+        tryVerify(() => !box.visible, 2000, "Releasing a box zoom must hide its selection rectangle");
+        const expected = [initial[0] + x0 / pointer.width * (initial[1] - initial[0]), initial[0] + x1 / pointer.width * (initial[1] - initial[0]), initial[3] - y1 / pointer.height * (initial[3] - initial[2]), initial[3] - y0 / pointer.height * (initial[3] - initial[2])];
+        tryVerify(() => [layer.xMin, layer.xMax, layer.yMin, layer.yMax].every((value, i) => Math.abs(value - expected[i]) < 1e-6 * Math.max(1, Math.abs(expected[i]))), 2000, "Box zoom must use both independently mapped coordinate intervals as the pattern chart does");
+        mouseClick(pan, pan.width / 2, pan.height / 2);
+        tryVerify(() => pan.checked && !zoom.checked, 2000, "Selecting move must enable pan and turn box zoom off");
+        compare(Preferences.chartPointerMode, "pan", "The single-crystal move button must write the shared remembered chart pointer mode");
+        const span = layer.xMax - layer.xMin;
+        const left = layer.xMin, bottom = layer.yMin, top = layer.yMax;
+        const from = Math.round(pointer.width * .45), to = Math.round(pointer.width * .58);
+        mousePress(pointer, from, pointer.height / 2, Qt.LeftButton, Qt.NoModifier, 20);
+        try {
+            mouseMove(pointer, to, pointer.height / 2, 20);
+            verify(!box.visible, "Moving the plot must not display the box-zoom selection rectangle");
+        } finally {
+            mouseRelease(pointer, to, pointer.height / 2, Qt.LeftButton, Qt.NoModifier, 20);
+        }
+        const shift = (to - from) / pointer.width * span;
+        tryVerify(() => Math.abs(layer.xMin - (left - shift)) < 1e-6 * Math.max(1, span) && Math.abs((layer.xMax - layer.xMin) - span) < 1e-6 * Math.max(1, span), 2000, "A rightward move must translate the x interval left by its independent pointer-distance conversion without zooming");
+        verify(Math.abs(layer.yMin - bottom) < 1e-6 && Math.abs(layer.yMax - top) < 1e-6, "A horizontal move must retain the selected y interval as on the pattern chart");
+        mouseClick(reset, reset.width / 2, reset.height / 2);
+        tryVerify(() => [layer.xMin, layer.xMax, layer.yMin, layer.yMax].every((value, i) => Math.abs(value - initial[i]) < 1e-6), 2000, "Reset must restore the full single-crystal axes after box zoom and move");
+        verify(Session.openProject(Probe.referenceUrl("powder")), "The pointer-mode parity control must open the unchanged powder project");
+        Ui.click(test, Probe, appWindow, "appBar.tab." + data.page);
+        const pattern = Review.find(Ui.page(appWindow), "chart");
+        const patternPan = Review.find(pattern, "chart.toolbar.pan"), patternZoom = Review.find(pattern, "chart.toolbar.zoom");
+        verify(patternPan !== null && patternZoom !== null && patternPan.checked && !patternZoom.checked, "The pattern chart must restore the move mode selected on the single-crystal chart");
+        mouseClick(patternZoom, patternZoom.width / 2, patternZoom.height / 2);
+        compare(Preferences.chartPointerMode, "zoom", "The pattern chart's zoom button must update the same saved pointer setting");
+        const reopened = openSingle(data);
+        verify(toolbarControl(reopened, "zoom").checked && !toolbarControl(reopened, "pan").checked, "Reopening single crystal must restore the box-zoom mode selected on the pattern chart");
     }
 }

@@ -92,6 +92,7 @@ def test_real_powder_view_retains_the_regression_pin(app_result, theme, page):
     [
         'toolbar_quantity_and_memory',
         'reflection_hover_and_shared_toggle',
+        'zoom_selection_and_shared_pointer_modes',
     ],
 )
 def test_real_chart_toolbar_conversion_memory_and_hover(app_result, theme, page, case):
