@@ -679,11 +679,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-            // The dark run goes back up the list from where the light one ended: the list is taller than the window,
-            // and the next entry is always beside the shown one.
+            // The list is taller than the window, so a far entry cannot be clicked: the first map is chosen from the
+            // list, and each next one by a key on the closed box (open it to give it the keyboard, close it, step),
+            // down the list in the light theme and back up it in the dark.
             for (qsizetype k = 0; k < titles.size(); ++k) {
                 const qsizetype i = theme == QLatin1String("light") ? k : titles.size() - 1 - k;
-                QStringList actions{"scanView.map.toolbar.colourMap", "choose:" + titles[i]};
+                const bool first = theme == QLatin1String("light") && k == 0;
+                QStringList actions = first ? QStringList{"scanView.map.toolbar.colourMap", "choose:" + titles[i]}
+                                      : k == 0 ? QStringList{}
+                                               : QStringList{"scanView.map.toolbar.colourMap", "key:Escape",
+                                                             theme == QLatin1String("light") ? "key:Down" : "key:Up"};
                 if (k == 0) {
                     actions.prepend("theme:" + theme);
                 }
