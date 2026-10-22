@@ -613,6 +613,30 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-11-stacked-light-plasma", {"theme:light", "scanView.stacked.toolbar.reset",
                                                                 "scanView.stacked.toolbar.palette", "choose:plasma"}});
     }
+    // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
+    // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
+    if (only.startsWith(QLatin1String("mapcands-"))) {
+        const QStringList titles = {"viridis", "magma", "inferno", "plasma", "batlow (Crameri)", "oslo (Crameri)",
+                                    "lajolla (Crameri)", "acton (Crameri)", "devon (Crameri)", "lapaz (Crameri)",
+                                    "thermal (cmocean)", "haline (cmocean)", "deep (cmocean)", "dense (cmocean)",
+                                    "ice (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)", "PuBu (ColorBrewer)",
+                                    "GnBu (ColorBrewer)", "gouldian (CET-L20)", "CET-L08", "CET-L06"};
+        steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.map",
+                                                                "scanView.map.toolbar.yscale", "choose:log"}});
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            for (qsizetype i = 0; i < titles.size(); ++i) {
+                QStringList actions{"scanView.map.toolbar.colourMap", "choose:" + titles[i]};
+                if (i == 0) {
+                    actions.prepend("theme:" + theme);
+                }
+                const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
+                steps_.push_back({QStringLiteral("mapcands-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(slug),
+                                  actions});
+            }
+        }
+    }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
