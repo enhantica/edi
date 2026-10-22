@@ -314,6 +314,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                       QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4_basic")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
+    steps_.push_back({"sc-07b-pr2nio4-zoomed", {"drag:singleCrystal.pointer:0.05,0.6,0.4,0.95"}});
+    steps_.push_back({"sc-07c-pr2nio4-panned", {"chart.toolbar.pan", "drag:singleCrystal.pointer:0.5,0.5,0.3,0.3",
+                                                "chart.toolbar.zoom"}});
     steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
     steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
