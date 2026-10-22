@@ -23,6 +23,9 @@ TestCase {
         id: application
         Main {}
     }
+    TextMetrics {
+        id: axisText
+    }
     function init() {
         originalTheme = Style.Colors.theme;
         Preferences.experimentXAxis = "native";
@@ -200,20 +203,52 @@ TestCase {
     function test_axis_selectors_data() {
         return [
             {
-                tag: "experiment",
+                tag: "cw-experiment",
+                kind: "cw",
                 page: "experiment"
             },
             {
-                tag: "analysis",
+                tag: "cw-analysis",
+                kind: "cw",
+                page: "analysis"
+            },
+            {
+                tag: "tof-experiment",
+                kind: "tof",
+                page: "experiment"
+            },
+            {
+                tag: "tof-analysis",
+                kind: "tof",
                 page: "analysis"
             }
         ];
     }
+    function checkAxisWidth(box, choices, closed) {
+        compare(Array.from(box.model), choices, "The axis list retains every independently authored scientific choice");
+        axisText.font = box.font;
+        let widest = 0;
+        for (const text of choices.concat(closed)) {
+            axisText.text = text;
+            widest = Math.max(widest, axisText.advanceWidth);
+        }
+        const padding = box.leftPadding + box.rightPadding + box.contentItemLabel.leftPadding + box.contentItemLabel.rightPadding;
+        const expected = Math.ceil(widest) + padding;
+        verify(Math.abs(box.width - expected) < 0.6, "Each pattern selector fits its own longest authored item with only its padding and arrow");
+        verify(box.indicator.visible && box.indicator.width > 0, "The independently sized selector retains its actual dropdown arrow");
+        verify(box.rightPadding >= box.indicator.width, "The selector reserves room for its arrow beside the complete text");
+    }
     function test_axis_selectors(data) {
-        pattern("cw", data.page);
+        pattern(data.kind, data.page);
         const x = Review.find(chart, "chart.toolbar.xaxis"), y = Review.find(chart, "chart.toolbar.yscale");
         verify(x !== null && y !== null, "Both axis selectors are visible on the selected pattern chart");
-        compare(x.width, y.width, "The x and y axis selectors have the same rendered width");
+        const native = data.kind === "tof" ? "time-of-flight" : "2θ";
+        const xChoices = [native, "d-spacing"];
+        const xClosed = [data.kind === "tof" ? "x: TOF" : "x: 2θ", "x: d-spacing"];
+        const yChoices = ["linear", "square root", "log"];
+        const yClosed = ["y: linear", "y: square root", "y: log"];
+        checkAxisWidth(x, xChoices, xClosed);
+        checkAxisWidth(y, yChoices, yClosed);
         mouseClick(x, x.width / 2, x.height / 2);
         tryCompare(x.popup, "opened", true, 2000, "Real input opens the x-axis selector");
         const option = x.popup.contentItem.itemAtIndex(1);
@@ -221,8 +256,9 @@ TestCase {
         mouseClick(option, option.width / 2, option.height / 2);
         tryCompare(x, "currentIndex", 1, 2000, "The actual menu action selects d-spacing");
         verify(Render.texts(x).some(item => item.text === "x: d-spacing"), "The native closed selector renderer reads x: d-spacing");
-        compare(x.width, y.width, "Axis selector widths remain equal after choosing the longer d-spacing label");
-        capture("axes-" + data.page);
+        checkAxisWidth(x, xChoices, xClosed);
+        checkAxisWidth(y, yChoices, yClosed);
+        capture("axes-" + data.tag);
     }
     function test_excluded_tint_data() {
         return [
