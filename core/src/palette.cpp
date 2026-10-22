@@ -109,13 +109,17 @@ Lab oklab(const std::string& hex) {
             0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s};
 }
 
-std::string hex_of(const Lab& lab) {
+// Linear sRGB from Oklab, each channel possibly outside [0, 1] for a colour sRGB cannot show.
+std::array<double, 3> linear_rgb(const Lab& lab) {
     const double l = std::pow(lab.l + 0.3963377774 * lab.a + 0.2158037573 * lab.b, 3.0);
     const double m = std::pow(lab.l - 0.1055613458 * lab.a - 0.0638541728 * lab.b, 3.0);
     const double s = std::pow(lab.l - 0.0894841775 * lab.a - 1.2914855480 * lab.b, 3.0);
-    const std::array<double, 3> rgb{4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-                                    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-                                    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s};
+    return {4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s};
+}
+
+std::string hex_of(const Lab& lab) {
+    const std::array<double, 3> rgb = linear_rgb(lab);
     char out[8];
     std::snprintf(out, sizeof(out), "#%02X%02X%02X",
                   static_cast<int>(std::lround(std::clamp(to_srgb(rgb[0]), 0.0, 1.0) * 255.0)),
@@ -168,7 +172,23 @@ std::string readable_colour(const std::string& colour, const std::string& backgr
     }
     const Lab lab = oklab(colour);
     const double end = contrast_ratio("#000000", background) >= contrast_ratio("#FFFFFF", background) ? 0.0 : 1.0;
-    const auto at = [&lab, end](double t) { return hex_of({lab.l + (end - lab.l) * t, lab.a, lab.b}); };
+    // At lightness `l`, the colour's hue with as much of its chroma as sRGB can show there: all of it when it fits.
+    const auto fitted = [&lab](double l) {
+        const auto shows = [l, &lab](double share) {
+            const std::array<double, 3> rgb = linear_rgb({l, lab.a * share, lab.b * share});
+            return std::all_of(rgb.begin(), rgb.end(), [](double c) { return c >= -1e-9 && c <= 1.0 + 1e-9; });
+        };
+        if (shows(1.0)) {
+            return hex_of({l, lab.a, lab.b});
+        }
+        double low = 0.0, high = 1.0;
+        for (int step = 0; step < 32; ++step) {
+            const double middle = (low + high) / 2.0;
+            (shows(middle) ? low : high) = middle;
+        }
+        return hex_of({l, lab.a * low, lab.b * low});
+    };
+    const auto at = [&](double t) { return fitted(lab.l + (end - lab.l) * t); };
     if (contrast_ratio(at(1.0), background) < ratio) {
         return at(1.0);
     }

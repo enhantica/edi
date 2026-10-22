@@ -14,13 +14,14 @@ one. The owner chose, on 2026-10-22, to adjust the colour's lightness rather tha
 
 ## Decision
 
-1. **One rule.** Wherever an element colour is drawn in 2D, it is the scheme colour with its Oklab lightness moved,
-   hue and chroma kept, by the least amount that gives at least 3:1 contrast (WCAG 2) with the background it is drawn
-   on. It moves towards black or white, whichever the background contrasts with more. A colour that already has 3:1
-   is drawn as it is. `edi::readable_colour` in the core is the only implementation.
-2. **Backgrounds.** Tables and lists are measured against the theme's content background, the darker of the light
-   rows and the lighter of the dark ones, so every row passes. The structure view's legend uses its own background
-   and the report its white paper.
+1. **One rule.** Wherever an element colour is drawn in 2D, it is the scheme colour with its Oklab lightness moved by
+   the least amount that gives at least 3:1 contrast (WCAG 2) with the background it is drawn on, towards black or
+   white, whichever the background contrasts with more. A colour that already has 3:1 is drawn byte for byte as it is.
+   The hue is always kept, and the chroma too wherever sRGB can show it at the new lightness. Where it cannot (bright
+   yellows and greens on white, deep blues and reds on dark grey), the colour keeps as much chroma as sRGB allows there.
+   `edi::readable_colour` in the core is the only implementation.
+2. **Backgrounds.** Tables, lists and the structure view's legend are measured against the theme's main content
+   background (white, or #444444 in the dark theme), and the report against its white paper.
 3. **3D unchanged.** The structure view's spheres keep the scheme colours exactly.
 4. **Names kept.** The scheme selector still says jmol and vesta, since the tables themselves are unchanged. Its
    tooltip says the colours are adjusted for contrast in labels and tables.
