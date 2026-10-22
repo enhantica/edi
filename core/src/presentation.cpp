@@ -174,6 +174,25 @@ std::vector<double> displayed(const std::vector<double>& values, YScale scale) {
     return out;
 }
 
+// Two decimations of the same rows taken together, each row once, in row order: a band keeps the extremes of both its
+// centre and its ends.
+Kept union_of(const Kept& first, const Kept& second) {
+    Kept merged;
+    std::size_t a = 0, b = 0;
+    while (a < first.rows.size() || b < second.rows.size()) {
+        const bool take_a = b == second.rows.size() || (a < first.rows.size() && first.rows[a] <= second.rows[b]);
+        const std::size_t row = take_a ? first.rows[a] : second.rows[b];
+        const std::size_t run = take_a ? first.runs[a] : second.runs[b];
+        if (take_a && b < second.rows.size() && second.rows[b] == row) {
+            ++b;
+        }
+        take_a ? ++a : ++b;
+        merged.rows.push_back(row);
+        merged.runs.push_back(run);
+    }
+    return merged;
+}
+
 // A line series from the kept rows, with one gap point between two runs.
 void fill_points(PatternSeries& series, const Kept& kept, const std::vector<double>& x,
                  const std::vector<double>& display) {
@@ -532,7 +551,8 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         const std::vector<double>* su = column_for(source.su);
         std::vector<double> bar_low(x.size()), bar_high(x.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
-            const double half = su != nullptr ? (*su)[i] : 0.0;
+            // A point without a finite s.u. has a bar (and a band) of no width, never one to the pane's floor.
+            const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
             bar_low[i] = to_display((*meas)[i] - half, view.y_scale);
             bar_high[i] = to_display((*meas)[i] + half, view.y_scale);
         }
@@ -545,22 +565,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
                 low[i] = std::isnan(bar_low[i]) ? display[i] : bar_low[i];
                 high[i] = std::isnan(bar_high[i]) ? display[i] : bar_high[i];
             }
-            const Kept bars = decimate(x, low, high, out.x.min, out.x.max, view.columns);
-            Kept merged;
-            std::size_t a = 0, b = 0;
-            while (a < kept.rows.size() || b < bars.rows.size()) {
-                const bool take_a = b == bars.rows.size() ||
-                                    (a < kept.rows.size() && kept.rows[a] <= bars.rows[b]);
-                const std::size_t row = take_a ? kept.rows[a] : bars.rows[b];
-                const std::size_t run = take_a ? kept.runs[a] : bars.runs[b];
-                if (take_a && b < bars.rows.size() && bars.rows[b] == row) {
-                    ++b;
-                }
-                take_a ? ++a : ++b;
-                merged.rows.push_back(row);
-                merged.runs.push_back(run);
-            }
-            kept = std::move(merged);
+            kept = union_of(kept, decimate(x, low, high, out.x.min, out.x.max, view.columns));
         }
         fill_points(series, kept, x, display);
         series.bar_low.reserve(series.rows.size());
@@ -640,20 +645,34 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         }
         line(source.resid, SeriesKind::Residual, Pane::Residual, "resid", "Residual (meas − calc)", "resid",
              YScale::Linear);
-        // In band style, the residual's band, ± the measured s.u. at each kept point; a point without an s.u. has none.
+        // In band style, the residual's band, ± the measured s.u. (none where it has none): its rows are taken, as the
+        // measured band's, from both the centre values and the band's ends, so a narrow s.u. peak between flat
+        // residuals is kept.
         const std::vector<double>* resid = column_for(source.resid);
         const std::vector<double>* su = column_for(source.su);
         if (view.residual_band && resid != nullptr && !out.series.empty() &&
             out.series.back().kind == SeriesKind::Residual) {
             PatternSeries& series = out.series.back();
+            const std::vector<double> centre = displayed(*resid, YScale::Linear);
+            std::vector<double> low(x.size()), high(x.size());
+            for (std::size_t i = 0; i < x.size(); ++i) {
+                const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
+                low[i] = centre[i] - half;
+                high[i] = centre[i] + half;
+            }
+            const Kept kept = union_of(decimate(x, centre, centre, out.x.min, out.x.max, view.columns),
+                                       decimate(x, low, high, out.x.min, out.x.max, view.columns));
+            series.points.clear();
+            series.rows.clear();
+            fill_points(series, kept, x, centre);
             series.bar_low.reserve(series.rows.size());
             series.bar_high.reserve(series.rows.size());
             for (const std::size_t row : series.rows) {
-                const double half = su != nullptr && row != kNoRow && std::isfinite((*su)[row]) ? (*su)[row] : 0.0;
-                series.bar_low.push_back(row == kNoRow ? kNaN : (*resid)[row] - half);
-                series.bar_high.push_back(row == kNoRow ? kNaN : (*resid)[row] + half);
+                series.bar_low.push_back(row == kNoRow ? kNaN : low[row]);
+                series.bar_high.push_back(row == kNoRow ? kNaN : high[row]);
             }
-            for (std::size_t k = 0; k < series.bar_low.size(); ++k) {
+            for (std::size_t k = 0; k < series.points.size(); ++k) {
+                cover(out.y_residual, any_residual, series.points[k].y);
                 cover(out.y_residual, any_residual, series.bar_low[k]);
                 cover(out.y_residual, any_residual, series.bar_high[k]);
             }

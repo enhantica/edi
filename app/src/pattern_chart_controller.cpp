@@ -749,8 +749,8 @@ void PatternChartController::refresh() {
     replace(calculated_series_, calculated != nullptr ? points_of(*calculated) : QList<QPointF>());
     replace(background_series_, background != nullptr ? points_of(*background) : QList<QPointF>());
     replace(residual_series_, residual != nullptr && !band ? points_of(*residual) : QList<QPointF>());
-    // A band: its area and its two edges, each point's ends (a point without an s.u. has its band's ends at the
-    // point; a lower end the log scale cannot show reaches the pane's bottom).
+    // A band: its area and its two edges, each point's ends (the presentation gives a point without a finite s.u. its
+    // ends at the point, so only a finite interval reaching below the log scale's domain takes the pane's bottom).
     const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
         const BandSeries& target = band_series_[pane];
         QList<QPointF> top, bottom;
