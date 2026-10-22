@@ -42,15 +42,16 @@ QtObject {
 
     // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), the colour of the
     // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H) in the structure view's scheme; the minor
-    // foreground colour for an element the table does not have. Drawn flat, so made readable on `background`, by
-    // default the theme's main content background, which tables and lists sit on (edi ADR-0047).
-    function element(typeSymbol, background) {
+    // foreground colour for an element the table does not have. Drawn flat, so made readable on `backgrounds`, by
+    // default every underlay of a table cell: both alternating rows and the hover tint (edi ADR-0047).
+    function element(typeSymbol, backgrounds) {
         const colour = ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
-        return colors.readable(colour, background === undefined ? EaStyle.Colors.mainContentBackground : background);
+        return colors.readable(colour, backgrounds === undefined ? colors.tableUnderlays : backgrounds);
     }
+    readonly property list<color> tableUnderlays: [EaStyle.Colors.themeBackgroundHovered1, EaStyle.Colors.themeBackgroundHovered2, EaStyle.Colors.themeRowHovered]
 
-    // A colour drawn flat on `background`, moved to 3:1 contrast by its lightness alone (edi ADR-0047).
-    function readable(colour, background) {
-        return ApplicationInfo.readableColour(colour, background);
+    // A colour drawn flat on any of `backgrounds`, moved to 3:1 contrast on each by its lightness (edi ADR-0047).
+    function readable(colour, backgrounds) {
+        return ApplicationInfo.readableColour(colour, backgrounds);
     }
 }

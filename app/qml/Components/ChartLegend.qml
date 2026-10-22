@@ -40,7 +40,7 @@ Rectangle {
     function markPiece(mark, width, color) {
         return mark === "atom" ? {
             "icon": "atom",
-            "color": AppColors.readable(color, legend.colors.mainContentBackgroundHalfTransparent)
+            "color": AppColors.readable(color, [legend.colors.mainContentBackgroundHalfTransparent])
         } : {
             "mark": mark,
             "width": width,

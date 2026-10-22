@@ -201,6 +201,21 @@ std::string readable_colour(const std::string& colour, const std::string& backgr
     return at(high);
 }
 
+std::string readable_colour(const std::string& colour, const std::vector<std::string>& backgrounds, double ratio) {
+    std::string furthest = colour;
+    double moved = 0.0;
+    const double lightness = oklab(colour).l;
+    for (const std::string& background : backgrounds) {
+        const std::string candidate = readable_colour(colour, background, ratio);
+        const double shift = std::abs(oklab(candidate).l - lightness);
+        if (shift > moved) {
+            furthest = candidate;
+            moved = shift;
+        }
+    }
+    return furthest;
+}
+
 std::span<const std::string_view> colour_scheme_names() { return kNames; }
 
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {

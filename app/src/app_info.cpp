@@ -258,10 +258,13 @@ QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fa
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
 }
 
-QColor ApplicationInfo::readableColour(const QColor& colour, const QColor& background) const {
+QColor ApplicationInfo::readableColour(const QColor& colour, const QList<QColor>& backgrounds) const {
     // A translucent background is taken as opaque: what shows through it is the same theme's background.
-    return QColor(QString::fromStdString(
-        edi::readable_colour(colour.name(QColor::HexRgb).toStdString(), background.name(QColor::HexRgb).toStdString())));
+    std::vector<std::string> hexes;
+    for (const QColor& background : backgrounds) {
+        hexes.push_back(background.name(QColor::HexRgb).toStdString());
+    }
+    return QColor(QString::fromStdString(edi::readable_colour(colour.name(QColor::HexRgb).toStdString(), hexes)));
 }
 
 namespace {

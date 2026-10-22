@@ -6,6 +6,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // The colour schemes (data/palettes, PROVENANCE.md beside them; ADR-0038): the datasets', structures' and chart roles'
 // colours, the only source of them in edi. The app's charts and icons, the pattern presentation and the report read
@@ -74,5 +75,10 @@ double contrast_ratio(const std::string& a, const std::string& b);
 /// chroma where sRGB can show it at that lightness; where it cannot, the most chroma it can. If even black or white falls
 /// short, that end is returned.
 std::string readable_colour(const std::string& colour, const std::string& background, double ratio = 3.0);
+
+/// The same for a colour drawn on any of several backgrounds of one theme (a table's alternating rows and its hover
+/// tint): it reads on each of them. Lightness moves the same way for all, so the result is the one that moved furthest;
+/// a colour that already reads on all is returned byte for byte.
+std::string readable_colour(const std::string& colour, const std::vector<std::string>& backgrounds, double ratio = 3.0);
 
 }  // namespace edi

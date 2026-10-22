@@ -20,8 +20,9 @@ one. The owner chose, on 2026-10-22, to adjust the colour's lightness rather tha
    The hue is always kept, and the chroma too wherever sRGB can show it at the new lightness. Where it cannot (bright
    yellows and greens on white, deep blues and reds on dark grey), the colour keeps as much chroma as sRGB allows there.
    `edi::readable_colour` in the core is the only implementation.
-2. **Backgrounds.** Tables, lists and the structure view's legend are measured against the theme's main content
-   background (white, or #444444 in the dark theme), and the report against its white paper.
+2. **Backgrounds.** A table cell's colour reads on every underlay it can have: both alternating row colours and the
+   hover tint, so the colour is the furthest moved of the three, and one that reads on all keeps its bytes. The
+   structure view's legend is measured against its own background and the report against its white paper.
 3. **3D unchanged.** The structure view's spheres keep the scheme colours exactly.
 4. **Names kept.** The scheme selector still says jmol and vesta, since the tables themselves are unchanged. Its
    tooltip says the colours are adjusted for contrast in labels and tables.
