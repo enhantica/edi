@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <atomic>
 #include <memory>
@@ -655,9 +656,11 @@ class Written {
     }
 
     // Comparison with whatever the value compares with. A type that compares through a template
-    // (an optional, a container) would not find the conversion alone.
+    // (an optional, a container) would not find the conversion alone. Iterators are left out first:
+    // an iterator over values that mention a cell finds these operators too, and libc++ 23 then
+    // checks the requirement below in terms of itself.
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !std::input_or_output_iterator<U>) &&
                 requires(const T& t, const U& u) { t == u; }
     friend bool operator==(const Written& a, const U& b) {
         return a.state_.v() == b;
@@ -695,7 +698,7 @@ class Written {
         return a.state_.v() <=> b.state_.v();
     }
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !std::input_or_output_iterator<U>) &&
                 requires(const T& t, const U& u) { t <=> u; }
     friend auto operator<=>(const Written& a, const U& b) {
         return a.state_.v() <=> b;
