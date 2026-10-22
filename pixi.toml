@@ -159,6 +159,7 @@ CRYSTA_SDK_TAG = "build-fb508b99822a30355dfe86faf5b5d22669a97f30"
 CRYSTA_SDK_SHA256 = "e9cad3bdbb2af91e78040cb90d82c3e9d2e4ab97c60ae003ec44d0a15700980b"
 
 [target.linux-64.dependencies]
+cxx-compiler = "*"
 clangxx = "22.*"
 llvm-tools = "22.*"
 # The core and its wheels link against glibc 2.28 although the platform's floor is 2.34 (the app's).
@@ -279,14 +280,8 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = [{ task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
-# Linux's compilers, from the cxx-compiler metapackage, kept out of the linux-64 table above, which holds only the
-# coverage toolchain. macOS names its Clang 23 drivers directly (above), so the metapackage is Linux's alone.
-[feature.compilers.target.linux-64.dependencies]
-cxx-compiler = "*"
-
 [environments]
-default = ["compilers"]
-app = ["compilers", "app"]
+app = ["app"]
 
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }
