@@ -25,6 +25,7 @@ const char* category_title(std::string_view id) {
         {"linked_structure", "Linked structures"},
         {"excluded_region", "Excluded regions"},  // owner, 2026-10-04
         {"absorption", "Absorption"},
+        {"extinction", "Extinction"},
         {"preferred_orientation", "Preferred orientations"},
         {"scattering_source", "Scattering source"},
         {"refln", "Reflections"},

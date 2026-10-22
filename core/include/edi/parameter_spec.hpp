@@ -163,6 +163,10 @@ inline constexpr const char* kBackgroundCoefCif[] = {"_pd_background.Chebyshev_c
 inline constexpr const char* kAbscor1[] = {"_absorption.abscor1"};
 inline constexpr const char* kAbscor2[] = {"_absorption.abscor2"};
 inline constexpr const char* kMuR[] = {"_absorption.mu_r"};
+inline constexpr const char* kExtinctionRadius[] = {"_extinction.radius"};
+inline constexpr const char* kExtinctionRadiusCif[] = {"_easydiffraction_extinction.radius"};
+inline constexpr const char* kExtinctionMosaicity[] = {"_extinction.mosaicity"};
+inline constexpr const char* kExtinctionMosaicityCif[] = {"_easydiffraction_extinction.mosaicity"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -463,6 +467,16 @@ inline const ParameterSpec absorption_mu_r{
     "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
     "each reflection's Bragg theta",
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
+// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction: the
+// crystal's mean radius in micrometres and its mosaicity in arc minutes).
+inline const ParameterSpec extinction_radius{
+    "extinction", "radius", "micrometres", "Mean radius of the crystal",
+    {0.0, detail::kInf}, "Radius", "μm", "r", "\\mu\\mathrm{m}", detail::kExtinctionRadius,
+    detail::kExtinctionRadiusCif};
+inline const ParameterSpec extinction_mosaicity{
+    "extinction", "mosaicity", "arcminutes", "Mosaicity of the crystal",
+    {0.0, detail::kInf}, "Mosaicity", "arcmin", "g", "\\mathrm{arcmin}",
+    detail::kExtinctionMosaicity, detail::kExtinctionMosaicityCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.

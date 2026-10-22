@@ -283,6 +283,9 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
         throw std::invalid_argument("edi fit: experiment '" + experiment().name +
                                     "' links no structure; link one before fitting");
     }
+    if (experiment().reflections.has_value()) {  // a single crystal fits its own reflections
+        return fit({}, {}, {}, on_iteration, on_start, should_cancel);
+    }
     if (!experiment().data.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
                                     "' carries no measured data (a calculation-only or "

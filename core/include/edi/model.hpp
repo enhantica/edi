@@ -3482,6 +3482,43 @@ struct AbsorptionBase {
     detail::CategoryRow table_row;
 };
 
+// A single crystal's extinction (diffraction-lib `extinction`): the type (`becker-coppens`), the
+// mosaic model (`gauss` or `lorentz`), the crystal's radius and its mosaicity. Engaged exactly on a
+// single crystal.
+struct ExtinctionBase {
+    std::optional<std::string> type;
+    std::optional<std::string> model;
+    OptionalParameter radius;
+    OptionalParameter mosaicity;
+
+    std::vector<Parameter*> parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+    detail::CategoryRow table_row;
+};
+
+// A single crystal's reflections (diffraction-lib `ReflnDataBase`, the `refln` category of a single
+// crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of
+// flight (else empty), and crysta's calculated columns beside them, empty until a calculation.
+struct ReflnDataBase {
+    std::vector<std::int32_t> index_h;
+    std::vector<std::int32_t> index_k;
+    std::vector<std::int32_t> index_l;
+    std::vector<double> intensity_meas;
+    std::vector<double> intensity_meas_su;
+    std::vector<double> wavelength;
+    ComputedColumn<double> d_spacing;
+    ComputedColumn<double> sin_theta_over_lambda;
+    ComputedColumn<double> intensity_calc;
+
+    std::size_t size() const noexcept { return intensity_meas.size(); }
+    void clear_computed() noexcept {
+        d_spacing.clear();
+        sin_theta_over_lambda.clear();
+        intensity_calc.clear();
+    }
+};
+
 // The largest absolute Miller index a texture axis component may take — the loader's bound, held at
 // every programmatic entrance too (crysta's kPreferredOrientationAxisBound).
 inline constexpr int kPreferredOrientationAxisBound = 1000;
@@ -3753,6 +3790,10 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<CarriedLoop> carried_reflections;
     // The reflections crysta computed, beside the `data` node's computed columns.
     PowderReflnDataBase refln;
+    // A single crystal's measured reflections and their calculated F² (engaged exactly on a single
+    // crystal, which has no `data` pattern), and its extinction.
+    std::optional<ReflnDataBase> reflections;
+    ExtinctionBase extinction;
     double dataset_weight = 1.0;  // joint-fit weight from analysis.edi
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
@@ -5573,6 +5614,12 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     return out;
 }
+inline std::vector<Parameter*> ExtinctionBase::parameters() {
+    std::vector<Parameter*> out;
+    detail::push_optional(out, radius);
+    detail::push_optional(out, mosaicity);
+    return out;
+}
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
     std::vector<Parameter*> out;
     detail::push_optional(out, abscor1);
@@ -5591,6 +5638,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
         out.push_back(&link->scale);
     }
     for (Parameter* parameter : absorption.parameters()) {
+        out.push_back(parameter);
+    }
+    for (Parameter* parameter : extinction.parameters()) {
         out.push_back(parameter);
     }
     for (const std::shared_ptr<PrefOrient>& row : preferred_orientation) {
