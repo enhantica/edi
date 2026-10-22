@@ -2,9 +2,9 @@ data_alpo4_p63mc
 
 _edi.schema_version 3
 
-_cell.length_a 4.973(4)
-_cell.length_b 4.973
-_cell.length_c 8.420(10)
+_cell.length_a 4.983(7)
+_cell.length_b 4.9832407377064385
+_cell.length_c 9.504(19)
 _cell.angle_alpha 90
 _cell.angle_beta 90
 _cell.angle_gamma 120

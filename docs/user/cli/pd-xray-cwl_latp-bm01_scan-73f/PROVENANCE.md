@@ -6,7 +6,8 @@ made it in edi's app and gave it to edi for its examples on 2026-10-22.
 
 ## What changed from the owner's project
 
-Only naming and session state; every parameter value, free flag, constraint and data point is as the owner left it.
+Naming, session state and the template dataset; every free flag, constraint, excluded region and scan data point is as
+the owner left it, and every parameter value is one of his fitted values.
 
 - `project.edi`: the name, title and description follow the other examples (`pd_xray_cwl_latp_bm01_scan_73f`,
   "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL"), with the instrument BM01, the facility SNBL and the
@@ -19,4 +20,15 @@ Only naming and session state; every parameter value, free flag, constraint and 
 - `experiments/bm01_scan/*.dat`: each file's header line naming its path on the facility's file system is removed;
   the data lines are unchanged.
 
-`structures/` and `experiments/bm01.edi` are byte-identical to the owner's.
+- The template: the owner's `experiments/bm01.edi` still held the data of an earlier file, `latp_001.dat`, on an
+  intensity scale about 40 times below the scan files, with the values fitted to it, while the scan's template file
+  was `latp_312.dat`. Opened, that template's calculation sat about 40 times below its measured pattern. The template
+  experiment now holds `latp_312.dat`'s data (`_data_source.file_name latp_312.dat`), and every free value in
+  `structures/` and `experiments/bm01.edi` is the owner's own fit of `latp_312.dat`, from the scan results his
+  session wrote (73 files, one row each), at the uncertainty rule's precision as edi saves them. A single fit of the
+  template then converges in 5 iterations to R<sub>wp</sub> 4.51 % and reduced χ² 1.4223·10⁸ (his run: 1.4226·10⁸),
+  and the sequential run reproduces his reduced χ² for every file within 2·10⁻⁴.
+
+The reduced χ² is in the 10⁷–10⁸ range because the files' third column, the integration's own error, is small: about
+1.8·10³ at the strongest peak (9.8·10⁸), a median 0.03 √I over the fitted range, so R<sub>exp</sub> is about 0.0005 %.
+R<sub>wp</sub> is the measure to read for this case.
