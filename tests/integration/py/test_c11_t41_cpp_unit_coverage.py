@@ -76,6 +76,7 @@ def test_cpp_coverage_port_is_isolated_explicit_total_and_report_only() -> None:
         'bash',
         'tools/ci/cpp-coverage-unit.sh',
     ]
+    # The macOS compiler update leaves Linux coverage and the core sysroot unchanged.
     assert manifest['target']['linux-64']['dependencies'] == {
         'cxx-compiler': '*',
         'clangxx': '22.*',

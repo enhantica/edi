@@ -1,6 +1,6 @@
 #  adaptation: seed inputs/pins were byte-identical and three seeds non-executing.
 #  additionally requires the seven declared imported minimizers to be crysta.
-# Only those declarations, analysis descent/tolerance additions and scan pins may change;
+# Only those declarations, analysis settings, scan pins and validated excluded cells may change;
 # all seeds execute. Every other original blob and every deferred-seed expected.json stay pinned.
 """CLI project plane: independent source identity and consumed-model semantics.
 
@@ -48,6 +48,7 @@ def blob_id(path):
 
 
 def retained_seed_bytes(name, raw, expected):
+    # Keep the imported blob pins; validate excluded cells before reversing their new spelling.
     if content_id(raw) == expected:
         return raw
     return historical_excluded_bytes(name.removeprefix('project/'), raw)
