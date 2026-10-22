@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T15:05:23Z
+# measured_utc = 2026-10-22T15:52:30Z
 #
-# Recorded from: Measured twelve new colour-bar nodes once; retain full-module fixture cost from the existing complete observer batch
-# Collected tests: 15965; with a reported duration: 9468
-# Module-scoped fixture costs recorded: 70
+# Recorded from: measured test run (21 node(s) measured once, 14560 banked, 0 stale row(s) dropped)
+# Collected tests: 15986; with a reported duration: 9474
+# Module-scoped fixture costs recorded: 71
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15965
+# inventory_python = 15986
 # inventory_cpp = 393
-# inventory_measured = 14560
-# inventory_unmeasured = 1798
+# inventory_measured = 14569
+# inventory_unmeasured = 1810
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -11829,6 +11829,27 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+0.020	tests/system/py/test_element_contrast.py::test_3d_sphere_instances_keep_exact_published_colours[jmol-dark]
+0.020	tests/system/py/test_element_contrast.py::test_3d_sphere_instances_keep_exact_published_colours[jmol-light]
+0.020	tests/system/py/test_element_contrast.py::test_3d_sphere_instances_keep_exact_published_colours[vesta-dark]
+0.020	tests/system/py/test_element_contrast.py::test_3d_sphere_instances_keep_exact_published_colours[vesta-light]
+0.050	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_keep_oklab_hue_and_chroma[jmol-dark]
+0.050	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_keep_oklab_hue_and_chroma[jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_keep_oklab_hue_and_chroma[vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_keep_oklab_hue_and_chroma[vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_reach_three_to_one[jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_reach_three_to_one[jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_reach_three_to_one[vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all_2d_element_uses_reach_three_to_one[vesta-light]
+0.000	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[jmol-dark]
+0.000	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[vesta-light]
+0.000	tests/system/py/test_element_contrast.py::test_independent_contrast_and_colour_observers_reject_escapes
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
@@ -16442,6 +16463,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 13.931	tests/system/py/test_element_contrast.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
