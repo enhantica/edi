@@ -99,13 +99,13 @@ QVariant PatternModel::data(const QModelIndex& index, int role) const {
         case ComponentIntensitiesRole: {
             const auto structures = static_cast<std::size_t>(component_names_.size());
             const auto row = static_cast<std::size_t>(index.row());
-            QVariantList values;
+            QList<double> values;
             if (structures > 0 && published_components_.size() >= (row + 1) * structures) {
                 for (std::size_t k = 0; k < structures; ++k) {
                     values.append(published_components_[row * structures + k]);
                 }
             }
-            return values;
+            return QVariant::fromValue(values);
         }
         case CalcStatusRole:
             return static_cast<std::size_t>(index.row()) < published_status_.size()

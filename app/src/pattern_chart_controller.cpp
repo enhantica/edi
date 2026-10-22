@@ -6,7 +6,6 @@
 #include <cmath>
 #include <limits>
 #include <QStringList>
-#include <QVariantMap>
 #include <utility>
 
 namespace edi_app {
@@ -194,38 +193,52 @@ void PatternChartController::animateTo(std::optional<double> x_min, std::optiona
     animation_.start();
 }
 
-QVariantList PatternChartController::viewRanges() const {
-    QVariantList out;
+QList<double> PatternChartController::viewRanges() const {
+    QList<double> out;
     for (int i = 0; i < 4; ++i) {
         const std::optional<double>& value = animating_ ? target_[i] : i == 0 ? x_min_ : i == 1 ? x_max_ : i == 2 ? y_min_ : y_max_;
-        out.append(value ? QVariant(*value) : QVariant());
+        out.append(value ? *value : std::numeric_limits<double>::quiet_NaN());
     }
-    // The x axis the ranges are on, so a chart that last showed another axis keeps them rather than resetting.
-    out.append(QString::fromStdString(ranges_axis_.empty() ? presented_x_ : ranges_axis_));
     return out;
 }
 
-void PatternChartController::setViewRanges(const QVariantList& ranges) {
-    // The same ranges, whatever axis they name, change nothing: a reset gives none, which suit every axis.
-    if (ranges.mid(0, 4) == viewRanges().mid(0, 4)) {
-        return;
-    }
+// The x axis the ranges are on, so a chart that last showed another axis keeps them rather than resetting.
+QString PatternChartController::viewRangesAxis() const {
+    return QString::fromStdString(ranges_axis_.empty() ? presented_x_ : ranges_axis_);
+}
+
+void PatternChartController::setViewRanges(const QList<double>& ranges) {
     std::optional<double> values[4];
     for (int i = 0; i < 4 && i < ranges.size(); ++i) {
-        bool number = false;
-        const double value = ranges[i].toDouble(&number);
-        if (ranges[i].isValid() && !ranges[i].isNull() && number && std::isfinite(value)) {
-            values[i] = value;
+        if (std::isfinite(ranges[i])) {
+            values[i] = ranges[i];
         }
+    }
+    // The same ranges change nothing: a reset gives none, which suit every axis.
+    const QList<double> now = viewRanges();
+    bool same = true;
+    for (int i = 0; i < 4; ++i) {
+        same = same && (values[i] ? std::isfinite(now[i]) && now[i] == *values[i] : !std::isfinite(now[i]));
+    }
+    if (same) {
+        return;
     }
     finishAnimation();
     x_min_ = values[0];
     x_max_ = values[1];
     y_min_ = values[2];
     y_max_ = values[3];
-    ranges_axis_ = ranges.size() > 4 ? ranges[4].toString().toStdString() : std::string();
     emit viewRangesChanged();
     invalidate();
+}
+
+// The axis is read when the chart next presents, after the ranges given with it.
+void PatternChartController::setViewRangesAxis(const QString& axis) {
+    const std::string value = axis.toStdString();
+    if (value != ranges_axis_) {
+        ranges_axis_ = value;
+        emit viewRangesAxisChanged();
+    }
 }
 
 void PatternChartController::animationFrame(double progress) {
@@ -267,8 +280,8 @@ void PatternChartController::publishColors() {
     emit braggColorsChanged();
 }
 
-QVariantList PatternChartController::braggColors() const {
-    QVariantList colours;
+QList<QColor> PatternChartController::braggColors() const {
+    QList<QColor> colours;
     for (const edi::SeriesStyle& style : styles()) {
         if (style.key.starts_with("bragg.")) {
             colours.append(color(QString::fromStdString(style.key)));
@@ -600,7 +613,10 @@ void PatternChartController::refresh() {
                 shown_ = edi::present_pattern(source, view());
             }
         }
-        ranges_axis_ = presented_x_;
+        if (ranges_axis_ != presented_x_) {
+            ranges_axis_ = presented_x_;
+            emit viewRangesAxisChanged();
+        }
         if (experiment_ && active_) {
             experiment_->notePresented();
         }
@@ -622,12 +638,10 @@ void PatternChartController::refresh() {
             }
         }
         // The label's pieces, each in its style's colour; a plain piece (no style) is drawn in the theme's colour.
-        QVariantList segments;
+        QStringList texts, colours;
         for (const edi::TitleSegment& segment : edi::legend_label(shown_, series)) {
-            segments.append(QVariantMap{{QStringLiteral("text"), QString::fromStdString(segment.text)},
-                                        {QStringLiteral("color"), segment.style.empty()
-                                                                      ? QVariant()
-                                                                      : QVariant(color(QString::fromStdString(segment.style)))}});
+            texts.append(QString::fromStdString(segment.text));
+            colours.append(segment.style.empty() ? QString() : color(QString::fromStdString(segment.style)).name(QColor::HexArgb));
         }
         const QColor mark = color(QString::fromStdString(series.style));
         // A dashed series has a dashed sample.
@@ -639,7 +653,7 @@ void PatternChartController::refresh() {
                        bragg    ? QStringLiteral("tick")
                        : dashed ? QStringLiteral("dash")
                                 : QStringLiteral("line"),
-                       bragg, width, segments});
+                       bragg, width, texts, colours});
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -786,13 +800,14 @@ void PatternChartController::refresh() {
         replace(bragg_series_[static_cast<qsizetype>(place)], ticks[place]);
     }
     // Each structure curve: its area between the background and the curve, and its outline.
-    QVariantList curve_colours;
+    QList<QColor> curve_colours, curve_fills;
     for (std::size_t index = 0; index < structure_curves.size(); ++index) {
         const edi::PatternSeries& series = *structure_curves[index];
         const QColor fill = color(QString::fromStdString(series.style));
         QColor outline = fill;
         outline.setAlphaF(1.0F);
-        curve_colours.append(QVariantMap{{QStringLiteral("color"), outline}, {QStringLiteral("fill"), fill}});
+        curve_colours.append(outline);
+        curve_fills.append(fill);
         if (static_cast<qsizetype>(index) >= structure_series_.size()) {
             continue;  // the chart makes its series and hands them over, which draws again
         }
@@ -812,6 +827,7 @@ void PatternChartController::refresh() {
         replace(structure_series_[index].lower, {});
         replace(structure_series_[index].outline, {});
     }
+    publish(structure_curve_fills_, curve_fills, &PatternChartController::structureCurveFillsChanged);
     publish(structure_curve_colors_, curve_colours, &PatternChartController::structureCurveColorsChanged);
     publish(has_calculated_, calculated != nullptr, &PatternChartController::hasCalculatedChanged);
     // More structures than tick series: the chart makes the rest, each handed over in turn.

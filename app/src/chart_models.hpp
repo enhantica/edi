@@ -6,7 +6,7 @@
 #include <QColor>
 #include <QList>
 #include <QString>
-#include <QVariantList>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 namespace edi_app {
@@ -15,8 +15,8 @@ namespace edi_app {
 // lists them. Roles `label` (the series' name, or a structure's for its ticks), `color` (the series' colour
 // in the current theme), `mark` (what is drawn before the name: a "line" or a "tick", in the series' width,
 // or an element's "atom" icon), `markWidth` (a line's or tick's width in pixels, the series' own) and `bragg`
-// (the row is a structure's Bragg ticks), and `labelSegments` (the label as pieces `{text, color}`, edi::legend_label;
-// a piece without a colour is plain). Line marks are drawn shapes, never characters, so they look the same
+// (the row is a structure's Bragg ticks), and `labelTexts` and `labelColors` (the label as pieces, edi::legend_label:
+// each piece's text and its colour's name, empty for a plain piece, index for index). Line marks are drawn shapes, never characters, so they look the same
 // on every platform (edi ADR-0033).
 class ChartLegendModel : public QAbstractListModel {
     Q_OBJECT
@@ -25,14 +25,14 @@ class ChartLegendModel : public QAbstractListModel {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
    public:
-    enum Role { LabelRole = Qt::UserRole + 1, ColorRole, MarkRole, BraggRole, MarkWidthRole, LabelSegmentsRole };
+    enum Role { LabelRole = Qt::UserRole + 1, ColorRole, MarkRole, BraggRole, MarkWidthRole, LabelTextsRole, LabelColorsRole };
     struct Entry {
         QString label;
         QColor color;
         QString mark;
         bool bragg = false;
         double markWidth = 0.0;
-        QVariantList labelSegments;
+        QStringList labelTexts, labelColors;
         friend bool operator==(const Entry&, const Entry&) = default;
     };
 

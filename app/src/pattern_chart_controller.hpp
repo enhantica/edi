@@ -124,21 +124,23 @@ class PatternChartController : public QObject {
     // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
     // structure's place in the project taken round the scheme's colours, as the structure lists take them.
     // Each structure's tick colour, by its place: one per `bragg.<place>` row of the style table.
-    Q_PROPERTY(QVariantList braggColors READ braggColors NOTIFY braggColorsChanged)
+    Q_PROPERTY(QList<QColor> braggColors READ braggColors NOTIFY braggColorsChanged)
     // Each structure's curve over the background (edi ADR-0017 §15): whether it is drawn, and, for each one drawn,
-    // in presentation order, its outline colour (`color`) and its fill colour (`fill`).
+    // in presentation order, its outline colour and its fill colour, index for index.
     Q_PROPERTY(bool structureCurves READ structureCurves WRITE setStructureCurves NOTIFY structureCurvesChanged)
-    Q_PROPERTY(QVariantList structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
+    Q_PROPERTY(QList<QColor> structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
+    Q_PROPERTY(QList<QColor> structureCurveFills READ structureCurveFills NOTIFY structureCurveFillsChanged)
     // How the measured pattern is drawn (the owner, 2026-10-22): "band", measured ± s.u. as two lines with a fill
     // between them, the residual drawn the same way; "line"; "points", markers with error bars; "linePoints", all
     // three. Anything else is "band".
     Q_PROPERTY(QString measuredStyle READ measuredStyle WRITE setMeasuredStyle NOTIFY measuredStyleChanged)
     // Whether the chart presents a calculated pattern, which the structure curves need.
     Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
-    // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or null for the data's own
-    // range, then the title of the x axis they are on. Several charts that follow one view share it (edi ADR-0017
+    // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or NaN for the data's own
+    // range, and the title of the x axis they are on. Several charts that follow one view share it (edi ADR-0017
     // §15); setting it draws without an animation.
-    Q_PROPERTY(QVariantList viewRanges READ viewRanges WRITE setViewRanges NOTIFY viewRangesChanged)
+    Q_PROPERTY(QList<double> viewRanges READ viewRanges WRITE setViewRanges NOTIFY viewRangesChanged)
+    Q_PROPERTY(QString viewRangesAxis READ viewRangesAxis WRITE setViewRangesAxis NOTIFY viewRangesAxisChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -206,13 +208,16 @@ class PatternChartController : public QObject {
     QColor backgroundColor() const { return color(QStringLiteral("bkg")); }
     QColor residualColor() const { return color(QStringLiteral("resid")); }
     QColor excludedColor() const { return color(QStringLiteral("excluded")); }
-    QVariantList braggColors() const;
+    QList<QColor> braggColors() const;
     bool structureCurves() const { return structure_curves_; }
     void setStructureCurves(bool on);
-    QVariantList structureCurveColors() const { return structure_curve_colors_; }
+    QList<QColor> structureCurveColors() const { return structure_curve_colors_; }
+    QList<QColor> structureCurveFills() const { return structure_curve_fills_; }
     bool hasCalculated() const { return has_calculated_; }
-    QVariantList viewRanges() const;
-    void setViewRanges(const QVariantList& ranges);
+    QList<double> viewRanges() const;
+    void setViewRanges(const QList<double>& ranges);
+    QString viewRangesAxis() const;
+    void setViewRangesAxis(const QString& axis);
     // The area (filled between its upper and lower series) and the outline of the structure curve at `index`, in
     // presentation order: the chart makes them as `structureCurveColors` grows and hands each over here.
     Q_INVOKABLE void setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline);
@@ -302,8 +307,10 @@ class PatternChartController : public QObject {
     void structureCurvesChanged();
     void measuredStyleChanged();
     void structureCurveColorsChanged();
+    void structureCurveFillsChanged();
     void hasCalculatedChanged();
     void viewRangesChanged();
+    void viewRangesAxisChanged();
 
    private:
     void invalidate();
@@ -374,7 +381,7 @@ class PatternChartController : public QObject {
     std::array<BandSeries, 2> band_series_;
     QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
-    QVariantList structure_curve_colors_;
+    QList<QColor> structure_curve_colors_, structure_curve_fills_;
     std::string presented_x_;  // the x axis last presented, its quantity and unit
     std::string ranges_axis_;  // the x axis the ranges were given on, empty when they were not given
     QPointer<MeasuredLayer> measured_layer_;

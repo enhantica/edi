@@ -6,7 +6,6 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
 #include "edi/model.hpp"

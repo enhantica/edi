@@ -37,7 +37,9 @@ QtObject {
     // The pattern charts' one view (edi ADR-0017 §15): the Structure, Experiment and Analysis pages each show a chart,
     // and every one follows these ranges (PatternChartController.viewRanges) and the toolbar's choices, which are app
     // settings (Preferences.patternLegendShown, patternHoverShown, patternPointerMode, structureCurves).
-    property var patternViewRanges: []
+    // [x min, x max, y min, y max], NaN for the data's own range, and the x axis they are on.
+    property list<real> patternViewRanges: [NaN, NaN, NaN, NaN]
+    property string patternViewAxis: ""
     // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
     // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
     property var scanZoom: ({})
@@ -46,7 +48,8 @@ QtObject {
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
-            AppState.patternViewRanges = [undefined, undefined, undefined, undefined];
+            AppState.patternViewRanges = [NaN, NaN, NaN, NaN];
+            AppState.patternViewAxis = "";
             AppState.scanZoom = {};
         }
     }

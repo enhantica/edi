@@ -587,6 +587,12 @@ Item {
         when: chart.followsSharedView
     }
     Binding {
+        target: controller
+        property: "viewRangesAxis"
+        value: AppState.patternViewAxis
+        when: chart.followsSharedView
+    }
+    Binding {
         target: toolbar
         property: "legendShown"
         value: Preferences.patternLegendShown
@@ -608,10 +614,21 @@ Item {
         target: controller
         enabled: chart.followsSharedView && chart.shown
         // Only different ranges are written: the view this chart was just given comes straight back, and writing it
-        // again inside that binding is a loop. The fifth entry, the axis the ranges are on, goes with them.
+        // again inside that binding is a loop. The axis the ranges are on goes with them.
+        function sameRanges(a, b) {
+            if (a.length !== b.length)
+                return false;
+            for (let i = 0; i < a.length; ++i) {
+                if (a[i] !== b[i] && !(isNaN(a[i]) && isNaN(b[i])))
+                    return false;
+            }
+            return true;
+        }
         function onViewRangesChanged() {
-            if (JSON.stringify(controller.viewRanges.slice(0, 4)) !== JSON.stringify(AppState.patternViewRanges.slice(0, 4)))
+            if (!sameRanges(controller.viewRanges, AppState.patternViewRanges)) {
+                AppState.patternViewAxis = controller.viewRangesAxis;
                 AppState.patternViewRanges = controller.viewRanges;
+            }
         }
     }
     Connections {
@@ -648,15 +665,16 @@ Item {
 
             required property int index
             readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
-            readonly property var colours: controller.structureCurveColors[index] ?? ({})
+            readonly property color lineColour: controller.structureCurveColors[index] ?? "transparent"
+            readonly property color fillColour: controller.structureCurveFills[index] ?? "transparent"
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
-                color: area.drawn ? area.colours.color ?? "transparent" : "transparent"
+                color: area.drawn ? area.lineColour : "transparent"
                 width: 1.5
             }
 
             objectName: "chart.series.structure." + area.index
-            color: area.drawn ? area.colours.fill ?? "transparent" : "transparent"
+            color: area.drawn ? area.fillColour : "transparent"
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
