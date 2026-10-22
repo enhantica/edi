@@ -34,7 +34,7 @@ Item {
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
     readonly property real toolbarTop: em
-    readonly property real plotTop: toolbarTop + AppSizes.toolbarControlSize + AppSizes.mainAreaMargin
+    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
     // The colours, as the app settings hold them (the owner, 2026-10-22): for either view a colour scheme's token (the
     // stacked view only), one of the four colour maps, or a ramp from the pattern chart's plot background to a scheme's
     // first measured colour (`ramp:<scheme>`).
@@ -376,14 +376,22 @@ Item {
     // colours, then the zoom, always on here, and the reset. x is the project's axis, shared with the pattern chart; y
     // places the rows by the extracted value or by file index, shared with the Evolution tab's x; z, the intensity
     // scale, is the pattern chart's y scale. The colours are each view's own app setting.
-    Row {
+    Flow {
+        id: scanToolbar
+
+        // On one line when the chart is wide enough, the buttons on a second line when it is not.
+        readonly property real oneLine: selectors.width + spacing + buttons.width
+
         objectName: "scanView." + chart.mode + ".toolbar"
         // Centred over the plot, and kept inside the chart when the view is narrow.
+        width: Math.min(oneLine, chart.width - 2 * chart.sideMargin)
         x: Math.round(Math.max(chart.sideMargin, Math.min(chart.width - width - chart.sideMargin, view.x + view.plotArea.x + (view.plotArea.width - width) / 2)))
         y: chart.toolbarTop
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         Row {
+            id: selectors
+
             spacing: AppSizes.toolbarSpacing
 
             ToolbarComboBox {
@@ -444,6 +452,8 @@ Item {
             }
         }
         Row {
+            id: buttons
+
             spacing: AppSizes.toolbarSpacing
 
             ChartToolButton {

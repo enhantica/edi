@@ -628,12 +628,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-            for (qsizetype i = 0; i < titles.size(); ++i) {
+            // The dark run goes back up the list from where the light one ended: the list is taller than the window,
+            // and the next entry is always beside the shown one.
+            for (qsizetype k = 0; k < titles.size(); ++k) {
+                const qsizetype i = theme == QLatin1String("light") ? k : titles.size() - 1 - k;
                 QStringList actions{"scanView.map.toolbar.colourMap", "choose:" + titles[i]};
-                if (i == 0) {
+                if (k == 0) {
                     actions.prepend("theme:" + theme);
                 }
-                if (theme == QLatin1String("dark") && i + 1 == titles.size()) {
+                if (theme == QLatin1String("dark") && i == 0) {
                     actions << "scanView.map.toolbar.reverse";  // the last one reversed, to show the switch
                 }
                 const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
