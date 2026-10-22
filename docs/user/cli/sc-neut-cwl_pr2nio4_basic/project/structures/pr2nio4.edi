@@ -1,0 +1,43 @@
+data_pr2nio4
+
+_edi.schema_version 3
+
+_cell.length_a 5.417799
+_cell.length_b 5.4146
+_cell.length_c 12.483399
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+
+_space_group.name_h_m "F m m m"
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+Pr Pr 0 0 0.35973 i 1 beta 0
+Ni Ni 0 0 0 a 1 beta 0
+O1 O 0.25 0.25 0 c 1 beta 0
+O2 O 0 0 0.17385 i 0.722965 beta 0
+Oi O 0.25 0.25 0.25 f 0.074655 beta 0
+Od O 0.07347 0.07347 0.17349 p 0.074654 Biso 2.31435
+
+loop_
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+Pr 0.0071 0.0071 0.00084 0 0 0
+Ni 0.0028 0.0028 0.00151 0 0 0
+O1 0.005 0.005 0.00413 -0.0014 0 0
+O2 0.01716 0.01716 0.00045 0 0 0
+Oi 0.01033 0.01176 0.001 0 0 0

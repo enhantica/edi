@@ -1,0 +1,13 @@
+_edi.schema_version 3
+
+_metadata.name             sc_neut_cwl_pr2nio4_basic
+_metadata.title "Pr₂NiO₄ [Fmmm] · Unknown instrument"
+_metadata.description "Single crystal · Anisotropic β tensors · Scale-only fit"
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?
+_metadata.polarisation "none"

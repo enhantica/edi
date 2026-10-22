@@ -76,3 +76,7 @@ projects:
     executing: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
+  - id: sc-neut-cwl_pr2nio4_basic
+    executing: false
+  - id: sc-neut-cwl_tb2ti2o7_basic
+    executing: false

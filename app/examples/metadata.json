@@ -1168,56 +1168,6 @@
         "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi"
       ]
     },
-    "pd-xray-cwl_pbso4-lab_round-robin": {
-      "samples": [
-        "PbSO₄ [Pnma]"
-      ],
-      "origin": "Laboratory X-ray",
-      "detail": "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "xray"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "single"
-        ],
-        "facilities": [
-          ""
-        ],
-        "instruments": [
-          ""
-        ],
-        "dimensionality": [
-          "1D"
-        ],
-        "polarisation": [
-          "__not_applicable__"
-        ]
-      },
-      "searchAliases": [
-        "pd-xray-cwl_pbso4-lab_round-robin",
-        "PbSO₄ [Pnma] · Laboratory X-ray",
-        "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement"
-      ],
-      "sources": [
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/project.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/analysis/analysis.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
-        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi"
-      ]
-    },
     "pd-neut-tof_ferrite-austenite-beer_joint": {
       "samples": [
         "Ferrite [Im-3m]",
@@ -1319,6 +1269,156 @@
         "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/analysis/analysis.edi",
         "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi",
         "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/structures/y2o3.edi"
+      ]
+    },
+    "pd-xray-cwl_pbso4-lab_round-robin": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "Laboratory X-ray",
+      "detail": "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_pbso4-lab_round-robin",
+        "PbSO₄ [Pnma] · Laboratory X-ray",
+        "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi"
+      ]
+    },
+    "sc-neut-cwl_pr2nio4_basic": {
+      "samples": [
+        "Pr₂NiO₄ [Fmmm]"
+      ],
+      "origin": "Unknown instrument",
+      "detail": "Single crystal · Anisotropic β tensors · Scale-only fit",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_pr2nio4_basic",
+        "Pr₂NiO₄ [Fmmm] · Unknown instrument",
+        "Single crystal · Anisotropic β tensors · Scale-only fit"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/experiments/pr2nio4.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4_basic/project/structures/pr2nio4.edi"
+      ]
+    },
+    "sc-neut-cwl_tb2ti2o7_basic": {
+      "samples": [
+        "Tb₂Ti₂O₇ [Fd-3m]"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Isotropic ADPs · Scale-only fit",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_tb2ti2o7_basic",
+        "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Isotropic ADPs · Scale-only fit"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/structures/tb2ti2o7.edi"
       ]
     },
     "pd-xray-cwl_lif": {
