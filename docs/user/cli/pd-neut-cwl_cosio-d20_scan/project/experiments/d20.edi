@@ -7,6 +7,8 @@ _experiment_type.beam_mode "constant wavelength"
 _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
 
+_data_source.file_name 01_001_497p3790.dat
+
 _peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0.2()
 _peak.broad_gauss_v -0.5()
