@@ -26,8 +26,16 @@ const observeLoaded = () => {
       patterns: [...document.querySelectorAll('.js-plotly-plot')]
         .filter(plot => plot.closest('.pattern-figure')).map(plot => ({
         traces: (plot.data || []).map(trace => ({
-          name: trace.name, line: trace.line, marker: trace.marker})),
+          name: trace.name, line: trace.line, marker: trace.marker,
+          mode: trace.mode, x: Array.from(trace.x ?? []), y: Array.from(trace.y ?? []),
+          error_x: trace.error_x, error_y: trace.error_y})),
+        svgCount: plot.querySelectorAll('svg,canvas').length,
+        xTitle: plot.layout?.xaxis?.title?.text, yTitle: plot.layout?.yaxis?.title?.text,
         background: plot._fullLayout?.plot_bgcolor ?? plot.layout?.plot_bgcolor})),
+      tables: [...document.querySelectorAll('table')].map(table => ({
+        columns: [...table.querySelectorAll('thead th')].map(cell => cell.textContent.trim()),
+        rows: [...table.querySelectorAll('tbody tr')].map(row =>
+          [...row.querySelectorAll('td')].map(cell => cell.textContent.trim()))})),
       figures: [...document.querySelectorAll('.evolution-figure')].map(f => ({
         className: f.className, text: f.textContent,
         children: [...f.children].map(c => c.className)})), plots: plots.map(plot => {

@@ -165,8 +165,12 @@ public:
         const QRegularExpression objects("(\\d+)\\s+0\\s+obj\\b([\\s\\S]*?)endobj");
         auto iterator = objects.globalMatch(pdf);
         std::vector<QColor> targets;
-        QVariantMap counts;
-        for (const auto& text : colours) { targets.emplace_back(text); counts.insert(text, 0); }
+        QVariantMap counts, verticalRuns;
+        for (const auto& text : colours) {
+            targets.emplace_back(text);
+            counts.insert(text, 0);
+            verticalRuns.insert(text, 0);
+        }
         int images = 0;
         while (iterator.hasNext()) {
             const auto object = iterator.next().captured(2);
@@ -197,18 +201,24 @@ public:
             } else return {{"error", "PDF colour observer refuses an unsupported image codec"}};
             if (image.isNull()) return {{"error", "Actual PDF colour image did not decode"}};
             ++images;
+            std::vector<std::vector<int>> runs(targets.size(), std::vector<int>(image.width(), 0));
             for (int y = 0; y < image.height(); ++y) for (int x = 0; x < image.width(); ++x) {
                 const auto actual = image.pixelColor(x, y);
                 for (std::size_t i = 0; i < targets.size(); ++i) {
                     const auto target = targets[i];
                     // A fixed five encoded-channel bound allows JPEG quantisation;
                     // source-palette correctness is tested separately, exactly.
-                    if (std::max({std::abs(actual.red()-target.red()), std::abs(actual.green()-target.green()), std::abs(actual.blue()-target.blue())}) <= 5)
+                    if (std::max({std::abs(actual.red()-target.red()), std::abs(actual.green()-target.green()), std::abs(actual.blue()-target.blue())}) <= 5) {
                         counts[colours[int(i)]] = counts[colours[int(i)]].toInt() + 1;
+                        ++runs[i][x];
+                        verticalRuns[colours[int(i)]] = std::max(verticalRuns[colours[int(i)]].toInt(), runs[i][x]);
+                    } else {
+                        runs[i][x] = 0;
+                    }
                 }
             }
         }
-        return {{"images", images}, {"counts", counts}};
+        return {{"images", images}, {"counts", counts}, {"maxVerticalRun", verticalRuns}};
     }
     Q_INVOKABLE QVariantMap pdfFacts(const QUrl& location) const {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());

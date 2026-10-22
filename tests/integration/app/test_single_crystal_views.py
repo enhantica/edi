@@ -49,7 +49,7 @@ def app_result():
         capture_output=True,
         text=True,
         check=False,
-        timeout=300,
+        timeout=600,
     )
 
 
@@ -148,3 +148,16 @@ def test_real_created_experiment_selects_type_before_loading(app_result, extensi
         'PASS   : edi_app::SingleCrystalViews::'
         f'test_create_single_crystal_then_load_reflections({extension}-{theme})' in output
     ), 'The real created experiment must select supported axes and load its reflections: ' + output
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_single_crystal_report_chart_html_and_pdf(app_result, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The real report-output host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_single_crystal_report_chart_and_outputs({theme})' in output
+    ), (
+        'The report model, live preview and actual HTML/PDF must contain reflection charts: '
+        + output
+    )
