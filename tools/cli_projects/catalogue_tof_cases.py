@@ -367,13 +367,31 @@ def source_background(pid: str, experiment: str) -> list[tuple[str, bool]]:
     return points
 
 
+# The owner's NCAF start (2026-10-22): peaks about 30 % narrower than the fitted ones, with the
+# Gaussian/Lorentzian balance and the asymmetry moved too. sigma_1 and sigma_2 are terms of the
+# Gaussian variance, so 0.7 in width is 0.49 here; the Lorentzian narrows more than the Gaussian and
+# the rise and decay edges sharpen.
+NCAF_START_FACTORS = {'broad_gauss': 0.49, 'broad_lorentz': 0.6, 'rise': 1.3, 'decay': 1.15}
+
+
+def sig2(value: float) -> str:
+    """A value to two significant figures."""
+    return f'{float(f"{value:.1e}"):g}'
+
+
+def ncaf_start(item: str, value: float) -> str:
+    """A free profile term's start: the fitted value moved by its NCAF_START_FACTORS entry."""
+    factor = next(f for prefix, f in NCAF_START_FACTORS.items() if item.startswith(prefix))
+    return free(sig2(value * factor))
+
+
 def ncaf_bank(name: str, spec: dict) -> str:
     rows = source_rows(NCAF_SOURCE, name)
     points = source_background(NCAF_SOURCE, name)
     level = flat_level(rows, spec['excluded'])
     profile = {'broad_gauss_sigma_0': 0, 'broad_lorentz_gamma_0': 0, 'broad_lorentz_gamma_2': 0}
     for item, (value, is_free) in spec['profile'].items():
-        profile[item] = free(sig1(value)) if is_free else value
+        profile[item] = ncaf_start(item, value) if is_free else value
     return tof_experiment(
         name,
         rows,

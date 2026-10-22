@@ -20,7 +20,7 @@ catalogue's NCAF case, started the way a user's own measurement would be.
 | zero, per bank | 0, free | the catalogue's zero-shift rule |
 | DIFC, per bank | 20772.9, 18660.1, 15105.5, 10389.9, 4985.32 (banks 5/6 to 1/10), free | the nominal values the source declares (its FullProf input); diffraction-lib names 20773.0 and 18660.0 for the first two |
 | DIFA, 2θ | the source's values, fixed | instrument calibration |
-| profile terms the source frees | one significant figure of the source's values, free | the profile rule |
+| profile terms the source frees | the fitted values moved so the peaks start about 30 % narrower, to two significant figures: Gaussian variance terms (σ₁, σ₂) × 0.49, the Lorentzian γ₁ × 0.6, the rise α₀, α₁ × 1.3, the decay β₀, β₁ × 1.15; free | the owner's start for this case (2026-10-22): narrower, differently shaped peaks |
 | profile terms the source fixes | the source's values, fixed | the instrument's resolution |
 | ABSCOR1 | 0, free on banks 2/9 to 5/6, fixed on 1/10 | as the source |
 | positions | the source's rounded to two decimals, free | the coordinate rule |
@@ -36,8 +36,8 @@ diffraction-lib fits two banks; its start places every atom and Biso near the an
 
 ## Check run
 
-`python -m edi fit <copy> --dry --report machine`: converged in 5 iterations, `n_free=193`, `n_points_fitted=18973`,
-reduced χ² 9.4978, Rwp 7.695 % (banks 1/10 to 5/6: 4.66, 6.44, 7.89, 8.10, 8.28 %), about 3 s. The source project
+`python -m edi fit <copy> --dry --report machine`: converged in 15 iterations, `n_free=193`, `n_points_fitted=18973`,
+reduced χ² 9.4978, Rwp 7.695 % (banks 1/10 to 5/6: 4.66, 6.44, 7.89, 8.10, 8.28 %), about 5 s. The source project
 reaches reduced χ² 9.4975 and Rwp 7.694 % from its own start; FullProf's global χ² for the same five banks is 9.96.
 Each of the 16 independent positions and Biso values lies within 0.05 of its FullProf standard uncertainty of
 FullProf's value.
