@@ -99,8 +99,6 @@ class ScanLayer : public QQuickPaintedItem {
     double display_min_ = 0.0, display_max_ = 1.0;
 };
 
-}  // namespace edi_app
-
 // The map's colour bar: the colour map from its low end at the bottom to its high end at the top, each pixel row
 // coloured by the lookup the map's own pixels take (edi::scan_map_colour), so the key and the image agree.
 class ScanColourBar : public QQuickPaintedItem {
@@ -119,5 +117,7 @@ class ScanColourBar : public QQuickPaintedItem {
    private:
     QString colour_map_ = QStringLiteral("viridis");
 };
+
+}  // namespace edi_app
 
 #endif  // EDI_APP_SCAN_LAYER_HPP
