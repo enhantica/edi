@@ -79,3 +79,6 @@ projects:
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
   # The example catalogue: its user-facing cases, in the order the app lists them.
+  - id: pd-neut-xray-cwl_pbso4-d1a-lab_joint
+    executing: false
+    user-facing: true

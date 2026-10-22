@@ -1,4 +1,57 @@
 {
   "schema": 1,
-  "examples": {}
+  "examples": {
+    "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "D1A @ ILL and laboratory X-ray",
+      "detail": "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron",
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D1A"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-xray-cwl_pbso4-d1a-lab_joint",
+        "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray",
+        "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/project.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/d1a.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/lab.edi",
+        "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/structures/pbso4.edi"
+      ]
+    }
+  }
 }
