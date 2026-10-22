@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from edi import verification
 
+from tests.fixtures.example_catalogue.fullprof_profile import read_profile
 from tests.integration.py.test_example_catalogue import SELECTED
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -69,7 +70,7 @@ def test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error(c
         suffix = '' if len(record['banks']) == 1 else f'_{index}'
         path = reference_home(case) / f'start{suffix}.prf'
         assert path.is_file(), 'Every bank needs an all-fixed start profile from FullProf'
-        x, expected = verification._parse_fullprof_calc_profile(str(path))
+        x, expected = read_profile(path)
         assert len(x) > 10 and np.isfinite(expected).all(), (
             'The independent pattern must contain finite observations across its fitted range'
         )
@@ -123,7 +124,7 @@ def test_measured_reference_has_a_fit_and_its_fitted_fixed_twin(case):
         suffix = '' if len(record['banks']) == 1 else f'_{index}'
         profile = twin / f'fixed{suffix}.prf'
         assert profile.is_file(), 'The fitted twin must produce a profile for every bank'
-        _, values = verification._parse_fullprof_calc_profile(str(profile))
+        _, values = read_profile(profile)
         assert np.isfinite(values).all(), 'A failed external calculation is not a reference'
 
 

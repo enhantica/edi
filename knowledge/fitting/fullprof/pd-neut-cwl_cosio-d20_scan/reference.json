@@ -5,7 +5,7 @@
   "start_project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project",
   "project_sha256": {
     "analysis/analysis.edi": "f3be9aaf7a450a964908736076414946c1dbe77087030fe2cb632d679f5e362b",
-    "experiments/d20.edi": "50d9dcd8d23871753d7936210a546d5fde8001fa9a459dc81da5fd1190870990",
+    "experiments/d20.edi": "841aa1a1ca4c6f39c3eb82664ebc9832c47ca4fe53650da29c62a43626b54393",
     "project.edi": "e457fc6ef52ce696fbf6a766486d5ba2fe4af4ab9c7c15925a557c490db29786",
     "structures/cosio.edi": "db297a9cb8148c8be36f3d5d52d5151e9b0f67e31ffcf92e52854a678c4f24d6"
   },

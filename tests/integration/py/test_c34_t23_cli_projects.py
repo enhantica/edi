@@ -251,9 +251,9 @@ def test_registry_executes_owner_declared_set_and_retains_every_seed():
         ' every registry project must explicitly declare executing membership'
     )
     assert all(
-        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}', row['id'])
+        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}', row['id'])
         for row in rows
-    ), ' every registered id needs three lowercase kebab parts separated by underscores'
+    ), ' every registered id needs two or three lowercase kebab parts separated by underscores'
 
 
 def nav_paths(value):
@@ -274,7 +274,13 @@ def test_effective_docs_navigation_has_descriptive_project_pages():
     for row in rows:
         prefix = f'user/cli/{row["id"]}/'
         candidates = [ROOT / 'docs' / path for path in paths if path.startswith(prefix)]
-        assert candidates, ' every project must appear in effective docs navigation'
+        if not row.get('user-facing', False):
+            assert not candidates, 'Retained fixture pages must leave the user navigation'
+            assert (CLI / row['id'] / 'project').is_dir(), (
+                'Non-public fixtures must retain their materialized project'
+            )
+            continue
+        assert candidates, 'Every user-facing case must appear in effective docs navigation'
         descriptions = []
         for path in candidates:
             assert path.is_file(), ' each project nav link must resolve to a page'
@@ -530,7 +536,7 @@ def test_loaded_settings_keep_multiple_occurrences_distinguishable(project_copy,
     [
         'cosio-d20-s1',
         'pd-neut-tof-diamond-dream',
-        'pd-neut-cwl_lif',
+        'pd-neut-cwl',
         'pd_neut_cwl_lif_single',
         'pd-neut-cwl__single',
         'pd-neut-cwl_LiF_single',
@@ -554,6 +560,7 @@ def test_executing_registry_refuses_obsolete_and_malformed_ids(tmp_path, project
 @pytest.mark.parametrize(
     'project_id',
     [
+        'pd-neut-cwl_lif',
         'pd-neut-tof_diamond-dream_basic',
         'pd-xray-cwl_lif_single',
         'pd-neut-cwl_yap_3k',
