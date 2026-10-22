@@ -75,6 +75,7 @@ nav:
           - dev/adrs/0044-pattern-charts-and-excluded-regions.md
           - dev/adrs/0045-fit-results-tables-and-agreement-factors.md
           - dev/adrs/0046-analysis-sidebar-scan-controls-and-filters.md
+          - dev/adrs/0048-single-crystal-experiments.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -144,6 +145,14 @@ nav:
           - user/cli/pd-xray-cwl_pbso4-lab_round-robin/index.md
           - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
           - user/cli/pd-xray-cwl_latp_scan-4f/index.md
+          - user/cli/sc-neut-cwl_pr2nio4_basic/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7_basic/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/index.md
+          - user/cli/sc-neut-tof_taurine_basic/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/index.md
+          - user/cli/sc-neut-cwl_pr2nio4-5c2_fit/index.md
+          - user/cli/sc-neut-tof_taurine_fit/index.md
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/sequential-fitting-in-the-app.md
