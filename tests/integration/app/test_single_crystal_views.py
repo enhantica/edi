@@ -126,3 +126,14 @@ def test_real_single_crystal_calculation_fit_and_results(app_result, theme, case
         'The app must calculate after edits and execute the independent fit and results witness: '
         + output
     )
+
+
+@pytest.mark.parametrize('compound', ['tb2ti2o7', 'pr2nio4'])
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_compound_examples_are_independent_fitting_exercises(app_result, compound, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The real compound fitting host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_two_compound_fitting_examples({compound}-{theme})' in output
+    ), 'Each compound must open through its row and fit to independent FullProf values: ' + output

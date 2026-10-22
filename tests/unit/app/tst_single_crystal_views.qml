@@ -632,4 +632,108 @@ TestCase {
         const reopened = openSingle(data);
         verify(toolbarControl(reopened, "zoom").checked && !toolbarControl(reopened, "pan").checked, "Reopening single crystal must restore the box-zoom mode selected on the pattern chart");
     }
+    function exampleRows(compound) {
+        Session.examples.searchText = "";
+        Session.examples.filterValue = "";
+        return Probe.rows(Session.examples).filter(row => row.exampleId.toLowerCase().includes(compound));
+    }
+    function openCompoundExample(compound) {
+        Ui.click(test, Probe, appWindow, "appBar.tab.home");
+        Ui.click(test, Probe, appWindow, "home.start");
+        Ui.click(test, Probe, appWindow, "appBar.tab.project");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        expand("group.examples");
+        const rows = exampleRows(compound);
+        compare(rows.length, 1, "The app example catalogue must offer exactly one fitting exercise per single-crystal compound");
+        const expected = compound === "tb2ti2o7" ? "HEiDi @ MLZ (FRM II)" : "5C2 @ LLB";
+        compare(rows[0].origin, expected, "The compound's app example must display the owner-selected instrument and facility label");
+        const all = Probe.rows(Session.examples);
+        const index = all.findIndex(row => row.exampleId === rows[0].exampleId);
+        const list = Review.find(Ui.page(appWindow), "examples.list");
+        verify(list !== null, "The actual example catalogue must expose its rendered list");
+        list.positionViewAtIndex(index, ListView.Contain);
+        list.forceLayout();
+        tryVerify(() => list.itemAtIndex(index) !== null, 2000, "The selected compound example must materialize its own real row");
+        Ui.scrollIntoView(list.itemAtIndex(index));
+        Ui.click(test, Probe, appWindow, "examples.open." + rows[0].exampleId);
+        tryVerify(() => Session.hasProject && Session.openedExample === rows[0].exampleId, 3000, "Clicking the compound's real example row must open that fitting exercise");
+        tryVerify(() => !Session.project.calculating && Session.project.currentExperiment.singleCrystalReflections.calculatedShown, 10000, "The compound fitting exercise must calculate automatically after it opens");
+        return Session.project;
+    }
+    function test_two_compound_fitting_examples_data() {
+        let cases = [];
+        for (const compound of ["tb2ti2o7", "pr2nio4"])
+            for (const dark of [false, true])
+                cases.push({
+                    tag: compound + "-" + (dark ? "dark" : "light"),
+                    compound: compound,
+                    dark: dark
+                });
+        return cases;
+    }
+    function test_two_compound_fitting_examples(data) {
+        Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+        const project = openCompoundExample(data.compound);
+        const experiment = project.currentExperiment;
+        const oracle = JSON.parse(Probe.readReferenceFile("example-fits.json")).cases[data.compound];
+        verify(data.compound !== "pr2nio4" || ["5c2", "llb_5c2"].includes(experiment.name), "The Pr2NiO4 experiment datablock must be named for its 5C2 instrument");
+        const tensors = Probe.rows(project.currentStructure.atomSiteAdps);
+        verify(tensors.length > 0 && tensors.every(row => ["beta", "Uani", "Bani"].includes(row.adpType)), "Each single-crystal fitting exercise must start with anisotropic ADPs on its atom sites");
+        for (const tensor of tensors) {
+            const cell = project.currentStructure.cell;
+            verify([cell.angleAlpha.value, cell.angleBeta.value, cell.angleGamma.value].every(value => Math.abs(value - 90) < 1e-10), "The orthogonal FullProf example cells must retain the metric used by the independent beta-to-U conversion");
+            const lengths = [cell.lengthA.value, cell.lengthB.value, cell.lengthC.value];
+            const u = ["11", "22", "33", "12", "13", "23"].map((component, i) => {
+                const value = tensor["ani" + component].value;
+                const a = Number(component[0]) - 1, b = Number(component[1]) - 1;
+                return tensor.adpType === "Uani" ? value : tensor.adpType === "Bani" ? value / (8 * Math.PI * Math.PI) : value * lengths[a] * lengths[b] / (2 * Math.PI * Math.PI);
+            });
+            verify(u.slice(0, 3).every(value => Number.isFinite(value) && value > 0), "Initial anisotropic tensors must represent positive isotropic-equivalent displacements");
+            const fittedDiagonal = oracle.parameters.filter(item => item.atom === tensor.label && item.kind === "beta" && ["11", "22", "33"].includes(item.component));
+            verify(fittedDiagonal.every(item => {
+                const axis = Number(item.component[0]) - 1;
+                return u[axis] < item.value * lengths[axis] * lengths[axis] / (2 * Math.PI * Math.PI);
+            }), "Initial isotropic-equivalent displacements must be smaller than the independent FullProf fitted diagonals");
+            verify(Math.max(...u.slice(0, 3)) - Math.min(...u.slice(0, 3)) < 1e-10 && u.slice(3).every(value => Math.abs(value) < 1e-12), "Initial anisotropic tensors must be isotropic-equivalent in Cartesian U, including non-cubic cells");
+        }
+        const extinction = Probe.rows(experiment.extinction).map(row => row.parameter);
+        verify(extinction.length === 2 && extinction.some(item => item.value === 0) && extinction.some(item => item.free), "The fitting exercise must start one extinction parameter at zero and leave an extinction parameter free");
+        const parameters = Probe.rows(project.parameters);
+        verify(parameters.some(row => row.category === "atom_site_aniso" && row.free) && parameters.some(row => row.category === "atom_site" && row.name.startsWith("fract_") && row.free), "The compound exercise must leave independent displacement and coordinate parameters free");
+        verify(oracle.parameters.some(item => item.kind === "coordinate") && oracle.parameters.some(item => item.kind === "beta"), "The independent FullProf oracle must include fitted coordinates and anisotropic tensors with uncertainties");
+        const atoms = Probe.rows(project.currentStructure.atomSites);
+        verify(oracle.parameters.filter(item => item.kind === "coordinate").some(item => Math.abs(atoms.find(atom => atom.label === item.atom)["fract" + item.component.toUpperCase()].value - item.value) > item.su), "The app example's initial coordinates must be perturbed beyond the independent FullProf uncertainty");
+        Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
+        verify(start !== null && start.enabled, "The loaded compound exercise must enable the real Start fitting action");
+        Ui.scrollIntoView(start);
+        verify(waitForPolish(appWindow.contentItem), "The compound fit action must finish layout before input");
+        const point = Ui.clickPoint(start);
+        verify(point !== null, "The compound's real fit action must be in the visible sidebar");
+        mouseClick(start, point.x, point.y);
+        const dialog = findChild(appWindow, "fit.results");
+        tryVerify(() => dialog !== null && dialog.opened && !project.fit.running, 30000, "The compound's normal app fit must finish and display results");
+        const fittedAtoms = Probe.rows(project.currentStructure.atomSites);
+        const fittedTensors = Probe.rows(project.currentStructure.atomSiteAdps);
+        for (const target of oracle.parameters) {
+            let value;
+            if (target.kind === "scale")
+                value = experiment.scale.value;
+            else if (target.kind === "coordinate")
+                value = fittedAtoms.find(atom => atom.label === target.atom)["fract" + target.component.toUpperCase()].value;
+            else {
+                const tensor = fittedTensors.find(row => row.label === target.atom);
+                value = tensor["ani" + target.component].value;
+                const cell = project.currentStructure.cell;
+                const lengths = [cell.lengthA.value, cell.lengthB.value, cell.lengthC.value];
+                const a = Number(target.component[0]) - 1, b = Number(target.component[1]) - 1;
+                if (tensor.adpType === "Uani")
+                    value *= 2 * Math.PI * Math.PI / (lengths[a] * lengths[b]);
+                else if (tensor.adpType === "Bani")
+                    value /= 4 * lengths[a] * lengths[b];
+            }
+            verify(Number.isFinite(value) && Math.abs(value - target.value) <= target.su + (target.kind === "coordinate" ? 5e-6 : target.kind === "beta" ? 5e-6 : 5e-7 * oracle.scale_factor), "The compound app fit must reach each independent FullProf coordinate, ADP and scale value within its printed uncertainty; atom=" + (target.atom || "scale") + ", component=" + (target.component || "") + ", actual=" + value + ", expected=" + target.value + ", su=" + target.su);
+        }
+    }
 }
