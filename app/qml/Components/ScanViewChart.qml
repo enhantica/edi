@@ -255,8 +255,9 @@ Item {
             max: chart.yMax
             tickInterval: chart.niceStep(chart.zoomY.length === 2 ? max - min : chart.scan ? chart.scan.rowMax - chart.scan.rowMin : 1, chart.yTicks)
             tickAnchor: 0
-            // A joint fit's rows are its experiments, named at each row instead of numbered.
-            labelsVisible: !chart.rowLabels
+            // Rows labelled left of the plot have no scale: the axis itself is hidden, since a hidden axis keeps no
+            // room, where one with hidden labels still keeps 60 px left of the plot (measured, Qt Graphs 6.11).
+            visible: !chart.rowLabels
             labelDelegate: yLabel
             lineVisible: false
             gridVisible: false
