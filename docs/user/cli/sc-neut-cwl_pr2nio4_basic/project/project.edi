@@ -6,7 +6,7 @@ _metadata.description "Single crystal · Anisotropic β tensors · Scale-only fi
 _metadata.created          "22 Oct 2026 18:00:00"
 _metadata.last_modified    "22 Oct 2026 18:00:00"
 _metadata.timestamp        ?
-_metadata.purpose "refinement"
+_metadata.purpose "verification"
 _metadata.dimensionality "1D"
 _metadata.instrument ?
 _metadata.facility ?

@@ -1341,7 +1341,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1391,7 +1391,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1441,7 +1441,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1491,7 +1491,7 @@
           "bragg"
         ],
         "purpose": [
-          "refinement"
+          "verification"
         ],
         "fittingMode": [
           "single"
@@ -1519,6 +1519,106 @@
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/analysis/analysis.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/experiments/heidi.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/structures/tb2ti2o7.edi"
+      ]
+    },
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": {
+      "samples": [
+        "Tb₂Ti₂O₇ [Fd-3m]"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Anisotropic displacements and extinction from a rough start",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_tb2ti2o7-heidi_fit",
+        "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Anisotropic displacements and extinction from a rough start"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/structures/tb2ti2o7.edi"
+      ]
+    },
+    "sc-neut-cwl_pr2nio4-5c2_fit": {
+      "samples": [
+        "Pr₂NiO₄ [Fmmm]"
+      ],
+      "origin": "5C2 @ LLB",
+      "detail": "Single crystal · Anisotropic displacements and extinction from a rough start",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "LLB"
+        ],
+        "instruments": [
+          "5C2"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_pr2nio4-5c2_fit",
+        "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB",
+        "Single crystal · Anisotropic displacements and extinction from a rough start"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi"
       ]
     },
     "pd-xray-cwl_lif": {
