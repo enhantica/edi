@@ -53,6 +53,12 @@ def composite(foreground, background):
     return '#' + ''.join(f'{value:02x}' for value in values)
 
 
+def table_backgrounds(observation):
+    return {observation['facts'][0]['background']} | {
+        sample['background'] for sample in observation['underlays']
+    }
+
+
 def test_independent_contrast_and_colour_observers_reject_escapes():
     assert instance_colour([0, 0.21678297836003518, 1]) == '#0080ff', (
         'The independent Qt instance lattice identifies black, encoded 128 and white'
@@ -80,6 +86,12 @@ def test_independent_contrast_and_colour_observers_reject_escapes():
     )
     assert not gamut_hue_chroma_preserved('#ffff30', '#949494'), (
         'The gamut amendment cannot admit neutral replacement or gratuitous desaturation'
+    )
+    assert table_backgrounds({
+        'facts': [{'background': '#444444'}],
+        'underlays': [{'background': '#353535'}, {'background': '#394247'}],
+    }) == {'#444444', '#353535', '#394247'}, (
+        'The conservative table reference includes the observed page, row and hover underlays'
     )
     assert not gamut_hue_chroma_preserved('#ff0d0d', '#0d0dff'), (
         'A rotated element hue cannot defeat the independent Oklab observer'
@@ -189,7 +201,7 @@ def test_all_2d_element_uses_reach_three_to_one(observations, tag):
             ('report', 'reportBackground'),
         ]:
             backgrounds = (
-                {sample['background'] for sample in observations[tag]['underlays']}
+                table_backgrounds(observations[tag])
                 if use in {'accessor', 'table', 'parameter', 'parameterLabel'}
                 else {row[background]}
             )
@@ -230,7 +242,7 @@ def test_already_passing_elements_are_exactly_unchanged(observations, tag):
             ('report', 'reportBackground'),
         ]:
             backgrounds = (
-                [sample['background'] for sample in observations[tag]['underlays']]
+                table_backgrounds(observations[tag])
                 if use in {'accessor', 'table', 'parameter', 'parameterLabel'}
                 else [row[background]]
             )
@@ -279,7 +291,7 @@ def test_elements_contrast_against_rendered_row_underlays(observations, tag, use
         and row['index'] == int(state.startswith('even'))
         and row['hovered'] == state.endswith('hover')
     )
-    backgrounds = {row['background'] for row in observations[tag]['underlays']}
+    backgrounds = table_backgrounds(observations[tag])
     failures = []
     for row in sample['facts']:
         for key in ('color', 'labelColor'):
