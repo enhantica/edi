@@ -586,32 +586,49 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"legend-2-dark", {"theme:dark"}});
     }
     // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
-    // while one runs, with the views' toolbars: the map on a log scale in magma and in shades of a palette's first
-    // colour, zoomed on d-spacing; the stacked patterns in shades, then reset, in plasma.
-    // Run only when asked (`--demo-only scanviews-`).
+    // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
+    // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
+    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; the excluded regions off and
+    // on; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
+    // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
     if (only.startsWith(QLatin1String("scanviews-"))) {
-        steps_.push_back({"scanviews-1-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                           + open_example("pd-neut-cwl_cosio-d20_scan-162f")
-                                                           + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
-        steps_.push_back({"scanviews-2-map-light", {"mainArea.analysis.tab.map"}});
-        steps_.push_back({"scanviews-2s-map-light-stepped", {"scanView.map.toolbar.smooth"}});
-        steps_.push_back({"scanviews-3-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale", "choose:log",
-                                                             "scanView.map.toolbar.colourMap", "choose:magma"}});
-        steps_.push_back({"scanviews-4-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
-                                                           "capture-now"}});
-        steps_.push_back({"scanviews-5-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
-                                                               "capture-now"}});
-        steps_.push_back({"scanviews-6-stacked-dark-running", {"theme:dark", "wait-files:80", "capture-now"}});
-        steps_.push_back({"scanviews-7-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
-        steps_.push_back({"scanviews-8-map-dark-shades", {"wait-fit", "choose:OK", "scanView.map.toolbar.colourMap",
+        steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                            + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                            + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"scanviews-04-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale",
+                                                              "choose:log", "scanView.map.toolbar.colourMap", "choose:magma"}});
+        steps_.push_back({"scanviews-05-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
+                                                            "capture-now"}});
+        steps_.push_back({"scanviews-06-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
+                                                                "capture-now"}});
+        steps_.push_back({"scanviews-07-evolution-light-running", {"mainArea.analysis.tab.evolution", "wait-files:70",
+                                                                  "capture-now"}});
+        steps_.push_back({"scanviews-08-stacked-dark-running", {"theme:dark", "mainArea.analysis.tab.stacked",
+                                                               "wait-files:80", "capture-now"}});
+        steps_.push_back({"scanviews-09-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
+        steps_.push_back({"scanviews-10-evolution-dark", {"wait-fit", "choose:OK", "mainArea.analysis.tab.evolution"}});
+        steps_.push_back({"scanviews-11-map-dark-shades", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
                                                           "choose:Edi Natural shades"}});
-        steps_.push_back({"scanviews-9-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:d-spacing",
+        steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:d",
                                                           "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
-        steps_.push_back({"scanviews-10-stacked-dark-shades", {"mainArea.analysis.tab.stacked",
-                                                               "scanView.stacked.toolbar.palette",
-                                                               "choose:Edi Coast shades"}});
-        steps_.push_back({"scanviews-11-stacked-light-plasma", {"theme:light", "scanView.stacked.toolbar.reset",
-                                                                "scanView.stacked.toolbar.palette", "choose:plasma"}});
+        steps_.push_back({"scanviews-13-stacked-dark-narrow-zoom", {"mainArea.analysis.tab.stacked",
+                                                                   "scanView.stacked.toolbar.xaxis", "choose:2θ",
+                                                                   "drag:scanView.stacked.pointer:0.40,0.02,0.46,0.6"}});
+        steps_.push_back({"scanviews-14-stacked-dark-secondary-reset", {"right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"scanviews-15-stacked-dark-excluded-off", {"scanView.stacked.toolbar.excluded"}});
+        steps_.push_back({"scanviews-16-stacked-light-excluded-on", {"theme:light", "scanView.stacked.toolbar.excluded"}});
+        steps_.push_back({"scanviews-17-map-light-excluded", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
+                                                             "choose:viridis"}});
+        steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:820x960"}});
+        steps_.push_back({"scanviews-19-joint-stacked-light-d",
+                          {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+                           "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:d"}});
+        steps_.push_back({"scanviews-20-joint-map-light-d", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-21-joint-map-dark-d", {"theme:dark"}});
+        steps_.push_back({"scanviews-22-joint-stacked-dark-d", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-23-joint-stacked-dark-tof", {"scanView.stacked.toolbar.xaxis", "choose:TOF"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
