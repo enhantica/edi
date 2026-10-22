@@ -13,7 +13,7 @@ It is the CLI counterpart of diffraction-lib's `sc-neut-cwl_Tb2Ti2O7_isotropic-e
 ## Run it
 
 ```bash
-python -m edi fit docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project --dry
+python -m edi fit docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project --dry
 ```
 
 `--dry` leaves the project unchanged; drop it to write the fitted values back. Add
@@ -21,5 +21,6 @@ python -m edi fit docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/projec
 
 ## What is checked
 
-**Registered, not executing yet.** It joins the executing set once its `expected.json` holds the
-values FullProf reaches when it fits the same parameters on the same reflections.
+**Registered, not executing.** FullProf fits its own extinction model, not the Becker-Coppens
+radius this project frees, so FullProf's values in `expected.json` describe a different model
+(`PROVENANCE.md`). The project joins the executing set once that difference is settled.

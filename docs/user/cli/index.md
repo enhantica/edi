@@ -50,15 +50,15 @@ are independent references.
 | [pd-neut-cwl_y2o3_beta-adp](pd-neut-cwl_y2o3_beta-adp/index.md) | Y2O3 (constant wavelength), anisotropic beta ADPs tied by site symmetry, scale only, against FullProf |
 | [pd-xray-cwl_latp_scan-4f](pd-xray-cwl_latp_scan-4f/index.md) | LATP with two AlPO4 phases, synchrotron X-ray sequential scan over four files, 54 parameters, against FullProf |
 
-The single-crystal projects below are registered but not executing yet.
+The single-crystal projects below reproduce diffraction-lib's verification pages against FullProf's fits; all but the isotropic-extinction one execute, and the three app examples are registered without reference values.
 
 | project | what it fits |
 | --- | --- |
-| [sc-neut-cwl_pr2nio4_basic](sc-neut-cwl_pr2nio4_basic/index.md) | Pr2NiO4 single crystal (constant wavelength), anisotropic displacements, scale only |
-| [sc-neut-cwl_tb2ti2o7_basic](sc-neut-cwl_tb2ti2o7_basic/index.md) | Tb2Ti2O7 on HEiDi (constant wavelength), scale only |
-| [sc-neut-cwl_tb2ti2o7_anisotropic-adp](sc-neut-cwl_tb2ti2o7_anisotropic-adp/index.md) | Tb2Ti2O7 on HEiDi, anisotropic displacements, scale only |
-| [sc-neut-cwl_tb2ti2o7_isotropic-extinction](sc-neut-cwl_tb2ti2o7_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and crystal radius |
-| [sc-neut-tof_taurine_basic](sc-neut-tof_taurine_basic/index.md) | taurine single crystal (time of flight), scale only |
+| [sc-neut-cwl_pr2nio4-5c2_basic](sc-neut-cwl_pr2nio4-5c2_basic/index.md) | Pr2NiO4 single crystal (constant wavelength), anisotropic displacements, scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_basic](sc-neut-cwl_tb2ti2o7-heidi_basic/index.md) | Tb2Ti2O7 on HEiDi (constant wavelength), scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp](sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md) | Tb2Ti2O7 on HEiDi, anisotropic displacements, scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction](sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and crystal radius |
+| [sc-neut-tof_taurine-unknown_basic](sc-neut-tof_taurine-unknown_basic/index.md) | taurine single crystal (time of flight), scale only |
 | [sc-neut-cwl_tb2ti2o7-heidi_fit](sc-neut-cwl_tb2ti2o7-heidi_fit/index.md) | Tb2Ti2O7 on HEiDi from a rough start (app example) |
 | [sc-neut-cwl_pr2nio4-5c2_fit](sc-neut-cwl_pr2nio4-5c2_fit/index.md) | Pr2NiO4 on 5C2 from a rough start (app example) |
 | [sc-neut-tof_taurine_fit](sc-neut-tof_taurine_fit/index.md) | taurine (time of flight) from a rough start (app example) |

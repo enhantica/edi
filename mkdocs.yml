@@ -145,11 +145,11 @@ nav:
           - user/cli/pd-xray-cwl_pbso4-lab_round-robin/index.md
           - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
           - user/cli/pd-xray-cwl_latp_scan-4f/index.md
-          - user/cli/sc-neut-cwl_pr2nio4_basic/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7_basic/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/index.md
-          - user/cli/sc-neut-tof_taurine_basic/index.md
+          - user/cli/sc-neut-cwl_pr2nio4-5c2_basic/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md
+          - user/cli/sc-neut-tof_taurine-unknown_basic/index.md
           - user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/index.md
           - user/cli/sc-neut-cwl_pr2nio4-5c2_fit/index.md
           - user/cli/sc-neut-tof_taurine_fit/index.md

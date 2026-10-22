@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40",
+    "artifact": "../../../../tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/tbti.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "comparable_parameters": false,
+  "quantities": {
+    "n_free": {
+      "value": 2,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 220,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "param.scale.value": {
+      "value": 3.4961121,
+      "kind": "reference",
+      "tol_abs": 0.10108793
+    },
+    "reduced_chi_square": {
+      "value": 82.69535362484258,
+      "kind": "reference",
+      "tol_abs": 0.06,
+      "tol_rel": 0.002
+    }
+  }
+}
