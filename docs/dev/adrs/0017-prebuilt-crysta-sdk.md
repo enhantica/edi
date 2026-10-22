@@ -119,3 +119,79 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
 | A conda channel for the SDK | Deferred: the release-asset transport needs no channel hosting; a later ADR can move it. |
 | Pin in `pixi.lock` | Not possible with release assets: the lock does not carry activation environment. |
 | Keep osx-64 | Rejected by the owner, 2026-09-30. |
+
+
+## Consumer object-cache identity
+
+The prior app key covered compiler/environment/options and the SDK prefix path. Core reused its configured
+tree, and the installed-consumer proof always rebuilt fresh. A replacement SDK at the same prefix can carry
+older header mtimes, so path/source-stamp identity alone cannot establish object compatibility. The app key now
+includes `tools/ci/sdk_content_identity.py`'s deterministic digest of the complete selected prefix's logical
+paths and regular-file contents, following installed directory links with cycle/special-file refusal. Core's
+ordinary and candidate trees retain an attempt content key and rebuild their generated trees when it changes or
+is absent; the standalone consumer remains fresh and records its selected content key. Same-content recovery
+reuses generated objects, independently of mtimes. A failed configure/build retains its attempt key so an
+unchanged retry can continue. Pinned, candidate and local app-prefix routes all use this one digest; CI still
+refuses the local app-prefix override. This is cache invalidation, not a substitute for fingerprint/ABI checks,
+qualified SDK provenance, the committed pin or official CI evidence. No SDK/source/fixture is modified.
+
+
+The successful core build separately writes `.crysta-linked-content` after its build steps complete. The
+standalone installed-consumer proof compares its selected prefix digest with that **successful** unit's
+content record as well as the existing source-commit records, including explicit extension selection. A
+same-source content replacement refuses until that selected edi unit is rebuilt; an attempt marker or a
+failed configure/build is not successful content provenance. The standalone helper resolves from the entry's
+absolute repository root, preserving invocation from outside the checkout. Existing core/consumer build argv
+remain unchanged; the app and explicitly invoked diagnostic builds retain their existing parallel controls.
+
+
+## Local developer launcher: selected Apple prerequisites
+
+FIRST is tools/dev/app-with-crysta.sh's existing clean-environment local SDK build
+and tools/ci/app-build.sh's ordinary app build/identity, documented in local-crysta.
+The local launcher now checks selected macOS SDK availability and the selected
+Apple C++ tool through xcrun in that SAME clean environment before suppressed Git
+metadata, Pixi installation or a build. Original stderr is preserved and failure
+stops with manual setup/license instructions. Ready Command Line Tools-only
+installations remain valid; no full-Xcode-only probe, automatic sudo/license
+acceptance/install, compiler macro workaround or toolchain/flag change is added.
+The observed license refusal precedes downstream libc++ NAN/INFINITY errors; it
+is not proof of their sole cause. CI refusal remains before this local preflight;
+non-Darwin paths, clean allowlist, source/argument isolation, pinned CI/release
+SDK and ordinary app build remain as before. Actual Mac recovery requires the
+user's ready selected installation and a subsequent genuine build.
+
+
+## Selected macOS SDK compatibility and coupled compiler family
+
+FIRST is this ADR's version-and-build SDK fingerprint, the app's explicit Mac ABI
+package constraints, and the isolated local-crysta launcher. The selected Apple
+SDK is also a compiler-header input: the observed SDK27/Clang19 failure remains
+after licence acceptance. [FreeCAD's platform declarations](https://github.com/FreeCAD/FreeCAD/blob/main/pixi.toml)
+identify the SDK27 math-header protocol and use direct Mac Clang23 drivers.
+The Mac proposal therefore selects coherent Clang/libc++23 for both default and
+app, removing Mac paths through older cxx-compiler metapackages. Linux compiler
+constraints and LLVM22 coverage retain their original meaning; deployment13.4,
+scientific source and the released SDK pin do not change.
+
+A family constraint is not ABI evidence. Independently resolve in isolated
+worktrees; record real lock package versions/builds and couple every app ABI entry
+to the actual tested Mac SDK fingerprint before publication. Existing fingerprint
+checks must reject an old SDK incompatible with a new compiler environment; do
+not bypass them or relabel old archives. Local paired development rebuilds crysta
+and edi with matching environments. A new released SDK/pin needs its ordinary
+qualified producer/review route. Preserve original Linux/Windows lock records
+and old environments/objects; do not update them as a side effect of a Mac solve.
+
+The SDK27 linker also requires the patched TAPI1600.0.11.8 build4
+(`hb561403_4` on arm64), per [upstream fix21](https://github.com/conda-forge/tapi-feedstock/pull/21).
+Older builds reject `arm64e.x1` slices in system TBD stubs even with Clang23.
+Select the patched reader in the shared Mac dependency table; preserve real
+linker/SDK diagnostics and never edit SDK stubs or ignore missing system symbols.
+
+Mac LLVM tools are resolved in the lock to23.1.3 to match Crysta's available clang-tools package,
+which constrains that patch. A real attempted23.1.4 solve refused because
+clang-tools23.1.4 is unavailable. Keep the existing org parity check and
+SDK ABI fingerprint checks; this does not change compiler/header/runtime identities.
+No Mac coverage-tools dependency is declared: the existing Linux-only
+coverage-tool declaration policy remains in force.

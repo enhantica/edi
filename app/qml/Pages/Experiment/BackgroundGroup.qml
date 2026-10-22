@@ -19,6 +19,7 @@ import edi.app
 Column {
     id: group
 
+    objectName: "background.rows"
     property ExperimentViewModel experiment: null
     readonly property BackgroundListModel points: experiment ? experiment.background : null
     readonly property BackgroundTermListModel terms: experiment ? experiment.backgroundTerms : null
@@ -131,12 +132,18 @@ Column {
                         text: row.index + 1
                     }
                     TextCell {
+                        editMember: row
+                        editModel: group.points
+                        editIndex: row.index
                         horizontalAlignment: Text.AlignLeft
                         objectName: `background.id.${row.index}`
                         value: row.model.id
                         onCommitted: text => group.points.setId(row.index, text)
                     }
                     TextCell {
+                        editMember: row
+                        editModel: group.points
+                        editIndex: row.index
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
                         value: row.position
@@ -294,6 +301,9 @@ Column {
                         text: termRow.index + 1
                     }
                     TextCell {
+                        editMember: termRow
+                        editModel: group.terms
+                        editIndex: termRow.index
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.order.${termRow.index}`
                         value: termRow.order

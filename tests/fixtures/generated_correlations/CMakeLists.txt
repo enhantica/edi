@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 project(generated_correlations LANGUAGES CXX)
 find_package(crysta CONFIG REQUIRED)
 add_executable(correlation_producer produce.cpp)
 target_compile_features(correlation_producer PRIVATE cxx_std_20)
 target_include_directories(correlation_producer PRIVATE "${EDI_INCLUDE}")
 target_link_libraries(correlation_producer PRIVATE "${EDI_CORE}" crysta::crysta)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(correlation_producer PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

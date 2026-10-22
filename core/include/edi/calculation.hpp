@@ -3,6 +3,7 @@
 #define EDI_CALCULATION_HPP
 
 #include <cstdint>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -80,6 +81,10 @@ enum class PublishOutcome : std::uint8_t {
 
 // Owner thread. The live project's stamps now: what a snapshot taken now would carry.
 WorkStamps work_stamps(const Project& live);
+// Same owner-thread capture, with checked admission BEFORE retained source
+// buffers grow. Includes container/payload and original relation-lookup scratch;
+// no callback, partial capture or change to injective scientific byte semantics.
+WorkStamps work_stamps(const Project& live, std::size_t construction_bytes);
 
 // Owner thread. Takes the stamps, then copies the project.
 WorkSnapshot snapshot_for_work(const Project& live);

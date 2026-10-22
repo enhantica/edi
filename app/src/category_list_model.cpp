@@ -48,11 +48,10 @@ CategoryPresentation category_presentation(const QString& id) {
     return {look.tier, edi::category_title(id.toStdString()), look.icon, look.extras_part};
 }
 
-namespace {
 // The sidebar's order where it differs from the core's page order (edi ADR-0017 §3): each first id is shown
 // directly before the second. Presentation only: the core's order (the Analysis table, the files) stands.
 // A category shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
-std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
+std::vector<const edi::Category*> category_presentation_order(const std::vector<edi::Category>& categories) {
     static const std::pair<const char*, const char*> kShownBefore[] = {{"background", "instrument"},
                                                                        {"excluded_region", "linked_structure"}};
     static const char* const kShownElsewhere[] = {"experiment_type"};
@@ -79,13 +78,12 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
     }
     return ordered;
 }
-}  // namespace
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
 void CategoryListModel::setCategories(const std::vector<edi::Category>& categories) {
     std::vector<Row> target;
-    for (const edi::Category* shown : presentation_order(categories)) {
+    for (const edi::Category* shown : category_presentation_order(categories)) {
         const edi::Category& category = *shown;
         target.push_back({QString::fromStdString(category.id), static_cast<int>(category.rows), category.is_loop,
                           category.admitted});

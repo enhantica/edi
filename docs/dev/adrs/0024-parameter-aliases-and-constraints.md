@@ -81,3 +81,200 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
 | Parse or evaluate expressions in edi or Python | Rejected: a second parser drifts from crysta's, and an interpreter runs arbitrary text. |
 | Keep edi's own cell and position completion beside crysta's applier | Rejected: two rules for the same dependents. |
 | Replace a row on a taken id, as diffraction-lib does | Rejected: ids are unique within a collection everywhere else in edi. |
+
+
+## Prepared bulk restore and recorded edit ownership
+
+The prior implementations are `Edit::restore_relations`, the manual alias and constraint list editors, `ProjectViewModel::apply_relation_edit`, and the parameter table's free-flag batch. The restore prepares both complete ItemVec tables before either live move commit; resolution and all fallible membership/table admission precede the scalar and collection commit. A copied validation model is not a reservation for live table allocation.
+
+The shared recorded-edit entrance owns the complete before declaration, parameter states, resolved parameter pointers and reserved history slot before a relation/value/free batch writes. These closed edits preserve parameter membership and names. After actual relation completion, and before presentation can signal other editors, an allocation-free pass retains exactly states whose values, uncertainty or free flag changed. A completion exception uses the same pass on the actual reached state. No post-write named-slot traversal or history growth is needed; a genuinely refused operation drops its provisional slot. Scalar assignments follow the existing RowHold numeric/optional/flag no-failure contract. This is not a promise to display diagnostics through permanent allocator exhaustion.
+
+A true core refusal and a successful core write followed by failed presentation are distinct. The latter retains Undo, leaves an explicit applied/unconfirmed outcome and fences further edits/fits until a genuine Undo or reopening. The legacy manual editor returns empty for an actual write, with the app warning retained; the native route receives both applied and published explicitly. Undo consumes an actually applied reversal once even if its later presentation fails. It does not repeat that reversal as if nothing had happened. Existing manual alias/constraint append, duplicate, rename, target/expression change, enable/disable and removal all use this shared entrance. Native value/free batches use it too; a native batch is one normal Undo step.
+
+Native affine declaration registration and its model-admission helper are outside this six-tool unit. Deliberately disabled manual drafts keep the ordinary editor behavior. Shared-ADP accepted-best trials, checkpoint isolation and physical site identification remain separate capabilities; none is implied by recorded parameter editing.
+
+
+### Shared critical admission and explicit recovery siblings
+
+The publication/reentrancy fence applies to every actual sibling admission, not only scalar/relation edits: report settings and their Undo, scan prepare/reset/restore and genuine fit start, data restoration, fit Undo, and save/write/readback. Critical admission is separate from displayed-dataset readiness, so scans still run from their template and save/reset policy is preserved. Only the private actual Undo entrances may recover a held publication failure; a public setting or Save cannot silently clear it. Report and scan reset/preparation own their normal Undo metadata/capacity before their existing closed file/model write doors. A completed file reversal is not repeated as a no-write refusal when its later presentation fails. Deferred same-dataset refresh revalidates the surviving owner/index and reads its latest template, never old captured model values.
+
+A failure in Undo-availability publication retains the already prepared warning in the normal app error channel as well as the native result. Successful complete recovery clears the held cause; failed or retired presentation does not erase it. Actual UI/worker lifetime and preview pre-admission semantics are specified at the shared ADR0020 seam.
+
+
+The existing scan file set-aside helper reserves its bounded moved-file ledger and recovery-path string before renaming. Recording a successful move or retaining its path therefore cannot introduce a new allocation after that move. Existing filesystem refusal/kept-aside diagnostics and restore policy are preserved; no global directory mutation or new filesystem transaction route is added.
+
+
+### Native affine append through the shared editor
+
+The app-only add_relations action uses the existing AliasListModel/ConstraintListModel representation, Edit::restore_relations, complete_relations and preowned ProjectViewModel::applyRecordedEdit/RelationsUndo. It appends actual parameter-path aliases and explicit id/expression/enabled constraints to a complete copied declaration; existing rows and composition are not replaced. The actual SDK parser/graph validates before returning the live Edit. The shared joint relation replacement and exact changed-parameter Undo remain unchanged; no rollback with guessed values or second expression parser exists. Structureless projects refuse because that existing completion seam cannot validate them. Unsupported/invalid batches refuse before mutation; postwrite presentation uncertainty keeps real Undo and the recovery fence.
+
+This supplies a relationship mechanism for a justified same-phase co-occupied-site ADP/coordinate model. It does not decide scientific equivalence, create an automatic equality from high uncertainty, run a fit or implement accepted-best/checkpoint restoration. Explicit user no-sharing instructions and known occupancy/composition remain authoritative.
+
+
+### Original manual declaration entry and visible sequencing
+
+Prior art is the existing AliasesGroup/ConstraintsGroup tables and their
+append/setText/setEnabled/remove model methods. Constraint Add now creates a
+disabled declaration; disabled ID/expression fields remain editable. The same
+actual enable toggle validates/applies the intended rule after entry, instead
+of activating a guessed default equality while the user is still editing.
+This changes only newly appended rows, never persisted flags or engine defaults.
+Each manual operation still records its own Undo through apply_relation_edit.
+
+The assistant uses those original controls, not another form. Its app-private
+RelationAction metadata names the exact model member, field and requested value
+at the final real event; a different control cannot consume that receipt.
+The preowned action captures actual applied state at the existing Preview write
+latch before model/publication callbacks. Normal native batches retain their
+one-edit/Undo semantics; a visible sequence reports genuine complete/partial
+steps and preserves all completed individual edits on interruption. Existing
+core expression parsing, validation, physical completion and Undo remain the
+only scientific authority. Details are in ADR-0037 and the GUI ADR-0017.
+
+
+### Shared text draft and ordinary alias defaults
+
+TextCell's first manual table entrances own the same draft rules as its paced
+assistant input. A clean display binding is removed with RestoreNone when real
+text/IME begins, without assigning over preedit. A draft captures its original
+project/delegate/model/index/control context; value-role publication cannot
+retarget or erase it. Each actual user text/preedit event replaces its revision
+record. Commit is single-entry and checks that original record/lifetime before
+any post-signal diagnostic or cleanup. A newer draft, IME, owner or member
+leaves the old continuation with no presentation authority. Cleanup releases
+only its own in-progress latch; clean formatting resumes through the binding
+only when there is no draft. Refused/no-op/Return/blur use the original model
+setter and formatting. Explicit human Escape can discard an obsolete draft;
+late assistant cleanup cannot discard newer manual input.
+
+The original Alias Add uses the actual offered independent parameter list. It
+chooses the first target with no alias, otherwise the first offered target: more
+than one alias for a real parameter is lawful. With no offered target, the
+ordinary button is disabled and the model refuses before admitting an Edit or
+Undo. All successful operations retain the same validator and recorded Undo;
+no alternate scientific executor or parallel form is added.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.
+
+
+### Save conversion restores authoritative dependence marks
+
+The common converted-save boundary refreshes the SDK's relation marks on its owned
+converted project before delegating to either ordinary Save or bounded native document
+preparation. Conversion reconstructs Parameters with their values, free flags and SUs;
+copying declarations alone does not restore dependence. The SDK writer preserves a fixed
+constrained parameter's nonzero SU only when that authoritative mark is present.
+
+This refresh also runs when recalculation is disabled or no calculated bank exists.
+It uses the existing SDK refresh_relations(project, false), after the final live-model
+read and before the writer callback. Its temporary graph dies before the writer's graph
+or copied save model is constructed. Native capture has already admitted the complete
+conversion/relations construction roles; no extra retained graph or larger allowance is
+introduced. Existing malformed-relation refusal, writer rounding, saved-state adoption,
+currentness, physical publication and Undo remain their original owners. No parameter
+value or uncertainty is recomputed here, and no material-specific scientific rule,
+serializer or post-load covariance reconstruction is added.
+
+
+### Explicit existing-row app action
+
+The app-only edit_relation action addresses one actual current alias or constraint
+by ID and a closed operation. It reuses the FIRST AliasListModel/ConstraintListModel
+setText, setEnabled and remove methods, shared apply_relation_control and recorded
+Undo in both modes. Only AliasRemove/ConstraintRemove semantic metadata is added
+at the original manual remove entrances so the same matched consumed/application
+receipt owns deletion before model callbacks. No-op stored values skip the method,
+cue and history. A deleted member is never dereferenced for its result.
+
+The original io.cpp parameter_slots spelling supplies a bounded single-member
+name lookup for an explicitly requested parameter path. Lazy original spelling
+expressions skip all unrelated member formatting and the lookup retains one slot;
+ordinary full walker callers keep their order/member/spelling semantics. A common
+checked preparation bound owns the finite transient/retained logical strings. No
+second naming grammar, expression parser or independent mutation engine exists.
+
+Original SDK validation can refuse a referenced rename/removal; the app does not
+automatically disable/drop/rewrite rules. Explicit current ID is not proof that an
+arbitrary default-named row belongs to an old run. add_relations stays append-only
+and unchanged. Actual applied/published/uncertain facts and ordinary Undo survive
+publication failure or interruption; no automatic recovery/replay is implied.
+
+
+## Native fit-only ordinary Undo
+
+FIRST is the original global appbar `Session.project.undo()` → ProjectViewModel::undo → FitViewModel::undo → applyUndo → applyEdit. The original core `Edit::undo_fit` remains the scientific restoration implementation; native delivery never calls the standalone core undo, walks history, copies a checkpoint or fits again. All unrelated manual history variants and loaded-project Undo keep their original behavior.
+
+The narrow native `undo_fit` action additionally requires explicit latest-history monostate and the most recent genuine current-owner single/joint attempt's actual adopted report. Manual/native attempt identity is fixed owner-local scalar state, not a history of attempts. Native preflight and actual Start share one identity. A later busy/availability/preparation/unadopted attempt invalidates old native eligibility even if ordinary manual canUndo still names the earlier good fit. Completion identity follows the actual report through finished/history insertion; an old completion tail cannot place a fit above a nested actual edit. Common edited/report-setting/scan-restore publication invalidates eligibility before notifying observers, with the original editing fence covering earlier trace callbacks. Pending fit presentation cannot admit native Undo.
+
+The scoped fit-only ordinary-input receipt is armed immediately around the same PVM.undo. Exact owner/attempt/top record are checked before the factory/history branch; consumed/started prevent reentry. The original applyEdit applied pointer latches the actual reversal before callbacks; published remains independently factual. Only those two scalar outcomes cross the ordinary wrapper into the receipt, never arbitrary app error text. Retired/native callbacks retain that receipt, so an applied but unconfirmed reversal is spent once rather than repeated against earlier science. Prewrite refusal consumes no history. Native bookkeeping does not alter the original generic manual Undo or add per-history-record instrumentation.
+
+## Ordinary scalar parameter edits own their next Undo
+
+FIRST is ParameterItem.setValue/setFree through ProjectEditor, the recorded free-header batch and relation editors, and PVM.applyRecordedEdit's preowned RelationsUndo. The two plain PVM scalar fallbacks previously delegated to unrecorded apply while the matched native-input branches already used recorded history. Changed ordinary numeric/free assignments now enter that same recorded-edit method. The existing snapshot restores the original relation rows and all changed parameter values, uncertainties and free flags through the ordinary appbar Undo; no new history manager or assistant-only reversal is added.
+
+Plain same-value assignments skip setter, publication and history only after the original fit/readiness/retirement fences. A numeric equality shortcut is allowed only within the original declared admissible range, so an already-invalid value still reaches the original validator/refusal. A refused operation creates no surviving history step; existing pre-write capture/reservation, actual applied-versus-published handling and ordinary dirty/calculation behavior remain authoritative for actual changes. Parameter identity is retained. The native exact-input matching/consumption/outcome branches, batch semantics and all unrelated apply/Undo paths remain unchanged. This source correction does not diagnose a particular human key/focus/Return delivery failure.
+
+
+## Window-centered Free header menu
+
+Prior implementation: Analysis ParametersGroup opens its existing FreeHeaderMenu
+from the header; the menu owns the exact eligible-row set and ordinary batch
+free action. Anchor that same popup in the current window overlay, using the
+original Qt Popup center anchor, so opening location does not depend on cursor
+position. Keep its QObject owner, filter, choices, normal dismissal and Undo.
+The assistant still opens and cues this same menu before the ordinary setter.
+
+
+## Provisional constraint Draft versus disabled scientific row
+
+FIRST is ConstraintListModel's ordinary declaration table, Edit/LivePreview's
+serialized refusal-before-write door and PVM applyRecordedEdit/RelationsUndo.
+Add now creates one model-local blank Draft with intended participation true;
+Add again focuses it. No arbitrary equality is prefilled, no fake disabled core
+member, dirty flag or Undo is created. An active duplicate remains provisional
+until confirmed; an explicit disabled duplicate remains disabled through ordinary
+prevalidated append. Existing loaded/disabled rows are never inferred to be Drafts.
+
+Typed CoreConstraintRef/DraftConstraintRef resolve a table key before any core
+cast. A nonrecycled serial, revision and decimal token identify the pending row;
+TextCell's editIdentity retires old input ownership when that token changes.
+Changed ID stores pending text. Changed expression or explicit Confirm validates
+the whole declaration. Unchanged duplicate text is not a scientific confirmation.
+Draft shows its unsaved status in the original status/control tooltip. Save writes
+only real declarations; Undo never resurrects provisional text.
+
+Closed Edit::constraint_append/expression/enabled factories own the complete
+inputs, resolve exact live membership after Input tracing, apply the corresponding
+operation to a prospective copy and call the original SDK complete_relations
+BEFORE the narrow live mutation. An active structureless candidate refuses.
+Disabled expressions keep original inactive storage semantics. No app expression
+parser is added. Append returns the trailing AppliedResult.constraint pin before
+callbacks; shared recorded history remains the sole ordinary Undo.
+
+The one local Draft survives unrelated publication/Undo while its model lives.
+A stale prepared owner/revision cannot commit. Original Rows::assign coalescing
+is reused locally so callbacks do not nest row transactions; original RowTableModel
+adds only destruction checkpoints around its existing notification boundaries.
+Manual takeover retires native Draft identity at FIRST retire_manual_input before
+cancellation, so old cleanup cannot discard user text. Stop discards only its exact
+still-uncommitted native Draft. During a real commit the model/PVM consumed and
+editing fences prevent a nested factory/history entry. Cleanup clears only the
+matching original row after factual application, never a successor.

@@ -10,12 +10,11 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `constraint`: each constraint as declared, `<alias> = <expression>`, editable as text; a disabled one
-// stays in the project, is not applied, and shows its id and expression disabled. Enable or disable, then remove, at the row's end; append and
-// duplicate below, as the aliases. A loop in `.edi`, so a table.
+// Confirmed disabled rows retain participation; provisional rows are unsaved Drafts (ADR-0024).
 Column {
     id: group
 
+    objectName: "relations.constraints"
     property AnalysisViewModel analysis: null
     readonly property ConstraintListModel constraints: analysis ? analysis.constraints : null
 
@@ -56,24 +55,35 @@ Column {
             // The roles by the model: `id` cannot be a property name.
             required property var model
 
+            function focusDraft(token: string) {
+                if (row.model.draft && row.model.draftToken === token)
+                    idCell.forceActiveFocus();
+            }
+
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 color: EaStyle.Colors.themeForegroundMinor
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.constraints
+                id: idCell
+                editIndex: row.index
+                editIdentity: row.model.draftToken
                 objectName: `constraint.id.${row.index}`
                 horizontalAlignment: Text.AlignLeft
-                // A disabled constraint's id and expression cells are both disabled.
-                enabled: row.model.enabled
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
                 value: row.model.id
                 onCommitted: text => group.constraints.setText(row.index, "id", text)
             }
             TextCell {
+                editMember: row
+                editModel: group.constraints
+                editIndex: row.index
+                editIdentity: row.model.draftToken
                 objectName: `constraint.expression.${row.index}`
                 horizontalAlignment: Text.AlignLeft
-                enabled: row.model.enabled
                 color: row.model.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundMinor
                 value: row.model.expression
                 onCommitted: text => group.constraints.setText(row.index, "expression", text)
@@ -81,9 +91,14 @@ Column {
             EaComponents.TableViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `constraint.enabled.${row.index}`
-                fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
-                ToolTip.text: row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
-                onClicked: group.constraints.setEnabled(row.index, !row.model.enabled)
+                fontIcon: row.model.draft ? "check" : row.model.enabled ? "toggle-on" : "toggle-off"
+                ToolTip.text: row.model.draft ? qsTr("Draft — not saved. Confirm this constraint") + (group.constraints.lastError ? ": " + group.constraints.lastError : "") : row.model.enabled ? qsTr("Disable this constraint") : qsTr("Enable this constraint")
+                onClicked: {
+                    if (row.model.draft)
+                        group.constraints.commitDraft(row.model.draftToken);
+                    else
+                        group.constraints.setEnabled(row.index, !row.model.enabled);
+                }
             }
             EaComponents.TableViewButton {
                 horizontalAlignment: Text.AlignHCenter
@@ -91,6 +106,25 @@ Column {
                 fontIcon: "minus-circle"
                 ToolTip.text: qsTr("Remove this constraint")
                 onClicked: group.constraints.remove(row.index)
+            }
+        }
+    }
+
+    Connections {
+        target: group.constraints
+        function onFocusDraftRequested(token: string) {
+            const model = group.constraints;
+            if (!model)
+                return;
+            for (let index = 0; index < model.count; ++index) {
+                if (model.text(index, "draftToken") !== token)
+                    continue;
+                if (!table.revealRow(index) || group.constraints !== model)
+                    return;
+                const item = table.itemAtIndex(index);
+                if (item && typeof item.focusDraft === "function" && model.text(index, "draftToken") === token)
+                    item.focusDraft(token);
+                return;
             }
         }
     }

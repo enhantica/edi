@@ -27,3 +27,8 @@ target_link_libraries(e04_t9_tsan_probe PRIVATE edi_core_tsan)
 add_executable(tsan_control control.cpp)
 target_compile_features(tsan_control PRIVATE cxx_std_20)
 target_link_libraries(tsan_control PRIVATE Threads::Threads)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(e04_t9_tsan_probe PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

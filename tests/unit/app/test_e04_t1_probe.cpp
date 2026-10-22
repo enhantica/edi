@@ -2,11 +2,16 @@
 // Link this TU into the Qt Quick Test runner alongside the production edi.app module.
 #include <QAbstractItemModel>
 #include <QCoreApplication>
+#include <QInputMethodEvent>
+#include <QInputMethodQueryEvent>
+#include <QKeyEvent>
+#include <QPointer>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
 #include <QJSEngine>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QMetaMethod>
 #include <QMetaProperty>
 #include <QQmlEngine>
@@ -35,6 +40,7 @@
 class AcceptanceProbe final : public QObject {
     Q_OBJECT
     struct Watch {
+        QPointer<QObject> original;
         std::vector<std::unique_ptr<QSignalSpy>> spies;
         QList<QByteArray> names;
     };
@@ -46,6 +52,66 @@ class AcceptanceProbe final : public QObject {
     }
 public:
     using QObject::QObject;
+    // Actual platform IME/forwarded-key delivery addresses the original focused Quick input.
+    // Narrow typed events only: no generic event/property/model executor.
+    Q_INVOKABLE QVariantMap focusedInputMethod233(QQuickWindow* window, QQuickItem* target,
+                                                  const QString& preedit, const QString& commit) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod) ||
+            preedit.size() > 64 || commit.size() > 64 || (preedit.isEmpty() && commit.isEmpty()))
+            return {{"delivered", false}, {"cause", "actual focused input and bounded IME text required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        const QPointer<QQuickWindow> original_window(window);
+        QInputMethodEvent event(preedit, {});
+        event.setCommitString(commit);
+        const bool returned = QCoreApplication::sendEvent(target, &event);
+        return {{"delivered", true}, {"dispatchReturned", returned}, {"accepted", event.isAccepted()},
+                {"eventKind", "InputMethod"}, {"preedit", preedit}, {"commit", commit},
+                {"targetAlive", !original.isNull()},
+                {"focusMatchesAfter", original_window && original && original_window->activeFocusItem() == original},
+                {"textAfter", original ? original->property("text") : QVariant{}},
+                {"preeditAfter", original ? original->property("preeditText") : QVariant{}}};
+    }
+    Q_INVOKABLE QVariantMap focusedForwardedDigit233(QQuickWindow* window, QQuickItem* target,
+                                                    const QString& text) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod) ||
+            text.size() != 1 ||
+            text.at(0) < QLatin1Char('0') || text.at(0) > QLatin1Char('9'))
+            return {{"delivered", false}, {"cause", "actual focused input and one original digit required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        const QPointer<QQuickWindow> original_window(window);
+        const int key = Qt::Key_0 + text.at(0).unicode() - QLatin1Char('0').unicode();
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
+        QCoreApplication::sendEvent(target, &press);
+        bool released = false;
+        if (original) {
+            QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
+            QCoreApplication::sendEvent(original, &release);
+            released = true;
+        }
+        return {{"delivered", true}, {"releasedToOriginal", released}, {"eventKind", "ForwardedKey"},
+                {"text", text}, {"targetAlive", !original.isNull()},
+                {"focusMatchesAfter", original_window && original && original_window->activeFocusItem() == original},
+                {"textAfter", original ? original->property("text") : QVariant{}}};
+    }
+    Q_INVOKABLE QVariantMap focusedInputMethodQuery233(QQuickWindow* window, QQuickItem* target) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
+            return {{"delivered", false}, {"cause", "actual focused Quick input required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        QInputMethodQueryEvent event(Qt::ImEnabled | Qt::ImCursorPosition | Qt::ImSurroundingText);
+        const bool returned = QCoreApplication::sendEvent(target, &event);
+        return {{"delivered", true}, {"eventKind", "InputMethodQuery"}, {"dispatchReturned", returned},
+                {"inputEnabled", event.value(Qt::ImEnabled)}, {"cursorPosition", event.value(Qt::ImCursorPosition)},
+                {"surroundingText", event.value(Qt::ImSurroundingText)}, {"targetAlive", !original.isNull()}};
+    }
     Q_INVOKABLE bool softwareOffscreenWithoutGl() const {
         if (QGuiApplication::platformName() != "offscreen" ||
             qEnvironmentVariable("QT_QUICK_BACKEND") != "software") return false;
@@ -276,6 +342,7 @@ public:
             return -1;
         }
         Watch watch;
+        watch.original = object;
         const auto *meta = object->metaObject();
         for (int i = 0; i < meta->methodCount(); ++i) {
             const auto method = meta->method(i);
@@ -288,6 +355,11 @@ public:
         }
         watches_.push_back(std::move(watch));
         return static_cast<int>(watches_.size()) - 1;
+    }
+    Q_INVOKABLE bool watchedAlive(int handle) const {
+        if (handle < 0 || handle >= static_cast<int>(watches_.size()))
+            qFatal("313: invalid original QObject lifetime watch");
+        return !watches_[handle].original.isNull();
     }
     Q_INVOKABLE QVariantMap events(int handle) const {
         QVariantMap result;
@@ -357,6 +429,43 @@ public:
 
 static void registerAcceptanceProbe() {
     QStandardPaths::setTestModeEnabled(true);
+    const auto owned_root = qEnvironmentVariable("EDI_TEST_APP_STORAGE_ROOT");
+    if (!owned_root.isEmpty()) {
+        // Before any QML engine/Session: keep Qt's supported test-mode routing, with a
+        // per-invocation application identity instead of the shared runner's archive.
+        // Only the fresh exact identity below is ours; no existing archive is accessed.
+        const auto identity = qEnvironmentVariable("EDI_TEST_APP_STORAGE_ID");
+        if (!QDir::isAbsolutePath(owned_root) || !QFileInfo(owned_root).isDir()
+            || QFileInfo(owned_root).canonicalFilePath().isEmpty()
+            || !QRegularExpression(QStringLiteral("^acceptance-[0-9a-f]{64}$")).match(identity).hasMatch())
+            qFatal("UX339 SETUP: existing owned root and unique application identity required");
+        QCoreApplication::setOrganizationName(QStringLiteral("EdiIndependentAcceptance"));
+        QCoreApplication::setApplicationName(identity);
+        QJsonObject destinations;
+        const auto verify_destination = [&](const char* label, QStandardPaths::StandardLocation location) {
+            const auto actual = QDir::fromNativeSeparators(QStandardPaths::writableLocation(location));
+            auto suffix = QStringLiteral("/EdiIndependentAcceptance/") + identity;
+#ifdef Q_OS_WIN
+            // Pinned Qt's Windows CacheLocation appends cache AFTER the application suffix.
+            if (location == QStandardPaths::CacheLocation) suffix += QStringLiteral("/cache");
+#endif
+            if (!QStandardPaths::isTestModeEnabled() || !QDir::isAbsolutePath(actual)
+                || !actual.endsWith(suffix) || QFileInfo::exists(actual))
+                qFatal("UX339 SETUP: actual Qt test storage must have our fresh exact application identity");
+            destinations[QString::fromLatin1(label)] = actual;
+        };
+        verify_destination("app_data", QStandardPaths::AppDataLocation);
+        verify_destination("app_local_data", QStandardPaths::AppLocalDataLocation);
+        verify_destination("app_config", QStandardPaths::AppConfigLocation);
+        verify_destination("cache", QStandardPaths::CacheLocation);
+        destinations[QStringLiteral("test_mode")] = QStandardPaths::isTestModeEnabled();
+        destinations[QStringLiteral("organization")] = QCoreApplication::organizationName();
+        destinations[QStringLiteral("application")] = QCoreApplication::applicationName();
+        destinations[QStringLiteral("invocation_root")] = owned_root;
+        destinations[QStringLiteral("before_session")] = true;
+        std::cout << "UX339_STORAGE " << QJsonDocument(destinations).toJson(QJsonDocument::Compact).constData()
+                  << std::endl;
+    }
     qmlRegisterSingletonType<AcceptanceProbe>("EdiAcceptance", 1, 0, "Probe",
         [](QQmlEngine *, QJSEngine *) -> QObject * { return new AcceptanceProbe; });
 }

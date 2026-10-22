@@ -61,12 +61,18 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.regions
+                editIndex: row.index
                 horizontalAlignment: Text.AlignLeft
                 objectName: `excludedRegion.id.${row.index}`
                 value: row.model.id
                 onCommitted: text => group.regions.setId(row.index, text)
             }
             TextCell {
+                editMember: row
+                editModel: group.regions
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.start.${row.index}`
                 value: row.start
@@ -74,6 +80,9 @@ Column {
                 onCommitted: text => group.regions.setStart(row.index, Number(text))
             }
             TextCell {
+                editMember: row
+                editModel: group.regions
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.end.${row.index}`
                 value: row.end

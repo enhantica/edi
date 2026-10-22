@@ -8,6 +8,8 @@
 #include <QtQml/qqmlregistration.h>
 
 #include <string>
+#include <memory>
+#include <optional>
 #include <vector>
 
 #include "block_text.hpp"
@@ -93,6 +95,24 @@ class ConstraintListModel : public RowTableModel {
    public:
     ConstraintListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
     void sync();
+    std::optional<ConstraintDraftId> currentDraft() const noexcept;
+    int draftRow(ConstraintDraftId) const noexcept;
+    std::shared_ptr<const ConstraintDraftCommit> prepareDraftCommit(ConstraintDraftId);
+    ProjectEditor::RelationOutcome commitDraft(const std::shared_ptr<const ConstraintDraftCommit>&);
+    bool discardDraft(ConstraintDraftId);
+    bool discardNativeDraft(ConstraintDraftId);
+    bool takeOverNativeDraft(ConstraintDraftId);
+    // Native fields are populated without the manual expression auto-commit.
+    // Refuses any existing provisional row rather than stealing manual input.
+    ConstraintDraftId beginNativeDraft(const QString& id, const QString& expression, bool enabled, ConstraintDraftId* created = nullptr);
+    bool draftCommitCurrent(const std::shared_ptr<const ConstraintDraftCommit>&) const noexcept;
+    quint64 draftPreparationBytes(ConstraintDraftId) const;
+    static quint64 nativeDraftPreparationBytes(const QString& id, const QString& expression);
+    static quint64 nativeDraftPreparationBytes(quint64 idUnits, quint64 expressionUnits, quint64 idBackingBytes, quint64 expressionBackingBytes);
+    Q_INVOKABLE void commitDraft(const QString& token);
+    Q_INVOKABLE void focusDraft(const QString& token);
+    QString lastError() const { return last_error_; }
+    Q_PROPERTY(QString lastError READ lastError NOTIFY draftErrorChanged)
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
     Q_INVOKABLE bool setEnabled(int row, bool enabled);
     Q_INVOKABLE void append();
@@ -102,9 +122,31 @@ class ConstraintListModel : public RowTableModel {
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override;
 
+   signals:
+    void focusDraftRequested(const QString& token);
+    void draftErrorChanged();
+
    private:
+    enum class DraftOrigin { Manual, Native, Duplicate };
+    struct Draft {
+        ConstraintDraftId key;
+        quint64 revision = 1;
+        QString id, expression, token;
+        bool intendedEnabled = true;
+        DraftOrigin origin = DraftOrigin::Manual;
+        std::weak_ptr<const ConstraintDraftCommit> prepared;
+    };
+    std::optional<ConstraintRowRef> rowRef(int row) const;
+    ConstraintDraftId beginDraft(QString id, QString expression, bool enabled, DraftOrigin, ConstraintDraftId* created = nullptr);
+    bool changeDraft(const QString& role, const QString& value);
+    void draftError(QString message);
     edi::Project& project_;
     ProjectEditor& editor_;
+    std::shared_ptr<Draft> draft_;
+    quint64 draft_serial_ = 0;
+    bool committing_ = false;
+    bool syncing_ = false, sync_pending_ = false;
+    QString last_error_;
 };
 
 // The persisted pre-fit start state (`_fit_parameter`, read-only: a fit writes it, undo restores it):

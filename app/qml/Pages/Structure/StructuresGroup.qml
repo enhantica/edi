@@ -12,8 +12,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
-// one current; a structure enters only from a `.edi` block file, while the project holds none — an
-// edi project holds one structure.
+// one current. The original Load accepts native .edi and the already supported
+// single-structure CIF vocabulary; all additions use the same editor/Undo.
 EaElements.GroupBox {
     id: group
 
@@ -63,7 +63,48 @@ EaElements.GroupBox {
 
                 objectName: `structures.row.${index}`
                 TapHandler {
-                    onTapped: group.project.currentStructureIndex = row.index
+                    readonly property var assistantGesture: ({ current: null })
+
+                    function sameGesture(point) {
+                        const retained = assistantGesture.current;
+                        return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                    }
+                    function discardGesture(point) {
+                        if (sameGesture(point)) {
+                            assistantGesture.current.closed = true;
+                            assistantGesture.current.proof = null;
+                        }
+                    }
+                    onGrabChanged: (transition, eventPoint) => {
+                        if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                            if (sameGesture(eventPoint))
+                                return; // Passive/exclusive transitions cannot rearm this press.
+                            if (eventPoint.state !== EventPoint.Pressed)
+                                return;
+                            const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                            const holder = assistantGesture;
+                            holder.current = original; // No QML notification before capture/cancellation.
+                            const proof = Session.assistant.beginManualControlInput(row, eventPoint, row.structure);
+                            if (holder.current === original && !original.closed)
+                                original.proof = proof; // An old callback cannot overwrite a newer grab.
+                        } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                            discardGesture(eventPoint);
+                        }
+                    }
+                    onCanceled: eventPoint => {
+                        if (sameGesture(eventPoint))
+                            discardGesture(eventPoint);
+                    }
+                    onTapped: eventPoint => {
+                        if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                            return;
+                        const original = assistantGesture.current;
+                        const proof = original.proof;
+                        original.closed = true;
+                        original.proof = null; // Consume BEFORE validation/action and any reentry.
+                        if (Session.assistant.completeManualControlInput(row, eventPoint, row.structure, proof))
+                            group.project.currentStructureIndex = row.index;
+                    }
                 }
 
                 EaComponents.TableViewLabel {
@@ -82,6 +123,9 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.structures : null
+                    editIndex: row.index
                     horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
@@ -108,18 +152,13 @@ EaElements.GroupBox {
 
             EaElements.SideBarButton {
                 objectName: "structures.load"
-                enabled: group.project !== null && group.project.canLoadStructure
+                enabled: group.project !== null && group.project.canLoadStructure &&
+                         group.webIntent === null && loadDialog.intent === null
                 fontIcon: "upload"
                 text: qsTr("Load structure from file")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webRequest = WebFiles.openFiles(".edi", false);
-                    } else {
-                        loadDialog.open();
-                    }
-                }
+                // Native and browser answers retain the same original owner.
+                onClicked: group.chooseStructure()
+
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
@@ -147,33 +186,65 @@ EaElements.GroupBox {
         }
     }
 
-    // This page's browser file request and the project it was made for: only its own answer is used, and only
-    // while that project is still open.
+    property var pickerLife: ({ alive: true })
+    Component.onDestruction: pickerLife.alive = false
     property int webRequest: 0
-    property var webRequestProject: null
+    property var webIntent: null
+    function chooseStructure() {
+        const life = pickerLife;
+        const originalProject = project;
+        if (!life.alive || project !== originalProject || Session.project !== originalProject) return false;
+        if (project === null || Session.project !== project || webIntent !== null || loadDialog.intent !== null || loadDialog.visible) return false;
+        const original = { project: project };
+        if (WebFiles.available) {
+            webIntent = original;
+            if (!life.alive || webIntent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            const request = WebFiles.openFiles(".edi,.cif", false);
+            if (!life.alive || webIntent !== original) return false;
+            if (request === 0 || project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            webRequest = request;
+        } else {
+            loadDialog.intent = original;
+            if (!life.alive || loadDialog.intent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { loadDialog.intent = null; return false; }
+            loadDialog.open();
+        }
+        return true;
+    }
+    function takeWebIntent(request) {
+        if (request !== webRequest || webIntent === null) return null;
+        const life = pickerLife;
+        const original = webIntent;
+        webRequest = 0;
+        if (!life.alive || webIntent !== original) return null;
+        webIntent = null; // Consume before any scientific callback or reentry.
+        if (!life.alive || webIntent !== null || project !== original.project || Session.project !== original.project) return null;
+        return original;
+    }
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (group.project !== null && group.project === group.webRequestProject)
-                group.project.loadStructure(files[0]);
+            const original = group.takeWebIntent(request);
+            if (original !== null && files.length === 1) original.project.loadStructure(files[0]);
         }
-        function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
-        function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
+        function onFailed(request) { group.takeWebIntent(request); }
+        function onCancelled(request) { group.takeWebIntent(request); }
     }
-
     FileDialog {
         id: loadDialog
-        title: qsTr("Load a structure from an .edi block file")
-        nameFilters: [qsTr("edi block files (*.edi)")]
-        onAccepted: group.project.loadStructure(selectedFile)
+        objectName: "structures.fileDialog"
+        property var intent: null
+        title: qsTr("Load a structure")
+        nameFilters: [qsTr("Structure files (*.edi *.cif)"), qsTr("edi block files (*.edi)"), qsTr("CIF files (*.cif)")]
+        onAccepted: {
+            const life = group.pickerLife;
+            const original = intent;
+            const file = selectedFile;
+            intent = null;
+            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+                original.project.loadStructure(file);
+        }
+        onRejected: intent = null
     }
 }

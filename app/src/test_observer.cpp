@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "test_observer.hpp"
+#include "edi/assistant_limits.hpp"
+#include <mutex>
+#include <array>
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -647,12 +650,32 @@ std::optional<int> refuse_test_observer(int argc, char* argv[]) {
     return std::nullopt;
 }
 
+namespace {
+std::mutex report_observation_mutex;
+struct ReportObservation {
+    quint64 events=0,limit=0,original=0,report=0,growth=0;
+    const char* boundary="before_growth";
+    bool capacity=false,fault_armed=false,fault_reached=false;
+    WorkReportFaultPoint fault=WorkReportFaultPoint::StageWrite;
+};
+ReportObservation report_observation;
+constexpr std::array<const char*,8> report_boundaries={"before_growth","after_growth","frozen","writer_handoff","before_encode","after_encode","terminal","released"};
+constexpr std::array<const char*,4> report_faults={"stage_write","before_atomic_publish","after_atomic_publish_readback","old_candidate_cleanup"};
+}
 std::optional<int> start_test_observer(const QStringList& arguments) {
     if (!enabled()) {
         std::fprintf(stderr, "edi_app: --test-observer is for system tests only (EDI_TEST_OBSERVERS=1 in a pytest run)\n");
         return 2;
     }
     const QString action = arguments.value(0);
+    if(action=="assistant-work-report-fault" && arguments.size()==2) {
+        std::lock_guard lock(report_observation_mutex);
+        for(unsigned i=0;i<report_faults.size();++i)if(arguments[1]==QLatin1StringView(report_faults[i])) {
+            report_observation.fault=static_cast<WorkReportFaultPoint>(i);
+            report_observation.fault_armed=true;return std::nullopt;
+        }
+        return 2;
+    }
     if (action == QLatin1String("scan-screen")) {
         screen_observer = true;
         edi::set_worker_file_observer(&file_completed);
@@ -718,4 +741,39 @@ void install_test_observer(QQmlApplicationEngine& engine) {
     QTimer::singleShot(500, o.window, [] { drive(o); });
 }
 
+void observe_work_report_boundary(const WorkReportTestView& view) noexcept {
+    if(!enabled())return;
+    try {
+        std::lock_guard lock(report_observation_mutex);
+        auto& sample=report_observation;
+        if(sample.events>=edi::assistant::Limits::stream_events){sample.capacity=true;return;}
+        ++sample.events;sample.boundary=report_boundaries.at(static_cast<unsigned>(view.boundary));
+        sample.limit=view.aggregate_limit;sample.original=view.original_reserved;
+        sample.report=view.report_reserved;sample.growth=view.requested_growth;
+        // QProcess exposes queued logical bytes, not all allocator/backing
+        // owners. Original native/transport inventory is not physically proved.
+        // Never turn these reservations or borrowed partial views into a whole
+        // simultaneous measurement or an apparently qualified aggregate peak.
+    }catch(...) { /* Diagnostic observation cannot affect ordinary work. */ }
+}
+QVariantMap work_report_test_observation() {
+    if(!enabled())return {{"enabled",false}};
+    std::lock_guard lock(report_observation_mutex);const auto& s=report_observation;
+    const QVariantMap missing{{"state","missing"},{"reason",s.capacity?"capacity":"not_observed"}};
+    return {{"enabled",true},{"events",QString::number(s.events)},{"last_boundary",s.boundary},
+        {"aggregate_limit",QString::number(s.limit)},{"original_reserved",QString::number(s.original)},
+        {"report_reserved",QString::number(s.report)},{"requested_growth",QString::number(s.growth)},
+        {"measurement_state","unavailable"},{"measurement_reason",s.capacity?"observer_capacity":"incomplete_owner_view"},
+        {"measured_aggregate_last",missing},{"measured_aggregate_peak",missing},{"measured_peak_boundary",missing},
+        {"roles",QVariantList{}},{"fault",QVariantMap{{"armed",s.fault_armed},
+            {"point",s.fault_armed||s.fault_reached?QVariant(report_faults.at(static_cast<unsigned>(s.fault))):QVariant()},
+            {"reached",s.fault_reached}}}};
+}
+bool work_report_test_fault(WorkReportFaultPoint point) noexcept {
+    if(!enabled())return false;
+    try {std::lock_guard lock(report_observation_mutex);auto& s=report_observation;
+        if(!s.fault_armed || s.fault!=point)return false;
+        s.fault_armed=false;s.fault_reached=true;return true;
+    }catch(...){return false;}
+}
 }  // namespace edi_app

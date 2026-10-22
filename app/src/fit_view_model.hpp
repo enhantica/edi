@@ -9,6 +9,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
 #include <memory>
+#include <functional>
 #include <optional>
 
 #include "edi/fit_job.hpp"
@@ -121,6 +122,9 @@ class FitViewModel : public QObject {
     ~FitViewModel() override;
 
     bool running() const { return running_; }
+    // Internal native adapter: actual worker admission is independent of UI publication.
+    bool nativeRunning() const noexcept { return job_ && job_->running(); }
+    void startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt = 0);
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
@@ -215,10 +219,12 @@ class FitViewModel : public QObject {
     void scanTextChanged();
     void etaChanged();
     void outOfDateChanged();
-    // A scan ended with its rows on disk (finished or stopped): the pop-up.
+    // A scan ended with its rows on disk (finished or stopped).
     void scanFinished();
-    // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
+    // A fit ended with a result the project now holds (finished, cancelled or stopped early).
     void finished();
+    // Only a manual fit requests automatic results presentation; explicit opening is separate.
+    void automaticResultsRequested();
     // A fit was refused or failed; the project is unchanged.
     void refused(const QString& message);
 
@@ -228,6 +234,20 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
+    void presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt);
+    void startImpl(std::uint64_t attempt);
+    friend class ProjectViewModel;
+    // Fixed correlation only: never a history of attempts or a scientific snapshot.
+    std::uint64_t beginAttempt() noexcept;
+    void invalidateFitUndo() noexcept { undo_attempt_ = history_attempt_ = 0; }
+    std::uint64_t attempt_serial_ = 0, latest_attempt_ = 0, submitted_attempt_ = 0;
+    std::uint64_t undo_attempt_ = 0, history_attempt_ = 0, finished_attempt_ = 0, native_attempt_ = 0;
+    bool presenting_ = false, submitted_single_joint_ = false;
+    friend class AssistantViewModel;
+    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
+    void discardNativePreparation(std::uint64_t token) noexcept;
+    std::uint64_t native_completion_serial_ = 0;
+    std::function<void(const edi::FitReport&, bool)> native_completion_;
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
     // A followed file's pattern, as its fit left it.
@@ -237,7 +257,7 @@ class FitViewModel : public QObject {
     void followLatest();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
-    void scanEnded(const edi::FitReport& report);
+    void scanEnded(const edi::FitReport& report, bool automatic_results);
     void setScanning(bool scanning);
     void setScanRefused(bool refused);
     void setContinuable(bool continuable);

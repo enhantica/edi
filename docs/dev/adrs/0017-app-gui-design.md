@@ -184,6 +184,10 @@ disabled** rather than left out, so the layout is final:
   profile)", whose label ran over its neighbours. Now `ParameterGrid` hides it and the other fields close
   up, a family row with no used field disappears, and the field stays in the Analysis table, where it can be
   fixed. Its value is unchanged and stays in the file.
+- **A missing peak family has no visible row.** Both the repeated profile-family rows and the
+  asymmetry row use the shared `ParameterGrid.fieldCount > 0` guard. That property already handles a
+  null `fields` model as zero, so initial loading and experiment replacement do not dereference a
+  missing model. Existing profile-used field selection, values and Analysis-table visibility are unchanged.
 - **Every field's title is set the same way, as the combo box's** (the owner, 2026-09-29): left-aligned,
   inset from the field's left edge by the base combo box's own content padding (read at run time from a base
   `ComboBox`, not a number of edi's; 0.75 font units in v0.9.1), as wide as the field less that inset, and
@@ -367,8 +371,13 @@ tint: the Experiments and Structures tables' current block and the parameter tab
 its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
 logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
 the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
-limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
-(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. This is the shared
+`EaComponents.ListView`/`ListViewDelegate` default, including ordinary consumers without an Edi wrapper.
+Its optional `currentRow` input supplies the backend presentation row without changing Qt currentIndex,
+selection, focus or scroll position. DataTable inherits it; TableRow is only a compatibility type. Neither
+adds a second bar or color override. The original ordinary hover remains unchanged for every row; only
+selected-specific fill/hover is removed. Ctrl/Shift multi-selection and its anchor remain genuine and use
+individual accent markers when several rows are selected. `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 
@@ -985,3 +994,669 @@ projects (the owner, 2026-10-13).
 | Keep singular loop titles (easydiffractionbeta's *Background*) | Rejected by the owner (idea 19): a loop names its rows, and the title carries their count. |
 | Leave unimplemented actions out until they work | Rejected (ideas 13, 17): the owner wants the final layout visible now. |
 | Fix `last` in gui-components | Deferred: the base is consumed unmodified (ADR-0015 §1); reported upstream as gui-components#55. |
+
+
+### Prepared native current-project save landing
+
+`Session.saveAs` / `ProjectViewModel.saveTo` remain the manual prior art. Native
+chosen-root saving uses their same native writer and ordinary reopen rounding
+contract, with preparation separated from commit. `PreparedSavedValues` resolves
+all original parameter/value/SU and correlation targets, preowns the existing
+computed publication/source state and saved path/timestamp before disk publication.
+After committed bytes are verified, its same-owner landing performs no allocation
+or callbacks. The displayed PVM/registry/parameter identities, fit result, Undo
+history, Session account/controller and conversation are retained. No replacement
+project is installed and no empty-session creation seam is misused.
+
+Session's exact original project/epoch guards clear fresh-result/example/read-only
+save-as flags only with that actual saved-state landing. Ordinary location and
+needsSaveAs notifications follow, with exact owner checks between synchronous
+observers. PVM saved-state/metadata/chart/text/report presentation follows the
+existing hooks, guarded after every observer; a user edit/replacement wins. The
+actual modified=false state is installed before notification, never reset after
+a later user edit. Native own-edit scope prevents this known persistence update
+from cancelling its own original call; unrelated ownership changes still retire
+currentness. A disk commit survives a failed or interrupted presentation as an
+explicit saved-but-unconfirmed outcome, without altering the replacement owner.
+
+
+### Parameter filter reset and visible row exposure
+
+ParametersGroup keeps its existing common filter model and actual manual inputs.
+A normal reset-filters ToolButton clears name/category/variability through its
+ordinary click handler, synchronizes the variability selector and returns the
+viewport to the beginning. A filtered current row is kept inside the viewport
+through ListView.positionViewAtIndex after the ordinary model update; no
+scientific field or parameter value is written by presentation navigation.
+The existing fixed-open Parameters/Fitting groups are not new collapsed groups.
+
+
+### Clean parameter text versus an actual draft
+
+Prior art: ParameterCell and ParameterField temporarily showed full editText by assigning text on focus. That removed the model binding, and an authoritative Analysis slider update could leave an old clean number which commit mistook for typed input on Tab/row change. Both forms now distinguish actual TextInput.textEdited from focus formatting/model publication. Clean focused text follows raw NumberText.full changes of the current model (even when its rounded display is identical); unfocused clean text uses the normal display binding. Clean blur never writes. IME composition is a genuine draft; refresh does not assign text over its preedit. Rounded unfocused display and SU/full-precision rules are unchanged.
+
+A real manual edit detaches only that draft and keeps its exact ParameterItem owner. Unrelated publication does not overwrite it. The same parameter's Analysis slider is disabled while its focused genuine draft is pending; Return/ordinary manual commit or explicit Escape resolves it, without forced blur/implicit draft discard. A recycled cell cannot apply the old draft to a different item. Common ValueField/TextCell were inspected: they do not perform the offending full-precision focus assignment and retain their existing display-comparison/manual commit rules.
+
+Assistant paced typing retains begin/allow/cancel authority: agent text is not a manual draft, only the actual prepared final commit can write, and cancellation restores the current authoritative model rather than a saved pre-slider value. A later genuine manual draft is never cleared by assistant cleanup. An actual InputMethod event joins the helper's existing genuine-manual takeover switch, preserving the same event/target and original cancellation cleanup. Assistant numeric typing remains its exact own key path. The existing native ParameterItem/editor/Undo/slider setter and calculation path remain unchanged. This correction changes input provenance/display synchronization, not scientific rounding, precision, validation or background/composition.
+
+
+### Focus-object text takeover
+
+Prior art: AssistantWidgetInput and AssistantViewModel installed window object filters for genuine manual takeover. Cocoa/IBus can deliver composition/commit and forwarded key events directly to QQuickWindow::focusObject (the active editor), bypassing a window filter. Both existing filters now observe application delivery but act only on their exact owned window or the current focus object for InputMethod/KeyPress/KeyRelease/ShortcutOverride. The request-wide VM covers helper continuation and inter-tool gaps; it is installed after the helper as before, so exact original request retirement/partial-draft cleanup precedes delivery of the same genuine event to its original receiver. InputMethodQuery, other controls/windows and idle requests are inert. A receiver deleted by genuine reentrant owner retirement is not dereferenced or retargeted.
+
+The filters are removed before helper/VM teardown and on action-window replacement. Focus is queried at delivery rather than retaining old editor pointers or a general event-routing map. Existing own-key injection guard, exact private mouse device/replay currentness, timers, numeric validation/Undo and deferred manual sidebar preservation remain. No synthetic-event blanket exemption, focus/property setter or scientific mutation is introduced. IME arriving during assistant partial input acquires genuine manual ownership after cancellation, rather than being reset as agent text; the ordinary parameter draft/Return/Escape rules remain the same.
+
+
+### Prepared terminal Return delivery
+
+Prior art: ParamTextField/TableViewParameter set focus=false on accepted Return; AssistantWidgetInput::key required focus after every press. Only an already prepared Value/ParameterFilter final Return may leave focus after its press. The initial active-focus and precommit ownership checks remain; ordinary typing/select-all retains postpress focus checks. The balancing release is delivered to the captured original surviving item in its original window, not a newly focused editor. Exact serial/request/target/window identity is checked after each synchronous delivery; cancellation, replacement or destruction cannot settle a newer operation. No refocus or second scientific commit is performed. Delivered input remains distinct from actual consumed/applied/published recorded edit and exact ParameterItem readback; the native completion conjunction is unchanged.
+
+
+### Checked navigation before scientific control lookup
+
+Prior art: real visible actions clicked an app-bar page tab and a generic named Main tab, then assumed delivery meant selection. WorkflowPage retains several named sidebars, and AbstractButton release/TabBar selection is an actual result, not a sendEvent guarantee. Page and exact workflow-owned Main tab are now skipped when already checked. A different tab still receives the same genuine pointer sequence; after the existing settling interval, the exact captured surviving target must be checked in its expected page/sidebar before filter or scientific lookup proceeds. A failed selection refuses at navigation, without typing or toggling science. No checked/currentIndex setter, refocus, retry, timing/device exception or normal-mode fallback is used. Original draft preflight/call/receipt/currentness/manual takeover and cancellation remain authoritative. This closes assumed navigation success and ambiguous same-name lookup; actual receiver/capture evidence remains necessary to diagnose a rejected physical click.
+
+
+Navigation diagnostics reuse edi.assistant.widget.lookup (warning threshold by default, enable debug explicitly) and the existing 256-record convention, now shared by the original tab-navigation request callbacks. Only page/Main navigation installs that sink. It records internal tab/owner identity, scene/clip geometry, checked/down/pressed before and after real mouse dispatch, the public window grabber and actual private-device filter disposition. No account/canonical/scientific text or arbitrary object executor is exposed. Omission is explicit; queries run only when debug is enabled. Logging failure cannot grant input, and enabled synchronous logger reentry can only reject an actually retired/replaced owner. These observations diagnose the physical click; they are not a claim that assumed-selection checks repair its unknown receiver/capture cause.
+
+
+### Navigation diagnostic removal
+
+The optional navigation sink introduced above is removed entirely after its enabled logging continuation exposed target/currentness reentry. Request has no navigation callback, helpers/ownership filters have no log callback or decision wrapper, NativeWidget has no navigation counters, and no callback retention allowance or shared category declaration remains. The earlier parameter-lookup category/diagnostics stay unchanged. No replacement diagnostic framework or application test executor is added; ordinary actor observations can trace real tab signals/geometry externally.
+
+The actual behavior stays: scope Main to the requested workflow, skip page/Main when already checked, use genuine input when different and require the captured expected selection before scientific control lookup. No direct selection assignment, extra click/retry or timing/device exemption. The original release sequence stamp is captured before dispatch so even existing synchronous button handlers cannot clear a genuinely newer held sequence. This is independent of optional logging. The physical Extra-to-Main failure remains unproved pending actual event evidence; an earlier precise refusal is not success.
+
+
+### Relations through the existing human row controls
+
+The first implementation is AliasesGroup/ConstraintsGroup, their original
+AliasListModel/ConstraintListModel setters and ProjectEditor.apply_relation_edit
+(ADR-0024). The duplicate RelationAppendGroup, its registration/insertion and
+appendRelationForm entrance are removed. There is no extra Apply or hidden
+staging model. The normal native add_relations tool keeps its complete validated
+batch and one Undo; Show actions is a sequence of the same real human edits.
+
+The visible route conditionally selects Analysis/Extra, expands the original
+category header and reveals its exact current row through real wheel input.
+Alias append, ID commit, parameter choice, constraint append, ID/expression
+commit and activation each use their original model/editor. Existing parameter
+popups use real searchable keyboard input or their finite ordinary choices.
+An exact original action/member/value receipt is installed immediately before
+the final genuine event. No direct model edit decorates a pointer action, no
+synthetic clicked/accepted signal is emitted, and no widget index/scroll/group
+state is assigned by the assistant. TextCell shares the original numeric editor's
+paced draft/commit/cancel ownership; ordinary manual blur/Return still uses the
+same model setter. Existing manual drafts and IME are preserved.
+
+A newly appended manual constraint starts disabled, and its ID/expression cells
+remain editable while disabled. This applies equally to humans and assistant
+input: a complete declaration is entered before the existing toggle activates
+it through the actual validator. Existing loaded enabled flags are unchanged.
+
+Each real change retains its own normal recorded Undo. Current member identity,
+actual model values and the original request/account/owner/window are checked
+between steps; receipt refresh follows each own applied edit. Stop, takeover,
+refusal or replacement preserves completed changes and answers the original
+call once. Outcomes distinguish complete edited from partial/refused, expose
+atomic:false and actual steps_completed, and retain uncertainty rather than
+claiming unchanged science after a failed publication. These steps are not an
+isolated trial, automatic rollback or a single-Undo transaction. Single-line
+editor spellings and existing resource/deadline/viewport limits may refuse
+before or during the sequence; never silently use normal mode instead.
+
+
+### Original-request manual input and ordinary parameter reveal
+
+The request-wide observation extends the existing helper-active manual takeover: while an admitted Show actions request is current, genuine input in its current workflow's manual controls retires the original request even before its first mutable tool. Composer typing, unrelated windows, queries and exact helper-owned device events remain outside this authority. Original receiver/event delivery is preserved; no focus, text or scientific value is assigned by this observation.
+
+Structure/Experiment numeric input first matches the exact current ParameterItem in the current Main tier, including controls outside the viewport. It expands only the actual owning CategoryGroup using its existing title button, and delivers genuine wheel input to the existing sidebar viewport until the exact field is usable. Checked page/Main tabs are reused. The private action allows at most 64 wheel steps, each one ordinary 120-unit wheel detent at the existing viewport's left gutter (outside fields/combo boxes): finite input-work bounds, not scientific thresholds, declared in source217 author.py/refine.py. No direct contentY/index/checked/model write is an automation route. A missing, disabled or unchanged viewport remains an honest refusal. Analysis's existing real reset/filter/list route is unchanged.
+
+A real manual takeover before the turn/start ACK retires native authority immediately and uses the original existing revoke deadline and once-only interrupt flag when that same turn ID arrives. It does not infer a turn ID or disconnect a healthy account. Request-input identity does not construct scientific fingerprints: cancellation grants no write authority; actual mutable operations retain their full native_current checks. Instrument-category routing covers existing instrument fields rather than one wavelength spelling.
+
+
+### Genuine pointer-handler actions and per-recipient private input
+
+The existing ChartToolButton and Structure/Experiment/Analysis row TapHandlers own real normal actions before optional Qt item-event delivery. Each now passes its actual public QEventPoint and control through the same original-request manual retirement door at its real passive/exclusive grab, then checks again before its unchanged clicked/selection action. This is not hit testing, a provider selector or a second executor. Ordinary disconnected and WASM manual actions remain independent of native authentication. Composer/other-window/query exclusions and whole-request original identity still apply. Status/results and About dialog handlers outside the current manual workflow do not become scientific-control input merely because they are taps.
+
+Private input recognition grants no recipient permission. Existing application-lifetime device/window/sequence/stamp ownership is checked at every window/item event recipient and again for actual handler grab/release points. A current window check cannot authorize later direct/cloned item delivery after retirement, replacement or helper destruction. Stale private input is consumed rather than reclassified as manual. Stable scene coordinates preserve the original outside balancing-release exception when Qt localizes an item event; the exact deferred cleanup identity remains separately owned. No event-pointer map, grace window, blanket synthetic exemption or fabricated input is introduced.
+
+
+### Original gesture ownership through handler completion
+
+The prior source221 ChartToolButton and Structure/Experiment/Analysis handlers discarded grab refusal and called cancellation again at tap. Each existing handler now latches its actual Qt point and an opaque original-owner proof before synchronous grab retirement. Passive/exclusive transitions for the same press do not rearm it. A rejected grab stays rejected; tap consumes the proof once, validates the same original control, row/action owner, selected structure/experiment, project/window/helper and request/account identities, then runs the unchanged action. Tap never starts new cancellation. Newer owner/request admission, canceled/ungrabbed points, retired helper/window and replaced/recycled rows cannot turn an old press into a new action.
+
+The proof retains only fixed weak QObject/record identities and the bounded original thread identifier, not project data, Worker ownership or a provider payload. It is local to the actual existing handler gesture, with no global map, timer, synthetic exemption or action executor. Its native one-use latch also rejects duplicate final calls. The fixed QML JavaScript holder installs its slot before cancellation without publishing a QML property change, and updates it only if it is still the same slot, so reentrant B cannot be overwritten by A's return. Cancel/ungrab discards the matching proof while retaining only its last physical point keys, so another grab transition cannot rearm that canceled press; a later independent ordinary gesture works while disconnected or in WASM. The exact private point still uses the existing IE2 original window/sequence/stamp predicate at grab and final delivery. No scientific editing, manual event, focus or geometry is synthesized or changed by this ownership check.
+
+
+## Shared typed CW import and visible input
+
+Prior art: Project/GetStartedGroup's Create/Open and ProjectDescriptionDialog,
+the actual create_cwl_project typed reader/Worker (ADR-0037), and the existing
+real pointer/keyboard sequencer. Import CIF and CW measurement is an additional
+ordinary manual workflow; it does not change OS project or structure loaders.
+The same common form supports no current project and the scientifically empty
+current owner. Its Inputs/Instrument/Background/Exclusions/Initial values tabs
+contain genuine source/profile ComboBoxes, text/numeric fields, a selected-row
+editor with Add/Remove and one Apply. All three arrays retain the actual native
+256-row bounds, including zero exclusions/initial parameters and at least two
+background anchors. Domain/physics validation belongs to the existing parser
+and native reader, not a new GUI model. Staging and blur do not edit science.
+
+Manual file selection uses the existing immutable selected-file picker and its
+owner token. Cancel/error does not grant a path, replace a project or submit a
+recipe. Form Close/reject/aboutToHide revokes the exact original authority before
+exit animation. Never-opened token retirement consumes its exact ID without
+waiting for an impossible closed signal. Pending newer file selections/forms
+remain separate; reentrant reset/Add/Remove/load-row operations stop before
+changing another intent. Nonadopted current failures retain real retry authority;
+retired/cancelled owners require reopening, and actual adoption cannot retry.
+
+The assistant's visible create action uses these same widgets and actual Apply,
+with the original once-owned RPC, account, selected-byte and Session proof.
+Project/Home navigation and already-selected tabs use ordinary real controls;
+no direct currentIndex, field setter or scientific fallback is called by the
+assistant. Each staged row is checked against its actual section/count/selection,
+and the final form's complete typed recipe/source IDs must equal the request.
+A single disabled passive pointer sits in a root sibling layer above Overlay,
+with scene-coordinate mapping; it neither raises application content nor
+intercepts input or creates a second pointer. ComboBox choices use actual
+pointer opening and keyboard selection; their final Return balances only its
+original surviving target. A field's canceled partial agent text restores its
+view-only original draft before the same genuine manual event is delivered.
+
+The original request is retired for helper-active and inter-step manual input,
+including the exact no-project popup. Manual takeover preserves target geometry
+until that event returns; old projection changes are queued and exact-ID scoped.
+Non-takeover retirement closes/consumes only the original form, including before
+open/capture finishes. Cleanup balances the original helper before terminal
+external QML cleanup and cannot resume against a reentrant newer operation.
+One existing fixed total deadline remains; actual delivered characters refresh
+idle activity without extending that total or exposing their contents.
+
+
+### Background through its original row controls
+
+BackgroundGroup's original Add, ID/position/intensity rows, parameter context
+menu and Remove are the manual and visible entrances (ADR-0043). The duplicate
+background setup form is removed; Add creates the ordinary default editable row
+through the same closed editor and recorded Undo. Native normal mode retains
+one strict operation; genuine visible actions prevalidate the final request and
+perform separately prearmed real human edits, retaining each actual Undo and
+complete/partial outcome. Exact row/bank/source/request identity, manual drafts,
+Stop and replacement are checked between events. The existing private mouse
+owner balances the actual button, including right-button retirement/deferred
+cleanup; the exact parameter menu is dismissed by real Escape. No control state
+is assigned to manufacture visibility, activation or a scientific result.
+Background discovery uses the same declared Basic-tier ancestry as the original
+parameter and creation selectors. Both sidebar tiers instantiate category content,
+including a hidden Extras projection; that retained group is not a second Main
+editor. Other-tier ancestors are excluded before the existing ambiguity guard,
+without choosing the first visible group or requiring an already expanded group.
+The same selector serves standalone and compound background edits; a missing or
+ambiguous eligible group still refuses, with all original member/input proofs.
+
+
+### Shared text draft and ordinary alias defaults
+
+TextCell's first manual table entrances own the same draft rules as its paced
+assistant input. A clean display binding is removed with RestoreNone when real
+text/IME begins, without assigning over preedit. A draft captures its original
+project/delegate/model/index/control context; value-role publication cannot
+retarget or erase it. Each actual user text/preedit event replaces its revision
+record. Commit is single-entry and checks that original record/lifetime before
+any post-signal diagnostic or cleanup. A newer draft, IME, owner or member
+leaves the old continuation with no presentation authority. Cleanup releases
+only its own in-progress latch; clean formatting resumes through the binding
+only when there is no draft. Refused/no-op/Return/blur use the original model
+setter and formatting. Explicit human Escape can discard an obsolete draft;
+late assistant cleanup cannot discard newer manual input.
+
+The original Alias Add uses the actual offered independent parameter list. It
+chooses the first target with no alias, otherwise the first offered target: more
+than one alias for a real parameter is lawful. With no offered target, the
+ordinary button is disabled and the model refuses before admitting an Edit or
+Undo. All successful operations retain the same validator and recorded Undo;
+no alternate scientific executor or parallel form is added.
+
+
+### Original structure and experiment file entrances
+
+The first Structure Load button and FileDialog now accept native .edi and
+supported single-structure .cif. Native blocks keep the strict existing schema
+loader; CIF calls the already existing structure_from_edi_text reader through
+the same file reader. No alternate parser, conversion or scientific setup form
+is introduced. The ordinary load preowns its structural Undo before the same
+closed addition and retains actual applied state through presentation failure.
+It adds to the original project, preserving its identity/metadata/settings/path.
+
+Original structure, experiment-block and measured-data choosers capture the
+project and exact data target when opened. Each native/browser answer consumes
+its one original intent before invoking the same loader; replacement/duplicate
+answers cannot target a new owner or clear a newer chooser. Existing browser
+request IDs and native picker behavior are preserved. The existing FileDialog
+instances have stable semantic identities for genuine subsequent input; these
+changes do not claim native macOS-panel automation or a completed visible
+creation route. The duplicate import-window removal and complete original
+creation/field sequence remain a separate connected continuation.
+
+The existing browser chooser's synchronous cancellation also retains its exact
+receiver/request serial. If a callback deletes it or admits a new request, the
+old begin refuses with zero; all existing callers stop before further member or
+filesystem access. This preserves a newer browser picker rather than overwriting
+its active ID. A never-opened original QML intent is consumed on refusal, so it
+cannot block the next ordinary Load. This changes no file grant or science.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.
+
+
+### Ordered assistant parameter arrays through the original manual controls
+
+The first implementation is the existing NativeWidget scalar parameter route: ParameterItem, the ProjectViewModel final-event receipt, ParametersGroup/ParameterCell and the original AssistantWidgetInput. The existing relation/background sequences supply the factual partial-result convention. Parameter/free arrays extend that same route with one bounded ordered cursor; there is no batch form, second editor or native atomic edit behind decorative input.
+
+The whole native array validator and initial original-control mapping run before visibility or input. An initially invalid/unmapped/manual-draft request refuses before the first scientific change. Instrument and Cell fields retain their original selected-owner routes; Analysis is limited to parameters actually represented by its original table, including the current scan scope. No hidden selection or universal Analysis fallback is implied.
+
+Every continuation retains its immutable entry identity, original owner/receipt and actual ParameterItem/native member. Controls are located through fresh membership and geometry after original tab, Main-sidebar, group, scroll and filter actions. Equal entries settle before those actions. A changed entry uses the ordinary prepared final event and native edit/Undo; only confirmed consumed/applied/published readback advances its cursor. Stop, takeover, refusal or retirement cannot redirect an old callback or its cleanup to the next entry. No rollback, retry or silent mode switch is provided.
+
+For visible parameter/free arrays, steps_completed is the settled requested-entry prefix including no-ops; it is not the Undo count. Each actual changed control has its ordinary Undo. Complete results say atomic:false and unchanged or edited; interruptions preserve the factual partial or uncertain outcome without counting an unconfirmed current entry as settled. Normal mode retains the complete atomic native edit and one Undo. Original source/fit/calculation/IME/manual-draft and objective-wide sidebar behavior remain authoritative.
+
+
+### Current original parameter binding before visible admission
+
+A selected block name and a cached QObject path are not a live control binding. The original ProjectViewModel's sole ParameterRegistry current maps/items and original model parameter roles are authoritative; deferred-deletion children are never lookup candidates. Instrument additionally requires its original selected native experiment/model and usedByProfile visibility role, including the retained-free-but-inert case. Cell requires the actual selected native structure and exact six Cell model/member pairs. Analysis requires the actual current table parameter role, preserving its scan scope. No fallback, profile/selection change or extra input is inferred.
+
+The same pinned registry/model/ParameterItem/native member/path is checked before scalar/array no-op, each currentness continuation and the genuine final event/readback. The original creation child's scalar parameter path uses this same entrance. An initially unavailable later array entry refuses the whole request before earlier inputs; a later retired binding stops with the original factual partial/uncertain result. Original scalar result shape, atomic normal mode, per-change visible Undo, old-owner once/ACK and retained callback budgets are preserved. Added weak identities are part of the existing typed frame size, and scalar path/callback backing uses the same prospective and retired-frame accounting as arrays.
+
+
+### Original project-name validator syntax
+
+The original Create project dialog accepts letters, digits, spaces and Unicode names while excluding slash, backslash and NUL. Its RegularExpressionValidator uses the PCRE-supported two-digit hexadecimal NUL escape (`\x00`), preserving the existing character class, nonempty constraint and original input/acceptance/location-preview behavior. A JavaScript-style Unicode escape is not assumed valid in QRegularExpression's Perl-compatible pattern syntax. This correction belongs to the existing shared project-description dialog; no second creation form, metadata or native Save rule changes.
+
+
+### Individual scientific app actions
+
+The first implementation is ProjectViewModel's Structure Load, Create experiment, enabled Experiment Type selectors and Load data into a bound ExperimentViewModel. Native `load_structure`, `create_experiment`, `set_experiment_type` and `load_data` expose those same doors in normal and Show actions delivery. File authority is an immutable admitted ID; member authority is the actual current PVM/native member, with a result pin on the original input receipt before public model notifications. Replacement or automatic naming returns the actual new dataset ID. No provider path, generic QObject scripting, new importer or recovery scheduler is introduced.
+
+Existing compound creation keeps its empty guard, typed recipe, normal atomic transaction/one Undo and visible per-control partial behavior. Shared app-owned snapshot IO and original visible load/current-member steps prevent scientific-reader divergence. The new calls preserve existing scientific members/metadata/explicit choices and each ordinary Undo. No-op type settles before navigation or input. Already measured targets refuse replacement. Native refusal uses closed app-owned action identifiers, never raw exception text. An actual applied input alone may advance its scientific/raw-data disclosure; selected files, project/account, skills and capabilities must still match the original approval. Late/retired callbacks preserve actual partial facts and cannot authorize or answer a newer owner. Normal mode requires no widget geometry. Show actions uses actual group/member controls; file loading alone presents the original Load pointer/click cue without dispatched input or a picker, then enters the same validated native file operation. Pending/retired callback owners remain charged until actual release. Native/compiler/input delivery and dedicated-package qualification are separate evidence.
+
+
+The original type selector rebuilds settings for the selected type; wavelength or linked-phase scales can be reset. Successful actual replacement reports the fixed `experiment_type_settings_reinitialized` diagnostic and current member/type/links. An equal-type no-op does not report a reset. Guidance requires inspection and reapplication of explicit supported values through the original parameter controls, without pretending this action preserves all experiment configuration or silently reconstructing it.
+
+
+Original file/creation inputs now receive the closed Edit's typed applied result directly through LivePreview before any Applied trace or edited/publication hook. No post-preview row lookup supplies that identity. A later failure retains actual applied/retired/Undo facts without pretending publication completed. Individual-action terminal preparation reuses actual phase IDs and bounds unknown result/diagnostic IDs by their full escaped JSON spelling, including the nested response text and app schema/code/refusal variants. Existing caps, lawful names and strict terminal checks remain unchanged. Only the four new tool declarations use the exact public canonical schema spelling; old tool declarations and requested-versus-advertised equality remain exact.
+
+
+### Individual-action parsed identities are admitted before Edit
+
+The original Structure/data reader result and original Create/type names and phase links must fit the existing assistant result identifier bound before an individual assistant input reaches Edit or Undo publication. A prearmed individual input opts into this check and keeps a fixed refusal latch; manual and compound readers keep their existing behavior. Structure Load checks its already parsed native name; Load data checks its already parsed replacement after normal name-collision handling; Create/type checks the exact generated names/links. There is one original parser and no rename, truncation, larger cap or rollback. Unsupported representation returns the existing closed unsupported_input/file_id (or project/experiment) refusal with no scientific edit, preserving the original supplied bytes and ordinary manual name domain. Final-result and encoded-terminal checks remain defense in depth; callback retirement never upgrades the refusal to a write or authorizes another owner.
+
+
+### Approved file load presentation and original source identity
+
+The original Structure and Experiment groups retain their genuine manual system/browser
+file choosers and owner-bound accepted/rejected handlers. Their assistant-only fallback
+configuration, picker token, location focus and breadcrumb/path typing are removed.
+For already approved attachments, Show actions reveals the existing Load control and
+shows the shared pointer/press cue without delivering any mouse, key or clicked event.
+It then uses the original prearmed PVM file operation/Undo; other control input is unchanged.
+
+Original attachment and actually opened directory-child FD proofs are retained by selected
+ID/collection generation under existing inclusive retention. The original URL/name remains
+the source identity. Physical spelling, object, approved digest, account/project/input and
+member authority must remain current; removal, Clear and retired callbacks do not retarget
+an old proof. Chip consumption preserves canonical selected authority. Missing/changed or
+unavailable origins refuse, never authorize a replacement path or temporary fallback.
+
+Structure parsing consumes immutable admitted bytes. The existing SDK measurement parser
+is path-only, so its approved-byte stage stays internal; the common core plain-data assembly
+now accepts a separate original source identity for naming. Manual loading delegates with
+the same path for both roles. The normal compound atomic worker stage/transaction is kept,
+with original-origin verification before worker admission. No second parser, recovery/import
+scheduler, OS automation or new scientific editor is introduced. Native proof is separate.
+
+### Passive visible-creation refusal observations
+
+The existing optional `edi.assistant.widget.lookup` debug category also records the original visible-creation refusal boundary. Fixed source-branch labels, plan index/input kind and scalar delivery/target-survival/consumed/applied/published facts distinguish a failed completion from a later validation or callback refusal. Completed edits remain factual applied latches, not cursor positions. No dynamic control name, value, path, packet or exception text is logged; no control predicate or QML getter is repeated. The existing terminal guard precedes observation, and the original weak receiver/run/index and retirement state are rechecked after any synchronous message-handler reentry before continuing. Default-off logging adds no control, recovery, timeout, pacing or scientific behavior. Before an original background child is erased, the same optional observer records only standard compile-time caller line/column, its retained step/group presence and original background/parameter receipt presence and consumed/applied/published scalars. Missing delivery/target facts remain unavailable. No filename/function, control getter or model traversal is added. The original child/parent/call/receipt, helper/group and phase identities are fenced after synchronous message-handler reentry, so observation cannot continue old cleanup through a replacement. These coordinates require the exact compiled source bond; they identify the refusing boundary, not an inferred underlying cause.
+
+### Declared text-control completion contracts
+
+Visible creation uses captureless local predicates in its existing entry point to derive the original three text `CreationAction` cases and match their canonical members. Both the initial no-write shortcut and final completion use the same canonical comparison; a QML value/draft cannot manufacture a no-op. Final-key preparation still occurs at its original time and uses the same expected kind/member/field/text/number contract. Completion uses the ORIGINAL input.expected and requires consumed/applied/published plus membership in the same live Session/PVM project; it never rebuilds or selects a replacement row. Canonical experiment names use non-owning UTF views and excluded-region bounds use exact equality to the already prepared number, without presentation rounding, spelling normalization, new parsing grammar or tolerance. The numeric suffix/value conversions are the existing control mapping; a string view avoids a temporary suffix allocation. `Kind::FormText` keeps genuine TextField/TextArea `text`. These fixed local predicates add no callback capture, retained state, public API or allocation. Original delivery/target survival, currentness/source proofs, typing/final-key behavior, Undo/once/refusal facts and all other control kinds remain authoritative.
+
+
+### Per-control receipt retirement in visible edit sequences
+
+The original relation and background sequences keep actual completed edits in
+`completed_steps`, with their ordinary Undo and partial outcomes. Before starting
+each subsequent real control request, they release the preceding control's
+relation/background/parameter receipt. A helper that stops before final-event
+preparation therefore has no consumed/applied receipt for that new control; it
+cannot recount the previous edit or use its publication as evidence. Preparation
+still installs the exact new action/member/value receipt immediately before the
+genuine final event. A new applied but unconfirmed edit remains factual even if
+delivery, publication or readback fails. No-op checks, currentness, actual model
+readback, input pacing, once-only completion and normal atomic edits are unchanged.
+
+
+### Passive select-all failure boundary
+
+The existing default-off `edi.assistant.widget.lookup` category can record one
+failed original Text/Select input boundary. It reports only a source line and
+the already evaluated binding/window/request/target/keyboard-ownership and
+post-event identity booleans; unreached operands remain unavailable. No field,
+text, path, object/pointer, packet, exception or scientific data is logged, and
+no getter or predicate is repeated for observation. The original key event and
+injection-cleanup scope finishes before logging. Captured weak receiver and
+exact request/serial/window/target fences follow synchronous message-handler
+reentry before any old continuation; no replacement is adopted. The category
+is the same shared app-private object, with no public API or new logging knob.
+Missing shortcut bindings and key failures are mutually exclusive record sites.
+Input delivery, returns, focus, draft/IME/currentness, once/Undo/Stop and native
+scientific receipts are unchanged. This observation identifies a boundary; it
+does not attribute a focus failure or authorize a retry or forced focus.
+
+### Visible background naming and exact grouped Free actions
+
+Prior art is BackgroundGroup's existing Ids from positions button and Analysis
+ParametersGroup/FreeHeaderMenu, backed by ProjectViewModel.namePointsByPosition
+and setParametersFree. Compound initialization enters every requested position,
+intensity and explicit initial-parameter value before invoking that naming button
+once. Literal background parameter paths therefore resolve against their original
+ordinal-ID members within the same request, including already-equal no-ops;
+position-derived IDs are assigned only after those operands are consumed. Individual background
+edits still honor the explicit original anchor ID. Both genuine native buttons
+now accept a prepared exact-member receipt at their existing PVM entry point;
+manual actions remain those same methods. Actual applied state is pinned before
+LivePreview notification, with original Undo and publication facts retained.
+
+The Analysis category picker uses the same matches_group predicate as filtering
+and menu counts, choosing the smallest offered group; cell rows stay unfiltered.
+Rows outside the viewport are reached by actual wheel input. The original reset is used only for conflicting name or variability filters;
+a suitable category persists across consecutive requested rows, with no stale
+presentation restoration or full-path typing. Group Free/Fixed is available in
+all categories only when every eligible displayed row is exactly one original
+requested member of the same consecutive uniform category block. Subsets and
+mixed flags use their requested row checkboxes. Read-only/dependent refusal, owner,
+source, generation, input/Stop and exact native receipts remain authoritative.
+
+Prepared member vectors are admitted before allocation and counted while original
+callbacks retain their frames. New input closure targets use their actual sizeof
+roles, including predecessor/new-request overlap; no capacity change is made.
+An applied group is one ordinary Undo, while completed parameter entries and
+uncertain partial facts retain their original result meaning. No decorative
+click, direct follow-up setter or general input engine is added.
+
+
+### Explicit background naming and Analysis flag controls
+
+The existing edit_background tool also accepts explicit operation=name_from_positions with only purpose, experiment and operation. It names the whole current measured line-segment table through the original namePointsByPosition receipt/action and ordinary Undo in both modes. Point add/update/remove retain their exact existing ID/value/free contracts; no naming is inferred from future calls. An unchanged generated ID set needs neither input nor Undo. Model/member identity, source/currentness and original applied/published facts remain authoritative through callbacks. The existing tool count is unchanged; its closed input schema distinguishes the whole-table operation from point operations.
+
+A requested background free flag selects the original Analysis Background category/row checkbox after its own point/position/intensity controls. It no longer opens an Experiment parameter context menu or depends on that popup's keyboard ownership. A multi-row free request can use the existing header only for the exact displayed eligible uniformly requested set; partial/no-op prefixes and the original prepared members, consumed/applied/published receipt and per-change Undo remain factual. Native/manual input helper semantics and manual menus are unchanged. New callback/frame owners stay in the existing inclusive weak-frame accounting, including old/new delivery overlap.
+
+For chosen new backgrounds the strategy remains three points. Explicit user counts, positions, intensities, free flags and initial parameter values remain exact. Compound initial values still resolve against original IDs before its one existing names action. Standalone guidance explicitly requests naming once, inspects the actual resulting IDs, then requests the intended Analysis free set; an individual free flag is honored within its own call. Neither background scientific adequacy nor the specific observed cell/coordinate refusal actor is inferred from source checks. Existing canonical ParameterItem/native member/read-only/dependence admission is unchanged; absent or unmapped requested controls refuse rather than invent a material-prefixed path.
+
+The common background preparation role also covers the original position-ID formatter's transient spelling domain before its final unchanged ID-length refusal: fixed double integral digits/sign/decimal, up to 15 decimal places from the existing 16 rounds, and its size_t ordinal suffix/NUL. This follows position_point_ids itself; it is not extra general headroom or a larger accepted ID/point limit. A generated oversized ID refuses before mutation. Actual original IDs and both source/derived metadata stay within the original output limits.
+
+
+### Default new-point identities before the original IDs action
+
+The existing edit_background Add permits omission of id: the exact selected experiment's original background_append_input supplies the ordinary Add identity. Explicit custom Add IDs remain exact; update/remove still name actual existing IDs. Normal preparation and visible Add use that same original helper, not an assistant generator or a later-call guess. Successful non-remove point completion exposes the actual background_id through the existing closed result projection, whose original maximum preparation covers its bounded escaped spelling before mutation. Refusal, partial, removal and whole-table naming do not invent a final point identity.
+
+The default delegated plan adds chosen positions/intensities with id omitted and free=false, invokes the existing whole-table IDs-from-positions action once, inspects those actual IDs, then submits the complete requested eligible Background flags together through the existing Analysis header. An explicit caller free=true/custom ID/value remains honored within its own call. The compound schema already has position/intensity rows without ID fields; its visible child keeps the actual ordinary Add ID instead of assigning a synthetic ordinal, and its normal candidate uses that same original helper and original background_point_ids action once after its explicit initial values. Explicit initial_parameters remain before the original names action and retain their original default-ID meaning. No schema relaxation for update/remove, silent custom rename, generator, new operation, allocator, control engine, extra scientific staging or resource limit is introduced. Original native validation, dependent/member protections, input/once/Undo/partial/currentness and OnlyStop remain authoritative.
+
+### Ordinary parameter methods with visible cues
+
+The first scientific edit owners are `ParameterItem::setValue`/`setFree`, `ProjectViewModel::assign_parameter_value`/`assign_parameter_free` and the original `FreeHeaderMenu.apply` → `ProjectViewModel::setParametersFree` action. Assistant normal atomic edits retain `applyRecordedEdit`; visible parameter/free edits navigate the original category/rows and use the existing visual-only cue, then call those ordinary methods under the existing exact prepared receipt. They do not maintain a second scientific keyboard/focus/draft mutation protocol. The receipt must be consumed, applied and published and the same canonical member must hold the requested value/flag. No-op, whole-request validation, current-owner/manual-edit/Stop fences, settled-prefix/uncertain facts and ordinary per-change Undo remain unchanged.
+
+Complete uniform requested eligible groups still open the original Free-column menu and cue its actual Free/Fixed choice. Its existing `apply` action supplies the displayed members and closes the menu; the prepared exact-member receipt refuses a different set. The original menu instance has a stable object name for this existing action boundary. Subsets use their original row cue and setter, never a broader group. Narrow name/variability filters are conflicting even when they expose the first requested row: clear them through the original reset before category presentation, while retaining a suitable category and unfiltered unit-cell rows. The same value/free boundary covers original background intensity/free edits and compound parameter children; Add/position/explicit-ID/Remove/Auto IDs, relation controls and fit keep their original actions. This changes no public scientific schema, physical/symmetry validation, source authority, allowance, renderer or execution engine. Exact owner failure actors and rendered behavior require genuine runtime qualification; source proves the competing input path and narrow-filter shortcut, not a particular macOS focus event.
+
+Menu-close cleanup is best effort under the original weak receiver/current-entry/menu guards. Its scope-guard callback is explicitly noexcept and contains both fallible currentness encoding and the original menu close invocation; cleanup exceptions never replace the original action/failure, terminate during unwinding or establish scientific success. Exact input release and own-edit release retain their existing noexcept, original-owner semantics.
+
+The existing default-off widget.lookup diagnostic also observes the original standalone parameter refusal entrance before cleanup. It emits only captured caller line/column, closed set_parameters/set_free tool label, original entry/completed-prefix and retained input presence/consumed/applied/published scalars; absent input values remain -1. It queries no UI/filter/model for logging and carries no request payload, IDs, paths, values or exception text. Original receiver/State/run/entry/input/call/owner-generation facts are checked after the synchronous message handler before old refusal continues. Logging failure preserves the original refusal; replacement or newly settled work is never cleaned up through the old observation. No result, validator, input, pacing, allowance or invocation is changed.
+
+
+### Native DataTable row reveal
+
+The ordinary parameter selection's positionViewAtIndex(..., ListView.Contain) is now owned by DataTable.revealRow and reused by original parameter, background, relation and creation row reveals. Pending native layout is resolved around positioning; no selection, filter, draft or scientific value is assigned. An already-created clipped control reveals only its actual delegate in that same table; an actual table header uses its native positionViewAtBeginning instead. Append/footer controls outside a table and collapsed groups/outer sidebar viewports retain their original distinct reveal/input behavior. A row reveal need not move contentY and dispatches no synthetic wheel; actual exposed control, original native member/currentness, visual cue and prepared ordinary app receipt still determine success. Receiver/run/member proofs are rechecked after synchronous layout callbacks; missing/replaced/unexposed controls refuse honestly. Existing continuation timing/bounds, OnlyStop, Undo/partial facts and resource ownership remain. The actual624 refusal identified only the old scroll-completion disjunction, not a specific failed wheel or destroyed table; this class correction makes no rendered/native pass claim.
+
+
+### Ordinary structure actions and original controls
+
+The existing Structures Create/name, SpaceGroup setters, AtomSiteListModel append/text/remove and AtomSiteAdpListModel type setter are also the assistant's finite structure actions. Normal and Show actions call those same app methods. Show actions first selects/reveals the exact original structure/control and gives the existing visual-only cue, without a second scientific key/click writer. Actual prepared consumed/applied/published receipts and original current-member checks decide the result. Stored canonical no-ops occur before navigation/cue/setter/Undo. Ordinary Create keeps its one original initial atom: strategy updates it for the first target and appends only later needed atoms. It does not copy the factory, generate a CIF, delete a placeholder implicitly or invent scientific defaults. Numeric cell/site/ADP/free editing remains the existing parameter actions and validation. Existing manual Undo semantics remain; no new universal undo/atomic multi-action claim is made.
+
+
+### Prepared Create entry and normal individual page follow
+
+Original createStructure, like createExperiment, enters a matched prearmed CreationAction only at apply_creation_control. It must not call editReadinessRefusal first while its own unconsumed input is deliberately installed. The existing exact kind/row/field/text/number and one-shot match then scopes widget_input_executing_ around the original applyEdit, whose retired/nested-edit/pending-dataset/failed-publication readiness guards remain unchanged. Manual calls without a prepared input use the same ordinary applyEdit readiness check. A competing or consumed input cannot enter this operation; no global pending-input exception is added.
+
+Normal individual structure creation/loading/metadata/atom actions and experiment creation/type/data actions reuse actionPageRequested to follow their corresponding existing Structure/Experiment page and Main sidebar before their ordinary method, after no-op settlement. Original Main already checks actual page enablement and current project. It may leave an unavailable page unchanged; no force-enable, pointer, delay or navigation manager is introduced. The original native call/receipt/project and resolved member are checked again after synchronous page/focus notifications. Show-actions controls, scientific setters and result/Undo semantics remain separate and unchanged.
+
+
+### Ordinary Create invocation ownership and history publication
+
+The original `ProjectViewModel::createStructure` entry and `apply_creation_control` matcher own one invocation, not merely a reusable successful receipt. Before factory/history preparation, Create rejects an executing, competing, consumed or mismatched input and uses the unchanged readiness guard for its exact unconsumed input (or ordinary manual entry). It never resets an earlier receipt. Its original history-availability notification holds the existing edit-publication fence, so synchronous observers cannot borrow the completed input or introduce nested Create/Undo work. An unused preowned history record is removed before a retired-owner return; an actually applied edit retains its record and actual receipt. This extends the original Create/ordinary edit/Undo boundaries without a new action engine or readiness allowance. Generated identity, early applied/member pin, page follow, scientific validation and ordinary Save remain unchanged.
+
+
+### Ordinary symmetry and atom Undo
+
+The FIRST SpaceGroup HM/number/setting and AtomSite append/text/remove/ADP-type methods share one preowned original structures-history entry per actual change through apply_creation_control, in manual and assistant modes alike. Stored no-ops skip the Edit and history; pre-write refusal drops the entry; applied-but-unpublished changes retain it. The same original Undo action restores structures/tensors and coupled alias/correlation/result identities and other experiment dependents, not an assistant-only reversal or fake availability flag. Genuine owner/nested-readiness/currentness fences and the early inserted-atom receipt remain.
+
+
+### Live Show-actions presentation speed
+
+The statusbar's original visible-action group adds a native speed menu between working and Stop, x1 by default with x1/x2/x3/x5/x10. Both speed and Stop circles use the same original AssistantWorking.iconExtent, not its diagonal rotation envelope. The existing working/logo/robot animations and Stop receiver are unchanged. This is a live user presentation preference, not a provider action or scientific setting.
+
+One closed multiplier scales the original helper's move/press/click/character pacing, original RemotePointer's exposed durations, and existing VM post-control/navigation/reveal/menu dwells. The helper retimes only the remainder of its existing active paced timer without restarting the step/request. Already queued VM singleShot callbacks finish their original bounded wait; later waits use the current multiplier. No second scheduler or simulated event workflow is added. Inactive-window checks, zero-delay dispatch/cleanup, readiness/currentness predicates, scientific work, RPC/operation/revoke/idle deadlines and streaming/observer timers are unscaled. OFF remains original duration. Invalid and already-equal speed values leave the old preference without a notification or operation retirement; it is not a persisted account setting.
+
+The genuine speed menu registers its original QObject/window before focus-taking work and releases that exact owner after close; destruction/window replacement clears it. A late A-close cannot unpause B. While it is open, the helper reuses its existing inactive-input check on its original timer, still checking currentness/deadlines/Stop and balancing any already-held press before pausing further input. It neither forces focus, restores an edited draft, suspends agent deadlines nor fakes activity. The original menu restores native focus when it closes; an actually changed target still refuses honestly.
+
+
+### Ordinary experiment profile and exclusion controls
+
+The FIRST `ExperimentViewModel::setPeakType` and `ExcludedRegionListModel` append/start/end/remove methods now share the original creation-control receipt/history boundary. Manual and assistant calls both preown one narrow ordinary Undo per actual change; equal canonical profile/bound values skip setter, visual cue and history. Exclusion remove enters the same exact consumed-input seam; append keeps the ordinary ItemVec-generated row/default bounds. Literal equal/reversed endpoints retain the original manual/presentation semantics; no automatic sorting/clipping or conversion is added. History owns only peak state or exclusion rows and affected relation/result state, not measured data or a whole experiment.
+
+The new `edit_experiment` adapter uses existing individual-action frame/member/currentness and original Experiment page/row/group/table reveal. ON shows the genuine original control and visual-only click cue, then calls that same ordinary method; OFF calls it directly. It never dispatches a second scientific keyboard mutation or falls back silently if an exact control/owner is unavailable. Noncurrent measured targets are resolved by actual experiment/region identity and do not inherit the unrelated calculation-only Load/type restriction. Current scientific values/option validators, manual drafts, Undo, OnlyStop, once, partial publication and original Save/reader/structure/speed remain authoritative.
+
+
+### Deferred table and popup presentation belongs to its original QObject
+
+The first parameter-row reveal is ParametersGroup's deferred current-row
+positioning through DataTable.revealRow; its connected searchable filter popup
+also defers ordinary placement/positioning. Retaining an unqualified QML method
+or closure with callLater can outlive its component context. Each now uses one
+owner-local, single-shot zero-delay Timer: current-row changes coalesce, and
+QObject destruction cancels pending presentation. The row request checks its
+original project/model; the popup checks its original still-visible popup before
+and after placement. Neither may use an old request through replacement objects.
+Original native layout/reveal/current-selection methods remain; there is no
+periodic timer, retry, synthetic input, scientific action or timing allowance.
+
+DataTable Connections binds only its actual QObject model or null, including
+undefined/non-QObject teardown states. Native row/header reveals retain the
+original source identity and explicitly reject missing sources and a QObject
+source destroyed by synchronous layout callbacks. Existing non-QObject ListView
+model forms are not removed from the view/reveal contract. Selection, filters,
+width invalidation, scientific values and ordinary Undo are unchanged. This fixes
+a source lifetime/type class, not the unobserved actor of ON Create, provider
+logout or Graphs warnings. Genuine original destruction/replacement and live
+reveal/popup controls qualify it; source/grammar alone does not.
+
+
+Popup presentation also belongs to its particular opening, not merely the same
+Popup QObject or visible flag: Qt can keep that object visible during exit. Each
+original aboutToShow owns a fresh local opening identity; aboutToHide invalidates
+it and the existing pending timer request. Immediate placement, opened list/focus
+and deferred placement carry that identity through clear, native forceLayout and
+geometry notifications. A synchronous close/reopen of the same object cannot
+continue the old opening's positioning or focus; the fresh opening keeps its
+ordinary live placement and search focus. No second timer or controller is added.
+
+
+### Whole table row before a visible edit (2026-10-19)
+
+The original ListView deliberately shows a half row below its configured full
+rows. That remains a scroll affordance, not a sufficient admission test for an
+assistant edit: a control's center can be inside while the row is clipped. The
+original DataTable.revealRow/revealItem positions the exact live delegate with
+Contain, accounts for its actual overlay header, and verifies the whole row fits.
+A row larger than the available viewport, or an original model/delegate destroyed
+or replaced during synchronous layout/positioning, returns false rather than
+repeating reveal indefinitely. Manual selection and assistant reveal share this
+same view method; no selection, filter or scientific value is changed by reveal.
+
+Parameter/free, relation/background and creation row controls use that original
+view before input when their full row is not exposed. An outer scroll measures
+the whole row, retaining the original bounded real-scroll path and current-owner
+checks. Headers and non-row controls keep their original behavior. A parent may
+continue immediately only when actual synchronous positioning reports readiness,
+its original child cleanup leaves the same receiver/State/helper/parent/step,
+and the retained target's complete row is genuinely exposed. Otherwise the
+existing asynchronous continuation or explicit refusal remains. Layout being
+requested is never assumed to be layout completed; no timing increase, retry,
+force-focus, scientific setter, second controller or allowance is added.
+
+This closes the source-proved center-only half-row admission class. It does not
+identify every later menu/group/relations refusal, operation deadline or apparent
+authentication failure. Original owning runtime checks remain required; source
+and grammar checks alone are not native qualification.
+
+
+### Ordinary absorption, cutoff and dataset-weight controls
+
+The FIRST ExperimentViewModel absorption-family, peak cutoff and dataset-weight
+setters join the existing CreationAction/ExperimentControlsUndo boundary used by
+profile/exclusions. Manual and assistant callers use the same original methods,
+readiness, exact input receipt and one preowned ordinary Undo per actual change.
+Equal canonical values produce no setter/cue/history. Cutoff and weight retain
+literal finite scalar semantics; nonpositive cutoff retains its original full-window
+meaning. Weight is stored in every mode but participates in the joint objective.
+
+Absorption is a narrow family edit, not a scalar replacement: its detached image
+runs the original mode/file-token/family contract before any live write. The FIRST
+peak OptionalParameter prepared-transfer design also governs absorption's three
+coefficient cells, both forward and Undo. Surviving coefficients keep identity;
+new cells and every detached-membership/retired vector exist before commit.
+History includes only that family and affected relation/result state; scalar history
+owns only its prior double and fit-result record. No whole experiment/data image,
+new history manager, or automatic graph rewrite is introduced.
+
+The genuine controls remain Experiment Extras Absorption/type and Peak/cutoff,
+and Analysis Extras Joint fit/weight. A weight row is resolved/revealed from the
+original experiments model and must still expose the same exact experiment; its
+index alone does not authorize a write. Existing whole-row reveal, selected member,
+manual draft, Stop and lifetime rules remain. No Experiment-page weight control
+or automatic cutoff implementation is invented.
+
+
+### Explicit existing-member selection through the ordinary selectors
+
+The first selection implementation is `ProjectViewModel::setCurrentStructureIndex` / `setCurrentExperimentIndex`, used by the Structure/Experiment page selector and table rows. The assistant's existing `edit_structure` / `edit_experiment` gain only a closed `select` operation with an actual canonical member ID. Both modes call that same setter once; Show actions reveals the original row and gives its visual-only cue first. The preselection guard proves the original list source model, exact native member/view and retained row/window before the scientific editor's already-selected guard would apply. Scientific controls retain that original selected-owner guard.
+
+Selection is UI state: the ordinary setter persists selection preferences and refreshes views, but creates no scientific Edit, Undo, modified flag or fabricated applied receipt. A real already-selected member is a no-op without navigation or cue. Changed selection respects manual drafts and original Stop/current-owner fences. The existing call frame records entry immediately before the void setter, with a preowned uncertain terminal; completion requires the same Session/epoch/project/native call and actual selected member after synchronous callbacks. Unknown UI completion is not replayed or rolled back into a newer user's choice. Scan selection can load data/stop following and is excluded from these new branches. Existing scientific/noncurrent and qualified parameter access is unchanged.
+
+
+## Shared list-row selection presentation
+
+Prior art is the original GUI ListView/ListViewDelegate, Edi's null-safe Base
+ListView replacement and TableRow/DataTable marker, and the tab underline.
+The shared component now owns the single moving marker using the actual realized
+delegate y/height in content coordinates. The overlay header's original z3
+occludes its z2 marker and the viewport retains clipping; no row-index times
+row-height geometry remains. Initial appearance snaps, between-row movement uses
+the original 250ms/two-pixel accent convention. Multi-selection and the original
+unselected anchor retain their individual bars. Marker items receive no input.
+
+Edi's Base replacement carries exactly the same shared marker behavior while
+retaining its null model and typed optional header protections. DataTable's
+measurement/model/reveal/full-row/lifetime code and all actual backend selection,
+manual-takeover, scientific setter, Undo and input handlers are unchanged. The
+ordinary hover palette and actual text-selection accent remain; selection adds
+no persistent blue row fill. No consumer needs a per-table visual declaration.
+
+This source requires the separately reviewed real GUI commit carrying the shared
+Delegate change. The actual GUI archive/commit/tree pin is intentionally not
+invented here; root must materialize that real commit, obtain original archive
+facts, then elect the normal dependency update before a consuming build. No
+native/render/Mac/scientific/task qualification follows from this QML proposal.
+
+
+## Synchronous marker refresh during model replacement
+
+FIRST is the shared ListView.refreshMarker implementation and Edi's existing
+null-safe/typed-header replacement of that component. Geometry, row and content
+callbacks refresh the same actual delegate marker synchronously. They must not
+read the native ListView.model property: Qt 6.11.1 setModel temporarily clears its
+internal model before resetting content position, while its owning-model flag
+still permits the getter to dereference that cleared pointer. Ordinary QObject
+validity does not prove the native model getter is safe inside those callbacks.
+
+The marker records modelChanged with its own revision and compares that revision
+after the existing markerMoves publication. It also rechecks the live view, the
+requested marker row and the actual realized item, including a null target, before
+publishing markerItem. Replacing a model during a synchronous callback therefore
+retires the earlier snapshot without reading ListView.model. Count and realized
+item lookup remain the original geometry inputs; no timer, platform switch,
+selection/focus/scroll write or persistent row fill is added. Edi's existing
+replacement carries the same correction and retains its model/header protections.
+
+The owner Mac crash reports dated 2026-10-21 17:02:10 and 17:02:26 identify a model
+getter fault during setModel/content-position callbacks in initial QML creation.
+Their exact QML caller is inferred from the source and native stack, not a QML
+source-line backtrace. The official Qt source documents the native transient:
+https://github.com/qt/qtdeclarative/blob/v6.11.1/src/quick/items/qquickitemview.cpp
+(model getter/setter, count and itemAtIndex). Source diagnosis and this correction
+do not qualify changed-source startup, rendering or native tests. Qualification
+must include synchronous startup/model replacement with changed content position,
+reentrant replacement from markerMoves notification, null/replaced/deleted targets,
+and original selection, scrolling, variable geometry and nested control input.
+
+
+## Marker row membership during synchronous clear
+
+FIRST is shared ListView's markerRow selection policy and refreshMarker, including
+the model-revision repair above and Edi's existing Base mirror. A derived QML
+binding can still expose its previous row while native removal/count callbacks
+are synchronously evaluating that binding. A live QObject or surviving delegate
+alone does not establish current model membership after a clear.
+
+One currentMarkerRow function owns the original backend-current-row versus sole
+selection policy. It returns no row for an empty view and bounds either source
+against the actual safe native count. The readonly markerRow still binds to that
+one policy, while refreshMarker calls the policy directly instead of re-reading
+the currently evaluating derived binding. It rechecks that bounded current row,
+the model revision, live objects and actual itemAtIndex identity after markerMoves
+can synchronously invoke another operation. Out-of-range delegate lookup is never
+a marker source; a count-clear can synchronously publish a null marker even if the
+old derived property has not settled. No model getter is reintroduced.
+
+Actual delegate coordinates/height, accent movement, backend-row precedence,
+multiple selection and anchor/input/selection/focus/scroll behavior remain. This
+changes only marker presentation/currentness; it adds no timer, native/private Qt
+patch, selection write or recovery operation. Both existing ListView copies carry
+the same policy/fences; Edi's null model/typed-header initialization stays exact.
+
+The routed diagnostic observed count zero after clear returned while markerRow
+still named a removed row and markerItem retained its surviving delegate. An event
+counter firing earlier inside the clear callback does not by itself prove that
+target was already retired. This source correction makes no changed-source native
+or Mac qualification claim. Independent exercises must cover empty/shrunk/replaced
+models, stale selected/backend rows, callback clear/replacement/null successors,
+realized-item reuse and original geometry/selection/nested controls. Qt's public
+source keeps count null-guarded and itemAtIndex based on realized view items:
+https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/items/qquickitemview.cpp

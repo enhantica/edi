@@ -466,3 +466,91 @@ TEST_CASE("Held native window geometry retains relation provenance and renews de
     CHECK_THROWS_MESSAGE(edi::window_geometry(p.structure(), {}),
                          "Invalid relations must refuse native window geometry");
 }
+
+// E11-T5: additive public WorkStamps overload, exercised in the ORIGINAL edi_tests target.
+// The unbounded API is a labelled compatibility reference, not a new hand-written codec.
+#include <limits>
+#include <optional>
+#include <stdexcept>
+
+TEST_CASE("E11-T5 bounded work stamps preserve original encoding and stale sources") {
+    using Capture = edi::WorkStamps (*)(const edi::Project&, std::size_t);
+    const Capture capture = static_cast<Capture>(&edi::work_stamps); // Required actual API; no absent-feature fallback.
+    auto project = transition_project();
+    REQUIRE_MESSAGE(project.experiment().data.has_value(), "STAMP482 SETUP original measured fixture has actual data");
+    REQUIRE_MESSAGE(!project.experiment().data->intensity_meas.get().empty(),
+                    "STAMP482 SETUP original fixture supplies nonempty actual measured columns");
+    REQUIRE_MESSAGE((project.aliases.size() > 0 && project.constraints.size() > 1),
+                    "STAMP482 SETUP original fixture exercises real alias lookup and relation encoding");
+    const auto maximum = std::numeric_limits<std::size_t>::max();
+    const auto equal = [](const edi::WorkStamps& a, const edi::WorkStamps& b) {
+        CHECK_MESSAGE((a.experiment_inputs == b.experiment_inputs && a.structure_inputs == b.structure_inputs),
+                      "STAMP482 compatibility reference: bounded capture retains EVERY original scientific input byte");
+        CHECK_MESSAGE((a.experiments == b.experiments && a.structures == b.structures &&
+                          a.experiments_generation == b.experiments_generation && a.structures_generation == b.structures_generation),
+                      "STAMP482 bounded capture preserves original collection and write identities");
+        CHECK_MESSAGE((a.edits == b.edits && a.edits_at == b.edits_at),
+                      "STAMP482 bounded capture preserves original live edit identity");
+        CHECK_MESSAGE((a.aliases == b.aliases && a.constraints == b.constraints && a.relations == b.relations),
+                      "STAMP482 bounded capture preserves original alias/constraint identities and exact relation bytes");
+    };
+    const auto original = edi::work_stamps(project);
+    const auto saved = edi::project_edi_files(project);
+    const auto bounded = capture(project, maximum);
+    equal(bounded, original);
+    CHECK_MESSAGE(edi::unchanged_since(project, bounded), "STAMP482 synchronous capture does not write or renew live scientific state");
+    CHECK_MESSAGE(edi::project_edi_files(project) == saved, "STAMP482 successful capture preserves original saved model bytes");
+
+    // Independent NECESSARY retained payload lower bound: actual original returned byte strings.
+    // This does not copy the encoder/count formula or claim a particular allocator/RSS threshold.
+    std::size_t payload = original.relations.size();
+    for (const auto& text : original.experiment_inputs) {
+        REQUIRE_MESSAGE(text.size() <= maximum - payload, "STAMP482 fixture lower-bound addition is representable");
+        payload += text.size();
+    }
+    for (const auto& text : original.structure_inputs) {
+        REQUIRE_MESSAGE(text.size() <= maximum - payload, "STAMP482 fixture lower-bound addition is representable");
+        payload += text.size();
+    }
+    REQUIRE_MESSAGE(payload > 0, "STAMP482 nonempty original scientific payload gives a meaningful finite insufficiency boundary");
+    for (const auto limit : {std::size_t{0}, sizeof(edi::WorkStamps) - 1, payload - 1}) {
+        CAPTURE(limit);
+        std::optional<edi::WorkStamps> partial;
+        CHECK_THROWS_AS_MESSAGE(partial = capture(project, limit), std::length_error,
+                                "STAMP482 insufficient actual container/payload admission fails with length_error");
+        CHECK_MESSAGE(!partial.has_value(), "STAMP482 refusal returns NO partial WorkStamps");
+        equal(edi::work_stamps(project), original);
+        CHECK_MESSAGE((edi::unchanged_since(project, bounded) && edi::project_edi_files(project) == saved),
+                      "STAMP482 insufficient capture neither writes model nor changes original source identities");
+    }
+
+    auto measured = project.experiment().data->intensity_meas.get();
+    measured[0] += 1.25; // Independent literal changed observation, not a computed scientific golden.
+    project.experiment().data->write_column(&edi::PdDataBase::intensity_meas, std::move(measured));
+    CHECK_MESSAGE(!edi::unchanged_since(project, bounded), "STAMP482 actual measured-column change stales original bounded source");
+    const auto after_measured = capture(project, maximum);
+    equal(after_measured, edi::work_stamps(project));
+    CHECK_MESSAGE(after_measured.experiment_inputs != bounded.experiment_inputs,
+                  "STAMP482 measured-column mutation changes exact scientific input encoding");
+
+    project.structure().cell.length_a.value = project.structure().cell.length_a.value.get() + .125;
+    CHECK_MESSAGE(!edi::unchanged_since(project, after_measured), "STAMP482 actual original shape change stales old bounded source");
+    const auto after_shape = capture(project, maximum);
+    equal(after_shape, edi::work_stamps(project));
+    CHECK_MESSAGE(after_shape.structure_inputs != after_measured.structure_inputs,
+                  "STAMP482 shape change changes exact original structure encoding");
+
+    declaration_edit(project, "expression"); // Existing original relation mutation vehicle.
+    CHECK_MESSAGE(!edi::unchanged_since(project, after_shape), "STAMP482 actual relation change stales old bounded authority");
+    const auto after_relation = capture(project, maximum);
+    equal(after_relation, edi::work_stamps(project));
+    CHECK_MESSAGE(after_relation.relations != after_shape.relations,
+                  "STAMP482 changed actual expression changes original relation encoding");
+
+    // Preserve the original equal-write semantics too, without inventing a second currency rule.
+    const auto equal_write_reference = edi::work_stamps(project);
+    project.structure().cell.length_a.value = project.structure().cell.length_a.value.get();
+    CHECK_MESSAGE(edi::unchanged_since(project, after_relation) == edi::unchanged_since(project, equal_write_reference),
+                  "STAMP482 bounded/unbounded old receipts agree after actual equal scalar write");
+    equal(capture(project, maximum), edi::work_stamps(project));
+}

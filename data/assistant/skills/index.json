@@ -1,0 +1,107 @@
+{
+  "schema": "edi.assistant.skills/1",
+  "skills": [
+    {
+      "id": "project-assistance",
+      "version": "1.5.55",
+      "title": "Work with the displayed Edi project",
+      "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
+      "path": "project-assistance/SKILL.md",
+      "sha256": "ce13af7c3de51423746d0583c1cc2ed424fc01da0b81d27008ed7495784b399c",
+      "requires": [],
+      "capabilities": [
+        "inspect_project",
+        "list_parameters",
+        "diagnostics",
+        "set_parameters",
+        "set_free"
+      ],
+      "references": [
+        {
+          "title": "IUCr Rietveld refinement guidelines",
+          "url": "https://journals.iucr.org/j/issues/1999/01/00/gl0561/"
+        }
+      ]
+    },
+    {
+      "id": "fullprof-intake",
+      "version": "1.0.8",
+      "title": "Inspect a FullProf project",
+      "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
+      "path": "fullprof-intake/SKILL.md",
+      "sha256": "11340c5497ffd1d9654fe97bff3dd772bc2d65cbfebbbd1d90361b9a59b86a9b",
+      "requires": [
+        "selected_files"
+      ],
+      "capabilities": [
+        "inspect_project",
+        "ask_question"
+      ],
+      "references": [
+        {
+          "title": "FullProf official documentation",
+          "url": "https://www2017.ill.eu/sites/fullprof/documentation.html"
+        },
+        {
+          "title": "FullProf July2001 manual: source conventions and mappings",
+          "url": "https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf"
+        }
+      ]
+    },
+    {
+      "id": "gsas-intake",
+      "version": "1.0.3",
+      "title": "Inspect GSAS/GSAS-II material",
+      "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
+      "path": "gsas-intake/SKILL.md",
+      "sha256": "1be108816c30cb1280651c945e223fab3635e9aa38cb3424dbcb5d97bd403f6f",
+      "requires": [
+        "selected_files"
+      ],
+      "capabilities": [
+        "inspect_project",
+        "ask_question"
+      ],
+      "references": [
+        {
+          "title": "GSAS-II Full CIF tutorial",
+          "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html"
+        }
+      ]
+    },
+    {
+      "id": "refinement-strategy",
+      "version": "1.2.17",
+      "title": "Plan adaptive Rietveld refinement",
+      "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
+      "path": "refinement-strategy/SKILL.md",
+      "sha256": "9be380ed45e8dec9bd5e7c7d22c45342cf007074870f0ea51084a14431ee3fa1",
+      "requires": [],
+      "capabilities": [
+        "inspect_project",
+        "list_parameters",
+        "diagnostics",
+        "set_parameters",
+        "set_free"
+      ],
+      "references": [
+        {
+          "title": "Young (ed.) The Rietveld Method, chapter 1 strategy and specialist chapters",
+          "url": "https://doi.org/10.1093/oso/9780198555773.001.0001"
+        },
+        {
+          "title": "IUCr Rietveld refinement guidelines",
+          "url": "https://journals.iucr.org/j/issues/1999/01/00/gl0561/"
+        },
+        {
+          "title": "GSAS-II constraints",
+          "url": "https://github.com/AdvancedPhotonSource/GSAS-II-tutorials/blob/main/MDhelp/docs/commontreeitems.md"
+        },
+        {
+          "title": "IUCr atomic displacement parameters",
+          "url": "https://www.iucr.org/who-we-are/commissions/commission-on-crystallographic-nomenclature/published-reports/adp"
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include <type_traits>
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "edi/validation.hpp"
@@ -18,6 +20,8 @@
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
+#include "import_symmetry.hpp"
+#include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 
 #include <algorithm>
@@ -1373,7 +1377,7 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
-BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
+BraggPdExperiment experiment_from_block(const Block& block, const std::string& where, bool embedded_only = false) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
     BraggPdExperiment experiment;
@@ -1927,6 +1931,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
+    if (embedded_only && !experiment.data.has_value()) {
+        throw IoError("assistant result requires embedded measured data; generated grids are unsupported: " + where);
+    }
 
     // The one-loader ruling ("one loader, project contents select calculate vs fit"): a block may
     // declare its measured `_data` loop (fit-ready) or its `_data_range.<axis>_min/_max/_step`
@@ -2056,29 +2063,37 @@ struct KeyRename {
 };
 
 template <typename ProjectT>
-auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
+auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const Parameter* selected = nullptr, std::size_t maximum_name_bytes = 0) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
     std::vector<ParameterSlot<ParameterPtr>> slots;
-    const auto add = [&slots](std::string id, std::string unique_name, ParameterPtr parameter) {
-        slots.push_back({std::move(id), std::move(unique_name), parameter});
+    const auto source = [selected,maximum_name_bytes](const std::string& value) -> const std::string& {
+        if(selected && value.size()>maximum_name_bytes)throw std::length_error("Parameter spelling source exceeds capacity");
+        return value;
     };
-    const auto structure_name = [rename](const std::string& name) -> const std::string& {
+    if(selected)slots.reserve(1);
+    const auto add = [&slots,selected](ParameterPtr parameter,const auto& names) {
+        if(selected && parameter!=selected)return; // No unrelated member formatting/allocation.
+        if(selected && !slots.empty())throw std::invalid_argument("Parameter spelling member is ambiguous");
+        auto pair=names();
+        slots.push_back({std::move(pair.first),std::move(pair.second),parameter});
+    };
+    const auto structure_name = [rename,&source](const std::string& name) -> const std::string& {
         const bool renamed =
             rename != nullptr && !rename->structure.empty() && datablock_key(name, "structure") == rename->structure;
-        return renamed ? rename->to : name;
+        return source(renamed ? rename->to : name);
     };
-    const auto experiment_name = [rename](const ExperimentBase& experiment) -> const std::string& {
-        return rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value();
+    const auto experiment_name = [rename,&source](const ExperimentBase& experiment) -> const std::string& {
+        return source(rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value());
     };
     // Several structures name each one's slots by its datablock key, as crysta's fit_state.hpp; one
     // structure keeps `structure.`.
     const bool several_structures = project.structures.size() > 1;
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        const std::string block = datablock_key(structure_name(structure.name.value()), "structure");
-        const std::string base = several_structures ? "structure." + block + "." : std::string("structure.");
+        const auto block = [&] {return datablock_key(structure_name(structure.name.value()), "structure");};
+        const auto base = [&] {return several_structures ? "structure." + block() + "." : std::string("structure.");};
         const auto cell = [&](const char* name, ParameterPtr parameter) {
-            add(base + "cell." + name, block + ".cell." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{base() + "cell." + name,block() + ".cell." + name};});
         };
         cell("length_a", &structure.cell.length_a);
         cell("length_b", &structure.cell.length_b);
@@ -2088,31 +2103,31 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         cell("angle_gamma", &structure.cell.angle_gamma);
         for (auto& site_item : structure.atom_sites) {
             auto& site = *site_item;
-            const std::string prefix = base + site.id.value() + ".";
-            const std::string unique = block + ".atom_site." + site.id.value() + ".";
-            add(prefix + "fract_x", unique + "fract_x", &site.fract_x);
-            add(prefix + "fract_y", unique + "fract_y", &site.fract_y);
-            add(prefix + "fract_z", unique + "fract_z", &site.fract_z);
-            add(prefix + "occupancy", unique + "occupancy", &site.occupancy);
-            add(prefix + "adp_iso", unique + "adp_iso", &site.adp_iso);
+            const auto prefix = [&] {return base() + source(site.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".atom_site." + source(site.id.value()) + ".";};
+            add(&site.fract_x,[&] {return std::pair<std::string,std::string>{prefix() + "fract_x",unique() + "fract_x"};});
+            add(&site.fract_y,[&] {return std::pair<std::string,std::string>{prefix() + "fract_y",unique() + "fract_y"};});
+            add(&site.fract_z,[&] {return std::pair<std::string,std::string>{prefix() + "fract_z",unique() + "fract_z"};});
+            add(&site.occupancy,[&] {return std::pair<std::string,std::string>{prefix() + "occupancy",unique() + "occupancy"};});
+            add(&site.adp_iso,[&] {return std::pair<std::string,std::string>{prefix() + "adp_iso",unique() + "adp_iso"};});
         }
         // The anisotropic sites' tensors, after every site (crysta's fit_state.hpp order).
         for (auto& tensor_item : structure.atom_site_aniso) {
             auto& tensor = *tensor_item;
-            const std::string prefix = base + tensor.id.value() + ".";
-            const std::string unique = block + ".atom_site_aniso." + tensor.id.value() + ".";
-            add(prefix + "adp_11", unique + "adp_11", &tensor.adp_11);
-            add(prefix + "adp_22", unique + "adp_22", &tensor.adp_22);
-            add(prefix + "adp_33", unique + "adp_33", &tensor.adp_33);
-            add(prefix + "adp_12", unique + "adp_12", &tensor.adp_12);
-            add(prefix + "adp_13", unique + "adp_13", &tensor.adp_13);
-            add(prefix + "adp_23", unique + "adp_23", &tensor.adp_23);
+            const auto prefix = [&] {return base() + source(tensor.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".atom_site_aniso." + source(tensor.id.value()) + ".";};
+            add(&tensor.adp_11,[&] {return std::pair<std::string,std::string>{prefix() + "adp_11",unique() + "adp_11"};});
+            add(&tensor.adp_22,[&] {return std::pair<std::string,std::string>{prefix() + "adp_22",unique() + "adp_22"};});
+            add(&tensor.adp_33,[&] {return std::pair<std::string,std::string>{prefix() + "adp_33",unique() + "adp_33"};});
+            add(&tensor.adp_12,[&] {return std::pair<std::string,std::string>{prefix() + "adp_12",unique() + "adp_12"};});
+            add(&tensor.adp_13,[&] {return std::pair<std::string,std::string>{prefix() + "adp_13",unique() + "adp_13"};});
+            add(&tensor.adp_23,[&] {return std::pair<std::string,std::string>{prefix() + "adp_23",unique() + "adp_23"};});
         }
     }
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
-        const std::string prefix = datablock_key(experiment_name(experiment), "experiment") + ".";
+        const auto prefix = [&] {return datablock_key(experiment_name(experiment), "experiment") + ".";};
         // A link with no structure id names its scale by the project's structure, as crysta's walk
         // does (structure_link_id). Every link prefixes its own slots by its structure, whatever their
         // number, as every loop row is named by its id (the owner, 2026-10-11).
@@ -2122,15 +2137,15 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
                                                                              : linked),
                 "structure");
         };
-        const auto phase_prefix = [&](const std::string& structure_id) { return prefix + entry_of(structure_id) + "."; };
+        const auto phase_prefix = [&](const std::string& structure_id) { return prefix() + entry_of(structure_id) + "."; };
         const auto peak = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "peak." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "peak." + name};});
         };
         const auto instrument = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "instrument." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "instrument." + name};});
         };
         const auto absorption = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "absorption." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "absorption." + name};});
         };
         if (experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
             peak("rise_alpha_0", &experiment.peak.rise_alpha_0);
@@ -2214,8 +2229,7 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         // One scale per linked structure; several links name theirs by structure.
         for (auto& link : experiment.linked_structures) {
-            add(phase_prefix(link->structure_id) + "scale",
-                prefix + "linked_structure." + entry_of(link->structure_id.value()) + ".scale", &link->scale);
+            add(&link->scale,[&] {return std::pair<std::string,std::string>{phase_prefix(link->structure_id) + "scale",prefix() + "linked_structure." + entry_of(link->structure_id.value()) + ".scale"};});
         }
         if (experiment.absorption.abscor1) {
             absorption("abscor1", &*experiment.absorption.abscor1);
@@ -2228,10 +2242,9 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
-            add(phase_prefix(row->structure_id) + "march_r", texture + "march_r", &row->march_r);
-            add(phase_prefix(row->structure_id) + "march_random_fract", texture + "march_random_fract",
-                &row->march_random_fract);
+            const auto texture = [&] {return prefix() + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";};
+            add(&row->march_r,[&] {return std::pair<std::string,std::string>{phase_prefix(row->structure_id) + "march_r",texture() + "march_r"};});
+            add(&row->march_random_fract,[&] {return std::pair<std::string,std::string>{phase_prefix(row->structure_id) + "march_random_fract",texture() + "march_random_fract"};});
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
@@ -2239,18 +2252,17 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         // file's position name is refused on load (refuse_older_parameter_name).
         if (experiment.background_type == "line-segment") {
             for (const auto& point : experiment.background) {
-                add(prefix + "background." + point->id.value(),
-                    prefix + "background." + point->id.value() + ".intensity", &point->intensity);
+                add(&point->intensity,[&] {return std::pair<std::string,std::string>{prefix() + "background." + source(point->id.value()),prefix() + "background." + source(point->id.value()) + ".intensity"};});
             }
         } else {
             for (const auto& term : experiment.background_terms) {
-                add(prefix + "background." + term->id.value(),
-                    prefix + "background." + term->id.value() + ".coef", &term->coef);
+                add(&term->coef,[&] {return std::pair<std::string,std::string>{prefix() + "background." + source(term->id.value()),prefix() + "background." + source(term->id.value()) + ".coef"};});
             }
         }
     }
     return slots;
 }
+
 
 // The `_fit_parameter` slot spelling of the walk above: (id, parameter) per refinable scalar.
 template <typename ProjectT>
@@ -2431,10 +2443,15 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             structure.geom.*field = value;
         }
     }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
+    structure.space_group.name_h_m = block.require("_space_group_name_H-M_alt", where);
+    if (const auto* code = block.find("_space_group_IT_coordinate_system_code"))
+        if (*code != "?" && *code != ".") structure.space_group.coord_system_code = *code;
+    if (const auto* number = block.find("_space_group_IT_number"); number && *number != "?" && *number != ".") {
+        std::size_t used = 0; int value = 0;
+        try { value = std::stoi(*number, &used); } catch (const std::exception&) {}
+        if (used != number->size() || value < 1 || value > 230)
+            fail_schema(where, "invalid-it-number", "The supplied CIF IT number must be an integer in 1..230");
+        structure.space_group.it_number = value;
     }
     read_into(structure.cell.length_a,
               parse_parameter(block.require("_cell_length_a", where), where), where);
@@ -2591,6 +2608,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
         }
     }
+    detail::normalize_imported_wyckoff(structure);
     // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
     // each declared type, converted from the form the file spells it in, uncertainties with it.
     if (!structure.atom_site_aniso.empty()) {
@@ -2606,17 +2624,109 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     return structure;
 }
 
+// CIF 1.1 section 26: data names ignore ASCII case, data values do not.
+// Keep this local to the structure CIF vocabulary; native schema parsing stays strict.
+std::string structure_cif_tag_key(std::string tag) {
+    for (char& c : tag) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return tag;
+}
+bool structure_cif_has_tag(const Block& block, const std::string& key) {
+    for (const auto& item : block.items) if (structure_cif_tag_key(item.first) == key) return true;
+    for (const auto& loop : block.loops)
+        for (const auto& tag : loop.tags) if (structure_cif_tag_key(tag) == key) return true;
+    return false;
+}
+
+// Dotted CIF cell names overlap the native format. Only an explicit native
+// declaration selects the strict Edi reader; CIF aliases reuse the parsed Block
+// and classic builder. Values, uncertainty spelling and row order are untouched.
+Block structure_cif_vocabulary(const Block& block, const std::string& where) {
+    static const std::map<std::string, std::string> aliases = [] {
+        const std::pair<const char*, const char*> spellings[]{
+        {"_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff"},
+        {"_geom.bond_distance_incr", "_geom_bond_distance_incr"},
+        {"_cell.length_a", "_cell_length_a"},
+        {"_cell.length_b", "_cell_length_b"},
+        {"_cell.length_c", "_cell_length_c"},
+        {"_cell.angle_alpha", "_cell_angle_alpha"},
+        {"_cell.angle_beta", "_cell_angle_beta"},
+        {"_cell.angle_gamma", "_cell_angle_gamma"},
+        {"_space_group.name_H-M_alt", "_space_group_name_H-M_alt"},
+        {"_space_group.IT_coordinate_system_code", "_space_group_IT_coordinate_system_code"},
+        {"_space_group.IT_number", "_space_group_IT_number"},
+        // The archived symmetry H-M name and its replacement denote one field.
+        {"_symmetry.space_group_name_H-M", "_space_group_name_H-M_alt"},
+        {"_symmetry_space_group_name_H-M", "_space_group_name_H-M_alt"},
+        {"_symmetry.Int_Tables_number", "_space_group_IT_number"},
+        {"_symmetry_Int_Tables_number", "_space_group_IT_number"},
+        {"_atom_site.label", "_atom_site_label"},
+        {"_atom_site.type_symbol", "_atom_site_type_symbol"},
+        {"_atom_site.fract_x", "_atom_site_fract_x"},
+        {"_atom_site.fract_y", "_atom_site_fract_y"},
+        {"_atom_site.fract_z", "_atom_site_fract_z"},
+        {"_atom_site.occupancy", "_atom_site_occupancy"},
+        {"_atom_site.Wyckoff_symbol", "_atom_site_Wyckoff_symbol"},
+        {"_atom_site.B_iso_or_equiv", "_atom_site_B_iso_or_equiv"},
+        {"_atom_site.U_iso_or_equiv", "_atom_site_U_iso_or_equiv"},
+        {"_atom_site.ADP_type", "_atom_site_adp_type"},
+        {"_atom_site.adp_type", "_atom_site_adp_type"},
+        {"_atom_site_aniso.label", "_atom_site_aniso_label"},
+        {"_atom_site_aniso.U_11", "_atom_site_aniso_U_11"},
+        {"_atom_site_aniso.U_22", "_atom_site_aniso_U_22"},
+        {"_atom_site_aniso.U_33", "_atom_site_aniso_U_33"},
+        {"_atom_site_aniso.U_12", "_atom_site_aniso_U_12"},
+        {"_atom_site_aniso.U_13", "_atom_site_aniso_U_13"},
+        {"_atom_site_aniso.U_23", "_atom_site_aniso_U_23"},
+        {"_atom_site_aniso.B_11", "_atom_site_aniso_B_11"},
+        {"_atom_site_aniso.B_22", "_atom_site_aniso_B_22"},
+        {"_atom_site_aniso.B_33", "_atom_site_aniso_B_33"},
+        {"_atom_site_aniso.B_12", "_atom_site_aniso_B_12"},
+        {"_atom_site_aniso.B_13", "_atom_site_aniso_B_13"},
+        {"_atom_site_aniso.B_23", "_atom_site_aniso_B_23"},
+        {"_atom_site_aniso.beta_11", "_atom_site_aniso_beta_11"},
+        {"_atom_site_aniso.beta_22", "_atom_site_aniso_beta_22"},
+        {"_atom_site_aniso.beta_33", "_atom_site_aniso_beta_33"},
+        {"_atom_site_aniso.beta_12", "_atom_site_aniso_beta_12"},
+        {"_atom_site_aniso.beta_13", "_atom_site_aniso_beta_13"},
+        {"_atom_site_aniso.beta_23", "_atom_site_aniso_beta_23"}};
+        std::map<std::string, std::string> result;
+        for (const auto& [alias, canonical] : spellings) {
+            result.emplace(structure_cif_tag_key(alias), canonical);
+            result.emplace(structure_cif_tag_key(canonical), canonical);
+        }
+        return result;
+    }();
+    std::set<std::string> declarations;
+    const auto normalize = [&](std::string& tag) {
+        if (const auto found = aliases.find(structure_cif_tag_key(tag)); found != aliases.end()) tag = found->second;
+        if (!declarations.insert(structure_cif_tag_key(tag)).second)
+            fail_schema(where, "duplicate-cif-alias", "More than one declaration names CIF field " + tag);
+    };
+    Block normalized; normalized.name = block.name;
+    for (const auto& item : block.items) {
+        auto tag = item.first; normalize(tag);
+        normalized.items.emplace_back(std::move(tag), item.second);
+    }
+    for (const auto& loop : block.loops) {
+        auto tags = loop.tags;
+        for (auto& tag : tags) normalize(tag);
+        // Loop tags/rows are immutable. Reconstruct through their actual identity
+        // validating constructor; never cast away const or bypass the boundary.
+        normalized.loops.emplace_back(std::move(tags), loop.rows, where);
+    }
+    return normalized;
+}
+
 Structure structure_from_edi_text(const std::string& text) {
     const std::string where = "<from_cif_str>";
     const Block block = parse_block(text, where);
-    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
-    // exactly one per document, decided by which cell vocabulary is present.
-    if (block.find("_cell.length_a") != nullptr) {
-        return structure_from_block(block, where);
-    }
-    if (block.find("_cell_length_a") != nullptr) {
-        return structure_from_cif_block(block, where);
-    }
+    // Native schema/native-only identities stay strict; never insert a schema
+    // tag into ordinary CIF just because its dictionary uses dotted names.
+    if (structure_cif_has_tag(block, "_edi.schema_version")) return structure_from_block(block, where);
+    if (structure_cif_has_tag(block, "_atom_site.id") || structure_cif_has_tag(block, "_atom_site.adp_iso") ||
+        structure_cif_has_tag(block, "_space_group.name_h_m")) return structure_from_block(block, where);
+    const auto cif = structure_cif_vocabulary(block, where);
+    if (cif.find("_cell_length_a") != nullptr) return structure_from_cif_block(cif, where);
     throw IoError(where +
                   ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
                   "present");
@@ -3017,6 +3127,13 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
+Structure load_structure_file(const std::string& path) {
+    const auto extension = fs::path(path).extension();
+    if (extension == ".edi") return load_structure_edi_file(path);
+    if (extension == ".cif") return structure_from_edi_text(read_file(path));
+    throw IoError(path + ": choose a native .edi structure or a supported .cif file");
+}
+
 Structure load_structure_edi_file(const std::string& path) {
     return structure_from_block(edi_file_block(path), path);
 }
@@ -3199,15 +3316,18 @@ std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token) {
     return found->second.mode;
 }
 
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor) {
+    for(const auto& [token,row]:peak_type_rows())visitor(token,row.implemented?std::optional<BeamModeEnum>(row.mode):std::nullopt);
+}
+
 std::vector<std::string> registered_peak_types() {
     std::vector<std::string> tokens;
-    for (const auto& [token, row] : peak_type_rows()) {
-        tokens.push_back(token);
-    }
+    visit_registered_peak_types([&](const std::string& token,std::optional<BeamModeEnum>){tokens.push_back(token);});
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+namespace {
+Project load_project_impl(const std::string& directory, const WarningSink& on_warning, bool assistant_result) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3258,7 +3378,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
-        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
@@ -3300,6 +3420,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
             }
             if (const Loop* files = block.loop_with("_report_file.name")) {
+                if (assistant_result && !files->rows.empty()) throw IoError("assistant result external report files are unsupported");
                 for (const auto& row : files->rows) {
                     ReportFile file;
                     file.name = loop_cell(*files, row, "_report_file.name", where);
@@ -3320,6 +3441,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         const Block block =
             parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
         const std::string* mode = block.find("_fitting_mode.type");
+        if (assistant_result && (block.find("_sequential_fit.data_dir") ||
+            (mode && is_scan_fitting_mode(*mode)))) {
+            throw IoError("assistant result external scan declarations are unsupported");
+        }
         if (mode != nullptr) {
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
@@ -4047,6 +4172,16 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     return project;
 }
 
+} // namespace
+Project load_project(const std::string& directory, const WarningSink& on_warning) {
+    return load_project_impl(directory, on_warning, false);
+}
+namespace detail {
+Project load_assistant_project(const std::string& directory) {
+    return load_project_impl(directory, {}, true);
+}
+} // namespace detail
+
 double parse_edi_double(const std::string& text, const std::string& where) {
     // Review-10 F2: the ONE numeric boundary, exported for the adapter's start_tied parsing —
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
@@ -4114,6 +4249,26 @@ std::vector<NamedParameter> named_parameters(const Project& project) {
         }
     }
     return named;
+}
+
+std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes) {
+    // Actual FIRST spelling expressions have at most two variable components;
+    // 64 bounds every fixed category/member/separator suffix in this walk.
+    // Two completed slot strings, their live concatenation/return intermediates
+    // and the single retained slot fit eight such logical string owners.
+    constexpr std::size_t owners=8,fixed=64;
+    constexpr auto headers=owners*sizeof(std::string)+2*sizeof(std::string)+sizeof(const Parameter*);
+    const auto ceiling=std::numeric_limits<std::size_t>::max();
+    if(maximum_name_bytes>(ceiling-headers-owners*fixed)/(2*owners))throw std::length_error("Parameter spelling scratch exceeds capacity");
+    return headers+owners*(2*maximum_name_bytes+fixed);
+}
+std::optional<std::string> named_parameter(const Project& project,const Parameter* member,std::size_t maximum_name_bytes) {
+    if(!member)return std::nullopt;
+    (void)named_parameter_preparation_bytes(maximum_name_bytes); // Overflow is refused before growth.
+    auto selected=parameter_slots(project,nullptr,member,maximum_name_bytes);
+    if(selected.empty())return std::nullopt;
+    if(selected.front().unique_name.size()>maximum_name_bytes)throw std::length_error("Parameter spelling exceeds capacity");
+    return std::move(selected.front().unique_name);
 }
 
 std::vector<NamedParameter> named_dependents(const Project& project) {
@@ -4186,13 +4341,15 @@ UndoFitOutcome restore_fit_start(Project& project) {
 }
 
 void copy_fit_result(Project& to, const Project& from) {
-    to.fit_result = from.fit_result;
+    FitResultRecord prepared = from.fit_result;
+    static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+    to.fit_result = std::move(prepared);
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
     }
 }
 
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) {
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     to.fit_n_data_points = from.fit_n_data_points;
     to.fit_prof_r_factor = from.fit_prof_r_factor;
     to.fit_prof_wr_factor = from.fit_prof_wr_factor;

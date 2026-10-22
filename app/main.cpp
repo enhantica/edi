@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
         edi_app::use_fresh_settings();  // never the machine's saved settings
     }
     QQmlApplicationEngine engine;
-    edi_app::configure_engine(engine);
+    edi_app::configure_engine(engine, {arguments.contains(QStringLiteral("--assistant-work-reports"))});
     edi_app::configure_test_observer(engine);
     engine.loadFromModule("edi.app", "Main");
     if (engine.rootObjects().isEmpty()) {

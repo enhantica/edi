@@ -235,7 +235,7 @@ REQUIRED = {
         'sleef',
     },
 }
-TESTED = ('lib/libcrysta_core.a', 'bin/crysta')  # the qualified bytes the manifest's hashes bind
+TESTED = ('lib/libcrysta_core.a', 'lib/libcrysta_process_defaults.a', 'bin/crysta')  # the qualified bytes the manifest's hashes bind
 RUNTIME = 'lib/crysta-runtime'  # The env libraries the SDK's CLI carries
 
 

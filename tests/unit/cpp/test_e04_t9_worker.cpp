@@ -4,6 +4,13 @@
 #include <optional>
 #include <thread>
 #include <type_traits>
+#include <limits>
+
+namespace c13_t12_fault {
+extern thread_local long remaining;
+extern thread_local unsigned calls;
+extern thread_local unsigned faults;
+}
 #include "e04_t9_support.hpp"
 
 #if __has_include("edi/worker.hpp") && __has_include("edi/live_preview.hpp")
@@ -309,7 +316,7 @@ TEST_CASE("E04-T9 C1 C2 C3 C4 C7 C8 newest previews and independent ordered stre
             const auto prior_measured = project.experiment().data->intensity_meas;
             const auto before = edi::snapshot_for_work(project).stamps;
             const auto callback = [&] { project.structure().cell.length_a.value = a + .03; };
-            using Apply = decltype(&edi::LivePreview::apply);
+            using Apply = decltype(static_cast<void (edi::LivePreview::*)(const edi::Edit&, bool*)>(&edi::LivePreview::apply));
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, decltype(callback)>),
                           " C4 the edit door cannot accept a raw state-writing lambda");
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, std::function<void()>>),
@@ -529,6 +536,571 @@ TEST_CASE("E04-T9 C5 newest refusal clears all computed categories without dropp
         CHECK_MESSAGE(!preview.busy(), " C5 refusal ends the latest request without an infinite retry");
     }
 }
+// E11-T5 R1: existing trace instrumentation can fail at this genuine
+// post-edit/post-snapshot, pre-submit boundary. It is not an allocation hook.
+TEST_CASE("E11-T5 R1 pre-submit preparation failure preserves edit and permits real recovery") {
+    auto live = edi::load_project(e04_t9_fixture::silicon);
+    e04_t9::OwnerQueue queue;
+    bool fail_once = true;
+    int fired = 0, submissions = 0, edits = 0, publications = 0;
+    edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+        {{}, [&](const edi::work::Event& event) {
+            if (event.channel != "preview") return;
+            if (event.kind == edi::work::EventKind::Submitted) ++submissions;
+            if (event.kind == edi::work::EventKind::Snapshot && fail_once) {
+                fail_once = false; ++fired;
+                throw std::runtime_error("original one-shot preparation observer refusal");
+            }
+        }});
+    edi::LivePreview preview(live, worker,
+        {[&] { ++edits; }, [&](const edi::PreviewResult&) { ++publications; }});
+    const double original = live.structure().cell.length_a.value.get();
+    CHECK_THROWS_AS(preview.apply(edi::Edit::value(live.structure().cell.length_a,
+                                                original + 0.01)), std::runtime_error);
+    REQUIRE(fired == 1);
+    CHECK(live.structure().cell.length_a.value.get() == original + 0.01);
+    CHECK(edits == 1);
+    CHECK(publications == 0);
+    CHECK(submissions == 0);
+    // Busy may truthfully include owed work. The required property is that an
+    // explicit normal retry can actually submit, not cancel a phantom ticket.
+    preview.recalculate();
+    REQUIRE(submissions == 1);
+    queue.one();
+    CHECK(publications == 1);
+    CHECK_FALSE(preview.busy());
+    CHECK(live.structure().cell.length_a.value.get() == original + 0.01);
+    CHECK(fired == 1);
+}
+
+
+TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observers") {
+    using Result = edi::Edit::AppliedResult;
+    static_assert(std::is_trivially_copyable_v<Result>);
+    static_assert(std::is_same_v<decltype(Result{}.structure), const edi::Structure*>);
+    static_assert(std::is_same_v<decltype(Result{}.experiment), const edi::ExperimentBase*>);
+    // All FOUR original closed factories; direct success is independent of the fallible observers.
+    for (int factory = 0; factory != 4; ++factory) {
+        for (int entrance = 0; entrance != 3; ++entrance) {
+            CAPTURE(factory);
+            CAPTURE(entrance);
+            auto live = edi::load_project(e04_t9_fixture::silicon);
+            const auto original_structure = live.structures.front();
+            const auto measured_source = live.experiments.front();
+            REQUIRE_MESSAGE(measured_source->data.has_value(), "RECEIPT491 SETUP original reader fixture has actual measured data");
+            const auto original_structure_count = live.structures.size();
+            auto initial = edi::simulation_experiment("receipt491_target", {}, std::vector<std::string>{original_structure->name.value()});
+            edi::Edit::create_experiment(live, std::move(initial))(); // Original ordinary setup; not the operation under test.
+            const auto target = live.experiments.back();
+            REQUIRE_MESSAGE(target->calculation_only, "RECEIPT491 SETUP original simulation target is genuinely eligible for replacement");
+            const auto target_index = live.experiments.size() - 1;
+            edi::Edit::create_experiment(live, edi::simulation_experiment(
+                "receipt491_unrelated_tail", {}, std::vector<std::string>{original_structure->name.value()}))();
+            const auto unrelated_tail = live.experiments.back();
+            const auto count = live.experiments.size();
+            const auto original_structure_text = edi::project_edi_files(live);
+            auto make_operation = [&]() -> edi::Edit {
+                if (factory == 0) {
+                    auto structure = *original_structure;
+                    structure.name = "receipt491_appended_structure";
+                    return edi::Edit::add_structure(live, std::move(structure));
+                }
+                if (factory == 1)
+                    return edi::Edit::create_experiment(live, edi::simulation_experiment(
+                        "receipt491_appended_experiment", {}, std::vector<std::string>{original_structure->name.value()}));
+                if (factory == 2) {
+                    edi::ExperimentTypeTokens type;
+                    type.radiation_probe = "xray";
+                    return edi::Edit::replace_experiment(live, *target, edi::simulation_experiment(
+                        "receipt491_target", type, std::vector<std::string>{original_structure->name.value()}));
+                }
+                auto loaded = *measured_source;
+                loaded.name = "receipt491_loaded_experiment";
+                return edi::Edit::load_data(live, *target, std::move(loaded));
+            };
+            const auto operation = make_operation();
+            bool applied = true; // Each actual Input entrance must clear BOTH supplied destinations.
+            Result result{original_structure.get(), target.get(), original_structure->atom_sites.front().get()};
+            int inputs = 0, applied_events = 0, edited = 0;
+            auto require_identity = [&] {
+                if (entrance != 0) CHECK_MESSAGE(applied, "RECEIPT491 actual applied flag exists before every fallible observer");
+                CHECK_MESSAGE(live.structures.front() == original_structure,
+                              "RECEIPT491 original unrelated structure retains its actual identity");
+                if (factory == 0) {
+                    REQUIRE_MESSAGE(live.structures.size() == original_structure_count + 1,
+                                    "RECEIPT491 structure factory executes exactly once");
+                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
+                                  "RECEIPT491 structure pin is the actual appended member before publication");
+                    CHECK_MESSAGE(live.structures.back()->name == "receipt491_appended_structure",
+                                  "RECEIPT491 actual appended identity belongs to the independent literal operation");
+                } else {
+                    REQUIRE_MESSAGE(live.experiments.size() == count + (factory == 1 ? 1 : 0),
+                                    "RECEIPT491 experiment factory executes exactly once without duplicate members");
+                    const auto actual_member = factory == 1 ? live.experiments.back() : live.experiments[target_index];
+                    CHECK_MESSAGE(live.experiments[count - 1] == unrelated_tail,
+                                  "RECEIPT491 replacement cannot select the unrelated later member by row position");
+                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get() && result.atom == nullptr && result.exclusion == nullptr),
+                                  "RECEIPT491 experiment pin is the actual current appended/replacement member");
+                    CHECK_MESSAGE(actual_member->name == (factory == 1 ? "receipt491_appended_experiment" :
+                                  factory == 2 ? "receipt491_target" : "receipt491_loaded_experiment"),
+                                  "RECEIPT491 receipt belongs to the independent literal closed operation");
+                    if (factory >= 2)
+                        CHECK_MESSAGE(result.experiment != target.get(),
+                                      "RECEIPT491 replacement receipt never keeps the old still-live member pointer");
+                    if (factory == 3) {
+                        REQUIRE_MESSAGE(actual_member->data.has_value(),
+                                        "RECEIPT491 real measurement replacement actually holds original data");
+                        CHECK_MESSAGE(actual_member->data->intensity_meas.get() == measured_source->data->intensity_meas.get(),
+                                      "RECEIPT491 measurement replacement preserves independent original reader observations");
+                    }
+                }
+            };
+            if (entrance == 0) {
+                result = operation.apply_result(); // Executes ONCE, never a getter after a separate operator().
+                require_identity();
+            } else {
+                e04_t9::OwnerQueue queue;
+                edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+                    {{}, [&](const edi::work::Event& event) {
+                        if (event.kind == edi::work::EventKind::Input) {
+                            ++inputs;
+                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
+                                          "RECEIPT491 both caller destinations clear before the original Input trace");
+                            CHECK_MESSAGE(edi::project_edi_files(live) == original_structure_text,
+                                          "RECEIPT491 Input trace precedes the actual closed operation");
+                        }
+                        if (event.kind == edi::work::EventKind::Applied) {
+                            ++applied_events;
+                            require_identity();
+                            if (entrance == 1) throw std::runtime_error("receipt491 Applied trace failure");
+                        }
+                    }});
+                edi::LivePreview preview(live, worker, {[&] {
+                    ++edited;
+                    require_identity();
+                    throw std::runtime_error("receipt491 edited publication failure");
+                }, {}});
+                const std::string expected = entrance == 1 ? "receipt491 Applied trace failure" : "receipt491 edited publication failure";
+                bool exact_failure = false;
+                try { preview.apply(operation, &applied, &result); }
+                catch (const std::runtime_error& failure) { exact_failure = failure.what() == expected; }
+                CHECK_MESSAGE(exact_failure, "RECEIPT491 reached real original fallible observer, never an earlier setup refusal");
+                CHECK_MESSAGE((inputs == 1 && applied_events == 1 && edited == (entrance == 2 ? 1 : 0)),
+                              "RECEIPT491 one actual Input/Applied boundary and expected original hook are reached");
+                require_identity(); // Throw cannot erase factual applied state or its ORIGINAL identity.
+            }
+        }
+    }
+}
+
+TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit") {
+    auto live = edi::load_project(e04_t9_fixture::silicon);
+    const auto before = edi::project_edi_files(live);
+    bool applied = true;
+    edi::Edit::AppliedResult result{live.structures.front().get(), live.experiments.front().get(), live.structures.front()->atom_sites.front().get()};
+    int inputs = 0;
+    e04_t9::OwnerQueue queue;
+    edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+        {{}, [&](const edi::work::Event& event) {
+            if (event.kind != edi::work::EventKind::Input) return;
+            ++inputs;
+            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
+                          "RECEIPT491 original Input observes cleared caller-owned storage");
+            throw std::runtime_error("receipt491 refused at Input");
+        }});
+    edi::LivePreview preview(live, worker, {});
+    auto structure = live.structure(); structure.name = "receipt491_must_not_append";
+    const auto operation = edi::Edit::add_structure(live, std::move(structure));
+    bool refused = false;
+    try { preview.apply(operation, &applied, &result); }
+    catch (const std::runtime_error& failure) { refused = std::string(failure.what()) == "receipt491 refused at Input"; }
+    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
+                  "RECEIPT491 actual pre-write Input refusal has no false or inherited applied identity");
+    CHECK_MESSAGE(edi::project_edi_files(live) == before, "RECEIPT491 Input refusal preserves every original scientific saved byte");
+}
+
+TEST_CASE("E11-T5 actual appended atom identity precedes fallible preview observers") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.atom),const edi::AtomSite*>);
+    for(int entrance=0;entrance!=3;++entrance) {
+        CAPTURE(entrance);
+        auto live=edi::load_project(e04_t9_fixture::silicon);
+        const auto structure=live.structures.front();
+        REQUIRE_MESSAGE(!structure->atom_sites.empty(),"ATOM634 SETUP original independent structure has an actual initial site");
+        const auto first=structure->atom_sites.front();const auto count=structure->atom_sites.size();
+        auto atom=*first;atom.id="Independent634_added";
+        const auto operation=edi::Edit::append(structure->atom_sites,std::move(atom));
+        const auto before=edi::project_edi_files(live);
+        bool applied=true;Result result{structure.get(),live.experiments.front().get(),first.get()};
+        int inputs=0,applied_events=0,edited=0;
+        auto pin=[&]{
+            REQUIRE_MESSAGE(structure->atom_sites.size()==count+1,"ATOM634 append executes exactly once");
+            CHECK_MESSAGE(structure->atom_sites.front()==first,"ATOM634 original initial atom is preserved by append");
+            CHECK_MESSAGE((result.atom==structure->atom_sites.back().get()&&result.atom!=first.get()&&result.structure==nullptr&&result.experiment==nullptr&&result.exclusion==nullptr),
+                          "ATOM634 result pins EXACT inserted atom before every fallible observer, never the retained initial row");
+            CHECK_MESSAGE(structure->atom_sites.back()->id=="Independent634_added","ATOM634 inserted pin owns the independently requested identity");
+        };
+        if(entrance==0){result=operation.apply_result();pin();continue;}
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==nullptr),
+                "ATOM634 all FOUR stale caller pins clear before real Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"ATOM634 Input is genuinely before append");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;CHECK_MESSAGE(applied,"ATOM634 factual applied flag precedes trace");pin();
+                if(entrance==1)throw std::runtime_error("atom634 Applied observer");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;CHECK_MESSAGE(applied,"ATOM634 factual applied flag precedes edited hook");pin();
+            throw std::runtime_error("atom634 edited observer");},{}});
+        bool exact=false;
+        try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){exact=std::string(error.what())==(entrance==1?"atom634 Applied observer":"atom634 edited observer");}
+        CHECK_MESSAGE(exact,"ATOM634 reached the original intended post-apply observer, not an earlier failure");
+        CHECK_MESSAGE((inputs==1&&applied_events==1&&edited==(entrance==2?1:0)),"ATOM634 each original boundary occurs exactly once");
+        pin(); // Later throw does not erase factual atom identity or apply again.
+    }
+}
+
+TEST_CASE("E11-T5 actual exclusion pin precedes fallible preview observers") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.exclusion),const edi::ExcludedRegion*>);
+    for(int entrance=0;entrance!=3;++entrance) {
+        CAPTURE(entrance);
+        auto live=edi::load_project(e04_t9_fixture::silicon);
+        const auto experiment=live.experiments.front();
+        edi::Edit::append_excluded_region(*experiment,1.25,2.5)();
+        const auto first=experiment->excluded_regions.back();const auto count=experiment->excluded_regions.size();
+        const auto operation=edi::Edit::append_excluded_region(*experiment,3.75,9.125);
+        const auto before=edi::project_edi_files(live);
+        bool applied=true;Result result{live.structures.front().get(),experiment.get(),live.structures.front()->atom_sites.front().get(),first.get()};
+        int inputs=0,applied_events=0,edited=0;
+        auto pin=[&]{
+            REQUIRE_MESSAGE(experiment->excluded_regions.size()==count+1,"EXPERIMENT643 append executes exactly once");
+            CHECK_MESSAGE(experiment->excluded_regions[count-1]==first,"EXPERIMENT643 retained previous row is not mistaken for inserted member");
+            CHECK_MESSAGE((result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==experiment->excluded_regions.back().get()&&result.exclusion!=first.get()),
+                "EXPERIMENT643 actual inserted exclusion is pinned BEFORE every fallible observer");
+            CHECK_MESSAGE((experiment->excluded_regions.back()->first==3.75&&experiment->excluded_regions.back()->second==9.125),
+                "EXPERIMENT643 early actual member retains independently requested literal endpoints");
+        };
+        if(entrance==0){result=operation.apply_result();pin();continue;}
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==nullptr),
+                "EXPERIMENT643 all FOUR stale caller pins clear BEFORE genuine Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 actual Input is before the write");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;CHECK_MESSAGE(applied,"EXPERIMENT643 actual applied flag precedes trace");pin();
+                if(entrance==1)throw std::runtime_error("exclusion643 Applied failure");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;pin();throw std::runtime_error("exclusion643 edited failure");},{}});
+        const std::string expected=entrance==1?"exclusion643 Applied failure":"exclusion643 edited failure";
+        bool exact=false;try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){exact=std::string(error.what())==expected;}
+        CHECK_MESSAGE((exact&&inputs==1&&applied_events==1&&edited==(entrance==2?1:0)),"EXPERIMENT643 exact real postwrite observer failure reached once");
+        pin();CHECK_MESSAGE(applied,"EXPERIMENT643 later failure cannot erase factual original insertion");
+    }
+}
+
+TEST_CASE("E11-T5 ordinary profile and exclusion restore preserve original scientific owners") {
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto structure=live.structures.front();
+    REQUIRE_MESSAGE(experiment->data.has_value(),"EXPERIMENT643 independent committed Echidna input is genuinely measured");
+    REQUIRE_MESSAGE(experiment->peak.broad_gauss_u.has_value(),"EXPERIMENT643 independent FCJ fixture has an engaged shared U cell");
+    REQUIRE_MESSAGE(experiment->peak.asym_fcj_1.has_value(),"EXPERIMENT643 independent FCJ fixture has an optional field dropped by Gaussian");
+    CHECK_MESSAGE(edi::effective_peak_type(*experiment)=="cwl-tch-pseudo-voigt-fcj","EXPERIMENT643 profile baseline comes from the committed fixture tag");
+    auto* shared=&*experiment->peak.broad_gauss_u;const auto original_data=&*experiment->data;
+    edi::Edit::value(*shared,.234567)();shared->free=true;shared->uncertainty=.012345;
+    const auto before=edi::project_edi_files(live);
+    auto undo=edi::capture_experiment_controls(live,*experiment,true);
+    edi::Edit::peak_profile(*experiment,"cwl-gaussian")();
+    CHECK_MESSAGE(edi::effective_peak_type(*experiment)=="cwl-gaussian","EXPERIMENT643 actual requested profile applied on measured target");
+    CHECK_MESSAGE((experiment->peak.broad_gauss_u.has_value()&&&*experiment->peak.broad_gauss_u==shared),"EXPERIMENT643 shared engaged original parameter handle survives changed profile");
+    CHECK_MESSAGE((shared->value.get()==.234567&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.012345}),"EXPERIMENT643 shared scalar/free/SU remain exact nontrivial operands");
+    CHECK_MESSAGE(!experiment->peak.asym_fcj_1.has_value(),"EXPERIMENT643 original selector actually drops FCJ-only field, never fakes preserved shape");
+    edi::Edit::restore_experiment_controls(live,std::move(undo))();
+    CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 narrow profile restore returns every saved scientific field/SU/free/optional/relationship fact");
+    CHECK_MESSAGE((live.experiments.front()==experiment&&live.structures.front()==structure&&&*experiment->data==original_data&&&*experiment->peak.broad_gauss_u==shared),
+        "EXPERIMENT643 restore retains original experiment/structure/measured data/shared parameter owners");
+    auto regions=edi::capture_experiment_controls(live,*experiment,false);
+    edi::Edit::append_excluded_region(*experiment,0,0)();
+    const auto index=experiment->excluded_regions.size()-1;
+    edi::Edit::excluded_region_bound(*experiment,index,false,7.25)();
+    edi::Edit::excluded_region_bound(*experiment,index,true,2.125)();
+    CHECK_MESSAGE((experiment->excluded_regions[index]->first==7.25&&experiment->excluded_regions[index]->second==2.125),
+        "EXPERIMENT643 ordinary finite reversed endpoints stay literal without sort/clamp");
+    edi::Edit::restore_experiment_controls(live,std::move(regions))();
+    CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 exact narrow exclusion restore preserves all unrelated scientific saved bytes");
+    const auto refused_before=edi::project_edi_files(live);
+    bool wrong_mode=false;try{edi::Edit::peak_profile(*experiment,"tof-jorgensen")();}catch(const std::invalid_argument&){wrong_mode=true;}
+    CHECK_MESSAGE((wrong_mode&&edi::project_edi_files(live)==refused_before),"EXPERIMENT643 actual wrong-beam profile refuses before scientific write");
+}
+
+TEST_CASE("E11-T5 original profile preparation refuses each reached allocation before live writes") {
+    for(bool restore : {false,true}) {
+        CAPTURE(restore);
+        // Existing C13-T12 allocator: count the successful original operation,
+        // then fail each actually reached allocation. No guessed sweep length.
+        auto make=[&] {
+            auto live=edi::load_project(e04_t9_fixture::echidna);
+            return live;
+        };
+        auto warm=make();auto warm_undo=edi::capture_experiment_controls(warm,warm.experiment(),true);
+        edi::Edit::peak_profile(warm.experiment(),"cwl-gaussian")();
+        edi::Edit::restore_experiment_controls(warm,std::move(warm_undo))();
+        auto measured=make();auto undo=edi::capture_experiment_controls(measured,measured.experiment(),true);
+        if(restore)edi::Edit::peak_profile(measured.experiment(),"cwl-gaussian")();
+        c13_t12_fault::calls=0;c13_t12_fault::faults=0;c13_t12_fault::remaining=std::numeric_limits<long>::max();
+        try {
+            if(restore)edi::Edit::restore_experiment_controls(measured,std::move(undo))();
+            else edi::Edit::peak_profile(measured.experiment(),"cwl-gaussian")();
+        } catch(...) {c13_t12_fault::remaining=-1;throw;}
+        c13_t12_fault::remaining=-1;
+        const auto allocations=c13_t12_fault::calls;
+        CHECK_MESSAGE(c13_t12_fault::faults==0,"EXPERIMENT648 successful allocation-counting control genuinely commits");
+        CHECK_MESSAGE(edi::effective_peak_type(measured.experiment())==(restore?"cwl-tch-pseudo-voigt-fcj":"cwl-gaussian"),
+            "EXPERIMENT648 measured original factory/operation reaches literal requested control");
+        for(unsigned allocation=0;allocation<allocations;++allocation) {
+            CAPTURE(allocation);
+            auto live=make();auto retained=edi::capture_experiment_controls(live,live.experiment(),true);
+            if(restore)edi::Edit::peak_profile(live.experiment(),"cwl-gaussian")();
+            const auto before=edi::project_edi_files(live);auto* shared=&*live.experiment().peak.broad_gauss_u;
+            bool refused=false;c13_t12_fault::calls=0;c13_t12_fault::faults=0;c13_t12_fault::remaining=allocation;
+            try {
+                if(restore)edi::Edit::restore_experiment_controls(live,std::move(retained))();
+                else edi::Edit::peak_profile(live.experiment(),"cwl-gaussian")();
+            }catch(const std::bad_alloc&){refused=true;}catch(...){c13_t12_fault::remaining=-1;throw;}
+            c13_t12_fault::remaining=-1;
+            CHECK_MESSAGE((refused&&c13_t12_fault::faults==1),"EXPERIMENT648 each measured allocation escape actually reaches first owning failure seam");
+            CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT648 preparation failure leaves every original scientific saved byte unchanged");
+            CHECK_MESSAGE(&*live.experiment().peak.broad_gauss_u==shared,"EXPERIMENT648 original shared parameter remains the same retained owner after refusal");
+        }
+    }
+}
+
+TEST_CASE("E11-T5 original supported profile domain preserves long escaped registered tokens") {
+    REQUIRE_MESSAGE(!edi::work::Worker::any_alive(),"EXPERIMENT648 registration uses original pre-Worker public boundary");
+    const std::vector<std::string> tokens={std::string(257,'p'),std::string(260,'q')+"\\\"\t",std::string("registered648_")+std::string(130,'x')+"\xce\xbb\xf0\x9f\x99\x82"};
+    for(const auto& token:tokens)edi::register_peak_type(token,edi::BeamModeEnum::TIME_OF_FLIGHT);
+    const auto offered=edi::supported_peak_profiles(edi::BeamModeEnum::TIME_OF_FLIGHT);
+    for(const auto& token:tokens) {
+        CHECK_MESSAGE(std::find(offered.begin(),offered.end(),token)!=offered.end(),"EXPERIMENT648 original registry offers exact extension token without member-ID restriction");
+        auto live=edi::load_project(e04_t9_fixture::silicon);const auto member=live.experiments.front();
+        edi::Edit::peak_profile(*member,token)();
+        CHECK_MESSAGE(edi::effective_peak_type(*member)==token,"EXPERIMENT648 ordinary TOF selector preserves exact long/control/UTF8 token; no computed-kernel claim");
+        auto cw=edi::load_project(e04_t9_fixture::echidna);const auto before=edi::project_edi_files(cw);
+        bool refused=false;try{edi::Edit::peak_profile(cw.experiment(),token)();}catch(const std::invalid_argument&){refused=true;}
+        CHECK_MESSAGE((refused&&edi::project_edi_files(cw)==before),"EXPERIMENT648 offered TOF extension remains wrong-mode for genuine CW member");
+    }
+}
+
+TEST_CASE("E11-T5 ordinary scalar absorption and cutoff weight restore retain scientific owners") {
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto structure=live.structures.front();
+    REQUIRE_MESSAGE(experiment->data.has_value(),"SCALAR698 fixture is genuinely measured CW input");
+    const auto* data=&*experiment->data;
+    edi::Edit::absorption(*experiment,"cylinder-hewat")();
+    REQUIRE(experiment->absorption.mu_r.has_value());
+    auto* shared=&*experiment->absorption.mu_r;
+    edi::Edit::value(*shared,.375)();shared->free=true;shared->uncertainty=.0125;
+    const auto before=edi::project_edi_files(live);
+    auto family=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::Absorption);
+    edi::Edit::absorption(*experiment,"cylinder-lobanov")();
+    CHECK_MESSAGE((experiment->absorption.type=="cylinder-lobanov"&&experiment->absorption.mu_r.has_value()&&&*experiment->absorption.mu_r==shared),
+        "SCALAR698 family forward transfer preserves the surviving actual coefficient handle");
+    CHECK_MESSAGE((shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR698 original coefficient value/free/SU survive an ordinary family change");
+    edi::Edit::restore_experiment_controls(live,std::move(family))();
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r==shared),
+        "SCALAR698 ordinary family Undo restores all scientific bytes and surviving identity");
+    auto removed=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::Absorption);
+    edi::Edit::absorption(*experiment,"none")();
+    CHECK_MESSAGE((!experiment->absorption.mu_r.has_value()&&!experiment->absorption.abscor1.has_value()&&!experiment->absorption.abscor2.has_value()),
+        "SCALAR698 none removes the actual optional coefficient owners");
+    const auto empty=edi::project_edi_files(live);
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 retired native storage stays readable, detached and retains its original free/SU state");
+    // Raw Edit::value is a range-checked native assignment, not the guarded Python handle setter.
+    edi::Edit::value(*shared,.875)();
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&shared->value.get()==.875&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 a valid raw write reaches only the still-readable retired native cell");
+    CHECK_MESSAGE((edi::project_edi_files(live)==empty&&!experiment->absorption.mu_r.has_value()&&!experiment->absorption.abscor1.has_value()&&!experiment->absorption.abscor2.has_value()),
+        "SCALAR743 a historical native cell cannot mutate the live project or resurrect any removed coefficient");
+    edi::Edit::restore_experiment_controls(live,std::move(removed))();
+    REQUIRE(experiment->absorption.mu_r.has_value());
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r!=shared),
+        "SCALAR698 Undo restores scientific state without resurrecting a detached historical cell");
+    auto* restored=&*experiment->absorption.mu_r;
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&!restored->is_detached()&&restored!=shared),
+        "SCALAR743 Undo creates a distinct live coefficient and leaves the historical native cell detached");
+    REQUIRE_MESSAGE((shared->value.get()==.875&&shared->value.get()!=.625),
+        "SCALAR746 post-Undo escape starts at the established historical value and must actually change it");
+    edi::Edit::value(*shared,.625)();
+    CHECK_MESSAGE((shared->is_detached()&&shared->value.get()==.625&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 the retired cell remains readable after Undo without acquiring current ownership");
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r==restored&&restored->value.get()==.375&&restored->free.get()&&restored->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 raw historical writes cannot alter the replacement's identity/value/free/SU or any live scientific byte");
+    for(double literal:{0.0,-2.5}) {
+        auto cutoff=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::CutoffFwhm);
+        edi::Edit::assign(experiment->peak.cutoff_fwhm,literal)();
+        CHECK_MESSAGE(experiment->peak.cutoff_fwhm==literal,"SCALAR698 nonpositive cutoff is stored literally, never clamped to an invented positive threshold");
+        edi::Edit::restore_experiment_controls(live,std::move(cutoff))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==before,"SCALAR698 cutoff Undo preserves the entire original project");
+    }
+    auto zero=edi::load_project(e04_t9_fixture::echidna);
+    auto negative=edi::load_project(e04_t9_fixture::echidna);
+    edi::Edit::assign(zero.experiment().peak.cutoff_fwhm,0.0)();
+    edi::Edit::assign(negative.experiment().peak.cutoff_fwhm,-2.5)();
+    // ADR0073 section7: published rows retain the original inclusive exclusion union.
+    // Derive expected membership from SOURCE axis/intervals before either calculation, never its output.
+    const auto axis=zero.experiment().data->axis();
+    const auto observations=zero.experiment().data->intensity_meas.get();
+    const auto sigmas=zero.experiment().data->intensity_meas_su.get();
+    std::vector<std::pair<double,double>> intervals;
+    for(const auto& region:zero.experiment().excluded_regions)
+        intervals.emplace_back(region->first.get(),region->second.get());
+    REQUIRE_MESSAGE((!axis.empty()&&observations.size()==axis.size()&&sigmas.size()==axis.size()),
+        "SCALAR743 original complete measured rows and supplied sigmas define the independent mask axis");
+    const auto negative_axis=negative.experiment().data->axis();
+    std::vector<std::pair<double,double>> negative_intervals;
+    for(const auto& region:negative.experiment().excluded_regions)
+        negative_intervals.emplace_back(region->first.get(),region->second.get());
+    REQUIRE_MESSAGE((negative_axis==axis&&negative_intervals==intervals&&negative.experiment().data->intensity_meas.get()==observations&&negative.experiment().data->intensity_meas_su.get()==sigmas),
+        "SCALAR743 both independently loaded original banks have the same complete source rows and literal intervals before calculation");
+    const auto source_mask=[](const auto& source_axis,const auto& source_intervals) {
+        std::vector<bool> mask;
+        for(double x:source_axis) {
+            REQUIRE_MESSAGE(std::isfinite(x),"SCALAR743 every original measured axis coordinate is finite");
+            bool masked=false;
+            for(const auto& bounds:source_intervals)
+                masked=masked||((bounds.first<=x&&x<=bounds.second)||(bounds.second<=x&&x<=bounds.first));
+            mask.push_back(masked);
+        }
+        return mask;
+    };
+    const auto excluded=source_mask(axis,intervals);
+    const auto negative_excluded=source_mask(negative_axis,negative_intervals);
+    REQUIRE_MESSAGE(excluded==negative_excluded,"SCALAR743 both source-derived inclusive masks agree before either calculation");
+    std::size_t included_count=0,excluded_count=0;
+    for(bool masked:excluded) {if(masked)++excluded_count;else ++included_count;}
+    REQUIRE_MESSAGE((included_count>0&&excluded_count>0),
+        "SCALAR743 unchanged original fixture genuinely exercises both included and excluded published rows");
+    zero.calculate();negative.calculate();
+    for(const auto* calculated:{&zero,&negative}) {
+        const auto& bank=calculated->experiment();
+        CHECK_MESSAGE((bank.data->axis()==axis&&bank.data->intensity_meas.get()==observations&&bank.data->intensity_meas_su.get()==sigmas),
+            "SCALAR743 calculation retains every original measured row/order/value and supplied sigma");
+        REQUIRE_MESSAGE(bank.excluded_regions.size()==intervals.size(),"SCALAR743 every original exclusion interval remains present");
+        for(std::size_t index=0;index<intervals.size();++index) {
+            CHECK_MESSAGE((bank.excluded_regions[index]->first.get()==intervals[index].first&&bank.excluded_regions[index]->second.get()==intervals[index].second),
+                "SCALAR743 calculation retains original exclusion order and literal endpoints");
+        }
+    }
+    const auto& full=zero.experiment().data->intensity_calc;
+    const auto& signed_full=negative.experiment().data->intensity_calc;
+    const auto& zero_status=zero.experiment().data->calc_status;
+    const auto& negative_status=negative.experiment().data->calc_status;
+    REQUIRE_MESSAGE((full.size()==axis.size()&&signed_full.size()==axis.size()&&zero_status.size()==axis.size()&&negative_status.size()==axis.size()),
+        "SCALAR743 both complete calculated/status columns retain the entire original measured population");
+    for(std::size_t row=0;row<axis.size();++row) {
+        const std::string expected=excluded[row]?"excl":"incl";
+        CHECK_MESSAGE(zero_status[row]==expected,"SCALAR743 zero-cutoff published status matches the independent inclusive source mask");
+        CHECK_MESSAGE(negative_status[row]==(negative_excluded[row]?"excl":"incl"),"SCALAR743 negative-cutoff published status matches its independent inclusive source mask");
+        if(excluded[row]) {
+            CHECK_MESSAGE((std::isnan(full[row])&&std::isnan(signed_full[row])),
+                "SCALAR743 excluded published rows remain explicitly NaN, never infinity/zero/dropped rows");
+        }else {
+            REQUIRE_MESSAGE((std::isfinite(full[row])&&std::isfinite(signed_full[row])),
+                "SCALAR743 every independently included published row is finite in both calculations");
+            CHECK_MESSAGE(std::bit_cast<std::uint64_t>(full[row])==std::bit_cast<std::uint64_t>(signed_full[row]),
+                "SCALAR698 zero and negative cutoff have the same original full-window semantics; no invented optimum or tolerance");
+        }
+    }
+    auto weight=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::DatasetWeight);
+    edi::Edit::assign(experiment->dataset_weight,.625)();
+    CHECK_MESSAGE(experiment->dataset_weight==.625,"SCALAR698 ordinary dataset weight stores the requested scalar; no single-bank curve claim");
+    edi::Edit::restore_experiment_controls(live,std::move(weight))();
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&live.experiments.front()==experiment&&live.structures.front()==structure&&&*experiment->data==data),
+        "SCALAR698 scalar history preserves all original owners, data, observations, links, free flags and SUs");
+}
+
+TEST_CASE("E11-T5 ordinary phase links restore narrow science and pin actual appended rows") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.linked_structure),const edi::LinkedStructure*>);
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto original_structure=live.structures.front();
+    REQUIRE_MESSAGE((!experiment->linked_structures.empty()&&experiment->data.has_value()),
+        "PHASE709 original measured project has a real initial link, never a fabricated empty bank");
+    const auto initial_id=experiment->linked_structures.front()->structure_id.value();
+    const auto initial_count=experiment->linked_structures.size();
+    for(const auto* id:{"phase709_b","phase709_c"}) {
+        auto extra=*original_structure;extra.name=id;edi::Edit::add_structure(live,std::move(extra))();
+    }
+    REQUIRE_MESSAGE((experiment->linked_structures.size()==initial_count&&experiment->linked_structures.front()->structure_id==initial_id),
+        "PHASE709 ordinary independent structure setup preserves every real initial experiment link");
+    auto row=experiment->linked_structures.front();
+    edi::Edit::value(row->scale,.375)();row->scale.free=true;row->scale.uncertainty=.0125;
+    const auto baseline=edi::project_edi_files(live);
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        auto* scale=&row->scale;const auto link=row;
+        edi::Edit::link_structure(*row,"phase709_b")();
+        CHECK_MESSAGE((experiment->linked_structures.front()==link&&&link->scale==scale&&link->structure_id=="phase709_b"),
+            "PHASE709 forward ordinary retarget retains actual link and scale owners");
+        CHECK_MESSAGE((scale->value.get()==.375&&scale->free.get()&&scale->uncertainty.get()==std::optional<double>{.0125}),
+            "PHASE709 retarget retains independently supplied scale value/free/SU");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 ordinary shared Undo restores all narrow rows, relations, scientific state and any existing fit state");
+        row=experiment->linked_structures.front(); // Undo may retire old link/parameter handles.
+    }
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        edi::Edit::assign(row->enabled,false)();
+        CHECK_MESSAGE((!row->enabled.get()&&row->structure_id==initial_id&&row->scale.value.get()==.375),
+            "PHASE709 explicit false keeps the stored original row and its scale, not an inverted guess");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 enabled-state Undo restores all original scientific bytes");
+        row=experiment->linked_structures.front();
+    }
+    {
+        auto history=edi::capture_experiment_links(live,*experiment);
+        edi::LinkedStructure extra;extra.structure_id="phase709_b";
+        auto operation=edi::Edit::append(experiment->linked_structures,std::move(extra));
+        bool applied=false;Result result{};int inputs=0,applied_events=0,edited=0;
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;
+                CHECK_MESSAGE((!applied&&result.linked_structure==nullptr&&edi::project_edi_files(live)==baseline),
+                    "PHASE709 original Input precedes append and clears the phase identity");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;
+                CHECK_MESSAGE((applied&&experiment->linked_structures.size()==initial_count+1&&result.linked_structure==experiment->linked_structures.back().get()),
+                    "PHASE709 actual inserted phase is pinned BEFORE the original fallible Applied publication");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;
+            CHECK_MESSAGE((applied&&result.linked_structure==experiment->linked_structures.back().get()),
+                "PHASE709 original edited callback sees the same actual early phase identity");
+            throw std::runtime_error("phase709 original edited observer");},{}});
+        bool intended=false;
+        try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){intended=std::string(error.what())=="phase709 original edited observer";}
+        REQUIRE_MESSAGE((intended&&inputs==1&&applied_events==1&&edited==1),
+            "PHASE709 reaches the actual original post-apply failure exactly once, never an earlier admission/setup failure");
+        REQUIRE_MESSAGE(experiment->linked_structures.size()==initial_count+1,"PHASE709 original append changes exactly one actual stored row");
+        const auto inserted=experiment->linked_structures.back();
+        CHECK_MESSAGE((result.linked_structure==inserted.get()&&result.linked_structure!=row.get()),
+            "PHASE709 AppliedResult pins the actual newly inserted phase, never the preexisting initial link");
+        CHECK_MESSAGE((inserted->structure_id=="phase709_b"&&inserted->scale.value.get()==1&&inserted->enabled.get()),
+            "PHASE709 original ordinary append defaults are independent scale1 and enabled true");
+        CHECK_MESSAGE((experiment->linked_structures.front()==row&&row->structure_id==initial_id&&row->scale.value.get()==.375),
+            "PHASE709 append never overwrites the real initial link or scale");
+        const auto appended=edi::project_edi_files(live);
+        auto removal=edi::capture_experiment_links(live,*experiment);
+        const auto removed_id=inserted->structure_id.value();
+        edi::Edit::erase(experiment->linked_structures,experiment->linked_structures.size()-1)();
+        CHECK_MESSAGE((experiment->linked_structures.size()==initial_count&&removed_id=="phase709_b"),
+            "PHASE709 erase confirms the previously admitted ID without dereferencing an erased row");
+        edi::Edit::restore_experiment_controls(live,std::move(removal))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==appended,"PHASE709 remove Undo restores complete ordered narrow row and scientific image");
+        edi::Edit::restore_experiment_controls(live,std::move(history))();
+        CHECK_MESSAGE(edi::project_edi_files(live)==baseline,"PHASE709 append Undo restores original science after reacquiring current rows");
+        row=experiment->linked_structures.front();
+    }
+    CHECK_MESSAGE((row->structure_id==initial_id&&row->scale.value.get()==.375&&row->scale.free.get()&&row->scale.uncertainty.get()==std::optional<double>{.0125}),
+        "PHASE709 current reacquired original link retains every independently supplied scale fact");
+}
+
 #else
 #define E04_T9_RED(name) TEST_CASE(name) { FAIL_CHECK(" accepted worker and transaction contracts are absent on red-first main"); }
 E04_T9_RED(" I2 I3 I4 I5 worker preserves every ordered delivery and cancellation")

@@ -23,6 +23,8 @@ Engine and libraries:
 - libgomp 15.2.0 | licence: GPL-3.0-only WITH GCC-exception-3.1 | the GCC OpenMP runtime (Linux), with the GCC runtime libraries libstdc++ and libgcc_s, under the GCC Runtime Library Exception
 - llvm-openmp 23.1.2 | licence: Apache-2.0 WITH LLVM-exception | the LLVM OpenMP runtime (macOS)
 - nanobind 2.13.0 | licence: BSD-3-Clause | the Python bindings, compiled into the Python extension
+- jwt-cpp 0.7.2 | licence: MIT | native ChatGPT OpenID token signature verification
+- picojson (jwt-cpp bundle) | licence: BSD-2-Clause | jwt-cpp JSON adapter
 - robin-map | licence: MIT | the hash map inside nanobind, compiled into the Python extension
 
 Application framework:
@@ -6265,3 +6267,68 @@ In edi: icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https:/
 
     The fonts are licensed under the SIL Open Font License 1.1 (its text is given under PT Sans,
     PT Mono); the icon designs under CC BY 4.0, https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## jwt-cpp 0.7.2
+
+Licence: MIT
+
+MIT License
+
+Copyright (c) 2018 Dominik Thalhammer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## picojson (bundled with jwt-cpp)
+
+Licence: BSD-2-Clause
+
+
+Copyright 2009-2010 Cybozu Labs, Inc.
+Copyright 2011-2014 Kazuho Oku
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+
+The native assistant includes OpenAI Codex app-server 0.162.1 and its complete
+platform package (code-mode host, ripgrep, patched zsh and Linux bubblewrap).
+The package's licence/copyright texts, pinned provenance and source links are
+installed beside it in libexec/edi/codex/edi-licenses. See the bundled Codex
+Apache-2.0 LICENSE/NOTICE, ripgrep MIT/COPYING, zsh LICENCE and bubblewrap LGPL
+COPYING there. The unmodified upstream runtime owns its managed authentication.

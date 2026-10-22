@@ -18,8 +18,12 @@ EaElements.StatusBar {
     id: bar
 
     readonly property ProjectViewModel project: Session.project
+    property bool assistantChatShown: false
+    property bool assistantManualTakeover: false
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0
+    readonly property bool assistantStatusNeeded: (assistantArea.presented && assistantArea.working)
+        || Session.assistant.showingActions || assistantManualTakeover || visibleStop.pressed
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || assistantStatusNeeded
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -37,13 +41,15 @@ EaElements.StatusBar {
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
         const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : 0;
-        return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
+        const assistantWidth = assistantGroup.visible ? assistantGroup.implicitWidth + spacing : 0;
+        return width + Math.max(0, shown - 1) * spacing + fitWidth + assistantWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0);
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitViewport.visible ? fitViewport.width + spacing : 0)
+            - (assistantGroup.visible ? assistantGroup.width + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
             if (!items[i].shown)
@@ -76,7 +82,9 @@ EaElements.StatusBar {
         keyIcon: "archive"
         keyText: qsTr("Project")
         valueText: bar.project ? bar.project.name : qsTr("Undefined")
-        ToolTip.text: qsTr("Current project")
+        clickable: bar.project !== null
+        ToolTip.text: qsTr("Current project folder")
+        onClicked: projectFolder.openCurrent()
     }
     StatusBarItem {
         id: structuresItem
@@ -132,16 +140,107 @@ EaElements.StatusBar {
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
-    // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
-    // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the
-    // far right, which stays put while their width changes. The status opens the last fit's results.
+    Item {
+        id: assistantGroup
+        parent: bar
+        readonly property bool stopShown: Session.assistant.showingActions || bar.assistantManualTakeover
+        readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+        readonly property real buttonExtent: assistantArea.iconExtent
+        // Keep the original Stop receiver and its text slot in place through
+        // manual takeover and the native press/release which caused it.
+        visible: bar.assistantStatusNeeded
+        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
+            + assistantArea.implicitWidth
+            + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
+        width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
+        height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
+        anchors.right: parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+            id: assistantRule
+            objectName: "statusBar.assistant.separator"
+            visible: fitViewport.visible
+            width: rule.width
+            height: rule.height
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            color: rule.color
+        }
+        AssistantWorking {
+            id: assistantArea
+            objectName: "statusBar.assistant.working"
+            assistant: Session.assistant
+            presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
+            width: Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
+                - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
+            height: Math.max(implicitHeight, iconExtent)
+            anchors.left: parent.left
+            anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
+            anchors.verticalCenter: parent.verticalCenter
+        }
+        EaElements.ToolButton {
+            id: visibleStop
+            objectName: "assistant.stopVisibleAction"
+            visible: assistantGroup.stopShown || pressed
+            enabled: Session.assistant.canCancel
+            implicitWidth: assistantGroup.buttonExtent
+            implicitHeight: implicitWidth
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            fontIcon: "stop"
+            background: Rectangle {
+                implicitWidth: assistantGroup.buttonExtent
+                implicitHeight: implicitWidth
+                width: assistantGroup.buttonExtent
+                height: width
+                anchors.centerIn: parent
+                radius: width / 2
+                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered
+                    : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent
+                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                border.width: 0
+            }
+            contentItem: EaElements.Label {
+                text: visibleStop.fontIcon
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: assistantGroup.buttonExtent * 0.5
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: visibleStop.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : visibleStop.foregroundColor()
+            }
+            ToolTip.text: bar.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
+            Accessible.name: ToolTip.text
+            onClicked: Session.assistant.cancel()
+        }
+    }
+    // Reserve the assistant's real viewport target first. Long native fit
+    // values remain complete inside a bounded, horizontally scrollable area.
+    Flickable {
+        id: fitViewport
+        objectName: "statusBar.fit.viewport"
+        parent: bar
+        visible: bar.fit !== null && (bar.fit.running || bar.fit.outcome !== "")
+        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
+        anchors.rightMargin: assistantGroup.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.min(fitArea.implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
+            - (assistantGroup.visible ? assistantGroup.width + fitArea.spacing : 0)))
+        height: bar.height
+        contentWidth: fitArea.implicitWidth
+        contentHeight: height
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.HorizontalFlick
+        ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
+    }
+    // Original full fit values, result control and progress retain their model
+    // and native input behavior inside that viewport.
     Row {
         id: fitArea
 
         objectName: "statusBar.fit"
-        parent: bar
-        anchors.right: parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        parent: fitViewport.contentItem
         anchors.verticalCenter: parent.verticalCenter
         spacing: EaStyle.Sizes.fontPixelSize * 1.2
         visible: bar.fit !== null && (running || bar.fit.outcome !== "")
@@ -175,32 +274,39 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            return width + (shown - 1) * spacing;
+            return width + (shown - 1) * spacing - (statusItem.shown ? statusItem.leftPadding : 0);
         }
 
-        Rectangle {
-            id: rule
-            width: EaStyle.Sizes.borderThickness
-            height: EaStyle.Sizes.fontPixelSize * 1.5
+        Row {
+            // The clickable result keeps its original hover/hit padding. Only
+            // this leading gap compensates for that padding before the icon.
+            spacing: fitArea.spacing - statusItem.leftPadding
             anchors.verticalCenter: parent.verticalCenter
-            color: EaStyle.Colors.appBarBorder
-        }
-        // The last fit's outcome, in its colour.
-        FitStatusItem {
-            id: statusItem
-            objectName: "statusBar.fit.outcome"
-            readonly property string outcome: bar.fit ? bar.fit.outcome : ""
-            shown: fitArea.summary && outcome !== ""
-            showKey: bar.keysFit
-            keyIcon: FitOutcomes.icon(outcome)
-            keyText: qsTr("Status")
-            valueText: FitOutcomes.word(outcome)
-            iconColor: FitOutcomes.color(outcome)
-            valueColor: FitOutcomes.color(outcome)
-            // The last fit's results table, also for a project opened with one.
-            clickable: bar.fit !== null && bar.fit.results.count > 0
-            ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
-            onClicked: fitResultsDialog.open()
+
+            Rectangle {
+                id: rule
+                width: EaStyle.Sizes.borderThickness
+                height: EaStyle.Sizes.fontPixelSize * 1.5
+                anchors.verticalCenter: parent.verticalCenter
+                color: EaStyle.Colors.appBarBorder
+            }
+            // The last fit's outcome, in its colour.
+            FitStatusItem {
+                id: statusItem
+                objectName: "statusBar.fit.outcome"
+                readonly property string outcome: bar.fit ? bar.fit.outcome : ""
+                shown: fitArea.summary && outcome !== ""
+                showKey: bar.keysFit
+                keyIcon: FitOutcomes.icon(outcome)
+                keyText: qsTr("Status")
+                valueText: FitOutcomes.word(outcome)
+                iconColor: FitOutcomes.color(outcome)
+                valueColor: FitOutcomes.color(outcome)
+                // The last fit's results table, also for a project opened with one.
+                clickable: bar.fit !== null && bar.fit.results.count > 0
+                ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+                onClicked: fitResultsDialog.open()
+            }
         }
         Row {
             objectName: "statusBar.fit.values"
@@ -303,6 +409,68 @@ EaElements.StatusBar {
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+        }
+    }
+
+    AppDialog {
+        id: projectFolder
+        objectName: "statusBar.project.folder"
+        property var presentation: null
+        readonly property var original: presentation ? presentation.owner : null
+        readonly property string originalPath: presentation ? presentation.path : ""
+        function owns(request) {
+            return Qt.isQtObject(projectFolder) && request!==null && presentation===request
+                && Qt.isQtObject(request.owner) && request.owner===Session.project && request.owner.path===request.path
+                && presentation===request;
+        }
+        readonly property bool current: owns(presentation)
+        function openCurrent() {
+            const dialog=projectFolder;
+            const owner=Session.project;
+            if(!Qt.isQtObject(owner))return;
+            const request={owner:owner,path:owner.path};
+            dialog.presentation=request; // One complete immutable record before notifying observers.
+            if(Qt.isQtObject(dialog) && dialog.owns(request))dialog.open();
+        }
+        title: qsTr("Project folder")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: folderContent.implicitHeight
+        Connections { target: Session; function onProjectChanged(){if(projectFolder.visible && !projectFolder.current)projectFolder.close();} }
+        Connections { target: projectFolder.original; function onPathChanged(){if(projectFolder.visible && !projectFolder.current)projectFolder.close();} }
+        Column {
+            id: folderContent
+            width: projectFolder.contentWidth
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.TextArea {
+                objectName: "statusBar.project.path"
+                width: parent.width
+                readOnly: true
+                selectByMouse: true
+                wrapMode: TextEdit.Wrap
+                textFormat: TextEdit.PlainText
+                text: projectFolder.current && projectFolder.originalPath.length ? projectFolder.originalPath : qsTr("This project has not been saved in a folder yet.")
+            }
+            Row {
+                spacing: EaStyle.Sizes.fontPixelSize
+                EaElements.Button {
+                    objectName: "statusBar.project.copy"
+                    text: qsTr("Copy path")
+                    enabled: projectFolder.current && projectFolder.originalPath.length>0
+                    onClicked: {const request=projectFolder.presentation;if(projectFolder.owns(request))ApplicationInfo.copyText(request.path);}
+                }
+                EaElements.Button {
+                    objectName: "statusBar.project.open"
+                    text: qsTr("Open folder")
+                    enabled: projectFolder.current && projectFolder.originalPath.length>0
+                    onClicked: {
+                        const dialog=projectFolder,request=dialog.presentation;
+                        if(!dialog.owns(request))return;
+                        const target=Session.projectFolderUrl();
+                        if(Qt.isQtObject(dialog) && dialog.owns(request))Qt.openUrlExternally(target);
+                    }
+                }
+            }
         }
     }
 

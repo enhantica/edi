@@ -3,6 +3,9 @@
 #define EDI_APP_PROJECT_VIEW_MODEL_HPP
 
 #include <QHash>
+#include <QVariantList>
+#include <QVariantMap>
+#include <QJsonObject>
 #include <QList>
 #include <QStringList>
 #include <QObject>
@@ -27,6 +30,7 @@
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/model.hpp"
+#include "edi/assistant_files.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
 #include "correlation_view_model.hpp"
@@ -42,6 +46,8 @@
 #include "structure_view_options.hpp"
 
 namespace edi_app {
+
+struct ImmutableAssistantResult;
 
 // A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
 // in the value's last digits, and the bracket; all empty when there is no s.u. to write.
@@ -254,6 +260,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
+    /// Native assistant access to the same model and worker used by manual controls.
+    edi::Project* assistantProject() { return project_.get(); }
+    edi::work::Worker& assistantWorker() { return *worker_; }
+    struct NativeSavedState;
+    // Same current PVM, its registry/Undo and Session attachment remain owned.
+    // All rounding/row/path/source preparation precedes destination publication.
+    std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
+        const edi::WorkStamps& original, edi::CalculationResult calculation, const QString& destination);
+    std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
+        const edi::WorkStamps&, edi::CalculationResult, const QString& destination, std::size_t metadata_limit);
+    bool commitNativeSaved(NativeSavedState&) noexcept;
+    bool presentNativeSaved(NativeSavedState&);
+
     // The demo's seam: the project's created and last-modified times, which a loaded example takes
     // from the clock, set to a fixed value so its saved Text is reproducible.
     void pinTimestamps(const QString& timestamp);
@@ -279,6 +298,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    struct EditOutcome {
+        bool applied = false;
+        bool published = false;
+        QString message;
+    };
+    // Native batches and the existing manual relation/free editor share the same
+    // preowned Undo and actual applied/publication boundary. No QML entry point.
+    EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
+    EditOutcome changeBackgroundPoint(edi::ExperimentBase&, const edi::BackgroundPointInput&, bool native_bounded = false);
+    BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) override;
+    QString rename_background_point(edi::ExperimentBase&, edi::LineSegment&, const std::string&) override;
+    // Same-owner empty completion, sharing the normal structural editor/Undo.
+    EditOutcome populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared);
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
@@ -305,11 +337,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
     QString apply(const edi::Edit& change, bool structural) override;
+    QString assign_parameter_value(edi::Parameter& parameter, double value) override;
+    QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
     QString apply_relation_edit(const edi::Edit& change) override;
+    QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
+    RelationOutcome commit_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;
     QString rename_structure(edi::Structure& structure, const std::string& name) override;
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
+    // Narrow app-native observation, not generic history access or a QML write door.
+    bool fitUndoAvailable() const;
 
     // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
@@ -361,12 +399,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
-    QString write_report_settings(const edi::Edit& change);
+    QString write_report_settings(const edi::Edit& change, bool restoring = false);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 
    signals:
     void nameChanged();
+    void projectEdited();
     void titleChanged();
     void descriptionChanged();
     void authorsChanged();
@@ -417,6 +456,109 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void published(const edi::PreviewResult& result);
     void publishCalculating();
     void setLastError(const QString& error);
+    friend class Session;
+    friend class FitViewModel;
+    friend class AssistantViewModel;
+    // One-shot ordinary Save entry origin and stack-local emitted origin.
+    // Manual edits/Save carry zero, including nested and early-error callbacks.
+    std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
+    void notifyProjectEdited(std::uint64_t origin=0);
+    struct WidgetParameterInput {
+        enum class Field { Value, Free, FreeGroup } field;
+        const edi::Parameter* parameter = nullptr;
+        std::vector<const edi::Parameter*> members; // Original exact free-header set; no QObject ownership.
+        double value = 0;
+        bool free = false, consumed = false;
+        EditOutcome outcome;
+    };
+    struct FitUndoInput {
+        std::uint64_t attempt = 0;
+        bool consumed = false, started = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<FitUndoInput> fit_undo_input_;
+    bool fit_undo_invoking_ = false;
+    std::shared_ptr<FitUndoInput> prepareFitUndo();
+    void finishFitUndo(const std::shared_ptr<FitUndoInput>&) noexcept;
+    struct WidgetRelationInput {
+        edi::Edit::AppliedResult applied_result;
+        ProjectEditor::RelationAction expected;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    struct WidgetCreationInput {
+        CreationAction expected;
+        // Opted in only by individual assistant actions; manual/compound readers unchanged.
+        bool bounded_result = false, result_identity_refused = false;
+        edi::Edit::AppliedResult applied_result;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetCreationInput> widget_creation_input_;
+    std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
+    void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
+    QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    struct WidgetFileInput {
+        std::function<bool()> source_current;
+        QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.
+        enum class Kind { Structure, Measurement };
+        Kind kind = Kind::Structure;
+        const edi::ExperimentBase* experiment = nullptr;
+        bool bounded_result = false, result_identity_refused = false, source_changed = false;
+        edi::Edit::AppliedResult applied_result;
+        std::size_t points = 0, skipped = 0, nonpositive = 0, duplicates = 0, reordered = 0, derived = 0;
+        QUrl path;
+        std::shared_ptr<const edi::assistant::SelectedFile> source;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetFileInput> widget_file_input_;
+    std::shared_ptr<WidgetFileInput> prepareWidgetStructureFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>);
+    std::shared_ptr<WidgetFileInput> prepareWidgetMeasurementFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>, ExperimentViewModel*);
+    void finishWidgetFile(const std::shared_ptr<WidgetFileInput>&) noexcept;
+    struct WidgetBackgroundInput {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundPointInput expected;
+        const edi::LineSegment* row = nullptr;
+        const edi::LineSegment* result_row = nullptr;
+        std::vector<const edi::LineSegment*> members;
+        bool names = false, rename = false, consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetBackgroundInput> widget_background_input_;
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackground(edi::ExperimentBase&, const edi::BackgroundPointInput&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundRename(edi::ExperimentBase&, edi::LineSegment&, const std::string&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundNames(edi::ExperimentBase&);
+    void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
+    edi::Edit::AppliedResult* relation_result_ = nullptr; // Scoped manual complete-row pin only.
+    std::shared_ptr<WidgetRelationInput> widget_relation_input_;
+    std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const ProjectEditor::RelationAction& action);
+    void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
+    std::shared_ptr<WidgetParameterInput> widget_input_;
+    bool widget_input_executing_ = false;
+    std::shared_ptr<WidgetParameterInput> prepareWidgetValue(const edi::Parameter& parameter, double value);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFree(const edi::Parameter& parameter, bool free);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFreeGroup(std::vector<const edi::Parameter*>, bool free);
+    void finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept;
+    void retire() noexcept;
+    bool retired_ = false;
+    unsigned publication_depth_ = 0;
+    // Private stack lifetime, not a callback/API or model authority grant. Session
+    // may eagerly drain only an idle old owner; active stacks unwind normally.
+    struct PublicationScope {
+        ProjectViewModel& owner;
+        explicit PublicationScope(ProjectViewModel& value) noexcept : owner(value) { ++owner.publication_depth_; }
+        ~PublicationScope() {
+            if (--owner.publication_depth_ == 0 && owner.retired_) owner.deleteLater();
+        }
+        PublicationScope(const PublicationScope&) = delete;
+        PublicationScope& operator=(const PublicationScope&) = delete;
+    };
+    // Keep the exact old sealed files alive until normal QObject deferred deletion.
+    std::shared_ptr<ImmutableAssistantResult> retired_result_;
+    QString criticalEditRefusal(bool restoring = false) const;
+    QString applyUndo(const edi::Edit& change, bool structural);
+    void holdPublicationFailure(const QString& warning) noexcept;
     void setModified(bool modified);
 
     std::unique_ptr<edi::Project> project_;
@@ -455,6 +597,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::vector<std::pair<std::string, bool>> before;
     };
     // Name points by position: the experiment's background point ids as they were, in order.
+    struct BackgroundPointUndo { std::shared_ptr<edi::BackgroundPointChange> prepared; };
     struct PointIds {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
@@ -468,15 +611,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_before;
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
+    struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState>;
+                                    edi::StructuresUndo, edi::ExperimentControlsUndo, FreeFlags, PointIds, BackgroundPointUndo, BlockName, edi::ReportSettingsState, EmptyPopulationUndo>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
-    QString replaceData(int index, edi::BraggPdExperiment replacement);
-    bool restoreScanRun(const ScanRun& run);
+    QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
+    bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
     // The indexed results in the lists, Evolution, the fit summary and the outdated state.
@@ -606,6 +750,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::unique_ptr<edi::work::Worker> worker_;
     std::unique_ptr<edi::LivePreview> preview_;
     bool pending_structural_ = false;
+    bool editing_ = false;
+    bool edit_publication_failed_ = false;
+    struct RecordedEdit {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
+    void finishRecordedEdit() noexcept;
+    EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
+    QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;
     bool modified_ = false;
     QString last_error_;

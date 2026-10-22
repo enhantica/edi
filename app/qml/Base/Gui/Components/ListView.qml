@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// gui-components edi 3897d339; null-safe selection model and typed header lookup.
+// Shared gui-components ListView with Edi null-safe selection and typed header lookup.
 import QtQuick
 import QtQuick.Controls
 
@@ -51,6 +51,53 @@ ListView {
     // that scope.
     property bool selectionActive: true
 
+    // Optional backend current row. It changes presentation only, never selection,
+    // currentIndex, focus or scroll position. Ordinary consumers need no binding.
+    property int currentRow: -1
+
+    // Companion geometry: one moving marker for a single selection/current row.
+    // Multi-selection keeps one marker on every selected delegate instead.
+    readonly property int markerRow: currentMarkerRow()
+    function currentMarkerRow() {
+        if (!selectionActive || count <= 0)
+            return -1;
+        let row = currentRow;
+        if (row < 0 || row >= count) {
+            const selected = selectedIndexes;
+            row = selected.length === 1 ? selected[0].row : -1;
+        }
+        return selectionActive && row >= 0 && row < count ? row : -1;
+    }
+    property Item markerItem: null
+    property bool markerMoves: false
+    property int markerModelRevision: 0
+    function refreshMarker() {
+        const view = listView;
+        if (!Qt.isQtObject(view))
+            return;
+        const revision = view.markerModelRevision, row = view.currentMarkerRow();
+        if (!Qt.isQtObject(view) || view.markerModelRevision !== revision)
+            return;
+        const next = row >= 0 && row < view.count ? view.itemAtIndex(row) : null;
+        view.markerMoves = view.markerItem !== null && next !== null;
+        if (!Qt.isQtObject(view) || view.markerModelRevision !== revision)
+            return;
+        const current = view.currentMarkerRow();
+        if (!Qt.isQtObject(view) || view.markerModelRevision !== revision || current !== row || (next !== null && !Qt.isQtObject(next)) || (row >= 0 && (row >= view.count || view.itemAtIndex(row) !== next)))
+            return;
+        view.markerItem = next;
+    }
+    onMarkerRowChanged: refreshMarker()
+    onCurrentItemChanged: refreshMarker()
+    onContentYChanged: refreshMarker()
+    onContentHeightChanged: refreshMarker()
+    onModelChanged: {
+        const view = listView;
+        ++view.markerModelRevision;
+        if (Qt.isQtObject(view))
+            view.markerItem = null;
+    }
+
     // Column widths definition. Each entry is one of:
     //   positive int  — fixed width in pixels.
     //   EaStyle.Sizes.tableColumnFlex (-1) — fill remaining row width.
@@ -91,8 +138,11 @@ ListView {
     // Anchor row index for shift-selection range tracking.
     // Used by: ListViewDelegate (anchor indicator when row is not selected)
     property int anchorRow: -1
-    onCountChanged: if (anchorRow >= count)
-        anchorRow = -1
+    onCountChanged: {
+        if (anchorRow >= count)
+            anchorRow = -1;
+        refreshMarker();
+    }
 
     // Row height in px, derived from tallRows.
     // Used by: ListViewDelegate (implicitHeight), ListViewHeader (own height)
@@ -235,6 +285,31 @@ ListView {
         interactive: listView.scrollBarInteractive
         topInset: listView._headerHeight
         topPadding: listView._headerHeight
+    }
+
+    // Content coordinates come from the actual delegate, including headers,
+    // variable row heights and view positioning. Scroll moves this with content;
+    // the existing z:3 overlay header and clipped viewport occlude it normally.
+    Rectangle {
+        objectName: "currentRowBar"
+        parent: listView.contentItem
+        z: 2
+        x: EaStyle.Sizes.borderThickness
+        y: listView.markerItem ? listView.markerItem.y : 0
+        width: 2
+        height: listView.markerItem ? listView.markerItem.height : 0
+        visible: listView.markerItem !== null && listView.markerRow >= 0
+        color: EaStyle.Colors.themeAccent
+        Behavior on y {
+            enabled: listView.markerMoves
+            SmoothedAnimation {
+                duration: 250
+                velocity: -1
+            }
+        }
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
     }
 
     // Empty-state label.

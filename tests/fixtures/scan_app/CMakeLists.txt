@@ -27,3 +27,8 @@ add_subdirectory(reference)
 
 set_target_properties(scan_app_probe PROPERTIES ENABLE_EXPORTS ON)
 target_link_libraries(scan_app_probe PRIVATE ${CMAKE_DL_LIBS})
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(scan_app_probe PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

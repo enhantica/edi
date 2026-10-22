@@ -24,6 +24,7 @@ struct ParameterEntry {
     std::string name;        // the `.edi` item name
     bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); shown, never fitted
     bool fittable = true;    // false: a fixed setting (categories.hpp); editable, never fitted
+    bool used_by_profile = true;  // profile metadata, distinct from visibility of an explicitly free inert field
 };
 
 // Every shown parameter of the project (the union of the categories' shown fields, §2b (iv), I15)

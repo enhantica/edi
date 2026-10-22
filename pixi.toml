@@ -46,8 +46,8 @@ pytest-split = ">=0.11.0,<0.12"
 # Owner ruling 67: the shell is pinned like any other toolchain input, so
 # `pixi run bash …` resolves the same bash on every leg. macOS ships bash 3.2 (2007) while
 # Linux runs 5.x, and edi's CI has a macOS leg. Declared HERE rather than in the linux-64
-# target table because that table is the gated, isolated C++ coverage port (clangxx +
-# llvm-tools and nothing else) — adding a shell to it breaks the isolation that gate asserts.
+# target table: that table owns Linux compiler/coverage constraints, while the shell
+# is required on every declared platform. LLVM coverage remains Linux-only.
 # Global is safe because every platform edi declares has a conda-forge bash; if win-64 returns
 # (see `platforms` above) this must become per-platform, and the lock will refuse loudly first.
 bash = ">=5.2"
@@ -83,7 +83,6 @@ nbstripout = "*"
 ipykernel = "*"
 plotly = "*"
 cmake = "*"
-cxx-compiler = "*"
 ninja = "*"
 # Eigen is the version crysta pins and its package config requires exactly: left free, the solve took 5.0.1,
 # which crysta refused, and builds silently used a system Eigen instead.
@@ -106,6 +105,19 @@ doctest = "*"
 # Non-GUI QML expression gates execute JavaScript in this declared environment.
 nodejs = "==22.23.2"
 
+# Selected macOS SDK27 compatibility (ADR-0017): direct platform drivers and
+# coherent Clang/libc++23, shared by default and app. No generic cxx-compiler
+# metapackage may force19/21. The lock supplies real versions/build identities.
+[target.osx-arm64.dependencies]
+# SDK27 arm64e.x1 stub support: conda-forge/tapi-feedstock#21.
+tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
+clang_osx-arm64 = "23.*"
+clangxx_osx-arm64 = "23.*"
+compiler-rt = "23.*"
+libcxx = "23.*"
+libcxx-devel = "23.*"
+llvm-openmp = "23.*"
+
 # The LLVM source-based coverage toolchain, linux-64 ONLY — coverage runs on the Linux leg
 # exclusively, so the macOS solves stay untouched. clangxx supplies the clang++ driver;
 # llvm-tools supplies llvm-cov + llvm-profdata. Both pinned to the org major recorded in the
@@ -117,7 +129,7 @@ nodejs = "==22.23.2"
 #
 # ⛔ THE VALUE IS 13.4 BECAUSE EDI'S OWN SOURCE REQUIRES IT; crysta's source needs nothing higher, and crysta declares the same 13.4 so the two products carry ONE
 # target: edi builds crysta with this value, and core-build passes it to every configure so compile and link agree. core/src/io.cpp's format_double calls
-# std::to_chars ON A DOUBLE, and in the libc++ this repo compiles against (libcxx-devel 19.1.7) that overload carries
+# std::to_chars ON A DOUBLE; in the original libcxx-devel19.1.7 diagnosis that overload carried
 # `__attribute__((availability(macos, strict, introduced = 13.4)))`; declaring 13.0 pinned edi
 # BELOW its own requirement and macOS CI said so exactly:
 #     core/src/io.cpp:1243:30: error: 'to_chars' is unavailable: introduced in macOS 13.4
@@ -148,6 +160,8 @@ CRYSTA_SDK_TAG = "build-46b91473911b2d0a04deb6f788829e81dbf8e86d"
 CRYSTA_SDK_SHA256 = "276a8b3465cc10f542da8ef7e24c47d322865fdb15b4449e36cd372bbbd49f08"
 
 [target.linux-64.dependencies]
+# Original non-Mac compiler constraint; coverage pins below are unchanged.
+cxx-compiler = "*"
 clangxx = "22.*"
 llvm-tools = "22.*"
 
@@ -160,9 +174,8 @@ llvm-tools = "22.*"
 qt6-main = "6.11.*"
 qt6-graphs = "6.11.*"
 qt6-quick3d = "6.11.*"
-# The app environment builds with the default environment's compilers: left free, the solve takes
-# cxx-compiler 2 and with it a third clang (21) on macOS, which the org toolchain parity gate refuses.
-cxx-compiler = "1.11.*"
+# Mac uses the shared platform23 family; the original Linux metapackage constraint
+# lives in the app Linux table, so it cannot silently pull an older Mac compiler.
 # A compiler cache for the app build (about 500 targets, 270 of them QML compiled to C++) and the app
 # environment's crysta, as crysta's own CI uses. A hit reproduces the identical object; the cache
 # directory lives outside the workspace (CI: $HOME/.cache/edi-ccache), so it survives the checkout's
@@ -174,6 +187,7 @@ libvulkan-headers = "1.4.*"
 # The Linux UI test's headless display (tools/ci/app-platform.sh; ADR-0015 §10): a rootful Xwayland on
 # Weston's headless backend, with Mesa's llvmpipe as the OpenGL Qt Quick draws through.
 [feature.app.target.linux-64.dependencies]
+cxx-compiler = "1.11.*"
 # The app environment links the crysta SDK, so its ABI packages resolve exactly as crysta's cpp-ci built it
 # (version AND build; the org toolchain moves both together).
 gcc_impl_linux-64 = { version = "==14.3.0", build = "h235f0fe_19" }
@@ -200,11 +214,13 @@ libglu = "9.0.*"
 [feature.app.target.osx-arm64.dependencies]
 # The app environment links the crysta SDK, so its ABI packages resolve exactly as crysta's cpp-ci built it
 # (version AND build; the org toolchain moves both together).
-clang_impl_osx-arm64 = { version = "==19.1.7", build = "default_hc11f16d_9" }
-clangxx_impl_osx-arm64 = { version = "==19.1.7", build = "default_hc11f16d_9" }
-libcxx = { version = "==22.1.8", build = "h55c6f16_0" }
-libcxx-devel = { version = "==19.1.7", build = "h6dc3340_2" }
-llvm-openmp = { version = "==22.1.8", build = "hc7d1edf_0" }
+# Exact package identities from the coordinated Mac SDK-producing lock solve.
+# Runtime SDK fingerprint checks remain authoritative; see ADR-0017.
+clang_impl_osx-arm64 = { version = "==23.1.3", build = "default_h79071a4_1" }
+clangxx_impl_osx-arm64 = { version = "==23.1.3", build = "default_ha944c1a_1" }
+libcxx = { version = "==23.1.4", build = "h55c6f16_0" }
+libcxx-devel = { version = "==23.1.4", build = "h6dc3340_0" }
+llvm-openmp = { version = "==23.1.4", build = "hdb3d66b_0" }
 eigen = { version = "==3.4.0", build = "h784d473_2" }
 sleef = { version = "==3.9.0", build = "hb028509_0" }
 

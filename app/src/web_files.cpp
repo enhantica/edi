@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "web_files.hpp"
+#include <limits>
 
 #include <QBuffer>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QPointer>
 #include <QStandardPaths>
 #include <QtCore/private/qzipreader_p.h>
 #include <QtCore/private/qzipwriter_p.h>
@@ -14,7 +16,6 @@
 #include <vector>
 
 #if defined(Q_OS_WASM)
-#include <QPointer>
 #include <QtGui/private/qwasmlocalfileaccess_p.h>
 #include <emscripten.h>
 
@@ -224,10 +225,14 @@ QString WebFiles::projectIn(const QString& path, QString& error) {
 }
 
 int WebFiles::begin() {
+    if (m_last == std::numeric_limits<int>::max()) return 0;
+    const QPointer<WebFiles> self(this);
+    const auto original_serial = m_last;
     if (m_active != 0) {
         const int superseded = m_active;
         m_active = 0;
         emit cancelled(superseded);
+        if (!self || m_last != original_serial || m_active != 0) return 0;
     }
     m_active = ++m_last;
     return m_active;
@@ -254,6 +259,7 @@ QUrl WebFiles::saveLocation(const QString& name) {
 
 int WebFiles::openProject() {
     const int request = begin();
+    if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     const QString root = freshDirectory(QStringLiteral("open"));
     m_folders.insert(request, root);
     folder_owner() = this;
@@ -311,6 +317,7 @@ int WebFiles::openFiles(const QString& accept, bool multiple) {
         QList<QUrl> written;
     };
     const int request = begin();
+    if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     auto batch = std::make_shared<Batch>();
     batch->directory = freshDirectory(QStringLiteral("files"));
     const QPointer<WebFiles> self(this);
@@ -379,6 +386,7 @@ QByteArray WebFiles::siteFile(const QString& path) {
 
 int WebFiles::openProject() {
     const int request = begin();
+    if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     finish(request);
     emit failed(request, QStringLiteral("opening a project folder upload is the browser build's"));
     return request;
@@ -392,6 +400,7 @@ void WebFiles::answerFolder(int /*request*/, int /*count*/) {}
 
 int WebFiles::openFiles(const QString& /*accept*/, bool /*multiple*/) {
     const int request = begin();
+    if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     finish(request);
     emit failed(request, QStringLiteral("opening files through the browser is the browser build's"));
     return request;

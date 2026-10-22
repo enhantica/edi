@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls as Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -43,6 +44,7 @@ EaElements.Menu {
         menu.close();
     }
 
+    anchors.centerIn: Controls.Overlay.overlay
     width: layout.implicitWidth
     verticalPadding: 0
 

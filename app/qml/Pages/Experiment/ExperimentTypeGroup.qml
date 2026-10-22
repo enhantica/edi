@@ -25,11 +25,25 @@ Grid {
     readonly property bool editable: experiment !== null && experiment.calculationOnly
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
+    property var editorLife: ({ alive: true })
+    property var activation: null
+    Component.onDestruction: editorLife.alive = false
+
     // A choice on one axis: the experiment made anew, or the box back at the stored value.
     function choose(box, axis, index) {
+        const life = editorLife;
+        const originalOwner = row.project;
+        const originalExperiment = row.experiment;
+        const originalIndex = row.experimentIndex;
+        const original = ({});
+        activation = original;
+        const current = () => life.alive && row.activation === original && row.project === originalOwner &&
+            Session.project === originalOwner && row.experiment === originalExperiment && row.experimentIndex === originalIndex;
+        if (!current()) return;
         const token = box.permittedValues[index];
-        if (token !== box.value && row.project)
-            row.project.setExperimentType(row.experimentIndex, axis, token);
+        if (token !== box.value && originalOwner)
+            originalOwner.setExperimentType(originalIndex, axis, token);
+        if (!current()) return;
         box.currentIndex = Qt.binding(() => box.permittedValues.indexOf(box.value));
     }
 

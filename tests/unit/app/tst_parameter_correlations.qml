@@ -398,4 +398,106 @@ TestCase {
         click("background.removeTerm.0");
         compare(terms.count, 0, "Chebyshev must offer the same remove operation");
     }
+    // Owner name contract, tested on the ORIGINAL source component and real focused native input.
+    // This observes text/path state, never duplicates the production validator/regular expression.
+    function project454_nameState(dialog, field, location, expected, directory) {
+        compare(field.text, expected, "NAME454: genuine original native input retains the exact independent name spelling");
+        compare(dialog.projectName, expected, "NAME454: original name alias follows actual typed field, not assigned test data");
+        verify(field.acceptableInput === true, "NAME454: letters/digits/spaces/Unicode are acceptable to the actual native validator");
+        verify(location.text.endsWith(expected), "NAME454: actual location preview retains the COMPLETE exact user name");
+        const base = SettingsProof.localPath(directory);
+        const prefix = location.text.slice(0, location.text.length - expected.length);
+        compare(prefix.slice(0, -1), base, "NAME454: location preview stays inside the independent chosen owned directory");
+        verify(prefix.endsWith("/") || prefix.endsWith("\\"), "NAME454: one actual platform path separator joins directory and name");
+    }
+    function test_project454_original_name_accepts_native_text_and_refuses_path_controls() {
+        // Load the real source URL rather than relabeling old compiled resources as a new dialog.
+        // The existing unit's separate Main Create/save assertions remain unchanged.
+        const component = Qt.createComponent(Probe.repoUrl("app/qml/Base/Gui/Components/ProjectDescriptionDialog.qml"));
+        tryCompare(component, "status", Component.Ready, 2000,
+            "NAME454: original ProjectDescriptionDialog source loads in the existing registered native engine: " + component.errorString());
+        const dialog = createTemporaryObject(component, appWindow.contentItem);
+        verify(dialog !== null && dialog.objectName === "createProject.dialog", "NAME454: test hosts the original named production dialog, no copied form");
+        const previousParent = dialog.projectParentDirectory;
+        const directory = SettingsProof.emptyDirectory();
+        verify(SettingsProof.localPath(directory).length > 0, "NAME454 SETUP: existing helper supplies a fresh owned location, not a fabricated picker acceptance");
+        dialog.projectParentDirectory = String(directory); // Existing original directory setup only; all NAME input is native.
+        const dialogWatch = Probe.watch(dialog);
+        let field = null, fieldWatch = -1, accepted = 0, acceptedLocation = "", edited = [];
+        function observedText() { edited.push(field.text); }
+        function observedAccepted() { ++accepted; acceptedLocation = dialog.projectLocation; }
+        let connectedText = false, connectedAccept = false;
+        try {
+            dialog.open();
+            tryCompare(dialog, "opened", true, 2000, "NAME454: actual original dialog finishes native entry before input");
+            verify(waitForPolish(dialog.contentItem) && waitForRendering(appWindow.contentItem), "NAME454: original native field layout renders before real pointer/key input");
+            field = findChild(dialog, "createProject.name");
+            const location = findChild(dialog, "createProject.location");
+            verify(field !== null && location !== null && field.visible && field.enabled && Ui.exposed(field),
+                "NAME454: exact original name/location controls exist and the genuine input receiver is exposed");
+            fieldWatch = Probe.watch(field);
+            verify(dialogWatch >= 0 && fieldWatch >= 0 && Probe.watchedAlive(dialogWatch) && Probe.watchedAlive(fieldWatch),
+                "NAME454: original dialog and field have actual native lifetime receipts");
+            field.textEdited.connect(observedText); connectedText = true;
+            dialog.accepted.connect(observedAccepted); connectedAccept = true;
+            mouseClick(field, field.width / 2, field.height / 2);
+            verify(field.activeFocus && appWindow.activeFocusItem === field,
+                "NAME454: real pointer selects the exact current native name receiver");
+            keyClick(Qt.Key_A, Qt.ControlModifier); keyClick(Qt.Key_Backspace);
+            compare(field.text, "", "NAME454: actual key input clears any persisted name before the independent witness");
+            // ASCII keyboard witnesses cover ordinary letters, a digit run and an internal space.
+            for (const character of "Project 42") {
+                const upper = character >= "A" && character <= "Z";
+                keyClick(character, upper ? Qt.ShiftModifier : Qt.NoModifier);
+            }
+            project454_nameState(dialog, field, location, "Project 42", directory);
+            verify(edited.includes("Project 42"), "NAME454: actual textEdited signal proves ordinary native key input reached its final spelling");
+            // Existing bounded genuine QInputMethodEvent supports non-Latin Unicode and NUL
+            // on the same focused receiver; no text/property/accepted signal is assigned.
+            const unicode = Probe.focusedInputMethod233(appWindow, field, "", " Åβ");
+            verify(unicode.delivered === true && unicode.targetAlive === true && unicode.focusMatchesAfter === true
+                && unicode.eventKind === "InputMethod" && unicode.commit === " Åβ",
+                "NAME454: original focused Qt input method really receives the independent Unicode commit");
+            project454_nameState(dialog, field, location, "Project 42 Åβ", directory);
+            verify(edited.includes("Project 42 Åβ"), "NAME454: Unicode is adopted by the original native input path, not a regex-only example");
+            const expected = "Project 42 Åβ", preview = location.text;
+            for (const key of [Qt.Key_Slash, Qt.Key_Backslash]) {
+                verify(Probe.watchedAlive(fieldWatch) && field.activeFocus && appWindow.activeFocusItem === field,
+                    "NAME454: each forbidden key still targets the same original current native field");
+                keyClick(Qt.Key_End); const before = edited.length;
+                keyClick(key);
+                project454_nameState(dialog, field, location, expected, directory);
+                compare(location.text, preview, "NAME454: slash/backslash rejection cannot redirect or alter the original location");
+                compare(edited.length, before, "NAME454: forbidden separator is refused before any accepted name edit");
+                verify(field.activeFocus && appWindow.activeFocusItem === field,
+                    "NAME454: rejected separator cannot transfer input authority to another receiver");
+                compare(accepted, 0, "NAME454: rejected name input cannot trigger original Create acceptance");
+            }
+            const beforeNul = edited.length, nul = String.fromCharCode(0);
+            const rejected = Probe.focusedInputMethod233(appWindow, field, "", nul);
+            verify(rejected.delivered === true && rejected.targetAlive === true && rejected.focusMatchesAfter === true
+                && rejected.eventKind === "InputMethod" && rejected.commit.length === 1 && rejected.commit.charCodeAt(0) === 0,
+                "NAME454: exact bounded NUL commit reaches the original focused native input event, never a setter or ignored shortcut");
+            project454_nameState(dialog, field, location, expected, directory);
+            compare(location.text, preview, "NAME454: NUL cannot enter the location preview");
+            compare(edited.length, beforeNul, "NAME454: NUL is refused before an accepted text edit");
+            compare(accepted, 0, "NAME454: no rejected key/IME input creates a project or acceptance");
+            keyClick(Qt.Key_Return);
+            tryCompare(dialog, "visible", false, 2000, "NAME454: genuine Return preserves original native accept/close behavior");
+            compare(accepted, 1, "NAME454: the original final Return accepts exactly ONCE, no synthetic accepted/duplicate tail");
+            compare(acceptedLocation, preview, "NAME454: original accepted handler publishes the exact preview location");
+            compare(dialog.projectLocation, preview, "NAME454: selected name/location semantics stay unchanged after native acceptance");
+            compare(Session.project, null, "NAME454: isolated original source dialog does not substitute a direct native Create/save call");
+            console.log("NAME454_INPUT", JSON.stringify({typed: edited, unicode: unicode, nul: rejected,
+                name: expected, preview: preview, accepted: accepted, acceptedLocation: acceptedLocation,
+                componentSource: String(Probe.repoUrl("app/qml/Base/Gui/Components/ProjectDescriptionDialog.qml"))}));
+        } finally {
+            if (connectedText && Probe.watchedAlive(fieldWatch)) field.textEdited.disconnect(observedText);
+            if (connectedAccept && Probe.watchedAlive(dialogWatch)) dialog.accepted.disconnect(observedAccepted);
+            if (Probe.watchedAlive(dialogWatch)) {
+                dialog.projectParentDirectory = previousParent;
+                dialog.close();
+            }
+        }
+    }
 }

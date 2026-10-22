@@ -26,6 +26,10 @@
 
 namespace edi {
 
+// Only an actual typed refusal from this job establishes a specific cause.
+// None also covers unknown failures; it is not an identifiability assertion.
+enum class FitFailureReason : std::uint8_t { None, UnanchoredCwDilation };
+
 // How a fit ended, on the owner thread.
 struct FitReport {
     // DONE, MAX_ITER, NO_STEP or CANCELLED: the live project holds the fit's result, a cancelled fit's
@@ -36,6 +40,8 @@ struct FitReport {
     std::string refusal;
     // What the fit returned; absent when it was refused.
     std::optional<FitResultBase> result;
+    // Trailing/default-none preserves existing aggregate leading meanings.
+    FitFailureReason reason = FitFailureReason::None;
     bool adopted() const noexcept {
         return status == FitStatus::DONE || status == FitStatus::MAX_ITER || status == FitStatus::NO_STEP ||
                status == FitStatus::CANCELLED;
@@ -56,7 +62,9 @@ class FitJob {
         // A frame, between iterations. The job calculates the next one only after `frame_shown`, so a slow
         // owner sees fewer frames and the fit is never queued behind them. Empty: no frames are calculated.
         std::function<void(const FitFrame&)> frame;
-        // Once, last: nothing of this fit is delivered afterwards.
+        // Once, last: nothing of this fit is delivered afterwards. The actual completed report is owned
+        // by this FitJob. Its const reference remains valid until the next admitted start or destruction;
+        // owner-thread access only. A failed start preparation preserves the previous completed report.
         std::function<void(const FitReport&)> finished;
         // The scan hooks follow `finished` so callers that list the first four in order keep their meaning.
         // A scan: once, before its first file, the number of files and the rows results.csv already holds.
@@ -75,7 +83,9 @@ class FitJob {
         std::function<void(int)> polled;
     };
 
-    FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams = {});
+    /// The optional production checkpoint predicate runs on the worker thread, including owner-thread kits.
+    /// It must be nonthrowing and thread-safe for that kit; elapsed budgets are checked without GUI polling.
+    FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams = {}, CancelCallback checkpoint = {});
     // Cancels a fit in progress; nothing of it is delivered afterwards.
     ~FitJob();
     FitJob(const FitJob&) = delete;

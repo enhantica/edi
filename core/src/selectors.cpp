@@ -66,13 +66,16 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
     return field->value_or(std::string{});
 }
 
+void visit_supported_peak_profiles(BeamModeEnum mode,const std::function<void(const std::string&)>& visitor) {
+    const auto& shipped=shipped_peak_profiles(mode);
+    for(const auto& token:shipped)visitor(token);
+    visit_registered_peak_types([&](const std::string& token,std::optional<BeamModeEnum> registered_mode) {
+        if(registered_mode==mode && !contains(shipped,token))visitor(token);
+    });
+}
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode) {
-    std::vector<std::string> profiles = shipped_peak_profiles(mode);
-    for (const std::string& token : registered_peak_types()) {
-        if (!contains(profiles, token) && peak_type_beam_mode(token) == mode) {
-            profiles.push_back(token);
-        }
-    }
+    std::vector<std::string> profiles;
+    visit_supported_peak_profiles(mode,[&](const std::string& token){profiles.push_back(token);});
     return profiles;
 }
 
@@ -100,7 +103,12 @@ std::string peak_profile_label(const std::string& token) {
 
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode) {
     // crysta's vocabulary table, in its order (ADR-0017): edi keeps no list of its own.
-    return absorption_file_tokens(mode);
+    auto options=absorption_file_tokens(mode);
+    // Fail closed when upgrading the pinned closed SDK table without updating
+    // the source-owned preparation proof; never substitute a copied vocabulary.
+    if(options.size()>absorption_option_count_bound)throw std::length_error("Absorption option table changed");
+    for(const auto& token:options)if(token.size()>absorption_option_bytes_bound)throw std::length_error("Absorption option table changed");
+    return options;
 }
 
 std::vector<std::string> supported_background_types() {
@@ -152,8 +160,13 @@ void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
                                          : "time-of-flight") +
                                     " profile; this experiment's beam mode is " + edi::token(mode));
     }
-    experiment.peak.type = token;
-    conform_peak_slots(experiment.peak, token);
+    // All optional engagement/retirement allocations precede live selection,
+    // through the same finite owner-transfer seam used by ordinary Undo.
+    PeakBase prepared=experiment.peak;
+    prepared.type=token;
+    conform_peak_slots(prepared,token);
+    detail::PreparedPeakRestore transfer(experiment.peak,std::move(prepared));
+    transfer.commit();
 }
 
 void conform_peak_slots(PeakBase& peak, const std::string& token) {

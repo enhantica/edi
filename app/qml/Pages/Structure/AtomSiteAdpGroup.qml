@@ -125,6 +125,9 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.adps
+                editIndex: row.index
                 objectName: `atomSiteAdp.label.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.label

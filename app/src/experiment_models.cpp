@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
+#include <string_view>
 
 #include <QVariantMap>
 #include <QtNumeric>
@@ -12,6 +13,8 @@
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
+#include "background_input.hpp"
+#include <QPointer>
 
 namespace edi_app {
 
@@ -71,31 +74,48 @@ void BackgroundListModel::sync() {
 
 bool BackgroundListModel::setId(int row, const QString& id) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
+    if (!point) return false;
+    try { return editor_.rename_background_point(experiment_, *point, id.toStdString()).isEmpty(); }
+    catch (...) { return false; }
 }
-
 bool BackgroundListModel::setPosition(int row, double position) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_position(*point, position), false).isEmpty();
+    if (!point) return false;
+    edi::BackgroundPointInput input;
+    input.action = edi::BackgroundPointInput::Action::Update; input.id = point->id.value();
+    input.position = position; input.intensity = point->intensity.value.get(); input.free = point->intensity.free.get();
+    return applyDefined(input).value("applied").toBool();
 }
-
 void BackgroundListModel::append() {
-    edi::ExperimentBase& experiment = experiment_;
-    edi::LineSegment point;
-    if (experiment.background.size() > 0) {
-        const edi::LineSegment& last = *experiment.background[experiment.background.size() - 1];
-        point.position = last.position;
-        point.intensity.value = last.intensity.value;
+    const QPointer<BackgroundListModel> self(this);
+    try { (void)applyDefined(background_append_input(experiment_)); }
+    catch (...) {
+        if (!self) return;
+        const QString message = tr("A background point could not be appended");
+        if (operation_error_ != message) { operation_error_ = message; emit operationErrorChanged(); }
     }
-    editor_.apply(edi::Edit::append(experiment.background, std::move(point)), true);
 }
-
+QVariantMap BackgroundListModel::changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free) {
+    std::optional<edi::BackgroundPointInput> input;
+    try { input = background_input(operation, id, position, intensity, free, false); }
+    catch (...) { return {{"applied", false}, {"published", false}, {"message", tr("The background input is invalid or exceeds its admitted capacity")}}; }
+    return applyDefined(*input);
+}
+QVariantMap BackgroundListModel::applyDefined(const edi::BackgroundPointInput& input) {
+    const QPointer<BackgroundListModel> self(this);
+    ProjectEditor::BackgroundOutcome result;
+    try { result = editor_.edit_background_point(experiment_, input); }
+    catch (...) { result.message = tr("The background input is invalid or exceeds its admitted capacity"); }
+    const QVariantMap outcome{{"applied", result.applied}, {"published", result.published}, {"message", result.message}};
+    if (self && operation_error_ != result.message) { operation_error_ = result.message; emit operationErrorChanged(); }
+    return outcome;
+}
 void BackgroundListModel::remove(int row) {
-    if (keyAt(row) == nullptr) {
-        return;
-    }
-    edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
+    auto* point = static_cast<const edi::LineSegment*>(keyAt(row));
+    if (!point) return;
+    edi::BackgroundPointInput input;
+    input.action = edi::BackgroundPointInput::Action::Remove; input.id = point->id.value();
+    (void)applyDefined(input);
 }
 
 BackgroundTermListModel::BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
@@ -187,26 +207,30 @@ bool ExcludedRegionListModel::setId(int row, const QString& id) {
 
 bool ExcludedRegionListModel::setStart(int row, double start) {
     edi::ExperimentBase& experiment = experiment_;
-    return row >= 0 && row < count() &&
-           editor_.apply(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), false, start), false).isEmpty();
+    if(row<0 || row>=count())return false;
+    return editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), false, start), false,
+               {ProjectEditor::CreationAction::Kind::ExclusionStart, keyAt(row), {}, {}, start}).isEmpty();
 }
 
 bool ExcludedRegionListModel::setEnd(int row, double end) {
     edi::ExperimentBase& experiment = experiment_;
-    return row >= 0 && row < count() &&
-           editor_.apply(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), true, end), false).isEmpty();
+    if(row<0 || row>=count())return false;
+    return editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), true, end), false,
+               {ProjectEditor::CreationAction::Kind::ExclusionEnd, keyAt(row), {}, {}, end}).isEmpty();
 }
 
 void ExcludedRegionListModel::append() {
     edi::ExperimentBase& experiment = experiment_;
     const double at = experiment.excluded_regions.empty() ? 0.0 : experiment.excluded_regions.back()->second.get();
-    editor_.apply(edi::Edit::append_excluded_region(experiment, at, at), false);
+    editor_.apply_creation_control(edi::Edit::append_excluded_region(experiment, at, at), false,
+        {ProjectEditor::CreationAction::Kind::ExclusionAppend, &experiment});
 }
 
 void ExcludedRegionListModel::remove(int row) {
     edi::ExperimentBase& experiment = experiment_;
     if (row >= 0 && row < count()) {
-        editor_.apply(edi::Edit::erase_excluded_region(experiment, static_cast<std::size_t>(row)), false);
+        editor_.apply_creation_control(edi::Edit::erase_excluded_region(experiment, static_cast<std::size_t>(row)), false,
+            {ProjectEditor::CreationAction::Kind::ExclusionRemove,keyAt(row)});
     }
 }
 
@@ -284,39 +308,48 @@ void LinkedStructureListModel::sync() {
 }
 
 bool LinkedStructureListModel::setStructureId(int row, const QString& id) {
-    auto* link = const_cast<edi::LinkedStructure*>(static_cast<const edi::LinkedStructure*>(keyAt(row)));
-    return link != nullptr &&
-           editor_.apply(edi::Edit::link_structure(*link, id.toStdString()), true).isEmpty();
+    const auto key=keyAt(row);
+    for(const auto& held:experiment_.linked_structures)if(held.get()==key) {
+        if(!held->enabled.get())return false;
+        return editor_.apply_creation_control(edi::Edit::link_structure(*held,id.toStdString()),true,
+            {ProjectEditor::CreationAction::Kind::PhaseRetarget,held.get(),{},id}).isEmpty();
+    }
+    return false;
 }
 
 bool LinkedStructureListModel::setEnabled(int row, bool enabled) {
-    auto* link = const_cast<edi::LinkedStructure*>(static_cast<const edi::LinkedStructure*>(keyAt(row)));
-    return link != nullptr && editor_.apply(edi::Edit::assign(link->enabled, enabled), true).isEmpty();
+    const auto key=keyAt(row);
+    for(const auto& held:experiment_.linked_structures)if(held.get()==key)
+        return editor_.apply_creation_control(edi::Edit::assign(held->enabled,enabled),true,
+            {ProjectEditor::CreationAction::Kind::PhaseEnabled,held.get(),{},{},double(enabled)}).isEmpty();
+    return false;
 }
 
 void LinkedStructureListModel::append() {
-    if (!canAppend()) {
-        return;
-    }
-    // The first structure the experiment does not link yet, at scale 1.
-    for (const QString& name : structure_names_) {
-        const bool linked = std::any_of(
-            experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
-            [&](const auto& link) { return QString::fromStdString(link->structure_id.value()) == name; });
-        if (!linked) {
-            edi::LinkedStructure link;
-            link.structure_id = name.toStdString();
-            editor_.apply(edi::Edit::append(experiment_.linked_structures, std::move(link)), true);
+    // The first CURRENT project structure not linked yet, at the original defaults.
+    // Cached Qt offers/counts are presentation, never live membership authority.
+    for(const auto& structure:project_.structures) {
+        const auto& raw=structure->name.value();
+        const std::string_view name=raw.empty()?std::string_view("structure"):std::string_view(raw);
+        const bool linked=std::any_of(experiment_.linked_structures.begin(),experiment_.linked_structures.end(),
+            [&](const auto& link){return (link->structure_id.value().empty()?std::string_view("structure"):std::string_view(link->structure_id.value()))==name;});
+        if(!linked) {
+            edi::LinkedStructure link;link.structure_id=std::string(name);
+            editor_.apply_creation_control(edi::Edit::append(experiment_.linked_structures,std::move(link)),true,
+                {ProjectEditor::CreationAction::Kind::PhaseAppend,&experiment_,{},QString::fromUtf8(name.data(),static_cast<qsizetype>(name.size()))});
             return;
         }
     }
 }
 
 void LinkedStructureListModel::remove(int row) {
-    if (!canRemove() || keyAt(row) == nullptr) {
+    const auto key=keyAt(row);
+    if(experiment_.linked_structures.size()<=1)return;
+    for(std::size_t i=0;i<experiment_.linked_structures.size();++i)if(experiment_.linked_structures[i].get()==key) {
+        editor_.apply_creation_control(edi::Edit::erase(experiment_.linked_structures,i),true,
+            {ProjectEditor::CreationAction::Kind::PhaseRemove,key});
         return;
     }
-    editor_.apply(edi::Edit::erase(experiment_.linked_structures, static_cast<std::size_t>(row)), true);
 }
 
 // ---- PrefOrientListModel -------------------------------------------------------------------------

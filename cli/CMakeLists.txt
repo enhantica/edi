@@ -7,3 +7,8 @@ add_executable(easydiffraction
 )
 target_link_libraries(easydiffraction PRIVATE edi::core)
 target_compile_features(easydiffraction PRIVATE cxx_std_17)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(easydiffraction PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

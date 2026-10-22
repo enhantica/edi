@@ -49,6 +49,7 @@ else
         CRYSTA_PREFIX="$ROOT/build/crysta-consumer-prefix$ENV_SUFFIX"
     fi
 fi
+SDK_CONTENT="$(python tools/ci/sdk_content_identity.py "$CRYSTA_PREFIX")"
 args=(-S . -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release
       -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF
       -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX;${CONDA_PREFIX:?run this in the app pixi environment}"
@@ -64,6 +65,7 @@ BUILD_KEY="$(
         printf 'env=%s\ncmake=%s\n' "$CONDA_PREFIX" "$(cmake --version | head -n 1)"
         printf 'launcher=%s\n' "${CMAKE_CXX_COMPILER_LAUNCHER:-}"
         printf 'packages=%s\n' "$(ls "$CONDA_PREFIX/conda-meta" 2>/dev/null | tr '\n' ' ')"
+        printf 'sdk-content=%s\n' "$SDK_CONTENT"
         printf 'args=%s\n' "${args[*]}"
     } | _sha256 | cut -d' ' -f1
 )"

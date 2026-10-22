@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "file_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16777216
+    },
+    "max_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65536
+    }
+  },
+  "required": [
+    "purpose",
+    "file_id",
+    "offset",
+    "max_bytes"
+  ],
+  "additionalProperties": false
+}

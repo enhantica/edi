@@ -18,6 +18,7 @@ engine boundary (ADR-0003).
   [architecture & upstreams](design/architecture-and-upstreams.md), the
   [user-facing API design](design/api-types.md), and the
   [modern-Qt guidelines](design/modern-qt-guidelines.md).
+- **[Assistant protocol](assistant-protocol.md)** — controller/transport boundary and staged implementation obligations.
 - **[Requirements coverage](requirements/rwg-edi-coverage.md)** — the RWG requirements
   split by owner (edi vs crysta).
 - **[The app against a local crysta](local-crysta.md)** — one command to build crysta from a

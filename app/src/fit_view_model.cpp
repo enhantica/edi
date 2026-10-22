@@ -2,6 +2,9 @@
 #include "fit_view_model.hpp"
 
 #include <QFileInfo>
+#include <QPointer>
+#include <QScopeGuard>
+#include <exception>
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -296,6 +299,8 @@ void FitViewModel::showScanRefused(const QString& error, const QString& run_outc
 FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
+    invalidateFitUndo();
+    latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     frame_timer_.stop();
     follow_timer_.stop();
     clock_timer_.stop();
@@ -303,8 +308,48 @@ void FitViewModel::close() {
     job_.reset();
 }
 
+std::uint64_t FitViewModel::beginAttempt() noexcept {
+    undo_attempt_ = 0;
+    latest_attempt_ = !owner_.retired_ && attempt_serial_ != UINT64_MAX ? ++attempt_serial_ : 0;
+    return latest_attempt_;
+}
+std::uint64_t FitViewModel::prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt || attempt != latest_attempt_) throw std::runtime_error("The original fit attempt is no longer current");
+    if (nativeRunning() || native_completion_ || native_completion_serial_ == UINT64_MAX)
+        throw std::runtime_error("A native fit is already owned or its completion identity is exhausted");
+    native_attempt_ = attempt;
+    native_completion_ = std::move(completion); // Callback ownership precedes either real start entrance.
+    return ++native_completion_serial_;
+}
+void FitViewModel::discardNativePreparation(std::uint64_t token) noexcept {
+    if (native_completion_serial_ == token && !nativeRunning()) native_completion_ = {};
+}
+void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt) attempt = beginAttempt();
+    const auto token = prepareNativeCompletion(std::move(completion), attempt);
+    const QPointer<FitViewModel> self(this);
+    try { startImpl(attempt); }
+    catch (...) { if (self) self->discardNativePreparation(token); throw; }
+    if (self) self->discardNativePreparation(token); // A submitted worker keeps its actual completion.
+}
+
 void FitViewModel::start() {
-    if (!job_ || running_ || !available_) {
+    const QPointer<FitViewModel> self(this);
+    const auto attempt = native_completion_ ? native_attempt_ : beginAttempt();
+    try { startImpl(attempt); }
+    catch (...) {
+        if (!self) return;
+        // Cancellation can throw from Worker tracing after setting its actual
+        // flag. Neither that nor a diagnostic observer may escape this QML door.
+        try { if (nativeRunning()) cancel(); } catch (...) {}
+        if (self) try { emit refused(tr("Fitting could not be started or presented; any admitted worker is being stopped")); } catch (...) {}
+        // An admitted worker still owns its original real FitReport callback.
+    }
+}
+void FitViewModel::startImpl(std::uint64_t attempt) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (const QString critical = owner_.criticalEditRefusal(); !critical.isEmpty()) { emit refused(critical); return; }
+    if (!attempt || attempt != latest_attempt_ || !job_ || job_->running() || !available_) {
         return;
     }
     // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
@@ -312,6 +357,7 @@ void FitViewModel::start() {
     if (const QString pending = owner_.pendingRefusal();
         !pending.isEmpty() && !edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_))) {
         emit refused(pending);
+        if (owner_.retired_) return;
         return;
     }
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
@@ -321,15 +367,25 @@ void FitViewModel::start() {
         const QString error = owner_.prepareScan(scan_.processed() == 0);
         if (!error.isEmpty()) {
             emit refused(error);
+            if (owner_.retired_) return;
             return;
         }
         setFollowing(true);
+        if (owner_.retired_) return;
+        if (owner_.retired_) return;
         job_->follow(true);
+        if (owner_.retired_) return;
     }
-    if (job_->start(scan ? owner_.scanTemplate() : nullptr)) {
+    submitted_single_joint_ = !scan;
+    submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
+    const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
+    if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
+    if (owner_.retired_) return;
+    if (admitted) {
         if (scan_last_ != scan) {
             scan_last_ = scan;
             emit scanSummaryChanged();
+            if (owner_.retired_) return;
         }
         if (scan) {
             scan_resumed_ = 0;
@@ -339,32 +395,45 @@ void FitViewModel::start() {
             frame_shown_ = true;
             dropHandedFile();
             setScanRefused(false);
+            if (owner_.retired_) return;
             setScanning(true);
+            if (owner_.retired_) return;
             setScanCounts(scan_, QString());
+            if (owner_.retired_) return;
         }
         results_->clear();
+        if (owner_.retired_) return;
         clock_.start();
         clock_timer_.start();
         setElapsed(duration(0.0));
+        if (owner_.retired_) return;
         setRunning(true);
+        if (owner_.retired_) return;
         setProgress(QString(), QString(), tr("Running"));
+        if (owner_.retired_) return;
     }
 }
 
 void FitViewModel::cancel() {
-    if (job_ && running_) {
+    if (job_ && job_->running()) {
         job_->cancel();
     }
 }
 
 bool FitViewModel::undo() {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    const auto input = owner_.fit_undo_input_;
+    if (owner_.fit_undo_invoking_ && !input) return false;
+    if (input && (!owner_.fit_undo_invoking_ || !input->consumed || input->started ||
+                  input->attempt != undo_attempt_ || !owner_.fitUndoAvailable())) return false;
     if (running_ || !can_undo_) {
         return false;
     }
     // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
     // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
     edi::Project& project = project_;
-    if (owner_.apply(edi::Edit::undo_fit(project), false).isEmpty()) {
+    if (owner_.applyUndo(edi::Edit::undo_fit(project), false).isEmpty()) {
+        if (owner_.retired_) return true;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->clear();
@@ -691,19 +760,49 @@ void FitViewModel::settleScanCounts() {
     setScanCounts(counts, QString());
 }
 
-void FitViewModel::scanEnded(const edi::FitReport& report) {
+void FitViewModel::scanEnded(const edi::FitReport& report, bool automatic_results) {
     setScanning(false);
+    if (owner_.retired_) return;
     const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
     // The owner reads the rows on disk again and shows the run's summary, its own end and time included.
     owner_.scanEnded(report.status, seconds);
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
         return;
     }
     emit scanFinished();
+    if (owner_.retired_) return;
+    if (automatic_results) emit automaticResultsRequested();
 }
 
 void FitViewModel::ended(const edi::FitReport& report) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    const auto attempt = submitted_attempt_;
+    submitted_attempt_ = 0;
+    const bool previous_presentation = presenting_;
+    presenting_ = true;
+    // Latch actual adoption before the first Qt notification. A later failed attempt
+    // cannot borrow an older fit start; an edit during presentation retires both facts.
+    const bool adopted = attempt && report.adopted() && submitted_single_joint_;
+    if (adopted) history_attempt_ = attempt;
+    if (attempt == latest_attempt_) undo_attempt_ = adopted ? attempt : 0;
+    // Take the callback before any presentation/receiver can throw or replace the
+    // model. FitJob owns this report through the entire completion invocation.
+    auto completion = std::move(native_completion_);
+    // This completed fit owns its origin even if presentation starts another fit.
+    const bool automatic_results = !completion;
+    std::exception_ptr failure;
+    const bool visible = !owner_.retired_;
+    try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
+    presenting_ = previous_presentation;
+    // Even a presentation failure has a real completed optimizer/publication
+    // report. Contain the internal callback independently of ordinary Qt signals.
+    if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
+    if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
+}
+
+void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
     follow_timer_.stop();
@@ -715,55 +814,82 @@ void FitViewModel::ended(const edi::FitReport& report) {
         // A followed scan always ends on its last file, whatever the interval skipped.
         if (following() && !latest_file_.empty() && latest_file_ != followed_file_ && latest_file_ != handed_file_) {
             owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
         }
         // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
         // closes on every file the run processed, whatever it ended as.
         settleScanCounts();
+        if (owner_.retired_) return;
         setRunning(false);
-        scanEnded(report);
+        if (owner_.retired_) return;
+        scanEnded(report, automatic_results);
+        if (owner_.retired_) return;
         return;
     }
     setRunning(false);
+    if (owner_.retired_) return;
     if (report.adopted()) {
         // The table, the χ², the chart and the texts all come from this one result, in this one step.
         owner_.publishFit();
+        if (owner_.retired_) return;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),
                     status_text(report.status), outcome_key(report.status));
+        if (owner_.retired_) return;
         setElapsed(duration(project_.fit_result.fitting_time));
+        if (owner_.retired_) return;
         results_->setRecord(project_);
+        if (owner_.retired_) return;
         sync();
+        if (owner_.retired_) return;
+        finished_attempt_ = attempt;
+        const auto finish_identity = qScopeGuard([this, attempt] { if (finished_attempt_ == attempt) finished_attempt_ = 0; });
         emit finished();
+        if (owner_.retired_) return;
+        if (automatic_results) emit automaticResultsRequested();
+        if (owner_.retired_) return;
         return;
     }
     // Nothing was written: the chart goes back to what the project holds.
     owner_.restorePatterns();
+    if (owner_.retired_) return;
     setProgress(QString(), QString(), status_text(report.status), outcome_key(report.status));
+    if (owner_.retired_) return;
     setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
+    if (owner_.retired_) return;
     sync();
+    if (owner_.retired_) return;
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
     }
 }
 
 void FitViewModel::setRunning(bool running) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (running != running_) {
         running_ = running;
         // canUndo is settled before the change is announced, so a listener reading both sees one state:
         // when a fit ends, the start state it can undo is already back.
         sync();
+        if (owner_.retired_) return;
         emit runningChanged();
+        if (owner_.retired_) return;
     }
 }
 
 void FitViewModel::setFollowing(bool following) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (job_) {
         job_->follow(following);
     }
     if (following != following_) {
         following_ = following;
         emit followingChanged();
+        if (owner_.retired_) return;
         // Follow turned on again: the newest finished file is shown now, calculated beside the scan, and the next
         // ones as they come.
         if (this->following() && !latest_file_.empty() && latest_file_ != followed_file_ &&
@@ -771,6 +897,7 @@ void FitViewModel::setFollowing(bool following) {
             frame_shown_ = false;
             follow_clock_.start();
             owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
         }
         // Follow turned off: a file still waiting to be drawn is not counted.
         if (!this->following()) {
@@ -802,21 +929,27 @@ void FitViewModel::setElapsed(const QString& elapsed) {
 
 void FitViewModel::setProgress(const QString& iterations, const QString& goodness, const QString& status,
                                const QString& outcome) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (iterations != iterations_) {
         iterations_ = iterations;
         emit iterationsChanged();
+        if (owner_.retired_) return;
     }
     if (goodness != goodness_of_fit_) {
         goodness_of_fit_ = goodness;
         emit goodnessOfFitChanged();
+        if (owner_.retired_) return;
     }
     if (status != status_) {
         status_ = status;
         emit statusChanged();
+        if (owner_.retired_) return;
     }
     if (outcome != outcome_) {
         outcome_ = outcome;
         emit outcomeChanged();
+        if (owner_.retired_) return;
     }
 }
 

@@ -29,6 +29,14 @@ if(EXISTS "${_edi_crysta_manifest}")
         set(EDI_APP_CRYSTA_COMMIT "unreadable SDK manifest")
     endif()
 endif()
+# Work-report native build facts; labels never masquerade as source hashes.
+set(EDI_APP_SDK_SOURCE_KIND "unknown")
+string(LENGTH "${EDI_APP_CRYSTA_COMMIT}" _edi_sdk_source_length)
+if(_edi_sdk_source_length EQUAL 40 AND EDI_APP_CRYSTA_COMMIT MATCHES "^[0-9a-f]+$")
+    set(EDI_APP_SDK_SOURCE_KIND "manifest")
+elseif(EDI_APP_CRYSTA_COMMIT STREQUAL "a local build (no SDK manifest)")
+    set(EDI_APP_SDK_SOURCE_KIND "local_without_manifest")
+endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
@@ -78,12 +86,27 @@ qt_add_qml_module(edi_app_module
         src/report_view_model.hpp src/report_view_model.cpp
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
+        src/assistant_view_model.hpp src/assistant_view_model.cpp
+        src/assistant_widget_input.hpp src/assistant_widget_input.cpp
+        src/assistant_result.hpp src/assistant_result.cpp
+        src/assistant_file_primitives.hpp src/assistant_file_primitives.cpp
+        src/assistant_work_report.hpp src/assistant_work_report.cpp
+        src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
     QML_FILES
         qml/Main.qml
+        qml/Components/AssistantPanel.qml
+        qml/Components/AssistantWorking.qml
+        qml/Components/AssistantMessage.qml
+        qml/Components/AssistantComposer.qml
+        qml/Components/AssistantPlan.qml
+        qml/Components/AssistantQuestion.qml
+        qml/Components/AssistantTrial.qml
+        qml/Components/AssistantSkillsDialog.qml
+        qml/Components/AssistantConnectionDialog.qml
         qml/Components/AppDialog.qml
-        qml/Components/AppPreferencesDialog.qml
+            qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
@@ -190,6 +213,8 @@ qt_add_qml_module(edi_app_module
         qml/Style/AppSizes.qml
     RESOURCES
         resources/logo/App.svg
+        resources/logo/AssistantWorking.svg
+        resources/logo/AssistantSpinner.svg
 )
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
@@ -198,6 +223,19 @@ target_link_libraries(edi_app_module
 if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
+
+# ADR-0041: the shared app module owns the identity used by reports and test observers.
+# Regenerate on every build; an unchanged source identity leaves the generated file untouched.
+set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
+execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
+                        -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
+add_custom_target(edi_app_build_commit
+    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
+            -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
+    BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
+    COMMENT "Embedding the source commit in the shared app module")
+target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_app_module edi_app_build_commit)
 
 # The Examples: every refinement and simulation project edi's CLI registry lists, in registry order, then the
 # app's own X-ray example, each with its scan data (a scan's datasets are browsed in the app). Verification
@@ -317,22 +355,7 @@ set_target_properties(edi_app_ui_compare PROPERTIES WIN32_EXECUTABLE FALSE MACOS
 # compiled in, over the same edi.app module and engine setup the host uses. The cases are the tests
 # lane's; a glob keeps the two lanes off one file. Never linked into edi_app.
 file(GLOB EDI_APP_TEST_SUPPORT CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/tests/unit/app/test_*.cpp)
-# The runner prints the commit it was built from (`<sha>-dirty` when tracked files differed), so the latency
-# bank attributes the frame times it prints to a revision; regenerated on every build, as lib's.
-set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
-execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
-                        -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
-add_custom_target(edi_app_build_commit
-    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
-            -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
-    BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
-    COMMENT "Embedding the source commit in the app and its test runner")
-qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT}
-                  "${EDI_APP_BUILD_COMMIT_CPP}")
-add_dependencies(edi_app_tests edi_app_build_commit)
-# The app names it too: its test observers report the build they observe.
-target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
-add_dependencies(edi_app edi_app_build_commit)
+qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT})
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo opens a verification project the app does not bundle from the source tree (ADR-0031).
@@ -345,3 +368,32 @@ set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE
 include(GNUInstallDirs)
 install(TARGETS edi_app RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+endif()
+
+# ADR-0041: one native official-runtime frontend, with ordinary Qt process ownership.
+if(NOT EMSCRIPTEN)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp src/assistant_native_tools.hpp src/assistant_native_tools.cpp src/assistant_native_create.hpp src/assistant_native_create.cpp)
+    file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
+         ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
+    qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
+                     BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
+endif()
+
+if(NOT EMSCRIPTEN)
+    include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
+    edi_bundle_assistant_runtime()
+endif()
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        edi_app
+        edi_app_chart_bench
+        edi_app_tests)
+        target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endforeach()
+    unset(_edi_engine_executable)
+endif()

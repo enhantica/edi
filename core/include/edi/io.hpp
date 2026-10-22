@@ -49,13 +49,17 @@ class IoError : public std::runtime_error {
 using WarningSink = std::function<void(const std::string&)>;
 Project load_project(const std::string& directory, const WarningSink& on_warning = {});
 
-// Structures and experiments enter an open project only from `.edi` block files. Each load
+// The strict native block entries below load structures and experiments from `.edi` files. Each load
 // refuses a path without the `.edi` extension and content without the project format's
 // `_edi.schema_version` (so a classic CIF is refused, although the from-text entries below read
 // that vocabulary too), then builds through the loader's own block builder. An experiment file
 // must also declare its type — all four `_experiment_type` axes — and a type edi's experiment
 // class implements (powder + bragg); a project directory keeps the loader's presence-tracked
 // axes. Nothing is changed by a load: adding is the separate step below.
+// Ordinary Structure Load accepts native .edi or supported single-structure .cif.
+// The existing strict .edi entry below retains its format/schema contract.
+// Both use the same file reader and existing structure builders; no conversion.
+Structure load_structure_file(const std::string& path);
 Structure load_structure_edi_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name
@@ -246,7 +250,7 @@ UndoFitOutcome restore_fit_start(Project& project);
 void copy_fit_result(Project& to, const Project& from);
 // One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
 // from its counterpart in another copy of the project.
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept;
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
@@ -272,13 +276,12 @@ void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrela
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs);
 
-// Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
-// `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form
-// `.edi` schema and the classic CIF vocabulary: the structure entry dispatches on
-// the cell vocabulary to the restored reader (B/U/aniso ADP ladder); the experiment entry
-// translates diffraction-lib's `cif_names` spellings (`_pd_meas.*`, `_instr.*`,
-// `_easydiffraction_peak.*`, …) to their `.edi` tags and flows through the one experiment
-// builder. Fails closed (IoError) as the directory loader does.
+// Build one entity from text using the existing parsed-block builders.
+// An explicit native schema/native-only structure identity selects strict Edi;
+// otherwise supported dotted/classic CIF aliases share the classic reader,
+// matching data names without ASCII case, preserving values, uncertainty and setting.
+// Duplicate case variants/aliases refuse; explicit native declarations stay strict.
+// The experiment reader retains its existing diffraction-lib vocabulary route.
 Structure structure_from_edi_text(const std::string& text);
 BraggPdExperiment experiment_from_edi_text(const std::string& text);
 
@@ -338,6 +341,10 @@ bool persistable_name(const std::string& name);
 /// row.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
+/// Same reader and assembly, with an internal approved-byte reader path and the original source path
+/// for file identity/naming. No second parser or input authority is introduced.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's
@@ -349,6 +356,8 @@ bool peak_type_known(const std::string& token);
 // and every registered token in the registry's order — the selector's supported-set query.
 std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token);
 std::vector<std::string> registered_peak_types();
+// Borrow registry token/mode facts without constructing a token collection.
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>&);
 
 
 

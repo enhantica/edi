@@ -178,6 +178,14 @@ void ParameterFilterModel::refreshCategories() {
     }
 }
 
+QString ParameterFilterModel::categoryFor(const ParameterItem* parameter) const {
+    if (!parameter || parameter->category()==QLatin1String("cell")) return {};
+    const CategoryGroup* best=nullptr;
+    for (const auto& group:category_groups_)
+        if(!group.key.isEmpty() && matches_group(group.key,parameter->blockKind(),parameter->category(),parameter->name()) &&
+            (!best || group.count<=best->count))best=&group;
+    return best?best->key:QString{};
+}
 void ParameterFilterModel::setCategoryFilter(const QString& category) {
     if (category != category_filter_) {
         beginFilterChange();

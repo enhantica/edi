@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 project(loaded_correlation_cache LANGUAGES CXX)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Qml)
@@ -7,3 +7,8 @@ add_executable(cache_probe probe.cpp "${EDI_VIEW}/correlation_view_model.hpp")
 target_compile_features(cache_probe PRIVATE cxx_std_20)
 target_include_directories(cache_probe PRIVATE "${EDI_INCLUDE}" "${EDI_VIEW}")
 target_link_libraries(cache_probe PRIVATE "${EDI_CORE}" crysta::crysta Qt6::Core Qt6::Qml)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(cache_probe PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

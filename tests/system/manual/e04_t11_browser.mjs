@@ -3,7 +3,7 @@
 // No delay is a readiness predicate: CDP events, animation frames, AX state and completed downloads are.
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import { resolve, extname, join, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -12,11 +12,21 @@ import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { inspectAssistantSelectedFiles } from './web_assistant_selected_files.mjs';
+import { inspectAssistantDevices } from './web_assistant_device.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const assistantFilesOnly = process.argv.includes('--assistant-files-only');
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
+const assistantDevicesOnly = process.argv.includes('--assistant-devices-only');
+const standaloneDevice = process.argv.includes('--standalone-singlethread-device');
+assert(!standaloneDevice || (assistantDevicesOnly && mode === 'singlethread' &&
+  !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only')),
+  'standalone delivery is only the explicit singlethread device observation');
+assert(!assistantFilesOnly || (!assistantDevicesOnly && !fileRequestsOnly && !standaloneDevice), 'I15/files: selected-file route is a separate actual packed artifact scope');
+assert(!assistantDevicesOnly || !fileRequestsOnly, 'device and file-request scopes must be distinct');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
@@ -31,7 +41,15 @@ console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
 const site = resolve(siteArg), output = resolve(outputArg);
-await readFile(join(site, 'index.html')); // A missing product fails before the browser is launched.
+const entryPath = standaloneDevice ? '/webapp/edi_app.html' : '/webapp/';
+await readFile(join(site, standaloneDevice ? 'edi_app.html' : 'index.html'));
+if (standaloneDevice) {
+  for (const name of ['edi_app.js', 'edi_app.wasm', 'qtloader.js']) {
+    const file = await stat(join(site, name));
+    assert(file.isFile() && file.size > 0,
+      'I16/device: standalone observation requires the real emitted runtime files');
+  }
+}
 await mkdir(output, { recursive: true });
 const scratch = await mkdtemp(join(tmpdir(), 'e04-browser-'));
 const chrome = chromeArg || process.env.CHROME_HEADLESS_SHELL;
@@ -283,7 +301,7 @@ try {
       nativeFocus.call(this, { ...options, preventScroll: true });
     };
   ` });
-  await send('Page.navigate', { url: origin + '/webapp/' });
+  await send('Page.navigate', { url: origin + entryPath });
   let ready = false;
   const readyDeadline = Date.now() + 90000;
   while (!ready && Date.now() < readyDeadline) {
@@ -317,11 +335,16 @@ try {
   assert.equal(isolated, mode !== 'singlethread', 'the browser itself must prove the selected isolation case');
   const wasm = network.filter(url => url.endsWith('.wasm'));
   const expected = mode === 'singlethread' ? 'singlethread' : 'multithread';
+  if (standaloneDevice) {
+    assert(wasm.length > 0 && wasm.every(url => url === origin + '/webapp/edi_app.wasm'),
+      'I16/device: standalone observation loads only the exact emitted singlethread module');
+  } else {
   assert(wasm.length && wasm.some(url => url.replace(/[-_]/g, '').includes(expected)),
     'automatic start-page selection must load the thread kit the browser can actually run');
   assert(!wasm.some(url => url.replace(/[-_]/g, '').includes(mode === 'singlethread' ? 'multithread' : 'singlethread')),
     'automatic selection must not launch an incompatible second kit');
-  await writeFile(join(output, `${mode}-startup.json`), JSON.stringify({ isolated, sharedArrayBuffer, coreCount, wasm, errors, transcript }, null, 2));
+  }
+  await writeFile(join(output, `${mode}-startup.json`), JSON.stringify({ artifact:standaloneDevice?'standalone-singlethread':'packed-site', isolated, sharedArrayBuffer, coreCount, wasm, errors, transcript }, null, 2));
   assert.equal(errors.length, 0, 'startup must have no uncaught browser exception');
   if (process.argv.includes('--startup-only')) {
     console.log(`${mode}: real canvas, browser isolation and automatic kit selection passed`);
@@ -334,6 +357,17 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  if (assistantDevicesOnly) {
+    await inspectAssistantDevices({send,evaluate,frame,url:origin+entryPath,
+      record:value=>writeFile(join(output,`${mode}-device-${value.fixture}.json`),JSON.stringify(value,null,2)),
+      capture:id=>shot('device-'+id)});
+    assert.equal(errors.length,0,'I16/device: actual device entries complete without browser exceptions');
+    console.log(`${mode}: assistant device entries passed; no provider readiness claimed`);
+  } else if (assistantFilesOnly) {
+    await inspectAssistantSelectedFiles({send,evaluate,frame,click,waitAX,event,lastEvents,shot,scratch,output,mode});
+    assert.equal(errors.length,0,'I15/files: selected-file interaction has no browser exception');
+    console.log(`${mode}: selected browser chooser subset passed; drop/native picker/provider read remain separately unqualified`);
+  } else {
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
     () => shot('develop-diagnostics'));
@@ -739,6 +773,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
   if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
 } catch (error) {

@@ -1,0 +1,159 @@
+{
+  "contract": "edi.individual-app-actions.proposal/1",
+  "state": "INTENDED_UNIMPLEMENTED",
+  "arguments": {
+    "load_structure": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "purpose",
+        "file_id"
+      ],
+      "additionalProperties": false
+    },
+    "create_experiment": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      },
+      "required": [
+        "purpose"
+      ],
+      "additionalProperties": false
+    },
+    "set_experiment_type": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "experiment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "axis": {
+              "const": "beamMode"
+            },
+            "token": {
+              "enum": [
+                "constant wavelength",
+                "time-of-flight"
+              ]
+            }
+          },
+          "required": [
+            "purpose",
+            "experiment",
+            "axis",
+            "token"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "experiment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "axis": {
+              "const": "radiationProbe"
+            },
+            "token": {
+              "enum": [
+                "neutron",
+                "xray"
+              ]
+            }
+          },
+          "required": [
+            "purpose",
+            "experiment",
+            "axis",
+            "token"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "load_data": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "experiment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "purpose",
+        "experiment",
+        "file_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "result_additions": {
+    "action_error": {
+      "enum": [
+        "project_required",
+        "input_required",
+        "input_unavailable",
+        "unsupported_input",
+        "target_unavailable",
+        "data_already_present",
+        "type_locked",
+        "unsupported_type",
+        "reader_refused",
+        "operation_superseded",
+        "control_unavailable"
+      ]
+    },
+    "action_field": {
+      "enum": [
+        "project",
+        "file_id",
+        "experiment",
+        "axis",
+        "token"
+      ]
+    }
+  },
+  "result_role": "Existing edi.assistant.outgoing/1 Result plus these two closed optional fields; no raw message passthrough. Existing transport envelope and retirement envelope unchanged."
+}
