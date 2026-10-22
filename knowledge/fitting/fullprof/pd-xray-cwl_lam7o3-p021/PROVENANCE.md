@@ -32,3 +32,8 @@ documents the lower-case symbols and the synchrotron correction route.
 The archived `strict-shift-attempt` used epsilon 0.001 and 1000 cycles
 from the same start but did not converge. The primary reference uses
 the established epsilon 0.1; no fitted result seeds another fit.
+
+A separately labelled self-continuation is retained under `continuation`.
+It starts from this run's emitted .new with the same free set and a valid
+200-cycle control field. Its own receipt and fixed twin identify the staged
+diagnostic; it does not replace this reference from the committed start.

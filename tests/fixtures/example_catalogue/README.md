@@ -56,3 +56,10 @@ keep their established FullProf table settings.
 The LaM7O3 tighter-tolerance attempt is retained under `strict-shift-attempt` in both
 reference homes; it exhausted its budget and is not the converged minimum reference.
 The primary run retains the established epsilon 0.1, with all starts and free flags unchanged.
+
+`continue_synchrotron.py --executable /path/to/fp2k --logs /persistent/logs` checks
+one separate FullProf self-continuation. Its receipt explicitly labels staging,
+binds the source `.new`, and keeps all thirty-nine free parameters. The emitted
+three-column cycle field cannot represent 1000 (`***`), so the diagnostic writes
+a valid 200-cycle field before running. Its outputs and fixed twin live under
+`continuation`; they do not replace the primary reference from the committed start.
