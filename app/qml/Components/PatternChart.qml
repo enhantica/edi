@@ -454,7 +454,7 @@ Item {
                 // the box shows the axis drawn, and names it as its list does.
                 enabled: chart.experiment !== null && controller.dAvailable
                 toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-                readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("d")]
+                readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("d-spacing")]
                 model: entries
                 closedTexts: entries.map(text => qsTr("x: %1").arg(text))
                 currentIndex: controller.dSpacing && controller.dAvailable ? 1 : 0

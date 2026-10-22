@@ -582,7 +582,8 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
   (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
   one; each chart keeps its own choice, and switching starts the view over. Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
-  *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
+  *x: d-spacing*, the list naming each choice as the closed box does after its axis (`ToolbarComboBox.closedTexts`;
+  the owner, 2026-10-22). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
 - **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
   left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and

@@ -98,7 +98,7 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    reset, a secondary click (a touchpad's two-finger click, as on the pattern chart), another scan, another x axis or
    another row placing returns to the whole range. The plot starts below the toolbar, so nothing is cut at the top;
    when the chart is too narrow for one toolbar line, the buttons take a second line, each line centred as the
-   pattern chart's. An axis box names its choice as its list does (`x: d` for the list's `d`; the owner, 2026-10-22),
+   pattern chart's. An axis box names its choice as its list does (`x: d-spacing` for the list's `d-spacing`; the owner, 2026-10-22),
    on the pattern chart too, and d can be chosen only once a calculation has given a current d column: until then
    the box is off and shows the axis drawn. The excluded regions are marked as the pattern chart marks them (ADR-0021 §4): its grey tint under the Stacked
    patterns, a wash towards the plot's background over the Map's colours, each on whole pixels so two rows' bands meet
