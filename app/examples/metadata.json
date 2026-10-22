@@ -913,6 +913,56 @@
         "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/experiments/echidna.edi",
         "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/structures/lab6.edi"
       ]
+    },
+    "pd-neut-tof_cecoal-polaris_basic": {
+      "samples": [
+        "CeCoAl₃ [Pmma]"
+      ],
+      "origin": "POLARIS @ ISIS",
+      "detail": "Structure and time-of-flight profile fit · 24-term Chebyshev background",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ISIS"
+        ],
+        "instruments": [
+          "POLARIS"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_cecoal-polaris_basic",
+        "CeCoAl₃ [Pmma] · POLARIS @ ISIS",
+        "Structure and time-of-flight profile fit · 24-term Chebyshev background"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/project.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/experiments/polaris.edi",
+        "docs/user/cli/pd-neut-tof_cecoal-polaris_basic/project/structures/cecoal.edi"
+      ]
     }
   }
 }

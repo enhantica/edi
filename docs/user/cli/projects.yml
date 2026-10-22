@@ -133,3 +133,6 @@ projects:
   - id: pd-neut-cwl_lab6-11b-echidna_basic
     executing: false
     user-facing: true
+  - id: pd-neut-tof_cecoal-polaris_basic
+    executing: false
+    user-facing: true
