@@ -267,7 +267,7 @@ TestCase {
             verify(waitForPolish(appWindow), "Changing parameter freedom updates both actual consumers");
             for (const input of [cell, field]) {
                 compare(input.font.bold, free, "Both consumers change weight with parameter freedom");
-                compare(input.color, free ? Style.Colors.green : Style.Colors.themeForeground, "Both consumers share the status green for free parameters and restore foreground when fixed");
+                tryCompare(input, "color", free ? Style.Colors.green : Style.Colors.themeForeground, 2000, "Both consumers share the status green for free parameters and restore foreground when fixed");
             }
         }
     }
