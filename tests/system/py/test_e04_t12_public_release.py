@@ -304,6 +304,20 @@ def test_dependency_notice_covers_review_component(component):
     notice = ROOT / 'THIRD-PARTY-NOTICES'
     assert notice.is_file(), 'the release must bundle the complete dependency notices locally'
     text = notice.read_text()
+    if component in {'diffraction-lib', 'easydiffractionbeta'}:
+        acknowledgements = re.search(r'(?ms)^Acknowledgements\n-+\n(.*?)(?=^## |\Z)', text)
+        if component == 'diffraction-lib':
+            assert acknowledgements and component in acknowledgements[1], (
+                'The element-data source retains its acknowledgement without claiming bundling'
+            )
+        assert not re.search(r'(?m)^## ' + re.escape(component) + r'$', text), (
+            'A reference-only project has no redistributed component notice section'
+        )
+        matrix = (ROOT / 'DEPENDENCIES.md').read_text()
+        assert not re.search(r'(?m)^\|\s*' + re.escape(component) + r'\s*\|', matrix), (
+            'A reference-only project is absent from the bundled dependency matrix'
+        )
+        return
     # Check a component's own section, not a licence token elsewhere in the document.
     match = re.search(r'(?im)^.*(?:#+|\[|<h\d).*' + re.escape(component) + r'.*$', text)
     assert match, 'every reviewed shipped component must have a named notice section: ' + component

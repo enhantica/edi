@@ -5,6 +5,8 @@ import subprocess
 
 import pytest
 
+from tests.fixtures.element_contrast.legacy_receipts import require_readable_elements
+
 from tests.integration.app.test_e04_t1_projects import APP_TESTS, runner
 
 
@@ -12,7 +14,7 @@ from tests.integration.app.test_e04_t1_projects import APP_TESTS, runner
 def legend_run():
     # One host supplies the independent scheme and geometry receipts. Its complete
     # launch cost is retained once by the canonical module-cost instrument.
-    return subprocess.run(
+    result = subprocess.run(
         [str(runner()), '-input', str(APP_TESTS / 'tst_legend_marks.qml'), '-o', '-,txt'],
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
         capture_output=True,
@@ -20,6 +22,10 @@ def legend_run():
         timeout=30,
         check=False,
     )
+
+    if result.returncode == 0:
+        require_readable_elements(result.stdout + result.stderr)
+    return result
 
 
 def test_actual_legend_marks_preserve_geometry_and_element_parity(legend_run):

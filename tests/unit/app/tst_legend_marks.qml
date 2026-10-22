@@ -4,6 +4,7 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
+import "../../fixtures/current_row_style/reference.js" as RowStyle
 
 TestCase {
     id: test
@@ -122,7 +123,25 @@ TestCase {
         verify(element !== undefined, "The minimal structure's element must have a legend entry");
         const expected = tableIcon.segments[0];
         tryVerify(() => element.segments[0].icon === expected.icon, 2000, "The legend must use the exact atom icon emitted by the table");
-        tryVerify(() => String(element.segments[0].color) === String(tableIcon.segments[0].color), 2000, "The legend and table must share the selected scheme's element colour");
+        let view = legend;
+        while (view && view.objectName !== "structure.view")
+            view = view.parent;
+        verify(view !== null, "The legend's actual opaque drawing background is observable");
+        const theme = EaStyle.Colors.isDarkPalette ? "dark" : "light";
+        console.log("LEGACY_ELEMENT " + JSON.stringify({
+            scheme: row.tag,
+            symbol: "La",
+            consumers: [
+                {
+                    colour: String(tableIcon.segments[0].color),
+                    backgrounds: [String(EaStyle.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                },
+                {
+                    colour: String(element.segments[0].color),
+                    backgrounds: [String(view.color)]
+                }
+            ]
+        }));
         const midpoint = Math.round((AppSizes.legendRowHeight + EaStyle.Sizes.comboBoxHeight) / 2);
         entries.forEach(entry => compare(entry.height, midpoint, "Structure legend rows must sit halfway between pattern and filter-dropdown spacing"));
         verify(element.segments[0].dot !== true && element.segments[0].text === undefined, "The element icon must replace both circle shapes and text dots");
