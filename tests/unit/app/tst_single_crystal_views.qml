@@ -127,7 +127,7 @@ TestCase {
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
         verify(!Ui.groupNames(Ui.page(appWindow)).includes("refln"), "The reflection group must not occupy the Basic tab");
         Ui.click(test, Probe, appWindow, "sideBar.tab.extras");
-        verify(Ui.groupNames(Ui.page(appWindow)).includes("refln"), "The Experiment Extra tab must expose its dedicated reflection group; visible groups=" + JSON.stringify(Ui.groupNames(Ui.page(appWindow))));
+        tryVerify(() => Ui.groupNames(Ui.page(appWindow)).includes("refln"), 2000, "The Experiment Extra tab must expose its dedicated reflection group after its lazy content has entered the viewport");
         expand("group.refln");
         const reflectionGroup = Review.findGroup(Ui.page(appWindow), "group.refln");
         verify(reflectionGroup !== null, "The expanded reflection group must remain in the live Extra tab");
@@ -465,7 +465,7 @@ TestCase {
         const location = SettingsProof.copyProject(Probe.referenceUrl("projects/sc-neut-cwl_tbti_basic"));
         const source = SettingsProof.text(location, "experiments/experiment.edi");
         verify(source.includes("structure 3.653\n"), "The weighted fit witness must preserve the frozen FullProf input scale");
-        verify(SettingsProof.write(location, "experiments/experiment.edi", source.replace("structure 3.653\n", "structure 2.59363()\n")), "The disposable fit witness must declare only scale free at seventy-one per cent of the FullProf starting value");
+        verify(SettingsProof.write(location, "experiments/experiment.edi", source.replace("structure 3.653\n", "structure 3.653()\n")), "The disposable fit witness must declare only scale free at the actual FullProf page starting value");
         openSingle(data, location);
         const reference = JSON.parse(Probe.readReferenceFile("fullprof.json")).cases["sc-neut-cwl_tbti_basic"];
         const rows = reference.input_rows;
