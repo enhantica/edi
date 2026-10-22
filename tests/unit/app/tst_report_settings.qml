@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtCore
 import QtTest
@@ -79,7 +80,7 @@ Item {
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
             const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
-            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Colour scheme:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
             const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
             function inkTop(item) {
                 const at = item.mapToItem(dialog.contentItem, 0, 0);
@@ -208,13 +209,13 @@ Item {
         function test_scheme_and_library_defaults_persist_without_changing_an_open_project() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "A real project supplies the modified-state control");
             const modified = Session.project.modified;
-            verify(typeof Preferences.colourScheme === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes the two declared string-token defaults");
-            Preferences.colourScheme = "okabeIto";
+            verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes independent Structures/Patterns choices and the declared library default");
+            Approved.setSchemes(Preferences, "ediContrast");
             Preferences.newReportLibraries = "embedded";
-            tryVerify(() => SettingsProof.value(location, "Appearance", "colourScheme") === "okabeIto" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
-            const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property string scheme: Preferences.colourScheme; property string libraries: Preferences.newReportLibraries }');
+            tryVerify(() => SettingsProof.value(location, "Appearance", "structureColourScheme") === "ediContrast" && SettingsProof.value(location, "Appearance", "patternColourScheme") === "ediContrast" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
+            const restored = SettingsProof.restart(Approved.freshSchemesCode());
             verify(!restored.error, "A fresh configured QML engine reloads the actual Preferences singleton");
-            compare(restored.scheme, "okabeIto", "A fresh engine restores the colour scheme from Appearance");
+            compare(restored.schemes, JSON.stringify(["ediContrast", "ediContrast"]), "A fresh engine restores the colour scheme from Appearance");
             compare(restored.libraries, "embedded", "A fresh engine restores the new-report libraries default from Projects");
             compare(Session.project.modified, modified, "Changing application defaults never modifies the open project");
         }
