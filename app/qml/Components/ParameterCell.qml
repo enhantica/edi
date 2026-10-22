@@ -63,7 +63,7 @@ EaComponents.TableViewParameter {
     property string shownValue: valueText
     function refit() {
         const sized = Math.abs(width - implicitWidth) >= 0.5;
-        shownValue = fitDigits || !sized ? valueText : NumberText.fitted(valueText, room, shownMetrics);
+        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits));
     }
     onRoomChanged: refit()
     onValueTextChanged: refit()

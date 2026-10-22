@@ -195,31 +195,85 @@ QtObject {
         return format.power !== 0 ? text + "e" + format.power : text;
     }
 
-    // A number's text as written for its cell, in scientific notation with the same significant digits, for a cell too
-    // narrow to show it (the owner, 2026-10-22): `0.0000123` is `1.23e-5`, `0.0010` is `1.0e-3`, `1250000` is
-    // `1.25e6`. A whole number's trailing zeros are not counted as significant. A text that is not a plain decimal
-    // number (already an exponent, a word) is returned as it is.
-    function compact(text) {
+    // A plain decimal text as its sign, its digits from the first significant one and that digit's power of ten, and
+    // whether it is a whole number; null for a zero or a text that is not a plain decimal number.
+    function decimal(text) {
         const parts = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(String(text));
         if (!parts || (parts[2] === "" && (parts[3] ?? "") === ""))
-            return String(text);
+            return null;
         const whole = parts[2].replace(/^0+/, "");
         const fraction = parts[3] ?? "";
-        let digits;
-        let power;
-        if (whole !== "") {
-            digits = whole + fraction;
-            power = whole.length - 1;
-            if (parts[3] === undefined)
-                digits = digits.replace(/0+$/, "") || "0";
-        } else {
-            const first = fraction.search(/[1-9]/);
-            if (first < 0)
-                return String(text);
-            digits = fraction.slice(first);
-            power = -(first + 1);
-        }
-        return parts[1] + digits[0] + (digits.length > 1 ? "." + digits.slice(1) : "") + "e" + power;
+        if (whole !== "")
+            return {
+                "sign": parts[1],
+                "digits": whole + fraction,
+                "power": whole.length - 1,
+                "whole": parts[3] === undefined
+            };
+        const first = fraction.search(/[1-9]/);
+        if (first < 0)
+            return null;
+        return {
+            "sign": parts[1],
+            "digits": fraction.slice(first),
+            "power": -(first + 1),
+            "whole": false
+        };
+    }
+
+    // A number's text as written for its cell, in scientific notation with the same significant digits, for a cell too
+    // narrow to show it (the owner, 2026-10-22): `0.0000123` is `1.23e-5`, `0.0010` is `1.0e-3`, `1250000` is
+    // `1.25e6`. `significant` is how many digits the text holds where its rounding says so (narrowParameter,
+    // ownUncertainty): `120000` known to the units is `1.20000e5`. Without it a whole number's trailing zeros are not
+    // counted, as for a number with no uncertainty. A text that is not a plain decimal number (already an exponent, a
+    // word) is returned as it is.
+    function compact(text, significant) {
+        const number = decimal(text);
+        if (number === null)
+            return String(text);
+        let digits = number.digits;
+        if (significant > 0)
+            digits = digits.slice(0, significant).padEnd(significant, "0");
+        else if (number.whole)
+            digits = digits.replace(/0+$/, "") || "0";
+        return number.sign + digits[0] + (digits.length > 1 ? "." + digits.slice(1) : "") + "e" + number.power;
+    }
+
+    // How many significant digits an s.u. the project's rule wrote has: two under iucr_99, and under iucr_19 from 10
+    // to 19 (a first digit 1); one otherwise. A whole number's text alone cannot say (`200000` is 2e5 or 2.0e5).
+    function suDigits(su) {
+        const project = Session.project;
+        const first = /[1-9]/.exec(String(su));
+        return (project && project.suRule === "iucr_99") || (first !== null && first[0] === "1") ? 2 : 1;
+    }
+
+    // How many significant digits a value the rule rounded beside its s.u. has (both texts from ruled): down to the
+    // s.u.'s last digit, or the s.u.'s own count for a value too small to reach that digit, which keeps as many of its
+    // own.
+    function ruledDigits(value, su) {
+        const number = decimal(value);
+        const uncertainty = decimal(su);
+        if (number === null || uncertainty === null)
+            return 0;
+        const count = suDigits(su);
+        const digits = number.power - (uncertainty.power - count + 1) + 1;
+        return digits >= 1 ? digits : count;
+    }
+
+    // A parameter's text (parameter) in scientific notation, for a cell too narrow for it, with the digits its
+    // uncertainty leaves it.
+    function narrowParameter(value, error, digits) {
+        const text = parameter(value, error, digits);
+        if (scientific(value))
+            return text;
+        const rule = ruled(value, error);
+        if (rule)
+            return compact(text, ruledDigits(rule.value, rule.su));
+        const number = decimal(text);
+        if (number === null || typeof error !== "number" || !isFinite(error) || error <= 0)
+            return compact(text);
+        // Without a project the uncertainty is rounded to one digit and the value to its place (rounded).
+        return compact(text, Math.max(1, number.power - exponentOf(error.toExponential(0)) + 1));
     }
 
     // A number's text as a cell `room` pixels wide shows it, measured with `metrics` (a FontMetrics in the cell's
@@ -239,7 +293,7 @@ QtObject {
             return "";
         const text = ruled(parameterValue, value);
         const written = text ? text.su : String(Number(value.toPrecision(1)));
-        return /e/.test(written) ? written.replace("e+", "e") : compact(written);
+        return /e/.test(written) ? written.replace("e+", "e") : compact(written, text ? suDigits(written) : 1);
     }
 
     // `value` in exponent form with `digits` significant digits, without trailing zeros in its mantissa.
