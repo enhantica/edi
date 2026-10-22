@@ -838,5 +838,71 @@ jobs:
         with:
           name: edi-webapp-checks
           path: ${{ runner.temp }}/edi-webapp-checks
+
+  # Each delivered surface carries the notices of exactly the components it ships, checked on the real outputs: the
+  # desktop install, the Python wheel, the CLI with the notices its build puts beside it, and the site the WebAssembly
+  # job built (tests/system/py/test_distribution_licences.py, which the system parts leave to this job). About 20
+  # minutes on one Linux runner after the WebAssembly job, so pull requests skip it as they skip that job.
+  licence-surfaces:
+    name: licence surfaces
+    if: ${{ !cancelled() && needs.app-wasm.result == 'success' }}
+    environment: crysta-sdk
+    needs: [changes, app-wasm]
+    runs-on: *linux
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # the app's version line is `git describe`
+      - uses: ./.github/actions/setup-pixi
+      # The compiler cache (app), between runs: the app job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 2G
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-app-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-app-${{ steps.ccache.outputs.key-prefix }}
+            ccache-app-${{ runner.os }}-${{ runner.arch }}-
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Fetch the site the WebAssembly job built
+        uses: actions/download-artifact@v4
+        with:
+          name: edi-webapp
+          path: build/wasm/site
+      - name: Build the core, the CLI and the Python extension
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Build the desktop app
+        run: pixi run -e app app-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # Installs the desktop app, builds and unpacks the wheel, collects the CLI with what its build emitted beside it,
+      # copies the site, and sets the four EDI_*_BUNDLE paths the checks read.
+      - name: Stage the four surfaces
+        run: pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py
+      - name: Check each surface's notices
+        run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py
+      - name: Upload the staged surfaces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: licence-surfaces
+          path: build/distribution-licences
+          if-no-files-found: error
           retention-days: 7
           if-no-files-found: ignore
