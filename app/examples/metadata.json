@@ -51,6 +51,56 @@
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_basic/project/structures/lbco.edi"
       ]
     },
+    "pd-neut-cwl_cosio-d20_basic": {
+      "samples": [
+        "Co₂SiO₄ [Pnma]"
+      ],
+      "origin": "D20 @ ILL",
+      "detail": "Olivine · Coordinates, displacements and oxygen occupancies",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D20"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_cosio-d20_basic",
+        "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "Olivine · Coordinates, displacements and oxygen occupancies"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_basic/project/structures/cosio.edi"
+      ]
+    },
     "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
       "samples": [
         "PbSO₄ [Pnma]"
