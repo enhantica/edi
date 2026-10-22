@@ -24,6 +24,46 @@ edi::YScale scale_of(const QString& scale) {
                                             : edi::YScale::Linear;
 }
 
+// Whether an excluded region reaches into the span between two x values.
+bool excluded_between(const ScanViewModel::Pattern& pattern, double a, double b) {
+    const double low = std::min(a, b), high = std::max(a, b);
+    return std::any_of(pattern.excluded_shown.begin(), pattern.excluded_shown.end(),
+                       [low, high](const std::pair<double, double>& range) {
+                           return range.first <= high && range.second >= low;
+                       });
+}
+
+// A pattern's points as the views draw them. With only the included range (the owner, 2026-10-22), a point inside an
+// excluded region is taken out and a break goes between two neighbouring points with one between them, so no line or
+// pixel joins across it; otherwise, every point.
+struct DrawnPattern {
+    std::vector<double> x, intensity;
+};
+DrawnPattern drawn_pattern(const ScanViewModel::Pattern& pattern, bool included_only) {
+    constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+    const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
+    DrawnPattern out;
+    out.x.reserve(points);
+    out.intensity.reserve(points);
+    const bool gaps = included_only && !pattern.excluded_shown.empty();
+    for (std::size_t i = 0; i < points; ++i) {
+        const double x = pattern.shown[i];
+        if (gaps && i > 0 && excluded_between(pattern, pattern.shown[i - 1], x)) {
+            out.x.push_back(kNaN);
+            out.intensity.push_back(kNaN);
+        }
+        out.x.push_back(x);
+        out.intensity.push_back(gaps && ScanViewModel::excludedAt(pattern, x) ? kNaN : pattern.intensity[i]);
+    }
+    return out;
+}
+
+// With only the included range, whether a pixel column (or a reduced trace's point) centred at x, `width` wide, reaches
+// into an excluded region: it is left empty, so a column joining two sides of a gap never shows across it.
+bool column_excluded(const ScanViewModel::Pattern& pattern, bool included_only, double x, double width) {
+    return included_only && excluded_between(pattern, x - width / 2.0, x + width / 2.0);
+}
+
 }  // namespace
 
 ScanLayer::ScanLayer(QQuickItem* parent) : QQuickPaintedItem(parent) { setAntialiasing(true); }
@@ -112,25 +152,23 @@ double ScanLayer::peakOf(int dataset) const {
     const edi::YScale scale = scale_of(scale_);
     // The line's highest point in the range shown: a point inside, or where the line joining two neighbouring points
     // crosses an edge of the range (the only part shown when no point is inside), as the line is drawn.
-    const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
+    // With only the included range, as drawn: nothing inside or across an excluded region.
+    const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+    const std::size_t points = drawn.x.size();
     const auto value_at = [&](std::size_t i) {
-        const double x = pattern.shown[i];
-        if (!std::isfinite(x) || (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
-            return kNaN;
-        }
-        return edi::to_display(pattern.intensity[i], scale);
+        return std::isfinite(drawn.x[i]) ? edi::to_display(drawn.intensity[i], scale) : kNaN;
     };
     const double lo = std::min(x_min_, x_max_), hi = std::max(x_min_, x_max_);
     double high = -std::numeric_limits<double>::infinity();
     for (std::size_t i = 0; i < points; ++i) {
-        const double x = pattern.shown[i], value = value_at(i);
+        const double x = drawn.x[i], value = value_at(i);
         if (x >= lo && x <= hi && std::isfinite(value)) {
             high = std::max(high, value);
         }
         if (i + 1 == points) {
             continue;
         }
-        const double xb = pattern.shown[i + 1], next = value_at(i + 1);
+        const double xb = drawn.x[i + 1], next = value_at(i + 1);
         if (!std::isfinite(value) || !std::isfinite(next) || x == xb) {
             continue;
         }
@@ -228,20 +266,6 @@ void ScanLayer::paint(QPainter* painter) {
             tint.setAlphaF(static_cast<float>(style.opacity));
         }
     }
-    // With only the included range, a dataset's points inside its excluded regions are taken out, so neither view draws
-    // or joins across them.
-    const auto intensity_of = [this](const ScanViewModel::Pattern& pattern) {
-        if (!included_only_ || pattern.excluded_shown.empty()) {
-            return pattern.intensity;
-        }
-        std::vector<double> out = pattern.intensity;
-        for (std::size_t i = 0; i < out.size() && i < pattern.shown.size(); ++i) {
-            if (ScanViewModel::excludedAt(pattern, pattern.shown[i])) {
-                out[i] = std::numeric_limits<double>::quiet_NaN();
-            }
-        }
-        return out;
-    };
 
     if (mode_ == QLatin1String("map")) {
         // The datasets read, in row order, each as its pixel columns' values on the y scale.
@@ -260,10 +284,15 @@ void ScanLayer::paint(QPainter* painter) {
         std::vector<std::vector<float>> values(order.size());
         for (std::size_t i = 0; i < order.size(); ++i) {
             const ScanViewModel::Pattern& pattern = patterns[order[i]];
-            values[i] = edi::scan_pixel_values(pattern.shown, intensity_of(pattern), x_min_, x_max_,
+            const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+            values[i] = edi::scan_pixel_values(drawn.x, drawn.intensity, x_min_, x_max_,
                                                static_cast<std::size_t>(pixel_columns));
-            for (float& value : values[i]) {
-                value = static_cast<float>(edi::to_display(value, scale));
+            const double width = (x_max_ - x_min_) / static_cast<double>(pixel_columns);
+            for (std::size_t c = 0; c < values[i].size(); ++c) {
+                const double centre = x_min_ + (static_cast<double>(c) + 0.5) * width;
+                values[i][c] = column_excluded(pattern, included_only_, centre, width)
+                                   ? std::numeric_limits<float>::quiet_NaN()
+                                   : static_cast<float>(edi::to_display(values[i][c], scale));
             }
         }
         std::vector<edi::ScanMapColour> table =
@@ -340,8 +369,16 @@ void ScanLayer::paint(QPainter* painter) {
         if (pattern.x.empty()) {
             return;
         }
-        const edi::ScanTrace trace = edi::scan_trace(pattern.shown, intensity_of(pattern), x_min_, x_max_,
-                                                     static_cast<std::size_t>(pixel_columns));
+        const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+        edi::ScanTrace trace = edi::scan_trace(drawn.x, drawn.intensity, x_min_, x_max_,
+                                               static_cast<std::size_t>(pixel_columns));
+        // A reduced trace's column that reaches into an excluded region is a break, as the map's pixels are.
+        const double width = (x_max_ - x_min_) / static_cast<double>(pixel_columns);
+        for (double& x : trace.x) {
+            if (std::isfinite(x) && column_excluded(pattern, included_only_, x, width)) {
+                x = std::numeric_limits<double>::quiet_NaN();
+            }
+        }
         QPainterPath path;
         bool open = false;
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
