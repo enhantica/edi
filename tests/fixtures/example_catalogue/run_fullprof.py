@@ -129,7 +129,7 @@ def run_case(case, executable, logs):
         if simulation
         else ('template' if case.endswith('_scan') else 'fit'),
         'staging': 'none',
-        'cycles': 200,
+        'cycles': 1 if simulation else 200,
     }
     if not simulation:
         fit = Writer(case, False)
