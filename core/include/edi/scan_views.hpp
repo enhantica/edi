@@ -35,9 +35,12 @@ std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions);
 
 /// The 2D map's colour maps (data/colormaps/PROVENANCE.md), in the order the app offers them; viridis is the default.
 enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
-/// The maps' names ("viridis", "magma", "inferno", "plasma"), in the enum's order.
+/// Every map's name, the enum's four first ("viridis", "magma", "inferno", "plasma"), then the candidates the owner
+/// chooses from (data/colormaps/PROVENANCE.md).
 const std::vector<std::string>& scan_colour_map_names();
-/// The map a saved name stands for; viridis for a name that is none of them.
+/// A map's title as the app lists it, naming its source ("batlow (Crameri)"); the name for one without a source note.
+std::string scan_colour_map_title(std::string_view name);
+/// The enum value a saved name stands for; viridis for a name that is not one of the four.
 ScanColourMap scan_colour_map_or_default(std::string_view name);
 
 /// A colour map's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.

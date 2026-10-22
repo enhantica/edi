@@ -14,7 +14,9 @@
 #include "edi/palette.hpp"
 
 namespace edi::detail {
-extern const char* const kColourMapTsvs[4];
+extern const std::size_t kColourMapCount;
+extern const char* const kColourMapNames[];
+extern const char* const kColourMapTsvs[];
 }
 
 namespace edi {
@@ -50,17 +52,26 @@ ColourTable read_colour_map(const char* tsv, const std::string& name) {
     return out;
 }
 
-// The embedded tables, read once, in ScanColourMap's order.
-const ColourTable& colour_map(ScanColourMap map) {
-    static const std::array<ColourTable, 4> tables = [] {
-        std::array<ColourTable, 4> out{};
-        for (std::size_t i = 0; i < out.size(); ++i) {
-            out[i] = read_colour_map(detail::kColourMapTsvs[i], scan_colour_map_names()[i]);
+// The embedded tables, read once, in scan_colour_map_names' order.
+const std::vector<ColourTable>& colour_maps() {
+    static const std::vector<ColourTable> tables = [] {
+        std::vector<ColourTable> out;
+        for (std::size_t i = 0; i < detail::kColourMapCount; ++i) {
+            out.push_back(read_colour_map(detail::kColourMapTsvs[i], detail::kColourMapNames[i]));
         }
         return out;
     }();
-    return tables[static_cast<std::size_t>(map)];
+    return tables;
 }
+
+// A map by name; viridis for any other name.
+const ColourTable& colour_map_named(std::string_view name) {
+    const std::vector<std::string>& names = scan_colour_map_names();
+    const auto found = std::find(names.begin(), names.end(), name);
+    return colour_maps()[found == names.end() ? 0 : static_cast<std::size_t>(found - names.begin())];
+}
+
+const ColourTable& colour_map(ScanColourMap map) { return colour_maps()[static_cast<std::size_t>(map)]; }
 
 }  // namespace
 
@@ -119,14 +130,30 @@ std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions) {
 }
 
 const std::vector<std::string>& scan_colour_map_names() {
-    static const std::vector<std::string> names{"viridis", "magma", "inferno", "plasma"};
+    static const std::vector<std::string> names(detail::kColourMapNames, detail::kColourMapNames + detail::kColourMapCount);
     return names;
+}
+
+std::string scan_colour_map_title(std::string_view name) {
+    static const std::vector<std::pair<std::string_view, std::string_view>> titles{
+        {"batlow", "batlow (Crameri)"},     {"oslo", "oslo (Crameri)"},         {"lajolla", "lajolla (Crameri)"},
+        {"acton", "acton (Crameri)"},       {"devon", "devon (Crameri)"},       {"lapaz", "lapaz (Crameri)"},
+        {"thermal", "thermal (cmocean)"},   {"haline", "haline (cmocean)"},     {"deep", "deep (cmocean)"},
+        {"dense", "dense (cmocean)"},       {"ice", "ice (cmocean)"},           {"turbo", "turbo (Google)"},
+        {"ylgnbu", "YlGnBu (ColorBrewer)"}, {"pubu", "PuBu (ColorBrewer)"},     {"gnbu", "GnBu (ColorBrewer)"},
+        {"cet-gouldian", "gouldian (CET-L20)"}, {"cet-l08", "CET-L08"},         {"cet-l06", "CET-L06"}};
+    for (const auto& [key, title] : titles) {
+        if (key == name) {
+            return std::string(title);
+        }
+    }
+    return std::string(name);
 }
 
 ScanColourMap scan_colour_map_or_default(std::string_view name) {
     const std::vector<std::string>& names = scan_colour_map_names();
-    const auto found = std::find(names.begin(), names.end(), name);
-    return found == names.end() ? ScanColourMap::Viridis : static_cast<ScanColourMap>(found - names.begin());
+    const auto found = std::find(names.begin(), names.begin() + 4, name);
+    return found == names.begin() + 4 ? ScanColourMap::Viridis : static_cast<ScanColourMap>(found - names.begin());
 }
 
 ScanMapColour scan_map_colour(ScanColourMap map, double t) {
@@ -166,7 +193,7 @@ std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std:
             return out;
         }
     }
-    const ColourTable& table = colour_map(scan_colour_map_or_default(choice));
+    const ColourTable& table = colour_map_named(choice);
     return {table.begin(), table.end()};
 }
 

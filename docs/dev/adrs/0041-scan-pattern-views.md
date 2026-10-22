@@ -47,7 +47,11 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    schemes' own colours (ADR-0038: by place, a gradient past five), its default the app's scheme. A pattern on the
    Stacked view takes a map's colour at its place along the scan between a tenth and nine tenths of the map, or a
    ramp's from a quarter of the way, so no line takes the background's colour. cividis and turbo were left out: their
-   tables come under other licences, and turbo is not perceptually uniform.
+   tables come under other licences, and turbo is not perceptually uniform. On the owner's asking for more pleasing maps
+   than matplotlib's (2026-10-22), candidates were added for the owner to choose from, each with its source table and
+   licence (`data/colormaps/PROVENANCE.md`, DEPENDENCIES.md): six of Fabio Crameri's Scientific colour maps, five
+   of cmocean's, Google's Turbo, three ColorBrewer schemes and three of Peter Kovesi's CET maps; the ones not chosen
+   are removed with their rows.
 7. **Axes and toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has (the owner,
    2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d

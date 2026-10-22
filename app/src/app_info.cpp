@@ -227,8 +227,8 @@ QStringList ApplicationInfo::scanColourMaps() const {
 }
 
 QString ApplicationInfo::scanColourMapOrDefault(const QString& name) const {
-    return QString::fromStdString(
-        edi::scan_colour_map_names()[static_cast<std::size_t>(edi::scan_colour_map_or_default(name.toStdString()))]);
+    const std::vector<std::string>& names = edi::scan_colour_map_names();
+    return std::find(names.begin(), names.end(), name.toStdString()) != names.end() ? name : QStringLiteral("viridis");
 }
 
 QStringList ApplicationInfo::scanColourRamps() const {
@@ -249,7 +249,7 @@ QString ApplicationInfo::scanColourTitle(const QString& choice) const {
         const std::string_view title = edi::colour_scheme_title(*scheme);
         return QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size()));
     }
-    return choice;
+    return QString::fromStdString(edi::scan_colour_map_title(choice.toStdString()));
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {

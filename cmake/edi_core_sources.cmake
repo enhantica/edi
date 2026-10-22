@@ -55,13 +55,18 @@ function(edi_core_sources root out)
 
     # ADR-0041: the 2D map's colour maps (data/colormaps, PROVENANCE.md beside them), embedded the same way, one per
     # edi::ScanColourMap in its order.
-    set(EDI_COLOUR_MAPS viridis magma inferno plasma)
+    # The first four are matplotlib's; the rest are the candidates the owner chooses from (2026-10-22).
+    set(EDI_COLOUR_MAPS viridis magma inferno plasma batlow oslo lajolla acton devon lapaz thermal haline deep dense ice
+        turbo ylgnbu pubu gnbu cet-gouldian cet-l08 cet-l06)
     set(EDI_COLOUR_MAP_TABLES "")
+    set(EDI_COLOUR_MAP_NAMES "")
+    list(LENGTH EDI_COLOUR_MAPS EDI_COLOUR_MAP_COUNT)
     foreach(map IN LISTS EDI_COLOUR_MAPS)
         set(map_tsv ${root}/data/colormaps/${map}.tsv)
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${map_tsv})
         file(READ ${map_tsv} colour_map)
         string(APPEND EDI_COLOUR_MAP_TABLES "    R\"edi_colour_map(${colour_map})edi_colour_map\",\n")
+        string(APPEND EDI_COLOUR_MAP_NAMES "    \"${map}\",\n")
     endforeach()
     configure_file(${root}/core/src/colour_map_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/colour_map_data.cpp @ONLY)
 

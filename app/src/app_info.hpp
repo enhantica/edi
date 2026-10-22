@@ -140,13 +140,14 @@ class ApplicationInfo : public QObject {
     QStringList colourSchemes() const;
     QStringList colourSchemeTitles() const;
     Q_INVOKABLE QString colourSchemeOrDefault(const QString& scheme) const;
-    // A scan map's colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for.
+    // A scan map's colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for: itself
+    // when listed, else viridis.
     Q_PROPERTY(QStringList scanColourMaps READ scanColourMaps CONSTANT)
     QStringList scanColourMaps() const;
     Q_INVOKABLE QString scanColourMapOrDefault(const QString& name) const;
     // The ramps from the chart's background to each colour scheme's first measured colour (`ramp:<scheme>`, in the
-    // schemes' order), which both scan views offer beside their own colours, and a colour choice's title: a map's name,
-    // or "<scheme title> shades" for a ramp.
+    // schemes' order), which both scan views offer beside their own colours, and a colour choice's title: a scheme's, a
+    // map's with its source (edi::scan_colour_map_title), or "<scheme title> shades" for a ramp.
     Q_PROPERTY(QStringList scanColourRamps READ scanColourRamps CONSTANT)
     QStringList scanColourRamps() const;
     Q_INVOKABLE QString scanColourTitle(const QString& choice) const;
