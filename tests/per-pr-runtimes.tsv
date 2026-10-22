@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T23:21:47Z
+# measured_utc = 2026-10-22T23:39:14Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 14558 banked, 0 stale row(s) dropped)
-# Collected tests: 16034; with a reported duration: 9558
+# Recorded from: measured test run (36 node(s) measured once, 14560 banked, 0 stale row(s) dropped)
+# Collected tests: 16070; with a reported duration: 9591
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16034
+# inventory_python = 16070
 # inventory_cpp = 389
-# inventory_measured = 14560
-# inventory_unmeasured = 1863
+# inventory_measured = 14593
+# inventory_unmeasured = 1866
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -12224,6 +12224,27 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_zero_
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
+0.500	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-lower-joint-first]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-lower-joint-last]
+0.390	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-lower-single]
+0.410	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-middle-joint-first]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-middle-joint-last]
+0.390	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-middle-single]
+0.410	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-upper-joint-first]
+0.360	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-upper-joint-last]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[dense-upper-single]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[duplicate-reference-joint-first]
+0.340	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[duplicate-reference-joint-last]
+0.410	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[duplicate-reference-single]
+0.420	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[irregular-middle-joint-first]
+0.340	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[irregular-middle-joint-last]
+0.380	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[irregular-middle-single]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[rounded-collision-joint-first]
+0.360	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[rounded-collision-joint-last]
+0.350	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[rounded-collision-single]
+0.320	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[singleton-far-joint-first]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[singleton-far-joint-last]
+0.320	tests/system/py/test_fit_quality_observation_coverage.py::test_ambiguous_reference_rows_cannot_manufacture_observation_coverage[singleton-far-single]
 0.170	tests/system/py/test_fit_quality_observation_coverage.py::test_complete_or_excluded_reference_points_remain_comparable[excluded-gap]
 0.170	tests/system/py/test_fit_quality_observation_coverage.py::test_complete_or_excluded_reference_points_remain_comparable[rounded-complete]
 0.400	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[0-banks0]
@@ -12232,6 +12253,21 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_zero_
 0.390	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[1-banks1]
 0.330	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[3-banks0]
 0.330	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[3-banks1]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[dense-exact-joint-first]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[dense-exact-joint-last]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[dense-exact-single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-claim-joint-first]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-claim-joint-last]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-claim-single]
+0.350	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-dense-gap-joint-first]
+0.360	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-dense-gap-joint-last]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[excluded-dense-gap-single]
+0.360	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[rounded-complete-joint-first]
+0.430	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[rounded-complete-joint-last]
+0.370	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[rounded-complete-single]
+0.350	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[singleton-rounded-joint-first]
+0.340	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[singleton-rounded-joint-last]
+0.350	tests/system/py/test_fit_quality_observation_coverage.py::test_unique_rounded_or_excluded_observations_keep_their_closed_form_comparison[singleton-rounded-single]
 0.510	tests/system/py/test_fullprof_powder_factors.py::test_fitted_lbco_factors_agree_with_the_committed_fullprof_summary
 0.570	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
 0.321	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
