@@ -5381,6 +5381,21 @@ struct DataCategory {
 };
 static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::items));
 
+// Each structure's curve: the per-point lists in the `_data` loop and the block's list of the structures they follow,
+// crysta's computed buffers, shared like the other computed columns.
+struct PdCalcCategory {
+    static constexpr const char* name = "_pd_calc";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
+    static constexpr std::array items{"component_intensities_net"};
+};
+static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
+struct PdCalcOverallCategory {
+    static constexpr const char* name = "_pd_calc_overall";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_order};
+    static constexpr std::array items{"component_presentation_order"};
+};
+static_assert(detail::one_entry_per_column(PdCalcOverallCategory::columns, PdCalcOverallCategory::items));
+
 // Categories on file that the model does not store.
 struct FitParameterCategory {
     static constexpr const char* name = "_fit_parameter";
