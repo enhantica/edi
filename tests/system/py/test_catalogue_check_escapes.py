@@ -264,3 +264,51 @@ def test_actual_cmake_configuration_emits_the_owner_selected_index(tmp_path):
     assert (tmp_path / 'build/app/examples/index.txt').read_text().splitlines() == SELECTED, (
         'The built app index must preserve the owner selection and order'
     )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'comment',
+        'string',
+        'dead-branch',
+        'uninvoked-function',
+        'uninvoked-lambda',
+        'extra-nonliteral',
+    ],
+)
+def test_check_requires_an_executable_load_in_both_tutorial_forms(tmp_path, damage):
+    root = clone(tmp_path)
+    assert check(root).returncode == 0, 'The actual catalogue must pass before inert-load damage'
+    case = SELECTED[1]
+    tutorial = root / f'docs/user/tutorials/{case}.py'
+    notebook = tutorial.with_suffix('.ipynb')
+    line = next(
+        line for line in tutorial.read_text().splitlines() if 'project = edi.Project.load(' in line
+    )
+    variants = {
+        'comment': '# ' + line,
+        'string': repr(line),
+        'dead-branch': 'if False:\n    ' + line,
+        'uninvoked-function': 'def never_called():\n    ' + line,
+        'uninvoked-lambda': 'loader = lambda: ' + line.split(' = ', 1)[1],
+        'extra-nonliteral': line + '\nother = edi.Project.load(project_path)',
+    }
+    replacement = variants[damage]
+    replace(tutorial, tutorial.read_text().replace(line, replacement))
+    document = json.loads(notebook.read_text())
+    changed = False
+    for cell in document['cells']:
+        if cell['cell_type'] != 'code':
+            continue
+        code = ''.join(cell['source'])
+        if line in code:
+            cell['source'] = code.replace(line, replacement).splitlines(keepends=True)
+            changed = True
+    assert changed, 'The escape must remove the same executable load in both representations'
+    write_json(notebook, document)
+    result = check(root)
+    assert result.returncode != 0, (
+        'The real catalogue command must refuse inert loads and extra nonliteral loads'
+    )
+    assert 'Traceback' not in result.stderr, 'Inert tutorial forms require a normal diagnostic'

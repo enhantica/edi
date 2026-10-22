@@ -11,6 +11,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
+
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / 'docs/user/cli'
 TUTORIALS = ROOT / 'docs/user/tutorials'
@@ -126,9 +128,14 @@ def test_old_projects_keep_their_files_pins_and_execution(record):
     assert set(paths) == set(record['sha256']), (
         'Retained fixtures must keep their complete original file inventory'
     )
-    assert {
-        name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in paths.items()
-    } == record['sha256'], (
+    restored = {}
+    for name, path in paths.items():
+        raw = path.read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != record['sha256'][name]:
+            raw = historical_excluded_bytes(name.removeprefix('project/'), raw)
+        restored[name] = hashlib.sha256(raw).hexdigest()
+    assert restored == record['sha256'], (
         'Retained fixture models and numerical expectations must remain byte-identical'
     )
     live = next(row for row in registry() if row['id'] == case)

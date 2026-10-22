@@ -39,13 +39,40 @@ def cycle_budget(control):
     return int(budget[1])
 
 
+def refresh_project_inputs(record, home, case):
+    project = ROOT / record['start_project']
+    current = {
+        str(path.relative_to(project)): digest(path) for path in sorted(project.rglob('*.edi'))
+    }
+    if current == record['project_sha256']:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        scratch = Path(directory)
+        for fixed, stem in [(True, 'start'), (False, 'fit')]:
+            if stem == 'fit' and record['scope'] == 'calculation':
+                continue
+            Writer(case, fixed, cycles=record['cycles']).write(scratch / f'{stem}.pcr')
+            for generated in scratch.glob(stem + '*'):
+                if generated.read_bytes() != (home / generated.name).read_bytes():
+                    raise ValueError(
+                        f'Changed FullProf input requires a new run: {generated.name}'
+                    )
+    record['project_sha256'] = current
+
+
+def prepare_record(path, home, simulation, case):
+    record = json.loads(path.read_text())
+    record['cycles'] = cycle_budget(home / ('start.pcr' if simulation else 'fit.pcr'))
+    refresh_project_inputs(record, home, case)
+    return record
+
+
 def finish(case, directories):  # noqa: PLR0914 - complete external output receipt
     simulation = case.endswith('_simulation')
     kind = 'verification' if simulation else 'fitting'
     home = ROOT / 'knowledge' / kind / 'fullprof' / case
     path = home / 'reference.json'
-    record = json.loads(path.read_text())
-    record['cycles'] = cycle_budget(home / ('start.pcr' if simulation else 'fit.pcr'))
+    record = prepare_record(path, home, simulation, case)
     stems = ['start'] if simulation else ['start', 'fit', 'fixed']
     twin = ROOT / 'knowledge/verification/fullprof' / case
     for stem in stems:

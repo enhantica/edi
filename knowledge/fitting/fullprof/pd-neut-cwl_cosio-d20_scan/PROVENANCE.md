@@ -8,13 +8,14 @@ No fitted values seed the start, and no parameters are fixed or released in stag
 Input triples retain positive sigma; excluded and sigma-zero points are omitted.
 The range remains the background domain. FullProf Ins=10 reads six header lines.
 
-Reproduce with `python tests/fixtures/example_catalogue/run_fullprof.py --case pd-neut-cwl_cosio-d20_scan --executable /path/to/fp2k --logs /persistent/logs`.
+Reproduce with `python tests/fixtures/example_catalogue/run_fullprof.py --case pd-neut-cwl_cosio-d20_scan --cycles 200 --executable /path/to/fp2k --logs /persistent/logs`.
 The executable receives the PCR basename and blank responses on standard input.
 A terminal EOF after completed output is not a numerical failure. Logs are retained.
 
 `fit.pcr` uses Pcr=2. `fit.new` is the independent fitted model.
 Its fixed twin zeros every value/code field in that emitted file.
 Finite output: True. Converged: True.
+Fitting cycle budget: 200. Convergence settings are unchanged.
 The output parameter table and its code-index mapping are retained.
 Rwp uses all-point least-squares factors, pooled with observed weighted sums.
 The scan rows claim only their single template fit.
