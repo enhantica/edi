@@ -2025,6 +2025,91 @@ Rectangle {
             if (data.pixels)
                 boxPixels(marker, data.dark);
         }
+        function test_reverse_colour_group_and_memory_data() {
+            return test_joint_labels_outside_axis_data();
+        }
+        function test_reverse_colour_group_and_memory(data) {
+            const scan = open(data.mode, "rows");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const toggle = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
+            verify(toggle !== undefined && toggle.enabled, "Both Stacked and Map expose a real reverse-colours button");
+            const group = toggle.parent, members = group.children.filter(item => item.visible && (typeof item.checked === "boolean" || typeof item.textAt === "function"));
+            compare(members.length, data.mode === "map" ? 2 : 1, "The colour group contains only the Map selector and reverse button, or the Stacked reverse button alone");
+            if (data.mode === "map")
+                verify(members.includes(named("toolbar.colourMap")), "The Map palette selector shares the reverse button's own colour group");
+            const others = group.parent.children.filter(item => item !== group && item.visible && item.width > 0 && item.height > 0);
+            verify(others.length > 0, "The colour group is separate from the other actual toolbar controls");
+            for (const other of others) {
+                const a = group.mapToItem(chart, 0, 0), b = other.mapToItem(chart, 0, 0);
+                const gapX = Math.max(a.x - b.x - other.width, b.x - a.x - group.width);
+                const gapY = Math.max(a.y - b.y - other.height, b.y - a.y - group.height);
+                verify(Math.max(gapX, gapY) >= AppSizes.toolbarSpacing, "The colour group has visible spacing from every other toolbar group");
+            }
+            const colours = Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark), location = Globals.Vars.settingsFile;
+            const ownKey = data.mode === "map" ? "mapReversed" : "stackedReversed";
+            for (const reversed of [true, false, true]) {
+                if (toggle.checked !== reversed)
+                    mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+                tryCompare(toggle, "checked", reversed, 1000, "Actual pointer input reverses either scan view in both directions");
+                tryVerify(() => SettingsProof.value(location, "ScanViews", ownKey) === reversed, 2000, "The view's reverse choice reaches its own saved settings key");
+                const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool map:Preferences.scanMapReversed; property bool stacked:Preferences.scanStackedReversed }');
+                verify(!fresh.error, "A fresh production settings engine reads the separately remembered reversal choices");
+                compare(fresh[data.mode], reversed, "The chosen view remembers its own reversal after restart");
+                compare(fresh[data.mode === "map" ? "stacked" : "map"], false, "Reversing one view leaves the other view's remembered colours unchanged");
+                surface.Window.window.update();
+                verify(waitForRendering(chart), "The reverse input reaches actual pattern and dataset-tick pixels");
+                const expected = data.mode === "stacked" && reversed ? colours.slice().reverse() : colours;
+                checkDatasetTicks([100, 250, 700], expected);
+                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+                const y = 700 + (data.mode === "stacked" ? scan.stackHeight : 0);
+                const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                const colour = data.mode === "stacked" ? expected[2] : reversed ? "#440154" : "#fde725";
+                let drawn = false;
+                for (let dy = -2; dy <= 2; ++dy)
+                    drawn = drawn || ink(frame.pixel(Math.round(at.x), Math.round(at.y) + dy), rgb(colour), chart.colors.chartBackground);
+                verify(drawn, "Reversal changes the actual independent dataset colour or frozen viridis endpoint in the drawn view");
+            }
+        }
+        function test_tof_x_labels_never_touch_data() {
+            return test_current_row_tracks_async_coordinates_data();
+        }
+        function test_tof_x_labels_never_touch(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+            Input.joint(SettingsProof, root, false, "tof-wide");
+            verify(Session.openProject(root), "TOF label spacing opens independently authored six-digit native coordinates");
+            Preferences.resetToDefaults();
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode
+            });
+            ready(Session.project.scanViews);
+            for (const width of [1100, 640, 420]) {
+                chart.width = width;
+                chart.zoomX = [];
+                for (const zoom of [false, true]) {
+                    if (zoom) {
+                        const pointer = named("pointer");
+                        mouseDrag(pointer, pointer.width * .23, pointer.height * .2, pointer.width * .47, pointer.height * .6, Qt.LeftButton);
+                    }
+                    surface.Window.window.update();
+                    verify(waitForRendering(chart), "The TOF axis redraws its tick labels after resizing and real zoom input");
+                    const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0);
+                    const labels = Render.texts(axes).filter(item => item.visible && /^[-−+0-9.,eE ]+$/.test(item.text)).map(item => {
+                        const p = item.mapToItem(chart, 0, 0);
+                        return {
+                            item,
+                            left: p.x,
+                            right: p.x + item.width,
+                            top: p.y
+                        };
+                    }).filter(box => box.top >= origin.y + layer.height - 1 && box.left + box.item.width / 2 >= origin.x - 1 && box.left + box.item.width / 2 <= origin.x + layer.width + 1).sort((a, b) => a.left - b.left);
+                    verify(labels.length >= 2, "A nonempty TOF axis retains at least two actual readable numeric ticks");
+                    for (let i = 1; i < labels.length; ++i)
+                        verify(labels[i].left - labels[i - 1].right >= 1, "Every adjacent pair of rendered TOF x tick labels keeps visible space at each chart width and zoom");
+                }
+            }
+        }
         function test_row_label_thinning_data() {
             const cases = [];
             for (const mode of ["stacked", "map"])

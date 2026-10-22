@@ -104,6 +104,13 @@ CASES += tuple(
     for part in ('geometry', 'pixels')
 )
 
+CASES += tuple(
+    'test_reverse_colour_group_and_memory:' + mode + '-' + theme
+    for mode in ('stacked', 'map')
+    for theme in ('light', 'dark')
+)
+CASES += tuple('test_tof_x_labels_never_touch:' + mode for mode in ('stacked', 'map'))
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):

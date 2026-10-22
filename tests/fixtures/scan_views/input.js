@@ -23,7 +23,7 @@ function joint(proof, root, independent, axes = "tof") {
     for (const [row, name] of [[0,"expt_n2"],[1,"expt_s2"]]) {
         const file="experiments/"+name+".edi";
         let text=proof.text(root,file);
-        const offset=[13,-19][row], slope=[1000,2500][row];
+        const offset=[13,-19][row], slope=(axes === "tof-wide" ? [100000,250000] : [1000,2500])[row];
         for(const [key,value] of [["offset",offset],["linear",slope],["quadratic",0],["reciprocal",0]])
             text=text.replace(new RegExp("(_instrument.calib_d_to_tof_"+key+" )[^\\n]+"),function(match, prefix) { return prefix+value; });
         const header=text.indexOf("loop_\n_data.time_of_flight");
