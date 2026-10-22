@@ -1423,6 +1423,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         rows.wavelength = file.wavelength;
         load.points = rows.size();
         load.experiment.reflections = std::move(rows);
+        load.experiment.calculation_only = false;
         if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
             load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
         }

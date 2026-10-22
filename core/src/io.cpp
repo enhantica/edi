@@ -1592,11 +1592,13 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
-    // A single crystal made in the app holds no reflections until its data are loaded.
+    // A single crystal made in the app holds no reflections until its data are loaded: until then it is a
+    // data-less experiment, as a powder one with a declared range is.
     const Loop* refln = block.loop_with("_refln.index_h");
     ReflnDataBase rows;
     if (refln == nullptr) {
         experiment.reflections = std::move(rows);
+        experiment.calculation_only = true;
         return experiment;
     }
     const auto index = [&](const std::vector<std::string>& row, const char* tag) {
