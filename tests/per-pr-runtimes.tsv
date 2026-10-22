@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T19:41:18Z
+# measured_utc = 2026-10-22T21:36:14Z
 #
-# Recorded from: measured test run (83 node(s) measured once, 14451 banked, 0 stale row(s) dropped)
-# Collected tests: 15979; with a reported duration: 9531
+# Recorded from: measured test run (52 node(s) measured once, 14507 banked, 22 stale row(s) dropped)
+# Collected tests: 16009; with a reported duration: 9536
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15979
+# inventory_python = 16009
 # inventory_cpp = 389
-# inventory_measured = 14508
-# inventory_unmeasured = 1860
+# inventory_measured = 14535
+# inventory_unmeasured = 1863
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -85,53 +85,74 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 0.400	tests/integration/app/test_display_fonts.py::test_display_alphabet_uses_only_packaged_rendering_fonts
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-1]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-4]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_yap-spodi_3k]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ferrite-austenite-beer_joint]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-2bank_start-3]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-3bank_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab_round-robin]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_hs-hrpt]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco_simulation]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lmo-echidna]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_y2o3-spodi]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_yalo3-al2o3-spodi]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ferrite-austenite-beer]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_lbco-si-mcstas]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si_simulation]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-xray-cwl_pbso4-d1a-lab]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_lam7o3-p021]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp-bm01_scan]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_nacl_simulation]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_diamond-dream_basic]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_fe_pseudo-voigt]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-xray-cwl_lif_single]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-324f]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-3f]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_start-1]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_start-4]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_hs-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lab6-11b-echidna_basic]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-2]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco-hrpt_start-4]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lbco_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_lmo-echidna]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_pbso4_beba-asymmetry]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_yalo3-al2o3-spodi]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_yap-spodi_3k]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_cecoal-polaris]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_cecoal-polaris_chebyshev]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ceo2-pearl]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ceo2-pearl_polynomial]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_diamond-dream_mcstas]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ferrite-austenite-beer]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ferrite-austenite-beer_joint]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_lbco-si-mcstas]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-2bank_start-3]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-3bank_start-5]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-5]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_ncaf-wish]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-2]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si-sepd_start-5]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-tof_si_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-xray-cwl_pbso4-d1a-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_latp-bm01_scan]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_latp_scan-4f]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_nacl_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_pbso4-lab_round-robin]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 0.370	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
@@ -1781,15 +1802,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_vm_spin_observation_controls
 0.810	tests/integration/py/test_c34_t23_cli_projects.py::test_effective_docs_navigation_has_descriptive_project_pages
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-cwl_cosio-d20_scan-3f]
+0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-cwl_lif]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-cwl_yap_3k]
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-tof_diamond-dream_basic]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-tof_ncaf-wish-2bank_start-3]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-xray-cwl_lif_single]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[cosio-d20-s1]
+0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl_LiF_single]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl__single]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl_lif-_single]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl_lif]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl_lif_start--2]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-tof-diamond-dream]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_executing_registry_refuses_obsolete_and_malformed_ids[pd_neut_cwl_lif_single]
@@ -9741,6 +9763,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[wrong-project-name]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-capital-boolean]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-extra-indent]
+0.320	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[comment]
+0.340	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[dead-branch]
+0.290	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[extra-nonliteral]
+0.330	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[string]
+0.350	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[uninvoked-function]
+0.390	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[uninvoked-lambda]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[deletion]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[permutation]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[substitution]
@@ -16315,6 +16343,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_verification_helpers.py::test_fullprof_version_fails_closed_without_banner
 0.000	tests/unit/py/test_verification_helpers.py::test_fullprof_version_reads_the_sum_banner
 0.000	tests/unit/py/test_verification_helpers.py::test_identical_patterns_score_perfectly
+UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_igor_fixed_width_rows_preserve_icalc_when_large_fields_touch[       6.566115594496.00 87355512.00 28238984.00-6.566-87355512.0]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_igor_fixed_width_rows_preserve_icalc_when_large_fields_touch[      30.592 97885616.00107255072.00 -9369456.00-30.592-107255072.0]
 0.000	tests/unit/py/test_verification_helpers.py::test_igor_prf_parses_x_and_icalc_columns
 0.000	tests/unit/py/test_verification_helpers.py::test_known_discrepancy_fails_when_a_comparison_starts_agreeing
 0.000	tests/unit/py/test_verification_helpers.py::test_known_discrepancy_passes_while_the_disagreement_persists
@@ -16412,7 +16442,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 285.715	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.214	tests/integration/app/test_phase_scan_state.py
