@@ -2725,6 +2725,26 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
             saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
             saved_files_ = SavedFiles{{}, refusal.what()};
+            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
+            // its text, from a save without those experiments, and only theirs shows the refusal.
+            try {
+                edi::Project resolved = *project_;
+                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+                    const auto& links = resolved.experiments[index]->linked_structures;
+                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                        const std::string& id = link->structure_id.value();
+                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                           [&id](const auto& structure) { return structure->name.value() == id; });
+                    });
+                    if (missing) {
+                        resolved.experiments.erase_at(index);
+                    }
+                }
+                if (resolved.experiments.size() < project_->experiments.size()) {
+                    saved_files_->files = edi::project_edi_files(resolved);
+                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+            }
         }
     }
     if (!saved_files_->refusal.empty()) {
@@ -2738,10 +2758,20 @@ SavedFile ProjectViewModel::savedFileFunction() const {
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
-    for (const auto& [path, body] : savedFiles()) {
+    // A block the save could not write shows why; the others show their text (savedFiles).
+    std::string refusal;
+    try {
+        savedFiles();
+    } catch (const std::exception& error) {
+        refusal = error.what();
+    }
+    for (const auto& [path, body] : saved_files_->files) {
         if (path == relative) {
             return body;
         }
+    }
+    if (!refusal.empty()) {
+        throw std::runtime_error(refusal);
     }
     return {};
 }
