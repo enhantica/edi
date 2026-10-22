@@ -172,7 +172,13 @@ def exclusion_entries(root: Path, problems: list[str]) -> list[str]:
         return []
 
 
-def check(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | None, int]]]:
+def check(root: Path) -> list[str]:
+    """Every problem the catalogue under ``root`` has; empty when every case has all its forms."""
+    return survey(root)[0]
+
+
+def survey(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | None, int]]]:
+    """The problems, and each case's title, tutorial and number of data files."""
     problems: list[str] = []
     ids, cases = registry_from_yaml(root, problems)
     cmake_ids, cmake_cases = registry_as_cmake_reads_it(root)
@@ -214,8 +220,10 @@ def check(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | None
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n', 1)[0])
     parser.add_argument('--root', type=Path, default=ROOT, help='the edi tree (default: this one)')
+    # Checking is all it does; the flag matches tools/dev/example_metadata.py --check.
+    parser.add_argument('--check', action='store_true', help='check the catalogue (the default)')
     args = parser.parse_args(argv)
-    problems, facts = check(args.root.resolve())
+    problems, facts = survey(args.root.resolve())
     if problems:
         for problem in problems:
             print(f'example catalogue: {problem}', file=sys.stderr)
