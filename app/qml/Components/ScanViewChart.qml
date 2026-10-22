@@ -130,6 +130,13 @@ Item {
         value: chart.project !== null && chart.project.patternDSpacing
         when: chart.scan !== null
     }
+    // How high the stacked patterns rise, an app setting.
+    Binding {
+        target: chart.scan
+        property: "stackScale"
+        value: Preferences.scanStackedHeight
+        when: chart.scan !== null
+    }
     // Only the included range, the pattern charts' one setting.
     Binding {
         target: chart.scan
@@ -497,20 +504,23 @@ Item {
         }
     }
 
-    // The Map's datasets on its scan-value scale: a short tick just left of the plot at each dataset's row.
+    // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
+    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour. Kept between the plot's top and bottom
+    // border rows, so a row a fraction of a pixel above the axis's end is not drawn below the x axis line.
     Repeater {
-        model: chart.mode === "map" && !chart.rowLabels && chart.scan !== null && chart.hasData ? chart.scan.count : 0
+        model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
         delegate: Rectangle {
             required property int index
             readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
 
-            objectName: "scanView.map.rowTick." + index
+            objectName: "scanView." + chart.mode + ".rowTick." + index
             visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
-            x: plot.x - width - 1
-            y: Math.round(plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height)
+            x: plot.x + plot.width + 1
+            y: plot.y + Math.max(0, Math.min(plot.height - 1, Math.floor((axisY.max - at) / (axisY.max - axisY.min) * plot.height)))
             width: Math.round(chart.em * 0.4)
             height: 1
-            color: chart.colors.chartLabels
+            // The colour choice and the theme are read here, so the tick follows them.
+            color: [layer.colourScheme, layer.dark].length > 0 ? layer.colourOf(index) : "transparent"
         }
     }
 
@@ -675,6 +685,18 @@ Item {
                     if (chart.project && chart.project.evolution)
                         chart.project.evolution.xMode = hasValue ? index : 1;
                 }
+            }
+            // How high each stacked pattern rises: one to five times four rows, two by default (the owner, 2026-10-22).
+            ToolbarComboBox {
+                readonly property var entries: ["1×", "2×", "3×", "4×", "5×"]
+
+                objectName: "scanView.stacked.toolbar.height"
+                visible: chart.mode === "stacked"
+                toolTip: qsTr("How high each pattern rises")
+                model: entries
+                closedTexts: entries.map(text => qsTr("height: %1").arg(text))
+                currentIndex: Math.max(0, Math.min(4, Preferences.scanStackedHeight - 1))
+                onActivated: index => Preferences.scanStackedHeight = index + 1
             }
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.yscale"

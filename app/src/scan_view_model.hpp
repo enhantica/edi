@@ -69,7 +69,9 @@ class ScanViewModel : public QObject {
     // The lowest and the highest row itself (not its extent): the range of scan values the rows stand for.
     Q_PROPERTY(double rowLowest READ rowLowest NOTIFY rowLowestChanged)
     Q_PROPERTY(double rowHighest READ rowHighest NOTIFY rowHighestChanged)
-    // How far up the stacked view draws a pattern's highest point above its row: four rows' height.
+    // How many times the default rise a stacked pattern takes (the owner, 2026-10-22: 1 to 5, an app setting).
+    Q_PROPERTY(int stackScale READ stackScale WRITE setStackScale NOTIFY stackScaleChanged)
+    // How far up the stacked view draws a pattern's highest point above its row: four rows' height, times stackScale.
     Q_PROPERTY(double stackHeight READ stackHeight NOTIFY stackHeightChanged)
     // A joint fit's experiments rather than a scan's datasets: rows by place, each labelled with its experiment's name.
     Q_PROPERTY(bool joint READ joint NOTIFY jointChanged)
@@ -120,6 +122,8 @@ class ScanViewModel : public QObject {
     bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
     bool includedOnly() const { return included_only_; }
+    int stackScale() const { return stack_scale_; }
+    void setStackScale(int scale);
     void setIncludedOnly(bool on);
     void setRowsByIndex(bool on);
     double rowMin() const { return row_min_; }
@@ -165,6 +169,7 @@ class ScanViewModel : public QObject {
     void dAvailableChanged();
     void rowsByIndexChanged();
     void includedOnlyChanged();
+    void stackScaleChanged();
     void rowTitleChanged();
     void orderNameChanged();
     void rowTextsChanged();
@@ -235,6 +240,7 @@ class ScanViewModel : public QObject {
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
+    int stack_scale_ = 1;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's

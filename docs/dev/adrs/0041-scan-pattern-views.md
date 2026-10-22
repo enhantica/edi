@@ -28,7 +28,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    each row's height: the experiment's icon and the row's scan value with its unit, its file's name or its datablock's,
    in the dataset's colour (the owner, 2026-10-22). The Stacked view always labels its rows so, with no numeric scale;
    the Map does in order, and by scan value keeps its numeric scale, a position on it being a real value its colour is
-   interpolated at, with a short tick beside the plot at each dataset's row. When labels would come too close to
+   interpolated at. Both views always mark each dataset's row with a short tick just right of the plot's right edge, in
+   the dataset's Stacked colour, kept inside the plot's height (the owner, 2026-10-22). When labels would come too close to
    read, an evenly spread share of them shows, the shown dataset's always among them, and the rest come back as a zoom
    spreads the rows.
 3. **What is kept.** A scan's datasets are read in the background, a few at a time, the first time either tab shows;
@@ -43,8 +44,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
    a dataset gives none, the rows stay in order by file and the views name that dataset.
 4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
-   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. Its rows are labelled (§2), not
-   scaled: the height the patterns rise into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
+   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. A toolbar box sets how high the patterns
+   rise, one to five times that, twice by default (the owner, 2026-10-22). Its rows are labelled (§2), not scaled: the height the patterns rise into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as the pattern chart's measured
    line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
    the shown dataset is marked by the selected-pattern line (§8), not by a wider curve (the owner, 2026-10-22).

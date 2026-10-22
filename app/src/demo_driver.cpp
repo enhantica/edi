@@ -681,7 +681,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
                                                                   + open_example("pd-neut-cwl_cosio-d20_scan-162f")
                                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
+        steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
         steps_.push_back({"rowlabels-02-map-value-ticks-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-02b-map-bottom-zoom-light", {"drag:scanView.map.pointer:0.1,0.82,0.9,0.995"}});
+        steps_.push_back({"rowlabels-02c-map-reset-light", {"right-click:scanView.map.pointer"}});
         steps_.push_back({"rowlabels-03-map-file-light", {"scanView.map.toolbar.rows", "choose:file"}});
         steps_.push_back({"rowlabels-04-stacked-file-light", {"mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-05-stacked-file-zoom-light", {"drag:scanView.stacked.pointer:0.1,0.55,0.9,0.85"}});

@@ -71,6 +71,7 @@ QtObject {
         preferences.scanMapColours = "ramp:ediNatural";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
+        preferences.scanStackedHeight = 2;
         preferences.chartIncludedOnly = false;
     }
 
@@ -129,6 +130,8 @@ QtObject {
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
     property bool scanMapReversed: false
+    // How high a Stacked pattern rises, in multiples of four rows, 1 to 5 (the owner, 2026-10-22).
+    property int scanStackedHeight: 2
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
     property bool chartIncludedOnly: false
 
@@ -162,6 +165,7 @@ QtObject {
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
+        property alias stackedHeight: preferences.scanStackedHeight
     }
 
     property Binding fitPatternUpdates: Binding {
