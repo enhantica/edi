@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T12:51:07Z
+# measured_utc = 2026-10-22T12:54:13Z
 #
 # Recorded from: Path-only migration tests/system/app to tests/system/py; existing measured values and explicit holes preserved (CI layout repair)
-# Collected tests: 16346; with a reported duration: 9468
+# Collected tests: 15953; with a reported duration: 9468
 # Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
