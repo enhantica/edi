@@ -768,7 +768,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "reveal:parameters.value.4",
                                                            "parameters.value.4"}});
         steps_.push_back({"rows-4-parameters-name-row-2", {"key:Escape", "reveal:parameters.name.1", "parameters.name.1"}});
-        steps_.push_back({"rows-5-parameters-free-row-3", {"reveal:parameters.free.2", "parameters.free.2"}});
+        steps_.push_back({"rows-5-parameters-down-row-3", {"key:Down"}});
+        steps_.push_back({"rows-6-parameters-free-row-4", {"reveal:parameters.free.3", "parameters.free.3"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
