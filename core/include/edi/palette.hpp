@@ -61,5 +61,8 @@ std::string structure_colour(ColourScheme scheme, std::size_t place, std::size_t
 
 /// The colour of a chart role in the scheme and theme.
 std::string role_colour(ColourScheme scheme, ChartRole role, bool dark);
+/// The colour `t` of the way from `from` to `to` (both `#RRGGBB`), mixed in Oklab as the gradients are; `t` is clamped
+/// to [0, 1] and the ends are the colours themselves.
+std::string mix_colours(const std::string& from, const std::string& to, double t);
 
 }  // namespace edi

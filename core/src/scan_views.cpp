@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "edi/palette.hpp"
+
 namespace edi::detail {
 extern const char* const kColourMapTsvs[4];
 }
@@ -136,5 +138,44 @@ ScanMapColour scan_map_colour(ScanColourMap map, double t) {
 }
 
 ScanMapColour scan_map_colour(double t) { return scan_map_colour(ScanColourMap::Viridis, t); }
+
+const std::vector<std::string>& scan_colour_choices() {
+    static const std::vector<std::string> choices = [] {
+        std::vector<std::string> out = scan_colour_map_names();
+        for (const std::string_view scheme : colour_scheme_names()) {
+            out.push_back("ramp:" + std::string(scheme));
+        }
+        return out;
+    }();
+    return choices;
+}
+
+std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std::string& background, bool dark) {
+    if (choice.starts_with("ramp:")) {
+        const std::optional<ColourScheme> scheme = colour_scheme_from_name(choice.substr(5));
+        if (scheme) {
+            const std::string to = pattern_colour(*scheme, 0, 1, dark);
+            std::vector<ScanMapColour> out(kMapColours);
+            for (std::size_t i = 0; i < kMapColours; ++i) {
+                const std::string hex =
+                    mix_colours(background, to, static_cast<double>(i) / static_cast<double>(kMapColours - 1));
+                const unsigned long rgb = std::strtoul(hex.c_str() + 1, nullptr, 16);
+                out[i] = {static_cast<std::uint8_t>(rgb >> 16), static_cast<std::uint8_t>(rgb >> 8),
+                          static_cast<std::uint8_t>(rgb), 255};
+            }
+            return out;
+        }
+    }
+    const ColourTable& table = colour_map(scan_colour_map_or_default(choice));
+    return {table.begin(), table.end()};
+}
+
+ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t) {
+    if (!std::isfinite(t) || table.empty()) {
+        return {};
+    }
+    const double clamped = std::clamp(t, 0.0, 1.0);
+    return table[static_cast<std::size_t>(std::lround(clamped * static_cast<double>(table.size() - 1)))];
+}
 
 }  // namespace edi

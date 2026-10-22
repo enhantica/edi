@@ -48,4 +48,13 @@ ScanMapColour scan_map_colour(ScanColourMap map, double t);
 /// viridis's colour of `t`.
 ScanMapColour scan_map_colour(double t);
 
+/// The scan views' colour choices (the owner, 2026-10-22): the four colour maps by name, then for each colour scheme
+/// a ramp from the chart's background to the scheme's first measured colour, `ramp:<scheme token>` ("ramp:ediNatural").
+const std::vector<std::string>& scan_colour_choices();
+/// A choice's 256 colours from its low end to its high end: a map's table, or a ramp from `background` (`#RRGGBB`) to
+/// the scheme's first measured colour in the theme, mixed in Oklab. An unknown choice is viridis.
+std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std::string& background, bool dark);
+/// A table's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
+ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t);
+
 }  // namespace edi

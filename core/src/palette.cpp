@@ -143,6 +143,16 @@ std::string group_colour(const std::vector<std::array<std::string, 2>>& group, s
 
 }  // namespace
 
+std::string mix_colours(const std::string& from, const std::string& to, double t) {
+    const double at = std::clamp(t, 0.0, 1.0);
+    if (at <= 0.0 || at >= 1.0) {
+        return at <= 0.0 ? from : to;
+    }
+    const Lab a = oklab(from);
+    const Lab b = oklab(to);
+    return hex_of({a.l + (b.l - a.l) * at, a.a + (b.a - a.a) * at, a.b + (b.b - a.b) * at});
+}
+
 std::span<const std::string_view> colour_scheme_names() { return kNames; }
 
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {

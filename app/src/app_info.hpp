@@ -144,6 +144,12 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QStringList scanColourMaps READ scanColourMaps CONSTANT)
     QStringList scanColourMaps() const;
     Q_INVOKABLE QString scanColourMapOrDefault(const QString& name) const;
+    // The ramps from the chart's background to each colour scheme's first measured colour (`ramp:<scheme>`, in the
+    // schemes' order), which both scan views offer beside their own colours, and a colour choice's title: a map's name,
+    // or "<scheme title> shades" for a ramp.
+    Q_PROPERTY(QStringList scanColourRamps READ scanColourRamps CONSTANT)
+    QStringList scanColourRamps() const;
+    Q_INVOKABLE QString scanColourTitle(const QString& choice) const;
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;

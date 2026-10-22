@@ -231,6 +231,27 @@ QString ApplicationInfo::scanColourMapOrDefault(const QString& name) const {
         edi::scan_colour_map_names()[static_cast<std::size_t>(edi::scan_colour_map_or_default(name.toStdString()))]);
 }
 
+QStringList ApplicationInfo::scanColourRamps() const {
+    QStringList ramps;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        ramps.append(QStringLiteral("ramp:") + QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size())));
+    }
+    return ramps;
+}
+
+QString ApplicationInfo::scanColourTitle(const QString& choice) const {
+    if (choice.startsWith(QLatin1String("ramp:"))) {
+        const std::string_view title = edi::colour_scheme_title(colour_scheme(choice.mid(5)));
+        return tr("%1 shades").arg(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+    }
+    const std::optional<edi::ColourScheme> scheme = edi::colour_scheme_from_name(choice.toStdString());
+    if (scheme) {
+        const std::string_view title = edi::colour_scheme_title(*scheme);
+        return QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size()));
+    }
+    return choice;
+}
+
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {
     const edi::ColorScheme colors = scheme == QLatin1String("vesta") ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
     const edi::ElementColor found = edi::element_color(edi::element_of(typeSymbol.toStdString()), colors);
