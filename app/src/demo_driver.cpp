@@ -612,7 +612,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-10-evolution-dark", {"wait-fit", "choose:OK", "mainArea.analysis.tab.evolution"}});
         steps_.push_back({"scanviews-11-map-dark-shades", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
                                                           "choose:Edi Natural shades"}});
-        steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:d-spacing",
+        steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
                                                           "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
         steps_.push_back({"scanviews-13-stacked-dark-narrow-zoom", {"mainArea.analysis.tab.stacked",
                                                                    "scanView.stacked.toolbar.xaxis", "choose:2θ",
@@ -625,7 +625,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:1000x960"}});
         steps_.push_back({"scanviews-19-joint-stacked-light-d",
                           {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
-                           "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:d-spacing"}});
+                           "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
         steps_.push_back({"scanviews-20-joint-map-light-d", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-21-joint-map-dark-d", {"theme:dark"}});
         steps_.push_back({"scanviews-22-joint-stacked-dark-d", {"mainArea.analysis.tab.stacked"}});
@@ -705,7 +705,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-12-joint-map-datablock-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
         // A datablock Map, each band its own bank: smooth, blended only across each band's edge; stepped, hard edges.
         // On d each bank's coverage ends at its own band's edges either way.
-        steps_.push_back({"rowlabels-13-joint-map-d-smooth-dark", {"scanView.map.toolbar.xaxis", "choose:d-spacing",
+        steps_.push_back({"rowlabels-13-joint-map-d-smooth-dark", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
                                                                    "drag:scanView.map.pointer:0.5,0.5,0.5,0.5"}});
         steps_.push_back({"rowlabels-14-joint-map-d-smooth-light", {"theme:light"}});
         steps_.push_back({"rowlabels-15-joint-map-d-stepped-light", {"scanView.map.toolbar.smooth"}});
