@@ -21,7 +21,7 @@ All three read the same files, in `docs/user/cli/pd-neut-cwl_lmo-echidna/project
 
 ## The start
 
-The project starts the way your own measurement would: zero shift 0, profile terms to one significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the scale to one significant figure. The asymmetry terms stay fixed at 0.08: they describe the instrument's geometry.
+The project starts the way your own measurement would: zero shift 0, profile terms to one significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the scale to one significant figure. Li1 starts at 0.95, 5 % Ni on the Li site, and the asymmetry terms stay fixed at 0.08: they describe the instrument's geometry.
 
 ## Sources
 

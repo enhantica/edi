@@ -128,13 +128,13 @@ def pd_neut_cwl_lmo_echidna() -> dict[str, str]:
     excluded = [(0, 12), (162, 180)]
     level = flat_level(rows, excluded)
     # R-3m, hexagonal axes: the Li layer at 3b (0, 0, 1/2) and the metal layer at 3a (0, 0, 0),
-    # each holding some of the other cation. The start is the fully ordered structure.
+    # each holding some of the other cation. The start has 5 % Ni on the Li site, the constraints carrying the rest.
     sites = [
         f'O O 0 0 {free(0.26)} c 1 {free(BISO)} Biso',
-        f'Ni1 Ni 0 0 0.5 b 0 {BISO} Biso',
-        f'Li1 Li 0 0 0.5 b {free(1)} {free(BISO)} Biso',
-        f'Li2 Li 0 0 0 a 0 {BISO} Biso',
-        f'Ni2 Ni 0 0 0 a 1 {free(BISO)} Biso',
+        f'Ni1 Ni 0 0 0.5 b 0.05 {BISO} Biso',
+        f'Li1 Li 0 0 0.5 b {free(0.95)} {free(BISO)} Biso',
+        f'Li2 Li 0 0 0 a 0.05 {BISO} Biso',
+        f'Ni2 Ni 0 0 0 a 0.95 {free(BISO)} Biso',
     ]
     cell = cell_lines(free(2.88), 2.88, free(14.18), gamma=120)
     background = [12, 30, 50, 70, 90, 110, 130, 150, 162]
