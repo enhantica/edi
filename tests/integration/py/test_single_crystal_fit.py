@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 import pytest
 
-from tests.conftest import crysta_reference_source
+from tests.conftest import corpus_case_dir
 from tests.integration.py.test_single_crystal import (
     NO_EXTINCTION,
     REFERENCE,
@@ -16,13 +16,13 @@ from tests.integration.py.test_single_crystal import (
 @pytest.mark.parametrize('case', NO_EXTINCTION)
 def test_scale_fit_matches_independent_weighted_linear_solution(tmp_path, case):
     source = (
-        crysta_reference_source()
-        / 'tests/fitting'
-        / case.replace('sc-neut-', 'single-crystal-').replace('_', '-')
-        / 'project'
+        corpus_case_dir(case.replace('sc-neut-', 'single-crystal-').replace('_', '-')) / 'project'
     )
     staged = tmp_path / 'fit'
-    shutil.copytree(source, staged)
+    staged.mkdir()
+    for name in ('structures', 'experiments'):
+        (staged / name).symlink_to(source / name, target_is_directory=True)
+    shutil.copytree(source / 'analysis', staged / 'analysis')
     model = engine().Project.load(staged)
     experiment = model.experiments[0]
     scale = experiment.linked_structure.scale

@@ -18,7 +18,14 @@ def test_dat_and_int_produce_the_same_fit():
             (FIXTURE / 'fullprof' / case / 'prnio.int').read_text().splitlines()[2].split()[0]
         )
         observed.instrument.setup_wavelength.value = wavelength
-        model = engine().Project(structure, observed)
+        model = engine().Project(name='reflection-formats')
+        model.structures.clear()
+        model.experiments.clear()
+        link = engine().LinkedStructure()
+        link.structure_id = structure.name
+        observed.linked_structures.add(link)
+        model.structures.add(structure)
+        model.experiments.add(observed)
         experiment = model.experiments[0]
         experiment.linked_structure.structure_id = 'structure'
         experiment.linked_structure.scale.value = 1.7
