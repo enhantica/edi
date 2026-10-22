@@ -88,3 +88,7 @@ projects:
     executing: false
   - id: sc-neut-cwl_pr2nio4-5c2_fit
     executing: false
+  - id: sc-neut-tof_taurine_basic
+    executing: false
+  - id: sc-neut-tof_taurine_fit
+    executing: false
