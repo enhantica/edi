@@ -2586,3 +2586,34 @@ scientific/history/Save state. A genuine ordinary saved automatic failure report
 is still required; a limitation/capacity receipt is not a positive qualification.
 All original remainingOutput/five release guards/limits,675–677/science/Save/Undo,
 source whitelist, immutable skills and other687 changes remain exact.
+
+
+###689 shared app build-identity ownership correction
+
+The FIRST build-identity path generated edi_app_build_commit.cpp separately into
+edi_app and edi_app_tests, for the common module's test_observer and the runner's
+startup witness. Report688 additionally calls edi::build_commit() from the same
+edi_app_module through assistant_view_model. A genuine workflow consumer of the
+module therefore exposed the missing executable-owned definition at link time.
+
+The generated source now belongs once to edi_app_module, alongside both module
+callers. Its existing edi_app_build_commit custom target is a module dependency;
+every real linked consumer inherits generation through that library. The app,
+Qt Quick runner and chart benchmark no longer need a separate definition, nor
+do normal, immutable-option or Consent module consumers. This is ownership at
+the common caller, not a probe shim or consumer-specific symbol. The public
+edi/version.hpp declaration and implementation signature remain unchanged.
+
+Both configure-time creation and the every-build custom target retain the same
+SOURCE_DIR, output path and MARK_DIRTY=ON invocation of cmake/build_commit.cmake.
+Current HEAD and tracked-dirty facts are still read at build time; unchanged
+content is not rewritten. Python bindings retain their independent non-dirty
+module witness and latency probes retain their distinct MARKER witness. Neither
+is moved into edi_core: doing so would change unrelated identity semantics.
+SDK executable bootstrap, build options and report688/848 semantics remain exact.
+
+This source correction does not qualify a build or report. Actual failed892
+source, generated input and partial kit remain separate retained evidence.
+Duplicate-definition, unchanged/changed HEAD, clean/dirty transition and all
+module-consumer build closure require independent reached checks on the new
+source; old executable success is not current consumer proof.

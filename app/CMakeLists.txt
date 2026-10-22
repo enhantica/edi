@@ -224,6 +224,19 @@ if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
+# ADR-0041: the shared app module owns the identity used by reports and test observers.
+# Regenerate on every build; an unchanged source identity leaves the generated file untouched.
+set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
+execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
+                        -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
+add_custom_target(edi_app_build_commit
+    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
+            -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
+    BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
+    COMMENT "Embedding the source commit in the shared app module")
+target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_app_module edi_app_build_commit)
+
 # The Examples: every refinement and simulation project edi's CLI registry lists, in registry order, then the
 # app's own X-ray example, each with its scan data (a scan's datasets are browsed in the app). Verification
 # projects stay CLI projects only (ADR-0031). The web app leaves out the 324-file scan (19 MB); the 162-file
@@ -342,22 +355,7 @@ set_target_properties(edi_app_ui_compare PROPERTIES WIN32_EXECUTABLE FALSE MACOS
 # compiled in, over the same edi.app module and engine setup the host uses. The cases are the tests
 # lane's; a glob keeps the two lanes off one file. Never linked into edi_app.
 file(GLOB EDI_APP_TEST_SUPPORT CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/tests/unit/app/test_*.cpp)
-# The runner prints the commit it was built from (`<sha>-dirty` when tracked files differed), so the latency
-# bank attributes the frame times it prints to a revision; regenerated on every build, as lib's.
-set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
-execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
-                        -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
-add_custom_target(edi_app_build_commit
-    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
-            -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
-    BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
-    COMMENT "Embedding the source commit in the app and its test runner")
-qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT}
-                  "${EDI_APP_BUILD_COMMIT_CPP}")
-add_dependencies(edi_app_tests edi_app_build_commit)
-# The app names it too: its test observers report the build they observe.
-target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
-add_dependencies(edi_app edi_app_build_commit)
+qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT})
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo opens a verification project the app does not bundle from the source tree (ADR-0031).
