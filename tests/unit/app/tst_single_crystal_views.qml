@@ -848,9 +848,11 @@ TestCase {
         tryVerify(() => dialog !== null && dialog.opened && !project.fit.running, 15000, "The report witness must complete a normal fit before inspecting agreement factors");
         dialog.close();
         Ui.click(test, Probe, appWindow, "appBar.tab.report");
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "The report workflow must finish entering the real viewport before preview inspection");
         const preview = Review.find(Ui.page(appWindow), "report.preview");
         verify(preview !== null, "The actual Report workflow must expose its live production preview");
         tryVerify(() => preview.model.experiments && preview.model.experiments.length === 1, 5000, "The report model must contain its fitted single-crystal experiment");
+        verify(waitForPolish(preview), "The report preview delegates must finish layout after the page transition");
         return {
             location: location,
             project: project,
@@ -914,8 +916,11 @@ TestCase {
         const expected = Probe.rows(witness.project.currentExperiment.singleCrystalReflections);
         const table = reportReflectionTable(witness.preview.model, expected);
         verify(expected.length > 100, "The reflection-list witness must exercise a long table rather than a one-page list");
-        const actual = Probe.objectsWithProperty(witness.preview, "columns").find(item => item.columns && item.columns.length === 7 && item.columns[0] === "h" && item.rows && item.rows.length === expected.length);
-        verify(actual !== undefined, "The live Report page must render the reflection model with its production report table");
+        let actual;
+        tryVerify(() => {
+            actual = Render.descendants(witness.preview).find(item => item.columns && item.columns.length === 7 && item.columns[0] === "h" && item.rows && item.rows.length === expected.length);
+            return actual !== undefined;
+        }, 3000, "The live Report page must render the reflection model with its production report table");
         Ui.scrollIntoView(actual);
         verify(waitForPolish(actual) && waitForRendering(actual), "The reflection report table must settle in the live viewport");
         const list = Render.descendants(actual).find(item => typeof item.positionViewAtIndex === "function" && item.count === expected.length);
@@ -933,7 +938,7 @@ TestCase {
         const files = savedReportFiles(witness);
         const savedTable = reportReflectionTable(SettingsProof.htmlModel(files.html), expected);
         const html = SettingsProof.htmlEvolutionFacts(files.html);
-        verify(!html.error && html.wide.ready && html.narrow.ready, "The reflection-list HTML must render in the actual browser at both viewports");
+        verify(!html.error && html.wide.ready && html.narrow.ready, "The reflection-list HTML must render in the actual browser at both viewports; observer=" + (html.error || "ready"));
         for (const view of [html.wide, html.narrow]) {
             const rendered = view.tables.find(candidate => candidate.columns.length === 7 && candidate.columns[0] === "h" && candidate.columns[1] === "k");
             verify(rendered !== undefined, "The actual saved HTML DOM must contain the seven-column reflection table");
@@ -984,7 +989,8 @@ TestCase {
         const categories = model.experiments[0].categories;
         const rows = categories.reduce((all, category) => all.concat(category.rows || []), []);
         verify(rows.some(row => /wavelength|λ/i.test(row.label)), "The single-crystal report must list its wavelength");
-        verify(rows.some(row => /extinction|model/i.test(row.label) && /gauss|lorentz|becker/i.test(row.text)), "The single-crystal report must list its extinction model");
+        const extinction = categories.find(category => category.id === "extinction");
+        verify(extinction !== undefined && extinction.rows.some(row => /type|model/i.test(row.label) && /becker/i.test(row.text)) && extinction.rows.some(row => /spread|model/i.test(row.label) && /gauss|lorentz/i.test(row.text)), "The single-crystal report must list its extinction model and mosaic distribution");
         verify(rows.some(row => /radius/i.test(row.label)) && rows.some(row => /mosaicity/i.test(row.label)), "The single-crystal report must list the descriptive extinction values");
         verify(rows.some(row => /reflection/i.test(row.label) && Number(row.text) === expected.length), "The single-crystal report must state the actual reflection count");
         const fitRows = model.analysis_categories.reduce((all, category) => all.concat(category.rows || []), []);
@@ -1010,7 +1016,7 @@ TestCase {
         const files = savedReportFiles(witness);
         reportChartValues(SettingsProof.htmlModel(files.html), expected);
         const html = SettingsProof.htmlEvolutionFacts(files.html);
-        verify(!html.error && html.wide.ready && html.narrow.ready, "The saved single-crystal HTML must render in the actual browser at both viewports");
+        verify(!html.error && html.wide.ready && html.narrow.ready, "The saved single-crystal HTML must render in the actual browser at both viewports; observer=" + (html.error || "ready"));
         for (const view of [html.wide, html.narrow]) {
             verify(view.patterns.length === 1 && view.patterns[0].svgCount > 0, "The saved HTML must draw one populated single-crystal SVG or canvas chart");
             const plot = view.patterns[0];

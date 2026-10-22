@@ -238,7 +238,8 @@ public:
         if (python.isEmpty()) return {{"error", "Browser observer requires the runner's Python"}};
         QProcess process;
         process.start(python, {root.filePath("tests/fixtures/report_evolution/observe_browser.py"), location.toLocalFile()});
-        if (!process.waitForFinished(20000)) { process.kill(); return {{"error", "Actual HTML browser did not finish"}}; }
+        // The browser observer allows 60 s for startup/frames and up to 6 s for child cleanup.
+        if (!process.waitForFinished(70000)) { process.kill(); process.waitForFinished(1000); return {{"error", "Actual HTML browser did not finish"}}; }
         const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
         if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
         return json.toVariant().toMap();
