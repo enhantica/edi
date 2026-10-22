@@ -103,7 +103,7 @@ def execute(executable, directory, stem, logs):
     return status
 
 
-def run_case(case, executable, logs):
+def run_case(case, executable, logs, cycles=200):
     simulation = case.endswith('_simulation')
     home = ROOT / 'knowledge' / ('verification' if simulation else 'fitting') / 'fullprof' / case
     home.mkdir(parents=True, exist_ok=True)
@@ -129,10 +129,10 @@ def run_case(case, executable, logs):
         if simulation
         else ('template' if case.endswith('_scan') else 'fit'),
         'staging': 'none',
-        'cycles': 1 if simulation else 200,
+        'cycles': 1 if simulation else cycles,
     }
     if not simulation:
-        fit = Writer(case, False)
+        fit = Writer(case, False, cycles=cycles)
         record['n_free'] = fit.write(home / 'fit.pcr')
         record['exit'] = execute(executable, home, 'fit', logs)
         twin = ROOT / 'knowledge/verification/fullprof' / case
@@ -165,7 +165,10 @@ if __name__ == '__main__':
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--logs', type=Path, required=True)
     parser.add_argument('--case', action='append')
+    parser.add_argument('--cycles', type=int, default=200)
     args = parser.parse_args()
+    if args.cycles < 1:
+        parser.error('--cycles must be positive')
     args.logs.mkdir(parents=True, exist_ok=True)
     cases = args.case or [
         r['id']
@@ -175,5 +178,5 @@ if __name__ == '__main__':
     ]
     results = {}
     for case in cases:
-        results[case] = run_case(case, args.executable, args.logs)
+        results[case] = run_case(case, args.executable, args.logs, args.cycles)
         (args.logs / 'results.json').write_text(json.dumps(results, indent=2) + '\n')

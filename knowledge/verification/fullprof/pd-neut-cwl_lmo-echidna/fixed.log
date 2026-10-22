@@ -9,7 +9,7 @@
  =>                      (Multi_Pattern: Linux-version)
   
   ==> Give the code of the files (xx for xx.pcr):   
- => START Date:22/10/2026  Time => 22:20:28.572
+ => START Date:22/10/2026  Time => 22:48:53.708
  => Reading control file *.PCR ... fixed
 ==> Give the name of data file (yy for yy.dat)
  =>                            (yy.uxd, or yy.acq)
@@ -27,37 +27,37 @@
  => Calculation of Yi for all points + Normal Matrix & Vector...
  => Calculation for pattern:       1
  => Writing results for cycle       1
- => R-Factors:   3.91      5.03     Chi2:  2.40     DW-Stat.:  0.9259   Patt#:  1
+ => R-Factors:   3.91      5.03     Chi2:  2.40     DW-Stat.:  0.9267   Patt#:  1
  => Expected :            3.25                                1.8866
  => Conventional Rietveld R-factors for Pattern:       1
  => Rp:  8.90     Rwp:  9.08     Rexp:    5.86                        Chi2:  2.40
-    => Global user-weigthed Chi2 (Bragg contrib.):   2.400
+    => Global user-weigthed Chi2 (Bragg contrib.):   2.399
   
  => Convergence reached at this CYCLE !!!!: CYCLE No.       1
- => R-Factors:   3.91      5.03     Chi2:  2.40     DW-Stat.:  0.9259   Patt#:  1
+ => R-Factors:   3.91      5.03     Chi2:  2.40     DW-Stat.:  0.9267   Patt#:  1
  => Expected :            3.25                                1.8866
  => Conventional Rietveld R-factors for Pattern:       1
  => Rp:  8.90     Rwp:  9.08     Rexp:    5.86                        Chi2:  2.40
-    => Global user-weigthed Chi2 (Bragg contrib.):   2.400
+    => Global user-weigthed Chi2 (Bragg contrib.):   2.399
  => Normal end, final calculations and writing...
  => Contribution to Yi for phase:       1
   
   
- =>               CPU Time:     1.016 seconds
+ =>               CPU Time:     1.047 seconds
  =>                             0.017 minutes
   
- => END   Date:22/10/2026  Time => 22:20:29.600
+ => END   Date:22/10/2026  Time => 22:48:54.746
   
  => Data Files :
  =>             - fixed.dat
  => PCR  File  : fixed
  => Do you want to continue (<cr>=N)? 
-forrtl: severe (24): end-of-file during read, unit -4, file /proc/3550315/fd/0
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/3716029/fd/0
 Image              PC                Routine            Line        Source             
 fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
 fp2k               000000000068C8CB  Unknown               Unknown  Unknown
 fp2k               0000000000405B3D  Unknown               Unknown  Unknown
-libc.so.6          00007FE8C8D96D90  Unknown               Unknown  Unknown
-libc.so.6          00007FE8C8D96E40  __libc_start_main     Unknown  Unknown
+libc.so.6          00007F2554471D90  Unknown               Unknown  Unknown
+libc.so.6          00007F2554471E40  __libc_start_main     Unknown  Unknown
 fp2k               0000000000405A55  Unknown               Unknown  Unknown
          (s:same, a:another problem): 

@@ -38,3 +38,8 @@ convergence and finite-output evidence, parameter table, code-index mapping,
 all-point least-squares Rwp and fitted-twin digests. Repeat `--logs` for separate
 authoring batches. Missing convergence keeps the minimum gate open. A finite
 last cycle alone does not establish convergence.
+
+The authoring runner accepts `--cycles N` to increase the computational budget from
+the default 200 cycles without changing the start, free flags or convergence settings.
+The receipt reads that budget from the actual PCR input. A fresh run always starts
+from the committed project; no previous `.new` seeds a fitting run.

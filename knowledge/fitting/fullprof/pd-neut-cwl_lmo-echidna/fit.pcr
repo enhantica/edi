@@ -6,7 +6,7 @@ COMM pd-neut-cwl_lmo-echidna
 ! Lambda1 Lambda2 Ratio Bkpos Wdt Cthm muR AsyLim Rpolarz 2nd-muR for Pattern# 1
 1.6215 1.6215 0 87.00439746 48 0 0.3 180 0 0
 !NCY Eps R_at R_an R_pr R_gl
-200 0.1 0.2 0.2 0.2 0.2 4.01383 0.05002 163.9066 0 0
+1000 0.1 0.2 0.2 0.2 0.2 4.01383 0.05002 163.9066 0 0
 !2Theta/TOF/E(Kev) Background for Pattern# 1
 12 550 11
 30 550 21
