@@ -3,6 +3,7 @@ _edi.schema_version 3
 _metadata.name pd_neut_tof_cecoal_polaris_basic
 _metadata.title "CeCoAl₃ [Pmma] · POLARIS @ ISIS"
 _metadata.description "Structure and time-of-flight profile fit · 24-term Chebyshev background"
+_metadata.authors .
 _metadata.purpose "refinement"
 _metadata.dimensionality "1D"
 _metadata.instrument "POLARIS"

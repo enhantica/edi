@@ -120,6 +120,8 @@ def project_record(
         f'_metadata.name {name}',
         f'_metadata.title "{title}"',
         f'_metadata.description "{description}"',
+        # CIF's empty value until the examples credit their authors.
+        '_metadata.authors .',
         f'_metadata.purpose "{purpose}"',
         '_metadata.dimensionality "1D"',
         f'_metadata.instrument {quoted(instrument)}',

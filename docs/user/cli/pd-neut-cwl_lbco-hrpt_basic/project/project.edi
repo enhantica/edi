@@ -3,6 +3,7 @@ _edi.schema_version 3
 _metadata.name pd_neut_cwl_lbco_hrpt_basic
 _metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
 _metadata.description "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
+_metadata.authors .
 _metadata.purpose "refinement"
 _metadata.dimensionality "1D"
 _metadata.instrument "HRPT"
