@@ -176,14 +176,17 @@ Item {
             Session.project.removeExperiment(0);
             tryCompare(tabs[1], "enabled", false, 1000, "Removing the last experiment disables Pattern again");
         }
-        function test_one_object_survives_page_changes() {
+        function test_all_hosts_follow_one_shared_view() {
             openExample();
             const original = shownChart("experiment");
             for (const name of ["analysis", "structure", "experiment", "analysis", "structure"]) {
-                verify(shownChart(name) === original, "One actual pattern-chart object moves between all three pages");
-                compare(charts(app.contentItem).length, 1, "Loaded hidden pages cannot retain duplicate non-report charts");
-                for (const hidden of ["structure", "experiment", "analysis"].filter(value => value !== name))
-                    compare(charts(page(hidden)).length, 0, "A hidden page owns no pattern chart that can draw");
+                const shown = shownChart(name);
+                verify(shown.experiment === Session.project.currentExperiment, "Every retained host shows the selected shared experiment");
+                const all = charts(app.contentItem);
+                verify(all.includes(original) && all.includes(shown), "The census includes the original and current chart without requiring reparenting");
+                compare(all.filter(item => item.visible && item.shown).length, 1, "Only the current Pattern host is eligible to draw");
+                for (const hidden of all.filter(item => item !== shown))
+                    verify(!hidden.visible || !hidden.shown, "Every retained fallback chart is hidden or paused");
             }
         }
         function test_view_change_follows_every_page_data() {
@@ -254,42 +257,71 @@ Item {
         }
         function test_hidden_pages_do_no_chart_work() {
             openExample();
-            const chart = shownChart("experiment");
-            shownChart("analysis");
-            showPage("structure", false);
-            shownChart("experiment");
-            for (const name of ["structure", "analysis"])
-                compare(charts(page(name)).length, 0, "Every loaded hidden page is empty of live chart objects");
-            const measured = named(chart, "chart.measured");
-            const line = named(chart, "chart.series.calc");
-            verify(measured.count > 0 && line.count > 0, "The hidden-work witness starts with real measured and calculated drawing data");
-            const spy = spyFactory.createObject(surface, {
-                target: line
+            for (const name of ["experiment", "analysis", "structure"])
+                shownChart(name);
+            const current = shownChart("experiment");
+            const measured = named(current, "chart.measured");
+            const signal = spyFactory.createObject(surface, {
+                target: named(current, "chart.series.calc")
             });
-            verify(spy.valid, "The drawing observer is connected to the actual Qt series upload signal");
-            const visibleRevision = measured.revision;
-            select(named(chart, "chart.toolbar.yscale"), 1);
-            tryVerify(() => measured.revision > visibleRevision && spy.count > 0, 1500, "Visible input really causes measured and Qt-series drawing uploads");
-            AppState.open(AppState.Page.Project);
-            tryVerify(() => !page("experiment").current && !page("analysis").current && !page("structure").current, 1000, "All pattern-chart pages are hidden for the idle-work witness");
+            verify(signal.valid && measured.count > 0, "The positive observer reaches real measured data and Qt-series signals");
+            const initial = measured.revision;
+            select(named(current, "chart.toolbar.yscale"), 1);
+            tryVerify(() => measured.revision > initial && signal.count > 0, 1500, "Visible input reaches both independent drawing upload observers");
+            signal.destroy();
+            showPage("project", false);
+            const all = charts(app.contentItem);
+            verify(all.length > 0, "The hidden-work census retains every initialized chart, including fallback hosts");
+            const observations = all.map(chart => {
+                const layer = named(chart, "chart.measured");
+                const spy = spyFactory.createObject(surface, {
+                    target: named(chart, "chart.series.calc")
+                });
+                verify(spy.valid, "Every retained chart has a connected actual Qt upload observer");
+                return {
+                    chart,
+                    layer,
+                    spy,
+                    pending: true
+                };
+            });
             wait(350);
-            verify(!chart.visible || chart.Window.window === null, "A chart with no visible Pattern host has no visible scene-graph item in any window");
-            spy.clear();
-            const hiddenRevision = measured.revision;
-            // A different real experiment invalidates the presentation without touching an invisible control.
-            Session.project.currentExperimentIndex = Session.project.currentExperimentIndex === 0 ? 1 : 0;
-            tryCompare(Session.project, "calculating", false, 10000, "The hidden-page stimulus finishes its real project update");
-            app.width += 31;
+            for (const row of observations) {
+                verify(!row.chart.visible || !row.chart.shown, "Every retained chart is paused with no visible Pattern host");
+                row.spy.clear();
+                row.revision = row.layer.revision;
+            }
+            // Multiple pending changes must coalesce into one catch-up per shown host.
+            for (let index = 0; index < 3; ++index) {
+                Session.project.currentExperimentIndex = Session.project.currentExperimentIndex === 0 ? 1 : 0;
+                tryCompare(Session.project, "calculating", false, 10000, "Each real hidden dataset change finishes calculation");
+                app.width += 11;
+            }
             wait(350);
-            compare(measured.revision, hiddenRevision, "Hidden pattern pages perform no measured drawing uploads after data and geometry change");
-            compare(spy.count, 0, "Hidden pattern pages perform no Qt-series drawing uploads after invalidation");
-            for (const name of ["structure", "experiment", "analysis"])
-                compare(charts(page(name)).length, 0, "No hidden page holds a chart capable of drawing while another page is shown");
-            const restored = shownChart("experiment");
-            verify(restored === chart, "The paused shared chart survives its hidden interval");
-            tryVerify(() => measured.revision > hiddenRevision && spy.count > 0, 1500, "Showing the chart consumes the deferred drawing update rather than losing it");
-            verify(restored.experiment === Session.project.currentExperiment, "The shown chart catches up to the newest experiment");
-            spy.destroy();
+            for (const row of observations) {
+                compare(row.layer.revision, row.revision, "Every hidden retained chart performs zero measured uploads after data and geometry invalidation");
+                compare(row.spy.count, 0, "Every hidden retained chart performs zero Qt-series uploads");
+            }
+            for (const name of ["experiment", "analysis", "structure"]) {
+                const restored = shownChart(name);
+                const row = observations.find(value => value.chart === restored);
+                verify(row !== undefined, "The shown host belongs to the complete preexisting hidden-chart census");
+                if (row.pending)
+                    tryVerify(() => row.layer.revision > row.revision && row.spy.count > 0, 1500, "Showing each retained host consumes its deferred update");
+                wait(350);
+                if (row.pending) {
+                    compare(row.layer.revision - row.revision, 1, "Each shown host coalesces pending changes into one measured catch-up");
+                    compare(row.spy.count, 1, "Each shown host coalesces pending changes into one Qt-series catch-up");
+                } else {
+                    verify(row.layer.revision - row.revision <= 1 && row.spy.count <= 1, "Moving an already caught-up single chart does no duplicate update work");
+                }
+                row.pending = false;
+                verify(restored.experiment === Session.project.currentExperiment, "Each shown host catches up to the newest experiment");
+                row.revision = row.layer.revision;
+                row.spy.clear();
+            }
+            for (const row of observations)
+                row.spy.destroy();
         }
     }
 }

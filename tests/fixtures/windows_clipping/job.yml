@@ -1,10 +1,14 @@
 # Add beside app-wasm. The producer requirements are in README.md.
 windows-web-clipping:
   needs: app-wasm
-  if: ${{ !cancelled() && needs.app-wasm.result == 'success' }}
+  if: ${{ !cancelled() && inputs.core_only != true }}
   runs-on: windows-2025
   timeout-minutes: 15
   steps:
+    - name: Require the web producer to have executed
+      shell: pwsh
+      run: |
+        if ('${{ needs.app-wasm.result }}' -ne 'success') { throw 'The Windows witness requires both built Qt kits; skipped or failed is not proof' }
     - uses: actions/checkout@v5
     - uses: actions/download-artifact@v4
       with:
@@ -33,6 +37,9 @@ windows-web-clipping:
     - name: Check both Qt kits and both themes in Windows Edge
       shell: pwsh
       run: node tests/system/manual/windows_clipping.mjs http://127.0.0.1:8765 build/windows-clipping
+    - name: Require every platform case at the checked-out head
+      shell: pwsh
+      run: python tests/fixtures/windows_clipping/check_receipt.py build/windows-clipping $env:GITHUB_SHA
     - name: Stop the local server
       if: always()
       shell: pwsh

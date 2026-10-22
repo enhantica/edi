@@ -267,16 +267,14 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
-    // ADR-0038: Coast is the default scheme; the retired Default token is gone.
-    // Before: fixed upstream measured/structure shades. After: parity with the
-    // published palette API, whose independent source and contrast gates own correctness.
+    // Exact Edi Natural coordinates: tests/fixtures/approved_palettes/colours.json.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,edi::pattern_colour(edi::ColourScheme::Coast,0,1,false),edi::pattern_colour(edi::ColourScheme::Coast,0,1,true),2},
-        {edi::SeriesKind::Calculated,"#F44336","#EF9A9A",2},
-        {edi::SeriesKind::Background,"#607D8B","#B0BEC5",1},
-        {edi::SeriesKind::Residual,"#8BC34A","#C5E1A5",1},
-        {edi::SeriesKind::BraggTicks,edi::structure_colour(edi::ColourScheme::Coast,0,false),edi::structure_colour(edi::ColourScheme::Coast,0,true),1}}) {
+        {edi::SeriesKind::Measured,"#039EDC","#71CBFE",2},
+        {edi::SeriesKind::Calculated,"#CA5C6E","#EE8795",2},
+        {edi::SeriesKind::Background,"#8A8A8A","#969696",1},
+        {edi::SeriesKind::Residual,"#737373","#B0B0B0",1},
+        {edi::SeriesKind::BraggTicks,"#D26E3C","#F59B6F",1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");

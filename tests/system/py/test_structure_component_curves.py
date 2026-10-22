@@ -12,12 +12,11 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def require_component_surface():
-    bindings = '\n'.join(path.read_text() for path in (ROOT / 'core').rglob('*.cpp'))
-    exposed = 'component_intensities_net' in bindings
-    assert exposed, (
-        'The engine must expose the calculated component curves on the experiment data surface'
-    )
-    return importlib.import_module('edi')
+    engine = importlib.import_module('edi')
+    assert hasattr(engine.PdDataBase, 'component_intensities_net') and hasattr(
+        engine.PdDataBase, 'component_presentation_order'
+    ), 'Edi Python publishes both component buffers and their independent structure order'
+    return engine
 
 
 def links(experiment):
@@ -28,13 +27,13 @@ def links(experiment):
     )
 
 
-def close_vectors(actual, expected):
+def close_vectors(actual, expected, *, abs_tol=2e-11):
     assert len(actual) == len(expected), 'Every component has exactly the experiment grid length'
     for a, b in zip(actual, expected, strict=True):
         if math.isnan(b):
             assert math.isnan(a), 'Excluded points keep the calculated-data NaN convention'
         else:
-            assert math.isclose(a, b, rel_tol=2e-11, abs_tol=2e-11), (
+            assert math.isclose(a, b, rel_tol=2e-11, abs_tol=abs_tol), (
                 'A net component equals an isolated whole-pattern calculation minus its background'
             )
 
@@ -48,8 +47,14 @@ def test_two_structure_curves_match_independent_scale_zero_controls(tmp_path, ba
     project.analysis.calculate()
     experiment = project.experiments[bank]
     components = [list(row) for row in experiment.data.component_intensities_net]
-    order = list(project.structures.keys())
-    assert len(order) == 2 and len(components) == len(experiment.data.intensity_calc), (
+    # Independent order: the committed BEER experiment's _linked_structure loop
+    # lists ferrite then austenite. Project map keys are alphabetically ordered.
+    order = ['ferrite', 'austenite']
+    assert list(experiment.data.component_presentation_order) == order, (
+        'Component columns name the linked structures in the independent BEER fixture order'
+    )
+    assert len(order) == 2, 'The BEER reference vehicle contains two distinct structures'
+    assert len(components) == len(experiment.data.intensity_calc), (
         'The two-structure vehicle publishes one component list for every data point'
     )
     background, total = list(experiment.data.intensity_bkg), list(experiment.data.intensity_calc)
@@ -61,7 +66,17 @@ def test_two_structure_curves_match_independent_scale_zero_controls(tmp_path, ba
         isolated.analysis.calculate()
         data = isolated.experiments[bank].data
         expected = [a - b for a, b in zip(data.intensity_calc, data.intensity_bkg, strict=True)]
-        close_vectors([row[column] for row in components], expected)
+        # Subtracting two rounded whole-pattern intensities loses relative accuracy
+        # near zero. Eight binary64 ulps at the whole-pattern/background scale
+        # conservatively cover the separate calculation, addition and subtraction;
+        # the allowance is independent of the observed component discrepancy.
+        scale = max(
+            abs(value)
+            for vector in (data.intensity_calc, data.intensity_bkg)
+            for value in vector
+            if math.isfinite(value)
+        )
+        close_vectors([row[column] for row in components], expected, abs_tol=8 * math.ulp(scale))
     close_vectors([b + sum(row) for b, row in zip(background, components, strict=True)], total)
     # A changed physical input must reach the same component path and invalidate its cache.
     links(experiment)[order[0]].scale.value *= 1.75
@@ -82,5 +97,8 @@ def test_two_structure_curves_match_independent_scale_zero_controls(tmp_path, ba
         'The saved presentation order names the members of every point list'
     )
     reopened = engine.Project.load(saved).experiments[bank]
+    assert list(reopened.data.component_presentation_order) == order, (
+        'Saving and reopening retains the independently named component column order'
+    )
     for actual, expected in zip(reopened.data.component_intensities_net, changed, strict=True):
         close_vectors(actual, expected)

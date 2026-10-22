@@ -209,12 +209,12 @@ Item {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "A real project supplies the modified-state control");
             const modified = Session.project.modified;
             verify(typeof Preferences.colourScheme === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes the two declared string-token defaults");
-            Preferences.colourScheme = "okabeIto";
+            Preferences.colourScheme = "ediContrast";
             Preferences.newReportLibraries = "embedded";
-            tryVerify(() => SettingsProof.value(location, "Appearance", "colourScheme") === "okabeIto" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
+            tryVerify(() => SettingsProof.value(location, "Appearance", "colourScheme") === "ediContrast" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
             const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property string scheme: Preferences.colourScheme; property string libraries: Preferences.newReportLibraries }');
             verify(!restored.error, "A fresh configured QML engine reloads the actual Preferences singleton");
-            compare(restored.scheme, "okabeIto", "A fresh engine restores the colour scheme from Appearance");
+            compare(restored.scheme, "ediContrast", "A fresh engine restores the colour scheme from Appearance");
             compare(restored.libraries, "embedded", "A fresh engine restores the new-report libraries default from Projects");
             compare(Session.project.modified, modified, "Changing application defaults never modifies the open project");
         }

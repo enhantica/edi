@@ -1,4 +1,5 @@
 import QtQuick
+import ReportAcceptance 1.0
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -504,12 +505,14 @@ TestCase {
         if (data.pane === 1) {
             verify(text.includes(r.name) && text.includes(r.hkl), " gate 6 Bragg read-out shows structure and independently loaded signed Miller tuple");
         } else {
-            ["Imeas", "Ibkg", "Icalc"].forEach(label => verify(text.includes(label), " gate 6 data and residual hover show each required series quantity"));
+            ["meas:", "bkg:", "calc:", "meas − calc:"].forEach(label => verify(Probe.plainText(text).includes(label), " gate 6 data and residual hover show each required series quantity"));
             [r.x, r.meas, r.bkg, r.calc, r.resid].forEach(value => verify(Probe.plainText(text).includes(Number(value).toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })), " gate 6 every displayed hover number equals its independent source row at read-out precision"));
-            ["#03a9f4", "#f44336", "#607d8b", "#8bc34a"].forEach(color => verify(text.toLowerCase().includes(color), " gate 6 every read-out quantity uses its ADR-0017 light series colour"));
+            const palette = JSON.parse(SettingsProof.repoText("tests/fixtures/approved_palettes/colours.json")).palettes[0].light;
+            [palette.measured[0], palette.total_calculation, palette.background].forEach(color => verify(text.toLowerCase().includes(color.toLowerCase()), "Every tooltip operand uses its approved palette colour, matching the axis title"));
+            verify(!/Imeas|Icalc|Ibkg/.test(text), "Tooltips contain no retired I-prefixed quantity names");
         }
     }
 }

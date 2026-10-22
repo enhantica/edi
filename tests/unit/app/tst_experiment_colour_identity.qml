@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
@@ -34,7 +35,7 @@ Item {
         name: "ExperimentColourIdentity"
         when: windowShown
         property int oldTheme
-        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
+        property var reference: Approved.reference(SettingsProof)
         property string oldScheme
         function initTestCase() {
             oldTheme = Style.Colors.theme;
@@ -104,15 +105,9 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const table = SettingsProof.paletteForScheme(data.scheme);
-            const palette = table.pattern, gradient = table.gradient || palette.slice(-2);
-            const theme = data.dark ? "dark" : "light";
-            compare(expected[0], (data.count > palette.length ? gradient[0] : palette[0])[theme].toLowerCase(), "Before endpoints in the short set; after the reordered short set or trimmed gradient role; actual first=" + expected[0] + "; declared first=" + (data.count > palette.length ? gradient[0] : palette[0])[theme]);
-            if (data.count > palette.length)
-                compare(expected[data.count - 1], gradient[gradient.length - 1][theme].toLowerCase(), "Any set beyond the fixed colours reaches the independent last gradient endpoint");
-            else
-                for (const position of positions)
-                    compare(expected[position], palette[position][theme].toLowerCase(), "The few-experiment Project list uses its independent palette place " + position);
+            const approved = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark);
+            for (const position of positions)
+                compare(expected[position], approved[position], "The Project icon equals its independently frozen approved place for the full experiment count");
             project.visible = false;
             const failures = [];
             for (const consumer of ["Experiment", "Analysis", "Evolution"]) {

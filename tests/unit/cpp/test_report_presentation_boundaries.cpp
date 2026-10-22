@@ -10,42 +10,20 @@
 #include "edi/presentation.hpp"
 #include "edi/report_html.hpp"
 
-template<class Scheme>
-auto structure_styles(Scheme scheme, std::size_t count) {
-    if constexpr (requires { edi::pattern_style_table(scheme, 1, count); })
-        return edi::pattern_style_table(scheme, 1, count);
-    else
-        return edi::pattern_style_table(scheme);
-}
+#include "../../fixtures/approved_palettes/assignments.hpp"
 
-TEST_CASE("Every structure palette entry and wraparound retains its Bragg colour") {
-    const auto root = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
-    for (const auto name : edi::colour_scheme_names()) {
-        CAPTURE(name);
-        std::string filename;
-        for (const unsigned char letter : name) {
-            if (std::isupper(letter)) filename += '-';
-            filename += static_cast<char>(std::tolower(letter));
-        }
-        std::ifstream file(root / "data/palettes" / (filename + ".tsv"));
-        REQUIRE_MESSAGE(file.good(), "ADR-0038 the frozen palette data supplies the consumer reference");
-        std::vector<std::pair<std::string, std::string>> colours;
-        for (std::string line; std::getline(file, line);) {
-            std::istringstream row(line);
-            std::string role, light, dark;
-            std::size_t index = 0;
-            if (row >> role >> index >> light >> dark; role == "structure") colours.emplace_back(light, dark);
-        }
-        REQUIRE_MESSAGE(!colours.empty(), "ADR-0038 every supplied scheme declares its structure set");
-        const auto scheme = edi::colour_scheme_from_name(name);
-        REQUIRE_MESSAGE(scheme.has_value(), "Every frozen scheme token resolves through the public palette API");
-        const auto styles = structure_styles(*scheme, 2 * colours.size() + 1);
+TEST_CASE("Every structure count retains its approved Bragg colour") {
+    for (const auto& expected : approved_palette::cases) {
+        CAPTURE(expected.scheme); CAPTURE(expected.count); CAPTURE(expected.dark);
+        const auto scheme = edi::colour_scheme_from_name(expected.scheme);
+        REQUIRE_MESSAGE(scheme.has_value(), "Every independently approved palette resolves through the public API");
+        const auto styles = edi::pattern_style_table(*scheme, 1, expected.count);
         edi::PatternSource source;
         source.x = std::make_shared<const std::vector<double>>(std::initializer_list<double>{10,20});
         source.meas = std::make_shared<const std::vector<double>>(std::initializer_list<double>{2,3});
         source.calc = source.meas;
         source.current = true;
-        for (std::size_t place = 0; place < 2 * colours.size() + 1; ++place)
+        for (std::size_t place = 0; place < expected.count; ++place)
             source.phases.push_back({std::to_string(place), "Structure " + std::to_string(place), place,
                 std::make_shared<const std::vector<double>>(std::initializer_list<double>{12.5}), {}, {}});
         const auto shown = edi::present_pattern(source, {});
@@ -53,17 +31,17 @@ TEST_CASE("Every structure palette entry and wraparound retains its Bragg colour
         for (const auto& series : shown.series) if (series.kind == edi::SeriesKind::BraggTicks) {
             CAPTURE(place);
             const auto row = std::find_if(styles.begin(), styles.end(), [&](const auto& style) { return style.key == series.style; });
-            REQUIRE_MESSAGE(row != styles.end(), "Every Bragg series resolves a style, including entries past the third");
-            const auto& expected = colours[place % colours.size()];
-            CHECK_MESSAGE(row->light == expected.first, "Bragg ticks retain the frozen structure colour in the light theme");
-            CHECK_MESSAGE(row->dark == expected.second, "Bragg ticks retain the frozen structure colour in the dark theme");
-            CHECK_MESSAGE(edi::structure_colour(*scheme, place, false) == expected.first,
-                          "Structure lists and Bragg consumers agree with each actual palette entry and wraparound");
+            REQUIRE_MESSAGE(row != styles.end(), "Every per-structure series resolves a style beyond the categorical group");
+            REQUIRE_MESSAGE(place < expected.colours.size(), "The presentation cannot invent extra structures");
+            CHECK_MESSAGE((expected.dark ? row->dark : row->light) == expected.colours[place],
+                          "Each tick style equals the approved coordinate or independent whole-group Oklab gradient");
+            CHECK_MESSAGE(edi::structure_colour(*scheme, place, expected.count, expected.dark) == expected.colours[place],
+                          "Structure icons and tick styles share the independently expected count-aware assignment");
             REQUIRE_MESSAGE(place < shown.bragg_labels.size(), "Every structure retains a row label alongside its ticks");
-            CHECK_MESSAGE(shown.bragg_labels[place].style == series.style, "Bragg row labels retain the same colour identity as their ticks");
+            CHECK_MESSAGE(shown.bragg_labels[place].style == series.style, "Row labels and ticks retain the same complete structure identity");
             ++place;
         }
-        CHECK_MESSAGE(place == source.phases.size(), "The complete structure set and wraparound all reach the presentation");
+        CHECK_MESSAGE(place == source.phases.size(), "Every structure reaches the presentation at categorical and gradient counts");
     }
 }
 

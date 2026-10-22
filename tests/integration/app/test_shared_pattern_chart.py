@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CASES = {
     'observer_control': ['test_actual_chart_observers_and_input'],
     'structure_tab': ['test_structure_pattern_requires_experiment'],
-    'identity': ['test_one_object_survives_page_changes'],
+    'identity': ['test_all_hosts_follow_one_shared_view'],
     'state': [
         f'{case}:{page}'
         for case in (

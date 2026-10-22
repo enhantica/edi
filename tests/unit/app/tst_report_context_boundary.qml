@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -22,7 +23,7 @@ Rectangle {
     TestCase {
         name: "ReportContextBoundary"
         when: windowShown
-        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
+        property var reference: Approved.reference(SettingsProof)
         property var page
         property var frozen
         property var browserExport

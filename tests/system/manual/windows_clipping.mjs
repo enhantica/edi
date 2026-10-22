@@ -175,12 +175,14 @@ try {
           if (scenario === 'popup-close' || scenario === 'sidebar-collapse')
             assert.equal(pixels.afterInside, 0, 'Vacated content also matches the independent empty background');
         }
-        receipts.push({mode, theme, scenario, build, gpu, pixels, geometry: facts, state});
+        receipts.push({mode, theme, scenario, status: "passed", build, gpu, pixels, geometry: facts, state,
+          screenshots: Object.fromEntries(Object.entries({background, visible, after}).map(([key, data]) => [key, createHash("sha256").update(data).digest("hex")]))});
         await writeFile(resolve(output, 'receipt.json'),
           JSON.stringify({browser: await browser.version(), receipts, errors}, null, 2) + '\n');
       }
     }
   }
+  await writeFile(resolve(output, "receipt.json"), JSON.stringify({complete: true, platform: process.platform, browser: await browser.version(), receipts, errors}, null, 2) + "\n");
   assert.deepEqual(errors, [], 'A clipping result cannot hide browser or Qt console errors');
 } finally {
   await writeFile(resolve(output, 'browser-errors.json'), JSON.stringify(errors, null, 2) + '\n');

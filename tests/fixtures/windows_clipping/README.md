@@ -22,8 +22,7 @@ than calling it a hardware-GPU result. If WebGL2 cannot start, the job fails.
 The ordinary site currently has `ediControlGeometry` and `ediOpenExample` but no
 clipping fixture. The producer must compile a test-only host into **both** kits,
 using the same app module, pinned gui-components, compiler options and rendering
-backend as the normal app. The current shared-cell pin is the published commit
-beginning `a69bef27`. Record the full pin, edi commit, source hashes of the host
+backend as the normal app. Resolve the shared-cell pin from `cmake/EdiGuiBase.cmake`. Record that full pin, edi commit, source hashes of the host
 and preset QML, Qt kit and Emscripten version in `clipping-host.json` at the site
 root. Preserve the production entry points and pages. Do not provide a separate
 HTML/CSS imitation of QML, or a renderer with clipping implemented by the host.
@@ -96,3 +95,5 @@ pull requests, so the dependent Windows job also skips those events: either run
 both jobs on the accepted head by dispatch/main, or change the producer's event
 policy before requiring this on pull requests. A skipped job, a Linux actor, a
 job fragment, or a missing fixture host supplies no Windows acceptance evidence.
+
+The consumer must run `check_receipt.py` after the browser actor. It requires the complete case matrix, exact app head, actual Windows renderer, native and QML source identities and the retained screenshot hashes. The controls in `test_windows_clipping_job.py` do not supply a Windows rendering result. A missing producer or installed workflow remains red.
