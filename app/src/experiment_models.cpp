@@ -11,6 +11,7 @@
 
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
+#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
@@ -185,11 +186,13 @@ void ReflectionListModel::sync() {
     setTableRows(rows);
 }
 
-SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent)
+SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
+                                                           const edi::Project& project, QObject* parent)
     : RowTableModel({"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas", "intensityMeasSu",
                      "intensityCalc", "residual"},
                     parent),
-      experiment_(experiment) {
+      experiment_(experiment),
+      project_(project) {
     sync();
 }
 
@@ -264,6 +267,37 @@ void SingleCrystalReflectionModel::sync() {
     high_ = high + pad;
     calculated_shown_ = shown;
     emit pointsChanged();
+}
+
+QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
+    const auto& reflections = experiment_.reflections;
+    if (!reflections.has_value() || row < 0 || static_cast<std::size_t>(row) >= reflections->size()) {
+        return {};
+    }
+    const auto at = static_cast<qsizetype>(row);
+    const double meas = squared ? measured_.value(at, qQNaN()) : measured_f_.value(at, qQNaN());
+    const double su = squared ? measured_su_.value(at, qQNaN()) : measured_f_su_.value(at, qQNaN());
+    const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
+    const QString quantity = squared ? QStringLiteral("F²") : QStringLiteral("F");
+    QStringList lines{QStringLiteral("%1 %2 %3")
+                          .arg(reflections->index_h[at])
+                          .arg(reflections->index_k[at])
+                          .arg(reflections->index_l[at])};
+    // The measured value and its su as the tables write them; the calculated value to the same last digit.
+    int decimals = 6;
+    if (std::isfinite(meas) && std::isfinite(su) && su > 0.0) {
+        const edi::SuText text = edi::su_text(meas, su, project_.su_rule);
+        const auto dot = text.value.find('.');
+        decimals = dot == std::string::npos ? 0 : static_cast<int>(text.value.size() - dot - 1);
+        lines.append(QStringLiteral("%1 meas: %2 ± %3")
+                         .arg(quantity, QString::fromStdString(text.value), QString::fromStdString(text.su)));
+    } else if (std::isfinite(meas)) {
+        lines.append(QStringLiteral("%1 meas: %2").arg(quantity, QString::number(meas, 'f', decimals)));
+    }
+    if (std::isfinite(calc)) {
+        lines.append(QStringLiteral("%1 calc: %2").arg(quantity, QString::number(calc, 'f', decimals)));
+    }
+    return lines.join(QStringLiteral("<br>"));
 }
 
 void ExcludedRegionListModel::sync() {

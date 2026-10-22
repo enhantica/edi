@@ -18,6 +18,10 @@ DataTable {
     function shown(value) {
         return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
     }
+    // A column whose values share one scale, with a fixed number of decimals, so none is cut.
+    function fixed(value, decimals) {
+        return value === undefined || isNaN(value) ? "" : value.toFixed(decimals);
+    }
 
     objectName: "singleCrystal.reflections"
     defaultInfoText: qsTr("No reflections")
@@ -97,7 +101,7 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.sinThetaOverLambda)
+            number: table.fixed(row.model.sinThetaOverLambda, 4)
             full: NumberText.plainFull(row.model.sinThetaOverLambda)
         }
         NumberLabel {
@@ -117,7 +121,7 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.residual)
+            number: table.fixed(row.model.residual, 2)
             full: NumberText.plainFull(row.model.residual)
         }
     }
