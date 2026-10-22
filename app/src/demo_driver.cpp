@@ -298,9 +298,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                       QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7_basic")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
-    steps_.push_back({"sc-03-tb2ti2o7-analysis-fitted-light", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-03b-tb2ti2o7-analysis-fitted-light", {"choose:OK"}});
     steps_.push_back({"sc-04-tb2ti2o7-analysis-dark", {"theme:dark"}});
     steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
+    steps_.push_back({"sc-05b-tb2ti2o7-reflections-dark", {extras, "expand:group.refln"}});
+    steps_.push_back({"sc-05c-tb2ti2o7-f-dark", {basic, "singleCrystal.toolbar.quantity", "choose:F"}});
     steps_.push_back({"sc-06-pr2nio4-experiment-light",
                       QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4_basic")
                           + QStringList{experiment, basic}});

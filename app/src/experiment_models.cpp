@@ -186,7 +186,9 @@ void ReflectionListModel::sync() {
 }
 
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent)
-    : RowTableModel({"h", "k", "l", "intensityMeas", "intensityMeasSu", "intensityCalc", "residual"}, parent),
+    : RowTableModel({"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas", "intensityMeasSu",
+                     "intensityCalc", "residual"},
+                    parent),
       experiment_(experiment) {
     sync();
 }
@@ -207,8 +209,12 @@ void SingleCrystalReflectionModel::sync() {
             const double sigma = reflections->intensity_meas_su[i];
             const double value = current ? calc[i] : qQNaN();
             const double residual = current && sigma > 0.0 ? (meas - value) / sigma : qQNaN();
+            const auto column = [current, i](const edi::ComputedColumn<double>& values) {
+                return current && i < values.size() ? values[i] : qQNaN();
+            };
             rows.append({reinterpret_cast<const void*>(i + 1),
-                         {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i], meas, sigma,
+                         {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i],
+                          column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
                           value, residual}});
             calculated.append(value);
             measured.append(meas);
@@ -227,6 +233,29 @@ void SingleCrystalReflectionModel::sync() {
         low = 0.0;
         high = 1.0;
     }
+    // The F view: F from F², the su carried by dF = dF² / (2 F); a non-positive F² has no F.
+    QList<double> calculated_f;
+    QList<double> measured_f;
+    QList<double> measured_f_su;
+    double high_f = 0.0;
+    for (qsizetype i = 0; i < measured.size(); ++i) {
+        const double calc_f = calculated[i] >= 0.0 ? std::sqrt(calculated[i]) : qQNaN();
+        const double meas_f = measured[i] > 0.0 ? std::sqrt(measured[i]) : qQNaN();
+        const double su_f = measured[i] > 0.0 ? su[i] / (2.0 * meas_f) : qQNaN();
+        calculated_f.append(calc_f);
+        measured_f.append(meas_f);
+        measured_f_su.append(su_f);
+        for (const double end : {meas_f + su_f, calc_f}) {
+            if (std::isfinite(end)) {
+                high_f = std::max(high_f, end);
+            }
+        }
+    }
+    calculated_f_ = calculated_f;
+    measured_f_ = measured_f;
+    measured_f_su_ = measured_f_su;
+    low_f_ = 0.0;
+    high_f_ = high_f > 0.0 ? high_f * 1.05 : 1.0;
     const double pad = (high - low) * 0.05;
     calculated_ = calculated;
     measured_ = measured;

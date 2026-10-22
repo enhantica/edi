@@ -438,6 +438,7 @@ std::size_t ExperimentViewModel::place() const {
 }
 
 void ExperimentViewModel::capturePattern() {
+    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

@@ -19,7 +19,7 @@ Item {
     property string settingsPage: ""
     property bool shown: true
     property PatternChart chart: null
-    // A single crystal has reflections, not a pattern: its F²calc-vs-F²meas chart and reflection table show instead.
+    // A single crystal has reflections, not a pattern: its F²calc-vs-F²meas chart shows instead.
     readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
 
@@ -60,19 +60,9 @@ Item {
         z: 1
 
         SingleCrystalChart {
-            id: singleCrystalChart
-            width: parent.width
-            height: Math.round(parent.height * 0.6)
+            anchors.fill: parent
             experiment: holder.singleCrystal ? holder.experiment : null
             shown: holder.shown && holder.singleCrystal
-        }
-        SingleCrystalTable {
-            anchors.top: singleCrystalChart.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: AppSizes.mainAreaMargin
-            experiment: holder.singleCrystal ? holder.experiment : null
         }
     }
 }
