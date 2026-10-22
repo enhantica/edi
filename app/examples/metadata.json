@@ -761,6 +761,58 @@
         "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/experiments/echidna.edi",
         "docs/user/cli/pd-neut-cwl_lmo-echidna_site-mixing/project/structures/lmo.edi"
       ]
+    },
+    "pd-neut-cwl_yap-spodi_two-phase": {
+      "samples": [
+        "YAlO₃ [Pbnm]",
+        "Al₂O₃ [R-3c]"
+      ],
+      "origin": "SPODI @ FRM II",
+      "detail": "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "FRM II"
+        ],
+        "instruments": [
+          "SPODI"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_yap-spodi_two-phase",
+        "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II",
+        "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/Al2O3.edi",
+        "docs/user/cli/pd-neut-cwl_yap-spodi_two-phase/project/structures/YAlO3.edi"
+      ]
     }
   }
 }
