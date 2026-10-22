@@ -167,6 +167,18 @@ def test_constraints_share_fullprof_code_indices_with_the_correct_sign():
     assert li1 == ni2 == -ni1 == -li2 != 0, (
         'The complementary lithium/nickel occupancies must share one signed variable'
     )
+    # The declared mixed start uses 3a/3b sites in a general position of multiplicity 36.
+    occupancies = {'Li1': 0.95, 'Ni1': 0.05, 'Li2': 0.05, 'Ni2': 0.95}
+    assert loaded('pd-neut-cwl_lmo-echidna').structures['lmo'].atom_sites[
+        'Li1'
+    ].occupancy.value == pytest.approx(0.95), (
+        'The declared LMO start must retain five-percent lithium/nickel mixing'
+    )
+    for label, occupancy in occupancies.items():
+        atom = re.search(rf'^{label}\s+.+$', text, re.MULTILINE)[0].split()
+        assert float(atom[6]) == pytest.approx(occupancy * 3 / 36), (
+            'FullProf must start with the same mixed occupancies in its multiplicity units'
+        )
     assert re.search(r'^24\s+!Number of refined parameters', text, re.MULTILINE), (
         'The lithium model must retain the independently specified shared free count'
     )

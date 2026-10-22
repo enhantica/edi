@@ -8,7 +8,7 @@
                  Refinement of X-ray and/or Neutron Data
 
 
-    Date: 22/10/2026  Time: 21:32:25.098                              
+    Date: 22/10/2026  Time: 22:19:13.068                              
 
  => PCR file code: start
  => DAT file code: start                -> Relative contribution: 1.0000                                                            
@@ -31,7 +31,7 @@
  =>-------> Pattern#  1
  => Crystal Structure Refinement for phase: 1
  => The density (volumic mass) of phase 1 is:    4.775 g/cm3
- => Scor: 6.9997
+ => Scor: 7.6944
 
  ==> RESULTS OF REFINEMENT:
 
@@ -50,10 +50,10 @@
 
   Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
  O       0.00000(   0)  0.00000(   0)  0.26000(   0)  0.500(  0)  0.167(  0)    6
- Ni1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.000(  0)    3
- Li1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.083(  0)    3
- Li2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.000(  0)    3
- Ni2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.083(  0)    3
+ Ni1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.004(  0)    3
+ Li1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.079(  0)    3
+ Li2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.004(  0)    3
+ Ni2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.079(  0)    3
 
  ==> PROFILE PARAMETERS FOR PATTERN#  1
 
@@ -103,26 +103,26 @@
   => Cycle:  1 => MaxCycle:  1
  => N-P+C:  3002
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  21.9     Rwp:  27.3     Rexp:    3.25 Chi2:  70.6      L.S. refinement
+ => Rp:  23.6     Rwp:  29.0     Rexp:    3.25 Chi2:  79.7      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  46.1     Rwp:  47.8     Rexp:    5.69 Chi2:  70.6    
- => Deviance:  0.368E+06     Dev*  :   122.5    
- => DW-Stat.:    0.0400     DW-exp:     1.8866
- => N-sigma of the GoF:     2695.050
+ => Rp:  49.8     Rwp:  50.8     Rexp:    5.69 Chi2:  79.7    
+ => Deviance:  0.421E+06     Dev*  :   140.1    
+ => DW-Stat.:    0.0353     DW-exp:     1.8866
+ => N-sigma of the GoF:     3050.425
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
  => N-P+C:  3002
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  21.9     Rwp:  27.3     Rexp:    3.25 Chi2:  70.6      L.S. refinement
+ => Rp:  23.6     Rwp:  29.0     Rexp:    3.25 Chi2:  79.7      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  46.1     Rwp:  47.8     Rexp:    5.69 Chi2:  70.6    
- => Deviance:  0.368E+06     Dev*  :   122.5    
- => DW-Stat.:    0.0400     DW-exp:     1.8866
- => N-sigma of the GoF:     2695.050
+ => Rp:  49.8     Rwp:  50.8     Rexp:    5.69 Chi2:  79.7    
+ => Deviance:  0.421E+06     Dev*  :   140.1    
+ => DW-Stat.:    0.0353     DW-exp:     1.8866
+ => N-sigma of the GoF:     3050.425
 
- => Global user-weigthed Chi2 (Bragg contrib.):   70.6    
- => Scor: 6.9997
+ => Global user-weigthed Chi2 (Bragg contrib.):   79.7    
+ => Scor: 7.6944
 
  ==> RESULTS OF REFINEMENT:
 
@@ -141,10 +141,10 @@
 
   Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
  O       0.00000(   0)  0.00000(   0)  0.26000(   0)  0.500(  0)  0.167(  0)    6
- Ni1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.000(  0)    3
- Li1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.083(  0)    3
- Li2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.000(  0)    3
- Ni2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.083(  0)    3
+ Ni1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.004(  0)    3
+ Li1     0.00000(   0)  0.00000(   0)  0.50000(   0)  0.500(  0)  0.079(  0)    3
+ Li2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.004(  0)    3
+ Ni2     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.079(  0)    3
 
  ==> PROFILE PARAMETERS FOR PATTERN#  1
 
@@ -194,36 +194,36 @@
   => Cycle:  1 => MaxCycle:  1
  => N-P+C:  3002
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  21.9     Rwp:  27.3     Rexp:    3.25 Chi2:  70.6      L.S. refinement
+ => Rp:  23.6     Rwp:  29.0     Rexp:    3.25 Chi2:  79.7      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  46.1     Rwp:  47.8     Rexp:    5.69 Chi2:  70.6    
- => Deviance:  0.368E+06     Dev*  :   122.5    
- => DW-Stat.:    0.0400     DW-exp:     1.8866
- => N-sigma of the GoF:     2695.050
+ => Rp:  49.8     Rwp:  50.8     Rexp:    5.69 Chi2:  79.7    
+ => Deviance:  0.421E+06     Dev*  :   140.1    
+ => DW-Stat.:    0.0353     DW-exp:     1.8866
+ => N-sigma of the GoF:     3050.425
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
  => N-P+C:  3002
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  21.9     Rwp:  27.3     Rexp:    3.25 Chi2:  70.6      L.S. refinement
+ => Rp:  23.6     Rwp:  29.0     Rexp:    3.25 Chi2:  79.7      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  46.1     Rwp:  47.8     Rexp:    5.69 Chi2:  70.6    
- => Deviance:  0.368E+06     Dev*  :   122.5    
- => DW-Stat.:    0.0400     DW-exp:     1.8866
- => N-sigma of the GoF:     2695.050
+ => Rp:  49.8     Rwp:  50.8     Rexp:    5.69 Chi2:  79.7    
+ => Deviance:  0.421E+06     Dev*  :   140.1    
+ => DW-Stat.:    0.0353     DW-exp:     1.8866
+ => N-sigma of the GoF:     3050.425
 
- => Global user-weigthed Chi2 (Bragg contrib.):   70.6    
+ => Global user-weigthed Chi2 (Bragg contrib.):   79.7    
 
      -----------------------------------------------------
      BRAGG R-Factors and weight fractions for Pattern #  1
      -----------------------------------------------------
 
  => Phase:  1     lmo
- => Bragg R-factor:   41.0       Vol:  101.857( 0.000)  Fract(%):  100.00( 0.00)
- => Rf-factor=  23.5             ATZ:         292.919   Brindley:  1.0000
+ => Bragg R-factor:   45.6       Vol:  101.857( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  27.0             ATZ:         292.919   Brindley:  1.0000
 
  
-              CPU Time:     1.094 seconds
-                            0.018 minutes
+              CPU Time:     1.188 seconds
+                            0.020 minutes
 
- => Run finished at:     Date: 22/10/2026  Time: 21:32:26.195                              
+ => Run finished at:     Date: 22/10/2026  Time: 22:19:14.250                              
