@@ -1,4 +1,4 @@
-# 0047. Single-crystal experiments
+# 0048. Single-crystal experiments
 
 - **Status:** Proposed
 - **Date:** 2026-10-22
