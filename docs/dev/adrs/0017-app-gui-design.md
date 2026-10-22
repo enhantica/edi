@@ -285,7 +285,7 @@ the light colours:
 | Block | Icon | Colour by its place in the project's list (light / dark theme), Edi Natural |
 |---|---|---|
 | structure | `layer-group` | orange `#D26E3C` / `#F59B6F`, gold `#958508` / `#BAAD52`, brown `#936844` / `#BD9372`, amber `#C28B0A` / `#EBB352`, olive `#71964E` / `#98BB79`; past five, a gradient from orange to gold along the order |
-| experiment | `microscope` | blue `#039EDC` / `#71CBFE`, slate `#829DB9` / `#B2C8E0`, green `#6EA163` / `#A1CD97`, teal `#479F93` / `#81CAC2`, violet `#8989F7` / `#C0B6E8`; past five, a gradient from blue to slate along the order |
+| experiment | `microscope` | slate `#829DB9` / `#B2C8E0`, blue `#039EDC` / `#71CBFE`, green `#6EA163` / `#A1CD97`, teal `#479F93` / `#81CAC2`, violet `#8989F7` / `#C0B6E8`; past five, a gradient from slate to blue along the order |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -642,7 +642,7 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Edi Natural) | `#039EDC` / `#71CBFE`, then `#829DB9` / `#B2C8E0`, then `#6EA163` / `#A1CD97` (§8) | 2 px line, 5 px markers, 1 px bars, drawn under the calculated curves |
+| Measured, by the experiment's place (Edi Natural) | `#829DB9` / `#B2C8E0`, then `#039EDC` / `#71CBFE`, then `#6EA163` / `#A1CD97` (§8) | 2 px line, 5 px markers, 1 px bars, drawn under the calculated curves |
 | Total calculation (Edi Natural) | the scheme's role colour, `#CA5C6E` / `#EE8795` | 2 px line, no fill |
 | Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px line |
 | Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02) |
