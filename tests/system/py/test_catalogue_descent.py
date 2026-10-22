@@ -14,7 +14,7 @@ def fitted():
     project = edi.Project.load(PROJECT)
     project.analysis.descent = 'ladder'
     outcome = project.analysis.fit()
-    record = edi.machine_report(project, outcome, edi.VerbosityEnum.COMPACT)
+    record = edi.machine_report(project, outcome, edi.VerbosityEnum.FULL)
     fields = dict(line.split('=', 1) for line in record.splitlines() if '=' in line)
     return project, fields
 
@@ -35,7 +35,7 @@ def test_default_descent_reaches_the_frozen_fast_descent_regression_witness():
 def test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit():
     project, first = fitted()
     outcome = project.analysis.fit()
-    record = edi.machine_report(project, outcome, edi.VerbosityEnum.COMPACT)
+    record = edi.machine_report(project, outcome, edi.VerbosityEnum.FULL)
     second = dict(line.split('=', 1) for line in record.splitlines() if '=' in line)
     assert float(second['reduced_chi_square']) >= float(first['reduced_chi_square']) * (
         1 - 1e-3

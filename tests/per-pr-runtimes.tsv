@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T18:33:51Z
+# measured_utc = 2026-10-22T18:58:43Z
 #
-# Recorded from: measured test run (73 node(s) measured once, 14426 banked, 0 stale row(s) dropped)
-# Collected tests: 15850; with a reported duration: 9483
+# Recorded from: measured test run (103 node(s) measured once, 14433 banked, 0 stale row(s) dropped)
+# Collected tests: 15953; with a reported duration: 9498
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15850
+# inventory_python = 15953
 # inventory_cpp = 389
-# inventory_measured = 14433
-# inventory_unmeasured = 1806
+# inventory_measured = 14451
+# inventory_unmeasured = 1891
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -2095,6 +2095,81 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_beba_map_is_exercised_at_the_nonzero_fitted_witness
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_constraints_share_fullprof_code_indices_with_the_correct_sign
+0.010	tests/integration/py/test_catalogue_convention_seams.py::test_line_background_interpolates_at_an_interior_point
+0.090	tests/integration/py/test_catalogue_convention_seams.py::test_nonconstant_background_uses_the_declared_domain_and_origin[pd-neut-tof_cecoal-polaris_chebyshev]
+0.050	tests/integration/py/test_catalogue_convention_seams.py::test_nonconstant_background_uses_the_declared_domain_and_origin[pd-neut-tof_ceo2-pearl_polynomial]
+0.010	tests/integration/py/test_catalogue_convention_seams.py::test_occupancy_and_beta_tensors_keep_the_independent_crystallographic_units
+0.010	tests/integration/py/test_catalogue_convention_seams.py::test_signed_zero_displacement_and_transparency_survive_the_cw_boundary
+0.010	tests/integration/py/test_catalogue_convention_seams.py::test_tch_widths_and_fcj_lengths_retain_the_independent_units
+0.000	tests/integration/py/test_catalogue_convention_seams.py::test_tof_sigma_is_variance_and_calibration_retains_its_quadratic_term
+0.010	tests/integration/py/test_catalogue_convention_seams.py::test_xray_doublet_and_monochromator_polarization_are_nontrivial
+0.020	tests/integration/py/test_catalogue_data_seams.py::test_embedding_preserves_stated_uncertainties_and_missing_sigma_rule[pd-neut-cwl_cosio-d20_scan-project/experiments/d20_scan/01_001_497p3790.dat-d20.edi]
+0.040	tests/integration/py/test_catalogue_data_seams.py::test_embedding_preserves_stated_uncertainties_and_missing_sigma_rule[pd-neut-cwl_hs-hrpt-data/hs-hrpt.xye-hrpt.edi]
+0.030	tests/integration/py/test_catalogue_data_seams.py::test_embedding_preserves_stated_uncertainties_and_missing_sigma_rule[pd-xray-cwl_lam7o3-p021-data/hep7c-xray-synchrotron.dat-p021.edi]
+0.040	tests/integration/py/test_catalogue_data_seams.py::test_report_omits_cif_null_authors_but_keeps_named_authors[.-]
+0.030	tests/integration/py/test_catalogue_data_seams.py::test_report_omits_cif_null_authors_but_keeps_named_authors[?-]
+0.030	tests/integration/py/test_catalogue_data_seams.py::test_report_omits_cif_null_authors_but_keeps_named_authors[A. Author; B. Author-A. Author; B. Author]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_data_seams.py::test_scan_template_names_the_file_whose_observations_are_embedded[pd-neut-cwl_cosio-d20_scan-d20-01_001_497p3790.dat]
+0.070	tests/integration/py/test_catalogue_data_seams.py::test_scan_template_names_the_file_whose_observations_are_embedded[pd-xray-cwl_latp-bm01_scan-bm01-latp_312.dat]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_cosio-d20]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_cosio-d20_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_hs-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_lbco-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_lbco_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_lmo-echidna]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-cwl_yalo3-al2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_cecoal-polaris]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_ceo2-pearl]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_ferrite-austenite-beer]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_lbco-si-mcstas]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_ncaf-wish]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_si-sepd]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-tof_si_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-neut-xray-cwl_pbso4-d1a-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_latp-bm01_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_nacl_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_pbso4-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_cosio-d20]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_cosio-d20_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_hs-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_lbco-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_lbco_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_lmo-echidna]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_yalo3-al2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_cecoal-polaris]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_ceo2-pearl]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_ferrite-austenite-beer]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_lbco-si-mcstas]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_ncaf-wish]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_si-sepd]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-tof_si_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-xray-cwl_pbso4-d1a-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_latp-bm01_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_nacl_simulation]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_pbso4-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_cosio-d20]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_cosio-d20_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_hs-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_lbco-hrpt]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_lmo-echidna]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-cwl_yalo3-al2o3-spodi]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_cecoal-polaris]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_ceo2-pearl]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_ferrite-austenite-beer]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_lbco-si-mcstas]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_ncaf-wish]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-tof_si-sepd]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-neut-xray-cwl_pbso4-d1a-lab]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_latp-bm01_scan]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_pbso4-lab]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-native]
@@ -9625,6 +9700,24 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 2.360	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[SequentialExtractRule]
 2.400	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[Structure]
 0.000	tests/system/py/test_c34_t28_value_storage.py::test_physical_reader_distinguishes_values_from_stable_column_handles
+0.050	tests/system/py/test_catalogue_check_escapes.py::test_actual_cmake_configuration_emits_the_owner_selected_index
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[double-load]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[missing-exclusion]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[missing-notebook]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[missing-page]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[missing-provenance]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[missing-source]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[notebook-disagrees]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[unknown-exclusion]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[unknown-tutorial]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[unlisted-dataset]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[wrong-load]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[wrong-project-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-capital-boolean]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-extra-indent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[deletion]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[permutation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[substitution]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
@@ -14986,6 +15079,16 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1c_construction_population
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[lambda]
 0.030	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[method]
 0.040	tests/unit/py/test_c34_t28_census_scope.py::test_independent_census_distinguishes_local_and_model_scopes[nested-block]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[empty]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[infinity]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[nan]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[negative-free]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[negative-sigma]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[no-dof]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[ragged]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_invalid_agreement_factor_inputs_fail_closed[zero-sigma]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_weighted_factors_pool_sums_and_use_only_the_common_point_mask[1-single]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py::test_weighted_factors_pool_sums_and_use_only_the_common_point_mask[2-pooled]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_alias_picker_uses_core_candidates_and_the_closed_edit_door
 0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[alias-AliasesGroup-aliases]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_analysis_groups_read_core_rows_without_preview_data[constraint-ConstraintsGroup-constraints]
