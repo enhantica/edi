@@ -137,3 +137,14 @@ def test_real_compound_examples_are_independent_fitting_exercises(app_result, co
         'PASS   : edi_app::SingleCrystalViews::'
         f'test_two_compound_fitting_examples({compound}-{theme})' in output
     ), 'Each compound must open through its row and fit to independent FullProf values: ' + output
+
+
+@pytest.mark.parametrize('extension', ['int', 'dat'])
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_created_experiment_selects_type_before_loading(app_result, extension, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The created-experiment host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_create_single_crystal_then_load_reflections({extension}-{theme})' in output
+    ), 'The real created experiment must select supported axes and load its reflections: ' + output
