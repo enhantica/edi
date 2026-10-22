@@ -3,6 +3,8 @@ import QtQuick
 
 import EasyApplication.Gui.Components as EaComponents
 
+import edi.app
+
 // The one row type of every edi table (edi ADR-0017 §11): the base's ListViewDelegate, whose rows keep their
 // alternating background, the current one too, with the list's accent marker on the current row and its number,
 // a ListViewLabel with marksCurrentRow, bold in the accent colour.
@@ -20,8 +22,9 @@ EaComponents.ListViewDelegate {
             row.activated();
     }
     function activated() {
-        if (row.listView !== null && row.listView.rowActivated !== undefined && row.index >= 0)
-            row.listView.rowActivated(row.index);
+        const table = row.listView as DataTable;
+        if (table !== null && row.index >= 0)
+            table.rowActivated(row.index);
     }
 
     Component.onCompleted: {
