@@ -133,10 +133,10 @@ TestCase {
         if (data.transition === "replace-same-free-count") {
             verify(project.setParametersFree(original.filter(item => item.blockName === "west"), false), "The replaced bank starts fixed so its removal does not change the project's free count");
         }
-        choose("parameters.category", "Peak profile");
+        choose("parameters.category", data.transition === "replace-same-free-count" ? "All categories" : "Peak profile");
         const state = {
             block: "",
-            peak: true,
+            peak: data.transition !== "replace-same-free-count",
             query: ""
         };
         if (["east-all", "east-west", "clear-all"].includes(data.transition))
@@ -148,7 +148,13 @@ TestCase {
         if (data.transition === "clear-all") {
             choose("parameters.variability", data.makeFree ? "Fixed parameters" : "Free parameters");
             const name = control("parameters.nameFilter");
+            Ui.scrollIntoView(name);
+            const namePoint = Ui.clickPoint(name);
+            verify(namePoint !== null, "The reset witness exposes the real name editor before typing");
+            mouseClick(name, namePoint.x, namePoint.y);
+            appWindow.requestActivate();
             name.forceActiveFocus();
+            tryCompare(name, "activeFocus", true, 2000, "The reset witness focuses the actual name editor before sending text");
             verify(SettingsProof.type(name, "broad_gauss"), "The reset witness enters the fourth filter through the actual name editor");
             state.query = "broad_gauss";
         }

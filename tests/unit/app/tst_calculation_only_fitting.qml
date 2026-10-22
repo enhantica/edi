@@ -46,7 +46,8 @@ TestCase {
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Calculation-only acceptance hosts the production application window");
         appWindow.width = 1300;
-        appWindow.height = 1000;
+        // Keep the bottom fitting controls inside the headless screen for real pointer input.
+        appWindow.height = 720;
         verify(waitForRendering(appWindow.contentItem), "The calculation-only window renders before input");
     }
     function cleanup() {
@@ -136,10 +137,13 @@ TestCase {
             verify(/measur/i.test(button.ToolTip.text) && /data/i.test(button.ToolTip.text), "Disabled Start fitting explains that a fit needs measured data");
         } else if (data.route === "hover-tooltip") {
             Ui.scrollIntoView(button);
+            verify(waitForPolish(appWindow.contentItem), "The disabled fitting hover target completes its actual layout");
+            appWindow.update();
+            verify(waitForRendering(appWindow.contentItem), "The disabled fitting hover target reaches a settled frame");
             const point = Ui.clickPoint(button);
             verify(point !== null, "The disabled fitting button remains reachable for its explanatory hover");
             mouseMove(button, point.x, point.y);
-            tryVerify(() => Probe.objectsWithProperty(Ui.windowRoot(appWindow), "text").some(item => item.visible && /measur/i.test(item.text) && /data/i.test(item.text)), 3000, "Hovering disabled Start fitting actually displays the measured-data explanation");
+            tryVerify(() => Probe.objectsWithProperty(button, "enterAnimationDuration").some(tip => tip.visible && tip.opened && tip.opacity >= 0.99 && View.textItems(tip.contentItem).some(item => /measur/i.test(item.text) && /data/i.test(item.text))), 3000, "Hovering disabled Start fitting actually displays the measured-data explanation");
         } else {
             running.clear();
             const status = fit.status;
