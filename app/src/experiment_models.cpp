@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
 
+#include <cmath>
+
 #include <QVariantMap>
 #include <QtNumeric>
 #include <algorithm>
@@ -181,6 +183,58 @@ void ReflectionListModel::sync() {
         }
     }
     setTableRows(rows);
+}
+
+SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent)
+    : RowTableModel({"h", "k", "l", "intensityMeas", "intensityMeasSu", "intensityCalc", "residual"}, parent),
+      experiment_(experiment) {
+    sync();
+}
+
+void SingleCrystalReflectionModel::sync() {
+    QList<Row> rows;
+    QList<double> calculated;
+    QList<double> measured;
+    QList<double> su;
+    double low = qInf();
+    double high = -qInf();
+    bool shown = false;
+    if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
+        const std::vector<double>& calc = reflections->intensity_calc.values();
+        const bool current = calc.size() == reflections->size() && experiment_.computed_current();
+        for (std::size_t i = 0; i < reflections->size(); ++i) {
+            const double meas = reflections->intensity_meas[i];
+            const double sigma = reflections->intensity_meas_su[i];
+            const double value = current ? calc[i] : qQNaN();
+            const double residual = current && sigma > 0.0 ? (meas - value) / sigma : qQNaN();
+            rows.append({reinterpret_cast<const void*>(i + 1),
+                         {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i], meas, sigma,
+                          value, residual}});
+            calculated.append(value);
+            measured.append(meas);
+            su.append(sigma);
+            for (const double end : {meas - sigma, meas + sigma, value}) {
+                if (std::isfinite(end)) {
+                    low = std::min(low, end);
+                    high = std::max(high, end);
+                }
+            }
+        }
+        shown = current;
+    }
+    setTableRows(rows);
+    if (!(high > low)) {
+        low = 0.0;
+        high = 1.0;
+    }
+    const double pad = (high - low) * 0.05;
+    calculated_ = calculated;
+    measured_ = measured;
+    measured_su_ = su;
+    low_ = std::min(0.0, low - pad);
+    high_ = high + pad;
+    calculated_shown_ = shown;
+    emit pointsChanged();
 }
 
 void ExcludedRegionListModel::sync() {

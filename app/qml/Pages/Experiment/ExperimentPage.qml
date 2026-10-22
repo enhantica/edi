@@ -27,6 +27,7 @@ WorkflowPage {
             "linked_structure": linkedStructureContent,
             "excluded_region": excludedRegionsContent,
             "absorption": absorptionContent,
+            "extinction": extinctionContent,
             "preferred_orientation": preferredOrientationContent,
             "scattering_source": scatteringSourceContent,
             "refln": reflectionsContent
@@ -159,6 +160,12 @@ WorkflowPage {
     Component {
         id: absorptionContent
         AbsorptionGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: extinctionContent
+        ExtinctionGroup {
             experiment: page.experiment
         }
     }
