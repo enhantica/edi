@@ -1166,9 +1166,9 @@ Rectangle {
                 compare(labels.length, 1, "Each joint experiment has exactly one actual visible name, without a duplicate inside the plot");
                 const label = labels[0], left = label.mapToItem(chart, 0, 0), right = label.mapToItem(chart, label.width, label.height);
                 verify(left.x >= 0 && right.x < origin.x, "Every complete joint experiment name lies outside the plot to the left of its y axis");
-                const centre = label.mapToItem(chart, label.width / 2, label.height / 2).y;
+                const centre = label.mapToItem(chart, label.width / 2, data.mode === "stacked" ? label.height : label.height / 2).y;
                 const wanted = origin.y + (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                verify(Math.abs(centre - wanted) <= chart.em / 2, "Each joint row name is centred beside its independently indexed dataset row");
+                verify(Math.abs(centre - wanted) <= 1, "Each joint label ends at its Stacked baseline or is centred on its Map row");
                 compare(String(label.color).toLowerCase(), expected[row], "Each joint dataset name uses its independently approved measured-data colour in both themes");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
@@ -1634,10 +1634,10 @@ Rectangle {
             for (let i = 0; i < expected.length; ++i) {
                 const matches = labelFor(labels, expected[i]);
                 compare(matches.length, 1, "Every row uses its independent file, datablock or scan value with unit");
-                const label = matches[0], right = label.mapToItem(chart, label.width, label.height / 2);
+                const label = matches[0], right = label.mapToItem(chart, label.width, chart.mode === "stacked" ? label.height : label.height / 2);
                 verify(right.x < origin.x && label.mapToItem(chart, 0, 0).x >= 0, "The complete row label lies left of the plot and inside the chart");
                 const wanted = origin.y + (axes.axisY.max - coordinates[i]) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                verify(Math.abs(right.y - wanted) <= chart.em / 2, "Every label follows its independent dataset row coordinate");
+                verify(Math.abs(right.y - wanted) <= 1, "A Stacked label's bottom sits on its independent baseline; a Map label stays centred on its row");
                 compare(String(label.color).toLowerCase(), colours[i], "Every row label uses its independently approved dataset colour");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
