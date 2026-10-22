@@ -275,8 +275,9 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     const auto role = [scheme](ChartRole chart_role, bool dark) { return role_colour(scheme, chart_role, dark); };
     table.push_back({"calc", role(ChartRole::TotalCalculation, false), role(ChartRole::TotalCalculation, true), "line",
                      2.0, 1.0, 0.0});
-    table.push_back({"bkg", role(ChartRole::Background, false), role(ChartRole::Background, true), "line", 1.0, 1.0,
-                     0.0});
+    // The background dashed, as easyDiffraction drew it (the owner, 2026-10-22).
+    table.push_back({"bkg", role(ChartRole::Background, false), role(ChartRole::Background, true), "line+dash", 1.0,
+                     1.0, 0.0});
     table.push_back({"resid", role(ChartRole::Difference, false), role(ChartRole::Difference, true), "line", 1.0, 1.0,
                      0.0});
     // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour among them all).
@@ -637,6 +638,24 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         }
         line(source.resid, SeriesKind::Residual, Pane::Residual, "resid", "Residual (meas − calc)", "resid",
              YScale::Linear);
+        // In band style, the residual's band, ± the measured s.u. at each kept point; a point without an s.u. has none.
+        const std::vector<double>* resid = column_for(source.resid);
+        const std::vector<double>* su = column_for(source.su);
+        if (view.residual_band && resid != nullptr && !out.series.empty() &&
+            out.series.back().kind == SeriesKind::Residual) {
+            PatternSeries& series = out.series.back();
+            series.bar_low.reserve(series.rows.size());
+            series.bar_high.reserve(series.rows.size());
+            for (const std::size_t row : series.rows) {
+                const double half = su != nullptr && row != kNoRow && std::isfinite((*su)[row]) ? (*su)[row] : 0.0;
+                series.bar_low.push_back(row == kNoRow ? kNaN : (*resid)[row] - half);
+                series.bar_high.push_back(row == kNoRow ? kNaN : (*resid)[row] + half);
+            }
+            for (std::size_t k = 0; k < series.bar_low.size(); ++k) {
+                cover(out.y_residual, any_residual, series.bar_low[k]);
+                cover(out.y_residual, any_residual, series.bar_high[k]);
+            }
+        }
     }
     const bool has_residual = std::any_of(out.series.begin(), out.series.end(), [](const auto& s) {
         return s.kind == SeriesKind::Residual;

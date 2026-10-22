@@ -56,6 +56,7 @@ QtObject {
         preferences.structureCurves = true;
         preferences.patternLegendShown = false;
         preferences.patternHoverShown = true;
+        preferences.patternMeasuredStyle = "band";
         preferences.patternPointerMode = "zoom";
         preferences.scanStackedPalette = "";
         preferences.scanMapColours = "viridis";
@@ -103,6 +104,9 @@ QtObject {
     property bool structureCurves: true
     property bool patternLegendShown: false
     property bool patternHoverShown: true
+    // How the pattern charts draw the measured data: "band" (measured ± s.u., the default), "line", "points" or
+    // "linePoints" (the owner, 2026-10-22).
+    property string patternMeasuredStyle: "band"
     property string patternPointerMode: "zoom"
     // A scan's Stacked and Map views (edi ADR-0041): the palette the stacked patterns take their colours from (one of
     // ApplicationInfo.colourSchemes; empty follows colourScheme) and the map's colour map (one of
@@ -129,6 +133,7 @@ QtObject {
         property alias structureCurves: preferences.structureCurves
         property alias legendShown: preferences.patternLegendShown
         property alias hoverShown: preferences.patternHoverShown
+        property alias measuredStyle: preferences.patternMeasuredStyle
         property alias pointerMode: preferences.patternPointerMode
     }
 

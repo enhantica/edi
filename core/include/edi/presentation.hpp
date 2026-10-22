@@ -98,6 +98,8 @@ struct PatternView {
     int columns = 0;                     // plot width in device pixels (pixel_columns); 0: no decimation
     YScale y_scale = YScale::Linear;
     bool structure_curves = false;  // each structure's curve over the background (edi ADR-0017 §15)
+    // The residual drawn as a band, (meas − calc) ± s.u. (edi ADR-0017 §15): its band's ends count in its pane's range.
+    bool residual_band = false;
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.
@@ -117,7 +119,8 @@ struct PatternSeries {
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
     // Measured, per point: the error bar's ends in the display scale. A NaN lower end is
-    // drawn to the bottom of the pane. A structure curve: bar_low is the background its fill starts from.
+    // drawn to the bottom of the pane. A structure curve: bar_low is the background its fill starts from. The
+    // residual, when the view asks for its band: (meas − calc) ∓ the measured s.u.
     std::vector<double> bar_low, bar_high;
 };
 

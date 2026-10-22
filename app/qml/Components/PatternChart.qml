@@ -339,6 +339,8 @@ Item {
         calculatedSeries: calculatedLine
         backgroundSeries: backgroundLine
         residualSeries: residualLine
+        // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
+        measuredStyle: Preferences.patternMeasuredStyle
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -463,6 +465,47 @@ Item {
                 }
             }
         }
+        // How the measured pattern is drawn (the owner, 2026-10-22), one choice of four: the band of measured ± s.u.,
+        // the default, with the residual drawn the same way; the line; the points with their error bars; or both.
+        Row {
+            objectName: "chart.toolbar.measuredStyle"
+            visible: !chart.report
+            spacing: AppSizes.toolbarSpacing
+
+            Repeater {
+                model: [
+                    {
+                        "token": "band",
+                        "icon": "chart-area",
+                        "tip": qsTr("Measured ± s.u. as a band, the residual too")
+                    },
+                    {
+                        "token": "line",
+                        "icon": "chart-line",
+                        "tip": qsTr("Measured as a line")
+                    },
+                    {
+                        "token": "points",
+                        "icon": "braille",
+                        "tip": qsTr("Measured as points with error bars")
+                    },
+                    {
+                        "token": "linePoints",
+                        "icon": "bezier-curve",
+                        "tip": qsTr("Measured as a line and points with error bars")
+                    }
+                ]
+                delegate: ChartToolButton {
+                    required property var modelData
+
+                    objectName: "chart.toolbar.measuredStyle." + modelData.token
+                    fontIcon: modelData.icon
+                    toolTip: modelData.tip
+                    checked: controller.measuredStyle === modelData.token
+                    onClicked: Preferences.patternMeasuredStyle = modelData.token
+                }
+            }
+        }
         ChartToolbar {
             id: toolbar
 
@@ -513,6 +556,28 @@ Item {
             labelDelegate: mainYLabel
         }
 
+        // The measured band: measured ± s.u., a soft fill between two thin lines (the band style).
+        AreaSeries {
+            id: measuredBand
+            objectName: "chart.series.meas.band"
+            color: Qt.alpha(controller.measuredColor, 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(0, measuredBand.upperSeries, measuredBand.lowerSeries, measuredBandTop, measuredBandBottom)
+        }
+        LineSeries {
+            id: measuredBandTop
+            objectName: "chart.series.meas.band.top"
+            color: controller.measuredColor
+            width: 1
+        }
+        LineSeries {
+            id: measuredBandBottom
+            objectName: "chart.series.meas.band.bottom"
+            color: controller.measuredColor
+            width: 1
+        }
         LineSeries {
             id: measuredLine
             objectName: "chart.series.meas"
@@ -524,6 +589,9 @@ Item {
             objectName: "chart.series.bkg"
             color: controller.backgroundColor
             width: 1
+            // Dashed, as the style table's `line+dash` says (the owner, 2026-10-22).
+            strokeStyle: LineSeries.StrokeStyle.DashLine
+            dashPattern: [4, 3]
         }
         LineSeries {
             id: calculatedLine
@@ -737,6 +805,28 @@ Item {
             objectName: "chart.series.resid"
             color: controller.residualColor
             width: 1  // edi::pattern_style_table's `resid` (ADR-0017 §15)
+        }
+        // The residual's band in the band style: (meas − calc) ± s.u., as the measured band.
+        AreaSeries {
+            id: residualBand
+            objectName: "chart.series.resid.band"
+            color: Qt.alpha(controller.residualColor, 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(1, residualBand.upperSeries, residualBand.lowerSeries, residualBandTop, residualBandBottom)
+        }
+        LineSeries {
+            id: residualBandTop
+            objectName: "chart.series.resid.band.top"
+            color: controller.residualColor
+            width: 1
+        }
+        LineSeries {
+            id: residualBandBottom
+            objectName: "chart.series.resid.band.bottom"
+            color: controller.residualColor
+            width: 1
         }
     }
 

@@ -203,7 +203,7 @@ function trace(pattern, series, index) {
     mode: marks.includes('markers') ? 'lines+markers' : 'lines',
     connectgaps: false,
     opacity: look.opacity ?? 1,
-    line: { color: look.light, width: look.width_px },
+    line: { color: look.light, width: look.width_px, dash: marks.includes('dash') ? 'dash' : 'solid' },
     hovertemplate: '%{x}, %{y}<extra>%{fullData.name}</extra>',
   };
   if (marks.includes('markers')) {

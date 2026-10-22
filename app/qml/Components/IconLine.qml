@@ -19,8 +19,8 @@ Item {
     // color, width}; a piece without a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not
     // (a fit-outcome column), and one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not
     // fitted"). A mark is a drawn shape, never a character, so it looks the same on every platform (edi ADR-0033):
-    // "line" a horizontal line `width` pixels thick, "tick" a vertical one. A `rich` piece's text is styled text (coloured
-    // spans in one label, spaced as the text itself).
+    // "line" a horizontal line `width` pixels thick, "dash" two dashes of one, "tick" a vertical one. A `rich`
+    // piece's text is styled text (coloured spans in one label, spaced as the text itself).
     property var segments: []
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
@@ -92,7 +92,7 @@ Item {
                 color: modelData.color ?? line.textColor
                 text: isIcon ? modelData.icon : mark !== "" ? "" : modelData.text
                 textFormat: modelData.rich === true ? Text.StyledText : Text.AutoText
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark === "dash" ? line.pixelSize * 1.2 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
@@ -113,12 +113,32 @@ Item {
                 Rectangle {
                     readonly property real thickness: piece.modelData.width ?? 1
 
-                    visible: piece.mark !== ""
+                    visible: piece.mark !== "" && piece.mark !== "dash"
                     width: piece.mark === "tick" ? thickness : piece.width
                     height: piece.mark === "line" ? thickness : line.pixelSize
                     x: (piece.width - width) / 2
                     y: line.centreY - piece.y - height / 2
                     color: piece.color
+                }
+
+                // A dashed series' sample: two dashes with a gap, as the series is drawn.
+                Row {
+                    id: dashes
+
+                    readonly property real thickness: piece.modelData.width ?? 1
+
+                    visible: piece.mark === "dash"
+                    y: line.centreY - piece.y - thickness / 2
+                    spacing: piece.width * 0.2
+
+                    Repeater {
+                        model: 2
+                        delegate: Rectangle {
+                            width: piece.width * 0.4
+                            height: dashes.thickness
+                            color: piece.color
+                        }
+                    }
                 }
 
                 TextMetrics {

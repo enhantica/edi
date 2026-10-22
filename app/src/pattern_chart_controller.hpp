@@ -11,6 +11,7 @@
 #include <QVariantAnimation>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
+#include <array>
 #include <optional>
 #include <vector>
 
@@ -124,6 +125,10 @@ class PatternChartController : public QObject {
     // in presentation order, its outline colour (`color`) and its fill colour (`fill`).
     Q_PROPERTY(bool structureCurves READ structureCurves WRITE setStructureCurves NOTIFY structureCurvesChanged)
     Q_PROPERTY(QVariantList structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
+    // How the measured pattern is drawn (the owner, 2026-10-22): "band", measured ± s.u. as two lines with a fill
+    // between them, the residual drawn the same way; "line"; "points", markers with error bars; "linePoints", all
+    // three. Anything else is "band".
+    Q_PROPERTY(QString measuredStyle READ measuredStyle WRITE setMeasuredStyle NOTIFY measuredStyleChanged)
     // Whether the chart presents a calculated pattern, which the structure curves need.
     Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
     // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or null for the data's own
@@ -205,6 +210,11 @@ class PatternChartController : public QObject {
     // The area (filled between its upper and lower series) and the outline of the structure curve at `index`, in
     // presentation order: the chart makes them as `structureCurveColors` grows and hands each over here.
     Q_INVOKABLE void setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline);
+    // A band's area (between its upper and lower series) and its two edges: pane 0 the measured band, 1 the
+    // residual's.
+    Q_INVOKABLE void setBandSeries(int pane, QXYSeries* upper, QXYSeries* lower, QXYSeries* top, QXYSeries* bottom);
+    QString measuredStyle() const { return measured_drawing_; }
+    void setMeasuredStyle(const QString& style);
     // The structures' tick series, one per `bragg.<place>` row of the style table, in place order: the chart makes
     // them as `braggColors` grows and hands each over here.
     Q_INVOKABLE void setBraggSeries(int place, QXYSeries* series);
@@ -283,6 +293,7 @@ class PatternChartController : public QObject {
     void excludedColorChanged();
     void braggColorsChanged();
     void structureCurvesChanged();
+    void measuredStyleChanged();
     void structureCurveColorsChanged();
     void hasCalculatedChanged();
     void viewRangesChanged();
@@ -349,6 +360,11 @@ class PatternChartController : public QObject {
         QPointer<QXYSeries> upper, lower, outline;
     };
     QList<StructureSeries> structure_series_;
+    struct BandSeries {
+        QPointer<QXYSeries> upper, lower, top, bottom;
+    };
+    std::array<BandSeries, 2> band_series_;
+    QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
     QVariantList structure_curve_colors_;
     std::string presented_x_;  // the x axis last presented, its quantity and unit

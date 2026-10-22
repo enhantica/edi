@@ -619,9 +619,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-14-stacked-dark-secondary-reset", {"right-click:scanView.stacked.pointer"}});
         steps_.push_back({"scanviews-15-stacked-dark-excluded-off", {"scanView.stacked.toolbar.excluded"}});
         steps_.push_back({"scanviews-16-stacked-light-excluded-on", {"theme:light", "scanView.stacked.toolbar.excluded"}});
-        steps_.push_back({"scanviews-17-map-light-excluded", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
-                                                             "choose:viridis"}});
-        steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:820x960"}});
+        steps_.push_back({"scanviews-17-map-light-excluded", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:1000x960"}});
         steps_.push_back({"scanviews-19-joint-stacked-light-d",
                           {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
                            "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:d"}});
@@ -629,6 +628,23 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-21-joint-map-dark-d", {"theme:dark"}});
         steps_.push_back({"scanviews-22-joint-stacked-dark-d", {"mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-23-joint-stacked-dark-tof", {"scanView.stacked.toolbar.xaxis", "choose:TOF"}});
+    }
+    // The pattern chart's four measured styles (the owner, 2026-10-22), in both themes, with the background dashed:
+    // the band of measured ± s.u. (the default) with the residual's band, the line, the points with their bars, and
+    // line and points; then the band zoomed in. Run only when asked (`--demo-only mstyle-`).
+    if (only.startsWith(QLatin1String("mstyle-"))) {
+        steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                     + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle.band"}});
+        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle.line"}});
+        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle.points"}});
+        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle.linePoints", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-5-linepoints-dark", {"theme:dark"}});
+        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle.points"}});
+        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle.line"}});
+        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle.band", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
+        steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).

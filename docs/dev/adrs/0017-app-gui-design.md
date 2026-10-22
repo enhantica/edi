@@ -638,14 +638,21 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   every marker and bar into one image, which every Qt Quick renderer draws, the offscreen platform's software one
   included. The benchmark that chose it over Qt Graphs' scatter series is `pixi run -e app app-chart-bench`; its
   table is under *The measured layer's benchmark* below.
+- **The measured style** (the owner, 2026-10-22): a group of four buttons between the axis boxes and the legend
+  button chooses how the measured pattern is drawn, one app setting for every pattern chart (ADR-0031 §7,
+  `PatternChart`): **band**, the default, two 1 px lines at measured + s.u. and measured − s.u. with a fill of 0.3
+  opacity between them, the residual then drawn the same way, (meas − calc) ± s.u., in its pane; **line**, the 2 px
+  line; **points**, the markers with their bars; **line and points**, all three, as the chart drew before. A point
+  without an s.u. has a band of no width; a lower end the log scale cannot show reaches the pane's bottom, as a bar
+  does. A report's figures keep the line and points.
 - **Colours and widths** (light / dark); the one table is `edi::pattern_style_table()`:
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Edi Natural) | `#829DB9` / `#B2C8E0`, then `#039EDC` / `#71CBFE`, then `#6EA163` / `#A1CD97` (§8) | 2 px line, 5 px markers, 1 px bars, drawn under the calculated curves |
+| Measured, by the experiment's place (Edi Natural) | `#829DB9` / `#B2C8E0`, then `#039EDC` / `#71CBFE`, then `#6EA163` / `#A1CD97` (§8) | by the measured style: a band of 1 px edges and a 0.3 fill, a 2 px line, 5 px markers with 1 px bars, or line and points; drawn under the calculated curves |
 | Total calculation (Edi Natural) | the scheme's role colour, `#CA5C6E` / `#EE8795` | 2 px line, no fill |
-| Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px line |
-| Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02) |
+| Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px dashed line, 4 px on and 3 off, its legend sample dashed too (the owner, 2026-10-22) |
+| Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02); in the band style a band as the measured one's |
 | Bragg ticks, by the structure's place (Edi Natural) | `#D26E3C` / `#F59B6F`, then `#958508` / `#BAAD52`, then `#936844` / `#BD9372` (§8) | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 

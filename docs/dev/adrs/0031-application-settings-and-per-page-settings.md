@@ -65,7 +65,7 @@ to know where Qt puts it.
    (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
    position on no screen is moved onto the primary screen), one group per page (`Analysis`: `scanPatternUpdates`),
    `PatternChart` for the one pattern chart every page shows (`yScale`, `structureCurves`, `legendShown`,
-   `hoverShown`, `pointerMode`; amended 2026-10-21: the Analysis and Experiment charts' y scales and the Experiment
+   `hoverShown`, `pointerMode`, `measuredStyle`; amended 2026-10-21: the Analysis and Experiment charts' y scales and the Experiment
    chart's x axis merged into it, the x axis being the project's own for every page, edi ADR-0017 §15), `ScanViews`
    for the Stacked and Map views (`stackedPalette`, `mapColours`, `mapSmooth`, `mapReversed`, `excludedShown`; edi ADR-0041) and `Selections` (each project's structure, experiment and
    scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store

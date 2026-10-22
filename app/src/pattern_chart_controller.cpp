@@ -92,6 +92,42 @@ std::size_t bragg_place(const std::string& style) {
     return place;
 }
 
+// An area's two edges for Qt Graphs from a curve and, per point, its base (NaN: `floor`). The area holds the drawn
+// points only: a gap (an excluded region, or a value the log scale cannot show) is not a point an area can take, so
+// the area closes onto its base at each gap instead of bridging it. The upper edge keeps `lift` above the lower one:
+// where the two met (a curve on its base, or a closed gap) Qt Graphs filled the area as a fan from its first point
+// or not at all.
+struct AreaEdges {
+    QList<QPointF> upper, lower;
+};
+AreaEdges area_edges(const QList<QPointF>& curve, const std::vector<double>& base, double floor, double lift) {
+    AreaEdges area;
+    area.upper.reserve(curve.size() + 2);
+    area.lower.reserve(curve.size() + 2);
+    bool open = false;
+    for (qsizetype k = 0; k < curve.size(); ++k) {
+        if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
+            if (open) {
+                area.upper.append(QPointF(area.lower.back().x(), area.lower.back().y() + lift));
+                area.lower.append(area.lower.back());
+                open = false;
+            }
+            continue;
+        }
+        const auto at = static_cast<std::size_t>(k);
+        const double low = at < base.size() ? base[at] : std::numeric_limits<double>::quiet_NaN();
+        const QPointF bottom(curve[k].x(), std::isfinite(low) ? low : floor);
+        if (!open && !area.upper.isEmpty()) {
+            area.upper.append(QPointF(bottom.x(), bottom.y() + lift));
+            area.lower.append(bottom);
+        }
+        area.upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), bottom.y() + lift)));
+        area.lower.append(bottom);
+        open = true;
+    }
+    return area;
+}
+
 }  // namespace
 
 PatternChartController::PatternChartController(QObject* parent)
@@ -247,6 +283,27 @@ void PatternChartController::setStructureCurves(bool on) {
         emit structureCurvesChanged();
         invalidate();
     }
+}
+
+void PatternChartController::setMeasuredStyle(const QString& style) {
+    const QString known = style == QLatin1String("line") || style == QLatin1String("points") ||
+                                  style == QLatin1String("linePoints")
+                              ? style
+                              : QStringLiteral("band");
+    if (known != measured_drawing_) {
+        measured_drawing_ = known;
+        emit measuredStyleChanged();
+        invalidate();
+    }
+}
+
+void PatternChartController::setBandSeries(int pane, QXYSeries* upper, QXYSeries* lower, QXYSeries* top,
+                                           QXYSeries* bottom) {
+    if (pane < 0 || pane >= static_cast<int>(band_series_.size())) {
+        return;
+    }
+    band_series_[static_cast<std::size_t>(pane)] = {upper, lower, top, bottom};
+    invalidateLater();
 }
 
 void PatternChartController::setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline) {
@@ -504,6 +561,7 @@ edi::PatternView PatternChartController::view() const {
     view.columns = plot_width_ > 0.0 ? edi::pixel_columns(plot_width_, device_pixel_ratio_) : 0;
     view.y_scale = core_scale(y_scale_);
     view.structure_curves = structure_curves_;
+    view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
     return view;
 }
 
@@ -562,8 +620,16 @@ void PatternChartController::refresh() {
                                                                       : QVariant(color(QString::fromStdString(segment.style)))}});
         }
         const QColor mark = color(QString::fromStdString(series.style));
+        // A dashed series has a dashed sample.
+        bool dashed = false;
+        for (const edi::SeriesStyle& style : styles()) {
+            dashed = dashed || (style.key == series.style && style.mark.find("dash") != std::string::npos);
+        }
         legend.append({QString::fromStdString(series.label), mark,
-                       bragg ? QStringLiteral("tick") : QStringLiteral("line"), bragg, width, segments});
+                       bragg    ? QStringLiteral("tick")
+                       : dashed ? QStringLiteral("dash")
+                                : QStringLiteral("line"),
+                       bragg, width, segments});
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -650,11 +716,16 @@ void PatternChartController::refresh() {
     publish(y_tick_, y_step, &PatternChartController::yTickIntervalChanged);
     publish(y_anchor_, y_anchor, &PatternChartController::yTickAnchorChanged);
 
-    replace(measured_series_, measured != nullptr ? points_of(*measured) : QList<QPointF>());
+    // The measured style (the owner, 2026-10-22): the line, the markers with their bars, or the band, measured ± s.u.
+    // with the residual drawn the same way. A report's chart draws all but the band, as the report does.
+    const bool band = measured_drawing_ == QLatin1String("band") && !report_;
+    const bool line = report_ || measured_drawing_ == QLatin1String("line") || measured_drawing_ == QLatin1String("linePoints");
+    const bool marks = report_ || measured_drawing_ == QLatin1String("points") || measured_drawing_ == QLatin1String("linePoints");
+    replace(measured_series_, measured != nullptr && line ? points_of(*measured) : QList<QPointF>());
     if (measured_layer_) {
         QList<QPointF> points;
         QList<double> low, high;
-        if (measured != nullptr) {
+        if (measured != nullptr && marks) {
             for (std::size_t i = 0; i < measured->points.size(); ++i) {
                 if (!std::isnan(measured->points[i].y)) {
                     points.append(QPointF(measured->points[i].x, measured->points[i].y));
@@ -667,7 +738,40 @@ void PatternChartController::refresh() {
     }
     replace(calculated_series_, calculated != nullptr ? points_of(*calculated) : QList<QPointF>());
     replace(background_series_, background != nullptr ? points_of(*background) : QList<QPointF>());
-    replace(residual_series_, residual != nullptr ? points_of(*residual) : QList<QPointF>());
+    replace(residual_series_, residual != nullptr && !band ? points_of(*residual) : QList<QPointF>());
+    // A band: its area and its two edges, each point's ends (a point without an s.u. has its band's ends at the
+    // point; a lower end the log scale cannot show reaches the pane's bottom).
+    const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
+        const BandSeries& target = band_series_[pane];
+        QList<QPointF> top, bottom;
+        if (band && series != nullptr) {
+            const double nan = std::numeric_limits<double>::quiet_NaN();
+            for (std::size_t k = 0; k < series->points.size(); ++k) {
+                const double x = series->points[k].x, y = series->points[k].y;
+                if (!std::isfinite(y)) {
+                    top.append(QPointF(nan, nan));
+                    bottom.append(QPointF(nan, nan));
+                    continue;
+                }
+                const double high = k < series->bar_high.size() && std::isfinite(series->bar_high[k]) ? series->bar_high[k] : y;
+                const double low = k < series->bar_low.size() ? series->bar_low[k] : y;
+                top.append(QPointF(x, high));
+                bottom.append(QPointF(x, std::isfinite(low) ? low : floor));
+            }
+        }
+        std::vector<double> base;
+        base.reserve(static_cast<std::size_t>(bottom.size()));
+        for (const QPointF& point : bottom) {
+            base.push_back(point.y());
+        }
+        const AreaEdges area = area_edges(top, base, floor, lift);
+        replace(target.upper, area.upper);
+        replace(target.lower, area.lower);
+        replace(target.top, top);
+        replace(target.bottom, bottom);
+    };
+    fill_band(measured, 0, shown_y_min_, plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0);
+    fill_band(residual, 1, residual_min_, 0.0);
     for (std::size_t place = 0; place < ticks.size(); ++place) {
         replace(bragg_series_[static_cast<qsizetype>(place)], ticks[place]);
     }
@@ -682,38 +786,12 @@ void PatternChartController::refresh() {
         if (static_cast<qsizetype>(index) >= structure_series_.size()) {
             continue;  // the chart makes its series and hands them over, which draws again
         }
-        // The area holds the drawn points only: a gap (an excluded region, or a curve the log scale cannot show) is
-        // not a point an area can take, so the area closes onto its base at each gap instead of bridging it. A
-        // background the log scale cannot show (zero or less) is below the axis: the fill reaches the axis there.
-        // The area's upper edge keeps a twentieth of a pixel above its lower one: where the two met (a curve on a
-        // zero background between its peaks, or a closed gap) Qt Graphs filled the area as a fan from its first point
-        // or not at all.
+        // A background the log scale cannot show (zero or less) is below the axis: the fill reaches the axis there.
         const double lift = plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0;
         const QList<QPointF> curve = points_of(series);
-        QList<QPointF> upper, lower;
-        upper.reserve(curve.size() + 2);
-        lower.reserve(curve.size() + 2);
-        bool open = false;
-        for (qsizetype k = 0; k < curve.size(); ++k) {
-            if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
-                if (open) {
-                    upper.append(QPointF(lower.back().x(), lower.back().y() + lift));
-                    lower.append(lower.back());
-                    open = false;
-                }
-                continue;
-            }
-            const auto at = static_cast<std::size_t>(k);
-            const double low = at < series.bar_low.size() ? series.bar_low[at] : std::numeric_limits<double>::quiet_NaN();
-            const QPointF base(curve[k].x(), std::isfinite(low) ? low : shown_y_min_);
-            if (!open && !upper.isEmpty()) {
-                upper.append(QPointF(base.x(), base.y() + lift));
-                lower.append(base);
-            }
-            upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), base.y() + lift)));
-            lower.append(base);
-            open = true;
-        }
+        const AreaEdges area = area_edges(curve, series.bar_low, shown_y_min_, lift);
+        const QList<QPointF>& upper = area.upper;
+        const QList<QPointF>& lower = area.lower;
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
         replace(target.upper, upper);
         replace(target.lower, lower);
