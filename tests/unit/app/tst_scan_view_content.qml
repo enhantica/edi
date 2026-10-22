@@ -221,26 +221,10 @@ Rectangle {
         function test_map_interpolates_between_neighboring_patterns() {
             const scan = open("map", "rows");
             ready(scan);
-            const layer = named("layer"), image = grabImage(chart), axes = named("axes");
-            const x = Math.floor(layer.width * 0.4);
-            const y = value => Math.round((axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * (layer.height - 1));
-            function pixel(py) {
-                const point = layer.mapToItem(chart, x, py);
-                return image.pixel(Math.round(point.x), Math.round(point.y));
-            }
-            const first = pixel(y(100)), second = pixel(y(250));
-            verify(String(first) !== String(second), "Independent constant-intensity datasets establish distinct neighboring row colours");
-            const colours = new Set();
-            for (let py = y(250) + 2; py < y(100) - 2; ++py) {
-                const current = pixel(py);
-                colours.add(String(current));
-                if (py > y(250) + 3) {
-                    const previous = pixel(py - 1);
-                    verify(Math.max(...["r", "g", "b"].map(c => Math.abs(current[c] - previous[c]))) < 0.04, "Adjacent Map pixels change smoothly without a row boundary jump");
-                }
-            }
-            verify(colours.size > 8, "Between neighboring datasets the actual Map draws many interior colours rather than constant row bands");
+            // Owner amendment 2026-10-22 replaces centre-to-centre interpolation.
+            checkEdgePixels([25, 175, 475, 775], [0, 128, 255], [[10, 112.4], [10, 112.4], [10, 112.4]], [50], true);
         }
+
         function ink(pixel, expected, background = ({
                 r: 1,
                 g: 1,
@@ -671,7 +655,10 @@ Rectangle {
             return Render.descendants(root).find(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip));
         }
         function mapStrip() {
-            const layer = named("layer"), axes = named("axes"), marker = named("current"), frame = grabImage(chart), strip = [];
+            const layer = named("layer"), axes = named("axes"), marker = named("current");
+            marker.visible = false;
+            verify(waitForRendering(chart), "Map interpolation samples exclude only the unrelated selection overlay");
+            const frame = grabImage(chart), strip = [];
             for (let py = 2; py < layer.height - 2; ++py) {
                 const top = marker.mapToItem(layer, 0, 0).y;
                 if (Math.abs(py - top) <= 2 || Math.abs(py - top - marker.height) <= 2)
@@ -684,10 +671,101 @@ Rectangle {
                     py
                 });
             }
+            marker.visible = true;
             return strip;
         }
         function smoothStrip(strip) {
             return new Set(strip.map(row => String(row.pixel))).size > 3;
+        }
+        // Closed-form owner oracle: band boundaries are neighbour midpoints;
+        // each blend extends one quarter of each adjacent band's own height.
+        function edgeValue(y, x, bounds, levels, supports, smooth) {
+            let own = -1;
+            for (let i = 0; i < levels.length; ++i)
+                if (y >= bounds[i] && y <= bounds[i + 1]) {
+                    own = i;
+                    break;
+                }
+            if (own < 0 || x < supports[own][0] || x > supports[own][1])
+                return NaN;
+            if (smooth)
+                for (let i = 0; i < levels.length - 1; ++i) {
+                    const lower = bounds[i + 1] - (bounds[i + 1] - bounds[i]) / 4;
+                    const upper = bounds[i + 1] + (bounds[i + 2] - bounds[i + 1]) / 4;
+                    if (y >= lower && y <= upper && x >= supports[i][0] && x <= supports[i][1] && x >= supports[i + 1][0] && x <= supports[i + 1][1])
+                        return levels[i] + (levels[i + 1] - levels[i]) * (y - lower) / (upper - lower);
+                }
+            return levels[own];
+        }
+        function checkEdgePixels(bounds, levels, supports, columns, smooth) {
+            const marker = named("current");
+            marker.visible = false;
+            verify(waitForRendering(chart), "The independent band-colour observation has a completed frame without its selection overlay");
+            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            const dy = (axes.axisY.max - axes.axisY.min) / layer.height;
+            for (let row = 0; row < levels.length; ++row)
+                for (const fraction of [.1, .2, .4, .6, .8, .9])
+                    for (const x of columns) {
+                        const y = bounds[row] + fraction * (bounds[row + 1] - bounds[row]);
+                        if (y <= axes.axisY.min + dy * 2 || y >= axes.axisY.max - dy * 2)
+                            continue;
+                        const point = layer.mapToItem(chart, (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width, (axes.axisY.max - y) / dy);
+                        const pixel = frame.pixel(Math.round(point.x), Math.round(point.y));
+                        const value = edgeValue(y, x, bounds, levels, supports, smooth);
+                        if (!Number.isFinite(value)) {
+                            compare(String(pixel), String(chart.colors.chartBackground), "A dataset's unsupported column stays empty through its whole band in both modes; row=" + row + " fraction=" + fraction + " x=" + x);
+                        } else {
+                            // At most two logical pixels of raster sampling uncertainty, never a data tolerance.
+                            const candidates = [-2, -1, 0, 1, 2].map(delta => edgeValue(y + delta * dy, x, bounds, levels, supports, smooth)).filter(Number.isFinite).map(v => rgb(table[Math.max(0, Math.min(255, Math.round(v)))]));
+                            verify(candidates.some(c => ["r", "g", "b"].every(k => Math.abs(c[k] - pixel[k]) <= 2 / 255)), "Map pixels retain their own dataset except inside the quarter-band edge zone; row=" + row + " fraction=" + fraction + " x=" + x + " smooth=" + smooth + " actual=" + pixel + " analytic intensity=" + value);
+                        }
+                    }
+            marker.visible = true;
+        }
+        function test_map_edge_bands_data() {
+            const rows = [];
+            for (const kind of ["value", "file", "datablock"])
+                for (const smooth of [false, true])
+                    for (const dark of [false, true])
+                        rows.push({
+                            tag: kind + "-" + (smooth ? "smooth" : "stepped") + "-" + (dark ? "dark" : "light"),
+                            kind,
+                            smooth,
+                            dark
+                        });
+            return rows;
+        }
+        function test_map_edge_bands(data) {
+            let scan;
+            if (data.kind === "datablock") {
+                Preferences.resetToDefaults();
+                Preferences.scanMapColours = "viridis";
+                const root = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+                Input.edgeBanks(SettingsProof, root);
+                verify(Session.openProject(root), "The edge-blend witness opens independently written unequal-support datablocks");
+                chart = factory.createObject(surface, {
+                    project: Session.project,
+                    mode: "map"
+                });
+                scan = Session.project.scanViews;
+            } else
+                scan = open("map", "edges");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const rows = axisControl("y");
+            if (data.kind === "file")
+                choose(rows, 1);
+            const toggle = interpolationToggle(chart);
+            verify(toggle !== undefined && toggle.enabled && toggle.visible, "Every row kind exposes the enabled hard-edge/edge-blend control");
+            compare(toggle.checked, true, "Every row kind begins with the remembered default edge blending");
+            if (!data.smooth) {
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+                tryCompare(toggle, "checked", false, 1000, "Real toolbar input selects hard band edges");
+            }
+            verify(waitForRendering(chart), "The selected edge mode reaches the actual Map pixels");
+            const bounds = data.kind === "value" ? [25, 175, 475, 775] : data.kind === "file" ? [-.5, .5, 1.5, 2.5] : [-.5, .5, 1.5];
+            checkEdgePixels(bounds, data.kind === "datablock" ? [0, 255] : [0, 128, 255], data.kind === "datablock" ? [[10000, 50000], [30000, 90000]] : [[10, 50], [30, 90], [20, 80]], data.kind === "datablock" ? [40000, 20000, 70000] : [40, 20, 85], data.smooth);
         }
         function test_map_default_and_saved_choice() {
             const location = Globals.Vars.settingsFile;
@@ -715,7 +793,7 @@ Rectangle {
             const scan = open("map", "rows");
             ready(scan);
             verify(interpolationToggle(chart) !== undefined, "The Map toolbar exposes its actual stepped/smooth toggle");
-            verify(smoothStrip(mapStrip()), "A new profile defaults to smoothly interpolated colour between the analytic datasets");
+            verify(smoothStrip(mapStrip()), "A new profile defaults to smooth blending across the analytic band edges");
         }
         function test_map_interpolation_toggle_data() {
             const rows = [];
@@ -743,28 +821,9 @@ Rectangle {
             compare(smoothStrip(strip), data.smooth, "Real input selects the requested interpolation rather than only changing its icon");
             verify(strip.length > 20 && strip.every(row => String(row.pixel) !== background), "Neither interpolation mode exposes background seams between any neighboring datasets");
             const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
-            if (!data.smooth) {
-                for (const row of strip) {
-                    // Exact bands meet at the independently known neighbour midpoints.
-                    if (Math.abs(row.value - 175) < (chart.yMax - chart.yMin) / named("layer").height || Math.abs(row.value - 475) < (chart.yMax - chart.yMin) / named("layer").height)
-                        continue;
-                    const expected = table[row.value < 175 ? 0 : row.value < 475 ? 128 : 255];
-                    compare(String(row.pixel).toLowerCase(), expected.toLowerCase(), "Each stepped dataset band keeps its independent published intensity colour, without a gradient inside the band");
-                }
-            } else {
-                let maximumStep = 0;
-                for (let index = 1; index < table.length; ++index)
-                    for (const offset of [1, 3, 5])
-                        maximumStep = Math.max(maximumStep, Math.abs(parseInt(table[index].slice(offset, offset + 2), 16) - parseInt(table[index - 1].slice(offset, offset + 2), 16)));
-                const minimumPixels = named("layer").height * 150 / (chart.yMax - chart.yMin);
-                const bound = (Math.ceil(128 / minimumPixels) + 1) * maximumStep + 1;
-                for (let index = 1; index < strip.length; ++index) {
-                    if (strip[index].py !== strip[index - 1].py + 1)
-                        continue;
-                    verify(["r", "g", "b"].every(channel => Math.abs(strip[index].pixel[channel] - strip[index - 1].pixel[channel]) * 255 <= bound), "Smooth colour has no band jump beyond the independently derived table and pixel-step bound");
-                }
-            }
+            checkEdgePixels([25, 175, 475, 775], [0, 128, 255], [[10, 112.4], [10, 112.4], [10, 112.4]], [50], data.smooth);
             const checked = toggle.checked;
+            tryVerify(() => SettingsProof.value(Globals.Vars.settingsFile, "ScanViews", "mapSmooth") === checked, 2000, "The real edge-mode preference reaches its settings file before the fresh-engine memory check");
             const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool saved:Preferences.scanMapSmooth }');
             verify(!fresh.error, "A fresh production engine reloads the interpolation setting exercised by the actual control");
             compare(fresh.saved, checked, "Both actual stepped and smooth choices are remembered in a fresh engine");

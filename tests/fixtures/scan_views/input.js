@@ -12,8 +12,8 @@ function prepare(proof, root, kind) {
     for (let row = 0; row < files.length; ++row) {
         let text = "XYDATA analytic scan\nTEMP " + (kind === "height" ? [100, 250, 400] : [100, 250, 700])[row] + "\n";
         for (let i = 0; i <= 4096; ++i) {
-            const value = kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : (kind === "rows" || kind === "height") ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
-            text += (10 + i / 40).toFixed(3) + " " + value + " 1\n";
+            const value = kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : (kind === "rows" || kind === "height" || kind === "edges") ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
+            text += (kind === "edges" ? [10,30,20][row] + i / 4096 * [40,60,60][row] : 10 + i / 40).toFixed(3) + " " + value + " 1\n";
         }
         if (!proof.write(root, "experiments/d20_scan/" + files[row], kind === "broken" && row === 1 ? "invalid pattern\n" : text))
             throw Error("The private analytic scan input could not be written");
@@ -70,4 +70,17 @@ function dense(proof, root, jointRows, count = 48, lowRows = []) {
             if(!proof.remove(root,"experiments/"+name+".edi")) throw Error("The dense joint fixture replaces its original private banks");
     }
     return count;
+}
+
+// Unequal native supports: no band's missing column may borrow a neighbour.
+function edgeBanks(proof, root) {
+    joint(proof, root, false);
+    for (const [row, name] of [[0,"expt_n2"],[1,"expt_s2"]]) {
+        const file="experiments/"+name+".edi", old=proof.text(root,file);
+        let text=old.slice(0,old.indexOf("loop_\n_data.time_of_flight")).replace(/loop_\n_excluded_region\.id[\s\S]*?\n\n/, "");
+        text+="loop_\n_data.time_of_flight\n_data.intensity_meas\n_data.intensity_meas_su\n";
+        for(let i=0;i<=256;++i)
+            text+=([10000,30000][row]+i/256*[40000,60000][row])+" "+[0,255][row]+" 1\n";
+        if(!proof.write(root,file,text)) throw Error("The independent unequal-support bank could not be written");
+    }
 }

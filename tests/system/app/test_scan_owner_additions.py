@@ -111,6 +111,13 @@ CASES += tuple(
 )
 CASES += tuple('test_tof_x_labels_never_touch:' + mode for mode in ('stacked', 'map'))
 
+CASES += tuple(
+    'test_map_edge_bands:' + kind + '-' + mode + '-' + theme
+    for kind in ('value', 'file', 'datablock')
+    for mode in ('stepped', 'smooth')
+    for theme in ('light', 'dark')
+)
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):
