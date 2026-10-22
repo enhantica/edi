@@ -32,7 +32,8 @@ TestCase {
         originalQuantity = Preferences.singleCrystalQuantity;
         originalHover = Preferences.chartHoverShown;
         originalPointer = Preferences.chartPointerMode;
-        Preferences.chartPointerMode = "zoom";
+        if (originalPointer !== undefined)
+            Preferences.chartPointerMode = "zoom";
         Preferences.singleCrystalQuantity = "f_squared";
         Preferences.chartHoverShown = true;
         appWindow = application.createObject(null);
@@ -47,7 +48,8 @@ TestCase {
         Probe.releaseScratchProjects();
         Preferences.singleCrystalQuantity = originalQuantity;
         Preferences.chartHoverShown = originalHover;
-        Preferences.chartPointerMode = originalPointer;
+        if (originalPointer !== undefined)
+            Preferences.chartPointerMode = originalPointer;
         Style.Colors.theme = originalTheme;
         if (appWindow)
             appWindow.destroy();
@@ -249,7 +251,8 @@ TestCase {
     }
     function initTestCase() {
         compare(Preferences.singleCrystalQuantity, "f_squared", "Fresh chart preferences must default to F squared before a test writes them");
-        compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
+        if (Preferences.chartPointerMode !== undefined)
+            compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
         compare(Preferences.chartHoverShown, true, "Fresh chart preferences must default to showing reflection tooltips");
     }
     function expand(name) {
@@ -416,7 +419,8 @@ TestCase {
         const patternToggle = Review.find(Ui.page(appWindow), "chart.toolbar.hover");
         verify(patternToggle !== null && !patternToggle.checked, "The powder chart's tooltip button must observe the same saved disabled setting");
         mouseClick(patternToggle, patternToggle.width / 2, patternToggle.height / 2);
-        compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
+        if (Preferences.chartPointerMode !== undefined)
+            compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
         compare(Preferences.chartHoverShown, true, "The powder tooltip button must update the same remembered setting");
         const restored = openSingle(data);
         compare(toolbarControl(restored, "hover").checked, true, "Reopening single crystal must retain the tooltip choice made on the pattern chart");
@@ -567,6 +571,7 @@ TestCase {
         const chart = openSingle(data);
         const pan = toolbarControl(chart, "pan"), zoom = toolbarControl(chart, "zoom"), reset = toolbarControl(chart, "reset");
         verify(pan !== null && zoom !== null && reset !== null && Ui.exposed(pan) && Ui.exposed(zoom), "The single-crystal chart must expose working move, box zoom and reset buttons as the pattern chart does");
+        compare(Preferences.chartPointerMode, "zoom", "The single-crystal chart must expose the shared remembered pointer setting");
         verify(zoom.checked && !pan.checked, "The shared initial chart pointer mode must enable box zoom and exclude move");
         const layer = Review.find(chart, "singleCrystal.points");
         const pointer = Review.find(chart, "singleCrystal.pointer") || Review.descendants(chart).find(item => typeof item.pressX === "number");
