@@ -145,10 +145,23 @@ def observe(html, *, render_timeout_ms=5000):
             url,
         ]
     )
+    environment = {**os.environ, 'MOZ_HEADLESS': '1'}
+    # The native runner's report-writer fault shim must stay in that runner. Firefox's
+    # sandbox also forks processes; loading the writer interposer there can crash them.
+    fault_directory = environment.get('EDI_REPORT_ACCEPTANCE_PRELOADED')
+    if fault_directory:
+        for key in ('LD_PRELOAD', 'DYLD_INSERT_LIBRARIES'):
+            libraries = [
+                item
+                for item in environment.get(key, '').split(':')
+                if item and Path(item).parent != Path(fault_directory)
+            ]
+            if libraries:
+                environment[key] = ':'.join(libraries)
+            else:
+                environment.pop(key, None)
     with (temporary / 'browser.log').open('w') as log:
-        process = subprocess.Popen(
-            args, stdout=log, stderr=log, env={**os.environ, 'MOZ_HEADLESS': '1'}
-        )
+        process = subprocess.Popen(args, stdout=log, stderr=log, env=environment)
         try:
             # Allow browser startup and both frames to load on slower CI runners.
             # Each page still has its own drawing deadline.
