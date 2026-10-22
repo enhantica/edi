@@ -141,9 +141,31 @@ ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensit
         return trace;
     }
     const std::size_t points = std::min(x.size(), intensity.size());
+    // No point inside: a zoom between two neighbouring points still shows the line joining them, as the map does,
+    // on a rising or a falling grid; a point that cannot be drawn between them breaks it.
+    if (inside.count == 0) {
+        for (std::size_t i = 0; i + 1 < points; ++i) {
+            const double xa = x[i], xb = x[i + 1], ya = intensity[i], yb = intensity[i + 1];
+            if (!std::isfinite(xa) || !std::isfinite(xb) || !std::isfinite(ya) || !std::isfinite(yb) ||
+                !(std::min(xa, xb) < x_min && std::max(xa, xb) > x_max)) {
+                continue;
+            }
+            if (!trace.x.empty()) {
+                trace.x.push_back(std::numeric_limits<double>::quiet_NaN());
+                trace.low.push_back(kNaN);
+                trace.high.push_back(kNaN);
+            }
+            for (const std::size_t k : {i, i + 1}) {
+                trace.x.push_back(x[k]);
+                trace.low.push_back(static_cast<float>(intensity[k]));
+                trace.high.push_back(static_cast<float>(intensity[k]));
+            }
+        }
+        return trace;
+    }
     // The points inside, and the one beyond each end of the run inside, so the line leaves the plot at its edges.
-    const std::size_t from = inside.count == 0 ? 0 : inside.first > 0 ? inside.first - 1 : 0;
-    const std::size_t to = inside.count == 0 ? 0 : std::min(points, inside.last + 2);
+    const std::size_t from = inside.first > 0 ? inside.first - 1 : 0;
+    const std::size_t to = std::min(points, inside.last + 2);
     for (std::size_t i = from; i < to; ++i) {
         const bool finite = std::isfinite(x[i]) && std::isfinite(intensity[i]);
         trace.x.push_back(finite ? x[i] : std::numeric_limits<double>::quiet_NaN());
