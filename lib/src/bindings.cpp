@@ -2848,6 +2848,17 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::views::NoAbsorption, edi::views::AbsorptionNode>(m, "NoAbsorption")
         .def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
 
+    // A single crystal's extinction: its mosaic model (read here; the file and the app set it) and
+    // its crystal radius and mosaicity.
+    nb::class_<edi::views::ExtinctionNode> extinction(m, "BeckerCoppensExtinction");
+    extinction.def_prop_ro("model", [](edi::views::ExtinctionNode& self) {
+        return self.storage().model.value_or("gauss");
+    });
+    def_view_optional_parameter_field(extinction, "radius", &edi::ExtinctionBase::radius,
+                                      edi::spec::extinction_radius);
+    def_view_optional_parameter_field(extinction, "mosaicity", &edi::ExtinctionBase::mosaicity,
+                                      edi::spec::extinction_mosaicity);
+
     def_parameters(peak);
     def_parameters(instrument);
     def_parameters(linked_structure);
@@ -2946,6 +2957,16 @@ NB_MODULE(_edi, m) {
                          nb::detail::keep_alive(out.ptr(), self_object.ptr());
                          return out;
                      })
+        // A single crystal's extinction; None for a powder.
+        .def_prop_ro(
+            "extinction",
+            [](edi::ExperimentBase& self) -> nb::object {
+                if (!self.reflections) {
+                    return nb::none();
+                }
+                return nb::cast(edi::views::ExtinctionNode(&self));
+            },
+            nb::keep_alive<0, 1>())
         // Immutable tuple-of-pairs out — no mutable copy can exist; the replacement setter
         // stays (ExcludedRegion items are D8's own task).
         .def_prop_rw(
