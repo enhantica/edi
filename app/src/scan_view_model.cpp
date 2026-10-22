@@ -138,23 +138,16 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     if (!joint && !joint_) {
         return;  // a scan, or nothing, stays as it is
     }
-    clear();
-    publish(joint_, joint, &ScanViewModel::jointChanged);
-    has_values_ = false;
-    extracted_title_.clear();
-    emit valueTitleChanged();
-    QStringList labels;
     // Every experiment's points as they are now; one without data draws nothing and counts as not read.
-    bool shared = true;
+    std::vector<Pattern> next;
+    QStringList labels;
+    bool shared = true, every_d = joint;
+    edi::BeamModeEnum mode = mode_;
     if (joint) {
-        mode_ = project->experiment().effective_beam_mode();
-        emit timeOfFlightChanged();
+        mode = project->experiment().effective_beam_mode();
         for (const auto& experiment : project->experiments) {
             shared = shared && (experiment->effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH) ==
-                                   (mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH);
-        }
-        bool every_d = true;
-        for (const auto& experiment : project->experiments) {
+                                   (mode == edi::BeamModeEnum::CONSTANT_WAVELENGTH);
             Pattern pattern;
             labels.append(QString::fromStdString(experiment->name));
             if (experiment->data) {
@@ -177,23 +170,47 @@ void ScanViewModel::setJoint(const edi::Project* project) {
             }
             every_d = every_d && xs.size() >= 2;
             pattern.excluded = excluded_of(*experiment);
-            if (pattern.x.empty()) {
-                ++failed_;
-            }
-            patterns_.push_back(std::move(pattern));
-            values_.push_back(kNaN);
+            next.push_back(std::move(pattern));
         }
-        loaded_ = static_cast<int>(patterns_.size());
-        publish(d_available_, every_d, &ScanViewModel::dAvailableChanged);
-        emit failedChanged();
-    } else {
-        publish(d_available_, false, &ScanViewModel::dAvailableChanged);
     }
+    // Taken again after every edit and calculation: the same experiments with the same data change nothing, so a
+    // running joint fit neither redraws the views nor resets their zoom.
+    const auto same = [](const std::vector<double>& a, const std::vector<double>& b) {
+        return std::equal(a.begin(), a.end(), b.begin(), b.end(),
+                          [](double u, double v) { return u == v || (std::isnan(u) && std::isnan(v)); });
+    };
+    if (joint && joint_ && labels == row_labels_ && next.size() == patterns_.size() &&
+        std::equal(next.begin(), next.end(), patterns_.begin(), [&same](const Pattern& a, const Pattern& b) {
+            return same(a.x, b.x) && same(a.intensity, b.intensity) && same(a.d, b.d) && a.excluded == b.excluded;
+        })) {
+        return;
+    }
+    const bool count_changed = next.size() != patterns_.size() || joint != joint_;
+    clear();
+    publish(joint_, joint, &ScanViewModel::jointChanged);
+    has_values_ = false;
+    extracted_title_.clear();
+    emit valueTitleChanged();
+    if (mode != mode_) {
+        mode_ = mode;
+        emit timeOfFlightChanged();
+    }
+    int empty = 0;
+    for (const Pattern& pattern : next) {
+        empty += pattern.x.empty() ? 1 : 0;
+    }
+    patterns_ = std::move(next);
+    values_.assign(patterns_.size(), kNaN);
+    loaded_ = static_cast<int>(patterns_.size());
+    publish(failed_, empty, &ScanViewModel::failedChanged);
+    publish(d_available_, every_d, &ScanViewModel::dAvailableChanged);
     publish(native_shared_, shared, &ScanViewModel::nativeSharedChanged);
     publish(row_labels_, labels, &ScanViewModel::rowLabelsChanged);
     placeAxis();
     placeRows();
-    emit countChanged();
+    if (count_changed) {
+        emit countChanged();
+    }
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
