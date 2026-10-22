@@ -23,7 +23,7 @@ _atom_site.occupancy
 _atom_site.adp_iso
 _atom_site.adp_type
 O O 0 0 0.26() c 1 0.5() Biso
-Ni1 Ni 0 0 0.5 b 0 0.5 Biso
-Li1 Li 0 0 0.5 b 1() 0.5() Biso
-Li2 Li 0 0 0 a 0 0.5 Biso
-Ni2 Ni 0 0 0 a 1 0.5() Biso
+Ni1 Ni 0 0 0.5 b 0.05 0.5 Biso
+Li1 Li 0 0 0.5 b 0.95() 0.5() Biso
+Li2 Li 0 0 0 a 0.05 0.5 Biso
+Ni2 Ni 0 0 0 a 0.95 0.5() Biso
