@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
+import QtGraphs
 import edi.app
 import ReportAcceptance 1.0
 import EdiAcceptance 1.0
@@ -766,6 +767,77 @@ Rectangle {
             verify(waitForRendering(chart), "The selected edge mode reaches the actual Map pixels");
             const bounds = data.kind === "value" ? [25, 175, 475, 775] : data.kind === "file" ? [-.5, .5, 1.5, 2.5] : [-.5, .5, 1.5];
             checkEdgePixels(bounds, data.kind === "datablock" ? [0, 255] : [0, 128, 255], data.kind === "datablock" ? [[10000, 50000], [30000, 90000]] : [[10, 50], [30, 90], [20, 80]], data.kind === "datablock" ? [40000, 20000, 70000] : [40, 20, 85], data.smooth);
+        }
+        function test_map_intensity_labels_data() {
+            const cases = [];
+            for (const scale of ["linear", "sqrt", "log"])
+                for (const range of ["large", "plain"])
+                    for (const dark of [false, true])
+                        cases.push({
+                            tag: scale + "-" + range + (dark ? "-dark" : "-light"),
+                            scale,
+                            range,
+                            dark
+                        });
+            return cases;
+        }
+        function test_map_intensity_labels(data) {
+            const low = data.range === "large" ? 437233 : 1;
+            const high = data.range === "large" ? 9853782 : 437233;
+            const expected = data.range === "large" ? (data.scale === "log" ? ["437233", "9.854e6"] : ["0.437e6", "9.854e6"]) : ["1", "437233"];
+            const root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
+            for (const [index, file] of ["all594687.dat", "all594791.dat", "all594842.dat"].entries()) {
+                const text = "XYDATA independent intensity endpoints\nTEMP " + [100, 250, 700][index] + "\n10 " + low + " 1\n40 " + high + " 1\n80 " + low + " 1\n";
+                verify(SettingsProof.write(root, "experiments/d20_scan/" + file, text), "The label fixture writes its declared original-count endpoints");
+            }
+            Preferences.resetToDefaults();
+            Preferences.patternYScale = data.scale;
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            verify(Session.openProject(root), "The intensity-label actor opens the independent scan");
+            const component = Qt.createComponent(Qt.resolvedUrl("../../../app/qml/Components/ScanViewChart.qml"));
+            compare(component.status, Component.Ready, "The label actor loads the actual production scan QML: " + component.errorString());
+            chart = component.createObject(surface, {
+                project: Session.project,
+                mode: "map",
+                shown: false,
+                width: 1100,
+                height: 760
+            });
+            verify(chart !== null, "The actual scan chart is created with the native production model");
+            ready(Session.project.scanViews);
+            const layer = named("layer");
+            const scale = data.scale === "log" ? PatternChartController.Log10 : data.scale === "sqrt" ? PatternChartController.Sqrt : PatternChartController.Linear;
+            const reference = patternReferenceFactory.createObject(surface);
+            verify(reference !== null, "The formatter comparison reaches the actual Pattern chart");
+            const axis = Qt.createQmlObject('import QtGraphs; ValueAxis {}', surface);
+            axis.min = layer.displayMin;
+            axis.max = layer.displayMax;
+            axis.tickAnchor = layer.displayMin;
+            axis.tickInterval = layer.displayMax - layer.displayMin;
+            const values = reference.yValues(axis, scale);
+            compare(values.length, 2, "The Pattern reference has exactly the same two intensity ticks as the colour bar");
+            fuzzyCompare(values[0], low, Math.abs(low) * 1e-10, "The lower rendered endpoint is the fixture's original count, including inverse scale conversion");
+            fuzzyCompare(values[1], high, high * 1e-10, "The upper rendered endpoint is the fixture's original count, including inverse scale conversion");
+            const format = NumberText.axisFormat(values, data.scale !== "log");
+            for (let index = 0; index < 2; ++index)
+                compare(reference.yLabelText(String(index ? axis.max : axis.min), axis, scale, format), expected[index], "The actual Pattern intensity formatter agrees with the independently written expected string");
+            reference.destroy();
+            axis.destroy();
+            const mismatches = [];
+            for (const width of [480, 1100]) {
+                chart.width = width;
+                verify(waitForPolish(chart) && waitForRendering(chart), "Each narrow and wide Map layout has a completed rendered frame");
+                for (const [index, end] of ["min", "max"].entries()) {
+                    const label = named("colourBar." + end);
+                    verify(label.visible && label.text.length > 0 && label.width > 0 && label.height > 0, "Both intensity endpoints have actual visible text");
+                    if (label.text !== expected[index])
+                        mismatches.push(end + " at " + width + ": " + label.text + " instead of " + expected[index]);
+                    const at = label.mapToItem(chart, 0, 0);
+                    verify(at.x >= 0 && at.y >= 0 && at.x + label.width <= chart.width && at.y + label.height <= chart.height, "Each complete colour-bar label remains inside the chart at both widths and themes");
+                    verify(label.contentWidth <= label.width + 0.5, "The colour-bar text is fully laid out inside its label without truncation");
+                }
+            }
+            compare(mismatches, [], "Colour-bar endpoints format the same original value exactly as the Pattern intensity axis");
         }
         function test_map_default_and_saved_choice() {
             const location = Globals.Vars.settingsFile;

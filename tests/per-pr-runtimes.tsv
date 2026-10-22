@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T12:54:13Z
+# measured_utc = 2026-10-22T15:05:23Z
 #
-# Recorded from: Path-only migration tests/system/app to tests/system/py; existing measured values and explicit holes preserved (CI layout repair)
-# Collected tests: 15953; with a reported duration: 9468
+# Recorded from: Measured twelve new colour-bar nodes once; retain full-module fixture cost from the existing complete observer batch
+# Collected tests: 15965; with a reported duration: 9468
 # Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15953
+# inventory_python = 15965
 # inventory_cpp = 393
-# inventory_measured = 14556
-# inventory_unmeasured = 1790
+# inventory_measured = 14560
+# inventory_unmeasured = 1798
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -14153,6 +14153,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_edge_bands:value-smooth-light]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_edge_bands:value-stepped-dark]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_edge_bands:value-stepped-light]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:linear-large-dark]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:linear-large-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:linear-plain-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:linear-plain-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:log-large-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:log-large-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:log-plain-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:log-plain-light]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:sqrt-large-dark]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:sqrt-large-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:sqrt-plain-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_intensity_labels:sqrt-plain-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:light]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:map]

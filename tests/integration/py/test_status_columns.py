@@ -95,7 +95,7 @@ def test_status_columns_use_shared_icons_with_word_tooltips(path):
         (kind, body)
         for kind, body in table_cells(source)
         if kind in {'IconCell', 'TextCell', 'ParameterCell', 'Item'}
-        or kind.startswith('EaComponents.TableView')
+        or kind.startswith('EaComponents.ListView')
     ]
     index = COLUMNS[path][1]
     assert len(cells) > index, 'The declared status column has an actual row cell'
@@ -115,7 +115,7 @@ def test_status_columns_use_shared_icons_with_word_tooltips(path):
 def test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell():
     source = """Item {
         delegate: EaComponents.ListViewDelegate {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 text: "{quoted brace}"
                 // IconCell { icon: "check-circle" }
                 Item { IconCell { icon: "check-circle" } }
@@ -124,7 +124,7 @@ def test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell():
         IconCell { icon: "check-circle" }
     }"""
     actual = table_cells(source)
-    assert [kind for kind, _ in actual] == ['EaComponents.TableViewLabel'], (
+    assert [kind for kind, _ in actual] == ['EaComponents.ListViewLabel'], (
         'Nested, commented and sibling icons cannot satisfy the actual table-cell convention'
     )
 

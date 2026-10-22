@@ -135,6 +135,13 @@ CASES += tuple(
     for suffix in ('', '-d')
 )
 
+CASES += tuple(
+    'test_map_intensity_labels:' + scale + '-' + span + '-' + theme
+    for scale in ('linear', 'sqrt', 'log')
+    for span in ('large', 'plain')
+    for theme in ('light', 'dark')
+)
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):
