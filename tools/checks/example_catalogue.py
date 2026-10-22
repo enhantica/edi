@@ -111,6 +111,19 @@ def check_project(folder: Path, case: str, problems: list[str]) -> str | None:
     return metadata_value(project_edi, '_metadata.title')
 
 
+def entries(sources: str) -> list[str]:
+    """The Sources section's list items, table rows and paragraphs, each with its wrapped lines."""
+    items: list[str] = []
+    for line in sources.splitlines():
+        if not line.strip():
+            items.append('')
+        elif line.lstrip().startswith(('- ', '* ', '|')) or not items:
+            items.append(line)
+        else:
+            items[-1] += ' ' + line.strip()
+    return [item for item in items if item]
+
+
 def check_provenance(folder: Path, case: str, problems: list[str]) -> int:
     provenance = folder / 'PROVENANCE.md'
     if not provenance.is_file():
@@ -124,7 +137,7 @@ def check_provenance(folder: Path, case: str, problems: list[str]) -> int:
     files = sorted(path for path in data.rglob('*') if path.is_file()) if data.is_dir() else []
     for path in files:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        named = [line for line in sources.splitlines() if path.name in line]
+        named = [entry for entry in entries(sources) if path.name in entry]
         relative = path.relative_to(folder).as_posix()
         if not named:
             problems.append(f'{case}: {relative} is not named in the Sources')
