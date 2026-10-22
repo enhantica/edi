@@ -57,6 +57,9 @@ void ScanLayer::setColourMap(const QString& map) { assign(colour_map_, map, &Sca
 void ScanLayer::setBackground(const QColor& colour) { assign(background_, colour, &ScanLayer::backgroundChanged); }
 void ScanLayer::setSmoothRows(bool smooth) { assign(smooth_rows_, smooth, &ScanLayer::smoothRowsChanged); }
 void ScanLayer::setReversed(bool reversed) { assign(reversed_, reversed, &ScanLayer::reversedChanged); }
+void ScanLayer::setStackedReversed(bool reversed) {
+    assign(stacked_reversed_, reversed, &ScanLayer::stackedReversedChanged);
+}
 void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
 void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
 void ScanLayer::setIncludedOnly(bool on) { assign(included_only_, on, &ScanLayer::includedOnlyChanged); }
@@ -135,11 +138,13 @@ QColor ScanLayer::colourOf(int dataset) const {
     }
     const std::string choice = colour_scheme_.toStdString();
     const std::vector<std::string>& maps = edi::scan_colour_map_names();
+    // Reversed, the last dataset takes the first colour.
+    const std::size_t place_index = stacked_reversed_ ? count - 1 - static_cast<std::size_t>(dataset) : static_cast<std::size_t>(dataset);
     if (std::find(maps.begin(), maps.end(), choice) == maps.end()) {
         return QColor(QString::fromStdString(
-            edi::pattern_colour(edi::colour_scheme_or_default(choice), static_cast<std::size_t>(dataset), count, dark_)));
+            edi::pattern_colour(edi::colour_scheme_or_default(choice), place_index, count, dark_)));
     }
-    const double place = count > 1 ? static_cast<double>(dataset) / static_cast<double>(count - 1) : 1.0;
+    const double place = count > 1 ? static_cast<double>(place_index) / static_cast<double>(count - 1) : 1.0;
     const edi::ScanMapColour c = edi::scan_table_colour(
         edi::scan_colour_table(choice, background_.name().toStdString(), dark_), 0.1 + 0.8 * place);
     return QColor(c.r, c.g, c.b);

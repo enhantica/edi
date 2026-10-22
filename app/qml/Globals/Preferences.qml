@@ -72,6 +72,7 @@ QtObject {
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
         preferences.scanStackedHeight = 2;
+        preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
     }
 
@@ -132,6 +133,8 @@ QtObject {
     property bool scanMapReversed: false
     // How high a Stacked pattern rises, in multiples of four rows, 1 to 5 (the owner, 2026-10-22).
     property int scanStackedHeight: 2
+    // The Stacked colours reversed, last dataset first (the owner, 2026-10-22).
+    property bool scanStackedReversed: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
     property bool chartIncludedOnly: false
 
@@ -166,6 +169,7 @@ QtObject {
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
         property alias stackedHeight: preferences.scanStackedHeight
+        property alias stackedReversed: preferences.scanStackedReversed
     }
 
     property Binding fitPatternUpdates: Binding {

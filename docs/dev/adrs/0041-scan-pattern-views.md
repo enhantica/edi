@@ -61,7 +61,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    stand for, each label centred on its end.
 6. **Colours** (the owner, 2026-10-22). The Stacked and Map colours are chosen in the app's Preferences with the
    structures' and patterns' (ADR-0038 §3); the Map keeps a box on its toolbar for the same setting, beside its
-   reverse and stepped or smooth switches. The Map lists the ramps below first, then the colour maps, and takes Edi Natural's
+   reverse and stepped or smooth switches. The colours stand in a toolbar group of their own: on the
+   Map its colour box and a reverse button, on Stacked a reverse button alone that runs the Stacked colours the other
+   way, each remembered with its colour setting (the owner, 2026-10-22). The Map lists the ramps below first, then the colour maps, and takes Edi Natural's
    ramp by default, for now (the owner, 2026-10-22); the Stacked view
    offers no ramp, as one colour's shades make neighbouring lines hard to tell apart (the owner, 2026-10-22). The
    choices: the colour maps viridis, magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
@@ -102,7 +104,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    outside every excluded region and the points inside them are not drawn, which leaves their tint as empty gaps, the
    pattern chart's tint on the Map too; off, the full range with the marks. The colours and the Map's switches are app
    settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
-   Every axis's tick labels and titles, and the colour bar's, take the app's label font and size, as the pattern
+   The x axis takes as many ticks as its widest label leaves room for, so long values such as TOF never run into
+   each other. Every axis's tick labels and titles, and the colour bar's, take the app's label font and size, as the pattern
    chart's axes do; the Evolution tab's tick labels too (the owner, 2026-10-22).
 8. **Following a running scan.** The shown dataset is marked at all times by an open rectangle across the plot (the
    owner, 2026-10-22): its border is the Evolution tab's selected-pattern line at 1 px, black in the light theme and

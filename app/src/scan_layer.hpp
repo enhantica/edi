@@ -40,6 +40,8 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(bool smoothRows MEMBER smooth_rows_ WRITE setSmoothRows NOTIFY smoothRowsChanged)
     // The map's colours run from their high end at the lowest intensity, reversed.
     Q_PROPERTY(bool reversed MEMBER reversed_ WRITE setReversed NOTIFY reversedChanged)
+    // The Stacked colours reversed: the last dataset takes the first colour (colourOf, so its labels and ticks too).
+    Q_PROPERTY(bool stackedReversed MEMBER stacked_reversed_ WRITE setStackedReversed NOTIFY stackedReversedChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // Only the included range: the points inside an excluded region are not drawn, which leaves its tint as a gap.
     Q_PROPERTY(bool includedOnly MEMBER included_only_ WRITE setIncludedOnly NOTIFY includedOnlyChanged)
@@ -65,6 +67,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setBackground(const QColor& colour);
     void setSmoothRows(bool smooth);
     void setReversed(bool reversed);
+    void setStackedReversed(bool reversed);
     void setDark(bool dark);
     void setCurrent(int dataset);
     void setIncludedOnly(bool on);
@@ -93,6 +96,7 @@ class ScanLayer : public QQuickPaintedItem {
     void backgroundChanged();
     void smoothRowsChanged();
     void reversedChanged();
+    void stackedReversedChanged();
     void darkChanged();
     void currentChanged();
     void includedOnlyChanged();
@@ -120,6 +124,7 @@ class ScanLayer : public QQuickPaintedItem {
     QColor background_ = Qt::white;
     bool smooth_rows_ = true;
     bool reversed_ = false;
+    bool stacked_reversed_ = false;
     bool dark_ = false;
     int current_ = -1;
     bool included_only_ = false;

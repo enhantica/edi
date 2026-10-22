@@ -701,6 +701,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-11-joint-stacked-datablock-light",
                           {"theme:light", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
                            "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-11b-joint-stacked-tof-reversed-light", {"scanView.stacked.toolbar.reverse"}});
         steps_.push_back({"rowlabels-12-joint-map-datablock-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the

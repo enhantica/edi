@@ -82,7 +82,17 @@ Item {
     onZoomYChanged: publishZoom()
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property real barWidth: mode === "map" ? em * 6 : 0
-    readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
+    // As many x ticks as their labels leave room for, the widest label (the larger end, with room for a decimal or
+    // two) and three em between labels, room for the round steps niceStep may take, so long TOF values never run into
+    // each other (the owner, 2026-10-22).
+    readonly property real xLabelWidth: tickMetrics.advanceWidth(Math.round(Math.max(Math.abs(scan ? scan.xMin : 0), Math.abs(scan ? scan.xMax : 1))).toString() + ".00")
+    readonly property int xTicks: Math.max(2, Math.min(8, Math.floor(Math.max(1, view.plotArea.width) / (xLabelWidth + em * 3))))
+    FontMetrics {
+        id: tickMetrics
+
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
     readonly property int yTicks: Math.max(2, Math.min(8, Math.floor((height - em * 6) / (em * 2.5))))
     readonly property real yMin: zoomY.length === 2 ? zoomY[0] : scan ? scan.rowMin : 0
     readonly property real yMax: zoomY.length === 2 ? zoomY[1] : scan ? scan.rowMax + (mode === "stacked" ? scan.stackHeight : 0) : 1
@@ -328,6 +338,7 @@ Item {
             background: chart.colors.chartBackground
             smoothRows: Preferences.scanMapSmooth
             reversed: chart.mode === "map" && Preferences.scanMapReversed
+            stackedReversed: Preferences.scanStackedReversed
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
@@ -491,7 +502,7 @@ Item {
             readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own.
             // The colour choice and the theme are read here, so the label follows them.
-            readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
+            readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
 
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
@@ -527,7 +538,7 @@ Item {
             width: Math.round(chart.em * 0.4)
             height: 1
             // The colour choice and the theme are read here, so the tick follows them.
-            color: [layer.colourScheme, layer.dark].length > 0 ? layer.colourOf(index) : "transparent"
+            color: [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : "transparent"
         }
     }
 
@@ -609,17 +620,18 @@ Item {
 
         readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
         readonly property real available: chart.width - 2 * chart.sideMargin
-        // The boxes that show, then the buttons as one group: what is laid out, and every width it depends on.
-        readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([buttons])
+        // The boxes that show, then the colours and the buttons, each a group: what is laid out, and every width it
+        // depends on.
+        readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([colours, buttons])
         readonly property string measure: available + ":" + units.map(unit => unit.width).join(",")
 
-        // As many as fit on a line, the buttons a group's spacing after the boxes, each line centred as the pattern
+        // As many as fit on a line, each group a group's spacing after the one before, each line centred as the pattern
         // chart's are (the owner, 2026-10-22); the toolbar is as wide as its widest line.
         function layout() {
             const lines = [];
             let line = null;
             for (const unit of units) {
-                const gap = line === null ? 0 : unit === buttons ? spacing : AppSizes.toolbarSpacing;
+                const gap = line === null ? 0 : unit === colours || unit === buttons ? spacing : AppSizes.toolbarSpacing;
                 if (line === null || line.width + gap + unit.width > available) {
                     line = {
                         "units": [unit],
@@ -716,8 +728,15 @@ Item {
                 currentIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
                 onActivated: index => Preferences.patternYScale = tokens[index]
             }
-            // The Stacked view's colours are chosen in Preferences; the Map keeps its box here, on the same setting
-            // (the owner, 2026-10-22).
+        }
+        // The colours, a group of their own (the owner, 2026-10-22): on the Map its colour map and the reverse button;
+        // on Stacked, whose colours are chosen in Preferences, the reverse button alone. Each view's reversal is kept
+        // with its colour setting.
+        Row {
+            id: colours
+
+            spacing: AppSizes.toolbarSpacing
+
             ToolbarComboBox {
                 objectName: "scanView.map.toolbar.colourMap"
                 visible: chart.mode === "map"
@@ -727,6 +746,20 @@ Item {
                 closedTexts: entries
                 currentIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
                 onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
+            }
+            ChartToolButton {
+                readonly property bool reversed: chart.mode === "map" ? Preferences.scanMapReversed : Preferences.scanStackedReversed
+
+                objectName: "scanView." + chart.mode + ".toolbar.reverse"
+                fontIcon: "exchange-alt"
+                toolTip: chart.mode === "map" ? qsTr("Reverse the map's colours") : qsTr("Reverse the patterns' colours")
+                checked: reversed
+                onClicked: {
+                    if (chart.mode === "map")
+                        Preferences.scanMapReversed = !Preferences.scanMapReversed;
+                    else
+                        Preferences.scanStackedReversed = !Preferences.scanStackedReversed;
+                }
             }
         }
         Row {
@@ -741,14 +774,6 @@ Item {
                 toolTip: Preferences.scanMapSmooth ? qsTr("Colour changes smoothly between datasets: click for one band per dataset") : qsTr("One band of colour per dataset: click for a smooth change between datasets")
                 checked: Preferences.scanMapSmooth
                 onClicked: Preferences.scanMapSmooth = !Preferences.scanMapSmooth
-            }
-            ChartToolButton {
-                objectName: "scanView.map.toolbar.reverse"
-                visible: chart.mode === "map"
-                fontIcon: "exchange-alt"
-                toolTip: qsTr("Reverse the map's colours")
-                checked: Preferences.scanMapReversed
-                onClicked: Preferences.scanMapReversed = !Preferences.scanMapReversed
             }
             // Only the included range: the pattern chart's eraser button and its one app setting, so the three charts
             // switch together (the owner, 2026-10-22).
