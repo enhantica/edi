@@ -121,12 +121,12 @@ AppDialog {
                 }
                 // The identifiers, a dot in the text colour between them: "BSD-3-Clause · GPL-3.0-only".
                 Repeater {
-                    model: ApplicationInfo.appLicences
+                    model: ApplicationInfo.appLicenceIds
 
                     Row {
                         id: licenceEntry
 
-                        required property var modelData
+                        required property string modelData
                         required property int index
 
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
@@ -136,11 +136,11 @@ AppDialog {
                             text: "·"
                         }
                         LinkLabel {
-                            objectName: "about.licence." + licenceEntry.modelData.id
-                            text: licenceEntry.modelData.id
+                            objectName: "about.licence." + licenceEntry.modelData
+                            text: licenceEntry.modelData
                             onActivated: {
-                                licencePopup.title = licenceEntry.modelData.id;
-                                licencePopup.licence = ApplicationInfo.licenceText(licenceEntry.modelData.url);
+                                licencePopup.title = licenceEntry.modelData;
+                                licencePopup.licence = ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index]);
                                 licencePopup.open();
                             }
                         }
