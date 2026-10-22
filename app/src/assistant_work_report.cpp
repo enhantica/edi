@@ -447,7 +447,7 @@ quint64 work_report_build_bound(quint64 historyOwned,quint64 registrationOwned,q
     constexpr auto gap=fixed_object({{"kind",id},{"first_id",fixed_observed(id)},{"last_id",m},{"count",m},{"reason",id}});
     multiple(rows,row_frame().owned+turn_frame().owned+objective.owned+assessment.owned+gap.owned);
     // Closed source gap classes independent of history length (see builder).
-    constexpr std::array gapClasses{0,1,2,3,4,5,6,7,8,9};multiple(gapClasses.size(),gap.owned);
+    constexpr std::array gapClasses{0,1,2,3,4,5,6,7,8,9,10,11,12};multiple(gapClasses.size(),gap.owned);
     multiple(roots.size(),fixed_string(buildUnits).owned);
     return n;
 }
@@ -645,7 +645,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         if(newEvent().isEmpty())return work_report_serial_variant();
         auto limited=receiptBase("wr/"+state->instance+u'/'+decimal(state->serial),state->scope,state->revision,"report_capacity");
         if(state->exhausted)limited["snapshot_revision"]=missing("capacity");
-        limited["error_code"]=observed("report_capacity");
+        limited["error_code"]=observed("settlement_pending");
         limited["coverage"]=work_report_receipt_coverage("settlement_unknown");
         if(state->capturing)return limited.toVariantMap(); // No recursive presentation.
         state->capturing=true;const auto leave=qScopeGuard([state]{state->capturing=false;});
@@ -710,14 +710,17 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
     // Native caller supplies only currently available room after its original
     // promised roles. Hold it while synchronously constructing/measuring the
     // bounded view; no observer/notification is emitted until it is reconciled.
-    if(!available || !admission.acquire(available,available)){receipt["coverage"]=coverage;return immediate(receipt);}
+    if(!available || !admission.acquire(available,available)){receipt["coverage"]=coverage;receipt["error_code"]=observed("admission_capacity");return immediate(receipt);}
     std::shared_ptr<Role> role;
     std::shared_ptr<WriterCompletion> completion;
     QVariantMap acceptedReply;bool accepted=false;
+    const char* preparationCode="receipt_capacity";
     try {
         role=std::make_shared<Role>();role->bytes=admission.bytes;admission.bytes=0;
         const auto scope=state->scope;const auto revision=state->revision;
-        if(storageRoot.isEmpty() || storageRoot.size()>static_cast<qsizetype>(L::message_bytes))throw std::runtime_error("Report storage unavailable");
+        if(storageRoot.isEmpty() || storageRoot.size()>static_cast<qsizetype>(L::message_bytes)) {
+            preparationCode="storage_root_unavailable";throw std::runtime_error("Report storage unavailable");
+        }
         // Root comes from the original history owner, never another settings or
         // filesystem source. Admit full framing before copying/converting it.
         const auto artifactFrame=fixed_observed(fixed_object({{"path",fixed_string(storageRoot.size()+sizeof("/assistant/work-reports/work-report.json"))},
@@ -740,7 +743,32 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         maximum["coverage"]=maximumCoverage;
         const auto receiptRoleBytes=2*(json_role(maximum)+variant_role(maximum));
         if(receiptRoleBytes>available)throw std::length_error("Complete receipt framing exceeds report room");
-        const auto snapshot=build(available-receiptRoleBytes);
+        preparationCode="writer_framing_capacity";
+        quint64 writerFraming=receiptRoleBytes;
+        add(writerFraming,2*sizeof(Role)+3*sizeof(std::shared_ptr<Role>),L::stream_retained_bytes);
+        add(writerFraming,2*sizeof(WorkCapture)+2*sizeof(FinishCapture)+
+            2*sizeof(std::shared_ptr<WorkCapture>)+2*sizeof(std::shared_ptr<FinishCapture>),L::stream_retained_bytes);
+        add(writerFraming,sizeof(QJsonValue)+sizeof(QCryptographicHash)+3*sizeof(QByteArray)+
+            codex_json_capacity(2*QCryptographicHash::hashLength(QCryptographicHash::Sha256)),L::stream_retained_bytes);
+        add(writerFraming,sizeof(WorkReportTestView)+sizeof(WorkReportJsonView)+sizeof(WorkReportTextView)+sizeof(WorkReportContainerView)+
+            sizeof(AssistantWorkReportSnapshot)+sizeof(FileResult)+sizeof(const char*)+2*sizeof(bool)+sizeof(QPointer<AssistantViewModel>)+
+            sizeof(std::shared_ptr<Control>)+sizeof(std::shared_ptr<Role>)+sizeof(QJsonObject)+sizeof(QString)+
+            edi::assistant::SelectedFileLimits::read_bytes,L::stream_retained_bytes);
+        constexpr auto completionExtra=fixed_object({{"error_code",fixed_observed(fixed_string(sizeof("completion_dispatch_unavailable")-1))},
+            {"disposition",fixed_string(sizeof("writer_busy_or_recovery_required")-1)}});
+        const auto completionFrame=json_role(maximum)+variant_role(maximum)+fixed_frame_role(completionExtra);
+        quint64 completionBound=sizeof(WriterCompletion)+sizeof(WriterWorkerLease)+
+            sizeof(std::array<WriterCompletion::Fallback,WriterCompletion::cases>)+
+            sizeof(std::array<QJsonValue,WriterCompletion::cases>)+sizeof(std::array<WorkReportJsonView,WriterCompletion::cases>)+
+            2*sizeof(WorkReportContainerView)+sizeof(WorkReportTestView)+3*sizeof(std::shared_ptr<WriterWorkerLease>)+4*sizeof(std::shared_ptr<WriterCompletion>);
+        constexpr std::array completionOwners{0,1};
+        for(const auto owner:completionOwners)for(std::size_t i=0;i<WriterCompletion::cases;++i){(void)owner;add(completionBound,completionFrame,L::stream_retained_bytes);}
+        add(writerFraming,completionBound,L::stream_retained_bytes);
+        constexpr auto publicationFrame=fixed_object({{"receipt_id",fixed_string(L::id_bytes)},{"state",fixed_string(sizeof("prepublication_snapshot")-1)}});
+        add(writerFraming,fixed_frame_role(publicationFrame),L::stream_retained_bytes);
+        if(writerFraming>available)throw std::length_error("Report writer framing exceeds current room");
+        preparationCode="snapshot_capacity";
+        const auto snapshot=build(available-writerFraming);
         if(snapshot.scope!=scope || snapshot.revision!=revision || state->scope!=scope || state->revision!=revision) {
             receipt["disposition"]="superseded";receipt["coverage"]=work_report_receipt_coverage("superseded");
             role.reset();return immediate(receipt);
@@ -752,6 +780,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
             zero["excluded_rows"]=observed(decimal(counts.excluded));zero["omitted_automatic_captures"]=observed(decimal(state->missed));
             zero["extent_unknown"]=state->unknown;receipt["coverage"]=zero;role.reset();return immediate(receipt);
         }
+        preparationCode="artifact_capacity";
         auto document=snapshot.document;
         document["artifact"]=Object{{"receipt_id",id},{"state","prepublication_snapshot"}};
         auto scopeData=document.value("scope_coverage").toObject();scopeData["trigger"]=automaticTrigger?"automatic":"manual";document["scope_coverage"]=scopeData;
@@ -777,6 +806,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
             sizeof(std::shared_ptr<Control>)+sizeof(std::shared_ptr<Role>)+sizeof(QJsonObject)+sizeof(QString)+
             edi::assistant::SelectedFileLimits::read_bytes,L::stream_retained_bytes);
         if(required>role->bytes)throw std::length_error("Report owner overlap exceeds available capacity");
+        preparationCode="completion_capacity";
         const auto full=document.value("coverage").toObject();
         QString coverageReason="none";
         const auto gaps=full.value("gaps").toArray();
@@ -915,7 +945,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
             state->busy=false;state->activeRole.reset();state->activeReceipt={};state->completion.reset();
         }
         receipt["phase"]="terminal";receipt["disposition"]="report_capacity";
-        receipt["coverage"]=coverage;receipt["error_code"]=observed("report_capacity");
+        receipt["coverage"]=coverage;receipt["error_code"]=observed(QLatin1StringView(preparationCode));
         const auto reply=receipt.toVariantMap();
         if(receiver && !state->closing)present(receipt,reply);
         role.reset();return reply;

@@ -2791,3 +2791,60 @@ capture/publication, immediate wire, deferred holding/flush and post-answer
 metadata ownership under unchanged hard limits. All695/694/692 first-fact,
 projection, partial/once/reentry/retirement/science/Undo contracts remain. Source
 reasoning is not reached pressure, compiler, runtime, Mac or CI qualification.
+
+
+###698 ordinary settlement and bounded incomplete work reports
+
+Prior owners are publish/admit, native_finish/native_owner and the existing
+work_snapshot/AssistantWorkReports::capture path. Optional work stamps and
+whole-history preparation must not acquire headroom ahead of the mandatory
+native primary destination. That destination is admitted against the original
+candidate first; both optional preparation and archive-admission fallbacks keep
+that same native-fact candidate and its reservation. A genuine mandatory row,
+identity or storage failure remains closed.
+
+The admitted-wire callback can decline local capture while still delivering the
+original response. An accepted call whose row was skipped or capacity-declined
+gets the same row's synchronous settlement opportunity after the original answer
+returns and its wire roles release. This is publication of an already-owned
+actual outcome, never another native action, response attempt, storage retry or
+queued recovery. A storage/identity refusal is not retried. Permanent missing
+required history keeps the actual record/reservation/Undo and blocked state,
+latches FINISH_HISTORY through the original first-failure owner and presents the
+existing retention notice. Successful post-wire settlement does not create a
+native failure from a transient capture shortage.
+
+native_owner preserves every original predicate and its short-circuit order.
+Its existing code field now distinguishes retired receipts, native retention
+blocks, attachment clearing, paused publication, unavailable authentication,
+retiring/revoked owners, agent/history interruption, context/history clearing,
+questions and input selection/staging. These closed spellings fit the existing
+longest Result code and projection sizing; no wire field or allowance grows.
+A later refusal is not installed as a new first work cause. No project/focus,
+scientific or platform cause is inferred from these owner states.
+
+The report builder keeps its full view when its simultaneous owners fit. When
+that construction does not fit, it admits a recent eligible evidence suffix
+under the same conservative source/section roles and omits schema bodies with
+explicit capacity gaps. It still charges the entire original history backing
+when any frozen history slice extends its lifetime. With insufficient room for
+that backing, a truthful incomplete document can instead contain build/scope,
+known retained/excluded/omitted counts and the original current attempt's known
+cause, without retaining a history alias. No-work remains distinct from omitted
+work. The earliest retained original workTurn cause is separately deep-detached
+only after its complete encoder/parser/JSON construction role fits; it keeps its
+original attempt identity. Omitted cause evidence is explicit. The existing
+NativeFailure cell has no original turn/row identity, so it is not attached to a
+later attempt; its unbound evidence is reported as a gap, while the original cell
+and local refusal/notice survive independently of report success.
+
+Receipt, writer, completion/fallback and publication framing is reserved before
+the builder chooses evidence. The existing writer still reconciles its exact
+final roles, freezes one immutable document and alone publishes/reads back the
+artifact. Capacity at a genuine fixed minimum still refuses honestly, with a
+closed admission-stage error code in the existing receipt. Manual/automatic,
+busy/coalesced/retired/reentry and physical artifact semantics stay unchanged.
+Collection disabled/unavailable does not disable primary facts or settlement.
+No hard limit, default, actor, ledger, timer, retry queue, schema field, scientific
+operation or Undo behavior changes. Source analysis identifies reachable defects;
+it does not establish the owner's actual startup cause or a current native pass.

@@ -819,19 +819,59 @@ struct AssistantViewModel::State {
         AssistantWorkReportSnapshot snapshot;snapshot.scope=work_reports.scope();snapshot.revision=work_reports.revision();
         const auto counts=work_counts();if(counts.known && !counts.retained)return snapshot;
         CodexJsonEncoding originalBacking,registration;
-        if(!codex_json_encoding(history,Limits::ui_history_bytes,originalBacking) ||
-           !codex_json_encoding(work_registration,Limits::context_bytes,registration))
-            throw std::length_error("Original report source exceeds capacity");
+        const bool historySource=codex_json_encoding(history,Limits::ui_history_bytes,originalBacking);
+        const bool registrationSource=codex_json_encoding(work_registration,Limits::context_bytes,registration);
         // Borrowed spellings only: no Qt build strings/sections/containers are
         // allocated before their complete simultaneous construction role fits.
         quint64 buildUnits=std::char_traits<char>::length(edi::build_commit())+
             sizeof(EDI_APP_VERSION)+sizeof(EDI_APP_CRYSTA_VERSION)+sizeof(EDI_APP_CRYSTA_COMMIT)+
             sizeof(EDI_APP_GUI_COMMIT)+sizeof(EDI_APP_GUI_ARCHIVE_SHA256)+sizeof(EDI_APP_GUI_SOURCE_SHA256)+
             sizeof(EDI_APP_SDK_SOURCE_KIND)+std::char_traits<char>::length(qVersion());
-        if(originalBacking.owned>room)throw std::length_error("Original backing extension exceeds report room");
-        room-=originalBacking.owned;
-        if(work_report_build_bound(originalBacking.owned,registration.owned,history.size(),buildUnits)>room)
-            throw std::length_error("Report construction role exceeds current room");
+        const auto available=room;
+        quint64 causePreparation=0;qsizetype firstCauseRow=-1;
+        const auto constructionFits=[&](quint64 source,quint64 schema,quint64 rows,quint64 capacity) {
+            if(causePreparation>Limits::stream_retained_bytes-schema)return false;
+            try {return work_report_build_bound(source,schema+causePreparation,rows+2,buildUnits)<=capacity;}
+            catch(const std::length_error&){return false;}
+        };
+        qsizetype firstEvidence=0;
+        bool includeRegistration=true;
+        quint64 sourceBacking=originalBacking.owned;
+        if(!historySource || !registrationSource || originalBacking.owned>room ||
+           !constructionFits(originalBacking.owned,registration.owned,history.size(),room-originalBacking.owned)) {
+            includeRegistration=false;firstEvidence=history.size();sourceBacking=0;
+            for(qsizetype i=0;i<history.size();++i) {
+                const auto row=history[i].toObject();if(!work_eligible(row))continue;
+                const auto turn=row.value("workTurn").toObject();
+                if(!turn.value("first_cause").toObject().contains("value"))continue;
+                CodexJsonEncoding encoded;
+                if(codex_json_encoding(turn,Limits::message_bytes,encoded) &&
+                   encoded.owned<=Limits::stream_retained_bytes/4) {
+                    const auto extra=4*encoded.owned+encoded.writer_scratch;
+                    if(extra<=Limits::stream_retained_bytes && codex_json_capacity(encoded.encoded)<=Limits::stream_retained_bytes-extra) {
+                        causePreparation=extra+codex_json_capacity(encoded.encoded);
+                        if(constructionFits(0,0,0,available))firstCauseRow=i;
+                        else causePreparation=0;
+                    }
+                }
+                break; // Earliest retained original cause only; never relabel a later refusal as first.
+            }
+            quint64 selectedOwned=0,selectedRows=0;
+            if(historySource && originalBacking.owned<=available) {
+                const auto capacity=available-originalBacking.owned;
+                for(qsizetype i=history.size();i>0;--i) {
+                    const auto row=history[i-1].toObject();if(!work_eligible(row))continue;
+                    CodexJsonEncoding encoded;
+                    if(!codex_json_encoding(row,Limits::ui_history_bytes,encoded) ||
+                       encoded.owned>Limits::stream_retained_bytes-selectedOwned ||
+                       !constructionFits(selectedOwned+encoded.owned,0,selectedRows+1,capacity))break;
+                    selectedOwned+=encoded.owned;++selectedRows;firstEvidence=i-1;sourceBacking=originalBacking.owned;
+                }
+            }
+            if(!selectedRows && !constructionFits(0,0,0,available))
+                throw std::length_error("Mandatory report construction exceeds current room");
+        }
+        room=available-sourceBacking;
         CodexJsonEncoding fixed;
         auto document=work_report_empty_document();
         if(!codex_json_encoding(document,Limits::record_bytes,fixed) || fixed.owned>room)
@@ -863,6 +903,15 @@ struct AssistantViewModel::State {
             return codex_json_encoding(value,Limits::record_bytes,encoding) && encoding.owned<=room &&
                 encoding.writer_scratch<=room-encoding.owned && codex_json_capacity(encoding.encoded)<=room-encoding.owned-encoding.writer_scratch;
         };
+        if(firstCauseRow>=0) {
+            const auto source=history[firstCauseRow].toObject().value("workTurn").toObject();
+            const auto encoded=QJsonDocument(source).toJson(QJsonDocument::Compact);
+            QJsonParseError parse;const auto detached=QJsonDocument::fromJson(encoded,&parse);
+            if(parse.error!=QJsonParseError::NoError || !detached.isObject())throw std::runtime_error("Original turn cause could not be detached");
+            turns.append(detached.object());
+        }
+        if(firstEvidence>0)gap("first_cause","capacity");
+        if(native_first_failure.stage)gap("native_first_cause","unbound_owner");
         auto identities=document.value("identity_inputs").toObject();auto build=identities.value("build").toObject();
         const auto builtCommit=QString::fromUtf8(edi::build_commit());
         if(builtCommit!="unknown")build["edi_commit"]=work_report_observed(builtCommit);
@@ -885,13 +934,15 @@ struct AssistantViewModel::State {
         runtime["adapter"]=generic_mode?"official":"restricted";
         // Selection is an original-boundary capture below, never a later
         // mutable settings read presented as the model used for earlier work.
-        identities["tool_schema"]=work_registration.isEmpty()?identities.value("tool_schema"):QJsonValue(work_registration);
+        if(includeRegistration)identities["tool_schema"]=work_registration.isEmpty()?identities.value("tool_schema"):QJsonValue(work_registration);
+        else {auto schema=identities.value("tool_schema").toObject();for(const char* key:{"sha256","count","body"})schema[key]=work_report_missing("capacity");identities["tool_schema"]=schema;gap("schema_body","capacity");}
 #else
         runtime["adapter"]="restricted";
 #endif
         identities["runtime"]=runtime;
         for(qsizetype i=0;i<history.size();++i) {
             const auto row=history[i].toObject();if(!work_eligible(row)){++excluded;continue;}++retained;
+            if(i<firstEvidence){++omitted;gap("history","capacity");continue;}
             const auto id=row.value("id").toString();const auto stamp=row.value("workScope").toObject();
             const auto payloadType=row.value("payload").toObject().value("type").toString();
             if(row.value("kind")=="activity" && payloadType!="dynamicToolCall") {++omitted;gap("history","not_observed",id);continue;}
@@ -944,6 +995,19 @@ struct AssistantViewModel::State {
                 omitted["count"]=work_report_observed(QString::number(work_reports.missedAutomaticCaptures()));gaps[i]=omitted;break;}}
         }
         if(work_reports.coverageUnknown())gap("row_supplement","not_observed");
+        bool currentAttempt=false;
+        for(qsizetype i=0;i<turns.size();++i) {
+            auto turn=turns[i].toObject();if(turn.value("attempt_id")!=work_reports.attempt())continue;
+            currentAttempt=true;
+            if(!turn.value("first_cause").toObject().contains("value") && !work_first_cause.isEmpty()) {
+                turn["first_cause"]=work_report_observed(work_first_cause);turns[i]=turn;
+            }
+        }
+        if(!currentAttempt && !work_reports.attempt().isEmpty())turns.append(Object{{"attempt_id",work_reports.attempt()},
+            {"thread_id",work_report_missing()},{"turn_id",work_report_missing()},
+            {"terminal",work_terminal.isEmpty()?work_report_missing():work_report_observed(work_terminal)},
+            {"native_settlement","unknown"},{"first_cause",work_first_cause.isEmpty()?work_report_missing():work_report_observed(work_first_cause)}});
+        if(work_first_cause.isEmpty() && turns.isEmpty())gap("first_cause","not_observed");
         scope["turns"]=turns;document["scope_coverage"]=scope;
         identities["objectives"]=objectives;identities["skills"]=capturedSkills;identities["inputs"]=capturedInputs;document["identity_inputs"]=identities;
         document["agent_assessment"]=assessment;document["observations"]=Object{{"ui",ui},{"science",science}};
@@ -962,9 +1026,7 @@ struct AssistantViewModel::State {
         snapshot.document=std::move(document);
         // Retaining an implicitly shared slice keeps its entire original history
         // backing alive, including excluded rows. Charge the original extent.
-        CodexJsonEncoding source;
-        if(!codex_json_encoding(history,Limits::ui_history_bytes,source))throw std::length_error("Original history backing unavailable");
-        snapshot.source_backing_bytes=source.owned;return snapshot;
+        snapshot.source_backing_bytes=sourceBacking;return snapshot;
     }
 #endif
     QVariantMap work_capture(bool automatic=false) {
@@ -5825,12 +5887,21 @@ struct AssistantViewModel::State {
             if(reason)*reason=Code::ContextUnready;
             return false;
         }
-        if(!(!receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
-            !generic_revoke_pending && !generic_blocked && !generic_context_pending && !generic_clear_pending &&
-            generic_question_id.isEmpty() && !file_selection && !file_staging)) {
-            if(reason)*reason=Code::OwnerUnavailable;
-            return false;
-        }
+        const auto refused=[&](Code code){if(reason)*reason=code;return false;};
+        if(receipt->retired)return refused(Code::OwnerRetired);
+        if(native_blocked)return refused(Code::RetentionBlocked);
+        if(attachment_clear_requested || attachment_clear_draining)return refused(Code::AttachmentsClearing);
+        if(!publishing)return refused(Code::PublicationPaused);
+        if(!generic_authenticated)return refused(Code::AccountUnready);
+        if(generic_retiring)return refused(Code::OwnerRetiring);
+        if(generic_revoke_pending)return refused(Code::ConsentRevoked);
+        if(generic_blocked)return refused(native_first_failure.stage && std::string_view(native_first_failure.stage)=="FINISH_HISTORY"?
+            Code::HistoryUnretained:Code::AgentInterrupted);
+        if(generic_context_pending)return refused(Code::ContextPending);
+        if(generic_clear_pending)return refused(Code::HistoryClearing);
+        if(!generic_question_id.isEmpty())return refused(Code::QuestionPending);
+        if(file_selection)return refused(Code::SelectionPending);
+        if(file_staging)return refused(Code::InputStaging);
         return receipt->generation == generation && receipt->thread == generic_thread && !receipt->turn.isEmpty() &&
             receipt->turn == generic_turn && receipt->project == project;
     }
@@ -6698,7 +6769,6 @@ struct AssistantViewModel::State {
         quint64 bound = Limits::message_bytes;
         bool retained = false, request_retired = false;
         try {
-            const bool visible = native_visible(call);
             // The original record already owns every known Undo effect before
             // a weaker generic result can be selected, stored or answered.
             auto actual = undo_facts == NativeUndoFacts::Applied ? record->outcome : outcome;
@@ -6737,12 +6807,12 @@ struct AssistantViewModel::State {
             try { native_refresh(call); }
             catch (...) { if (!original_call()) return; native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired)); native_fence(); }
             if (!original_call()) return;
-            bool presented=false;
+            bool presented=false,historyCapacity=false;
             auto present=[&]() noexcept {
                 if(!original_call())return false;
                 presented=true;bool capacity=false;
                 stage="FINISH_HISTORY";role="HISTORY";bound=Limits::ui_history_bytes;
-                try {retained=!visible || generic_present(record->terminal,false,&capacity);}
+                try {retained=!native_visible(call) || generic_present(record->terminal,false,&capacity);}
                 catch(const std::bad_alloc&){capacity=true;}
                 catch(const std::length_error&){capacity=true;}
                 catch(...) {
@@ -6751,9 +6821,9 @@ struct AssistantViewModel::State {
                     return original_call(); // The original exception already owns its single fence.
                 }
                 if(!original_call())return false;
-                record->reserved=!retained;
+                record->reserved=!retained;historyCapacity=capacity;
                 if(!retained) {
-                    if(capacity)work_reports.missEvidence(); // Decline local capture; the owed response still fits.
+                    if(capacity)work_reports.missEvidence(); // Wire-live capture shortage does not veto the owed response.
                     else {native_failure(stage,role,bound,"REFUSAL",&call,&outcome,int(request_retired));native_fence();}
                 }
                 return original_call();
@@ -6769,7 +6839,11 @@ struct AssistantViewModel::State {
                 };
                 const bool attempted=original_transport->answer(call.rpc,record->response,&prepare,[](void* context) noexcept {return (*static_cast<decltype(prepare)*>(context))();});
                 if (!original_call()) return;
-                if(!presented)work_reports.missEvidence();
+                if(!retained && (!presented || historyCapacity)) {
+                    // Settle the same mandatory row after original wire roles release;
+                    // never reattempt a response or a storage/identity refusal (ADR-0041).
+                    if(!present())return;
+                }
                 work_latch_call(call,attempted?"attempted":"unknown");
                 if (!attempted) throw std::runtime_error("Native response delivery is uncertain");
             }else if(!present())return;
@@ -6799,7 +6873,11 @@ struct AssistantViewModel::State {
             if (!receiver || !settled()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
             if (!receiver || !settled()) return;
-            if (!retained) generic_blocked = true;
+            if (!retained) {
+                native_failure("FINISH_HISTORY","HISTORY",Limits::ui_history_bytes,historyCapacity?"CAPACITY":"REFUSAL",&call,&outcome,int(request_retired));
+                generic_blocked=true;error=native_capacity_error;
+                if(work_scope_bound && work_first_cause.isEmpty())work_first_cause=QStringLiteral("history_unretained");
+            }
             stage = "FINISH_NOTIFY"; role = "PUBLICATION"; bound = 0;
             notify();
         } catch (...) {
@@ -14142,6 +14220,12 @@ struct AssistantViewModel::State {
         // arbitrary legacy or scientific rows under a failed admission.
         const auto originalNext=next;
 #ifndef __EMSCRIPTEN__
+        quint64 primaryBytes=0;
+        std::optional<decltype(reserve_disclosure(0))> primaryDestination;
+        try {primaryBytes=native_primary_bytes(next);if(primaryBytes)primaryDestination.emplace(reserve_disclosure(primaryBytes));}
+        catch(const std::bad_alloc&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(const std::length_error&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(...){error=originalError;return false;}
         quint64 retainedBytes=0;
         std::optional<decltype(reserve_disclosure(0))> retainedRole,temporaryRole;
         try {
@@ -14176,14 +14260,6 @@ struct AssistantViewModel::State {
             next=originalNext;retainedRole.reset();temporaryRole.reset();retainedBytes=0;
             work_reports.missEvidence();error=originalError;if(report_only)return false;
         }
-#endif
-#ifndef __EMSCRIPTEN__
-        quint64 primaryBytes=0;
-        std::optional<decltype(reserve_disclosure(0))> primaryDestination;
-        try {primaryBytes=native_primary_bytes(next);if(primaryBytes)primaryDestination.emplace(reserve_disclosure(primaryBytes));}
-        catch(const std::bad_alloc&){if(capacity)*capacity=true;error=originalError;return false;}
-        catch(const std::length_error&){if(capacity)*capacity=true;error=originalError;return false;}
-        catch(...){error=originalError;return false;}
 #endif
         if (!admit(next, except, remaining_terminal ? except : nullptr, true, release_failure)) {
             next=originalNext;

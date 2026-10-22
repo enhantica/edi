@@ -39,10 +39,12 @@ inline constexpr quint64 control_pair_json_bytes=sizeof(R"(,"action_error":"","a
 inline constexpr quint64 control_pair_owned_bytes=4*sizeof(QJsonValue)+
     (sizeof("action_error")-1+sizeof("action_field")-1+longest_action_literal(action_errors)+longest_action_literal(action_fields))*sizeof(QChar);
 inline constexpr quint64 control_pair_role=control_pair_json_bytes>control_pair_owned_bytes?control_pair_json_bytes:control_pair_owned_bytes;
-enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch, RequestStale, ContextUnready, OwnerUnavailable, PendingOperation, ItemMismatch, DuplicateCall, InvalidArguments, CalculationBusy, VisibleUnmapped, ProjectRequired, Unclassified };
-inline constexpr std::array<std::string_view,18> result_codes={
+enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch, RequestStale, ContextUnready, OwnerUnavailable, PendingOperation, ItemMismatch, DuplicateCall, InvalidArguments, CalculationBusy, VisibleUnmapped, ProjectRequired, Unclassified, OwnerRetired, RetentionBlocked, AttachmentsClearing, PublicationPaused, AccountUnready, OwnerRetiring, ConsentRevoked, HistoryUnretained, AgentInterrupted, ContextPending, HistoryClearing, QuestionPending, SelectionPending, InputStaging };
+inline constexpr std::array<std::string_view,32> result_codes={
     "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch",
-    "request_stale","context_unready","owner_unavailable","pending_operation","item_mismatch","duplicate_call","invalid_arguments","calculation_busy","visible_unmapped","project_required","unclassified"};
+    "request_stale","context_unready","owner_unavailable","pending_operation","item_mismatch","duplicate_call","invalid_arguments","calculation_busy","visible_unmapped","project_required","unclassified",
+    "owner_retired","retention_blocked","attachments_clear","publication_paused","account_unready","owner_retiring","consent_revoked",
+    "history_unretained","agent_interrupted","context_pending","history_clearing","question_pending","selection_pending","input_staging"};
 inline constexpr std::string_view result_code(ResultCode code) {return result_codes[static_cast<std::size_t>(code)];}
 inline constexpr std::string_view maximum_result_code() {
     std::string_view maximum;
