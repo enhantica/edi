@@ -161,3 +161,13 @@ def test_real_single_crystal_report_chart_html_and_pdf(app_result, theme):
         'The report model, live preview and actual HTML/PDF must contain reflection charts: '
         + output
     )
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_single_crystal_report_reflections(app_result, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The reflection-list report host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_single_crystal_report_reflection_list({theme})' in output
+    ), 'The report preview, actual HTML and paginated PDF must list every reflection: ' + output

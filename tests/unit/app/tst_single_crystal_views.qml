@@ -887,6 +887,83 @@ TestCase {
             pdf: SettingsProof.childUrl(witness.location, "reports/" + report.savedReports.find(row => row.format === "pdf").name)
         };
     }
+    function reportReflectionTable(model, expected) {
+        const category = model.experiments[0].categories.find(category => category.id === "refln");
+        verify(category !== undefined, "The single-crystal report must include a reflections category after its chart");
+        const table = category.table;
+        compare(JSON.stringify(table.columns.slice(0, 3)), JSON.stringify(["h", "k", "l"]), "The report reflection table must keep the three signed indices in separate columns");
+        verify(table.columns.length === 7 && /F².*meas/.test(table.columns[3]) && /s.u./.test(table.columns[4]) && /F².*calc/.test(table.columns[5]) && /meas.*calc.*s.u./.test(table.columns[6]), "The report reflection columns must contain measured F-squared, uncertainty, calculated F-squared and normalised residual");
+        compare(table.rows.length, expected.length, "The report reflection table must have exactly one row for every project reflection");
+        for (let i = 0; i < expected.length; ++i) {
+            const row = table.rows[i], reflection = expected[i];
+            compare(JSON.stringify(row.slice(0, 3).map(Number)), JSON.stringify([reflection.h, reflection.k, reflection.l]), "The report table must retain the signed reflection identity and input order");
+            const numbers = [reflection.intensityMeas, reflection.intensityMeasSu, reflection.intensityCalc];
+            for (let j = 0; j < numbers.length; ++j) {
+                const sixDigits = Number(numbers[j].toPrecision(6));
+                verify(Math.abs(Number(row[j + 3]) - sixDigits) <= Math.max(1e-12, Math.abs(sixDigits) * 1e-12), "Report reflection values must follow the app's six-significant-digit number rule independently of the report formatter");
+            }
+            compare(row[6], ((reflection.intensityMeas - reflection.intensityCalc) / reflection.intensityMeasSu).toFixed(2), "The report's normalised residual must use an independent measured-minus-calculated-over-uncertainty formula");
+        }
+        return table;
+    }
+    function test_single_crystal_report_reflection_list_data() {
+        return test_single_crystal_report_chart_and_outputs_data();
+    }
+    function test_single_crystal_report_reflection_list(data) {
+        const witness = fittedReport(data);
+        const expected = Probe.rows(witness.project.currentExperiment.singleCrystalReflections);
+        const table = reportReflectionTable(witness.preview.model, expected);
+        verify(expected.length > 100, "The reflection-list witness must exercise a long table rather than a one-page list");
+        const actual = Probe.objectsWithProperty(witness.preview, "columns").find(item => item.columns && item.columns.length === 7 && item.columns[0] === "h" && item.rows && item.rows.length === expected.length);
+        verify(actual !== undefined, "The live Report page must render the reflection model with its production report table");
+        Ui.scrollIntoView(actual);
+        verify(waitForPolish(actual) && waitForRendering(actual), "The reflection report table must settle in the live viewport");
+        const list = Render.descendants(actual).find(item => typeof item.positionViewAtIndex === "function" && item.count === expected.length);
+        verify(list !== undefined, "A long report reflection table must expose its real scrolling row view");
+        for (const index of [0, Math.floor(expected.length / 2), expected.length - 1]) {
+            list.positionViewAtIndex(index, ListView.Contain);
+            tryVerify(() => list.itemAtIndex(index) !== null, 2000, "Scrolling the report must instantiate each sampled reflection row including the last");
+            const item = list.itemAtIndex(index);
+            const labels = Render.texts(item).map(label => label.text).join("").replace(/\s/g, "");
+            compare(labels, table.rows[index].join("").replace(/\s/g, ""), "The first, middle and last report rows must render all seven complete reflection values");
+        }
+        const chart = Review.find(witness.preview, "report.singleCrystal");
+        verify(chart !== null && actual.mapToItem(witness.preview, 0, 0).y > chart.mapToItem(witness.preview, 0, chart.height).y, "The rendered report reflection table must follow its single-crystal chart");
+        witness.project.report.setIncluded("reflections", true);
+        const files = savedReportFiles(witness);
+        const savedTable = reportReflectionTable(SettingsProof.htmlModel(files.html), expected);
+        const html = SettingsProof.htmlEvolutionFacts(files.html);
+        verify(!html.error && html.wide.ready && html.narrow.ready, "The reflection-list HTML must render in the actual browser at both viewports");
+        for (const view of [html.wide, html.narrow]) {
+            const rendered = view.tables.find(candidate => candidate.columns.length === 7 && candidate.columns[0] === "h" && candidate.columns[1] === "k");
+            verify(rendered !== undefined, "The actual saved HTML DOM must contain the seven-column reflection table");
+            compare(JSON.stringify(rendered.columns), JSON.stringify(savedTable.columns), "The saved HTML must render every reflection column header");
+            compare(JSON.stringify(rendered.rows), JSON.stringify(savedTable.rows), "The actual saved HTML must render every reflection row without truncation or omission");
+        }
+        const pdf = SettingsProof.pdfFacts(files.pdf);
+        verify(!pdf.error && pdf.pages.length > 1, "The reflection report must export a parseable multi-page PDF");
+        const compact = text => text.replace(/\s/g, "").replace(/−/g, "-");
+        const header = compact(table.columns.join(""));
+        const rowTexts = table.rows.map(row => compact(row.join("")));
+        const seen = Array(expected.length).fill(0);
+        let reflectionPages = 0;
+        for (const page of pdf.pages) {
+            const lines = page.lines.map(line => ({
+                        text: compact(line.text),
+                        y: line.y
+                    }));
+            const rows = lines.filter(line => rowTexts.includes(line.text));
+            if (rows.length === 0)
+                continue;
+            ++reflectionPages;
+            const heading = lines.find(line => line.text === header);
+            verify(heading !== undefined && rows.every(row => row.y > heading.y), "Every PDF page carrying reflection rows must repeat the complete header above them");
+            for (const row of rows)
+                ++seen[rowTexts.indexOf(row.text)];
+        }
+        verify(reflectionPages >= 2, "The long single-crystal reflection list must continue across multiple PDF pages");
+        verify(seen.every(count => count === 1), "The exported PDF must render every complete reflection row exactly once across its pages");
+    }
     function test_single_crystal_report_chart_and_outputs_data() {
         return [
             {
