@@ -419,14 +419,15 @@ TestCase {
         verify(summary.text.length < 650 && /GNU General Public License/.test(summary.text) && /BSD/.test(summary.text), "About provides a short user-facing licence summary for both distribution terms");
         verify(!/ADR-\d|app\/|DISTRIBUTION-LICENSE|source repo/i.test(summary.text), "The short licence summary has no developer file or decision references");
         verify(formatted(summary), "The user licence summary renders as formatted text");
-        for (const data of [["copying", "COPYING"], ["bsd", "LICENSE"]]) {
+        for (const data of [["gpl", "app/DISTRIBUTION-LICENSE.md", TextEdit.MarkdownText], ["copying", "COPYING", TextEdit.PlainText], ["bsd", "LICENSE", TextEdit.PlainText]]) {
             const link = textInDialog(dialog, "about.licence." + data[0]);
             mouseClick(link, link.width / 2, link.height / 2);
             verify(waitForPolish(appWindow), "A real licence request lays out the inline full text");
             singleAbout(original);
             const full = textInDialog(dialog, "about.licence.text");
-            compare(full.textFormat, TextEdit.PlainText, "The complete plain licence retains its original text without markup interpretation");
-            compare(normalized(full.getText(0, full.length)), normalized(Probe.readFile(data[1])), "The complete independent bundled licence text remains reachable inside About");
+            compare(full.textFormat, data[2], "Each complete licence uses the format of its independent bundled file");
+            const completeText = data[2] === TextEdit.MarkdownText ? full.text : full.getText(0, full.length);
+            compare(normalized(completeText), normalized(Probe.readFile(data[1])), "The complete independent bundled licence text remains reachable inside About");
             verify(full.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "Licence body text uses the app text size instead of oversized headings");
             verify(full.readOnly, "The complete licence remains a read-only text view");
         }
