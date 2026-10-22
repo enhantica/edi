@@ -6,6 +6,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include <algorithm>
+#include <limits>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -66,6 +67,8 @@ class ScanViewModel : public QObject {
     // The scan's datasets after a load or a refresh, the project they belong to and the first extract rule's title;
     // what was read is dropped and read again when a view next shows.
     void setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title);
+    // After a calculation: the d axis takes the project's current conversion.
+    void setConversion(const edi::Project* project);
 
     bool wanted() const { return wanted_; }
     void setWanted(bool wanted);
@@ -128,9 +131,19 @@ class ScanViewModel : public QObject {
    private:
     void start();
     void stop();
+    // One dataset's read: its columns over the shared x range, its own x extent, its scan value; an unreadable
+    // pattern's refusal, or why a readable one has no scan value.
+    struct Read {
+        edi::ScanColumns columns;
+        double value = std::numeric_limits<double>::quiet_NaN();
+        double low = 0.0, high = 0.0;
+        QString error, value_problem;
+    };
     void readNext();
+    void deliver(std::size_t first, std::vector<Read>& done);
     void placeRows();
     void placeAxis();
+    bool readConversion(const edi::Project* project);
     // One property's value and its own signal: only what changed notifies (the app's per-property rule).
     template <typename T>
     void publish(T& member, const T& value, void (ScanViewModel::*changed)()) {
@@ -160,6 +173,7 @@ class ScanViewModel : public QObject {
     double x_min_ = 0.0, x_max_ = 1.0, row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;  // x on the pattern's own axis
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, rows_by_index_ = false;
+    bool range_known_ = false;  // a readable dataset has given the x range
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<double> edges_;
     std::uint64_t generation_ = 0;  // bumped by every listing; a read delivers only to its own

@@ -2684,6 +2684,7 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
     for (StructureViewModel* structure : structure_models_) {
         structure->captureScene();
     }
+    scan_views_->setConversion(project_.get());  // a scan's d axis follows the calculation, as the pattern chart's
     saved_files_.reset();  // a save writes the calculated pattern too
     invalidateTexts();
     report_->refresh();

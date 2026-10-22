@@ -8,6 +8,7 @@
 #include <functional>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 
 #include "background.hpp"
 #include "edi/scan.hpp"
@@ -27,26 +28,13 @@ ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {}
 ScanViewModel::~ScanViewModel() { stop(); }
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
-    // The template's d column, as the last calculation left it: what d-spacing is read from.
-    template_x_.clear();
-    template_d_.clear();
-    if (project != nullptr && !project->experiments.empty()) {
-        const edi::PdDataBase* data = project->experiment().data ? &*project->experiment().data : nullptr;
-        if (data != nullptr) {
-            const std::vector<double>& x = data->axis();
-            const std::vector<double>& d = data->d_spacing.values();
-            for (std::size_t i = 0; i < x.size() && i < d.size(); ++i) {
-                if (std::isfinite(x[i]) && std::isfinite(d[i])) {
-                    template_x_.push_back(x[i]);
-                    template_d_.push_back(d[i]);
-                }
-            }
-        }
-    }
+    readConversion(project);
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (session != nullptr && project != nullptr && session->datasets().files == files_ &&
         session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
         placeAxis();
+        ++revision_;
+        emit revisionChanged();
         return;
     }
     stop();
@@ -54,6 +42,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     started_ = false;
     next_ = 0;
     loaded_ = 0;
+    range_known_ = false;
     publish(failed_, 0, &ScanViewModel::failedChanged);
     publish(error_, QString(), &ScanViewModel::errorChanged);
     value_problem_.clear();
@@ -113,44 +102,52 @@ void ScanViewModel::readNext() {
     if (next_ >= files_.size()) {
         return;
     }
-    // The first dataset alone: its x range is every dataset's.
+    // Until a readable dataset has given the x range, one dataset at a time: the columns of every dataset are cut over
+    // that range. An unreadable dataset gives none, so the next one is read alone in its turn.
     const std::size_t first = next_;
-    const std::size_t last = first == 0 ? 1 : std::min(files_.size(), first + kBatch);
+    const std::size_t last = range_known_ ? std::min(files_.size(), first + kBatch) : first + 1;
     next_ = last;
-    struct Read {
-        edi::ScanColumns columns;
-        double value = std::numeric_limits<double>::quiet_NaN();
-        double x_min = 0.0, x_max = 0.0;
-        QString error, value_problem;
-    };
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
     std::vector<std::string> batch(files_.begin() + static_cast<std::ptrdiff_t>(first),
                                    files_.begin() + static_cast<std::ptrdiff_t>(last));
     run_in_background([self, generation, stop, first, batch = std::move(batch), source = source_, directory = directory_,
-                       mode = mode_, values = has_values_, range_known = first > 0, x_min = x_min_, x_max = x_max_] {
+                       mode = mode_, values = has_values_, range_known = range_known_, x_min = x_min_, x_max = x_max_] {
         std::vector<Read> done;
         for (const std::string& file : batch) {
             if (stop->load()) {
                 break;
             }
             Read read;
+            // The pattern: unreadable, it is not drawn and is counted as such.
             try {
                 const edi::PdDataBase data = edi::read_scan_dataset(directory, file, mode);
                 const std::vector<double>& x = data.axis();
                 const std::vector<double>& y = data.intensity_meas.get();
-                read.x_min = x_min;
-                read.x_max = x_max;
-                if (!range_known) {
-                    const auto [low, high] = std::minmax_element(x.begin(), x.end());
-                    if (low != x.end()) {
-                        read.x_min = *low;
-                        read.x_max = *high;
+                double low = std::numeric_limits<double>::infinity(), high = -low;
+                for (const double value : x) {
+                    if (std::isfinite(value)) {
+                        low = std::min(low, value);
+                        high = std::max(high, value);
                     }
                 }
-                read.columns = edi::scan_columns(x, y, read.x_min, read.x_max, kColumns);
-                if (values) {
+                if (!(high > low)) {
+                    throw std::runtime_error("the pattern has no x range");
+                }
+                read.low = low;
+                read.high = high;
+                read.columns = range_known ? edi::scan_columns(x, y, x_min, x_max, kColumns)
+                                           : edi::scan_columns(x, y, low, high, kColumns);
+            } catch (const std::exception& refusal) {
+                read.error = QString::fromStdString(file) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
+                done.push_back(std::move(read));
+                continue;
+            }
+            // Its place along the scan: without one the pattern is still drawn, and the rows stay by file index with
+            // the reason.
+            if (values) {
+                try {
                     const std::vector<std::string> extracted = edi::scan_extract_values(*source, directory, file);
                     double value = 0.0;
                     if (!extracted.empty() && edi::parse_scan_number(extracted.front(), value)) {
@@ -161,9 +158,9 @@ void ScanViewModel::readNext() {
                                                                 : QStringLiteral(": '%1' is not a number")
                                                                       .arg(QString::fromStdString(extracted.front())));
                     }
+                } catch (const std::exception& refusal) {
+                    read.value_problem = QString::fromStdString(file) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
                 }
-            } catch (const std::exception& refusal) {
-                read.error = QString::fromStdString(file) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
             }
             done.push_back(std::move(read));
         }
@@ -173,37 +170,65 @@ void ScanViewModel::readNext() {
                 if (self.isNull() || generation != self->generation_ || stop->load()) {
                     return;  // a read of an earlier listing, or a stopped one
                 }
-                for (std::size_t i = 0; i < done.size(); ++i) {
-                    Read& read = done[i];
-                    const std::size_t dataset = first + i;
-                    if (!read.error.isEmpty()) {
-                        if (self->error_.isEmpty()) {
-                            self->publish(self->error_, read.error, &ScanViewModel::errorChanged);
-                        }
-                        self->publish(self->failed_, self->failed_ + 1, &ScanViewModel::failedChanged);
-                        if (self->value_problem_.isEmpty()) {
-                            self->value_problem_ = read.error;
-                        }
-                    } else if (!read.value_problem.isEmpty() && self->value_problem_.isEmpty()) {
-                        self->value_problem_ = read.value_problem;
-                    }
-                    if (dataset == 0 && read.x_max > read.x_min) {
-                        self->x_min_ = read.x_min;
-                        self->x_max_ = read.x_max;
-                        self->placeAxis();
-                    }
-                    self->columns_[dataset] = std::move(read.columns);
-                    self->values_[dataset] = read.value;
-                    ++self->loaded_;
-                }
-                self->placeRows();
-                emit self->loadedChanged();
-                ++self->revision_;
-                emit self->revisionChanged();
-                self->readNext();
+                self->deliver(first, done);
             },
             Qt::QueuedConnection);
     });
+}
+
+// A batch's reads, in scan order from `first`. The first readable dataset gives the x range; a later one reaching
+// beyond it widens the range, and every dataset is read again over the wider one (the range only grows, so this ends).
+void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
+    bool widen = false;
+    double low = x_min_, high = x_max_;
+    for (std::size_t i = 0; i < done.size(); ++i) {
+        Read& read = done[i];
+        const std::size_t dataset = first + i;
+        ++loaded_;
+        if (!read.error.isEmpty()) {
+            if (error_.isEmpty()) {
+                publish(error_, read.error, &ScanViewModel::errorChanged);
+            }
+            publish(failed_, failed_ + 1, &ScanViewModel::failedChanged);
+            columns_[dataset] = {};
+            continue;
+        }
+        if (!read.value_problem.isEmpty() && value_problem_.isEmpty()) {
+            value_problem_ = read.value_problem;
+        }
+        if (!range_known_) {
+            range_known_ = true;
+            x_min_ = low = read.low;
+            x_max_ = high = read.high;
+            placeAxis();
+        } else {
+            const double slack = 1e-9 * (x_max_ - x_min_);
+            if (read.low < x_min_ - slack || read.high > x_max_ + slack) {
+                widen = true;
+                low = std::min(low, read.low);
+                high = std::max(high, read.high);
+            }
+        }
+        columns_[dataset] = std::move(read.columns);
+        values_[dataset] = read.value;
+    }
+    if (widen) {
+        x_min_ = low;
+        x_max_ = high;
+        next_ = 0;
+        loaded_ = 0;
+        publish(failed_, 0, &ScanViewModel::failedChanged);
+        publish(error_, QString(), &ScanViewModel::errorChanged);
+        value_problem_.clear();
+        columns_.assign(files_.size(), {});
+        values_.assign(files_.size(), std::numeric_limits<double>::quiet_NaN());
+        placeAxis();
+    }
+    placeRows();
+    emit loadedChanged();
+    ++revision_;
+    emit revisionChanged();
+    readNext();
 }
 
 void ScanViewModel::placeRows() {
@@ -230,6 +255,38 @@ void ScanViewModel::placeRows() {
     // Four rows' height: how far up the stacked view draws a pattern's highest point above its row.
     publish(stack_height_, 4.0 * (high - low) / std::max<double>(1.0, static_cast<double>(files_.size())),
             &ScanViewModel::stackHeightChanged);
+}
+
+// The project's current d column against its own axis, finite pairs only: what d-spacing is read from.
+bool ScanViewModel::readConversion(const edi::Project* project) {
+    std::vector<double> xs, ds;
+    if (project != nullptr && !project->experiments.empty() && project->experiment().data &&
+        project->experiment().computed_current()) {
+        const edi::PdDataBase& data = *project->experiment().data;
+        const std::vector<double>& x = data.axis();
+        const std::vector<double>& d = data.d_spacing.values();
+        for (std::size_t i = 0; i < x.size() && i < d.size(); ++i) {
+            if (std::isfinite(x[i]) && std::isfinite(d[i])) {
+                xs.push_back(x[i]);
+                ds.push_back(d[i]);
+            }
+        }
+    }
+    if (xs == template_x_ && ds == template_d_) {
+        return false;
+    }
+    template_x_ = std::move(xs);
+    template_d_ = std::move(ds);
+    return true;
+}
+
+void ScanViewModel::setConversion(const edi::Project* project) {
+    // A calculation published: the d axis follows its conversion, as the pattern chart's does.
+    if (readConversion(project)) {
+        placeAxis();
+        ++revision_;
+        emit revisionChanged();
+    }
 }
 
 void ScanViewModel::setDSpacing(bool on) {
