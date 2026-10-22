@@ -11,7 +11,7 @@ does not go into CI) stays executing but runs only when asked for explicitly —
 ``--offline`` runs every offline project, ``--project <id>`` any executing one. ``--project``
 otherwise narrows the run for diagnosis.
 
-Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a disposable copy
+Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a disposable copy
 (the project tree is never written) with ``--report machine --verbosity full``:
 
 - a top-level ``quantities`` block — the default invocation;
@@ -19,12 +19,13 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a
   names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
   copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); an unknown
   descent fails;
-- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay).
+- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
+- a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
 is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
-non-null ``tol_abs``/``tol_rel`` bound must hold; the record must say ``status=done``. Every
+non-null ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
 deviation is reported, never only the first, and any deviation is red.
 
 ``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
@@ -238,6 +239,9 @@ def _units(expected: dict) -> list[tuple[str, dict[str, str], dict]]:
         units.append((name, {'descent': descent}, block['quantities']))
     if 'edi' in expected:
         units.append(('edi', {}, expected['edi']['quantities']))
+    # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
+    if 'calc' in expected:
+        units.append(('calc', {}, expected['calc']['quantities']))
     if not units or not all(quantities for _, _, quantities in units):
         raise ValueError('expected.json declares no quantities to compare')
     return units
@@ -324,7 +328,8 @@ def run_project(root: Path, pid: str) -> list[str]:
             project = Path(scratch) / 'project'
             shutil.copytree(source / 'project', project, symlinks=True)
             declare_conditions(project, conditions)
-            argv = [sys.executable, '-m', 'edi', 'fit', str(project), '--report', 'machine']
+            command = 'calc' if label == 'calc' else 'fit'
+            argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
             argv += ['--verbosity', 'full']
             result = subprocess.run(
                 argv, capture_output=True, text=True, timeout=FIT_TIMEOUT_S, check=False
@@ -333,7 +338,7 @@ def run_project(root: Path, pid: str) -> list[str]:
                 deviations.append(f'{label}: rc={result.returncode}: {result.stderr[-400:]}')
                 continue
             record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
-            if record.get('status') != 'done':
+            if command == 'fit' and record.get('status') != 'done':
                 deviations.append(f'{label}: status={record.get("status")!r}, expected done')
             for name, spec in quantities.items():
                 try:
