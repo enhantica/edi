@@ -397,6 +397,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                             + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
     steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
+    steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
+                                                              + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7_basic"}
+                                                              + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                                            "choose:OK", "parameters.nameFilter", "type:scale"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
