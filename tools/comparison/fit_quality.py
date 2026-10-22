@@ -164,7 +164,12 @@ def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict
         x, observed, calculated = read_prf(
             home / ('fit.prf' if len(banks) == 1 else f'fit_{index}.prf')
         )
-        found, nearest = match_rows(x, grids[bank]['x'])
+        # Only included points are compared, so only they take part in the matching: FullProf
+        # writes no row for an excluded point, and one must not take an included point's row.
+        included = grids[bank]['included']
+        found = np.zeros(included.size, dtype=bool)
+        nearest = np.zeros(included.size, dtype=int)
+        found[included], nearest[included] = match_rows(x, grids[bank]['x'][included])
         values = np.where(found, calculated[nearest], np.nan)
         out[bank] = {
             'calculated': values,
