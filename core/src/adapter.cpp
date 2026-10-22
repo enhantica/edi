@@ -3323,6 +3323,10 @@ BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments
     banks.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const BraggPdExperiment& bank = *bank_item;
+        if (bank.reflections.has_value()) {  // a single crystal: its reflections cross with it
+            build_on_heap(banks, bank);
+            continue;
+        }
         if (!bank.data.has_value()) {
             throw std::invalid_argument(
                 "edi calculate: experiment carries no data node — a loaded project always has "
@@ -3878,7 +3882,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         return PublishOutcome::Superseded;
     }
     for (std::size_t index = 0; index < banks; ++index) {
-        if (!refused && !live.experiments[index]->data.has_value()) {
+        if (!refused && !live.experiments[index]->data.has_value() &&
+            !live.experiments[index]->reflections.has_value()) {
             return PublishOutcome::Superseded;
         }
     }

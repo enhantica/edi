@@ -23,7 +23,7 @@ _atom_site.adp_type
 _atom_site.adp_iso
 Pr Pr 0 0 0.35973 i 1 beta 0
 Ni Ni 0 0 0 a 1 beta 0
-O1 O 0.25 0.25 0 c 1 beta 0
+O1 O 0.25 0.25 0 e 1 beta 0
 O2 O 0 0 0.17385 i 0.722965 beta 0
 Oi O 0.25 0.25 0.25 f 0.074655 beta 0
 Od O 0.07347 0.07347 0.17349 p 0.074654 Biso 2.31435

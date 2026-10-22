@@ -202,6 +202,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         }
         categories.push_back(linked);
         categories.push_back({"scattering_source"});
+        categories.push_back({"refln", true, experiment.reflections->size()});
         detail::mark_dependents(categories);
         return categories;
     }
