@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T14:03:46Z
+# measured_utc = 2026-10-22T17:55:41Z
 #
-# Recorded from: scoped calc facade stand-in with a false estimate preflight; existing output and dry persistence assertions unchanged
-# Collected tests: 16148; with a reported duration: 9468
-# Module-scoped fixture costs recorded: 60
+# Recorded from: measured test run (276 node(s) measured once, 14583 banked, 0 stale row(s) dropped)
+# Collected tests: 16280; with a reported duration: 9490
+# Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,89 +29,11 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16004
+# inventory_python = 16280
 # inventory_cpp = 393
-# inventory_measured = 14583
-# inventory_unmeasured = 1814
+# inventory_measured = 14725
+# inventory_unmeasured = 1948
 
-
-# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
-# paid ONCE per module by whichever test triggers them, so they cannot be
-# per-test rows (and are spelled as comments so per-test consumers are
-# unaffected; excluding one test only moves the cost to the next sibling).
-# These rows mark and deselect NOTHING - kept for visibility
-# and the stale-module integrity refusal.
-# module-cost: 5.172	tests/integration/app/test_about_components.py
-# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
-# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
-# module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
-# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 4.741	tests/integration/app/test_scan_view_content.py
-# module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
-# module-cost: 128.644	tests/integration/app/test_shared_pattern_chart.py
-# module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
-# module-cost: 20.019	tests/integration/app/test_table_about_and_scan_views.py
-# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.091	tests/integration/py/test_report_palette_cardinality.py
-# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
-# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
-# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 1.669	tests/system/py/test_approved_palettes.py
-# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
-# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
-# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
-# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
-# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
-# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
-# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
-# module-cost: 1.201	tests/system/py/test_correlation_selection.py
-# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
-# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
-# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
-# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
-# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
-# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 13.931	tests/system/py/test_element_contrast.py
-# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
-# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
-# module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
-# module-cost: 179.025	tests/system/py/test_plain_data_app.py
-# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
-# module-cost: 2.346	tests/system/py/test_report_index_width.py
-# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
-# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
-# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
-# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
-# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
-# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
-# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
-# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
-# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
-# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 18.238	tests/system/py/test_scan_owner_additions.py
-# module-cost: 0.058	tests/system/py/test_scan_screen.py
-# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
-# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 6.259	tests/system/py/test_thread_selector.py
-# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
-# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[columns_fit_content:dark]
@@ -10571,6 +10493,282 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[parameter-selection]
 0.010	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[weak-negative]
 0.009	tests/system/py/test_correlation_selection.py::test_every_finite_lower_pair_of_selected_parameters_remains_visible[weak-positive]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-editable2-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSiteAdps.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[atomSites.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[background.terms-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-editable2-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[constraints.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[data.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-keyboard-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-readonly-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[examples.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[excludedRegions.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-cursor-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-editable3-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[experiments.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fit.results.agreement-passive-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fit.results.agreement-passive-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fit.results.list-passive-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fit.results.list-passive-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[fitStart.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[jointFit.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-editable3-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-editable3-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[linkedStructure.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-editable2-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-keyboard-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-readonly-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[parameters.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable2-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable5-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-editable5-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-hover-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-keyboard-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[preferredOrientation.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-keyboard-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-readonly-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[recentProjects.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[reflections.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[report.table-passive-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[report.table-passive-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-editable1-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-editable1-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-editable2-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-editable2-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[scatteringLengths.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-readonly-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[sequentialExtract.list-readonly-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-background-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-cursor-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-cursor-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-editable2-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-editable2-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-keyboard-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-readonly-dark]
+0.001	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[structures.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-background-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-hover-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-hover-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-keyboard-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-keyboard-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-readonly-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[warnings.list-readonly-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-background-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-cursor-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-selection-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.atomSites.list-selection-light]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-background-dark]
+0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-background-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-cursor-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-cursor-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-selection-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[window.parameters.list-selection-light]
+0.080	tests/system/py/test_current_row_input.py::test_every_production_table_has_a_real_input_case
+0.000	tests/system/py/test_current_row_input.py::test_input_receipt_refuses_missing_duplicate_and_failed_rows
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-gaussian]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-lorentzian]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_profile_is_selectable_from_the_cli[cwl-pseudo-voigt-berar-baldinozzi]
@@ -16509,3 +16707,82 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-public-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-outside/edi-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_unknown_condition_cannot_invent_reachability
+
+# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
+# paid ONCE per module by whichever test triggers them, so they cannot be
+# per-test rows (and are spelled as comments so per-test consumers are
+# unaffected; excluding one test only moves the cost to the next sibling).
+# These rows mark and deselect NOTHING - kept for visibility
+# and the stale-module integrity refusal.
+# module-cost: 5.172	tests/integration/app/test_about_components.py
+# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
+# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
+# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 10.317	tests/integration/app/test_legend_marks.py
+# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
+# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
+# module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
+# module-cost: 4.741	tests/integration/app/test_scan_view_content.py
+# module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
+# module-cost: 128.644	tests/integration/app/test_shared_pattern_chart.py
+# module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
+# module-cost: 20.019	tests/integration/app/test_table_about_and_scan_views.py
+# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
+# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.091	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
+# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
+# module-cost: 1.669	tests/system/py/test_approved_palettes.py
+# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
+# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
+# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
+# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
+# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
+# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
+# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
+# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
+# module-cost: 1.201	tests/system/py/test_correlation_selection.py
+# module-cost: 353.159	tests/system/py/test_current_row_input.py
+# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
+# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
+# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
+# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
+# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 13.931	tests/system/py/test_element_contrast.py
+# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
+# module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
+# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
+# module-cost: 2.346	tests/system/py/test_report_index_width.py
+# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
+# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
+# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
+# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
+# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
+# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
+# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
+# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
+# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
+# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
+# module-cost: 18.238	tests/system/py/test_scan_owner_additions.py
+# module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
+# module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
+# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
