@@ -352,6 +352,56 @@
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/experiments/lab.edi",
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab_joint/project/structures/pbso4.edi"
       ]
+    },
+    "pd-neut-cwl_lbco-hrpt_calculation": {
+      "samples": [
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
+      ],
+      "origin": "HRPT @ PSI",
+      "detail": "Cubic perovskite · Calculated pattern without measured data",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "simulation"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "PSI"
+        ],
+        "instruments": [
+          "HRPT"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_lbco-hrpt_calculation",
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "Cubic perovskite · Calculated pattern without measured data"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/structures/lbco.edi"
+      ]
     }
   }
 }
