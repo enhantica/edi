@@ -103,3 +103,6 @@ projects:
   - id: pd-neut-cwl_lbco-hrpt_calculation
     executing: false
     user-facing: true
+  - id: pd-neut-tof_si-sepd_calculation
+    executing: false
+    user-facing: true

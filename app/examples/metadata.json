@@ -402,6 +402,56 @@
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/experiments/hrpt.edi",
         "docs/user/cli/pd-neut-cwl_lbco-hrpt_calculation/project/structures/lbco.edi"
       ]
+    },
+    "pd-neut-tof_si-sepd_calculation": {
+      "samples": [
+        "Silicon [Fd-3m]"
+      ],
+      "origin": "SEPD @ Argonne",
+      "detail": "Silicon standard · Calculated time-of-flight pattern without measured data",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "simulation"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "Argonne"
+        ],
+        "instruments": [
+          "SEPD"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_si-sepd_calculation",
+        "Silicon [Fd-3m] · SEPD @ Argonne",
+        "Silicon standard · Calculated time-of-flight pattern without measured data"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/project.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/experiments/sepd.edi",
+        "docs/user/cli/pd-neut-tof_si-sepd_calculation/project/structures/si.edi"
+      ]
     }
   }
 }
