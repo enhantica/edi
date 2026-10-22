@@ -127,7 +127,7 @@ TestCase {
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
         verify(!Ui.groupNames(Ui.page(appWindow)).includes("refln"), "The reflection group must not occupy the Basic tab");
         Ui.click(test, Probe, appWindow, "sideBar.tab.extras");
-        verify(Ui.groupNames(Ui.page(appWindow)).includes("refln"), "The Experiment Extra tab must expose its dedicated reflection group");
+        verify(Ui.groupNames(Ui.page(appWindow)).includes("refln"), "The Experiment Extra tab must expose its dedicated reflection group; visible groups=" + JSON.stringify(Ui.groupNames(Ui.page(appWindow))));
         expand("group.refln");
         const reflectionGroup = Review.findGroup(Ui.page(appWindow), "group.refln");
         verify(reflectionGroup !== null, "The expanded reflection group must remain in the live Extra tab");
@@ -138,6 +138,9 @@ TestCase {
         const columns = [headers.indexOf("h"), headers.indexOf("k"), headers.indexOf("l"), headers.findIndex(text => /f2.*meas/.test(text)), headers.findIndex(text => /^(su|sigma|uncertainty)$/.test(text)), headers.findIndex(text => /f2.*calc/.test(text)), headers.findIndex((text, index) => /residual|diff.*sigma/.test(text) || (text === "su" && index > headers.findIndex(t => /^(su|sigma|uncertainty)$/.test(t))))];
         verify(columns.every(index => index >= 0) && new Set(columns).size === 7, "The real reflection table must label its distinct h, k, l, measured, uncertainty, calculated and residual columns");
         const dColumn = headers.findIndex(text => text === "d" || text === "da");
+        const wavelengthColumn = headers.findIndex(text => /wavelength|lambda/.test(text) && !text.includes("sin"));
+        if (data.project.includes("tof"))
+            verify(wavelengthColumn >= 0, "The TOF reflection table must include its per-reflection wavelength column");
         const sinColumn = headers.findIndex(text => /sin.*lambda|sinθ|sin/.test(text));
         verify(dColumn >= 0 && sinColumn >= 0, "The Extra table must include the reflection category's d-spacing and sin-theta-over-wavelength columns");
         for (const i of [0, Math.floor(expected.length / 2), expected.length - 1]) {
@@ -147,6 +150,8 @@ TestCase {
             Ui.scrollIntoView(item);
             verify(waitForRendering(item), "The reflection row must be drawn before its text is checked");
             const cells = cellTexts(item);
+            if (data.project.includes("tof"))
+                verify(matchesDisplayed(cells[wavelengthColumn], inputs[i][5]), "The TOF reflection wavelength cell must retain the independent input value");
             verify(Number.isFinite(expected[i].dSpacing) && expected[i].dSpacing > 0, "Calculation on load must populate finite positive reflection d spacings");
             verify(matchesDisplayed(cells[dColumn], expected[i].dSpacing), "The rendered d-spacing column must show the calculated reflection value");
             verify(matchesDisplayed(cells[sinColumn], 1 / (2 * expected[i].dSpacing)), "The reflection columns must satisfy the independent Bragg relation sin-theta-over-wavelength equals one over two d");
@@ -481,9 +486,8 @@ TestCase {
         mouseClick(start, target.x, target.y);
         const dialog = findChild(appWindow, "fit.results");
         tryVerify(() => dialog !== null && dialog.opened && !Session.project.fit.running, 15000, "Start fitting must finish and open its real result dialog");
-        verify(Math.abs(scale.value - expectedScale) <= Math.abs(expectedScale) * 2e-4 + 2e-5, "The app's fit must reach the independent FullProf-based weighted scale optimum; actual=" + scale.value + ", expected=" + expectedScale);
         const chi = rows.reduce((sum, row, i) => sum + Math.pow((row[3] - model.calculated[i]) / row[4], 2), 0) / (rows.length - 1);
-        verify(chi < before && Math.abs(chi - expectedChi) <= expectedChi * 3e-4 + .002, "The app fit must lower reduced chi square to the independent all-reflection optimum");
+        verify(chi < before, "The app fit must lower the independently calculated reflection objective");
         const columns = dialog.factorColumns.map(column => column.factor.replace(/<[^>]*>/g, ""));
         compare(JSON.stringify(columns), JSON.stringify(["R(F²)", "wR(F²)"]), "A single-crystal fit result must name its two single-crystal agreement factors");
         const table = Review.find(dialog.contentItem, "fit.results.agreement");
@@ -495,6 +499,9 @@ TestCase {
         verify(matchesDisplayed(values[0], r) && matchesDisplayed(values[1], wr), "Rendered R-F-squared and weighted-R-F-squared percentages must match independent residual formulas");
         for (const label of Render.texts(dialog.contentItem))
             verify(label.truncated !== true && !label.text.includes("…"), "The real fit-results dialog must show complete names without truncation");
+        verify(matchesDisplayed(Session.project.fit.results.text(3, "value"), chi), "The actual fit result summary must report the independently calculated reduced chi square");
+        verify(Math.abs(scale.value - expectedScale) <= Math.abs(expectedScale) * 2e-4 + 2e-5, "The app's fit must reach the independent FullProf-based weighted scale optimum; actual=" + scale.value + ", expected=" + expectedScale);
+        verify(chi < before && Math.abs(chi - expectedChi) <= expectedChi * 3e-4 + .002, "The app fit must lower reduced chi square to the independent all-reflection optimum");
     }
 
     function test_result_structure_names_are_complete_data() {
