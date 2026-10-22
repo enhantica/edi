@@ -386,6 +386,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
                                                 "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
+    // The mosaicity with no unit and, hovered, the mosaic spread it means.
+    steps_.push_back({"sccheck-11-mosaicity-hint", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                       + QStringList{experiment, basic, "expand:group.extinction",
+                                                                     "hover:extinction.mosaicity:0.5,0.5"}});
+    steps_.push_back({"sccheck-11b-mosaicity-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                        "choose:OK", experiment, basic, "hover:extinction.mosaicity:0.5,0.5"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
