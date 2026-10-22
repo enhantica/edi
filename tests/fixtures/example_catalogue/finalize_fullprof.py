@@ -32,13 +32,20 @@ def parameters(home, case):
     return result, codes
 
 
+def cycle_budget(control):
+    budget = re.search(r'^!NCY[^\n]*\n\s*(\d+)', control.read_text(), re.MULTILINE)
+    if budget is None:
+        raise ValueError(f'Missing FullProf cycle budget in {control}')
+    return int(budget[1])
+
+
 def finish(case, directories):  # noqa: PLR0914 - complete external output receipt
     simulation = case.endswith('_simulation')
     kind = 'verification' if simulation else 'fitting'
     home = ROOT / 'knowledge' / kind / 'fullprof' / case
     path = home / 'reference.json'
     record = json.loads(path.read_text())
-    record['cycles'] = 1 if simulation else 200
+    record['cycles'] = cycle_budget(home / ('start.pcr' if simulation else 'fit.pcr'))
     stems = ['start'] if simulation else ['start', 'fit', 'fixed']
     twin = ROOT / 'knowledge/verification/fullprof' / case
     for stem in stems:
@@ -113,7 +120,8 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
         '',
         (
             'Reproduce with `python tests/fixtures/example_catalogue/run_fullprof.py '
-            f'--case {case} --executable /path/to/fp2k --logs /persistent/logs`.'
+            f'--case {case} --cycles {record["cycles"]} '
+            '--executable /path/to/fp2k --logs /persistent/logs`.'
         ),
         'The executable receives the PCR basename and blank responses on standard input.',
         'A terminal EOF after completed output is not a numerical failure. Logs are retained.',
@@ -124,6 +132,7 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
             '`fit.pcr` uses Pcr=2. `fit.new` is the independent fitted model.',
             'Its fixed twin zeros every value/code field in that emitted file.',
             f'Finite output: {record["finite_fit"]}. Converged: {record["converged"]}.',
+            f'Fitting cycle budget: {record["cycles"]}. Convergence settings are unchanged.',
             'The output parameter table and its code-index mapping are retained.',
             'Rwp uses all-point least-squares factors, pooled with observed weighted sums.',
             'The scan rows claim only their single template fit.',

@@ -8,7 +8,7 @@
                  Refinement of X-ray and/or Neutron Data
 
 
-    Date: 22/10/2026  Time: 22:19:13.068                              
+    Date: 22/10/2026  Time: 22:47:12.695                              
 
  => PCR file code: start
  => DAT file code: start                -> Relative contribution: 1.0000                                                            
@@ -633,7 +633,7 @@
     NSOL    =       10 Max.num. of solutions to be stored in Montecarlo searchs   
 
  
-              CPU Time:     1.188 seconds
-                            0.020 minutes
+              CPU Time:     1.000 seconds
+                            0.017 minutes
 
- => Run finished at:     Date: 22/10/2026  Time: 22:19:14.250                              
+ => Run finished at:     Date: 22/10/2026  Time: 22:47:13.700                              

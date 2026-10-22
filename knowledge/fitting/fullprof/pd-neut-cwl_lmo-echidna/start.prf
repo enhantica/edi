@@ -3058,12 +3058,12 @@ X Modify mirror(left)=2, mirror(bottom)=2
 X Modify gfSize=12
 X Append tik1 vs Phase1
 X Modify mode(tik1)=1
-X TextBox /F=2/S=3/A=RT "Files: start\rDate of fit: \Z09 22/10/2026/ 22:19:13.8\Z12\rlmo\rChi2 =   79.74"
+X TextBox /F=2/S=3/A=RT "Files: start\rDate of fit: \Z09 22/10/2026/ 22:47:13.3\Z12\rlmo\rChi2 =   79.74"
 X Label left "\Z14Intensity"
 X Label bottom "\Z142-Theta (in degrees)"
 X TileWindows/O=1/C
 X ShowInfo
 X | Title of data set:  pd-neut-cwl_lmo-echidna
-X | Date of run: 22/10/2026 / 22:19:13.8
+X | Date of run: 22/10/2026 / 22:47:13.3
 X Beep
 X Beep
