@@ -42,8 +42,15 @@ QtObject {
 
     // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), the colour of the
     // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H) in the structure view's scheme; the minor
-    // foreground colour for an element the table does not have.
-    function element(typeSymbol) {
-        return ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
+    // foreground colour for an element the table does not have. Drawn flat, so made readable on `background`, by
+    // default the content background every table row passes with (edi ADR-0046).
+    function element(typeSymbol, background) {
+        const colour = ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
+        return colors.readable(colour, background === undefined ? EaStyle.Colors.contentBackground : background);
+    }
+
+    // A colour drawn flat on `background`, moved to 3:1 contrast by its lightness alone (edi ADR-0046).
+    function readable(colour, background) {
+        return ApplicationInfo.readableColour(colour, background);
     }
 }
