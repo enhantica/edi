@@ -307,42 +307,51 @@ void ScanLayer::paint(QPainter* painter) {
         QImage image(pixel_columns, pixel_rows, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         const double low_edge = spans[order.front()].low, high_edge = spans[order.back()].high;
-        // The datasets' rows in rising order; each pixel row finds the pair around its own scan value, whatever the
-        // order the pixel rows are visited in.
-        std::vector<double> placed(order.size());
+        // The bands' lower edges in rising order: each pixel row finds the band it lies in, whatever the order the
+        // pixel rows are visited in.
+        std::vector<double> lows(order.size());
         for (std::size_t i = 0; i < order.size(); ++i) {
-            placed[i] = rows[order[i]];
+            lows[i] = spans[order[i]].low;
         }
+        const auto height = [&](std::size_t i) { return spans[order[i]].high - spans[order[i]].low; };
         for (int j = 0; j < pixel_rows; ++j) {
             const double y = y_max_ - (static_cast<double>(j) + 0.5) / static_cast<double>(pixel_rows) * (y_max_ - y_min_);
             if (y < low_edge || y > high_edge) {
                 continue;
             }
-            const edi::ScanRowPair pair = edi::scan_row_pair(placed, y, smooth_rows_);
-            const std::vector<float>& a = values[pair.first];
-            const std::vector<float>& b = values[pair.second];
-            const double f = pair.share;
-            // The blending zone straddles the edge between the two bands, a quarter of each band's own height on its
-            // side (the owner, 2026-10-22), so uneven rows and the outer bands, which run to the extent, take theirs.
-            const edi::ScanRowSpan& lower = spans[order[pair.first]];
-            const edi::ScanRowSpan& upper = spans[order[pair.second]];
-            const double edge_y = lower.high;
-            const double below = (lower.high - lower.low) / 4.0;
-            const double above = (upper.high - upper.low) / 4.0;
-            const double edge = pair.first == pair.second || !(below + above > 0.0)
-                                    ? (f < 0.5 ? 0.0 : 1.0)
+            const auto past = static_cast<std::size_t>(std::upper_bound(lows.begin(), lows.end(), y) - lows.begin());
+            const std::size_t band = past == 0 ? 0 : past - 1;
+            // The edge zone y lies in, if any: a quarter of each band's own height on its side of the edge (the owner,
+            // 2026-10-22). A band's bottom quarter belongs to the edge below it and its top quarter to the edge above,
+            // so the zone is chosen by the band y lies in, not by the rows around y: a wide band's zone reaches past a
+            // narrow neighbour's row.
+            std::size_t neighbour = band;
+            if (band > 0 && y < spans[order[band]].low + height(band) / 4.0) {
+                neighbour = band - 1;
+            } else if (band + 1 < order.size() && y > spans[order[band]].high - height(band) / 4.0) {
+                neighbour = band + 1;
+            }
+            const std::size_t lower = std::min(band, neighbour), upper = std::max(band, neighbour);
+            const double below = height(lower) / 4.0, above = height(upper) / 4.0;
+            const double edge_y = spans[order[lower]].high;
+            const double edge = lower == upper || !(below + above > 0.0)
+                                    ? 0.0
                                     : std::clamp((y - (edge_y - below)) / (below + above), 0.0, 1.0);
+            const std::vector<float>& own = values[band];
+            const std::vector<float>& a = values[lower];
+            const std::vector<float>& b = values[upper];
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
-                const double va = a[static_cast<std::size_t>(i)], vb = b[static_cast<std::size_t>(i)];
+                const auto at = static_cast<std::size_t>(i);
+                const double va = a[at], vb = b[at];
                 // A band is its own dataset's, out to halfway to each neighbouring row, empty where that dataset has no
-                // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in the zone above,
-                // and never into or out of an empty column, so no band shows a neighbour's data. One rule for scan
-                // values, files and datablocks (the owner, 2026-10-22): blending from row to row had invented patterns
-                // between a sparse scan's rows.
-                const double own = f < 0.5 ? va : vb;
-                const double value =
-                    !smooth_rows_ || !std::isfinite(va) || !std::isfinite(vb) ? own : va + (vb - va) * edge;
+                // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in the edge zone, and
+                // never into or out of an empty column, so no band shows a neighbour's data. One rule for scan values,
+                // files and datablocks (the owner, 2026-10-22): blending from row to row had invented patterns between
+                // a sparse scan's rows.
+                const double value = !smooth_rows_ || lower == upper || !std::isfinite(va) || !std::isfinite(vb)
+                                         ? own[at]
+                                         : va + (vb - va) * edge;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
                 line[i] = qRgba(colour.r, colour.g, colour.b, colour.a);
             }
