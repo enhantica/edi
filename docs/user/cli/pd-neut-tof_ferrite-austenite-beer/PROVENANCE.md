@@ -9,7 +9,9 @@ own measurement would be.
 
 - **Data:** the two banks of `pd-neut-tof_ferrite-austenite-beer_joint` (diffraction-lib's dataset
   `meas-ferrite-austenite-beer`, files `Duplex_in_HR_for_IRF_S2.dat` and `_N2.dat`), read from that project's
-  `_data` loops by `tools/cli_projects/catalogue_tof_cases.py`. No fitted value is copied.
+  `_data` loops by `tools/cli_projects/catalogue_tof_cases.py`. No fitted value is copied. Each bank holds the 2999
+  points of its file in `data/measured/ferrite-austenite-beer.zip` in `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669` (sha256
+  `68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e`), licence BSD-3-Clause.
 - **What is calibrated and free:** diffraction-lib's BEER calibration tutorial (`docs/docs/tutorials/` at develop
   `cb2cda7b`): per bank the zero, σ₀, σ₁, σ₂ and γ₀; each phase's scale shared by the two banks; the displacement;
   the background. The cells (ferrite 2.886 Å, austenite 3.6468 Å) and each bank's DIFC and 2θ (from the data files'

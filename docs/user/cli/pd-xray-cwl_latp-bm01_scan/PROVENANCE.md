@@ -4,6 +4,12 @@ The owner's LATP project: 73 constant-wavelength synchrotron X-ray patterns (λ 
 fitted in sequence with three phases, Li1.3Al0.3Ti1.7(PO4)3 (R-3c) and two AlPO4 phases (C222₁ and P6₃mc). The owner
 made it in edi's app and gave it to edi for its examples on 2026-10-22.
 
+## Sources
+
+- **Data and model:** the 73 patterns (`experiments/bm01_scan/*.dat`) and the edi project fitted to them, measured on
+  BM01 at SNBL and given to edi for its examples by their author with the project; no licence is recorded for
+  them.
+
 ## What changed from the owner's project
 
 Naming, session state and the template dataset; every free flag, constraint, excluded region and scan data point is as
