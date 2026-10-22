@@ -189,6 +189,10 @@ TestCase {
         const capture = PatternProof.capture(appWindow, "uncertainty-" + data.tag);
         verify(capture.openGL && capture.saved, "Numeric-column witnesses retain actual OpenGL captures");
     }
+    function tooltipShows(cell, texts) {
+        // Inherited QML tooltips are owned by the cell, outside the window's QObject tree.
+        return Probe.objectsWithProperty(cell, "enterAnimationDuration").some(tip => tip.parent === cell && tip.visible && tip.opened && tip.opacity >= 0.99 && tip.contentItem.visible && Render.texts(tip.contentItem).some(label => texts.includes(label.text)));
+    }
     function test_full_hover_data() {
         const cases = [];
         for (const rule of ["iucr_19", "iucr_99"])
@@ -225,7 +229,9 @@ TestCase {
         tryCompare(cell, "hovered", true, 2000, "Real pointer input reaches the numeric cell before observing its tooltip");
         const whole = ref[data.column + "_text"];
         const raw = String(data.column === "value" ? ref.value : ref.su);
-        tryVerify(() => Probe.visiblePopups(appWindow).some(popup => popup.visible && (popup.text === whole || popup.text === raw)), 3000, "Hovering a compact numeric cell actually shows its complete plain value or standard uncertainty");
+        tryVerify(() => tooltipShows(cell, [whole, raw]), 3000, "Hovering a compact numeric cell actually shows its complete plain value or standard uncertainty");
+        mouseMove(appWindow.contentItem, 1, 1);
+        tryVerify(() => !tooltipShows(cell, [whole, raw]), 2000, "Leaving the numeric cell removes its rendered full-value tooltip");
     }
     function reportTexts(rule) {
         const actual = Session.project.report.model.parameters;
@@ -348,8 +354,9 @@ TestCase {
             const point = Ui.clickPoint(cell);
             verify(point !== null, "Every actual LATP uncertainty exposes a real hover target");
             mouseMove(cell, point.x, point.y);
-            tryVerify(() => Probe.visiblePopups(appWindow).some(popup => popup.visible && (popup.text === ref.full_su || popup.text === String(ref.su))), 3000, "Hovering compact LATP uncertainties exposes their full authored values beyond the rule-rounded mantissa");
+            tryVerify(() => tooltipShows(cell, [ref.full_su, String(ref.su)]), 3000, "Hovering compact LATP uncertainties exposes their full authored values beyond the rule-rounded mantissa");
             mouseMove(appWindow.contentItem, 1, 1);
+            tryVerify(() => !tooltipShows(cell, [ref.full_su, String(ref.su)]), 2000, "Leaving each LATP cell removes its own rendered full-uncertainty tooltip");
         }
     }
     function sidebarContainer() {
