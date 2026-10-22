@@ -1,4 +1,4 @@
-"""Fit measured reflections against the frozen FullProf fitting twins."""
+"""Fit measured reflections against independent model-equivalent fitting references."""
 
 import json
 import shutil
@@ -15,6 +15,11 @@ REFERENCES = json.loads((FIXTURE / 'fitting/fullprof.json').read_text())['cases'
 def test_fit_reaches_fullprof_scale_and_objective(tmp_path, case):
     reference = REFERENCES[case]
     source = FIXTURE / 'fitting/fullprof' / reference['project_id']
+    if 'extinction' in case:
+        source = FIXTURE / 'fitting/becker-coppens' / reference['project_id']
+        reference = dict(
+            reference, parameters=json.loads((source / 'reference.json').read_text())['parameters']
+        )
     expected = json.loads((source / 'expected.json').read_text())['quantities']
     destination = tmp_path / 'project'
     shutil.copytree(source / 'project', destination)
@@ -40,14 +45,21 @@ def test_fit_reaches_fullprof_scale_and_objective(tmp_path, case):
         scale_reference['value'],
         abs=scale_reference['su'] + 0.0000005,
         rel=0,
-    ), 'The fitted scale must reach FullProf within its reported uncertainty'
+    ), 'The fitted scale must reach the model-equivalent reference within its uncertainty'
+    if 'extinction' in case:
+        radius_reference = reference['parameters'][1]
+        assert float(experiment.extinction.radius.value) == pytest.approx(
+            radius_reference['value'],
+            abs=radius_reference['su'],
+            rel=0,
+        ), 'The fitted radius must reach the independent Becker-Coppens value within its s.u.'
     target = expected['reduced_chi_square']
     assert abs(result.reduced_chi_square - target['value']) <= target['tol_abs'], (
-        'The fitted objective must reach the FullProf N-minus-p reference within '
-        'its absolute numerical budget; empirical extinction remains a model mismatch'
+        'The fitted objective must reach the independent N-minus-p reference within '
+        'its unchanged absolute numerical budget'
     )
     assert abs(result.reduced_chi_square / target['value'] - 1) <= target['tol_rel'], (
-        'The fitted objective must also satisfy the FullProf relative numerical budget'
+        'The fitted objective must also satisfy the unchanged relative numerical budget'
     )
     observed = np.asarray(experiment.refln.intensity_meas)
     sigma = np.asarray(experiment.refln.intensity_meas_su)

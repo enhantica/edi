@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "Becker-Coppens closed form on FullProf F2",
+    "artifact": "reference.json",
+    "provenance": "../README.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 2,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 220,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "param.scale.value": {
+      "value": 3.6799768101945864,
+      "kind": "reference",
+      "tol_abs": 0.10288873814942545
+    },
+    "param.radius.value": {
+      "value": 16.550771124907907,
+      "kind": "reference",
+      "tol_abs": 2.225559273639577
+    },
+    "reduced_chi_square": {
+      "value": 76.79365259985084,
+      "kind": "reference",
+      "tol_abs": 0.06,
+      "tol_rel": 0.002
+    }
+  }
+}

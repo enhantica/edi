@@ -33,16 +33,11 @@ a scale–Ext1 correlation of 83%. It converged with finite uncertainties,
 but Ext1 is weakly constrained. This does not measure the conditioning of
 a Becker–Coppens radius/mosaicity fit.
 
-**The extinction fit is diagnostic, not a parameter-equivalent oracle.**
-The page itself says its Becker–Coppens model differs from FullProf's.
-FullProf model 1 has no radius or mosaicity parameter. No mapping or radius
-s.u. is invented. The candidate project frees radius and keeps mosaicity
-fixed, exactly as the page does. Its common scale/chi-square comparison may
-fail because the models differ. `comparable_parameters=false` preserves
-this limitation; a passing common-quantity comparison would still not
-establish the missing radius-within-s.u. requirement. The page never frees
-radius and mosaicity together, so the reported near-degeneracy in the app's
-different fitting example does not alter this page's free set.
+**The FullProf extinction fit is diagnostic, not a parameter-equivalent oracle.**
+Its empirical Ext1 has no mapping to Becker–Coppens radius or mosaicity.
+The model-equivalent independent fit is now in [becker-coppens](becker-coppens/README.md),
+using FullProf's unextincted structure factors and the spherical closed form.
+The original empirical fit remains here unchanged for provenance.
 
 The taurine verification source names no instrument. `unknown` is explicit;
 the separate SENJU tutorial is not evidence that these INT bytes are SENJU

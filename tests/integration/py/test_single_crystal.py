@@ -73,6 +73,14 @@ def test_each_reference_reader_preserves_every_input_row(case, extension):
 @pytest.mark.parametrize(
     'bad',
     ['2.5 1 3 9 1', '2 1 3 nan 1', '2 1 3 9 0', '2 1 3 9 -1', '2 1 3 9', '2 1 3 9 1 garbage'],
+    ids=[
+        'fractional-index',
+        'nonfinite-intensity',
+        'zero-su',
+        'negative-su',
+        'missing-su',
+        'trailing-word',
+    ],
 )
 def test_reader_refusal_names_the_physical_line(tmp_path, extension, bad):
     prefix = 'Sample\n(3i4,2f12.4)\n1.234 0 0\n' if extension == 'int' else '# Sample\n\n'
@@ -113,6 +121,40 @@ def test_fullprof_per_reflection_forward_values(tmp_path, case):
 @pytest.mark.parametrize('case', CASES)
 def test_project_round_trip_retains_reflections_and_model(tmp_path, case):
     model = project(tmp_path, case)
+    if case == 'sc-neut-cwl_tbti_basic':
+        omitted = tmp_path / 'omitted-extinction'
+        shutil.copytree(FIXTURE / 'projects' / case, omitted)
+        path = omitted / 'experiments/experiment.edi'
+        text = (
+            '\n'.join(
+                line
+                for line in path.read_text().splitlines()
+                if not line.startswith('_extinction.')
+            )
+            + '\n'
+        )
+        path.write_text(text)
+        default = engine().Project.load(omitted)
+        extinction = default.experiments[0].extinction
+        assert (
+            extinction.model,
+            float(extinction.radius.value),
+            float(extinction.mosaicity.value),
+        ) == ('gauss', 1.0, 1.0), (
+            'Omitted single-crystal extinction must use the diffraction-lib defaults'
+        )
+        path.write_text(
+            text + '_extinction.type becker-coppens\n_extinction.model gauss\n'
+            '_extinction.radius 1\n_extinction.mosaicity 1\n'
+        )
+        explicit = engine().Project.load(omitted)
+        np.testing.assert_allclose(
+            calculated(default),
+            calculated(explicit),
+            rtol=0,
+            atol=0,
+            err_msg='An omitted extinction category must calculate like its explicit defaults',
+        )
     before = columns(model.experiments[0], tof='tof' in case)
     first_calc = calculated(model)
     previous = None
@@ -186,7 +228,7 @@ def test_extinction_matches_decimal_closed_form_before_scale(tmp_path, model, sa
         expected = scale * float(row['f2']) * float(row[model])
         assert result.tolist() == pytest.approx([expected], rel=2e-11, abs=1e-12), (
             'Becker-Coppens must apply the spherical primary and selected secondary correction '
-            'to unscaled F² with micrometre radius and arcminute mosaicity, on both '
+            'to unscaled F² with micrometre radius and the stored mosaicity convention, on both '
             'angular branches'
         )
 

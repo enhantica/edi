@@ -1,5 +1,10 @@
 # Single-crystal references
 
+The [Becker–Coppens fitting reference](fitting/becker-coppens/README.md) uses
+the independent closed form on FullProf’s unextincted basis. Non-extinction
+projects explicitly set Becker–Coppens radius and mosaicity to zero; omission follows
+diffraction-lib’s Gaussian radius=1, mosaicity=1 default.
+
 The separate [fitting references](fitting/README.md) retain one measured-data
 FullProf fit per page, with PCR/NEW/OUT artifacts, uncertainties and explicit
 model/observation-selection limits. The fixed references below are unchanged.
