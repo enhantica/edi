@@ -58,9 +58,18 @@ Item {
     // clears it.
     property var zoomX: []
     property var zoomY: []
+    // The x and y ranges change together and are published once, so another page never takes up a new x with the
+    // old y.
+    property bool settingZoom: false
+    function setZoom(x, y) {
+        settingZoom = true;
+        zoomX = x;
+        zoomY = y;
+        settingZoom = false;
+        publishZoom();
+    }
     function resetZoom() {
-        zoomX = [];
-        zoomY = [];
+        setZoom([], []);
     }
     // The zoom is one per view across the pages (the owner, 2026-10-22): the shown chart writes it, and a chart
     // takes it up when it is shown.
@@ -69,7 +78,7 @@ Item {
             "y": []
         })
     function publishZoom() {
-        if (!shown)
+        if (!shown || settingZoom)
             return;
         const next = Object.assign({}, AppState.scanZoom);
         next[mode] = {
@@ -102,8 +111,8 @@ Item {
     // Shown once: the datasets are read from then on, for either view.
     onShownChanged: {
         if (shown) {
-            zoomX = sharedZoom.x;
-            zoomY = sharedZoom.y;
+            const zoom = sharedZoom;
+            setZoom(zoom.x, zoom.y);
         }
         if (shown && scan !== null)
             scan.wanted = true;
@@ -425,8 +434,7 @@ Item {
                 if (zoomBox.visible) {
                     zoomBox.visible = false;
                     if (zoomBox.width > 4 && zoomBox.height > 4) {
-                        chart.zoomX = [atX(zoomBox.x / width), atX((zoomBox.x + zoomBox.width) / width)];
-                        chart.zoomY = [atY((zoomBox.y + zoomBox.height) / height), atY(zoomBox.y / height)];
+                        chart.setZoom([atX(zoomBox.x / width), atX((zoomBox.x + zoomBox.width) / width)], [atY((zoomBox.y + zoomBox.height) / height), atY(zoomBox.y / height)]);
                     }
                     return;
                 }
