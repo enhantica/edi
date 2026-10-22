@@ -55,10 +55,10 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    stand for, each label centred on its end.
 6. **Colours** (the owner, 2026-10-22). The Stacked and Map colours are chosen in the app's Preferences with the
    structures' and patterns' (ADR-0038 §3); the Map keeps a box on its toolbar for the same setting, beside its
-   reverse and stepped or smooth switches. The Map lists the ramps below first, then the colour maps; the Stacked view
+   reverse and stepped or smooth switches. The Map lists the ramps below first, then the colour maps, and takes Edi Natural's
+   ramp by default, for now (the owner, 2026-10-22); the Stacked view
    offers no ramp, as one colour's shades make neighbouring lines hard to tell apart (the owner, 2026-10-22). The
-   choices: the colour maps viridis
-   (the Map's default), magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
+   choices: the colour maps viridis, magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
    provenance), all perceptually uniform, reading in grey and to the common colour-vision deficiencies, and in either
    app theme; and for each colour scheme a ramp from the pattern chart's plot background in the current theme to the
    scheme's first measured colour, mixed in Oklab (ADR-0038's gradients). The Stacked view also offers the five
@@ -96,12 +96,14 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    outside every excluded region and the points inside them are not drawn, which leaves their tint as empty gaps, the
    pattern chart's tint on the Map too; off, the full range with the marks. The colours and the Map's switches are app
    settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
-8. **Following a running scan.** A line marks the shown dataset's row at all times, the same line as the Evolution
-   tab's mark of the shown dataset (the owner, 2026-10-22): 2 px, edged on each side by 1 px of half-transparent
-   colour, black edged in white in the light theme and white edged in black in the dark one, so it shows on the plot
-   background and on every colour of every map; it moves when the rows are placed again (by
+8. **Following a running scan.** The shown dataset is marked at all times by an open rectangle across the plot (the
+   owner, 2026-10-22): its border is the Evolution tab's selected-pattern line at 1 px, black in the light theme and
+   white in the dark, with a 1 px half-transparent line of the opposite colour just outside and another just inside,
+   so it shows on the background and on every colour of every map. On the map it encloses the dataset's band, halfway
+   to each neighbouring row; on the stacked view it encloses the dataset's line from its row up to its highest point
+   in the range shown; it moves when the rows are placed again (by
    scan value once every dataset is read). The shown dataset is the one the Pattern tab shows: with Follow on, a
-   running scan moves it to each dataset as it is fitted, so the line moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
+   running scan moves it to each dataset as it is fitted, so the mark moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
    shows that dataset, here and on the Pattern tab.
 
 ## Consequences

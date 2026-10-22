@@ -123,6 +123,9 @@ class ScanViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.
     Q_INVOKABLE double rowOf(int dataset) const;
+    // The lower and upper edge of a dataset's row extent (halfway to its neighbours), NaN when it has none yet.
+    Q_INVOKABLE double rowLowEdge(int dataset) const;
+    Q_INVOKABLE double rowHighEdge(int dataset) const;
 
     // Per dataset, in scan order: its measured points (empty until read) with x on the axis shown (NaN where that axis
     // has no value), its excluded ranges on the axis shown, its row and its row's extent.

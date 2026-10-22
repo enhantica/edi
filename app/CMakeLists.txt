@@ -113,6 +113,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ScanViewChart.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
+        qml/Components/SelectedPatternBox.qml
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml

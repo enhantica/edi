@@ -99,6 +99,33 @@ void ScanLayer::measure() {
     }
 }
 
+double ScanLayer::peakOf(int dataset) const {
+    constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+    if (!model_ || dataset < 0 || static_cast<std::size_t>(dataset) >= model_->patterns().size() ||
+        static_cast<std::size_t>(dataset) >= model_->rows().size()) {
+        return kNaN;
+    }
+    const ScanViewModel::Pattern& pattern = model_->patterns()[static_cast<std::size_t>(dataset)];
+    const edi::YScale scale = scale_of(scale_);
+    double high = -std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0; i < pattern.shown.size() && i < pattern.intensity.size(); ++i) {
+        const double x = pattern.shown[i];
+        if (!(x >= std::min(x_min_, x_max_) && x <= std::max(x_min_, x_max_)) ||
+            (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
+            continue;
+        }
+        const double value = edi::to_display(pattern.intensity[i], scale);
+        if (std::isfinite(value)) {
+            high = std::max(high, value);
+        }
+    }
+    const double span = display_max_ - display_min_;
+    if (!std::isfinite(high) || !(span > 0.0)) {
+        return kNaN;
+    }
+    return model_->rows()[static_cast<std::size_t>(dataset)] + (high - display_min_) / span * model_->stackHeight();
+}
+
 QColor ScanLayer::mapColour(double t) const {
     const edi::ScanMapColour colour = edi::scan_table_colour(
         edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_), t);

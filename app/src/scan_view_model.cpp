@@ -541,4 +541,14 @@ double ScanViewModel::rowOf(int dataset) const {
                                                                            : kNaN;
 }
 
+double ScanViewModel::rowLowEdge(int dataset) const {
+    return dataset >= 0 && static_cast<std::size_t>(dataset) < spans_.size() ? spans_[static_cast<std::size_t>(dataset)].low
+                                                                             : kNaN;
+}
+
+double ScanViewModel::rowHighEdge(int dataset) const {
+    return dataset >= 0 && static_cast<std::size_t>(dataset) < spans_.size() ? spans_[static_cast<std::size_t>(dataset)].high
+                                                                             : kNaN;
+}
+
 }  // namespace edi_app

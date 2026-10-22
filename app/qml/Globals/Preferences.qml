@@ -68,7 +68,7 @@ QtObject {
         preferences.patternMeasuredStyle = "band";
         preferences.patternPointerMode = "zoom";
         preferences.scanStackedPalette = "";
-        preferences.scanMapColours = "viridis";
+        preferences.scanMapColours = "ramp:ediNatural";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
         preferences.chartIncludedOnly = false;
@@ -123,7 +123,8 @@ QtObject {
     // ApplicationInfo.colourSchemes; empty follows colourScheme) and the map's colour map (one of
     // ApplicationInfo.scanColourMaps).
     property string scanStackedPalette: ""
-    property string scanMapColours: "viridis"
+    // The Map's default, for now, is Edi Natural's shades (the owner, 2026-10-22).
+    property string scanMapColours: "ramp:ediNatural"
     // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).

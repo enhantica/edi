@@ -48,7 +48,7 @@ Item {
         const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours;
         return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(stored);
     }
-    readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "viridis"
+    readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "ramp:ediNatural"
     // The view's zoom, always on in these views (the owner, 2026-10-22): [min, max] on x and on y, or empty for the
     // whole range. A drag on the plot sets it; the reset button, another scan, another x axis or another row placing
     // clears it.
@@ -295,16 +295,28 @@ Item {
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
-        // The shown dataset's row, at all times: it moves with the shown dataset, so with a followed scan as it runs,
-        // and with the rows when they are placed again (by scan value once every dataset is read). The Evolution
-        // chart's line, which shows on the background and on every colour of every map.
-        SelectedPatternLine {
-            // The revision is part of the expression, so the line moves when the rows are placed again.
-            readonly property real at: chart.scan && chart.project && chart.scan.revision >= 0 ? chart.scan.rowOf(chart.project.currentExperimentIndex) : NaN
+        // The shown dataset, at all times, marked by an open rectangle (the owner, 2026-10-22): on the map round its
+        // row's band, halfway to each neighbour; on the stacked view from its row up to its line's highest point in
+        // the range shown. It moves with the shown dataset, so with a followed scan as it runs, and with the rows when
+        // they are placed again (by scan value once every dataset is read), the range and the scale.
+        SelectedPatternBox {
+            readonly property int dataset: chart.project ? chart.project.currentExperimentIndex : -1
+            // What the edges are read from, so the box follows each of them.
+            readonly property var follows: [chart.scan ? chart.scan.revision : -1, layer.xMin, layer.xMax, layer.scale, layer.includedOnly, layer.displayMin, layer.displayMax]
+            readonly property real low: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowLowEdge(dataset) : chart.scan.rowOf(dataset)) : NaN
+            readonly property real high: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowHighEdge(dataset) : layer.peakOf(dataset)) : NaN
+            readonly property real topPx: (axisY.max - high) / (axisY.max - axisY.min) * plot.height
+            readonly property real bottomPx: (axisY.max - low) / (axisY.max - axisY.min) * plot.height
+            // The stacked line sits inside its box: the border stands three pixels clear of its top and its row.
+            readonly property real clear: chart.mode === "map" ? 0 : 3
 
             objectName: "scanView." + chart.mode + ".current"
             dark: chart.colors.isDarkPalette
-            position: (axisY.max - at) / (axisY.max - axisY.min) * plot.height
+            visible: !isNaN(low) && !isNaN(high) && height > 0
+            x: 0
+            y: Math.max(0, Math.round(topPx) - clear)
+            width: plot.width
+            height: Math.min(plot.height, Math.round(bottomPx) + clear) - y
         }
         Rectangle {
             anchors.fill: parent

@@ -68,6 +68,9 @@ class ScanLayer : public QQuickPaintedItem {
     void setDark(bool dark);
     void setCurrent(int dataset);
     void setIncludedOnly(bool on);
+    // On the stacked view, how high a dataset's line reaches over the x range shown, on the vertical axis; NaN when it
+    // draws nothing there.
+    Q_INVOKABLE double peakOf(int dataset) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     // The colour map's colour at `t` in [0, 1].
