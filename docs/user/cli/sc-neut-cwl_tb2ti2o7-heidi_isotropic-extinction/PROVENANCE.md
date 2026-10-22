@@ -7,17 +7,15 @@ extinction and starting scale are the page's FullProf values; the measured refle
 
 ## Which values are references
 
-Every value comes from FullProf's own fit of the same parameters on the same reflections
-(`../../../../tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/`, see the `README.md` there), never from edi or crysta.
+Every value comes from the Becker-Coppens closed form (Becker and Coppens, Acta Cryst. A30, 1974) applied to FullProf's unextincted F2 and fitted to the same reflections with the same free parameters, computed once by a tool independent of edi and crysta. FullProf has no Becker-Coppens sphere model, so its own fit cannot be the reference (`../../../../tests/fixtures/single_crystal/fitting/becker-coppens/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/`, see the `README.md` there), never from edi or
+crysta.
 
 | quantity | kind | value | tolerance |
 | --- | --- | --- | --- |
 | `n_free` | reference | 2 | tol_abs 0 |
 | `n_points_fitted` | reference | 220 | tol_abs 0 |
-| `param.scale.value` | reference | 3.4961121 | tol_abs 0.10108793 |
-| `reduced_chi_square` | reference | 82.69535362484258 | tol_abs 0.06, tol_rel 0.002 |
+| `param.scale.value` | reference | 3.6799768101945864 | tol_abs 0.10288873814942545 |
+| `param.radius.value` | reference | 16.550771124907907 | tol_abs 2.225559273639577 |
+| `reduced_chi_square` | reference | 76.79365259985084 | tol_abs 0.06, tol_rel 0.002 |
 
-The scale's tolerance is FullProf's own uncertainty plus half its last printed digit; the
-reduced chi-square is FullProf's residual sum over N - p.
-
-FullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens radius this project frees, so its values do not describe the same model. diffraction-lib marks the same difference on its page. FullProf 8.40 has no Becker-Coppens sphere model (only model 1 and the anisotropic model 4), so no FullProf fit can be its reference: the project stays out of the executing set until a reference from the Becker-Coppens engine diffraction-lib uses (CrysPy) exists.
+Each parameter bound is one s.u. of that fit; the reduced chi-square is the residual sum over N - p.

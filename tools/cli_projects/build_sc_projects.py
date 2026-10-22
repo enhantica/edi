@@ -25,6 +25,8 @@ FP = ROOT / 'tests' / 'fixtures' / 'single_crystal' / 'fullprof'
 # FullProf's fits of the same pages on their measured reflections, which the verification projects'
 # expected values come from.
 FITTED = ROOT / 'tests' / 'fixtures' / 'single_crystal' / 'fitting' / 'fullprof'
+# The Becker-Coppens fit of the extinction page, which FullProf cannot make.
+BECKER_COPPENS = ROOT / 'tests' / 'fixtures' / 'single_crystal' / 'fitting' / 'becker-coppens'
 
 PR2NIO4_SITES = [
     # id, type, x, y, z, wyckoff, occupancy, adp_type, adp_iso, beta (11 22 33 12 13 23)
@@ -533,9 +535,15 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 â€
 
 
 def write_references(root: Path, pid: str) -> None:
-    """Write a verification project's expected.json and PROVENANCE.md from FullProf's fit."""
-    reference = json.loads((FITTED / pid / 'expected.json').read_text(encoding='utf-8'))
-    artifact = f'../../../../tests/fixtures/single_crystal/fitting/fullprof/{pid}/'
+    """Write a verification project's expected.json and PROVENANCE.md from its reference fit.
+
+    The reference is FullProf's own fit of the same parameters on the same reflections, or, for
+    the Becker-Coppens extinction FullProf does not have, the independent closed-form fit.
+    """
+    becker_coppens = BECKER_COPPENS / pid
+    folder = becker_coppens if becker_coppens.is_dir() else FITTED / pid
+    reference = json.loads((folder / 'expected.json').read_text(encoding='utf-8'))
+    artifact = '../../../../' + folder.relative_to(ROOT).as_posix() + '/'
     reference['source'] = {
         'engine': reference['source']['engine'],
         'artifact': artifact + reference['source']['artifact'],
@@ -550,17 +558,19 @@ def write_references(root: Path, pid: str) -> None:
         + ' |'
         for name, item in reference['quantities'].items()
     )
-    caveat = (
-        ''
-        if reference.get('comparable_parameters', True)
-        else '\nFullProf fits its own extinction model (model 1, Ext1), not the Becker-Coppens '
-        'radius this project frees, so its values do not describe the same model. diffraction-lib '
-        'marks '
-        'the same difference on its page. FullProf 8.40 has no Becker-Coppens sphere model (only '
-        'model 1 and the anisotropic model 4), so no FullProf fit can be its reference: the '
-        'project stays out of the executing set until a reference from the Becker-Coppens '
-        'engine diffraction-lib uses (CrysPy) exists.\n'
-    )
+    if becker_coppens.is_dir():
+        source = (
+            'the Becker-Coppens closed form (Becker and Coppens, Acta Cryst. A30, 1974) applied '
+            "to FullProf's unextincted F2 and fitted to the same reflections with the same free "
+            'parameters, computed once by a tool independent of edi and crysta. FullProf has no '
+            'Becker-Coppens sphere model, so its own fit cannot be the reference'
+        )
+        bounds = 'Each parameter bound is one s.u. of that fit'
+    else:
+        source = "FullProf's own fit of the same parameters on the same reflections"
+        bounds = (
+            "The scale's tolerance is FullProf's own uncertainty plus half its last printed digit"
+        )
     (root / pid / 'PROVENANCE.md').write_text(
         f"""# {pid}: provenance
 
@@ -571,16 +581,15 @@ extinction and starting scale are the page's FullProf values; the measured refle
 
 ## Which values are references
 
-Every value comes from FullProf's own fit of the same parameters on the same reflections
-(`{artifact}`, see the `README.md` there), never from edi or crysta.
+Every value comes from {source} (`{artifact}`, see the `README.md` there), never from edi or
+crysta.
 
 | quantity | kind | value | tolerance |
 | --- | --- | --- | --- |
 {rows}
 
-The scale's tolerance is FullProf's own uncertainty plus half its last printed digit; the
-reduced chi-square is FullProf's residual sum over N - p.
-{caveat}""",
+{bounds}; the reduced chi-square is the residual sum over N - p.
+""",
         encoding='utf-8',
     )
 

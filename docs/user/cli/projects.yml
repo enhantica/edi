@@ -81,9 +81,7 @@ projects:
   - id: sc-neut-cwl_tb2ti2o7-heidi_basic
     executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
-    # FullProf has no Becker-Coppens sphere model, so no FullProf fit can be this project's reference;
-    # executing once a CrysPy reference exists.
-    executing: false
+    executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
     executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_fit

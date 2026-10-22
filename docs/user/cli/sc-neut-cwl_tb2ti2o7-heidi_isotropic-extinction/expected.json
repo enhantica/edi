@@ -1,11 +1,10 @@
 {
   "schema": 1,
   "source": {
-    "engine": "FullProf 8.40",
-    "artifact": "../../../../tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/tbti.out",
+    "engine": "Becker-Coppens closed form on FullProf F2",
+    "artifact": "../../../../tests/fixtures/single_crystal/fitting/becker-coppens/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/reference.json",
     "provenance": "PROVENANCE.md"
   },
-  "comparable_parameters": false,
   "quantities": {
     "n_free": {
       "value": 2,
@@ -18,12 +17,17 @@
       "tol_abs": 0
     },
     "param.scale.value": {
-      "value": 3.4961121,
+      "value": 3.6799768101945864,
       "kind": "reference",
-      "tol_abs": 0.10108793
+      "tol_abs": 0.10288873814942545
+    },
+    "param.radius.value": {
+      "value": 16.550771124907907,
+      "kind": "reference",
+      "tol_abs": 2.225559273639577
     },
     "reduced_chi_square": {
-      "value": 82.69535362484258,
+      "value": 76.79365259985084,
       "kind": "reference",
       "tol_abs": 0.06,
       "tol_rel": 0.002

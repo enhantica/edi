@@ -21,7 +21,8 @@ python -m edi fit docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/
 
 ## What is checked
 
-**Registered, not executing.** FullProf has no Becker-Coppens sphere model (only its empirical
-model 1 and the anisotropic model 4), so FullProf's values in `expected.json` describe a different
-model (`PROVENANCE.md`), as diffraction-lib notes on its page. The project joins the executing set
-once a reference from CrysPy, the Becker-Coppens engine diffraction-lib uses, exists.
+FullProf has no Becker-Coppens sphere model, so `expected.json` holds an independent
+Becker-Coppens fit of the same scale and radius on the same reflections: the number of
+reflections, the scale and radius each within one s.u. of that fit, and the reduced chi-square
+within 0.2 %. CI and `pixi run verify` run this project through `python -m edi` on every pull
+request (`tools/checks/cli_projects.py`); `PROVENANCE.md` names each value's source.
