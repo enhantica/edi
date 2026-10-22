@@ -1158,7 +1158,7 @@ Rectangle {
             const scan = Session.project.scanViews;
             ready(scan);
             const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0);
-            compare(axes.axisY.labelsVisible, false, "Joint experiment names replace numeric scan tick labels on both views");
+            compare(axes.axisY.visible, false, "Joint experiment names replace the entire numeric y axis on both views");
             const expected = Approved.colours(SettingsProof, "ediNatural", "measured", 2, data.dark);
             for (let row = 0; row < 2; ++row) {
                 const name = ["expt_n2", "expt_s2"][row];
@@ -1628,7 +1628,7 @@ Rectangle {
         }
         function checkRows(expected, coordinates, dark) {
             const axes = named("axes"), layer = named("layer"), labels = rowLabels(), origin = layer.mapToItem(chart, 0, 0);
-            compare(axes.axisY.labelsVisible, false, "Named or Stacked rows replace the numeric y scale");
+            compare(axes.axisY.visible, false, "Labelled rows hide the whole y axis so it reserves no numeric-scale gutter");
             compare(labels.length, expected.length, "Sparse rows show exactly one icon-and-name label for each independent dataset");
             const colours = Approved.colours(SettingsProof, "ediNatural", "measured", expected.length, dark);
             for (let i = 0; i < expected.length; ++i) {
@@ -1689,7 +1689,10 @@ Rectangle {
                 if (selector.textAt(i) === data.kind)
                     index = i;
             verify(index >= 0, "The actual row selector offers file or datablock according to the independent datasets' names");
-            choose(selector, index);
+            if (selector.count > 1)
+                choose(selector, index);
+            else
+                compare(selector.currentIndex, index, "A joint fit displays its sole datablock ordering without requiring a disabled selector to open");
             compare(selector.displayText, "y: " + data.kind, "The selected row ordering uses its short owner-requested caption");
             checkRows(expected, expected.map((_, i) => i), data.dark);
             if (data.mode === "map") {
@@ -1758,19 +1761,182 @@ Rectangle {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
             choose(axisControl("y"), 0);
-            const axes = named("axes"), layer = named("layer"), origin = layer.mapToItem(chart, 0, 0);
-            verify(axes.axisY.labelsVisible, "The Map retains a numeric axis when rows use physical scan values");
+            const axes = named("axes");
+            verify(axes.axisY.visible && axes.axisY.labelsVisible, "The Map retains a numeric axis when rows use physical scan values");
+            checkDatasetTicks([100, 250, 700], Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark));
+        }
+        function checkDatasetTicks(rows, colours) {
+            const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0), right = origin.x + layer.width;
             const candidates = Render.descendants(chart).filter(item => item.visible && item.width >= 2 && item.width <= chart.em && item.height > 0 && item.height <= 2 && item.color !== undefined).filter(item => {
-                const p = item.mapToItem(chart, 0, item.height / 2);
-                return Math.abs(p.x - origin.x) <= chart.em && p.y > origin.y && p.y < origin.y + layer.height;
+                const p = item.mapToItem(chart, 0, 0);
+                return p.x > right && p.x <= right + chart.em;
             });
-            const frame = grabImage(chart);
-            for (const value of [100, 250, 700]) {
-                const y = origin.y + (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                const ticks = candidates.filter(item => Math.abs(item.mapToItem(chart, 0, item.height / 2).y - y) <= 1);
-                compare(ticks.length, 1, "Every independent measured dataset has exactly one small edge tick on the numeric Map axis");
-                const tick = ticks[0], p = tick.mapToItem(chart, tick.width / 2, tick.height / 2);
-                verify(ink(frame.pixel(Math.floor(p.x), Math.floor(p.y)), tick.color, chart.colors.chartBackground), "Each dataset edge tick has actual rendered ink");
+            const indices = rows.map((value, index) => ({
+                        value,
+                        index
+                    })).filter(row => row.value >= axes.axisY.min && row.value <= axes.axisY.max);
+            compare(candidates.length, indices.length, "Exactly one right-hand tick remains for every in-range dataset, even when labels are thinned");
+            const leftTicks = Render.descendants(chart).filter(item => item.visible && /^scanView\..*\.rowTick\./.test(item.objectName)).filter(item => item.mapToItem(chart, 0, 0).x < origin.x);
+            compare(leftTicks.length, 0, "Dataset ticks replace the former left-hand Map ticks");
+            const frame = grabImage(chart), matched = [];
+            for (const row of indices) {
+                const wanted = origin.y + (axes.axisY.max - row.value) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const matches = candidates.filter(item => Math.abs(item.mapToItem(chart, 0, item.height / 2).y - wanted) <= 1);
+                compare(matches.length, 1, "Each dataset tick sits at its independent row coordinate within one raster pixel");
+                const tick = matches[0], top = tick.mapToItem(chart, 0, 0), centre = tick.mapToItem(chart, tick.width / 2, tick.height / 2);
+                verify(!matched.includes(tick), "Distinct dataset rows never reuse one tick");
+                matched.push(tick);
+                verify(top.y >= origin.y - .01 && top.y + tick.height <= origin.y + layer.height + .01, "Every complete tick stays between the plot top and x axis, including boundary rows");
+                fuzzyCompare(top.x - right, 1, .01, "Right-hand dataset ticks preserve the existing one-pixel clear gap from the axis line");
+                compare(String(tick.color).toLowerCase(), colours[row.index], "Every tick follows its independent dataset colour from the Stacked choice, including on Map");
+                verify(ink(frame.pixel(Math.floor(centre.x), Math.floor(centre.y)), rgb(colours[row.index]), chart.colors.chartBackground), "Each correctly placed dataset tick has actual ink in its independent colour");
+            }
+        }
+        function test_dataset_ticks_all_y_modes_data() {
+            const cases = [];
+            for (const mode of ["stacked", "map"])
+                for (const kind of ["value", "file", "datablock"])
+                    for (const dark of [false, true])
+                        cases.push({
+                            tag: mode + "-" + kind + (dark ? "-dark" : "-light"),
+                            mode,
+                            kind,
+                            dark
+                        });
+            return cases;
+        }
+        function test_dataset_ticks_all_y_modes(data) {
+            let scan;
+            if (data.kind === "datablock") {
+                openJoint();
+                chart = factory.createObject(surface, {
+                    project: Session.project,
+                    mode: data.mode
+                });
+                scan = Session.project.scanViews;
+            } else
+                scan = open(data.mode);
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            Preferences.scanStackedPalette = "ediNatural";
+            ready(scan);
+            const selector = axisControl("y");
+            if (selector.count > 1)
+                choose(selector, data.kind === "value" ? 0 : selector.count - 1);
+            else
+                compare(selector.currentIndex, 0, "A joint fit starts in its sole datablock ordering");
+            const rows = data.kind === "value" ? [100, 250, 700] : data.kind === "file" ? [0, 1, 2] : [0, 1];
+            compare(named("axes").axisY.visible, data.mode === "map" && data.kind === "value", "Only a Map ordered by physical values keeps the numeric y axis");
+            for (const palette of ["ediNatural", "ediCoast"]) {
+                Preferences.scanStackedPalette = palette;
+                surface.Window.window.update();
+                verify(waitForRendering(chart), "A changed Stacked colour choice redraws ticks on both scan views");
+                checkDatasetTicks(rows, Approved.colours(SettingsProof, palette, "measured", rows.length, data.dark));
+            }
+            const pointer = named("pointer");
+            mouseDrag(pointer, pointer.width * .2, pointer.height * .15, pointer.width * .6, pointer.height * .7, Qt.LeftButton);
+            verify(waitForRendering(chart), "Actual zoom redraws dataset ticks at their new row coordinates");
+            checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediCoast", "measured", rows.length, data.dark));
+            // Put the first and last rows exactly at the viewport boundaries.
+            chart.zoomY = [rows[0], rows[rows.length - 1]];
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "The boundary viewport has a completed frame");
+            checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediCoast", "measured", rows.length, data.dark));
+        }
+        function test_dataset_ticks_survive_label_thinning_data() {
+            return test_current_row_tracks_async_coordinates_data();
+        }
+        function test_dataset_ticks_survive_label_thinning(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            const count = Input.dense(SettingsProof, root, false);
+            verify(Session.openProject(root), "Dense dataset ticks use independently generated measured files");
+            Preferences.resetToDefaults();
+            Preferences.scanStackedPalette = "ediNatural";
+            Style.Colors.theme = Style.Colors.LightTheme;
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode,
+                height: 500
+            });
+            ready(Session.project.scanViews);
+            const selector = axisControl("y");
+            choose(selector, selector.count - 1);
+            chart.zoomY = [-.5, count - .5];
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "Dense tick rows have a completed frame in their full row viewport");
+            verify(rowLabels().length < count, "The dense tick witness reaches actual label thinning");
+            const endpoints = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
+            checkDatasetTicks(Array.from({
+                length: count
+            }, (_, i) => i), Array.from({
+                length: count
+            }, (_, i) => Oklab.gradient(endpoints[0], endpoints[1], i / (count - 1))));
+        }
+        function heightSelector() {
+            const controls = Render.descendants(chart).filter(item => item.visible && typeof item.textAt === "function" && /height/i.test(String(item.objectName) + " " + item.toolTip));
+            compare(controls.length, 1, "The Stacked toolbar exposes exactly one pattern-height selector");
+            return controls[0];
+        }
+        function test_stacked_height_default_and_memory() {
+            const location = Globals.Vars.settingsFile, code = 'import QtQuick; import edi.app; QtObject { property int saved:Preferences.scanStackedHeight }';
+            SettingsProof.erase(location, "ScanViews", "stackedHeight");
+            compare(SettingsProof.settingFacts(location, "ScanViews", "stackedHeight").type, "invalid", "The height default is observed with its actual saved key absent");
+            const fresh = SettingsProof.restart(code);
+            verify(!fresh.error, "The height default loads in a fresh production Preferences engine");
+            compare(fresh.saved, 2, "An absent Stacked height setting defaults to twice the prior four-row rise");
+            const scan = open("stacked", "rows");
+            ready(scan);
+            const selector = heightSelector();
+            compare(selector.currentText, "2×", "The actual Stacked selector starts at the independent default");
+            compare(selector.count, 5, "The Stacked height selector offers exactly five steps");
+            for (let i = 0; i < 5; ++i)
+                compare(selector.textAt(i), (i + 1) + "×", "The height choices are the consecutive one-to-five multipliers");
+            for (const choice of [4, 0, 2]) {
+                choose(selector, choice);
+                compare(selector.displayText, "height: " + (choice + 1) + "×", "The selected height uses the chart's axis-value caption form");
+                tryVerify(() => SettingsProof.value(location, "ScanViews", "stackedHeight") === choice + 1, 2000, "Real height-selector input reaches the remembered settings file");
+                const restored = SettingsProof.restart(code);
+                verify(!restored.error, "Each changed height is read by a fresh production Preferences engine");
+                compare(restored.saved, choice + 1, "The selected height survives a fresh settings engine in both directions");
+            }
+            chart.mode = "map";
+            surface.Window.window.update();
+            verify(waitForRendering(chart), "The same view can display Map after changing Stacked height");
+            verify(!Ui.rendered(selector), "The pattern-height selector is exposed only for Stacked");
+        }
+        function test_stacked_height_changes_rise_not_rows_data() {
+            return [
+                {
+                    tag: "value",
+                    byIndex: false
+                },
+                {
+                    tag: "file",
+                    byIndex: true
+                }
+            ];
+        }
+        function test_stacked_height_changes_rise_not_rows(data) {
+            const scan = open("stacked", "height");
+            ready(scan);
+            choose(axisControl("y"), data.byIndex ? 1 : 0);
+            Session.project.currentExperimentIndex = 0;
+            const rows = data.byIndex ? [0, 1, 2] : [100, 250, 400], selector = heightSelector();
+            // Equally spaced rows make four row spacings exactly 4 or 600 (ADR-0041).
+            const priorRise = data.byIndex ? 4 : 600;
+            for (const factor of [1, 2, 3, 4, 5, 1]) {
+                choose(selector, factor - 1);
+                tryCompare(scan, "stackHeight", priorRise * factor, 1000, "Every selected height multiplies the independent four-row rise");
+                surface.Window.window.update();
+                verify(waitForRendering(chart), "Each new height reaches the actual Stacked rendering");
+                compare(rows.map((_, i) => scan.rowOf(i)), rows, "Height changes leave every independent dataset row fixed");
+                checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediNatural", "measured", 3, false));
+                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart), expected = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false);
+                const y = rows[1] + 128 / 255 * priorRise * factor;
+                const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                let found = false;
+                for (let dy = -2; dy <= 2; ++dy)
+                    found = found || ink(frame.pixel(Math.round(at.x), Math.round(at.y) + dy), rgb(expected[1]), chart.colors.chartBackground);
+                verify(found, "The actual middle measured curve rises by the chosen factor above its unchanged row");
             }
         }
         function test_row_label_thinning_data() {

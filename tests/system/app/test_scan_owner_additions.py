@@ -87,6 +87,16 @@ CASES += tuple(
     for kind in (('file', 'datablock', 'value') if mode == 'stacked' else ('file', 'datablock'))
 )
 
+CASES += tuple(
+    'test_dataset_ticks_all_y_modes:' + mode + '-' + kind + '-' + theme
+    for mode in ('stacked', 'map')
+    for kind in ('value', 'file', 'datablock')
+    for theme in ('light', 'dark')
+)
+CASES += tuple('test_dataset_ticks_survive_label_thinning:' + mode for mode in ('stacked', 'map'))
+CASES += ('test_stacked_height_default_and_memory',)
+CASES += tuple('test_stacked_height_changes_rise_not_rows:' + kind for kind in ('value', 'file'))
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):

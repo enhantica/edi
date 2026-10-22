@@ -10,9 +10,9 @@ function prepare(proof, root, kind) {
         if (!proof.write(root, file, text)) throw Error("The overlapping excluded-region witness could not be written");
     }
     for (let row = 0; row < files.length; ++row) {
-        let text = "XYDATA analytic scan\nTEMP " + [100, 250, 700][row] + "\n";
+        let text = "XYDATA analytic scan\nTEMP " + (kind === "height" ? [100, 250, 400] : [100, 250, 700])[row] + "\n";
         for (let i = 0; i <= 4096; ++i) {
-            const value = kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : kind === "rows" ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
+            const value = kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : (kind === "rows" || kind === "height") ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
             text += (10 + i / 40).toFixed(3) + " " + value + " 1\n";
         }
         if (!proof.write(root, "experiments/d20_scan/" + files[row], kind === "broken" && row === 1 ? "invalid pattern\n" : text))

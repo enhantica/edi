@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T08:41:55Z
+# measured_utc = 2026-10-22T09:11:11Z
 #
-# Recorded from: scoped owner scan and pattern gates plus isolated native band receipts
-# Collected tests: 16295; with a reported duration: 9468
+# Recorded from: measured test run (17 node(s) measured once, 14515 banked, 0 stale row(s) dropped)
+# Collected tests: 15919; with a reported duration: 9467
 # Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15902
+# inventory_python = 15919
 # inventory_cpp = 393
-# inventory_measured = 14515
+# inventory_measured = 14532
 # inventory_unmeasured = 1780
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -6908,6 +6908,20 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::tes
 0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:points-dark]
 0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:points-light]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_chart_colour_selector_location]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-datablock-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-datablock-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-file-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-file-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-value-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:map-value-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-datablock-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-datablock-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-file-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-file-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-value-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_all_y_modes:stacked-value-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_survive_label_thinning:map]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_dataset_ticks_survive_label_thinning:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-analysis-map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-analysis-stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-experiment-map]
@@ -6987,6 +7001,9 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::tes
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:map-light]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-dark]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_changes_rise_not_rows:file]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_changes_rise_not_rows:value]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_default_and_memory]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_schemes_and_line_width:dark]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_schemes_and_line_width:light]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_tick_labels_cover_rows_only:index-dark]
@@ -16360,7 +16377,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 3.896	tests/system/app/test_pattern_owner_styles.py
-# module-cost: 2.748	tests/system/app/test_scan_owner_additions.py
+# module-cost: 23.329	tests/system/app/test_scan_owner_additions.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
