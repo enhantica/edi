@@ -24,6 +24,8 @@ TestCase {
         verify(appWindow !== null, "The reported row-input paths run in the actual application window");
         appWindow.width = 1200;
         appWindow.height = 1000;
+        appWindow.requestActivate();
+        tryVerify(() => appWindow.active, 1500, "The user's application window is active before real input");
         verify(waitForRendering(appWindow.contentItem), "The actual application window renders before pointer input");
     }
     function cleanup() {

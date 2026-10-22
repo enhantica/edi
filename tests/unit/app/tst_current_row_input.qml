@@ -286,13 +286,13 @@ Item {
             surface.Window.window.update();
             verify(waitForRendering(surface), "Selection is observed after a real rendered frame");
             tryVerify(() => {
-                const number = Render.cells(table.itemAtIndex(index))[0];
+                const number = Render.descendants(table.itemAtIndex(index)).find(item => item.marksCurrentRow === true);
                 return number && number.font && number.font.bold && String(number.color) === String(Style.Colors.themeAccent);
             }, 1500, "The current row number finishes its colour transition to the exact bold accent");
             for (let i = 0; i < Math.min(table.count, 2); ++i) {
                 const row = table.itemAtIndex(i);
                 verify(row !== null, "Both independent row witnesses stay materialized");
-                const number = Render.cells(row)[0];
+                const number = Render.descendants(row).find(item => item.marksCurrentRow === true);
                 verify(number && number.font, "The actual production row number is observable");
                 compare(number.font.bold, i === index, "Exactly the current row number is bold");
                 compare(String(number.color) === String(Style.Colors.themeAccent), i === index, "Exactly the current row number uses the accent colour");
