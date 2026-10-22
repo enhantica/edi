@@ -90,7 +90,8 @@ Item {
     onZoomXChanged: publishZoom()
     onZoomYChanged: publishZoom()
     readonly property real xTitleHeight: Math.round(em * 1.7)
-    readonly property real barWidth: mode === "map" ? em * 6 : 0
+    // The bar, its gap and its wider end label, so a label never runs past the chart's right edge.
+    readonly property real barWidth: mode === "map" ? Math.max(em * 6, em * 2.8 + Math.max(tickMetrics.advanceWidth(intensityText(layer.displayMax)), tickMetrics.advanceWidth(intensityText(layer.displayMin)))) : 0
     // As many x ticks as their labels leave room for, the widest label (the larger end, with room for a decimal or
     // two) and three em between labels, room for the round steps niceStep may take, so long TOF values never run into
     // each other (the owner, 2026-10-22).
@@ -609,11 +610,18 @@ Item {
         }
     }
 
-    // An end of the colour bar as an intensity: the y scale's value taken back to counts.
-    function intensityText(value: real): string {
+    // An end of the colour bar as an intensity: the y scale's value taken back to counts, to four significant digits
+    // as a key needs no more.
+    function intensityCounts(value: real): real {
         const scale = Preferences.patternYScale;
         const counts = scale === "log" ? Math.pow(10, value) : scale === "sqrt" ? Math.sign(value) * value * value : value;
-        return Math.abs(counts) >= 1000 ? Math.round(counts).toString() : Number(Number(counts).toPrecision(3)).toString();
+        return isFinite(counts) ? Number(counts.toPrecision(4)) : counts;
+    }
+    // The ends are written as the pattern chart writes its intensity ticks, so large ones take the same short
+    // exponent form (the owner, 2026-10-22).
+    readonly property var colourBarFormat: NumberText.axisFormat([intensityCounts(layer.displayMin), intensityCounts(layer.displayMax)], Preferences.patternYScale !== "log")
+    function intensityText(value: real): string {
+        return NumberText.axisTick(intensityCounts(value), colourBarFormat);
     }
 
     EaElements.Label {
