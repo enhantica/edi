@@ -36,17 +36,24 @@ Item {
         when: windowShown
         property int oldTheme
         property var reference: Approved.reference(SettingsProof)
-        property string oldScheme
+        property var oldScheme
         function initTestCase() {
             oldTheme = Style.Colors.theme;
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
             surface.Window.window.width = surface.width;
             surface.Window.window.height = surface.height;
         }
         function cleanup() {
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setSchemes(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
         }
         function icon(root) {
             return Render.descendants(root).find(item => item.isIcon === true && item.modelData.icon === ParameterNames.blockIcon("experiment"));
@@ -87,7 +94,7 @@ Item {
             verify(Session.openExample(data.example), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
-            Preferences.colourScheme = data.scheme;
+            Approved.setSchemes(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = createTemporaryObject(projectFactory, surface, {
                 width: surface.width,

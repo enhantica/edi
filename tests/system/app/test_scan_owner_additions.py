@@ -2,6 +2,7 @@
 
 import os
 import re
+import signal
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -10,6 +11,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = (
+    'test_map_default_and_saved_choice',
+    'test_joint_labels_outside_axis:stacked-light',
+    'test_joint_labels_outside_axis:stacked-dark',
+    'test_joint_labels_outside_axis:map-light',
+    'test_joint_labels_outside_axis:map-dark',
+    'test_stacked_schemes_and_line_width:light',
+    'test_stacked_schemes_and_line_width:dark',
     'test_owner_axis_name:stacked',
     'test_owner_axis_name:map',
     'test_owner_d_availability:stacked',
@@ -36,6 +44,48 @@ CASES = (
     'test_joint_rows_and_common_d:map',
 )
 CASES += tuple('test_owner_selector_widths:' + mode for mode in ('pattern', 'stacked', 'map'))
+CASES += tuple(
+    'test_joint_user_chosen_axes:' + mode + '-' + axes
+    for mode in ('stacked', 'map')
+    for axes in ('tof', 'cwl', 'mixed')
+)
+CASES += (
+    'test_preferences_four_colour_choices:light',
+    'test_preferences_four_colour_choices:dark',
+    'test_preferences_map_shortcut_and_roster',
+    'test_preferences_four_choices_remembered',
+)
+CASES += tuple(
+    'test_experiment_analysis_scan_sharing:' + project + '-' + origin + '-' + mode
+    for project in ('scan', 'tof', 'cwl', 'mixed')
+    for origin in ('experiment', 'analysis')
+    for mode in ('stacked', 'map')
+)
+CASES += ('test_chart_colour_selector_location',)
+
+CASES += tuple(
+    'test_stacked_tick_labels_cover_rows_only:' + mode + '-' + theme
+    for mode in ('value', 'index')
+    for theme in ('light', 'dark')
+)
+
+CASES += tuple(
+    'test_scan_axis_fonts:' + mode + '-' + theme
+    for mode in ('stacked', 'map', 'evolution')
+    for theme in ('light', 'dark')
+)
+CASES += tuple(
+    'test_row_order_and_map_bands:' + mode + '-' + kind + '-' + theme
+    for mode in ('stacked', 'map')
+    for kind in ('file', 'datablock')
+    for theme in ('light', 'dark')
+)
+CASES += tuple('test_map_numeric_dataset_ticks:' + theme for theme in ('light', 'dark'))
+CASES += tuple(
+    'test_row_label_thinning:' + mode + '-' + kind
+    for mode in ('stacked', 'map')
+    for kind in (('file', 'datablock', 'value') if mode == 'stacked' else ('file', 'datablock'))
+)
 
 
 @pytest.fixture(scope='module')
@@ -59,18 +109,25 @@ def scan_receipt(request):
             '-,txt',
             *['ScanViewContent::' + case for case in cases],
         ]
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
+        )
+        print(f'Acceptance actor process group {process.pid}: {cases}', flush=True)
         try:
-            result = subprocess.run(
-                command, capture_output=True, text=True, check=False, timeout=40
-            )
-            output = result.stdout + result.stderr
-            status = result.returncode
-        except subprocess.TimeoutExpired as error:
-            output = (
-                (error.stdout or b'').decode(errors='replace')
-                + (error.stderr or b'').decode(errors='replace')
-                + '\nThe scan acceptance function exceeded its unchanged actor watchdog'
-            )
+            output, _ = process.communicate(timeout=40)
+            status = process.returncode
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                output, _ = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                output, _ = process.communicate()
+            output += '\nThe acceptance function exceeded its unchanged actor watchdog'
             status = 124
         print(output)
         return cases, status, output
@@ -97,7 +154,7 @@ def scan_receipt(request):
 def test_scan_owner_addition(scan_receipt, case):
     status, output = scan_receipt[case]
     assert (
-        status >= 0
+        0 <= status < 128
         and status != 124
         and 'Totals:' in output
         and '::ScanViewContent::cleanupTestCase()' in output

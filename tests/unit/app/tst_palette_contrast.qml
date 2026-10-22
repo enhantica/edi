@@ -23,12 +23,16 @@ Rectangle {
         name: "PublishedPaletteContrast"
         when: windowShown
         property int oldTheme
-        property string oldScheme
+        property var oldScheme
         property var page
         property var reference: Approved.reference(SettingsProof)
         function initTestCase() {
             oldTheme = Style.Colors.theme;
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
         }
         function cleanup() {
             if (page)
@@ -36,7 +40,10 @@ Rectangle {
             page = null;
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setSchemes(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
         }
         // W3C WCAG 2.2, relative luminance: the sRGB transfer function, then
         // the fixed 0.2126/0.7152/0.0722 weights. No product colour arithmetic.
@@ -80,19 +87,39 @@ Rectangle {
             fuzzyCompare(luminance("#0a0a0a"), 0.003035269835488375, 1e-12, "Encoded sRGB 10 uses the W3C lower linear branch");
             fuzzyCompare(luminance("#0b0b0b"), 0.003346535763899161, 1e-12, "Encoded sRGB 11 uses the W3C power branch");
         }
-        function test_preferences_lists_all_five_named_schemes() {
+        function colourChoice(dialog, label) {
+            const row = Render.descendants(dialog.contentItem).find(item => item.rowLabel === true && String(item.text).replace(/:$/, " ").trim() === label);
+            verify(row !== undefined, "The split Preferences exposes its independently named " + label + " colour choice");
+            const siblings = row.parent.children, box = siblings.slice(siblings.indexOf(row) + 1).find(item => item.rowBox === true);
+            verify(box !== undefined, "The " + label + " choice retains its actual populated Preferences selector");
+            return box;
+        }
+        function setBothSchemes(token) {
             const dialog = createTemporaryObject(preferencesFactory, parent);
-            verify(dialog !== null, "The five-palette gate creates the actual Preferences dialog");
-            const box = findChild(dialog, "preferences.colourScheme");
-            verify(box !== null, "Appearance exposes its actual preferences.colourScheme selector");
-            const actual = Array.from({
-                length: box.count
-            }, (_, index) => box.textAt(index));
-            compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Preferences lists the five approved palettes in the owner's order; actual=" + JSON.stringify(actual));
-            for (let index = 0; index < reference.schemes.length; ++index) {
+            verify(dialog !== null, "The colour setup uses actual split production Preferences controls");
+            const index = reference.schemes.findIndex(scheme => scheme.id === token);
+            verify(index >= 0, "The colour fixture resolves an independently approved scheme token");
+            for (const label of ["Structures", "Patterns"]) {
+                const box = colourChoice(dialog, label);
                 box.currentIndex = index;
                 box.activated(index);
-                compare(Preferences.colourScheme, reference.schemes[index].id, "Selecting each actual published scheme stores its corresponding token: " + actual[index]);
+            }
+        }
+        function test_preferences_lists_all_five_named_schemes() {
+            const dialog = createTemporaryObject(preferencesFactory, parent);
+            verify(dialog !== null, "The five-palette gate creates the actual split Preferences dialog");
+            for (const label of ["Structures", "Patterns"]) {
+                const box = colourChoice(dialog, label), actual = Array.from({
+                    length: box.count
+                }, (_, index) => box.textAt(index));
+                compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Each independent Structures/Patterns preference lists all five approved palettes in owner order");
+                for (let index = 0; index < reference.schemes.length; ++index) {
+                    box.currentIndex = index;
+                    box.activated(index);
+                    const fresh = createTemporaryObject(preferencesFactory, parent);
+                    verify(fresh !== null, "Each actual choice is observed by a separate production Preferences instance");
+                    compare(colourChoice(fresh, label).currentText, reference.schemes[index].label, "A separate actual control reads the selected scheme from the shared preference state");
+                }
             }
         }
         function test_approved_palette_assignment_data() {
@@ -161,11 +188,15 @@ Rectangle {
             verify(!calcHue("#0055a0") && !calcHue("#808080"), "An independently blue hue and hue-less neutral stay outside the calculated hue range");
         }
         function test_natural_is_the_reversible_default() {
-            Preferences.resetToDefaults();
-            compare(Preferences.colourScheme, reference.default, "The owner-selected new default is Edi Natural after a real Preferences reset");
-            Preferences.colourScheme = reference.schemes[1].id;
-            Preferences.resetToDefaults();
-            compare(Preferences.colourScheme, reference.default, "Reset reversibly restores Edi Natural after selecting another named scheme");
+            for (const afterChoice of [false, true]) {
+                if (afterChoice)
+                    setBothSchemes(reference.schemes[1].id);
+                Preferences.resetToDefaults();
+                const dialog = createTemporaryObject(preferencesFactory, parent);
+                verify(dialog !== null, "Default reset is observed through the actual split Preferences controls");
+                for (const label of ["Structures", "Patterns"])
+                    compare(colourChoice(dialog, label).currentText, reference.schemes[0].label, "The owner-selected Edi Natural default resets reversibly for both independent colour choices");
+            }
         }
         function test_pdf_colour_observer_reaches_an_independent_qt_image() {
             const witness = SettingsProof.pdfWitness();
@@ -182,7 +213,7 @@ Rectangle {
         }
         function test_report_preview_html_and_pdf_use_light_palettes(data) {
             Style.Colors.theme = Style.Colors.DarkTheme;
-            Preferences.colourScheme = data.scheme;
+            setBothSchemes(data.scheme);
             const expected = reference.schemes.find(row => row.id === data.scheme).palette;
             verify(expected !== undefined, "The report colour gate reaches its independently approved palette");
             const folder = SettingsProof.copyProject(Qt.resolvedUrl("../../../docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));

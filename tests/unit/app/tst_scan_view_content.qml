@@ -6,9 +6,11 @@ import QtTest
 import edi.app
 import ReportAcceptance 1.0
 import EdiAcceptance 1.0
+import EasyApplication.Gui.Globals as Globals
 import EasyApplication.Gui.Style as Style
 import "ApprovedPalette.js" as Approved
 import "RenderedTable.js" as Render
+import "UiInteraction.js" as Ui
 import "../../fixtures/scan_views/input.js" as Input
 import "../../fixtures/scan_views/oklab.js" as Oklab
 
@@ -39,16 +41,34 @@ Rectangle {
         name: "ScanViewContent"
         when: windowShown
         property var chart
+        property var applicationWindow
+        property var preferencesDialog
+        property var preferencesSelector
+        Component {
+            id: preferencesFactory
+            AppPreferencesDialog {}
+        }
         property var samples: JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/viridis.json")).samples
         function cleanup() {
-            if (chart)
+            if (preferencesDialog) {
+                preferencesDialog.close();
+                preferencesDialog.destroy();
+            }
+            preferencesDialog = null;
+            preferencesSelector = null;
+            if (chart && !applicationWindow)
                 chart.destroy();
+            if (applicationWindow) {
+                applicationWindow.close();
+                applicationWindow.destroy();
+            }
+            applicationWindow = null;
             chart = null;
             Session.closeProject();
         }
         function open(mode, kind = "bands") {
             Style.Colors.theme = Style.Colors.LightTheme;
-            Preferences.colourScheme = "ediNatural";
+            Preferences.resetToDefaults();
             Preferences.patternYScale = "linear";
             if (typeof Preferences.scanMapColours === "string")
                 Preferences.scanMapColours = "viridis";
@@ -83,6 +103,62 @@ Rectangle {
             verify(item !== null, "The scan actor reaches its actual " + suffix + " item");
             return item;
         }
+        function outlineBounds(mode, index, rows, levels) {
+            const low = mode === "map" ? (index ? (rows[index - 1] + rows[index]) / 2 : rows[0] - (rows[1] - rows[0]) / 2) : rows[index];
+            const high = mode === "map" ? (index + 1 < rows.length ? (rows[index] + rows[index + 1]) / 2 : rows[index] + (rows[index] - rows[index - 1]) / 2) : rows[index] + levels[index] / 255 * Session.project.scanViews.stackHeight;
+            return [low, high];
+        }
+        function outlineGeometry(mode, index, rows, levels) {
+            const marker = named("current"), layer = named("layer"), axes = named("axes"), limits = outlineBounds(mode, index, rows, levels);
+            verify(marker.visible && marker.height > 3, "Stacked and Map mark a selected dataset with a visible open rectangle even without a fit");
+            compare(marker.width, layer.width, "The selected dataset's open rectangle spans the full plot width");
+            const top = Math.max(0, (axes.axisY.max - limits[1]) / (axes.axisY.max - axes.axisY.min) * layer.height);
+            const bottom = Math.min(layer.height, (axes.axisY.max - limits[0]) / (axes.axisY.max - axes.axisY.min) * layer.height);
+            const actual = marker.mapToItem(layer, 0, 0);
+            const allowance = mode === "stacked" ? 3.5 : .75;
+            verify(Math.abs(actual.y - top) <= allowance && Math.abs(actual.y + marker.height - bottom) <= allowance, "The selected rectangle follows independently computed dataset-band or shown-curve bounds after coordinate changes");
+            return [top, bottom];
+        }
+        function outlinePixels(mode, index, dark, background) {
+            const layer = named("layer"), bounds = outlineGeometry(mode, index, [100, 250, 700], [0, 128, 255]), origin = layer.mapToItem(chart, 0, 0), frame = grabImage(chart);
+            const core = dark ? 1 : 0, edge = 1 - core;
+            function actual(x, y) {
+                return frame.pixel(Math.floor(origin.x + x), Math.floor(origin.y + y));
+            }
+            function below(x, y) {
+                return background.pixel(Math.floor(origin.x + x), Math.floor(origin.y + y));
+            }
+            function coreAt(x, y) {
+                return ["r", "g", "b"].every(c => Math.abs(actual(x, y)[c] - core) <= 1 / 255);
+            }
+            for (const [bound, inside] of [[bounds[0], 1], [bounds[1], -1]]) {
+                const marker = named("current"), rectangle = marker.mapToItem(layer, 0, 0);
+                const near = Math.round(inside === 1 ? rectangle.y + 1 : rectangle.y + marker.height - 2);
+                const y = [near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).find(candidate => [.25, .5, .75].every(place => coreAt(Math.round(layer.width * place), candidate)));
+                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge");
+                for (const place of [.25, .5, .75]) {
+                    const x = Math.round(layer.width * place);
+                    for (const offset of [-1, 1]) {
+                        const pixel = actual(x, y + offset), prior = below(x, y + offset);
+                        verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "Exactly one half-transparent opposite-colour pixel lies outside and inside the rectangle border");
+                    }
+                    const second = actual(x, y + inside * 2), prior = below(x, y + inside * 2);
+                    verify(["r", "g", "b"].every(c => Math.abs(second[c] - prior[c]) <= 1 / 255), "The rectangle border is one opaque pixel plus one edge on either side, with no extra interior stripe");
+                }
+            }
+            for (const side of [1, Math.round(layer.width) - 2]) {
+                const y = Math.round((bounds[0] + bounds[1]) / 2);
+                verify(coreAt(side, y), "The selected dataset rectangle has a one-pixel opaque vertical side in the owner theme colour");
+                for (const offset of [-1, 1]) {
+                    const pixel = actual(side + offset, y), prior = below(side + offset, y);
+                    verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "The vertical rectangle sides have the same half-transparent opposite-colour inner and outer lines");
+                }
+            }
+            for (const place of [.25, .5, .75]) {
+                const x = Math.round(layer.width * place), y = Math.round((bounds[0] + bounds[1]) / 2), pixel = actual(x, y), prior = below(x, y);
+                verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - prior[c]) <= 1 / 255), "The open rectangle has an empty interior and preserves the actual data pixels underneath it");
+            }
+        }
         function test_current_row_tracks_async_coordinates_data() {
             return [
                 {
@@ -103,11 +179,7 @@ Rectangle {
             ready(scan);
             compare(Session.project.currentExperimentIndex, 1, "The selected dataset remains unchanged throughout asynchronous placement");
             compare(scan.rowOf(1), 250, "The second independent TEMP field becomes the scan coordinate");
-            const axes = named("axes"), layer = named("layer");
-            const expected = (axes.axisY.max - 250) / (axes.axisY.max - axes.axisY.min) * layer.height;
-            verify(marker.visible && Math.abs(marker.mapToItem(layer, 0, marker.height / 2).y - expected) <= 1, "The drawn marker centre lies at the selected physical scan coordinate");
-            compare(marker.width, layer.width, "The current pattern is marked by a full-width horizontal line");
-            verify(marker.height >= 1 && marker.visible, "The selected Map pattern has visible line ink even with no fit running");
+            outlineGeometry(data.mode, 1, [100, 250, 700], [255, 255, 255]);
         }
         function test_unreadable_pattern_is_visibly_refused_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -270,30 +342,61 @@ Rectangle {
                 verify(point.y >= 0 && point.y + text.height <= chart.height + 0.5, "Every scan label, including the Map maximum, fits inside the view");
             }
         }
-        function test_selected_map_line_is_always_drawn() {
+        function test_selected_map_rectangle_is_always_drawn() {
             const scan = open("map");
             ready(scan);
-            const marker = named("current"), layer = named("layer");
             for (const index of [0, 2, 1]) {
                 Session.project.currentExperimentIndex = index;
-                const axes = named("axes");
-                const expectedY = (axes.axisY.max - [100, 250, 700][index]) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                const inside = Math.max(marker.height / 2, Math.min(layer.height - marker.height / 2, expectedY));
-                verify(Math.abs(marker.mapToItem(layer, 0, marker.height / 2).y - inside) <= 1, "Selecting a pattern centres its line at the independent temperature, clamped inside the plot at its edges");
-                verify(marker.visible && marker.width === layer.width, "The Map keeps a visible full-width current-pattern line outside a running fit");
-                surface.Window.window.update();
-                verify(waitForRendering(chart), "The selected Map line reaches an actual completed frame");
+                verify(waitForRendering(chart), "The newly selected Map dataset reaches a completed real frame");
+                outlineGeometry("map", index, [100, 250, 700], [255, 255, 255]);
             }
         }
         function axisControl(axis) {
-            const controls = Render.descendants(chart).filter(item => item.visible && item.count > 1 && typeof item.currentIndex === "number");
+            const controls = Render.descendants(chart).filter(item => item.visible && item.count >= 1 && typeof item.currentIndex === "number");
             const expression = new RegExp("(?:[. _-]|^)" + axis + "(?:axis|scale|type|[. _-])|" + axis + "[ -]axis", "i");
             const found = controls.find(item => expression.test(String(item.objectName) + " " + item.toolTip + " " + (item.closedTexts || []).join(" ")));
             verify(found !== undefined, "The real scan toolbar has an independent " + axis + " axis-type control");
             return found;
         }
+        function openPreferences() {
+            if (!preferencesDialog)
+                preferencesDialog = preferencesFactory.createObject(surface);
+            verify(preferencesDialog !== null, "The palette witness opens the actual application Preferences dialog");
+            Preferences.dialogShown = true;
+            tryCompare(preferencesDialog, "opened", true, 1000, "The actual Preferences dialog finishes opening before colour input");
+            const tab = findChild(preferencesDialog.contentItem, "preferences.tab.appearance");
+            verify(tab !== null && tab.enabled, "The actual Preferences Appearance tab is available");
+            if (!tab.checked)
+                mouseClick(tab, tab.width / 2, tab.height / 2);
+            tryCompare(tab, "checked", true, 1000, "Actual input chooses the Preferences Appearance page");
+            tryVerify(() => !Ui.moving(preferencesDialog.contentItem), 2000, "The actual Preferences page finishes moving before colour input");
+            verify(waitForPolish(preferencesDialog.contentItem), "Preferences colour controls finish layout before input");
+        }
+        function preferenceColour(label) {
+            openPreferences();
+            const row = Render.descendants(preferencesDialog.contentItem).find(item => item.rowLabel === true && String(item.text).replace(/:$/, " ").trim() === label);
+            verify(row !== undefined, "Preferences contains its actual independently named " + label + " colour choice");
+            const siblings = row.parent.children, index = siblings.indexOf(row);
+            const box = siblings.slice(index + 1).find(item => item.rowBox === true);
+            verify(box !== undefined && box.count > 1, "The " + label + " colour choice has its actual populated Preferences selector");
+            return box;
+        }
+        function paletteSelector(mode) {
+            if (mode === "map")
+                return named("toolbar.colourMap");
+            preferencesSelector = preferenceColour("Stacked");
+            return preferencesSelector;
+        }
         function choose(control, index) {
-            mouseClick(control, control.width / 2, control.height / 2);
+            if (control === preferencesSelector)
+                openPreferences();
+            Ui.scrollIntoView(control);
+            verify(waitForPolish(control.Window.window.contentItem), "The selector is laid out after scrolling its real viewport");
+            control.Window.window.update();
+            verify(waitForRendering(control.Window.window.contentItem), "The actual selector window has rendered before input");
+            const at = Ui.clickPoint(control);
+            verify(at !== null, "The real selector is exposed inside its viewport before input");
+            mouseClick(control, at.x, at.y);
             tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector");
             verify(SettingsProof.key(control, Qt.Key_Home), "Home reaches the actual scan selector window");
             for (let step = 0; step < index; ++step)
@@ -301,6 +404,10 @@ Rectangle {
             verify(SettingsProof.key(control, Qt.Key_Return), "Return commits the actual scan selector choice");
             tryCompare(control, "currentIndex", index, 1000, "Real input chooses the requested scan axis or palette type");
             tryCompare(control.popup, "visible", false, 1000, "The real popup finishes closing before another scan input");
+            if (control === preferencesSelector) {
+                verify(SettingsProof.key(control, Qt.Key_Escape), "Actual Escape input closes Preferences after the colour choice");
+                tryCompare(preferencesDialog, "visible", false, 1000, "The Preferences overlay closes before observing actual scan pixels");
+            }
             surface.Window.window.update();
             verify(waitForRendering(chart), "The selected scan setting reaches an actual frame");
         }
@@ -356,65 +463,92 @@ Rectangle {
             compare(zoom.checked, true, "Zoom remains on after reset");
         }
         function test_background_to_experiment_ramp_data() {
-            const cases = [];
-            for (const mode of ["stacked", "map"])
-                for (const dark of [false, true])
-                    cases.push({
-                        tag: mode + (dark ? "-dark" : "-light"),
-                        mode,
-                        dark
-                    });
-            return cases;
+            return [
+                {
+                    tag: "map-light",
+                    mode: "map",
+                    dark: false
+                },
+                {
+                    tag: "map-dark",
+                    mode: "map",
+                    dark: true
+                }
+            ];
         }
         function test_background_to_experiment_ramp(data) {
-            const scan = open(data.mode, data.mode === "stacked" ? "rows" : "bands");
+            const scan = open("map", "bands");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
-            const choices = data.mode === "map" ? chart.mapChoices : chart.stackedChoices;
-            verify(choices !== undefined, "The actual scan menu exposes the offered ramp choices");
-            const selector = findChild(chart, "scanView." + data.mode + ".toolbar." + (data.mode === "map" ? "colourMap" : "palette"));
-            verify(selector !== null, "The ramp observer operates the actual palette selector");
+            const choices = chart.mapChoices, selector = paletteSelector("map");
             const schemes = Approved.reference(SettingsProof).schemes;
+            compare(choices.slice(0, 5).join(","), schemes.map(scheme => "ramp:" + scheme.id).join(","), "The Map toolbar offers all five Edi shades before every published colour map");
+            const preferences = preferenceColour("Map");
+            compare(Array.from({
+                length: 5
+            }, (_, index) => preferences.textAt(index)).join(","), Array.from({
+                length: 5
+            }, (_, index) => selector.textAt(index)).join(","), "The Preferences Map list has the same first five Edi shades in the same order");
+            keyClick(Qt.Key_Escape);
+            tryCompare(preferencesDialog, "visible", false, 1000, "Actual Escape closes the Preferences observer before Map input");
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment
             });
-            verify(pattern !== null, "The ramp reference is the actual single-pattern chart in the current theme");
-            let offered = 0;
-            for (let choice = 0; choice < choices.length; ++choice) {
-                if (!String(choices[choice]).startsWith("ramp:"))
-                    continue;
-                ++offered;
-                const scheme = schemes.find(row => row.id === choices[choice].slice(5));
-                verify(scheme !== undefined, "Every offered ramp ends at an independently approved experiment colour");
+            verify(pattern !== null, "The Map ramp reference is the actual Pattern plot background in the current theme");
+            for (let choice = 0; choice < 5; ++choice) {
                 choose(selector, choice);
-                const expected = [String(pattern.colors.chartBackground), scheme.palette[data.dark ? "dark" : "light"].measured[0]];
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
-                if (data.mode === "map") {
-                    for (const index of [0, 1]) {
-                        const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : 0.5) / 7, layer.height * 0.2);
-                        compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Every Map ramp starts at the Pattern plot background and ends at its main experiment colour");
-                    }
-                } else {
-                    for (let row = 0; row < 3; ++row) {
-                        const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
-                        const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                        const point = layer.mapToItem(chart, layer.width * 0.4, py);
-                        const place = Math.round((0.25 + 0.75 * row / 2) * 255) / 255;
-                        const colour = Oklab.gradient(expected[0], expected[1], place);
-                        const rgb = {
-                            r: parseInt(colour.slice(1, 3), 16) / 255,
-                            g: parseInt(colour.slice(3, 5), 16) / 255,
-                            b: parseInt(colour.slice(5, 7), 16) / 255
-                        };
-                        verify(colour !== expected[0].toLowerCase(), "ADR-0041's quarter-ramp start gives every Stacked trace a colour distinct from the Pattern background");
-                        let present = false;
-                        for (let dy = -2; dy <= 2; ++dy)
-                            present = present || ink(frame.pixel(Math.round(point.x), Math.round(point.y) + dy), rgb, chart.colors.chartBackground);
-                        verify(present, "Every Stacked ramp pattern has actual drawable ink in its independently mixed inset colour");
-                    }
+                const expected = [String(pattern.colors.chartBackground), schemes[choice].palette[data.dark ? "dark" : "light"].measured[0]];
+                const layer = named("layer"), frame = grabImage(chart);
+                for (const index of [0, 1]) {
+                    const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : .5) / 7, layer.height * .2);
+                    compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Every Map shade ramp starts at the Pattern plot background and ends at its independently approved main experiment colour");
                 }
             }
-            verify(offered > 0, "Both scan palette selectors offer background-to-experiment ramps in both themes");
+        }
+        function test_stacked_schemes_and_line_width_data() {
+            return [
+                {
+                    tag: "light",
+                    dark: false
+                },
+                {
+                    tag: "dark",
+                    dark: true
+                }
+            ];
+        }
+        function test_stacked_schemes_and_line_width(data) {
+            const scan = open("stacked", "rows");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const choices = chart.stackedChoices, schemes = Approved.reference(SettingsProof).schemes;
+            verify(choices.every(name => !String(name).startsWith("ramp:")), "Stacked offers no background-to-colour shades after the owner's removal decision");
+            const selector = paletteSelector("stacked");
+            const pattern = createTemporaryObject(patternReferenceFactory, surface, {
+                experiment: Session.project.currentExperiment
+            });
+            verify(pattern !== null, "The Stacked width witness reaches the prior Pattern chart's actual measured series");
+            const measured = Render.series(pattern).find(item => item.objectName === "chart.series.meas");
+            verify(measured !== undefined, "The width comparison observes an actual Pattern measured line");
+            compare(measured.width, 2, "The Pattern measured-line width is the owner's independently declared two logical pixels");
+            for (const scheme of schemes) {
+                const index = choices.indexOf(scheme.id);
+                verify(index >= 0, "Every approved categorical Edi scheme remains offered for Stacked");
+                choose(selector, index);
+                const layer = named("layer"), axes = named("axes"), frame = grabImage(layer);
+                const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark);
+                for (let row = 0; row < 3; ++row) {
+                    const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
+                    const py = Math.round((axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height), px = Math.round(layer.width * .4), expected = rgb(colours[row]);
+                    let coverage = 0;
+                    for (let dy = -6; dy <= 6; ++dy) {
+                        const pixel = frame.pixel(px, py + dy);
+                        if (["r", "g", "b"].every(channel => Math.abs(pixel[channel] - expected[channel]) <= 3 / 255))
+                            coverage += pixel.a;
+                    }
+                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row);
+                }
+            }
         }
         function test_offered_maps_are_readable_in_both_themes_data() {
             const rows = [];
@@ -434,7 +568,7 @@ Rectangle {
             const references = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json"));
             const choices = data.mode === "map" ? chart.mapChoices : chart.stackedChoices;
             verify(choices !== undefined && choices.length > 1, "The real view exposes its offered palette choices for independent source matching");
-            const selector = findChild(chart, "scanView." + data.mode + ".toolbar." + (data.mode === "map" ? "colourMap" : "palette"));
+            const selector = paletteSelector(data.mode);
             verify(selector !== null, "The published-map observer uses the actual palette selector");
             const categorical = Approved.reference(SettingsProof).schemes.map(row => row.id);
             let offered = 0;
@@ -539,7 +673,8 @@ Rectangle {
         function mapStrip() {
             const layer = named("layer"), axes = named("axes"), marker = named("current"), frame = grabImage(chart), strip = [];
             for (let py = 2; py < layer.height - 2; ++py) {
-                if (Math.abs(py - marker.y) <= marker.height + 1)
+                const top = marker.mapToItem(layer, 0, 0).y;
+                if (Math.abs(py - top) <= 2 || Math.abs(py - top - marker.height) <= 2)
                     continue;
                 const at = layer.mapToItem(chart, layer.width * 0.4, py);
                 const value = axes.axisY.max - py / layer.height * (axes.axisY.max - axes.axisY.min);
@@ -553,6 +688,27 @@ Rectangle {
         }
         function smoothStrip(strip) {
             return new Set(strip.map(row => String(row.pixel))).size > 3;
+        }
+        function test_map_default_and_saved_choice() {
+            const location = Globals.Vars.settingsFile;
+            SettingsProof.erase(location, "ScanViews", "mapColours");
+            compare(SettingsProof.settingFacts(location, "ScanViews", "mapColours").type, "invalid", "The default witness removes the actual saved Map choice before a fresh engine reads it");
+            const code = 'import QtQuick; import edi.app; QtObject { property string preference:Preferences.scanMapColours }';
+            const fresh = SettingsProof.restart(code);
+            verify(!fresh.error, "The absent-choice witness starts a fresh production Map engine");
+            compare(fresh.preference, "ramp:ediNatural", "The absent Map preference uses the same Edi Natural shades default");
+            const scan = open("map");
+            Preferences.scanMapColours = fresh.preference;
+            ready(scan);
+            compare(chart.mapChoices[paletteSelector("map").currentIndex], "ramp:ediNatural", "The actual Map selector displays the independently reloaded absent-key default");
+            const selector = paletteSelector("map"), choice = chart.mapChoices.indexOf("plasma");
+            verify(choice >= 0, "A distinct published colour map provides the saved-choice witness");
+            choose(selector, choice);
+            tryCompare(Preferences, "scanMapColours", "plasma", 1000, "Real Map selector input updates the saved choice");
+            tryVerify(() => SettingsProof.value(location, "ScanViews", "mapColours") === "plasma", 2000, "The selected Map choice reaches the actual settings file before restart");
+            const saved = SettingsProof.restart(code);
+            verify(!saved.error, "The saved-choice witness starts another fresh production engine");
+            compare(saved.preference, "plasma", "The remembered Map preference remains bound to its toolbar selector");
         }
         function test_map_interpolation_default() {
             Preferences.resetToDefaults();
@@ -620,27 +776,19 @@ Rectangle {
             const scan = open(data.mode);
             ready(scan);
             const controls = Render.descendants(chart).filter(item => item.visible && typeof item.count === "number" && typeof item.currentIndex === "number" && typeof item.textAt === "function");
-            const palette = controls.find(item => /palette|colour|color|viridis/i.test(item.objectName + " " + item.toolTip + " " + Array.from({
-                    length: item.count
-                }, (_, i) => item.textAt(i)).join(" ")));
-            verify(palette !== undefined && palette.count > 1, "Both scan views provide an actual palette selector in a second chart-toolbar line");
-            const layer = named("layer"), at = palette.mapToItem(chart, 0, 0), plot = layer.mapToItem(chart, 0, 0);
-            verify(at.y >= 0 && at.y + palette.height <= plot.y && at.y > 0, "The second toolbar line fits above the scan plot with a positive top margin");
+            const toolbarColour = controls.filter(item => /palette|colourMap/.test(item.objectName));
+            compare(toolbarColour.length, data.mode === "map" ? 1 : 0, "Only the Map retains a toolbar colour selector after colour choices move to Preferences");
+            const layer = named("layer"), plot = layer.mapToItem(chart, 0, 0), axis = axisControl("x"), at = axis.mapToItem(chart, 0, 0);
+            verify(at.y >= 0 && at.y + axis.height <= plot.y && at.y > 0, "The scan toolbar keeps its actual axis line and positive plot margin after palette relocation");
             for (const text of Render.texts(chart)) {
                 const point = text.mapToItem(chart, 0, 0);
-                verify(point.y >= 0 && point.y + text.height <= chart.height + 0.5, "Every scan axis and colour-key label fits vertically inside the view");
+                verify(point.y >= 0 && point.y + text.height <= chart.height + .5, "Every scan axis and key label stays inside the chart after palette relocation");
             }
-            if (palette.count > 1) {
-                const before = grabImage(layer);
-                const previous = palette.currentIndex;
-                mouseClick(palette, palette.width / 2, palette.height / 2);
-                keyClick(Qt.Key_Down);
-                keyClick(Qt.Key_Return);
-                tryVerify(() => palette.currentIndex !== previous, 1000, "Real input changes the view's palette selector");
-                verify(waitForRendering(chart), "The selected palette reaches a real scan frame");
-                verify(!before.equals(grabImage(layer)), "Changing the scan palette changes its actual rendered colours");
-            }
+            const before = grabImage(layer), palette = paletteSelector(data.mode), previous = palette.currentIndex;
+            choose(palette, (previous + 1) % palette.count);
+            verify(!before.equals(grabImage(layer)), "Real colour-choice input in Preferences or the Map shortcut changes actual scan pixels");
         }
+
         function test_owner_axis_name_data() {
             return test_current_row_tracks_async_coordinates_data();
         }
@@ -830,12 +978,20 @@ Rectangle {
             verify(layer !== null && axes !== null && pointer !== null && marker !== null, "Each scan chart supplies a real selected-pattern indicator and plot for pixel inspection");
             Session.project.currentExperimentIndex = 0;
             verify(waitForRendering(chart), "The initial indicator is rendered away from the next selected row");
+            const opacity = marker.opacity;
+            marker.opacity = 0;
+            verify(waitForRendering(chart), "The indicator pixel observer captures the actual data underlay with only the prior indicator transparent");
             const background = grabImage(chart);
+            marker.opacity = opacity;
             const vertical = data.mode === "evolution";
             const position = vertical ? (value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width : (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
             mouseClick(pointer, vertical ? position : pointer.width * .6, vertical ? pointer.height * .5 : position);
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real chart input selects the middle independent dataset on every scan chart");
             verify(waitForRendering(chart), "The newly selected indicator has a completed actual frame");
+            if (!vertical) {
+                outlinePixels(data.mode, 1, data.dark, background);
+                return;
+            }
             compare(vertical ? marker.width : marker.height, 4, "Every selected-pattern indicator occupies exactly four logical pixels");
             const children = marker.children.filter(item => item.visible && item.color !== undefined);
             compare(children.length, 3, "The unified indicator draws one core and two border strips");
@@ -844,7 +1000,7 @@ Rectangle {
                 const strip = sorted[index], core = index === 1;
                 compare(vertical ? strip.width : strip.height, core ? 2 : 1, "The selected indicator uses a two-pixel core and one-pixel borders");
                 const colour = core ? (data.dark ? 1 : 0) : (data.dark ? 0 : 1);
-                verify(["r", "g", "b"].every(c => Math.abs(strip.color[c] - colour) < 1e-9) && Math.abs(strip.color.a - (core ? 1 : .5)) < 1e-9, "The actual core and half-transparent border use the exact owner colours for this theme");
+                verify(["r", "g", "b"].every(c => Math.abs(strip.color[c] - colour) < 1e-9) && Math.abs(strip.color.a - (core ? 1 : .5)) <= 1 / 65535, "The actual core and half-transparent border use the exact owner colours for this theme");
                 for (const along of [.25, .5, .75]) {
                     const at = strip.mapToItem(chart, vertical ? strip.width / 2 : strip.width * along, vertical ? strip.height * along : strip.height / 2);
                     const actual = grabImage(chart).pixel(Math.floor(at.x), Math.floor(at.y)), before = background.pixel(Math.floor(at.x), Math.floor(at.y));
@@ -855,7 +1011,7 @@ Rectangle {
             verify(Math.abs((vertical ? actualCentre.x : actualCentre.y) - position) <= 1, "The indicator centre follows the selected physical coordinate, rather than its top or left edge");
         }
         function excludedButton(root) {
-            return Render.descendants(root).find(item => item.visible && typeof item.checked === "boolean" && /exclud.*region|region.*exclud/i.test(String(item.objectName) + " " + item.toolTip));
+            return Render.descendants(root).find(item => item.visible && typeof item.checked === "boolean" && /exclud.*region|region.*exclud|Show only the included range/i.test(String(item.objectName) + " " + item.toolTip));
         }
         function test_owner_excluded_regions_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -868,20 +1024,54 @@ Rectangle {
                 visible: true,
                 shown: true
             });
-            verify(pattern !== null, "Excluded-region behaviour is checked against the actual prior Pattern chart");
-            const prior = excludedButton(pattern), control = excludedButton(chart);
-            verify(prior !== undefined && control !== undefined, "Pattern and both scan toolbars expose the same excluded-regions control");
-            const original = SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi");
-            for (const root of [pattern, chart]) {
-                const button = excludedButton(root), before = grabImage(root), initial = button.checked;
-                mouseClick(button, button.width / 2, button.height / 2);
-                tryCompare(button, "checked", !initial, 1000, "Real input toggles excluded-region visibility on Pattern, Stacked and Map");
-                verify(waitForRendering(root), "The excluded-region setting reaches an actual chart frame");
-                verify(!before.equals(grabImage(root)), "The real excluded-region control changes drawable chart content");
-                mouseClick(button, button.width / 2, button.height / 2);
-                tryCompare(button, "checked", initial, 1000, "The same excluded-region input restores its original state");
+            const other = createTemporaryObject(factory, surface, {
+                project: Session.project,
+                mode: data.mode === "map" ? "stacked" : "map",
+                shown: true
+            });
+            verify(pattern !== null && other !== null, "The excluded-range actor reaches all three actual chart implementations");
+            const roots = [pattern, chart, other], buttons = roots.map(excludedButton);
+            verify(buttons.every(item => item !== undefined), "Pattern, Stacked and Map expose the same included-range toggle");
+            for (let index = 0; index < roots.length; ++index) {
+                const control = buttons[index], legend = Render.descendants(roots[index]).find(item => /toolbar.legend$/.test(item.objectName));
+                compare(control.fontIcon, "eraser", "Every included-range toggle uses the sidebar's eraser icon");
+                compare(control.toolTip, "Show only the included range", "All three charts use the owner's exact included-range tooltip");
+                verify(legend !== undefined && Math.abs(control.mapToItem(roots[index], 0, 0).y - legend.mapToItem(roots[index], 0, 0).y) < 1, "The included-range toggle belongs to the chart's legend/tooltip button group");
             }
-            compare(SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi"), original, "A visibility control preserves the independently specified excluded scientific ranges");
+            const original = SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi");
+            function activate(index, wanted) {
+                roots.forEach((root, at) => root.visible = at === index);
+                const control = buttons[index];
+                if (control.checked !== wanted)
+                    mouseClick(control, control.width / 2, control.height / 2);
+                tryVerify(() => buttons.every(button => button.checked === wanted), 1000, "Real input on each chart updates the one shared included-range choice on all three charts");
+                verify(waitForRendering(roots[index]), "The shared included-range choice reaches an actual chart frame");
+            }
+            for (let index = 0; index < roots.length; ++index) {
+                activate(index, true);
+                const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { PatternChart {width:1100;height:760} ScanViewChart {mode:"stacked";width:1100;height:760} ScanViewChart {mode:"map";width:1100;height:760} function walk(item) {let all=[item];for(const child of item.children||[])all=all.concat(walk(child));return all;} readonly property var controls:walk(this).filter(item=>item.toolTip==="Show only the included range"&&typeof item.checked==="boolean"); property bool acceptanceReady:controls.length===3; property bool allOn:acceptanceReady&&controls.every(item=>item.checked) }');
+                verify(!fresh.error && fresh.acceptanceReady && fresh.allOn, "The one included-range setting is remembered by actual Pattern, Stacked and Map controls in a fresh engine");
+                activate(index, false);
+            }
+            activate(1, false);
+            const layer = named("layer"), axes = named("axes");
+            const x = value => Math.round((value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * (layer.width - 1));
+            const traceY = 100 + 64 / 255 * scan.stackHeight;
+            const y = Math.round((axes.axisY.max - (data.mode === "map" ? 175 : traceY)) / (axes.axisY.max - axes.axisY.min) * (layer.height - 1));
+            const full = grabImage(layer), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
+            if (data.mode === "stacked")
+                verify([-2, -1, 0, 1, 2].some(dy => ink(full.pixel(x(42), y + dy), expected, chart.colors.chartBackground)), "Off draws the independent measured trace through the excluded range beneath its tint");
+            else
+                verify(String(full.pixel(x(36), y)) !== String(full.pixel(x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
+            activate(1, true);
+            const gap = grabImage(layer), blank = gap.pixel(x(41), y - 6);
+            verify(blank.a > 0, "On draws a visible tint in the otherwise empty excluded gap");
+            for (let px = x(40); px <= x(44); ++px)
+                for (let dy = -2; dy <= 2; ++dy)
+                    compare(String(gap.pixel(px, y + dy)), String(blank), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap");
+            const outside = Math.round(layer.height * .8);
+            verify(String(gap.pixel(x(30), outside)) === String(full.pixel(x(30), outside)), "The included-range toggle preserves drawable data outside the independent excluded interval");
+            compare(SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi"), original, "A display toggle preserves the independently specified excluded scientific ranges");
         }
         Component {
             id: analysisFactory
@@ -947,6 +1137,59 @@ Rectangle {
             verify(follow !== null, "The actual fitting sidebar supplies its Follow control");
             verify(data.kind === "scan" ? follow.visible : !follow.enabled && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
         }
+        function test_joint_labels_outside_axis_data() {
+            const rows = [];
+            for (const mode of ["stacked", "map"])
+                for (const dark of [false, true])
+                    rows.push({
+                        tag: mode + (dark ? "-dark" : "-light"),
+                        mode,
+                        dark
+                    });
+            return rows;
+        }
+        function test_joint_labels_outside_axis(data) {
+            openJoint();
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode
+            });
+            const scan = Session.project.scanViews;
+            ready(scan);
+            const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0);
+            compare(axes.axisY.labelsVisible, false, "Joint experiment names replace numeric scan tick labels on both views");
+            const expected = Approved.colours(SettingsProof, "ediNatural", "measured", 2, data.dark);
+            for (let row = 0; row < 2; ++row) {
+                const name = ["expt_n2", "expt_s2"][row];
+                const labels = Render.texts(chart).filter(item => item.text === name);
+                compare(labels.length, 1, "Each joint experiment has exactly one actual visible name, without a duplicate inside the plot");
+                const label = labels[0], left = label.mapToItem(chart, 0, 0), right = label.mapToItem(chart, label.width, label.height);
+                verify(left.x >= 0 && right.x < origin.x, "Every complete joint experiment name lies outside the plot to the left of its y axis");
+                const centre = label.mapToItem(chart, label.width / 2, label.height / 2).y;
+                const wanted = origin.y + (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                verify(Math.abs(centre - wanted) <= chart.em / 2, "Each joint row name is centred beside its independently indexed dataset row");
+                compare(String(label.color).toLowerCase(), expected[row], "Each joint dataset name uses its independently approved measured-data colour in both themes");
+                let parent = label.parent;
+                while (parent && parent.segments === undefined)
+                    parent = parent.parent;
+                verify(parent !== null && parent.segments !== undefined, "The joint name belongs to an actual icon-and-name row");
+                const icons = Render.texts(parent).filter(item => item !== label && String(item.font.family).includes("Awesome"));
+                compare(icons.length, 1, "Every outside joint row label has exactly one real experiment icon");
+                verify(parent.segments.some(piece => piece.icon === "microscope"), "The joint row uses the prior experiment list's microscope icon");
+                compare(String(icons[0].color).toLowerCase(), expected[row], "The experiment icon and its name share the independent dataset colour");
+                verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= left.x, "The experiment icon precedes its name outside the axis");
+                const frame = grabImage(chart), inkColour = rgb(expected[row]);
+                for (const item of [label, icons[0]]) {
+                    const at = item.mapToItem(chart, 0, 0);
+                    let painted = false;
+                    for (let x = Math.ceil(at.x); x < Math.floor(at.x + item.width) && !painted; ++x)
+                        for (let y = Math.ceil(at.y); y < Math.floor(at.y + item.height) && !painted; ++y)
+                            painted = ink(frame.pixel(x, y), inkColour, chart.colors.chartBackground);
+                    verify(painted, "Both the outside joint icon and name have actual drawable ink in the dataset colour");
+                }
+            }
+        }
         function test_joint_rows_and_common_d_data() {
             return test_current_row_tracks_async_coordinates_data();
         }
@@ -963,7 +1206,8 @@ Rectangle {
             compare(scan.rowOf(1), 1, "The second joint experiment follows the first in project order");
             fuzzyCompare(scan.xMin, 813, 1e-6, "The native joint range starts at the first bank's own offset plus calibrated d minimum");
             fuzzyCompare(scan.xMax, 6981, 1e-6, "The native joint range covers the second bank's distinct calibrated maximum");
-            const names = Probe.rows(Session.project.experiments).map(row => String(row.label));
+            const names = Probe.rows(Session.project.experiments).map(row => String(row.name));
+            compare(names.join(","), "expt_n2,expt_s2", "The independent joint fixture retains its declared experiment names in project order");
             const texts = Render.texts(chart).map(item => item.text).join(" ");
             verify(names.length === 2 && names.every(name => name !== "" && texts.includes(name)), "Joint rows are visibly labelled by their real experiment names in project order");
             const selector = axisControl("x");
@@ -989,7 +1233,7 @@ Rectangle {
             const py = (axes.axisY.max - 1) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseClick(pointer, pointer.width * .4, Math.max(2, py));
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Actual joint-chart input selects the second real experiment");
-            verify(Math.abs(marker.mapToItem(layer, 0, marker.height / 2).y - Math.max(marker.height / 2, py)) <= 1, "The joint indicator follows the selected experiment's index row");
+            outlineGeometry(data.mode, 1, [0, 1], [255, 255]);
         }
         function rgb(hex) {
             return Qt.rgba(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255, 1);
@@ -1043,10 +1287,556 @@ Rectangle {
                 const label = control.contentItemLabel;
                 verify(label !== undefined, "The actual selector exposes its rendered text padding and arrow clearance");
                 const clearance = label.leftPadding + label.rightPadding + control.leftPadding + control.rightPadding;
-                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance));
+                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance) + " entries=" + JSON.stringify(entries) + " font=" + JSON.stringify(control.font) + " measuredFont=" + JSON.stringify(metrics.font) + " cachedLongest=" + control.widestEntry);
                 widths.push(control.width);
             }
             verify(Math.max(...widths) - Math.min(...widths) > 1, "Unequal longest texts produce individual selector widths rather than one shared width");
+        }
+        function test_joint_user_chosen_axes_data() {
+            const rows = [];
+            for (const mode of ["stacked", "map"])
+                for (const axes of ["tof", "cwl", "mixed"])
+                    rows.push({
+                        tag: mode + "-" + axes,
+                        mode,
+                        axes
+                    });
+            return rows;
+        }
+        function test_joint_user_chosen_axes(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+            Input.joint(SettingsProof, root, false, data.axes);
+            verify(Session.openProject(root), "Every native-axis witness opens independently calibrated real joint experiments: " + Session.lastError);
+            const page = createTemporaryObject(analysisFactory, surface, {
+                visible: false,
+                current: false
+            });
+            verify(page !== null, "The any-joint gate reaches the actual Analysis tab declarations");
+            for (const mode of ["stacked", "map"])
+                compare(page.mainTabs.find(item => item.objectName === "mainArea.analysis.tab." + mode).enabled, true, "Both scan-view tabs are enabled for TOF, constant-wavelength and mixed-axis joint fits");
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode
+            });
+            const scan = Session.project.scanViews;
+            ready(scan);
+            compare(scan.count, 2, "Every real joint-fit axis witness draws both measured experiments");
+            const selector = axisControl("x");
+            const entries = [];
+            for (let i = 0; i < selector.count; ++i)
+                entries.push(selector.textAt(i));
+            const dIndex = entries.findIndex(text => /^d(?:$|[ -])/.test(text));
+            verify(dIndex >= 0, "Every joint fit offers physical d as a user-selectable common quantity");
+            if (data.axes === "mixed") {
+                compare(entries.length, 1, "Unlike native quantities are not offered as one mixed 2theta/TOF axis");
+                verify(!entries.some(text => /TOF|2θ|two.theta/i.test(text)), "A mixed joint fit exposes d only, never one bank's native quantity for all banks");
+                const axes = named("axes");
+                tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 3.2) < 1e-5, 8000, "A mixed native-axis fit actually draws the independently computed common d union");
+            } else {
+                const nativeIndex = entries.findIndex(text => data.axes === "tof" ? /TOF/i.test(text) : /2θ|two.theta/i.test(text));
+                verify(nativeIndex >= 0 && nativeIndex !== dIndex, "A shared native quantity remains available beside d, regardless of how well the banks align visually");
+                tryVerify(() => selector.enabled, 8000, "A real joint calculation makes both physical/native choices usable");
+                const native = data.axes === "tof" ? [813, 6981] : [Math.asin(1.54 / 6.4) * 360 / Math.PI, Math.asin(1.87 / 2.4) * 360 / Math.PI];
+                for (const index of [nativeIndex, dIndex, nativeIndex]) {
+                    choose(selector, index);
+                    const axes = named("axes"), expected = index === nativeIndex ? native : data.axes === "tof" ? [.8, 2.8] : [1.2, 3.2];
+                    tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Actual joint-axis input uses every bank's own native or independently calibrated d coordinates in both directions");
+                }
+            }
+        }
+        function choosePreference(label, wanted) {
+            const box = preferenceColour(label);
+            let index = -1;
+            for (let i = 0; i < box.count; ++i)
+                if (String(box.textAt(i)).toLowerCase() === wanted.toLowerCase())
+                    index = i;
+            verify(index >= 0, "The actual " + label + " preference offers the independently named choice " + wanted);
+            preferencesSelector = box;
+            choose(box, index);
+            return box.currentText;
+        }
+        function currentPreference(label) {
+            const box = preferenceColour(label), result = box.currentText;
+            preferencesSelector = box;
+            verify(SettingsProof.key(box, Qt.Key_Escape), "Actual Escape input closes the observed Preferences dialog");
+            tryCompare(preferencesDialog, "visible", false, 1000, "Preferences closes before colour rendering observations");
+            return result;
+        }
+        function test_preferences_four_colour_choices_data() {
+            return [
+                {
+                    tag: "light",
+                    dark: false
+                },
+                {
+                    tag: "dark",
+                    dark: true
+                }
+            ];
+        }
+        function test_preferences_four_colour_choices(data) {
+            const scan = open("stacked", "rows");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const pattern = createTemporaryObject(patternReferenceFactory, surface, {
+                experiment: Session.project.currentExperiment,
+                visible: false,
+                shown: true
+            });
+            verify(pattern !== null, "Independent structure/pattern choices are observed through the actual Pattern drawing");
+            const refs = Approved.reference(SettingsProof).schemes;
+            function check(structures, patterns) {
+                const series = Render.series(pattern), measured = series.find(item => item.objectName === "chart.series.meas"), bragg = series.find(item => item.objectName === "chart.series.bragg.0");
+                verify(measured !== undefined && bragg !== undefined, "The colour-split witness reaches real measured and structure drawing series");
+                const expectedMeasured = Approved.colours(SettingsProof, patterns, "measured", 3, data.dark)[1], expectedStructure = Approved.colours(SettingsProof, structures, "structures", 1, data.dark)[0];
+                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices");
+                Session.project.report.active = true;
+                tryVerify(() => Session.project.report.model.pattern_styles !== undefined, 3000, "The colour split reaches the actual report style model");
+                const styles = Session.project.report.model.pattern_styles;
+                const reportMeas = Approved.colours(SettingsProof, patterns, "measured", 3, false)[1], reportStructure = Approved.colours(SettingsProof, structures, "structures", 1, false)[0];
+                verify(styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure), "The report follows the same independent structure/pattern choices in its paper theme");
+            }
+            choosePreference("Structures", refs[1].label);
+            choosePreference("Patterns", refs[3].label);
+            check(refs[1].id, refs[3].id);
+            choosePreference("Structures", refs[2].label);
+            check(refs[2].id, refs[3].id);
+            choosePreference("Patterns", refs[4].label);
+            check(refs[2].id, refs[4].id);
+            choosePreference("Stacked", refs[1].label);
+            choosePreference("Map", "Plasma");
+            compare(String(chart.stackedPalette), refs[1].id, "The Stacked colour preference controls its own lines independently of Structures and Patterns");
+            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const colours = Approved.colours(SettingsProof, refs[1].id, "measured", 3, data.dark);
+            for (let row = 0; row < 3; ++row) {
+                const y = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
+                const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                let hit = false;
+                for (let dy = -2; dy <= 2; ++dy)
+                    hit = hit || ink(frame.pixel(Math.round(at.x), Math.round(at.y) + dy), rgb(colours[row]), chart.colors.chartBackground);
+                verify(hit, "Every Stacked line draws its independently approved preference colour in both themes");
+            }
+            const map = createTemporaryObject(factory, surface, {
+                project: Session.project,
+                mode: "map",
+                shown: true
+            });
+            verify(map !== null && waitForRendering(map), "The independent Map preference reaches an actual completed image");
+            compare(map.mapColours, "plasma", "The separate Map preference controls the map without changing the other three choices");
+            const expected = [refs[2].label, refs[4].label, refs[1].label, "Plasma"];
+            for (let i = 0; i < 4; ++i)
+                compare(currentPreference(["Structures", "Patterns", "Stacked", "Map"][i]), expected[i], "Changing one of the four colour preferences preserves the other independently chosen values");
+        }
+        function test_preferences_map_shortcut_and_roster() {
+            const scan = open("map");
+            ready(scan);
+            const roster = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps;
+            compare(roster.length, 28, "The keep-all witness uses the owner's complete pinned candidate roster");
+            const toolbar = named("toolbar.colourMap"), preference = preferenceColour("Map");
+            const expectedTitles = roster.map(name => ApplicationInfo.scanColourTitle(name)).sort();
+            for (const control of [toolbar, preference]) {
+                const offered = [];
+                for (let i = 0; i < control.count; ++i)
+                    offered.push(control.textAt(i));
+                verify(expectedTitles.every(title => offered.includes(title)), "All 28 independently frozen candidate identities are offered in both Map preference and shortcut");
+            }
+            choosePreference("Map", "Plasma");
+            compare(toolbar.currentText, "Plasma", "The actual Preferences Map choice immediately updates the toolbar shortcut");
+            let viridis = -1;
+            for (let i = 0; i < toolbar.count; ++i)
+                if (toolbar.textAt(i).toLowerCase() === "viridis")
+                    viridis = i;
+            verify(viridis >= 0, "The shortcut retains the independent viridis map witness");
+            choose(toolbar, viridis);
+            compare(currentPreference("Map").toLowerCase(), "viridis", "Actual Map-toolbar input updates the very same preference in the reverse direction");
+            verify(interpolationToggle(chart) !== undefined && Render.descendants(chart).some(item => typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip)), "Reverse and stepped/smooth remain actual Map-toolbar controls beside the shared shortcut");
+        }
+        function test_preferences_four_choices_remembered() {
+            const scan = open("stacked");
+            ready(scan);
+            const refs = Approved.reference(SettingsProof).schemes, labels = ["Structures", "Patterns", "Stacked", "Map"], expected = [refs[1].label, refs[3].label, refs[2].label, "Plasma"];
+            for (let i = 0; i < 4; ++i)
+                choosePreference(labels[i], expected[i]);
+            const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { AppPreferencesDialog { id: dialog } Component.onCompleted: Preferences.dialogShown=true; function walk(item) {let out=[item];for(const child of item.children||[])out=out.concat(walk(child));return out;} readonly property var labels:["Structures","Patterns","Stacked","Map"]; readonly property var rows:walk(dialog.contentItem).filter(item=>item.rowLabel===true); function selected(label) {const row=rows.find(item=>String(item.text).replace(/:$/," ").trim()===label);if(!row)return "";const siblings=row.parent.children;const box=siblings.slice(siblings.indexOf(row)+1).find(item=>item.rowBox===true);return box?box.currentText:"";} property bool acceptanceReady:labels.every(label=>selected(label)!==""); property string saved:JSON.stringify(labels.map(label=>selected(label))) }');
+            verify(!fresh.error && fresh.acceptanceReady, "A fresh actual Preferences engine restores all four real colour selectors");
+            compare(fresh.saved, JSON.stringify(expected), "Four distinct colour choices are remembered independently across a fresh production settings engine");
+        }
+        Component {
+            id: applicationFactory
+            Main {
+                width: 1500
+                height: 1000
+                visible: true
+            }
+        }
+        function showSharedScan(pageName, mode) {
+            Ui.click(test, Probe, applicationWindow, "appBar.tab." + pageName);
+            let page;
+            tryVerify(() => {
+                page = Render.descendants(applicationWindow.contentItem).find(item => item.pageName === pageName && item.current);
+                return page !== undefined;
+            }, 2000, "Actual application input opens the requested scan-view page");
+            tryVerify(() => !Ui.moving(applicationWindow.contentItem), 2000, "The scan page finishes moving before tab input");
+            verify(waitForPolish(applicationWindow), "The actual application lays out its scan-view tabs");
+            applicationWindow.update();
+            verify(waitForRendering(applicationWindow.contentItem), "The actual page has a completed frame before scan-tab input");
+            const tab = Array.from(page.mainTabs).find(item => item.text === (mode === "map" ? "Map" : "Stacked"));
+            verify(tab !== undefined && tab.enabled, "Experiment and Analysis both offer enabled Stacked/Map tabs for scans and every joint fit");
+            if (!tab.checked)
+                mouseClick(tab, tab.width / 2, tab.height / 2);
+            tryCompare(tab, "checked", true, 1000, "Actual pointer input chooses the requested Stacked or Map tab");
+            tryVerify(() => !Ui.moving(applicationWindow.contentItem), 2000, "The requested shared scan chart finishes its transition");
+            const found = Render.descendants(page).filter(item => item.objectName === "scanView." + mode && item.visible && item.shown);
+            compare(found.length, 1, "The shown page contains exactly one eligible actual scan chart");
+            chart = found[0];
+            tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "Shared measured views finish their real asynchronous data reads");
+            verify(waitForRendering(chart), "The shown shared scan drawing reaches a completed actual frame");
+            return chart;
+        }
+        function test_experiment_analysis_scan_sharing_data() {
+            const rows = [];
+            for (const project of ["scan", "tof", "cwl", "mixed"])
+                for (const origin of ["experiment", "analysis"])
+                    for (const mode of ["stacked", "map"])
+                        rows.push({
+                            tag: project + "-" + origin + "-" + mode,
+                            project,
+                            origin,
+                            mode
+                        });
+            return rows;
+        }
+        function test_experiment_analysis_scan_sharing(data) {
+            Preferences.resetToDefaults();
+            Style.Colors.theme = Style.Colors.LightTheme;
+            Preferences.patternYScale = "linear";
+            Preferences.scanMapColours = "viridis";
+            const root = SettingsProof.copyProject(Probe.repoUrl(data.project === "scan" ? "tests/fixtures/scan_template/project" : "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+            if (data.project === "scan")
+                Input.prepare(SettingsProof, root, "bands");
+            else
+                Input.joint(SettingsProof, root, false, data.project);
+            verify(Session.openProject(root), "Shared scan charts open real independently specified measured data before fitting: " + Session.lastError);
+            verify(!Session.project.fit.running && Session.project.fit.scanFitted === 0, "The Experiment scan-view witness has performed no fit");
+            applicationWindow = applicationFactory.createObject(null);
+            verify(applicationWindow !== null && applicationWindow.visible, "The shared scan actor opens the actual application");
+            applicationWindow.requestActivate();
+            tryCompare(applicationWindow, "active", true, 2000, "Shared scan input reaches the active actual application window");
+            const first = showSharedScan(data.origin, data.mode), scan = Session.project.scanViews;
+            compare(scan.count, data.project === "scan" ? 3 : 2, "Before any fit the shared chart reads every independent measured dataset");
+            const firstPixels = grabImage(named("layer"));
+            verify(firstPixels.width > 100 && firstPixels.height > 100, "Before any fit the shared measured view has actual nonempty plot pixels");
+            const colours = new Set();
+            for (let x = 5; x < firstPixels.width - 5; x += 5)
+                for (let y = 5; y < firstPixels.height - 5; y += 5)
+                    colours.add(String(firstPixels.pixel(x, y)));
+            verify(colours.size > 3, "Before any fit the actual plot contains measured map/curve ink rather than only an empty canvas");
+            const expectedLine = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", scan.count, false)[1]);
+            const mapReferences = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            let measuredInk = false;
+            for (let x = 2; x < firstPixels.width - 2 && !measuredInk; ++x)
+                for (let y = 2; y < firstPixels.height - 2 && !measuredInk; ++y) {
+                    const pixel = firstPixels.pixel(x, y);
+                    measuredInk = data.mode === "stacked" ? ink(pixel, expectedLine, chart.colors.chartBackground) : [32, 96, 128, 192, 255].some(index => String(pixel).toLowerCase() === mapReferences[index].toLowerCase());
+                }
+            verify(measuredInk, "Before any fit the actual scan view contains independently identified measured-data ink, beyond its grid and selected marker");
+            for (const quantity of ["x", "y", "z"]) {
+                const control = axisControl(quantity);
+                if (control.enabled && control.count > 1)
+                    choose(control, (control.currentIndex + 1) % control.count);
+            }
+            const palette = paletteSelector(data.mode);
+            choose(palette, (palette.currentIndex + 1) % palette.count);
+            const selectionPointer = named("pointer"), selectionAxes = named("axes");
+            const selectY = (selectionAxes.axisY.max - scan.rowOf(1)) / (selectionAxes.axisY.max - selectionAxes.axisY.min) * selectionPointer.height;
+            mouseClick(selectionPointer, selectionPointer.width * .4, Math.max(2, Math.min(selectionPointer.height - 2, selectY)));
+            tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real scan-view input selects a non-default measured dataset before changing pages");
+            const pointer = named("pointer"), axes = named("axes");
+            mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .6, pointer.height * .6, Qt.LeftButton);
+            const ranges = [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max];
+            const controls = Render.descendants(chart).filter(item => item.visible && typeof item.currentIndex === "number" && String(item.objectName).includes("toolbar"));
+            const types = controls.map(item => [item.objectName, item.currentIndex]);
+            const row = Session.project.currentExperimentIndex;
+            const firstMarker = named("current"), firstLayer = named("layer");
+            const firstTop = firstMarker.mapToItem(firstLayer, 0, 0).y / firstLayer.height;
+            const firstBottom = firstTop + firstMarker.height / firstLayer.height;
+            const next = data.origin === "experiment" ? "analysis" : "experiment";
+            for (const pageName of [next, data.origin, next]) {
+                const shown = showSharedScan(pageName, data.mode), actual = named("axes");
+                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) < 1e-9), "User zoom ranges remain identical through actual Experiment/Analysis navigation in both directions");
+                for (const [name, index] of types)
+                    compare(findChild(shown, name).currentIndex, index, "Every shared scan axis/palette control follows the same user state across pages");
+                compare(Session.project.currentExperimentIndex, row, "The same selected measured dataset remains current across both scan-view pages");
+                const retained = Render.descendants(applicationWindow.contentItem).filter(item => item.objectName === "scanView." + data.mode);
+                compare(retained.filter(item => item.visible && item.shown).length, 1, "The shared-object or authorized retained-chart fallback has exactly one eligible shown view");
+                const marker = named("current"), layer = named("layer");
+                const top = marker.mapToItem(layer, 0, 0).y / layer.height;
+                verify(marker.visible && marker.width === layer.width && Math.abs(top - firstTop) <= 2 / layer.height && Math.abs(top + marker.height / layer.height - firstBottom) <= 2 / layer.height, "The selected dataset keeps the same open-rectangle bounds on both pages after the same user axes and zoom choices");
+                const p = named("pointer");
+                mouseClick(p, p.width * .5, p.height * .5, Qt.RightButton);
+                const native = [actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max];
+                mouseDrag(p, p.width * .2, p.height * .2, p.width * .6, p.height * .6, Qt.LeftButton);
+                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) <= Math.abs(native[i % 2 ? 1 : 0]) * 1e-10 + 1e-9), "Both pages accept real reset and re-zoom input while retaining the same shared visible ranges");
+            }
+        }
+        function test_chart_colour_selector_location() {
+            const scan = open("stacked");
+            ready(scan);
+            chart.destroy();
+            chart = null;
+            applicationWindow = applicationFactory.createObject(null);
+            verify(applicationWindow !== null, "Colour-control placement is checked in the actual application");
+            applicationWindow.requestActivate();
+            tryCompare(applicationWindow, "active", true, 2000, "The actual application receives colour-control placement navigation");
+            for (const pageName of ["structure", "experiment", "analysis"]) {
+                Ui.click(test, Probe, applicationWindow, "appBar.tab." + pageName);
+                tryVerify(() => !Ui.moving(applicationWindow.contentItem), 2000, "Actual page navigation finishes before observing its colour controls");
+                const page = Render.descendants(applicationWindow.contentItem).find(item => item.pageName === pageName && item.current);
+                verify(page !== undefined, "Every colour-consuming page is reached in the actual application");
+                const controls = Render.descendants(page).filter(item => item.visible && typeof item.textAt === "function" && String(item.objectName).includes("toolbar"));
+                const colours = controls.filter(item => /colour|color|palette/i.test(String(item.objectName) + " " + item.toolTip));
+                compare(colours.length, 0, "Pattern and Structure chart toolbars contain no colour selectors after the four choices move to Preferences");
+            }
+            for (const pageName of ["experiment", "analysis"])
+                for (const mode of ["stacked", "map"]) {
+                    const target = showSharedScan(pageName, mode);
+                    const controls = Render.descendants(target).filter(item => item.visible && typeof item.textAt === "function" && /colour|color|palette/i.test(String(item.objectName) + " " + item.toolTip));
+                    compare(controls.length, mode === "map" ? 1 : 0, "Only the Map toolbar retains its one shared colour-map shortcut on both pages");
+                }
+        }
+        function test_stacked_tick_labels_cover_rows_only_data() {
+            const rows = [];
+            for (const byIndex of [false, true])
+                for (const dark of [false, true])
+                    rows.push({
+                        tag: (byIndex ? "index" : "value") + (dark ? "-dark" : "-light"),
+                        byIndex,
+                        dark
+                    });
+            return rows;
+        }
+        function rowLabels() {
+            return Render.texts(chart).filter(item => {
+                let parent = item.parent;
+                while (parent && parent.segments === undefined)
+                    parent = parent.parent;
+                return parent && parent.segments.some(piece => piece.icon === "microscope") && !String(item.font.family).includes("Awesome") && Ui.rendered(item);
+            });
+        }
+        function labelFor(labels, expected) {
+            return labels.filter(item => typeof expected === "number" ? /^[-+0-9.]+\s*K$/.test(item.text.trim()) && Math.abs(parseFloat(item.text) - expected) < 1e-9 : item.text === expected);
+        }
+        function checkRows(expected, coordinates, dark) {
+            const axes = named("axes"), layer = named("layer"), labels = rowLabels(), origin = layer.mapToItem(chart, 0, 0);
+            compare(axes.axisY.labelsVisible, false, "Named or Stacked rows replace the numeric y scale");
+            compare(labels.length, expected.length, "Sparse rows show exactly one icon-and-name label for each independent dataset");
+            const colours = Approved.colours(SettingsProof, "ediNatural", "measured", expected.length, dark);
+            for (let i = 0; i < expected.length; ++i) {
+                const matches = labelFor(labels, expected[i]);
+                compare(matches.length, 1, "Every row uses its independent file, datablock or scan value with unit");
+                const label = matches[0], right = label.mapToItem(chart, label.width, label.height / 2);
+                verify(right.x < origin.x && label.mapToItem(chart, 0, 0).x >= 0, "The complete row label lies left of the plot and inside the chart");
+                const wanted = origin.y + (axes.axisY.max - coordinates[i]) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                verify(Math.abs(right.y - wanted) <= chart.em / 2, "Every label follows its independent dataset row coordinate");
+                compare(String(label.color).toLowerCase(), colours[i], "Every row label uses its independently approved dataset colour");
+                let parent = label.parent;
+                while (parent && parent.segments === undefined)
+                    parent = parent.parent;
+                const icons = Render.texts(parent).filter(item => String(item.font.family).includes("Awesome"));
+                compare(icons.length, 1, "Every labelled row draws its experiment icon");
+                compare(String(icons[0].color).toLowerCase(), colours[i], "The experiment icon uses the same independent dataset colour as its row label");
+                verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= label.mapToItem(chart, 0, 0).x, "The experiment icon precedes the name outside the y axis");
+            }
+        }
+        function test_stacked_tick_labels_cover_rows_only(data) {
+            const scan = open("stacked");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const selector = axisControl("y"), expected = data.byIndex ? ["all594687.dat", "all594791.dat", "all594842.dat"] : [100, 250, 700];
+            choose(selector, data.byIndex ? 1 : 0);
+            compare(selector.displayText, data.byIndex ? "y: file" : "y: temperature (K)", "The order selector names files or the extracted quantity, never a file-index scale");
+            checkRows(expected, data.byIndex ? [0, 1, 2] : [100, 250, 700], data.dark);
+        }
+        function test_row_order_and_map_bands_data() {
+            const cases = [];
+            for (const mode of ["stacked", "map"])
+                for (const kind of ["file", "datablock"])
+                    for (const dark of [false, true])
+                        cases.push({
+                            tag: mode + "-" + kind + (dark ? "-dark" : "-light"),
+                            mode,
+                            kind,
+                            dark
+                        });
+            return cases;
+        }
+        function test_row_order_and_map_bands(data) {
+            let scan;
+            if (data.kind === "datablock") {
+                openJoint();
+                chart = factory.createObject(surface, {
+                    project: Session.project,
+                    mode: data.mode
+                });
+                scan = Session.project.scanViews;
+            } else
+                scan = open(data.mode);
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const selector = axisControl("y"), expected = data.kind === "file" ? ["all594687.dat", "all594791.dat", "all594842.dat"] : ["expt_n2", "expt_s2"];
+            let index = -1;
+            for (let i = 0; i < selector.count; ++i)
+                if (selector.textAt(i) === data.kind)
+                    index = i;
+            verify(index >= 0, "The actual row selector offers file or datablock according to the independent datasets' names");
+            choose(selector, index);
+            compare(selector.displayText, "y: " + data.kind, "The selected row ordering uses its short owner-requested caption");
+            checkRows(expected, expected.map((_, i) => i), data.dark);
+            if (data.mode === "map") {
+                const bounds = expected.map((_, i) => [scan.rowLowEdge(i), scan.rowHighEdge(i)]);
+                for (let i = 0; i < bounds.length; ++i) {
+                    fuzzyCompare(bounds[i][0], i - .5, 1e-9, "Each named Map band begins at the independent half-index edge");
+                    fuzzyCompare(bounds[i][1], i + .5, 1e-9, "Each named Map band has equal unit height irrespective of temperature spacing");
+                }
+            }
+        }
+        function test_scan_axis_fonts_data() {
+            return test_owner_indicator_data();
+        }
+        function test_scan_axis_fonts(data) {
+            if (data.mode === "evolution") {
+                const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+                verify(Session.openProject(root), "Evolution font comparison uses a real saved fitted scan");
+                chart = evolutionFactory.createObject(surface, {
+                    project: Session.project
+                });
+                tryVerify(() => chart.fitted, 3000, "Evolution has real numeric axis content before its font comparison");
+            } else {
+                const scan = open(data.mode);
+                ready(scan);
+            }
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            const pattern = createTemporaryObject(patternReferenceFactory, surface, {
+                experiment: Session.project.currentExperiment,
+                shown: true
+            });
+            verify(pattern !== null && waitForRendering(chart), "Actual Pattern and scan chart font objects are ready");
+            const reference = findChild(pattern, "chart.view.main"), title = findChild(pattern, "chart.title.x"), axes = findChild(chart, data.mode === "evolution" ? "evolution.view" : "scanView." + data.mode + ".axes");
+            verify(reference !== null && title !== null && axes !== null, "Font equality compares the actual chart axes and title, not hardcoded point sizes");
+            function equal(actual, wanted) {
+                compare(actual.family, wanted.family, "Every scan axis uses the Pattern axis font family");
+                fuzzyCompare(actual.pixelSize, wanted.pixelSize, .01, "Every scan tick, title and key uses the Pattern axis font size");
+                compare(actual.weight, wanted.weight, "Every scan axis uses the Pattern axis font weight");
+            }
+            equal(axes.theme.labelFont, reference.theme.labelFont);
+            const prefix = data.mode === "evolution" ? "evolution" : "scanView." + data.mode;
+            for (const axis of ["x", "y"]) {
+                const item = findChild(chart, prefix + ".title." + axis);
+                verify(item !== null, "Each actual scan axis has its rendered title for comparison");
+                equal(item.font, title.font);
+            }
+            for (const item of Render.texts(axes))
+                equal(item.font, reference.theme.labelFont);
+            if (data.mode === "map")
+                for (const end of ["min", "max"])
+                    equal(named("colourBar." + end).font, reference.theme.labelFont);
+        }
+        function test_map_numeric_dataset_ticks_data() {
+            return [
+                {
+                    tag: "light",
+                    dark: false
+                },
+                {
+                    tag: "dark",
+                    dark: true
+                }
+            ];
+        }
+        function test_map_numeric_dataset_ticks(data) {
+            const scan = open("map");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            choose(axisControl("y"), 0);
+            const axes = named("axes"), layer = named("layer"), origin = layer.mapToItem(chart, 0, 0);
+            verify(axes.axisY.labelsVisible, "The Map retains a numeric axis when rows use physical scan values");
+            const candidates = Render.descendants(chart).filter(item => item.visible && item.width >= 2 && item.width <= chart.em && item.height > 0 && item.height <= 2 && item.color !== undefined).filter(item => {
+                const p = item.mapToItem(chart, 0, item.height / 2);
+                return Math.abs(p.x - origin.x) <= chart.em && p.y > origin.y && p.y < origin.y + layer.height;
+            });
+            const frame = grabImage(chart);
+            for (const value of [100, 250, 700]) {
+                const y = origin.y + (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const ticks = candidates.filter(item => Math.abs(item.mapToItem(chart, 0, item.height / 2).y - y) <= 1);
+                compare(ticks.length, 1, "Every independent measured dataset has exactly one small edge tick on the numeric Map axis");
+                const tick = ticks[0], p = tick.mapToItem(chart, tick.width / 2, tick.height / 2);
+                verify(ink(frame.pixel(Math.floor(p.x), Math.floor(p.y)), tick.color, chart.colors.chartBackground), "Each dataset edge tick has actual rendered ink");
+            }
+        }
+        function test_row_label_thinning_data() {
+            const cases = [];
+            for (const mode of ["stacked", "map"])
+                for (const kind of (mode === "stacked" ? ["file", "datablock", "value"] : ["file", "datablock"]))
+                    cases.push({
+                        tag: mode + "-" + kind,
+                        mode,
+                        kind
+                    });
+            return cases;
+        }
+        function test_row_label_thinning(data) {
+            const joint = data.kind === "datablock", root = SettingsProof.copyProject(Probe.repoUrl(joint ? "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project" : "tests/fixtures/scan_template/project"));
+            const count = Input.dense(SettingsProof, root, joint);
+            verify(Session.openProject(root), "Dense row-label acceptance opens independently generated files or datablocks");
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.mode,
+                height: 500
+            });
+            const scan = Session.project.scanViews;
+            ready(scan);
+            compare(scan.count, count, "The dense actor has every independently generated dataset");
+            const selector = axisControl("y");
+            let choice = -1;
+            for (let i = 0; i < selector.count; ++i)
+                if (data.kind === "value" ? /temperature/i.test(selector.textAt(i)) : selector.textAt(i) === data.kind)
+                    choice = i;
+            verify(choice >= 0, "Dense row-label input reaches the real file, datablock or scan-value choice");
+            choose(selector, choice);
+            function name(i) {
+                return data.kind === "value" ? 100 + i * 7 + .345 : "row_" + String(i).padStart(3, "0") + (joint ? "" : ".dat");
+            }
+            function visibleIndices() {
+                const labels = rowLabels();
+                return Array.from({
+                    length: count
+                }, (_, i) => i).filter(i => labelFor(labels, name(i)).length === 1);
+            }
+            let shown = visibleIndices();
+            verify(shown.length > 2 && shown.length < count, "Crowded rows thin their labels while retaining a readable spread across the plot");
+            const selected = Array.from({
+                length: count - 8
+            }, (_, i) => i + 4).find(i => !shown.includes(i));
+            verify(selected !== undefined, "The dense witness chooses a dataset whose label was thinned out");
+            const axes = named("axes"), pointer = named("pointer"), row = data.kind === "value" ? 100 + selected * 7 + .345 : selected;
+            mouseClick(pointer, pointer.width * .5, (axes.axisY.max - row - (data.kind === "value" ? .7 : .1)) / (axes.axisY.max - axes.axisY.min) * pointer.height);
+            tryCompare(Session.project, "currentExperimentIndex", selected, 1000, "Real plot input selects the independently chosen hidden-label dataset");
+            verify(waitForRendering(chart), "The selected dense row has a completed frame");
+            shown = visibleIndices();
+            verify(shown.includes(selected), "Thinning always retains the selected dataset's label");
+            const regular = shown.filter(i => i !== selected), gaps = regular.slice(1).map((i, n) => i - regular[n]);
+            verify(gaps.length > 0 && Math.max(...gaps) <= 2 * Math.min(...gaps), "Thinned row labels remain evenly spread, allowing the selected-row insertion");
+            const labels = rowLabels().map(item => ({
+                        top: item.mapToItem(chart, 0, 0).y,
+                        bottom: item.mapToItem(chart, 0, item.height).y
+                    })).sort((a, b) => a.top - b.top);
+            verify(labels.slice(1).every((box, i) => box.top >= labels[i].bottom), "Visible thinned labels do not collide, including the always-kept selected row");
+            const step = data.kind === "value" ? 7 : 1, top = (axes.axisY.max - (row + 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height, bottom = (axes.axisY.max - (row - 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
+            mouseDrag(pointer, pointer.width * .2, top, pointer.width * .6, bottom - top, Qt.LeftButton);
+            verify(waitForRendering(chart), "Actual drag zoom gives the formerly crowded rows room to reappear");
+            shown = visibleIndices();
+            for (let i = selected - 2; i <= selected + 2; ++i)
+                verify(shown.includes(i), "Every independently in-range row label reappears once zoom makes its spacing readable");
         }
     }
 }

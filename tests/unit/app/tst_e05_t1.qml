@@ -77,7 +77,11 @@ TestCase {
             }
         }
     }
+    property var savedMeasuredStyle
     function init() {
+        savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = "linePoints";
         savedTheme = Style.Colors.theme;
         Style.Colors.theme = Style.Colors.Themes.LightTheme;
         Session.closeProject();
@@ -86,6 +90,8 @@ TestCase {
         animation = flightControl.createObject(appWindow.contentItem);
     }
     function cleanup() {
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = savedMeasuredStyle;
         FitOracle.disarm();
         animation.destroy();
         Session.closeProject();

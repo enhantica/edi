@@ -18,17 +18,37 @@ are the presentation reference, never the producer's row order.
 from a supplied directory, recording their URLs, pinned revisions and SHA256s in
 `maps.json`. Direct 256-row tables retain their published RGB samples. ColorBrewer's
 nine sequential stops are independently interpolated in Oklab to 256 entries.
-Additional frozen candidates do not require the product to offer a fixed list.
+The owner keep-all record now pins the offered roster to 28 names in `offered.json`; extra independent reference tables do not enlarge that roster.
 `oklab.js` uses Ottosson's published matrices independently of the application.
 
-The selected-line witness captures the real scene before selecting the next row
-with actual chart input. It checks the new line against that prior background:
-2 px opaque black plus 1 px half-transparent white on each side in light, colours
-inverted in dark. It checks all three charts, physical centres and rendered pixels.
-A Map row-colour witness moves the separate selected-line overlay away before each
-of its three samples, preserving the full row/color assertion.
+Evolution retains its selected-line witness: two opaque core pixels plus one
+half-transparent opposite-colour pixel on each side, with exact theme colours,
+physical centre and rendered pixels. Stacked and Map use the final open-rectangle
+amendment described below. Row-colour samples avoid the separate selected overlay,
+preserving every independently specified row and colour assertion.
 
 Actors run in private OpenGL sessions through `run.sh`. Software rendering,
 Windows/ANGLE and exact-head CI are separate evidence; a copied native host is only
 a local diagnostic. New end-to-end owner cases live in the system tier, with real
 projects, asynchronous worker reads, actual input and completed image captures.
+
+The later owner width/colour decision removes Stacked shade ramps. Its replacement
+witness covers drawable ink for all five categorical schemes, each row's physical
+line coverage against the Pattern chart's two-pixel width, and absence of shade
+ramps. Published-map endpoint/interior and theme checks remain. Map ramps retain
+their background/end-colour checks and occupy the first five positions in both
+actual selectors.
+
+The final indicator amendment keeps Evolution's four-pixel line and replaces the
+Stacked/Map line with an open rectangle: independent row-to-peak or midpoint-band
+bounds, one opaque border pixel and one half-transparent opposite-colour pixel on
+either side. A data-underlay capture temporarily makes only the prior indicator
+transparent; the selected frame must retain empty interior pixels and the exact
+themed border composites. Async-coordinate and cross-page checks follow the
+rectangle bounds rather than the superseded line centre.
+
+The Map default witness removes the actual ScanViews/mapColours key, restarts the production engine, and expects Edi Natural shades. It then chooses Plasma through real toolbar input and restarts again to prove that a saved choice is retained (owner decision 2026-10-22, b8b32e8c9).
+
+Owner decisions 62d2c7401 and 1f6bd79e6 replace the Stacked numeric y-scale witness with named, coloured icon rows. The sparse temperatures remain 100, 250 and 700 K, so they distinguish physical spacing from equal file/datablock bands. The font witness compares real Pattern tick/title fonts with all three scan charts and the Map key. The dense generator writes 48 distinct private files (temperatures 100.345 + 7*i K) or 48 distinct joint datablocks; real plot selection must reveal a previously thinned label, and actual drag zoom must restore every interior label that now fits. The Map keeps its numeric scan-value scale and a separately rendered edge tick per measured dataset.
+
+Rectangle geometry allows the three-pixel stroke envelope around a Stacked curve, with only raster rounding beyond it; Map bounds follow the independent midpoint band edges. Pixel tests separately require the exact one-pixel core, inner/outer half-alpha stripes, and untouched open interior. Settings restart observes the real Preferences singleton in a fresh engine; actual selectors and their input bindings are checked in the rendered chart engine, avoiding unsupported headless Qt Graphs teardown in the restart observer.

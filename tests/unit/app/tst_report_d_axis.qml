@@ -20,7 +20,15 @@ Rectangle {
     TestCase {
         name: "ReportDAxis"
         when: windowShown
+        property var savedMeasuredStyle
+        function init() {
+            savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = "linePoints";
+        }
         function cleanup() {
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = savedMeasuredStyle;
             Session.closeProject();
         }
         function test_real_pattern_selectors_use_the_nontrivial_d_conversion_data() {

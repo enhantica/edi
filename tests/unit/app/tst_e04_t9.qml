@@ -1,4 +1,5 @@
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -39,7 +40,11 @@ TestCase {
         }
     }
     property var animation
+    property var savedMeasuredStyle
     function init() {
+        savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = "linePoints";
         savedPointerMode = Preferences.patternPointerMode;
         Preferences.patternPointerMode = "zoom";
         savedAnalysisYScale = Preferences.analysisYScale;
@@ -54,6 +59,8 @@ TestCase {
         animation = flightControl.createObject(appWindow.contentItem);
     }
     function cleanup() {
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = savedMeasuredStyle;
         ChartOracle.disarm();
         animation.destroy();
         Session.closeProject();
@@ -98,7 +105,7 @@ TestCase {
     function approvedPalette() {
         const catalogue = JSON.parse(Probe.readFile("tests/fixtures/approved_palettes/colours.json")).palettes;
         const normalize = name => name.toLowerCase().replace(/[^a-z]/g, "").replace(/^edi/, "");
-        const palette = catalogue.find(row => normalize(row.name) === normalize(Preferences.colourScheme));
+        const palette = catalogue.find(row => normalize(row.name) === normalize(Approved.getSchemes(Preferences).patterns));
         verify(palette !== undefined, "The chart expectation comes from the independently approved palette coordinates");
         return palette;
     }

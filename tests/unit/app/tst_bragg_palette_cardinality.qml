@@ -21,17 +21,24 @@ Rectangle {
         name: "BraggPaletteCardinality"
         when: windowShown
         property var chart
-        property string oldScheme
+        property var oldScheme
         property int oldTheme
         function initTestCase() {
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
             oldTheme = Style.Colors.theme;
             const location = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/report_palette/project"));
             verify(Session.openProject(location), "The complete-palette witness opens independently named linked structures");
             tryCompare(Session.project, "calculating", false, 15000, "All independent structure reflections finish calculating");
         }
         function cleanupTestCase() {
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setSchemes(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
             Style.Colors.theme = oldTheme;
             Session.closeProject();
         }
@@ -55,7 +62,7 @@ Rectangle {
             return cases;
         }
         function test_native_bragg_ticks_labels_and_icons_share_every_colour(data) {
-            Preferences.colourScheme = data.scheme;
+            Approved.setSchemes(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = Session.project;
             const expected = Approved.colours(SettingsProof, data.scheme, "structures", project.structures.count, data.report ? false : data.dark);

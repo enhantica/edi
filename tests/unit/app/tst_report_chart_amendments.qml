@@ -88,8 +88,8 @@ Item {
             for (let i = 0; i < 5; ++i)
                 verify(Session.project.createStructure(), "The icon witness creates each actual structure identity before checking its colour");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(typeof Preferences.colourScheme === "string", "The scheme preference is available to every actual colour consumer");
-            Preferences.colourScheme = data.scheme;
+            verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string", "Both split scheme preferences are available to every actual colour consumer");
+            Approved.setSchemes(Preferences, data.scheme);
             const expected = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark);
             const colors = Array.from({
                 length: data.count

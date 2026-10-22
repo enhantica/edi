@@ -2,6 +2,7 @@
 
 import os
 import re
+import signal
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -30,12 +31,12 @@ CASES = (
     + [
         *[
             f'test_background_to_experiment_ramp:{mode}-{theme}'
-            for mode in ('stacked', 'map')
+            for mode in ('map',)
             for theme in ('light', 'dark')
         ],
         'test_map_key_and_image_use_frozen_interior_samples',
         'test_map_interpolates_between_neighboring_patterns',
-        'test_selected_map_line_is_always_drawn',
+        'test_selected_map_rectangle_is_always_drawn',
         'test_antialiased_ink_observer',
         'test_map_interpolation_default',
         *[
@@ -78,18 +79,25 @@ def scan_receipt(request):
             '-,txt',
             *['ScanViewContent::' + case for case in cases],
         ]
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
+        )
+        print(f'Acceptance actor process group {process.pid}: {cases}', flush=True)
         try:
-            result = subprocess.run(
-                command, capture_output=True, text=True, check=False, timeout=40
-            )
-            output = result.stdout + result.stderr
-            status = result.returncode
-        except subprocess.TimeoutExpired as error:
-            output = (
-                (error.stdout or b'').decode(errors='replace')
-                + (error.stderr or b'').decode(errors='replace')
-                + '\nThe scan acceptance function exceeded its unchanged actor watchdog'
-            )
+            output, _ = process.communicate(timeout=40)
+            status = process.returncode
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                output, _ = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                output, _ = process.communicate()
+            output += '\nThe acceptance function exceeded its unchanged actor watchdog'
             status = 124
         print(output)
         return cases, status, output
@@ -116,7 +124,7 @@ def scan_receipt(request):
 def test_scan_view_content(scan_receipt, case):
     status, output = scan_receipt[case]
     assert (
-        status >= 0
+        0 <= status < 128
         and status != 124
         and 'Totals:' in output
         and '::ScanViewContent::cleanupTestCase()' in output

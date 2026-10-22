@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T06:52:33Z
+# measured_utc = 2026-10-22T08:38:38Z
 #
-# Recorded from: scoped scan, changed consumers and native visible-column receipts
-# Collected tests: 16205; with a reported duration: 9466
-# Module-scoped fixture costs recorded: 69
+# Recorded from: scoped owner scan and pattern gates plus isolated native band receipts
+# Collected tests: 16295; with a reported duration: 9468
+# Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15814
-# inventory_cpp = 391
-# inventory_measured = 14479
-# inventory_unmeasured = 1726
+# inventory_python = 15902
+# inventory_cpp = 393
+# inventory_measured = 14515
+# inventory_unmeasured = 1780
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -269,22 +269,20 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test_scan_axis_quantity_is_shared[x-experiment-Pattern]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test_scan_axis_quantity_is_shared[x-structure-Pattern]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_antialiased_ink_observer]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-dark]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-light]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:stacked-dark]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:stacked-light]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-dark]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-light]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:map]
-0.006	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:stacked]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-x]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-y]
+0.004	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:stacked]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-x]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-y]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-z]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-x]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-x]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-y]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-z]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolates_between_neighboring_patterns]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_default]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_default]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:smooth-dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:smooth-light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:stepped-dark]
@@ -294,15 +292,15 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_reverse_and_key:forward-light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_reverse_and_key:reversed-dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_reverse_and_key:reversed-light]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:map-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:map-dark]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:map-light]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:stacked-dark]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:stacked-light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:stacked-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:stacked-light]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_scan_toolbar_and_top_margin:map]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_scan_toolbar_and_top_margin:stacked]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_scan_toolbar_and_top_margin:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_scan_top_margin:map]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_scan_top_margin:stacked]
-0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_selected_map_line_is_always_drawn]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_selected_map_rectangle_is_always_drawn]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_unreadable_pattern_is_visibly_refused:map]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_unreadable_pattern_is_visibly_refused:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_zoom_stays_on_and_reset_restores_axes:map]
@@ -5817,6 +5815,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-independent]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-sequential]
 0.007	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
+0.140	tests/integration/py/test_pattern_background_report.py::test_report_background_dash_and_solid_structure_outline[background]
+0.130	tests/integration/py/test_pattern_background_report.py::test_report_background_dash_and_solid_structure_outline[structure]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[clipped]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[nested]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[rotated]
@@ -6432,7 +6432,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylgnbu]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylorrd]
 0.000	tests/integration/py/test_scan_map_sources.py::test_light_ended_candidates_are_offered_without_fixing_their_names
-0.000	tests/integration/py/test_scan_map_sources.py::test_scan_offers_multiple_published_maps_without_fixing_the_final_set
+0.000	tests/integration/py/test_scan_map_sources.py::test_scan_retains_all_owner_selected_candidate_maps
 0.340	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-human]
 0.330	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-machine]
 0.410	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[True-human]
@@ -6878,14 +6878,73 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_no
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:experiment-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:experiment-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:report-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:report-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:structure-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:structure-light]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:analysis-band]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:analysis-linePoints]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:analysis-line]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:analysis-points]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:experiment-band]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:experiment-linePoints]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:experiment-line]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:experiment-points]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:structure-band]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:structure-linePoints]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:structure-line]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_choice_shared_and_remembered:structure-points]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_default_and_group_order]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:band-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:band-light]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:line-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:line-light]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:linePoints-dark]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:linePoints-light]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:points-dark]
+0.000	tests/system/app/test_pattern_owner_styles.py::test_pattern_owner_style[test_each_mode_marks:points-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_chart_colour_selector_location]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-analysis-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-analysis-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-experiment-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:cwl-experiment-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:mixed-analysis-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:mixed-analysis-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:mixed-experiment-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:mixed-experiment-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:scan-analysis-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:scan-analysis-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:scan-experiment-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:scan-experiment-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:tof-analysis-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:tof-analysis-stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:tof-experiment-map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_experiment_analysis_scan_sharing:tof-experiment-stacked]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_labels_outside_axis:map-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_labels_outside_axis:map-light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_labels_outside_axis:stacked-dark]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_labels_outside_axis:stacked-light]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_rows_and_common_d:map]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_rows_and_common_d:stacked]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_tab_availability:joint]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_rows_and_common_d:stacked]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_tab_availability:joint]
 0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_tab_availability:scan]
 0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_tab_availability:single-multi]
 0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_tab_availability:single]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:map]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:map-cwl]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:map-mixed]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:map-tof]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-cwl]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-mixed]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-tof]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_map_default_and_saved_choice]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:light]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:map]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_d_availability:map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_d_availability:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_excluded_regions:map]
@@ -6896,15 +6955,44 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::tes
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_indicator:map-light]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_indicator:stacked-dark]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_indicator:stacked-light]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_secondary_click:map]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_secondary_click:stacked]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_secondary_click:map]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_secondary_click:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_selector_widths:map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_selector_widths:pattern]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_selector_widths:stacked]
-UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_toolbar_centred:map]
+0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_toolbar_centred:map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_toolbar_centred:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_zoom_samples:map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_zoom_samples:stacked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_choices_remembered]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_colour_choices:dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_colour_choices:light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_map_shortcut_and_roster]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_label_thinning:map-datablock]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_label_thinning:map-file]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_label_thinning:stacked-datablock]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_label_thinning:stacked-file]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_label_thinning:stacked-value]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:map-datablock-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:map-datablock-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:map-file-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:map-file-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:stacked-datablock-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:stacked-datablock-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:stacked-file-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_row_order_and_map_bands:stacked-file-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:evolution-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:evolution-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:map-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:map-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_schemes_and_line_width:dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_schemes_and_line_width:light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_tick_labels_cover_rows_only:index-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_tick_labels_cover_rows_only:index-light]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_tick_labels_cover_rows_only:value-dark]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_tick_labels_cover_rows_only:value-light]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Bani-0]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Uani-0]
 0.560	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-beta-0]
@@ -14636,6 +14724,8 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
 0.026	tests/unit/cpp/test_fullprof_powder_factors.cpp::FullProf phase factors at the fixed PCR model match its summary
 UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
+UNMEASURED:failed-nonfinite-measured-band	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands give absent zero and nonfinite su zero width
+0.000	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands retain independent measured and residual edges
 0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I40 writes the signed coloured matrix as a text table
 0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I41 keeps the reference HTML page width while PDF uses A4
 0.000	tests/unit/cpp/test_report_correlation_count.cpp::Report automatic correlation level preserves complete threshold ties
@@ -16256,7 +16346,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 33.604	tests/integration/app/test_scan_view_content.py
+# module-cost: 57.546	tests/integration/app/test_scan_view_content.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 128.644	tests/integration/app/test_shared_pattern_chart.py
 # module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
@@ -16269,7 +16359,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 14.633	tests/system/app/test_scan_owner_additions.py
+# module-cost: 3.896	tests/system/app/test_pattern_owner_styles.py
+# module-cost: 3.482	tests/system/app/test_scan_owner_additions.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py

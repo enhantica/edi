@@ -32,7 +32,11 @@ Item {
         name: "SharedPatternChart"
         when: windowShown
         property var app
+        property var savedMeasuredStyle
         function init() {
+            savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = "linePoints";
             AppState.reset();
             app = appFactory.createObject(null);
             verify(app !== null && app.visible, "The chart gate opens the actual application window");
@@ -40,6 +44,8 @@ Item {
             tryCompare(app, "active", true, 2000, "Actual input reaches the active application window");
         }
         function cleanup() {
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = savedMeasuredStyle;
             if (app) {
                 app.close();
                 app.destroy();

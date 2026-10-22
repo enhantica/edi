@@ -13,9 +13,14 @@ REFERENCES = json.loads((ROOT / 'tests/fixtures/scan_views/maps.json').read_text
 OFFERED = sorted((ROOT / 'data/colormaps').glob('*.tsv'))
 
 
-def test_scan_offers_multiple_published_maps_without_fixing_the_final_set():
-    assert len(OFFERED) > 1, (
-        'The palette menu offers several published maps beside its custom ramps'
+def test_scan_retains_all_owner_selected_candidate_maps():
+    kept = json.loads((ROOT / 'tests/fixtures/scan_views/offered.json').read_text())
+    assert kept['authority'] == 'owner decision 3b42802d3', (
+        'The keep-all roster names its committed owner authority'
+    )
+    assert sorted(path.stem for path in OFFERED) == kept['maps'] and len(kept['maps']) == 28, (
+        'Every one of the 28 owner-retained candidate maps remains offered; '
+        'source/table correctness is checked independently below'
     )
 
 

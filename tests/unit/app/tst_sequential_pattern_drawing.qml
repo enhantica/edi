@@ -31,7 +31,15 @@ Item {
         property var initialPoints: []
         property string captureKind: ""
 
+        property var savedMeasuredStyle
+        function init() {
+            savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = "linePoints";
+        }
         function cleanup() {
+            if (savedMeasuredStyle !== null)
+                Preferences.patternMeasuredStyle = savedMeasuredStyle;
             if (Session.project && Session.project.fit.running) {
                 Session.project.fit.cancel();
                 tryVerify(() => !Session.project.fit.running, 10000, "The real scan worker must stop before the chart is destroyed");
