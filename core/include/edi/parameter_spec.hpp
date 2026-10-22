@@ -467,15 +467,16 @@ inline const ParameterSpec absorption_mu_r{
     "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
     "each reflection's Bragg theta",
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
-// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction: the
-// crystal's mean radius in micrometres and its mosaicity in arc minutes).
+// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): the crystal's mean radius in
+// micrometres and its mosaicity g, an inverse width of the mosaic spread (larger is narrower). The value is
+// diffraction-lib's and CrysPy's, which call it arc minutes, but it is not an angle (edi ADR-0048).
 inline const ParameterSpec extinction_radius{
     "extinction", "radius", "micrometres", "Mean radius of the crystal",
     {0.0, detail::kInf}, "Crystal radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionRadius,
     detail::kExtinctionRadiusCif};
 inline const ParameterSpec extinction_mosaicity{
-    "extinction", "mosaicity", "arcminutes", "Mosaicity of the crystal",
-    {0.0, detail::kInf}, "Mosaicity", "arcmin", "", "\\mathrm{arcmin}",
+    "extinction", "mosaicity", "dimensionless", "Mosaicity g of the crystal, an inverse width of its mosaic spread",
+    {0.0, detail::kInf}, "Mosaicity", "", "", "",
     detail::kExtinctionMosaicity, detail::kExtinctionMosaicityCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader

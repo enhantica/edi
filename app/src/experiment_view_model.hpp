@@ -115,6 +115,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
     Q_PROPERTY(edi_app::SingleCrystalReflectionModel* singleCrystalReflections READ singleCrystalReflections CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* extinction READ extinction CONSTANT)
+    // Whether the extinction's mosaic spread is Lorentzian rather than Gaussian.
+    Q_PROPERTY(bool lorentzianExtinction READ lorentzianExtinction CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
     Q_PROPERTY(edi_app::LinkedStructureListModel* linkedStructures READ linkedStructures CONSTANT)
     Q_PROPERTY(edi_app::ScatteringSourceViewModel* scatteringSource READ scatteringSource CONSTANT)
@@ -217,6 +219,7 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peakOther() const { return peak_families_[3]; }
     ParameterListModel* absorption() const { return absorption_; }
     ParameterListModel* extinction() const { return extinction_; }
+    bool lorentzianExtinction() const { return experiment_.extinction.model.value_or("gauss") == "lorentz"; }
     SingleCrystalReflectionModel* singleCrystalReflections() const { return single_crystal_reflections_; }
     ParameterItem* scale() const { return scale_; }
     BackgroundListModel* background() const { return background_; }

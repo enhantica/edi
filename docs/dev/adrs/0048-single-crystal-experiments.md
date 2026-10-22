@@ -26,6 +26,10 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 4. **Views.** For a single crystal the Experiment and Analysis pages show, where the pattern chart was, a chart of
    F²calc against F²meas (each reflection a point with its su bar, and the y = x line) over a table of h, k, l,
    F²meas, su, F²calc and (F²meas − F²calc)/su. The sidebar shows Extinction and leaves out the pattern-only groups.
+   The mosaicity is Becker–Coppens' g, an inverse width of the mosaic spread (larger is narrower), not an angle: its
+   value stays the one diffraction-lib and CrysPy give, which they call arc minutes, and edi shows it with no unit. Its
+   hint gives the spread it means: g per radian is the value times π/10800 times 10⁴ (CrysPy reads it beside the
+   radius in μm and λ in Å), a Gaussian spread's FWHM is √(2 ln 2/π)/g and a Lorentzian's 1/(πg).
 5. **Report.** The report model carries a single crystal's reflections for its chart instead of a pattern, so the
    Report page, the HTML and the PDF draw the same chart, with R(F²) and wR(F²) in its title and in the fit result.
    The experiment's section lists the reflection file and count, the extinction, and every reflection with its
