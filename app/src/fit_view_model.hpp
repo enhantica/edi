@@ -3,6 +3,7 @@
 #define EDI_APP_FIT_VIEW_MODEL_HPP
 
 #include <QElapsedTimer>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QTimer>
@@ -45,6 +46,23 @@ struct ScanSummary {
     QString outcome;
 };
 
+// One column of the agreement factors: `factor` (its name in Qt rich text, with the subscript), `structure` (the
+// structure's name, empty for a profile factor) and `place` (the structure's colour place, -1 for none). QML reads a
+// list of them as an array (edi ADR-0030).
+struct AgreementColumn {
+    Q_GADGET
+    QML_VALUE_TYPE(agreementColumn)
+    Q_PROPERTY(QString factor MEMBER factor CONSTANT)
+    Q_PROPERTY(QString structure MEMBER structure CONSTANT)
+    Q_PROPERTY(int place MEMBER place CONSTANT)
+
+   public:
+    QString factor;
+    QString structure;
+    int place = -1;
+    bool operator==(const AgreementColumn&) const = default;
+};
+
 // The agreement factors of the fit the project records (edi ADR-0045): one row per dataset, after an "All datasets"
 // row when there are several, and one column per factor: Rp, Rwp, Rexp, cRp, cRwp, then R_Bragg and R_F for each
 // linked structure. Roles `label`, `place` (the experiment's colour place, -1 for the global row) and `values` (the
@@ -53,21 +71,19 @@ class FitAgreementModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the fit results")
-    // Each column as a map: `factor` (its name in Qt rich text, with the subscript), `structure` (the structure's
-    // name, empty for a profile factor) and `place` (the structure's colour place, -1 for none).
-    Q_PROPERTY(QVariantList columns READ columns NOTIFY columnsChanged)
+    Q_PROPERTY(QList<edi_app::AgreementColumn> columns READ columns NOTIFY columnsChanged)
 
    public:
     explicit FitAgreementModel(QObject* parent);
     void setRecord(const edi::Project& project);
     void clear();
-    QVariantList columns() const { return columns_; }
+    QList<AgreementColumn> columns() const { return columns_; }
 
    signals:
     void columnsChanged();
 
    private:
-    QVariantList columns_;
+    QList<AgreementColumn> columns_;
 };
 
 class FitResultListModel : public RowTableModel {

@@ -114,9 +114,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     };
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).
-    QVariantList columns;
+    QList<AgreementColumn> columns;
     const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
-        columns.append(QVariantMap{{"factor", factor}, {"structure", structure}, {"place", place}});
+        columns.append(AgreementColumn{factor, structure, place});
     };
     column(QStringLiteral("R<sub>p</sub>"));
     column(QStringLiteral("R<sub>wp</sub>"));

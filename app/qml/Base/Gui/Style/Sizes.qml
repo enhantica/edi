@@ -80,7 +80,9 @@ QtObject {
 
     // Fonts
     //property int fontPixelSize: scalePx(14) //scalePx(Qt.application.font.pixelSize)
-    property Text _text: Text { font.pixelSize: sizes.scalePx(14) }
+    property Text _text: Text {
+        font.pixelSize: sizes.scalePx(14)
+    }
     property int fontPointSize: _text.font.pointSize
     property int fontPixelSize: _text.font.pixelSize
 
@@ -100,6 +102,6 @@ QtObject {
 
     // Functions
     function scalePx(size) {
-        return Math.round(size * (defaultScale / 100))
+        return Math.round(size * (defaultScale / 100));
     }
 }
