@@ -96,6 +96,14 @@ def dispersion_notes(record, home):
             'the established epsilon 0.1; no fitted result seeds another fit.',
             '',
         ]
+    if (home / 'continuation/reference.json').is_file():
+        notes += [
+            'A separately labelled self-continuation is retained under `continuation`.',
+            "It starts from this run's emitted .new with the same free set and a valid",
+            '200-cycle control field. Its own receipt and fixed twin identify the staged',
+            'diagnostic; it does not replace this reference from the committed start.',
+            '',
+        ]
     return notes
 
 
