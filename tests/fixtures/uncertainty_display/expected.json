@@ -606,6 +606,15 @@
         "su_text": "2",
         "value_scientific": "1.20000e5",
         "su_scientific": "2e0"
+      },
+      {
+        "token": "900000(2.0)",
+        "value": 900000.0,
+        "su": 2.0,
+        "value_text": "900000",
+        "su_text": "2",
+        "value_scientific": "9.00000e5",
+        "su_scientific": "2e0"
       }
     ],
     "iucr_99": [
@@ -625,6 +634,15 @@
         "value_text": "120000.0",
         "su_text": "2.0",
         "value_scientific": "1.200000e5",
+        "su_scientific": "2.0e0"
+      },
+      {
+        "token": "900000(2.0)",
+        "value": 900000.0,
+        "su": 2.0,
+        "value_text": "900000.0",
+        "su_text": "2.0",
+        "value_scientific": "9.000000e5",
         "su_scientific": "2.0e0"
       }
     ]

@@ -99,7 +99,7 @@ def generate():
             latp.append(row)
         result['latp'][rule] = latp
         integers = []
-        for value, su in (('900000', '200000.0'), ('120000', '2.0')):
+        for value, su in (('900000', '200000.0'), ('120000', '2.0'), ('900000', '2.0')):
             token = f'{value}({su})'
             row = expectation(token, rule)
             row.pop('saved')
