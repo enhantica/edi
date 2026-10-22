@@ -84,3 +84,7 @@ projects:
     executing: false
   - id: sc-neut-cwl_tb2ti2o7_anisotropic-adp
     executing: false
+  - id: sc-neut-cwl_tb2ti2o7-heidi_fit
+    executing: false
+  - id: sc-neut-cwl_pr2nio4-5c2_fit
+    executing: false
