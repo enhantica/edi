@@ -103,26 +103,26 @@ AreaEdges area_edges(const QList<QPointF>& curve, const std::vector<double>& bas
     AreaEdges area;
     area.upper.reserve(curve.size() + 2);
     area.lower.reserve(curve.size() + 2);
-    bool open = false;
+    bool drawing = false;
     for (qsizetype k = 0; k < curve.size(); ++k) {
         if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
-            if (open) {
+            if (drawing) {
                 area.upper.append(QPointF(area.lower.back().x(), area.lower.back().y() + lift));
                 area.lower.append(area.lower.back());
-                open = false;
+                drawing = false;
             }
             continue;
         }
         const auto at = static_cast<std::size_t>(k);
         const double low = at < base.size() ? base[at] : std::numeric_limits<double>::quiet_NaN();
         const QPointF bottom(curve[k].x(), std::isfinite(low) ? low : floor);
-        if (!open && !area.upper.isEmpty()) {
+        if (!drawing && !area.upper.isEmpty()) {
             area.upper.append(QPointF(bottom.x(), bottom.y() + lift));
             area.lower.append(bottom);
         }
         area.upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), bottom.y() + lift)));
         area.lower.append(bottom);
-        open = true;
+        drawing = true;
     }
     return area;
 }

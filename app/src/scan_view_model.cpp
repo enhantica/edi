@@ -365,9 +365,9 @@ void ScanViewModel::placeRows() {
             &ScanViewModel::rowNoteChanged);
     // Each row's label: the value with the unit the extract rule's title gives in brackets ("temperature (K)"), the
     // file's name, or the datablock's.
-    const qsizetype open = extracted_title_.lastIndexOf(QLatin1Char('('));
-    const QString unit = open >= 0 && extracted_title_.endsWith(QLatin1Char(')'))
-                             ? extracted_title_.mid(open + 1, extracted_title_.size() - open - 2).trimmed()
+    const qsizetype bracket = extracted_title_.lastIndexOf(QLatin1Char('('));
+    const QString unit = bracket >= 0 && extracted_title_.endsWith(QLatin1Char(')'))
+                             ? extracted_title_.mid(bracket + 1, extracted_title_.size() - bracket - 2).trimmed()
                              : QString();
     QStringList texts;
     for (std::size_t i = 0; i < patterns_.size(); ++i) {

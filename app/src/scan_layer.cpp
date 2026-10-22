@@ -380,21 +380,21 @@ void ScanLayer::paint(QPainter* painter) {
             }
         }
         QPainterPath path;
-        bool open = false;
+        bool drawing = false;
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
             const double low = edi::to_display(trace.low[k], scale), high = edi::to_display(trace.high[k], scale);
             const double x = px(trace.x[k]);
             if (!std::isfinite(low) || !std::isfinite(high) || !std::isfinite(x)) {
-                open = false;
+                drawing = false;
                 continue;
             }
             const double y_low = py(rows[d] + (low - display_min_) / span * lift);
             const double y_high = py(rows[d] + (high - display_min_) / span * lift);
-            if (open) {
+            if (drawing) {
                 path.lineTo(x, y_low);
             } else {
                 path.moveTo(x, y_low);
-                open = true;
+                drawing = true;
             }
             if (y_high != y_low) {
                 path.lineTo(x, y_high);
