@@ -125,8 +125,9 @@ Flickable {
             rightPadding: table.padding
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideNone
-            textFormat: Text.PlainText
-            text: cell.text
+            // An agreement factor with its subscript (FactorText).
+            textFormat: FactorText.has(cell.text) ? Text.RichText : Text.PlainText
+            text: FactorText.has(cell.text) ? FactorText.rich(cell.text) : cell.text
         }
         Row {
             visible: cell.parts !== null

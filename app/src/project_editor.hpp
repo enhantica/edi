@@ -22,6 +22,16 @@ inline QString estimated_background_refusal(const edi::ExperimentBase& experimen
                : QString();
 }
 
+// Some experiment of the project holds measured data; without any there is nothing to fit (edi ADR-0046).
+inline bool has_measured_data(const edi::Project& project) {
+    for (const auto& experiment : project.experiments) {
+        if (!experiment->calculation_only) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // The one door every write goes through: run a core call, then publish what it changed. The call is
 // an edi::Edit (edi ADR-0020 §8): one core operation that refuses before it writes, or completes. The
 // door takes no callable, so a change that writes and then throws cannot be passed to it.
@@ -41,6 +51,9 @@ class ProjectEditor {
     // Why a user may not set this parameter's value, before anything is written: empty when they may. An auto-mode
     // background's point intensities and term coefficients refuse (estimated_background_refusal).
     virtual QString value_refusal(const edi::Parameter& /*parameter*/) const { return {}; }
+    // Why no parameter may be set free or fixed now: empty when they may. A project with no measured data in any
+    // experiment has nothing to fit, so it refuses (edi ADR-0046).
+    virtual QString free_refusal() const { return {}; }
     // An edit of an experiment's background rows (an id, position or order, a row added or removed, the rows named):
     // refused in auto mode (estimated_background_refusal), else applied as `apply` does.
     virtual QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,

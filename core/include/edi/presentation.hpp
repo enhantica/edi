@@ -94,12 +94,15 @@ std::vector<PatternSource::Component> structure_components(std::span<const std::
 
 // What the renderer asks for.
 struct PatternView {
-    std::optional<double> x_min, x_max;  // absent: the data's full range
+    std::optional<double> x_min, x_max;  // absent: the data's full range (the included range when included_only)
     int columns = 0;                     // plot width in device pixels (pixel_columns); 0: no decimation
     YScale y_scale = YScale::Linear;
     bool structure_curves = false;  // each structure's curve over the background (edi ADR-0017 §15)
     // The residual drawn as a band, (meas − calc) ± s.u. (edi ADR-0017 §15): its band's ends count in its pane's range.
     bool residual_band = false;
+    // Only the included range (ADR-0044): the default x range runs from the first to the last included point, and
+    // no measured point is drawn inside an excluded region. Reflection ticks are hidden there in both states.
+    bool included_only = false;
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.

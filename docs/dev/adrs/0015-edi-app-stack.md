@@ -44,7 +44,8 @@ original could. Three facts shape the decision:
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
-   focused colour, ProjectDescriptionDialog, and Fonts for edi's font inventory (§10); configuration refuses another commit or local changes under `src/`. The pinned
+   focused colour, ProjectDescriptionDialog, Fonts for edi's font inventory (§10) and Sizes for a sidebar width the app
+   window sets (ADR-0017 §12); configuration refuses another commit or local changes under `src/`. The pinned
    commit is downloaded as GitHub's archive of it, checked against a committed SHA-256, with a message and a timeout (a
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.

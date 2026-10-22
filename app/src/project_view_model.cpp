@@ -1008,6 +1008,10 @@ void ProjectViewModel::postAutoModelReason(const std::string& experiment, const 
 }
 
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
+    if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
+        emit refused(refusal);
+        return false;
+    }
     std::map<const edi::Parameter*, std::string> names;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
         names.emplace(slot.parameter, slot.unique_name);
@@ -2089,6 +2093,11 @@ QString ProjectViewModel::value_refusal(const edi::Parameter& parameter) const {
         }
     }
     return {};
+}
+
+QString ProjectViewModel::free_refusal() const {
+    return has_measured_data(*project_) ? QString()
+                                        : tr("a fit needs measured data, and no experiment in this project has any");
 }
 
 QString ProjectViewModel::apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,

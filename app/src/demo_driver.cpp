@@ -748,7 +748,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
-    // Element colours drawn flat, in both themes (edi ADR-0046): PbSO4's pale S and dark Pb in the Atom sites table, the
+    // Element colours drawn flat, in both themes (edi ADR-0047): PbSO4's pale S and dark Pb in the Atom sites table, the
     // structure view's legend and the parameter table. Run only when asked (`--demo-only elements-`).
     if (only.startsWith(QLatin1String("elements-"))) {
         steps_.push_back({"elements-1-structure-light", {"resize:1280x960", "theme:light",

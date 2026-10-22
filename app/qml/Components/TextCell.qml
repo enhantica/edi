@@ -3,6 +3,8 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -18,8 +20,11 @@ EaComponents.ListViewTextInput {
     id: cell
 
     property var value: ""
-    // A number by the app's one rule for numbers in cells (NumberText).
-    readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? NumberText.plain(value, 8) : String(value)
+    // A number by the app's one rule for numbers in cells (NumberText), in scientific notation when that would not
+    // fit the cell (NumberText.fitted; the owner, 2026-10-22), with the number in full on hover.
+    readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
+    readonly property string written: numeric ? NumberText.plain(value, 8) : String(value)
+    readonly property string shown: numeric ? NumberText.fitted(written, width - leftPadding - rightPadding, metrics) : written
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.
@@ -41,6 +46,14 @@ EaComponents.ListViewTextInput {
     WarningToolTip {
         text: cell.refusal
         visible: text !== "" && (cell.hovered || cell.activeFocus)
+    }
+    FontMetrics {
+        id: metrics
+        font: cell.font
+    }
+    EaElements.ToolTip {
+        text: NumberText.plainFull(cell.value)
+        visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
     }
     onValueChanged: refusal = ""
     onAccepted: commit()

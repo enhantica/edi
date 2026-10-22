@@ -1,4 +1,4 @@
-# 0046. Element colours readable in 2D
+# 0047. Element colours readable in 2D
 
 - **Status:** Accepted
 - **Date:** 2026-10-22

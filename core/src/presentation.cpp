@@ -45,8 +45,10 @@ struct Kept {
     std::vector<std::size_t> runs;
 };
 
+// `breaks`, when given, marks the rows a run must not continue into from the row before (a segment crossing an
+// excluded region with no sample inside it).
 Kept decimate(std::span<const double> x, std::span<const double> low, std::span<const double> high,
-              double x_min, double x_max, int columns) {
+              double x_min, double x_max, int columns, std::span<const char> breaks = {}) {
     Kept kept;
     const std::size_t n = std::min({x.size(), low.size(), high.size()});
     if (n == 0) {
@@ -110,6 +112,11 @@ Kept decimate(std::span<const double> x, std::span<const double> low, std::span<
         group = Group{};
     };
     for (std::size_t i = 0; i < n; ++i) {
+        if (in_run && i < breaks.size() && breaks[i] != 0) {
+            flush();
+            ++run;
+            in_run = false;
+        }
         if (visible[i] == 0 || !valid(i)) {
             if (in_run) {
                 flush();
@@ -530,9 +537,43 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
     out.y_residual.title = "Residual";  // the owner, 2026-10-02
     static const std::vector<double> kNone;
     const std::vector<double>& x = source.x ? *source.x : kNone;
-    const auto [data_min, data_max] = full_range(x);
-    out.x.min = view.x_min.value_or(data_min);
-    out.x.max = view.x_max.value_or(data_max);
+    const auto excluded = [&](double value) {
+        return std::any_of(source.excluded.begin(), source.excluded.end(),
+                           [value](const ExcludedBand& band) { return value >= band.x_min && value <= band.x_max; });
+    };
+    std::pair<double, double> range = full_range(x);
+    if (view.included_only) {
+        std::vector<double> included;
+        for (const double value : x) {
+            if (!excluded(value)) {
+                included.push_back(value);
+            }
+        }
+        if (!included.empty()) {
+            range = full_range(included);
+        }
+    }
+    out.x.min = view.x_min.value_or(range.first);
+    out.x.max = view.x_max.value_or(range.second);
+    // An excluded row's value as a gap: the curves always break there, and the measured points do too when only
+    // the included range is shown.
+    // A segment between two neighbouring rows that crosses an excluded region breaks there, even with no row inside
+    // the region (the curves never cross one).
+    std::vector<char> crossing(x.size(), 0);
+    for (std::size_t i = 1; i < x.size(); ++i) {
+        const double lo = std::min(x[i - 1], x[i]), hi = std::max(x[i - 1], x[i]);
+        crossing[i] = std::any_of(source.excluded.begin(), source.excluded.end(), [lo, hi](const ExcludedBand& band) {
+            return band.x_min < hi && band.x_max > lo;
+        }) ? 1 : 0;
+    }
+    const auto masked = [&](std::vector<double> values) {
+        for (std::size_t i = 0; i < values.size() && i < x.size(); ++i) {
+            if (excluded(x[i])) {
+                values[i] = kNaN;
+            }
+        }
+        return values;
+    };
     bool any_main = false, any_residual = false;
 
     const auto column_for = [&](const PatternSource::Column& column) -> const std::vector<double>* {
@@ -547,16 +588,20 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.id = "meas";
         series.label = "Measured (meas)";
         series.style = style_key("meas", source.experiment_place);
-        const std::vector<double> display = displayed(*meas, view.y_scale);
+        const std::vector<double> display =
+            view.included_only ? masked(displayed(*meas, view.y_scale)) : displayed(*meas, view.y_scale);
         const std::vector<double>* su = column_for(source.su);
         std::vector<double> bar_low(x.size()), bar_high(x.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
             // A point without a finite s.u. has a bar (and a band) of no width, never one to the pane's floor.
             const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
-            bar_low[i] = to_display((*meas)[i] - half, view.y_scale);
-            bar_high[i] = to_display((*meas)[i] + half, view.y_scale);
+            bar_low[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] - half, view.y_scale);
+            bar_high[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] + half, view.y_scale);
         }
-        Kept kept = decimate(x, display, display, out.x.min, out.x.max, view.columns);
+        // The measured line keeps the full range unless only the included range is shown.
+        const std::span<const char> measured_breaks =
+            view.included_only ? std::span<const char>(crossing) : std::span<const char>();
+        Kept kept = decimate(x, display, display, out.x.min, out.x.max, view.columns, measured_breaks);
         if (su != nullptr) {
             // A bar end that cannot be drawn stands in as the measured value, so both passes see
             // the same runs.
@@ -565,7 +610,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
                 low[i] = std::isnan(bar_low[i]) ? display[i] : bar_low[i];
                 high[i] = std::isnan(bar_high[i]) ? display[i] : bar_high[i];
             }
-            kept = union_of(kept, decimate(x, low, high, out.x.min, out.x.max, view.columns));
+            kept = union_of(kept, decimate(x, low, high, out.x.min, out.x.max, view.columns, measured_breaks));
         }
         fill_points(series, kept, x, display);
         series.bar_low.reserve(series.rows.size());
@@ -595,8 +640,8 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.id = id;
         series.label = label;
         series.style = style;
-        const std::vector<double> display = displayed(*values, scale);
-        fill_points(series, decimate(x, display, display, out.x.min, out.x.max, view.columns), x,
+        const std::vector<double> display = masked(displayed(*values, scale));
+        fill_points(series, decimate(x, display, display, out.x.min, out.x.max, view.columns, crossing), x,
                     display);
         for (const PresentedPoint& point : series.points) {
             pane == Pane::Residual ? cover(out.y_residual, any_residual, point.y)
@@ -620,8 +665,8 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
             for (std::size_t row = 0; row < upper.size(); ++row) {
                 upper[row] = (*bkg)[row] + (*net)[row];
             }
-            const std::vector<double> display = displayed(upper, view.y_scale);
-            const std::vector<double> base = displayed(*bkg, view.y_scale);
+            const std::vector<double> display = masked(displayed(upper, view.y_scale));
+            const std::vector<double> base = masked(displayed(*bkg, view.y_scale));
             // A background the log scale cannot show still leaves the curve drawn: its rows are kept by the curve.
             std::vector<double> kept_low(base.size());
             for (std::size_t row = 0; row < base.size(); ++row) {
@@ -633,7 +678,8 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
             series.id = "structure/" + component.structure_id;
             series.label = component.label;
             series.style = style_key("structure", component.place);
-            fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns), x, display);
+            fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns, crossing), x,
+                        display);
             series.bar_low.reserve(series.rows.size());
             for (const std::size_t row : series.rows) {
                 series.bar_low.push_back(row == kNoRow ? kNaN : base[row]);
@@ -653,15 +699,15 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         if (view.residual_band && resid != nullptr && !out.series.empty() &&
             out.series.back().kind == SeriesKind::Residual) {
             PatternSeries& series = out.series.back();
-            const std::vector<double> centre = displayed(*resid, YScale::Linear);
+            const std::vector<double> centre = masked(displayed(*resid, YScale::Linear));
             std::vector<double> low(x.size()), high(x.size());
             for (std::size_t i = 0; i < x.size(); ++i) {
                 const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
                 low[i] = centre[i] - half;
                 high[i] = centre[i] + half;
             }
-            const Kept kept = union_of(decimate(x, centre, centre, out.x.min, out.x.max, view.columns),
-                                       decimate(x, low, high, out.x.min, out.x.max, view.columns));
+            const Kept kept = union_of(decimate(x, centre, centre, out.x.min, out.x.max, view.columns, crossing),
+                                       decimate(x, low, high, out.x.min, out.x.max, view.columns, crossing));
             series.points.clear();
             series.rows.clear();
             fill_points(series, kept, x, centre);
@@ -708,8 +754,9 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         std::vector<char> taken(binned ? static_cast<std::size_t>(view.columns) : 0, 0);
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];
-            // A tick is drawn inside the view's x range or not at all.
-            if (std::isnan(position) || position < out.x.min || position > out.x.max) {
+            // A tick is drawn inside the view's x range or not at all, and never inside an excluded region; the
+            // reflection stays in the calculation, since its tails reach included points (edi ADR-0044).
+            if (std::isnan(position) || position < out.x.min || position > out.x.max || excluded(position)) {
                 continue;
             }
             if (binned) {

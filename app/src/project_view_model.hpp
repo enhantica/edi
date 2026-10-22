@@ -371,6 +371,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
     QString value_refusal(const edi::Parameter& parameter) const override;
+    QString free_refusal() const override;
     QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
                                   bool structural) override;
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.

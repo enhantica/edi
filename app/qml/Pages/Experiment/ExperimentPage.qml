@@ -106,12 +106,6 @@ WorkflowPage {
             }
         }
     }
-    // The pattern chart's view options (edi ADR-0031 §2), one set for every page that shows it.
-    settingsItem: Component {
-        EaComponents.SideBarColumn {
-            ChartSettingsGroup {}
-        }
-    }
     textItem: Component {
         TextTab {
             source: page.experiment ? page.experiment.text : null

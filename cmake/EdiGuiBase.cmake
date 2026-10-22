@@ -75,7 +75,8 @@ set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
 # the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
-# Elements/TextInput for its focused colour; ADR-0015 §10, ADR-0029).
+# Style/Sizes for a sidebar width the app window sets, Elements/TextInput for its focused colour; ADR-0015 §10,
+# ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -112,7 +113,7 @@ endfunction()
 
 edi_gui_base_module(edi_gui_style EasyApplication.Gui.Style Gui/Style
     SINGLETONS Colors Fonts Sizes Times
-    REPLACED Fonts)
+    REPLACED Fonts Sizes)
 edi_gui_base_module(edi_gui_globals EasyApplication.Gui.Globals Gui/Globals
     SINGLETONS Vars)
 # Left out of Logic: Plotting.js, used only by the base's Charts, which edi does not build.

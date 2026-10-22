@@ -154,7 +154,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
-    // `colour` as drawn flat on `background`: its lightness moved to 3:1 contrast, hue and chroma kept (edi ADR-0046).
+    // `colour` as drawn flat on `background`: its lightness moved to 3:1 contrast, hue and chroma kept (edi ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QColor& background) const;
 };
 

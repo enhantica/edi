@@ -65,17 +65,20 @@ DataTable {
             horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
-        EaComponents.ListViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.dSpacing)
+            number: table.shown(row.model.dSpacing)
+            full: NumberText.plainFull(row.model.dSpacing)
         }
-        EaComponents.ListViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.position)
+            number: table.shown(row.model.position)
+            full: NumberText.plainFull(row.model.position)
         }
-        EaComponents.ListViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.fSquaredCalc)
+            number: table.shown(row.model.fSquaredCalc)
+            full: NumberText.plainFull(row.model.fSquaredCalc)
         }
     }
 }

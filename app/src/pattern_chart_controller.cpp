@@ -564,6 +564,17 @@ void PatternChartController::setDSpacing(bool on) {
     }
 }
 
+void PatternChartController::setIncludedOnly(bool on) {
+    if (on != included_only_) {
+        stopAnimation();
+        included_only_ = on;
+        x_min_.reset();
+        x_max_.reset();
+        emit includedOnlyChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::cycleYScale() {
     setYScale(y_scale_ == Linear ? Sqrt : y_scale_ == Sqrt ? Log10 : Linear);
 }
@@ -598,6 +609,7 @@ edi::PatternView PatternChartController::view() const {
     view.y_scale = core_scale(y_scale_);
     view.structure_curves = structure_curves_;
     view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
+    view.included_only = included_only_;
     return view;
 }
 

@@ -323,9 +323,9 @@ Item {
         structureColourScheme: Preferences.structureColours
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
-        // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        includedOnly: !chart.report && Preferences.chartIncludedOnly
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
@@ -488,7 +488,9 @@ Item {
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
             structureCurvesAvailable: !chart.report && controller.hasCalculated
+            includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
+            onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
         }
     }
 
@@ -893,7 +895,8 @@ Item {
         x: mainView.x + mainView.plotArea.x
         y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
         color: chart.colors.chartLabels
-        text: chart.reliability
+        textFormat: Text.RichText
+        text: FactorText.rich(chart.reliability)
     }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,

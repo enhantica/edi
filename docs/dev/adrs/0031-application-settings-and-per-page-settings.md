@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-11
 - **Implementation:** 🟡 Partially implemented — the desktop store and its one-time carry-over, the Settings tab on
-  every page (the Analysis and Experiment charts' options and "Pattern updates during a scan"), the shown path with
+  every page ("Pattern updates during a scan" on the Analysis page), the shown path with
   Open folder and Reset, the window's geometry, the recent and last projects and each project's selection; the
   browser keeps local storage until its measurement (4)
 - **Priority:** Medium
@@ -44,9 +44,13 @@ to know where Qt puts it.
    holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
    project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app
    bar's settings, which apply to the whole app. The Analysis page's Settings tab is the first: "Pattern updates during
-   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins it,
-   so the chosen scale is kept. A page with no such options has its Settings tab disabled, as an empty Extras tab is
-   (the owner, 2026-10-14).
+   a scan" moves there from Analysis, Extras. A page with no such options has its Settings tab disabled, as an empty
+   Extras tab is (the owner, 2026-10-14).
+
+   A choice made on a chart lives on the chart only, never also in Settings (the owner, 2026-10-21): each choice has
+   one place. The pattern chart's y-axis type (linear, square root or log) and the Experiment chart's x axis are on the
+   chart's own selectors. The chart still keeps them in the app-settings store under the page's name (7), so the chosen
+   scale is kept. The Experiment page has no other view options, so its Settings tab is disabled.
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
@@ -92,4 +96,5 @@ to know where Qt puts it.
 | Native `QSettings` formats (a property list on macOS, the registry on Windows) | Rejected: a different store per platform, not one text file a user can read, copy, remove or attach to a report. |
 | A user selector between the ini file and the native store | Not taken: the choice would itself have to be read from a fixed file before the settings are, switching would need the settings moved from one store to the other, and the web app has no choice to offer. |
 | Page settings among each page's Extras | Rejected: Extras holds project data written to `.edi`, so options there look like part of the project. |
+| A chart's display choices also in the page's Settings tab | Rejected by the owner: one choice in two places, and the chart already shows it. |
 | View settings in the project's `.edi` files | Rejected: they would travel with a project to another machine and person, and a change of view would mark the project modified. |

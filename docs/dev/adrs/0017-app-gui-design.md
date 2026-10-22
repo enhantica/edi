@@ -416,6 +416,16 @@ one selected row, and the row's number in the first column, bold in the accent c
   base `ContentPage`'s two containers (reached as the parents of the main content and the sidebar) and moves the
   sidebar's border to its edge towards the main area. Nothing is mirrored: text, icons and the order of numbers
   and columns stay as they are. The base is unmodified.
+- **The sidebar's width** (the owner, 2026-10-22): the sidebar reaches from the window's edge to the centre of the
+  Experiment button in the top bar, so its edge sits under that button on every page that has one. The width is read
+  from the top bar's layout (the centred tabs' position and the button's), not a fixed number, so it follows the window
+  and any change to the buttons: 609 px at the 1280 px minimum window width, 929 px at 1920 px (the base's own was
+  584 px). The sidebar on the left keeps the same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
+  with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
+- **One green** (the owner, 2026-10-22): a free parameter's bold value, the status bar's Success and its ✓ count, a
+  succeeded fit's outcome, an included dataset's mark and an available recent project's mark all draw the base's
+  `Colors.green`, in both themes. The report figures' light palette keeps its own copy of the light value, and the
+  residual curve its own lighter green (ADR-0038).
 
 ### 13. Saving
 
@@ -874,7 +884,8 @@ refuses to write its bank rows into it.
   table is disabled and every edit is refused.
 - **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
   on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
-  the three share the row in thirds.
+  the three share the row in thirds. Reset fits and Follow show only in the sequential and independent modes;
+  otherwise Start fitting is alone at the full width (ADR-0046).
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
@@ -1019,6 +1030,17 @@ the Text tab and the files agree. A value the cells write in scientific notation
 the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard
 uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
 projects (the owner, 2026-10-13).
+
+A number that does not fit its table cell is never cut short (the owner, 2026-10-22). When the text the rule writes is
+wider than the cell, the cell shows the same number in scientific notation with the same significant digits
+(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows every digit the number holds, written plainly. An s.u. that does not fit takes
+its own shortest scientific form, with the one or two significant digits the rule gives, never its value's exponent:
+beside 3.700e-6 the column's `0.008e-6` becomes `8e-9`. A number that fits keeps its
+form, and the check runs again whenever the column's width changes. It applies to every numeric table cell: the
+parameter values on every page, the Analysis table's s.u., min and max, the editable number cells (excluded regions,
+atom sites, scattering lengths, constraints), the measured data and reflections tables, the fit's start values, a
+scan's extracted values and the fit results dialog's agreement factors. It changes only what the screen shows: the
+saved files, the Report and the CLI write the numbers as before.
 
 ## Consequences
 

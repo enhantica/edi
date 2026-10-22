@@ -1,0 +1,402 @@
+[
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "length_a",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "length_b",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "length_c",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "angle_alpha",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "angle_beta",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "cell",
+    "name": "angle_gamma",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "amber",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "A",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "length_a",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "length_b",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "length_c",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "angle_alpha",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "angle_beta",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "cell",
+    "name": "angle_gamma",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "A",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "A",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "B",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "B",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "B",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "B",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "violet",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "B",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "broad_gauss_u",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "broad_gauss_v",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "broad_gauss_w",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "broad_lorentz_x",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "broad_lorentz_y",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "instrument",
+    "name": "setup_wavelength",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "instrument",
+    "name": "calib_twotheta_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "amber",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "violet",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "background",
+    "name": "coef",
+    "label": "c0",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "background",
+    "name": "coef",
+    "label": "c1",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "broad_gauss_u",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "broad_gauss_v",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "broad_gauss_w",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "broad_lorentz_x",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "broad_lorentz_y",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "instrument",
+    "name": "setup_wavelength",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "instrument",
+    "name": "calib_twotheta_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "amber",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "violet",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "coef",
+    "label": "c0",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "coef",
+    "label": "c1",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "coef",
+    "label": "c2",
+    "free": true
+  }
+]

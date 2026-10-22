@@ -12,7 +12,8 @@ import edi.app
 // button follows the datasets' fits (edi ADR-0017 §17): Start fitting while none is fitted, Continue fitting while
 // some are not (it fits from the first unfitted one), disabled once all are. Reset fits, between it and Follow,
 // clears every dataset's fit result in one Undo step. Follow is enabled while a scan runs: on, the pattern tab shows
-// the file being fitted. A scan project's three buttons share the row in thirds; the other modes' two in halves.
+// the file being fitted. Reset fits and Follow are shown only in the sequential and independent modes, so a single or
+// joint fit has Start fitting alone at the full width (edi ADR-0046); the shown buttons share the row equally.
 // Untitled and fixed open, as the original's group.
 EaElements.GroupBox {
     id: group
@@ -25,14 +26,15 @@ EaElements.GroupBox {
     Row {
         id: buttons
 
-        readonly property bool scan: Session.project !== null && Session.project.scan
-        readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+        readonly property bool scanMode: group.fit !== null && group.fit.scanMode
+        readonly property int shown: scanMode ? 3 : 1
+        readonly property real share: (EaStyle.Sizes.sideBarContentWidth - (shown - 1) * spacing) / shown
 
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
             objectName: "fitting.start"
-            width: buttons.scan ? buttons.third : implicitWidth
+            width: buttons.share
             enabled: group.fit !== null && (group.fit.running || group.fit.available)
             fontIcon: group.fit && group.fit.running ? "stop-circle" : "play-circle"
             text: group.fit && group.fit.running ? qsTr("Stop fitting") : group.fit && group.fit.continuable ? qsTr("Continue fitting") : qsTr("Start fitting")
@@ -41,8 +43,8 @@ EaElements.GroupBox {
         }
         EaElements.SideBarButton {
             objectName: "fitting.reset"
-            visible: buttons.scan
-            width: buttons.third
+            visible: buttons.scanMode
+            width: buttons.share
             enabled: group.fit !== null && group.fit.canReset
             fontIcon: "eraser"
             text: qsTr("Reset fits")
@@ -51,7 +53,8 @@ EaElements.GroupBox {
         }
         EaElements.SideBarButton {
             objectName: "fitting.follow"
-            width: buttons.scan ? buttons.third : implicitWidth
+            visible: buttons.scanMode
+            width: buttons.share
             enabled: group.fit !== null && group.fit.scanning
             checkable: true
             checked: group.fit !== null && group.fit.scanning && group.fit.following

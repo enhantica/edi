@@ -351,7 +351,7 @@ void add_scene(ReportStructure& out, const Structure& structure, ColorScheme col
     options.colors = colours;
     out.scene = present_structure(source, options);
     // The element legend is drawn flat on the report's white paper, so its colours are made readable there
-    // (ADR-0046); the spheres keep the scheme's.
+    // (ADR-0047); the spheres keep the scheme's.
     for (SceneLegendEntry& entry : out.scene.legend) {
         char hex[8];
         std::snprintf(hex, sizeof(hex), "#%02X%02X%02X", entry.color.r, entry.color.g, entry.color.b);
