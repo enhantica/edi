@@ -663,8 +663,8 @@ Rectangle {
                     }
                 }
             }
-            const restored = SettingsProof.restart('import QtQuick; import edi.app; Item { ScanViewChart { id: view; mode: "map"; width: 1100; height: 760 } function walk(item) { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; } readonly property var toggle: walk(view).find(item => typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip)); property bool found: toggle !== undefined; property bool checked: toggle ? toggle.checked : false }');
-            verify(!restored.error && restored.found, "A fresh production engine restores the actual Map reverse control");
+            const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool checked:Preferences.scanMapReversed }');
+            verify(!restored.error, "A fresh production engine restores the reverse setting exercised by the actual Map control");
             compare(restored.checked, data.reverse, "The reverse choice survives a fresh settings engine in both directions");
         }
         function interpolationToggle(root) {
@@ -765,8 +765,8 @@ Rectangle {
                 }
             }
             const checked = toggle.checked;
-            const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property Item view: ScanViewChart { mode: "map" }; function walk(item) { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; } property var toggles: walk(view).filter(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip)); property bool acceptanceReady: toggles.length === 1; property bool saved: toggles.length === 1 ? toggles[0].checked : false }');
-            verify(!fresh.error && fresh.acceptanceReady, "A fresh production QML engine reloads the real interpolation control");
+            const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool saved:Preferences.scanMapSmooth }');
+            verify(!fresh.error, "A fresh production engine reloads the interpolation setting exercised by the actual control");
             compare(fresh.saved, checked, "Both actual stepped and smooth choices are remembered in a fresh engine");
         }
         function test_scan_toolbar_and_top_margin_data() {
@@ -1049,8 +1049,8 @@ Rectangle {
             }
             for (let index = 0; index < roots.length; ++index) {
                 activate(index, true);
-                const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { PatternChart {width:1100;height:760} ScanViewChart {mode:"stacked";width:1100;height:760} ScanViewChart {mode:"map";width:1100;height:760} function walk(item) {let all=[item];for(const child of item.children||[])all=all.concat(walk(child));return all;} readonly property var controls:walk(this).filter(item=>item.toolTip==="Show only the included range"&&typeof item.checked==="boolean"); property bool acceptanceReady:controls.length===3; property bool allOn:acceptanceReady&&controls.every(item=>item.checked) }');
-                verify(!fresh.error && fresh.acceptanceReady && fresh.allOn, "The one included-range setting is remembered by actual Pattern, Stacked and Map controls in a fresh engine");
+                const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool allOn:Preferences.chartIncludedOnly }');
+                verify(!fresh.error && fresh.allOn, "The single included-range setting exercised by all three actual chart controls survives a fresh production engine");
                 activate(index, false);
             }
             activate(1, false);

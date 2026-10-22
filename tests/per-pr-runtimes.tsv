@@ -10,7 +10,7 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T08:38:38Z
+# measured_utc = 2026-10-22T08:41:55Z
 #
 # Recorded from: scoped owner scan and pattern gates plus isolated native band receipts
 # Collected tests: 16295; with a reported duration: 9468
@@ -16346,7 +16346,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 57.546	tests/integration/app/test_scan_view_content.py
+# module-cost: 11.465	tests/integration/app/test_scan_view_content.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 128.644	tests/integration/app/test_shared_pattern_chart.py
 # module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
@@ -16360,7 +16360,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 3.896	tests/system/app/test_pattern_owner_styles.py
-# module-cost: 3.482	tests/system/app/test_scan_owner_additions.py
+# module-cost: 2.748	tests/system/app/test_scan_owner_additions.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
