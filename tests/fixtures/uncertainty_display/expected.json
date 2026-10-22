@@ -586,5 +586,47 @@
         "full_su": "0.000000419"
       }
     ]
+  },
+  "integers": {
+    "iucr_19": [
+      {
+        "token": "900000(200000.0)",
+        "value": 900000.0,
+        "su": 200000.0,
+        "value_text": "900000",
+        "su_text": "200000",
+        "value_scientific": "9e5",
+        "su_scientific": "2e5"
+      },
+      {
+        "token": "120000(2.0)",
+        "value": 120000.0,
+        "su": 2.0,
+        "value_text": "120000",
+        "su_text": "2",
+        "value_scientific": "1.20000e5",
+        "su_scientific": "2e0"
+      }
+    ],
+    "iucr_99": [
+      {
+        "token": "900000(200000.0)",
+        "value": 900000.0,
+        "su": 200000.0,
+        "value_text": "900000",
+        "su_text": "200000",
+        "value_scientific": "9.0e5",
+        "su_scientific": "2.0e5"
+      },
+      {
+        "token": "120000(2.0)",
+        "value": 120000.0,
+        "su": 2.0,
+        "value_text": "120000.0",
+        "su_text": "2.0",
+        "value_scientific": "1.200000e5",
+        "su_scientific": "2.0e0"
+      }
+    ]
   }
 }

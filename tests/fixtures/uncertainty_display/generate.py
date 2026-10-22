@@ -71,6 +71,7 @@ def generate():
         },
         'rules': {},
         'latp': {},
+        'integers': {},
     }
     for rule in ('iucr_19', 'iucr_99'):
         rows = []
@@ -97,6 +98,13 @@ def generate():
             row['full_su'] = format(su, 'f')
             latp.append(row)
         result['latp'][rule] = latp
+        integers = []
+        for value, su in (('900000', '200000.0'), ('120000', '2.0')):
+            token = f'{value}({su})'
+            row = expectation(token, rule)
+            row.pop('saved')
+            integers.append({'token': token, **row})
+        result['integers'][rule] = integers
     return result
 
 
