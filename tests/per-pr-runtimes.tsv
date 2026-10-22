@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T11:18:24Z
+# measured_utc = 2026-10-22T11:22:10Z
 #
-# Recorded from: measured test run (18 node(s) measured once, 14553 banked, 0 stale row(s) dropped)
-# Collected tests: 15966; with a reported duration: 9468
+# Recorded from: banked rows (nothing added; 13 stale row(s) dropped)
+# Collected tests: 15953; with a reported duration: 9468
 # Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15966
+# inventory_python = 15953
 # inventory_cpp = 393
-# inventory_measured = 14568
-# inventory_unmeasured = 1791
+# inventory_measured = 14556
+# inventory_unmeasured = 1790
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -6853,19 +6853,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[missing]
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[uncertainty]
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[wrong]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_windows_clipping_job.py::test_windows_clipping_job_is_installed_with_a_real_producer
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[duplicate]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[incomplete]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[missing]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[no-action]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[no-content]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[no-escape]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[no-native]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[overflow]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[skipped]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[stale-popup]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[stale]
-0.000	tests/integration/py/test_windows_clipping_job.py::test_windows_receipt_refuses_missing_skipped_and_false_green_controls[wrong-gpu]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
 0.050	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[absorption]

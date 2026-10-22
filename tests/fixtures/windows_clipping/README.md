@@ -1,5 +1,11 @@
 # Hosted Windows clipping job
 
+Windows clipping is deferred because the rendering fault has not been reproduced.
+The actor, job fragment and producer-refusal module require explicit invocation. The preserved
+checks are in `tests/deferred/py/windows_clipping_job.py`, outside automatic
+collection. Restore them with a reproducible Windows case and a working producer.
+
+
 `job.yml` is the job to add beside `app-wasm` in the application workflow. The
 existing Linux `app-wasm` job builds both Qt kits with
 `pixi run -e app --skip-deps wasm-build` and uploads the directory
@@ -119,4 +125,4 @@ both jobs on the accepted head by dispatch/main, or change the producer's event
 policy before requiring this on pull requests. A skipped job, a Linux actor, a
 job fragment, or a missing fixture host supplies no Windows acceptance evidence.
 
-The consumer must run `check_receipt.py` after the browser actor. It requires the complete case matrix, exact app head, actual Windows renderer, native and QML source identities and the retained screenshot hashes. The controls in `test_windows_clipping_job.py` do not supply a Windows rendering result. A missing producer or installed workflow remains red.
+The consumer must run `check_receipt.py` after the browser actor. It requires the complete case matrix, exact app head, actual Windows renderer, native and QML source identities and the retained screenshot hashes. The controls in `tests/deferred/py/windows_clipping_job.py` do not supply a Windows rendering result. A missing producer or installed workflow remains red.

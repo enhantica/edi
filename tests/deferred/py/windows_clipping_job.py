@@ -1,4 +1,4 @@
-"""The platform witness must be installed and refuse missing or skipped evidence."""
+"""Deferred Windows clipping checks; the rendering fault has not been reproduced."""
 
 import copy
 from pathlib import Path

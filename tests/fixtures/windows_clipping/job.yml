@@ -1,3 +1,4 @@
+# Deferred until the clipping fault is reproduced and a Windows producer is available.
 # Add beside app-wasm. The producer requirements are in README.md.
 windows-web-clipping:
   needs: app-wasm

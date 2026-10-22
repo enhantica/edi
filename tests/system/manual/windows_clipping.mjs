@@ -1,3 +1,4 @@
+// Deferred until Windows clipping is reproduced; run this retained actor manually.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
