@@ -115,3 +115,6 @@ projects:
   - id: pd-neut-tof_lbco-si-mcstas_two-phase
     executing: false
     user-facing: true
+  - id: pd-neut-tof_ferrite-austenite-beer_calibration
+    executing: false
+    user-facing: true

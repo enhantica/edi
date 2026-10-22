@@ -608,6 +608,59 @@
         "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/lbco.edi",
         "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/si.edi"
       ]
+    },
+    "pd-neut-tof_ferrite-austenite-beer_calibration": {
+      "samples": [
+        "Ferrite [Im-3m]",
+        "Austenite [Fm-3m]"
+      ],
+      "origin": "BEER @ ESS",
+      "detail": "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "joint"
+        ],
+        "facilities": [
+          "ESS"
+        ],
+        "instruments": [
+          "BEER"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ferrite-austenite-beer_calibration",
+        "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS",
+        "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_n2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/experiments/expt_s2.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/austenite.edi",
+        "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_calibration/project/structures/ferrite.edi"
+      ]
     }
   }
 }
