@@ -134,6 +134,14 @@ struct AbsorptionNode {
     std::vector<edi::Parameter*> parameters() const { return storage().parameters(); }
 };
 
+// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): its
+// mosaic model, crystal radius and mosaicity.
+struct ExtinctionNode {
+    edi::ExperimentBase* experiment;
+    explicit ExtinctionNode(edi::ExperimentBase* experiment) : experiment(experiment) {}
+    edi::ExtinctionBase& storage() const { return experiment->extinction; }
+};
+
 class AbsorptionFactory {
    public:
     struct Row {
