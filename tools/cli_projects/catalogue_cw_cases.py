@@ -405,7 +405,7 @@ def y2o3_aniso_adp() -> dict[str, str]:
         ['_atom_site_aniso.id', *(f'_atom_site_aniso.{c}' for c in components)], aniso
     )
     experiment = text(
-        ['data_y2o3', '', '_edi.schema_version 3'],
+        ['data_spodi', '', '_edi.schema_version 3'],
         neutron_type(),
         ['_scattering_source.neutron_scattering_length sears1992'],
         [
@@ -425,9 +425,11 @@ def y2o3_aniso_adp() -> dict[str, str]:
     )
     return {
         'project.edi': project_record(
-            'pd_neut_cwl_y2o3_aniso_adp',
-            'Y₂O₃ [Ia-3] · Unknown instrument',
+            'pd_neut_cwl_y2o3_spodi_aniso_adp',
+            'Y₂O₃ [Ia-3] · SPODI @ FRM II',
             'Anisotropic β tensors tied by site symmetry · Coordinates, profile and background',
+            instrument='SPODI',
+            facility='FRM II',
         ),
         'analysis/analysis.edi': analysis(),
         'structures/y2o3.edi': structure(
@@ -438,7 +440,7 @@ def y2o3_aniso_adp() -> dict[str, str]:
             system='1',
             extra=aniso_loop,
         ),
-        'experiments/y2o3.edi': experiment,
+        'experiments/spodi.edi': experiment,
     }
 
 
@@ -448,5 +450,5 @@ CASES = {
     'pd-xray-cwl_pbso4-lab_basic': pbso4_lab_basic,
     'pd-neut-cwl_yap-spodi_two-phase': yap_spodi_two_phase,
     'pd-neut-cwl_lab6-11b-echidna_basic': lab6_echidna_basic,
-    'pd-neut-cwl_y2o3_aniso-adp': y2o3_aniso_adp,
+    'pd-neut-cwl_y2o3-spodi_aniso-adp': y2o3_aniso_adp,
 }

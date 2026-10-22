@@ -1014,11 +1014,11 @@
         "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/structures/ceo2.edi"
       ]
     },
-    "pd-neut-cwl_y2o3_aniso-adp": {
+    "pd-neut-cwl_y2o3-spodi_aniso-adp": {
       "samples": [
         "Y₂O₃ [Ia-3]"
       ],
-      "origin": "Unknown instrument",
+      "origin": "SPODI @ FRM II",
       "detail": "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background",
       "values": {
         "sampleForm": [
@@ -1040,10 +1040,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "FRM II"
         ],
         "instruments": [
-          ""
+          "SPODI"
         ],
         "dimensionality": [
           "1D"
@@ -1053,15 +1053,15 @@
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_y2o3_aniso-adp",
-        "Y₂O₃ [Ia-3] · Unknown instrument",
+        "pd-neut-cwl_y2o3-spodi_aniso-adp",
+        "Y₂O₃ [Ia-3] · SPODI @ FRM II",
         "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/experiments/y2o3.edi",
-        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/structures/y2o3.edi"
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/experiments/spodi.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3-spodi_aniso-adp/project/structures/y2o3.edi"
       ]
     },
     "pd-xray-cwl_latp-bm01_scan-73f": {

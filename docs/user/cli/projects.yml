@@ -139,7 +139,7 @@ projects:
   - id: pd-neut-tof_ceo2-pearl_basic
     executing: false
     user-facing: true
-  - id: pd-neut-cwl_y2o3_aniso-adp
+  - id: pd-neut-cwl_y2o3-spodi_aniso-adp
     executing: false
     user-facing: true
   - id: pd-xray-cwl_latp-bm01_scan-73f

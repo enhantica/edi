@@ -1,10 +1,10 @@
-# pd-neut-cwl_y2o3_aniso-adp: provenance
+# pd-neut-cwl_y2o3-spodi_aniso-adp: provenance
 
 Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.py`).
 
 - **Data:** the constant-wavelength neutron pattern of `pd-neut-cwl_y2o3_beta-adp` (FullProf's `y2o3.dat` from
-  diffraction-lib's verification folder, with its own sigmas), read from its `_data` loop unchanged. No source names
-  the instrument; the FullProf input's title gives a Ge(551) monochromator and 1.548 Å.
+  diffraction-lib's verification folder, with its own sigmas), read from its `_data` loop unchanged. It was measured
+  on SPODI at FRM II (the owner, 2026-10-22); the FullProf input's title gives a Ge(551) monochromator and 1.548 Å.
 - **Model:** the source project's: Y2O3 in `I a -3`, every site's displacement an anisotropic β tensor tied by its site
   symmetry (Y1 on `24d` keeps four components, Y2 on `8b` two, O1 on `48e` six), a Thompson-Cox-Hastings pseudo-Voigt
   with no Lorentzian part, wavelength 1.54822 Å fixed, excluded regions 0-12° and 137.5-180°, the source's 21
