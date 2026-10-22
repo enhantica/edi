@@ -20,6 +20,9 @@ def require_readable_elements(output):
     with source.open() as stream:
         published = {row['symbol']: row for row in csv.DictReader(stream, delimiter='\t')}
     for row in rows:
+        assert row['symbol'] == 'La', (
+            'The older GUI actors retain their independent lanthanum input'
+        )
         original = published[row['symbol']][row['scheme']]
         assert len(row['consumers']) == 2, (
             'Both real element consumers supply independent receipts'

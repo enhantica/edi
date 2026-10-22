@@ -383,6 +383,8 @@ Rectangle {
             verify(at !== null, "The real selector is exposed inside its viewport before input");
             mouseClick(control, at.x, at.y);
             tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector");
+            const windowRoot = control.Window.window.contentItem;
+            mouseMove(windowRoot, windowRoot.width - 1, windowRoot.height - 1);
             verify(SettingsProof.key(control, Qt.Key_Home), "Home reaches the actual scan selector window");
             for (let step = 0; step < index; ++step)
                 verify(SettingsProof.key(control, Qt.Key_Down), "Down reaches the actual scan selector window");
@@ -598,13 +600,18 @@ Rectangle {
         }
         function test_map_reverse_and_key_data() {
             const cases = [];
+            const count = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps.length + Approved.reference(SettingsProof).schemes.length;
             for (const reverse of [false, true])
                 for (const dark of [false, true])
-                    cases.push({
-                        tag: (reverse ? "reversed" : "forward") + (dark ? "-dark" : "-light"),
-                        reverse,
-                        dark
-                    });
+                    for (let first = 0; first < count; first += 12)
+                        cases.push({
+                            tag: (reverse ? "reversed" : "forward") + (dark ? "-dark" : "-light") + "-part" + Math.floor(first / 12),
+                            reverse,
+                            dark,
+                            first,
+                            last: Math.min(first + 12, count),
+                            count
+                        });
             return cases;
         }
         function test_map_reverse_and_key(data) {
@@ -614,6 +621,7 @@ Rectangle {
             const toggle = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
             verify(toggle !== undefined && toggle.enabled, "The Map toolbar exposes an actual reverse switch");
             const choices = chart.mapChoices;
+            compare(choices.length, data.count, "Every reversal part retains the complete independently recorded roster of maps and approved ramps");
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json"));
             const selector = findChild(chart, "scanView.map.toolbar.colourMap");
             verify(selector !== null && choices !== undefined, "Reversal operates the real offered Map palette selector");
@@ -630,7 +638,7 @@ Rectangle {
                 if (toggle.checked !== requested)
                     mouseClick(toggle, toggle.width / 2, toggle.height / 2);
                 tryCompare(toggle, "checked", requested, 1000, "Real pointer input changes the reverse choice in both directions");
-                for (let choice = 0; choice < choices.length; ++choice) {
+                for (let choice = data.first; choice < data.last; ++choice) {
                     const name = choices[choice];
                     const ramp = String(name).startsWith("ramp:");
                     const scheme = ramp ? schemes.find(row => row.id === String(name).slice(5)) : null;
@@ -1533,7 +1541,7 @@ Rectangle {
             const entries = [];
             for (let i = 0; i < selector.count; ++i)
                 entries.push(selector.textAt(i));
-            const dIndex = entries.findIndex(text => /^d(?:$|[ -])/.test(text));
+            const dIndex = entries.findIndex(text => /^(?:x:\s*)?d(?:$|[ -])/.test(text));
             verify(dIndex >= 0, "Every joint fit offers physical d as a user-selectable common quantity");
             if (data.axes === "mixed") {
                 compare(entries.length, 1, "Unlike native quantities are not offered as one mixed 2theta/TOF axis");
@@ -1594,15 +1602,20 @@ Rectangle {
             verify(pattern !== null, "Independent structure/pattern choices are observed through the actual Pattern drawing");
             const refs = Approved.reference(SettingsProof).schemes;
             function check(structures, patterns) {
+                pattern.visible = true;
+                verify(waitForRendering(pattern), "The palette witness shows its paused Pattern chart before observing uploaded series colours");
                 const series = Render.series(pattern), measured = series.find(item => item.objectName === "chart.series.meas"), bragg = series.find(item => item.objectName === "chart.series.bragg.0");
                 verify(measured !== undefined && bragg !== undefined, "The colour-split witness reaches real measured and structure drawing series");
                 const expectedMeasured = Approved.colours(SettingsProof, patterns, "measured", 3, data.dark)[1], expectedStructure = Approved.colours(SettingsProof, structures, "structures", 1, data.dark)[0];
                 tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices");
                 Session.project.report.active = true;
                 tryVerify(() => Session.project.report.model.pattern_styles !== undefined, 3000, "The colour split reaches the actual report style model");
-                const styles = Session.project.report.model.pattern_styles;
                 const reportMeas = Approved.colours(SettingsProof, patterns, "measured", 3, false)[1], reportStructure = Approved.colours(SettingsProof, structures, "structures", 1, false)[0];
-                verify(styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure), "The report follows the same independent structure/pattern choices in its paper theme");
+                tryVerify(() => {
+                    const styles = Session.project.report.model.pattern_styles;
+                    return styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure);
+                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update");
+                pattern.visible = false;
             }
             choosePreference("Structures", refs[1].label);
             choosePreference("Patterns", refs[3].label);

@@ -91,8 +91,11 @@ Item {
             return item;
         }
         function choose(item, index) {
-            const point = Ui.clickPoint(item);
-            verify(item.enabled && point !== null, "A real pointer reaches the visible quantity selector");
+            let point;
+            tryVerify(() => {
+                point = Ui.clickPoint(item);
+                return item.enabled && point !== null;
+            }, 1500, "A real pointer reaches the visible quantity selector after its tab transition");
             mouseClick(item, point.x, point.y);
             verify(SettingsProof.key(item, Qt.Key_Home), "The real selector receives Home");
             for (let step = 0; step < index; ++step)

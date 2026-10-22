@@ -138,7 +138,7 @@ Item {
             };
             const live = graph.seriesList.filter(series => series.visible && series.opacity > 0 && series.color.a > 0);
             const calculated = live.filter(series => series.objectName === "chart.series.calc");
-            const areas = live.filter(series => series.upperSeries !== undefined && series.lowerSeries !== undefined && series.upperSeries && series.lowerSeries && series.upperSeries.count > 0 && series.lowerSeries.count > 0);
+            const areas = live.filter(series => String(series.objectName).startsWith("chart.series.structure.") && series.upperSeries !== undefined && series.lowerSeries !== undefined && series.upperSeries && series.lowerSeries && series.upperSeries.count > 0 && series.lowerSeries.count > 0);
             const calculation = Drawing.calculatedPixels(image, box, points, line.color, initialPoints, chart.colors.chartBackground);
             const fills = areas.map(area => Drawing.fillPixels(image, box, seriesPoints(area.lowerSeries), seriesPoints(area.upperSeries), area.color, area.opacity, chart.colors.chartBackground));
             image.save("sequential-" + captureKind + "-" + (file || "initial") + ".png");

@@ -96,8 +96,8 @@ def test_two_structure_curves_match_independent_scale_zero_controls(tmp_path, ba
     assert re.search(r'_pd_calc_overall.component_presentation_order\s+\[', text), (
         'The saved presentation order names the members of every point list'
     )
-    reopened_project = engine.Project.load(saved)
-    reopened = reopened_project.experiments[bank]
+    project = engine.Project.load(saved)
+    reopened = project.experiments[bank]
     assert list(reopened.data.component_presentation_order) == order, (
         'Saving and reopening retains the independently named component column order'
     )

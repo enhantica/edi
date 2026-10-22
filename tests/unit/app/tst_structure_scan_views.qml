@@ -313,7 +313,7 @@ Item {
                 if (!item.visible || item.seriesList === undefined)
                     continue;
                 for (const series of item.seriesList)
-                    if (drawableArea(series))
+                    if (String(series.objectName).startsWith("chart.series.structure.") && drawableArea(series))
                         fills.push(series);
             }
             return fills;

@@ -1,5 +1,6 @@
 """Observe every new scan contract in one real rendering session."""
 
+import json
 import os
 import re
 import signal
@@ -58,6 +59,14 @@ CASES = (
 )
 
 
+def reverse_parts():
+    maps = json.loads((ROOT / 'tests/fixtures/scan_views/offered.json').read_text())['maps']
+    palettes = json.loads((ROOT / 'tests/fixtures/approved_palettes/colours.json').read_text())[
+        'palettes'
+    ]
+    return range((len(maps) + len(palettes) + 11) // 12)
+
+
 @pytest.fixture(scope='module')
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
@@ -104,7 +113,22 @@ def scan_receipt(request):
 
     receipts = {}
     batches = [
-        cases[index : index + 2] for cases in groups.values() for index in range(0, len(cases), 2)
+        cases[index : index + size]
+        for function, cases in groups.items()
+        for size in (
+            1
+            if function
+            in {'test_offered_maps_are_readable_in_both_themes', 'test_map_reverse_and_key'}
+            else 2,
+        )
+        for index in range(0, len(cases), size)
+    ]
+    batches = [
+        [cases[0] + f'-part{part}'] if cases[0].startswith('test_map_reverse_and_key:') else cases
+        for cases in batches
+        for part in (
+            reverse_parts() if cases[0].startswith('test_map_reverse_and_key:') else [None]
+        )
     ]
     batches.sort(
         key=lambda cases: (
@@ -116,7 +140,9 @@ def scan_receipt(request):
     with ThreadPoolExecutor(max_workers=3) as pool:
         for cases, status, output in pool.map(run, batches):
             for case in cases:
-                receipts[case] = status, output
+                original = re.sub(r'-part\d+$', '', case)
+                previous_status, previous_output = receipts.get(original, (0, ''))
+                receipts[original] = previous_status or status, previous_output + output
     return receipts
 
 
@@ -132,11 +158,18 @@ def test_scan_view_content(scan_receipt, case):
         'A crashed, skipped or incomplete acceptance function cannot supply passing receipts: '
         + output
     )
-    name, _, tag = case.partition(':')
-    witness = f'::ScanViewContent::{name}({tag})'
-    lines = [line for line in output.splitlines() if witness in line]
-    assert any(line.startswith('PASS ') for line in lines) and not any(
-        re.match(r'FAIL|SKIP', line) for line in lines
-    ), 'The requested production scan contract executes and passes without skipping: ' + '\n'.join(
-        lines
+    variants = (
+        [case + f'-part{part}' for part in reverse_parts()]
+        if case.startswith('test_map_reverse_and_key:')
+        else [case]
     )
+    for variant in variants:
+        name, _, tag = variant.partition(':')
+        witness = f'::ScanViewContent::{name}({tag})'
+        lines = [line for line in output.splitlines() if witness in line]
+        assert any(line.startswith('PASS ') for line in lines) and not any(
+            re.match(r'FAIL|SKIP', line) for line in lines
+        ), (
+            'Every requested map part and production scan contract executes without skipping: '
+            + '\n'.join(lines)
+        )

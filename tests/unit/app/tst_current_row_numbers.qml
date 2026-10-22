@@ -49,10 +49,6 @@ Item {
             savedTheme = Style.Colors.theme;
         }
         function test_current_number(data) {
-            if (data.kind === "parameters") {
-                skip("Waiting for the updated Analysis Parameters table; this case supplies no acceptance evidence.");
-                return;
-            }
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The row-number check opens a real project");
             verify(Session.project.duplicateStructure(), "The selected-row check needs distinct structure rows");
@@ -82,7 +78,7 @@ Item {
                     tryVerify(() => {
                         const cells = Render.cells(table.itemAtIndex(index));
                         return cells.length > 0 && cells[0].font.bold && String(cells[0].color) === String(Style.Colors.themeAccent);
-                    }, 1000, "The actual current row number becomes bold in the theme accent colour");
+                    }, 1500, "The actual current row number reaches bold and the exact accent after the base's one-second colour animation");
                 } finally {
                     console.log("CURRENT_NUMBER_OBSERVATION " + JSON.stringify({
                         kind: data.kind,

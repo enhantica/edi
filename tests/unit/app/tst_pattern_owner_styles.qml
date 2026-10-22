@@ -288,6 +288,7 @@ Rectangle {
                     report: Session.project.report,
                     reportExperiment: Session.project.report.model.experiments[0].id
                 });
+                chart.colors.light = true;
                 target = chart;
             } else {
                 app = appFactory.createObject(null);
@@ -318,10 +319,11 @@ Rectangle {
             verify(segment !== undefined && segment.mark === "dash", "The background legend sample is explicitly dashed like its actual series");
             const shapes = Render.descendants(rows[0]).filter(item => item.visible && item.color !== undefined && item.width > 1 && item.height <= 2 && String(item.color) === String(background.color));
             verify(shapes.length >= 2, "The background legend draws separated dash ink rather than only carrying a dash label");
-            const rowImage = grabImage(rows[0]);
+            const capture = target.Window.window.contentItem;
+            const rowImage = grabImage(capture);
             const bounds = shapes.map(item => ({
-                        x: item.mapToItem(rows[0], 0, 0).x,
-                        y: item.mapToItem(rows[0], 0, 0).y,
+                        x: item.mapToItem(capture, 0, 0).x,
+                        y: item.mapToItem(capture, 0, 0).y,
                         width: item.width,
                         height: item.height
                     })).sort((a, b) => a.x - b.x);

@@ -39,6 +39,12 @@ def view_receipts(request):
                 'StructureScanViews::test_scan_tabs',
             ]
             if suite == 'StructureScanViews'
+            else [
+                f'CurrentRowNumbers::test_current_number:{kind}-{theme}'
+                for kind in ('experiments', 'structures', 'parameters', 'adps')
+                for theme in ('light', 'dark')
+            ]
+            if suite == 'CurrentRowNumbers'
             else [None]
         )
         parts = [run_view_phase(binary, file, phase) for phase in phases]
@@ -89,14 +95,7 @@ def test_production_view_actor_executes_every_case(view_receipts, suite):
         'The production view must satisfy its rendered acceptance: ' + output
     )
     skips = [line for line in output.splitlines() if line.startswith('SKIP')]
-    if suite == 'CurrentRowNumbers':
-        assert len(skips) == 2 and all(
-            f'test_current_number(parameters-{theme})' in skips[index]
-            and 'Waiting for the updated Analysis Parameters table' in skips[index]
-            for index, theme in enumerate(('light', 'dark'))
-        ), 'Only the two explicitly waiting Analysis Parameters cases may be skipped'
-    else:
-        assert not skips, 'An available view actor must execute every acceptance case'
+    assert not skips, 'Every available table and view executes without skipped acceptance cases'
     assert f'::{suite}::test_' in output and '0 failed' in output, (
         'Each Qt actor must execute real cases; an empty run supplies no evidence'
     )

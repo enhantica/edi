@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.element_contrast.legacy_receipts import require_readable_elements
 from tests.fixtures.palette_sources.oklab_reference import (
     contrast,
     gamut_hue_chroma_preserved,
@@ -96,6 +97,35 @@ def test_independent_contrast_and_colour_observers_reject_escapes():
     assert not gamut_hue_chroma_preserved('#ff0d0d', '#0d0dff'), (
         'A rotated element hue cannot defeat the independent Oklab observer'
     )
+
+    rows = [
+        {
+            'scheme': scheme,
+            'symbol': 'La',
+            'consumers': [
+                {'colour': colour, 'backgrounds': ['#000000']},
+                {'colour': colour, 'backgrounds': ['#000000']},
+            ],
+        }
+        for scheme, colour in [('jmol', '#70d4ff'), ('vesta', '#5ac449')]
+    ]
+
+    def output(values):
+        return '\n'.join('LEGACY_ELEMENT ' + json.dumps(row) for row in values)
+
+    require_readable_elements(output(rows))
+    for damage in ('missing', 'unreadable', 'changed-passing', 'wrong-element'):
+        altered = json.loads(json.dumps(rows))
+        if damage == 'missing':
+            altered.pop()
+        elif damage == 'wrong-element':
+            altered[0]['symbol'] = 'Ag'
+        else:
+            altered[0]['consumers'][0]['colour'] = (
+                '#000000' if damage == 'unreadable' else '#949494'
+            )
+        with pytest.raises(AssertionError):
+            require_readable_elements(output(altered))
 
 
 @pytest.fixture(scope='module')

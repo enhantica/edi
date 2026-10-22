@@ -6,7 +6,6 @@ import subprocess
 import pytest
 
 from tests.fixtures.element_contrast.legacy_receipts import require_readable_elements
-
 from tests.integration.app.test_e04_t1_projects import APP_TESTS, runner
 
 

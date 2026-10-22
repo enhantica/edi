@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T19:30:38Z
+# measured_utc = 2026-10-22T23:41:19Z
 #
-# Recorded from: measured test run (40 node(s) measured once, 14725 banked, 0 stale row(s) dropped)
-# Collected tests: 16320; with a reported duration: 9490
+# Recorded from: measured test run (1 node(s) measured once, 14729 banked, 0 stale row(s) dropped)
+# Collected tests: 16321; with a reported duration: 9490
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16320
+# inventory_python = 16321
 # inventory_cpp = 393
 # inventory_measured = 14729
-# inventory_unmeasured = 1984
+# inventory_unmeasured = 1985
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -11639,6 +11639,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.500	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
 0.510	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
 0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[licence-surfaces]
 0.520	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 0.290	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
 1.640	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
