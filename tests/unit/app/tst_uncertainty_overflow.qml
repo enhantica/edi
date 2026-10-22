@@ -51,8 +51,17 @@ TestCase {
         table = Ui.find(Ui.page(appWindow), "parameters.list", true);
         verify(table !== null && table.sourceModel !== null, "The real Analysis table exposes its production parameter filter");
     }
-    function open(rule) {
+    function open(rule, narrowValue = false) {
         location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fit_tables/five"));
+        if (narrowValue) {
+            const ref = expected.rules[rule][0];
+            const file = "experiments/" + ref.block + ".edi";
+            const text = SettingsProof.text(location, file);
+            const pattern = new RegExp("^_peak\\." + ref.name + "\\s+\\S+", "m");
+            verify(pattern.test(text), "The constructed value seam addresses an existing saved asymmetry parameter");
+            verify(SettingsProof.write(location, file, text.replace(pattern, "_peak." + ref.name + " " + expected.narrow_value.token)), "The disposable project receives a decimal whose scientific spelling is shorter");
+            expected.rules[rule][0] = Object.assign({}, ref, expected.narrow_value);
+        }
         verify(Session.openProject(location), "The saved NCAF five-bank project opens through the actual application loader");
         Session.project.suRule = rule;
         compare(Session.project.suRule, rule, "The live project selects the independently specified standard-uncertainty rule");
@@ -111,7 +120,9 @@ TestCase {
     }
     function widths(kind) {
         const values = table.columnWidths.slice();
-        values[2] = kind === "wide" ? 130 : 55;
+        // The original saved values can have longer scientific forms. This constructed
+        // decimal fits in scientific notation here without sacrificing any digits.
+        values[2] = kind === "wide" ? 130 : 4.5 * Style.Sizes.fontPixelSize;
         values[4] = kind === "wide" ? 100 : 42;
         table.columnWidths = values;
         verify(waitForPolish(table), "A real live column-width edit finishes the table layout");
@@ -157,7 +168,7 @@ TestCase {
         return cases;
     }
     function test_cells(data) {
-        open(data.rule);
+        open(data.rule, data.column === "value" && (data.layout === "narrow" || data.layout === "resize"));
         if (data.layout === "wide" || data.layout === "resize")
             widths("wide");
         if (data.layout === "resize") {
@@ -190,7 +201,7 @@ TestCase {
         return cases;
     }
     function test_full_hover(data) {
-        open(data.rule);
+        open(data.rule, data.column === "value");
         widths("narrow");
         const rows = Probe.rows(table.sourceModel);
         let cell = null, ref = null;
@@ -205,9 +216,13 @@ TestCase {
         }
         verify(cell !== null && ref !== null, "The full-hover witness reaches an actual overflowing saved NCAF number under the current font metrics");
         Ui.scrollIntoView(cell);
+        verify(waitForPolish(appWindow.contentItem), "The scrolled numeric hover target completes its actual layout");
+        appWindow.update();
+        verify(waitForRendering(appWindow.contentItem), "The numeric hover target reaches a settled rendered frame");
         const point = Ui.clickPoint(cell);
         verify(point !== null, "The actual narrow numeric cell exposes a real hover target");
         mouseMove(cell, point.x, point.y);
+        tryCompare(cell, "hovered", true, 2000, "Real pointer input reaches the numeric cell before observing its tooltip");
         const whole = ref[data.column + "_text"];
         const raw = String(data.column === "value" ? ref.value : ref.su);
         tryVerify(() => Probe.visiblePopups(appWindow).some(popup => popup.visible && (popup.text === whole || popup.text === raw)), 3000, "Hovering a compact numeric cell actually shows its complete plain value or standard uncertainty");

@@ -65,6 +65,10 @@ def generate():
     result = {
         'definition': 'ADR-0017 §21; report_units/iucr_reference.py',
         'latp_input': 'Owner-provided scale magnitudes; authored uncertainties, not fit pins',
+        'narrow_value': {
+            'token': '0.0001234',
+            **expectation('0.0001234', 'iucr_19'),
+        },
         'rules': {},
         'latp': {},
     }
