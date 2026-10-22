@@ -6,9 +6,10 @@ Python package, CLI). From it this script writes:
 
 - each THIRD-PARTY-NOTICES section's `Licence:` and `In edi:` lines (the section's licence text
   stays as the component distributes it);
-- licenses/, one `<component>-LICENSE` file per component the Python package carries, the text
-  of its notices section, and nothing else;
-- pyproject.toml's `license-files`: LICENSE and those files.
+- licenses/, one `<component>-LICENSE` file per component the Python package or the CLI carries, the
+  text of its notices section, and nothing else;
+- pyproject.toml's `license-files`: LICENSE and the Python package's files;
+- cli/licence-files.txt: the CLI's files, which its build puts beside the executable with LICENSE.
 
 The application reads DEPENDENCIES.md itself, from its resources (ApplicationInfo).
 
@@ -26,6 +27,7 @@ DEPENDENCIES = ROOT / 'DEPENDENCIES.md'
 NOTICES = ROOT / 'THIRD-PARTY-NOTICES'
 LICENSES = ROOT / 'licenses'
 PYPROJECT = ROOT / 'pyproject.toml'
+CLI_LIST = ROOT / 'cli' / 'licence-files.txt'
 HEADER = [
     'Component',
     'Version',
@@ -93,8 +95,8 @@ def licence_text(lines: list[str]) -> str:
     return text + '\n'
 
 
-def expected(rows: list[dict[str, str]]) -> tuple[str, dict[str, str], str]:
-    """The notices, the licenses/ files and pyproject.toml as DEPENDENCIES.md makes them."""
+def expected(rows: list[dict[str, str]]) -> tuple[str, dict[str, str], str, str]:
+    """The notices, the licenses/ files, pyproject.toml and the CLI's list as DEPENDENCIES.md makes them."""
     notices = NOTICES.read_text(encoding='utf-8')
     sections = notices_sections(notices)
     names = [row['Component'] for row in rows]
@@ -107,6 +109,7 @@ def expected(rows: list[dict[str, str]]) -> tuple[str, dict[str, str], str]:
         )
     lines = notices.split('\n')
     files = {}
+    python, cli = [], []
     for row in rows:
         start, end = sections[row['Component']]
         for i in range(start, end):
@@ -114,22 +117,27 @@ def expected(rows: list[dict[str, str]]) -> tuple[str, dict[str, str], str]:
                 lines[i] = f'Licence: {row["Licence"]}'
             elif lines[i].startswith('In edi:'):
                 lines[i] = f'In edi: {row["In edi"]}'
+        name = f'{slug(row["Component"])}-LICENSE'
+        if carried(row, 'Python package') or carried(row, 'CLI'):
+            files[name] = licence_text(lines[start:end])
         if carried(row, 'Python package'):
-            text = licence_text(lines[start:end])
-            files[f'{slug(row["Component"])}-LICENSE'] = text
+            python.append(name)
+        if carried(row, 'CLI'):
+            cli.append(name)
     pyproject = PYPROJECT.read_text(encoding='utf-8')
-    listed = ', '.join(f'"{name}"' for name in ['LICENSE', *(f'licenses/{f}' for f in files)])
+    listed = ', '.join(f'"{name}"' for name in ['LICENSE', *(f'licenses/{f}' for f in python)])
     pyproject = re.sub(
         r'^license-files = \[.*\]$', f'license-files = [{listed}]', pyproject, flags=re.MULTILINE
     )
-    return '\n'.join(lines), files, pyproject
+    cli_list = ''.join(f'{name}\n' for name in cli)
+    return '\n'.join(lines), files, pyproject, cli_list
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--check', action='store_true', help='compare, write nothing')
     args = parser.parse_args()
-    notices, files, pyproject = expected(components())
+    notices, files, pyproject, cli_list = expected(components())
     present = {path.name: path.read_text(encoding='utf-8') for path in LICENSES.glob('*')}
     differences = []
     if notices != NOTICES.read_text(encoding='utf-8'):
@@ -138,6 +146,8 @@ def main() -> int:
         differences.append('licenses/')
     if pyproject != PYPROJECT.read_text(encoding='utf-8'):
         differences.append('pyproject.toml license-files')
+    if not CLI_LIST.exists() or cli_list != CLI_LIST.read_text(encoding='utf-8'):
+        differences.append('cli/licence-files.txt')
     if args.check:
         if differences:
             print(f'not as DEPENDENCIES.md makes them: {", ".join(differences)}')
@@ -151,6 +161,7 @@ def main() -> int:
     for name, text in files.items():
         (LICENSES / name).write_text(text, encoding='utf-8')
     PYPROJECT.write_text(pyproject, encoding='utf-8')
+    CLI_LIST.write_text(cli_list, encoding='utf-8')
     print(f'wrote {", ".join(differences) or "nothing (already current)"}')
     return 0
 
