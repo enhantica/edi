@@ -214,11 +214,36 @@ def pd_neut_cwl_lmo_echidna() -> dict[str, str]:
 B_CATIONS = ['Ti', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu']
 
 
+# The owner's background points (2026-10-22): ids and positions as he gave them, each starting
+# flat at 300 counts. They follow the capillary and air scattering under the first peaks.
+LAM7O3_BACKGROUND = [
+    ('2.0', 2.0033379),
+    ('2.3', 2.297792),
+    ('2.7', 2.7079241),
+    ('2.9', 2.8761833),
+    ('3.0', 2.9813454),
+    ('3.1', 3.1180563),
+    ('3.7', 3.7174802),
+    ('4.1', 4.1381288),
+    ('4.3', 4.2748394),
+    ('4.4', 4.3905177),
+    ('4.5', 4.5482607),
+    ('4.9', 4.9268441),
+    ('5.1', 5.1371684),
+    ('7', 7.4086699),
+    ('8', 8.0922232),
+    ('10', 9.7748175),
+    ('11', 10.910567),
+    ('12', 12.498515),
+    ('14.7', 14.70692),
+    ('15.0', 14.990857),
+]
+
+
 def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
     pid = 'pd-xray-cwl_lam7o3-p021'
     rows = read_points(CLI / pid / 'data' / 'hep7c-xray-synchrotron.dat')
     excluded = [(0, 2), (15, 20)]
-    level = flat_level(rows, excluded)
     # Pnma: La and O1 on 4c (x, 1/4, z), the B site on 4a (0, 0, 0), O2 on 8d. Only Ti's
     # displacement is free on the B site; the other six follow it.
     sites = [
@@ -228,9 +253,6 @@ def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
         f'O2 O {free(0.22)} {free(0.03)} {free(0.27)} d 1 {BISO} Biso',
     ]
     cell = cell_lines(free(5.5), free(7.7), free(5.5))
-    # A point every 0.25°, as dense as diffraction-lib's estimated background: the capillary and
-    # air scattering under the first peaks is not a smooth curve.
-    background = [round(2 + 0.25 * i, 2) for i in range(53)]
     p021 = text(
         ['data_p021', '', '_edi.schema_version 3'],
         experiment_type('constant wavelength', 'xray'),
@@ -254,7 +276,10 @@ def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
             [['lam7o3', free('0.000005')]],
         ),
         ['_background.type line-segment'],
-        flat_points(background, level),
+        loop(
+            ['_background.id', '_background.position', '_background.intensity'],
+            [[point, x, free(300)] for point, x in LAM7O3_BACKGROUND],
+        ),
         data_loop(rows, 'two_theta'),
     )
     aliases = [(f'biso_{m}', f'lam7o3.atom_site.{m}.adp_iso') for m in B_CATIONS]
@@ -275,7 +300,13 @@ def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
         'analysis/analysis.edi': text(
             ['_edi.schema_version 3'],
             ['_fitting_mode.type single'],
-            ['_minimizer.type crysta', '_minimizer.max_iterations 1000'],
+            # The default descent stops at R_wp 3.0 % with O1 x near 0.499, from these points or
+            # from the owner's fitted ones; the fast descent reaches the tutorial's minimum.
+            [
+                '_minimizer.type crysta',
+                '_minimizer.max_iterations 1000',
+                '_minimizer.descent fast_descent',
+            ],
             aliases_and_constraints(aliases, constraints),
         ),
         'structures/lam7o3.edi': structure('lam7o3', cell, 'P n m a', sites, system='abc'),

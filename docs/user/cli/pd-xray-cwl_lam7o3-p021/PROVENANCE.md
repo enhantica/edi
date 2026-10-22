@@ -22,15 +22,17 @@ from the P02.1 beamline at PETRA III.
 The start a user's own measurement would have, built by `tools/cli_projects/build_catalogue_projects.py`:
 zero shift 0; U, V, W and X at the tutorial's values, already one significant figure (0.04, −0.01, 0.001,
 0.1); Biso 0.5 on every site; the tutorial's free coordinates to two decimals (La z 0.004 becomes 0.0);
-a flat line-segment background at the 10th percentile of the counts; scale 0.000005; the tutorial's cell
-(5.5, 7.7, 5.5 Å). Free: the cell, scale, zero shift, U, V, W, X, the 53 background points, La x/z,
-O1 x/z, O2 x/y/z and the Biso of La, Ti and O1 (72 parameters).
+the owner's 20 line-segment background points, flat at 300 counts; scale 0.000005; the tutorial's cell
+(5.5, 7.7, 5.5 Å). Free: the cell, scale, zero shift, U, V, W, X, the 20 background points, La x/z,
+O1 x/z, O2 x/y/z and the Biso of La, Ti and O1 (39 parameters).
 
 **The background.** The tutorial's automatic estimate is not capped in its number of points, so its
-background follows the capillary and air scattering under the first peaks closely. Here a flat point every
-0.25° from 2 to 15° (53 points) stands in for it. With 15 points the fit stopped at R<sub>wp</sub> 2.72 %
-(reduced χ² 0.51), and with 27 at 2.81 %; with 40 it reached 1.60 % and with 53 1.49 %. With 79 points it
-needs 580 iterations and stops at 2.58 %.
+background follows the capillary and air scattering under the first peaks closely. The owner chose 20 points
+(2026-10-22): ids and positions as he gave them, denser between 2° and 5°, each starting at 300 counts.
+
+**The descent.** The project declares `_minimizer.descent fast_descent`. With the default descent the fit
+stops at R<sub>wp</sub> 3.04 % and reduced χ² 0.64 with O1 x at 0.499, from these flat points and equally from
+the owner's own fitted intensities; the fast descent (and the multistart one) reaches the tutorial's minimum.
 
 ## Differences from the tutorial
 
@@ -41,7 +43,7 @@ needs 580 iterations and stops at 2.58 %.
 
 ## Result from this start (local diagnostic)
 
-From this start edi converges in 26 iterations to R<sub>wp</sub> 1.49 % and reduced χ² 0.157, with
-a 5.46216, b 7.73301, c 5.49025 Å, O1 x 0.5078 and scale 3.670 × 10⁻⁶. diffraction-lib's own tutorial
+From this start edi converges in 18 iterations to R<sub>wp</sub> 1.64 % and reduced χ² 0.187, with
+a 5.46218, b 7.73302, c 5.49022 Å, O1 x 0.5078 and scale 3.686 × 10⁻⁶. diffraction-lib's own tutorial
 record reports R<sub>wp</sub> 1.51 %, reduced χ² 0.16, a 5.46225, b 7.73307, c 5.49024 Å, O1 x 0.50828
 and scale 3.653 × 10⁻⁶.
