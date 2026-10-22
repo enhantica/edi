@@ -560,10 +560,10 @@ Item {
     Connections {
         target: controller
         enabled: chart.followsSharedView && chart.shown
-        // Only a different view is written: the view this chart was just given comes straight back, and writing it
-        // again inside that binding is a loop.
+        // Only different ranges are written: the view this chart was just given comes straight back, and writing it
+        // again inside that binding is a loop. The fifth entry, the axis the ranges are on, goes with them.
         function onViewRangesChanged() {
-            if (JSON.stringify(controller.viewRanges) !== JSON.stringify(AppState.patternViewRanges))
+            if (JSON.stringify(controller.viewRanges.slice(0, 4)) !== JSON.stringify(AppState.patternViewRanges.slice(0, 4)))
                 AppState.patternViewRanges = controller.viewRanges;
         }
     }

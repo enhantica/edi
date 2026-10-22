@@ -170,7 +170,8 @@ QVariantList PatternChartController::viewRanges() const {
 }
 
 void PatternChartController::setViewRanges(const QVariantList& ranges) {
-    if (ranges == viewRanges()) {
+    // The same ranges, whatever axis they name, change nothing: a reset gives none, which suit every axis.
+    if (ranges.mid(0, 4) == viewRanges().mid(0, 4)) {
         return;
     }
     std::optional<double> values[4];
