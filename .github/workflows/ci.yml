@@ -838,6 +838,8 @@ jobs:
         with:
           name: edi-webapp-checks
           path: ${{ runner.temp }}/edi-webapp-checks
+          retention-days: 7
+          if-no-files-found: ignore
 
   # Each delivered surface carries the notices of exactly the components it ships, checked on the real outputs: the
   # desktop install, the Python wheel, the CLI with the notices its build puts beside it, and the site the WebAssembly
@@ -904,5 +906,3 @@ jobs:
           name: licence-surfaces
           path: build/distribution-licences
           if-no-files-found: error
-          retention-days: 7
-          if-no-files-found: ignore
