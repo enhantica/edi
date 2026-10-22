@@ -98,6 +98,8 @@ AppDialog {
             anchors.fill: parent
             interactive: false
             defaultInfoText: ""
+            // Read-only: no row is ever current (the owner, 2026-10-22).
+            selectable: false
             sourceModel: dialog.results
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, dialog.metricColumnWidth, dialog.valueColumnWidth]
@@ -182,6 +184,8 @@ AppDialog {
             height: agreementArea.tableHeight
             interactive: contentHeight > height
             defaultInfoText: ""
+            // Read-only: no row is ever current (the owner, 2026-10-22).
+            selectable: false
             sourceModel: dialog.agreement
 
             // The icon, the dataset, then one real column per factor.

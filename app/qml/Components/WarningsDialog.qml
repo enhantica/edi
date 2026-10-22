@@ -67,11 +67,15 @@ AppDialog {
             defaultInfoText: ""
             sourceModel: dialog.messages
 
-            columnWidths: [AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            // The row number first, as in every table: the current row is marked by it (the owner, 2026-10-22).
+            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -93,6 +97,11 @@ AppDialog {
 
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
+                    text: row.index + 1
+                }
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.kind.${row.index}`
@@ -104,7 +113,7 @@ AppDialog {
                     id: messageCell
                     objectName: `warnings.message.${row.index}`
                     // Wrapping determines the row height, so its initial width must not depend on that height.
-                    width: table.resolvedColumnWidths[1] ?? 0
+                    width: table.resolvedColumnWidths[2] ?? 0
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideNone
                     wrapMode: Text.Wrap

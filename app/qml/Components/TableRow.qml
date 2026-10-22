@@ -21,10 +21,15 @@ EaComponents.ListViewDelegate {
         if (row.editing)
             row.activated();
     }
+    // A row's own click handler (one that opens what the row names) calls this too, so its click makes the row current
+    // as any other does: selected in a selectable table, and reported to a page that holds its current row.
     function activated() {
         const table = row.listView as DataTable;
-        if (table !== null && row.index >= 0)
-            table.rowActivated(row.index);
+        if (table === null || row.index < 0)
+            return;
+        if (table.selectable && !row.inSelection)
+            table.selectWithModifiers(row.index, Qt.NoModifier);
+        table.rowActivated(row.index);
     }
 
     Component.onCompleted: {

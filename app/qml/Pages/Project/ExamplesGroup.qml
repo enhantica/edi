@@ -97,7 +97,10 @@ EaElements.GroupBox {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Session.openExample(row.exampleId)
+                    onClicked: {
+                        row.activated();
+                        Session.openExample(row.exampleId);
+                    }
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
