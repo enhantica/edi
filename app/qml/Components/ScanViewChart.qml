@@ -185,7 +185,8 @@ Item {
 
             objectName: "scanView." + chart.mode + ".current"
             visible: !isNaN(at)
-            y: Math.round((axisY.max - at) / (axisY.max - axisY.min) * plot.height) - Math.floor(height / 2)
+            // Kept inside the plot, so the top and bottom rows' lines show too.
+            y: Math.max(0, Math.min(plot.height - height, Math.round((axisY.max - at) / (axisY.max - axisY.min) * plot.height) - Math.floor(height / 2)))
             width: plot.width
             height: chart.mode === "map" ? 4 : 2
             color: chart.mode === "map" ? "black" : EaStyle.Colors.themeAccent
@@ -309,6 +310,7 @@ Item {
             visible: chart.mode === "stacked"
             toolTip: qsTr("The patterns' colours")
             model: ApplicationInfo.colourSchemeTitles
+            closedTexts: ApplicationInfo.colourSchemeTitles.map(title => qsTr("colours: %1").arg(title))
             currentIndex: Math.max(0, ApplicationInfo.colourSchemes.indexOf(chart.stackedPalette))
             onActivated: index => Preferences.scanStackedPalette = ApplicationInfo.colourSchemes[index]
         }
