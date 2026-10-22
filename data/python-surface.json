@@ -3210,6 +3210,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "d_spacing": {
      "need": {
       "by": "counterpart",
@@ -3279,6 +3297,24 @@
      "need": {
       "by": "counterpart",
       "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3436,6 +3472,24 @@
      "need": {
       "by": "counterpart",
       "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7193,6 +7247,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
@@ -7206,6 +7262,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
@@ -7233,6 +7291,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
