@@ -57,7 +57,7 @@ function(edi_core_sources root out)
     # edi::ScanColourMap in its order.
     # The first four are matplotlib's; the rest are the candidates the owner chooses from (2026-10-22).
     set(EDI_COLOUR_MAPS viridis magma inferno plasma batlow oslo lajolla acton devon lapaz thermal haline deep dense ice
-        turbo ylgnbu pubu gnbu cet-gouldian cet-l08 cet-l06)
+        tempo turbo ylgnbu pubu gnbu blues purples ylorrd cet-gouldian cet-l08 cet-l06 cet-l17 cet-l18)
     set(EDI_COLOUR_MAP_TABLES "")
     set(EDI_COLOUR_MAP_NAMES "")
     list(LENGTH EDI_COLOUR_MAPS EDI_COLOUR_MAP_COUNT)

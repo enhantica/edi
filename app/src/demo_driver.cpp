@@ -619,8 +619,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QStringList titles = {"viridis", "magma", "inferno", "plasma", "batlow (Crameri)", "oslo (Crameri)",
                                     "lajolla (Crameri)", "acton (Crameri)", "devon (Crameri)", "lapaz (Crameri)",
                                     "thermal (cmocean)", "haline (cmocean)", "deep (cmocean)", "dense (cmocean)",
-                                    "ice (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)", "PuBu (ColorBrewer)",
-                                    "GnBu (ColorBrewer)", "gouldian (CET-L20)", "CET-L08", "CET-L06"};
+                                    "ice (cmocean)", "tempo (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)",
+                                    "PuBu (ColorBrewer)", "GnBu (ColorBrewer)", "Blues (ColorBrewer)",
+                                    "Purples (ColorBrewer)", "YlOrRd (ColorBrewer)", "gouldian (CET-L20)", "CET-L08",
+                                    "CET-L06", "CET-L17", "CET-L18"};
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
                                                   + open_example("pd-neut-cwl_cosio-d20_scan-162f")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
@@ -630,6 +632,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 QStringList actions{"scanView.map.toolbar.colourMap", "choose:" + titles[i]};
                 if (i == 0) {
                     actions.prepend("theme:" + theme);
+                }
+                if (theme == QLatin1String("dark") && i + 1 == titles.size()) {
+                    actions << "scanView.map.toolbar.reverse";  // the last one reversed, to show the switch
                 }
                 const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
                 steps_.push_back({QStringLiteral("mapcands-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(slug),

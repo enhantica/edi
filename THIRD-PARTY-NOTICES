@@ -1921,7 +1921,7 @@ In edi: Fabio Crameri's batlow, oslo, lajolla, acton, devon and lapaz, candidate
 ## cmocean
 
 Licence: MIT
-In edi: thermal, haline, deep, dense and ice, candidates for the scan map's colours
+In edi: thermal, haline, deep, dense, ice and tempo, candidates for the scan map's colours
 
     The MIT License (MIT)
 
@@ -2160,7 +2160,7 @@ In edi: Google's Turbo colour map, a candidate for the scan map's colours
 ## ColorBrewer
 
 Licence: Apache-2.0
-In edi: the YlGnBu, PuBu and GnBu schemes spread to 256 colours, candidates for the scan map's colours
+In edi: the YlGnBu, PuBu, GnBu, Blues, Purples and YlOrRd schemes spread to 256 colours, candidates for the scan map's colours
 
                                      Apache License
                                Version 2.0, January 2004
@@ -2368,7 +2368,7 @@ In edi: the YlGnBu, PuBu and GnBu schemes spread to 256 colours, candidates for 
 ## CET colour maps
 
 Licence: CC-BY-4.0
-In edi: Peter Kovesi's perceptually uniform maps L20, L08 and L06, candidates for the scan map's colours
+In edi: Peter Kovesi's perceptually uniform maps L20, L08, L06, L17 and L18, candidates for the scan map's colours
 
     The CET perceptually uniform colour maps by Peter Kovesi (https://colorcet.com; "Good Colour Maps: How to
     Design Them", arXiv:1509.03700), as distributed by colorcet (https://github.com/holoviz/colorcet), under:

@@ -56,6 +56,7 @@ void ScanLayer::setColourScheme(const QString& scheme) { assign(colour_scheme_, 
 void ScanLayer::setColourMap(const QString& map) { assign(colour_map_, map, &ScanLayer::colourMapChanged); }
 void ScanLayer::setBackground(const QColor& colour) { assign(background_, colour, &ScanLayer::backgroundChanged); }
 void ScanLayer::setSmoothRows(bool smooth) { assign(smooth_rows_, smooth, &ScanLayer::smoothRowsChanged); }
+void ScanLayer::setReversed(bool reversed) { assign(reversed_, reversed, &ScanLayer::reversedChanged); }
 void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
 void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
 
@@ -137,8 +138,11 @@ void ScanLayer::paint(QPainter* painter) {
                 values[i][c] = static_cast<float>(edi::to_display(all[order[i]].high[c], scale));
             }
         }
-        const std::vector<edi::ScanMapColour> table =
+        std::vector<edi::ScanMapColour> table =
             edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_);
+        if (reversed_) {
+            std::reverse(table.begin(), table.end());
+        }
         // One image pixel per plot pixel, so no row of the plot is drawn twice and nothing shows between datasets. Across,
         // each pixel takes the column its x falls in, on the axis shown (so on d-spacing too). Up, between two datasets'
         // rows the value is interpolated linearly, so the colour changes smoothly, or, stepped, is the nearer dataset's,
@@ -286,13 +290,24 @@ void ScanColourBar::setDark(bool dark) {
     }
 }
 
+void ScanColourBar::setReversed(bool reversed) {
+    if (reversed != reversed_) {
+        reversed_ = reversed;
+        emit reversedChanged();
+        update();
+    }
+}
+
 void ScanColourBar::paint(QPainter* painter) {
     const int rows = static_cast<int>(std::ceil(height()));
     if (rows <= 0 || width() <= 0.0) {
         return;
     }
-    const std::vector<edi::ScanMapColour> table =
+    std::vector<edi::ScanMapColour> table =
         edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_);
+    if (reversed_) {
+        std::reverse(table.begin(), table.end());
+    }
     QImage image(1, rows, QImage::Format_ARGB32);
     for (int j = 0; j < rows; ++j) {
         const double t = rows == 1 ? 1.0 : 1.0 - static_cast<double>(j) / static_cast<double>(rows - 1);

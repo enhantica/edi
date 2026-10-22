@@ -38,12 +38,14 @@ The ends are `#440154` and `#FDE725` (viridis), `#000004` and `#FCFDBF` (magma),
 
 Each candidate's source table, its licence (in THIRD-PARTY-NOTICES, and a DEPENDENCIES.md row) and its conversion. A
 256-row source is converted as above: each channel scaled by 255 and rounded, written as `#RRGGBB`. The sources were
-fetched on 2026-10-22 at the commits named, of the repository each came from.
+fetched on 2026-10-22 at the commits named, of the repository each came from. `tempo`, `blues`, `purples`, `ylorrd`,
+`cet-l17` and `cet-l18` start from a light colour, for the light theme (the owner, 2026-10-22); any map can also be
+drawn reversed.
 
 | Files | Source | Licence | Conversion |
 | ----- | ------ | ------- | ---------- |
 | `batlow`, `oslo`, `lajolla`, `acton`, `devon`, `lapaz` | Fabio Crameri's Scientific colour maps, `cmcrameri/cmaps/<name>.txt` of github.com/callumrollo/cmcrameri at `78f02a08` (256 RGB triples in [0, 1]) | MIT (Crameri) | as above |
-| `thermal`, `haline`, `deep`, `dense`, `ice` | cmocean (Kristen Thyng), `cmocean/rgb/<name>-rgb.txt` of github.com/matplotlib/cmocean at `59c35002` | MIT | as above |
+| `thermal`, `haline`, `deep`, `dense`, `ice`, `tempo` | cmocean (Kristen Thyng), `cmocean/rgb/<name>-rgb.txt` of github.com/matplotlib/cmocean at `59c35002` | MIT | as above |
 | `turbo` | Google's Turbo (Anton Mikhailov), `turbo_colormap_data` of gist `mikhailov-work/ee72ba4191942acecc03fe6da94fc73f` at `dccf2856` | Apache-2.0 | as above |
-| `ylgnbu`, `pubu`, `gnbu` | ColorBrewer (Cynthia Brewer), the nine-class schemes of `colorbrewer_schemes.js` of github.com/axismaps/colorbrewer at `7d135fc4` | Apache-2.0 | the nine colours spread over 256: colour i at t = 8i/255 between the stops around it, mixed in Oklab as ADR-0038's gradients; the ends are the first and ninth colours |
-| `cet-gouldian`, `cet-l08`, `cet-l06` | Peter Kovesi's CET perceptually uniform maps L20 (`linear_kbgoy_20-95_c57_n256.csv`), L08 (`linear_bmy_10-95_c78_n256.csv`) and L06 (`linear_kbc_5-95_c73_n256.csv`) of github.com/holoviz/colorcet at `076eb84b`, `assets/CET` | CC-BY-4.0 (Kovesi, "Good Colour Maps: How to Design Them", arXiv:1509.03700) | as above |
+| `ylgnbu`, `pubu`, `gnbu`, `blues`, `purples`, `ylorrd` | ColorBrewer (Cynthia Brewer), the nine-class schemes of `colorbrewer_schemes.js` of github.com/axismaps/colorbrewer at `7d135fc4` | Apache-2.0 | the nine colours spread over 256: colour i at t = 8i/255 between the stops around it, mixed in Oklab as ADR-0038's gradients; the ends are the first and ninth colours |
+| `cet-gouldian`, `cet-l08`, `cet-l06`, `cet-l17`, `cet-l18` | Peter Kovesi's CET perceptually uniform maps L20 (`linear_kbgoy_20-95_c57_n256.csv`), L08 (`linear_bmy_10-95_c78_n256.csv`), L06 (`linear_kbc_5-95_c73_n256.csv`), L17 (`linear_worb_100-25_c53_n256.csv`) and L18 (`linear_wyor_100-45_c55_n256.csv`) of github.com/holoviz/colorcet at `076eb84b`, `assets/CET` | CC-BY-4.0 (Kovesi, "Good Colour Maps: How to Design Them", arXiv:1509.03700) | as above |

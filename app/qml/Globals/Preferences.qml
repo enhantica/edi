@@ -60,6 +60,7 @@ QtObject {
         preferences.scanStackedPalette = "";
         preferences.scanMapColours = "viridis";
         preferences.scanMapSmooth = true;
+        preferences.scanMapReversed = false;
     }
 
     property Settings settings: Settings {
@@ -109,6 +110,8 @@ QtObject {
     property string scanMapColours: "viridis"
     // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
     property bool scanMapSmooth: true
+    // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
+    property bool scanMapReversed: false
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -132,6 +135,7 @@ QtObject {
         property alias stackedPalette: preferences.scanStackedPalette
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
+        property alias mapReversed: preferences.scanMapReversed
     }
 
     property Binding fitPatternUpdates: Binding {

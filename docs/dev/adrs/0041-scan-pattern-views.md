@@ -51,7 +51,9 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    than matplotlib's (2026-10-22), candidates were added for the owner to choose from, each with its source table and
    licence (`data/colormaps/PROVENANCE.md`, DEPENDENCIES.md): six of Fabio Crameri's Scientific colour maps, five
    of cmocean's, Google's Turbo, three ColorBrewer schemes and three of Peter Kovesi's CET maps; the ones not chosen
-   are removed with their rows.
+   are removed with their rows. On the owner's asking for maps with a light low end for the light theme, cmocean's
+   tempo, ColorBrewer's Blues, Purples and YlOrRd and CET L17 and L18 joined them, and the Map's toolbar gained a
+   reverse switch, remembered with the other settings, that runs any map the other way; the colour key follows it.
 7. **Axes and toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has (the owner,
    2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d

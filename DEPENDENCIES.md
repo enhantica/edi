@@ -38,10 +38,10 @@ Each surface lists only its own column: the application's About window reads thi
 | EasyScience gui-components |  | BSD-3-Clause | compiled in | compiled in | — | — | the base QML components and styles of the application |
 | pymatgen |  | MIT | compiled in | compiled in | compiled in | — | VESTA element colours and Shannon ionic radii in the element table, compiled into edi |
 | Scientific colour maps |  | MIT | compiled in | compiled in | compiled in | — | Fabio Crameri's batlow, oslo, lajolla, acton, devon and lapaz, candidates for the scan map's colours |
-| cmocean |  | MIT | compiled in | compiled in | compiled in | — | thermal, haline, deep, dense and ice, candidates for the scan map's colours |
+| cmocean |  | MIT | compiled in | compiled in | compiled in | — | thermal, haline, deep, dense, ice and tempo, candidates for the scan map's colours |
 | Turbo |  | Apache-2.0 | compiled in | compiled in | compiled in | — | Google's Turbo colour map, a candidate for the scan map's colours |
-| ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the YlGnBu, PuBu and GnBu schemes spread to 256 colours, candidates for the scan map's colours |
-| CET colour maps |  | CC-BY-4.0 | compiled in | compiled in | compiled in | — | Peter Kovesi's perceptually uniform maps L20, L08 and L06, candidates for the scan map's colours |
+| ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the YlGnBu, PuBu, GnBu, Blues, Purples and YlOrRd schemes spread to 256 colours, candidates for the scan map's colours |
+| CET colour maps |  | CC-BY-4.0 | compiled in | compiled in | compiled in | — | Peter Kovesi's perceptually uniform maps L20, L08, L06, L17 and L18, candidates for the scan map's colours |
 | coi-serviceworker | 0.1.7 | MIT | — | bundled | — | — | the service worker that lets the web app use threads on a host without the needed headers |
 
 ## HTML report libraries
