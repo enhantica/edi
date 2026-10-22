@@ -5,12 +5,15 @@
 Run it with a Python that has diffraction-lib installed, never from a test:
 
     python tools/comparison/run_diffraction_lib.py <case> --commit SHA [--incompatible REASON]
+    python tools/comparison/run_diffraction_lib.py <simulation> --commit SHA --calculate
 
 The case's committed project is copied into the schema diffraction-lib reads (schema 1, its
 profile names, positional numbers, its Levenberg-Marquardt minimizer), fitted from the committed
 start and written to ``knowledge/comparison/<case>/diffraction-lib/``: one ``<bank>.csv`` per
 experiment and ``reference.json``. A scan is fitted on its template file only, as FullProf's
 reference is. ``--incompatible`` records why the model cannot be expressed and fits nothing.
+``--calculate`` calculates a simulation at its committed values instead and writes ``start.npz``
+(``x`` and ``calculated``): the witness that both programs compute the same profile.
 """
 
 from __future__ import annotations
@@ -45,6 +48,7 @@ MINIMIZER = 'lmfit (leastsq)'
 
 def convert(text: str, *, analysis: bool) -> str:
     text = re.sub(r'(?m)^_edi\.schema_version 3$', '_edi.schema_version 1', text)
+    text = re.sub(r'(?m)^(_data_range\.(?:two_theta|time_of_flight))_step ', r'\1_inc ', text)
     text = re.sub(r'(?m)^(_peak\.type) (\S+)$', lambda m: f'{m[1]} {PEAK.get(m[2], m[2])}', text)
     text = EXPONENT.sub(
         lambda m: np.format_float_positional(float(m[0]), unique=True, trim='-'), text
@@ -123,11 +127,31 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def calculate(case: str, out: Path) -> dict:
+    """Calculate a one-experiment simulation at its committed values into ``start.npz``."""
+    import easydiffraction as ed  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as scratch:
+        project = ed.Project.load(str(copy_project(case, Path(scratch))))
+        # Without measured points the first calculation runs before the background is laid on
+        # the grid; the second includes it.
+        project.analysis.calculate()
+        project.analysis.calculate()
+        (experiment,) = project.experiments
+        np.savez(
+            out / 'start.npz',
+            x=np.asarray(experiment.data.x, dtype=float),
+            calculated=np.asarray(experiment.data.intensity_calc, dtype=float),
+        )
+    return {'scope': 'calculation', 'artifacts_sha256': {'start.npz': digest(out / 'start.npz')}}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n', 1)[0])
     parser.add_argument('case')
     parser.add_argument('--commit', required=True, help='the diffraction-lib commit installed')
     parser.add_argument('--incompatible', metavar='REASON')
+    parser.add_argument('--calculate', action='store_true', help='calculate a simulation')
     args = parser.parse_args(argv)
     out = OUT_DIR / args.case / 'diffraction-lib'
     shutil.rmtree(out, ignore_errors=True)
@@ -140,6 +164,8 @@ def main(argv: list[str] | None = None) -> int:
     }
     if args.incompatible:
         record['reason'] = args.incompatible
+    elif args.calculate:
+        record.update(calculate(args.case, out))
     else:
         import easydiffraction as ed  # noqa: PLC0415
 
