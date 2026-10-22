@@ -109,7 +109,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    white in the dark, with a 1 px half-transparent line of the opposite colour just outside and another just inside,
    so it shows on the background and on every colour of every map. On the map it encloses the dataset's band, halfway
    to each neighbouring row; on the stacked view it encloses the dataset's line from its row up to its highest point
-   in the range shown; it moves when the rows are placed again (by
+   in the range shown; never thinner than 8 px, so its lines and an empty inside always show: a thinner band, in a
+   dense part of a scan, takes 8 px centred on the dataset's row (the owner, 2026-10-22); it moves when the rows are placed again (by
    scan value once every dataset is read). The shown dataset is the one the Pattern tab shows: with Follow on, a
    running scan moves it to each dataset as it is fitted, so the mark moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
    shows that dataset, here and on the Pattern tab.

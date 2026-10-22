@@ -346,14 +346,21 @@ Item {
             readonly property real bottomPx: (axisY.max - low) / (axisY.max - axisY.min) * plot.height
             // The stacked line sits inside its box: the border stands three pixels clear of its top and its row.
             readonly property real clear: chart.mode === "map" ? 0 : 3
+            // Never thinner than its three lines either side and an empty inside (the owner, 2026-10-22): a thinner
+            // band, in a dense part of a scan, takes this height centred on the dataset's row.
+            readonly property real minimum: 8
+            readonly property real rowPx: chart.scan ? (axisY.max - chart.scan.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
+            readonly property real ownTop: Math.round(topPx) - clear
+            readonly property real ownBottom: Math.round(bottomPx) + clear
+            readonly property bool thin: ownBottom - ownTop < minimum
 
             objectName: "scanView." + chart.mode + ".current"
             dark: chart.colors.isDarkPalette
             visible: !isNaN(low) && !isNaN(high) && height > 0
             x: 0
-            y: Math.max(0, Math.round(topPx) - clear)
+            y: thin ? Math.max(0, Math.min(plot.height - minimum, Math.round(rowPx - minimum / 2))) : Math.max(0, ownTop)
             width: plot.width
-            height: Math.min(plot.height, Math.round(bottomPx) + clear) - y
+            height: thin ? Math.min(minimum, plot.height) : Math.min(plot.height, ownBottom) - y
         }
         Rectangle {
             anchors.fill: parent
