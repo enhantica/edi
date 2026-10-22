@@ -1,5 +1,6 @@
 """Exercise damaged forms and coordinated edits through the real catalogue check."""
 
+import errno
 import json
 import os
 import shutil
@@ -26,10 +27,19 @@ def write_json(path, value):
     replace(path, json.dumps(value, indent=2) + '\n')
 
 
+def copy_fixture(source, destination):
+    try:
+        os.link(source, destination)
+    except OSError as error:
+        if error.errno != errno.EXDEV:
+            raise
+        shutil.copyfile(source, destination)
+
+
 def clone(tmp_path):
     assert (ROOT / CHECKER).is_file(), 'The catalogue needs its executable consistency check'
     for name in ['docs/user/cli', 'docs/user/tutorials', 'app/examples', 'tools']:
-        shutil.copytree(ROOT / name, tmp_path / name, copy_function=os.link)
+        shutil.copytree(ROOT / name, tmp_path / name, copy_function=copy_fixture)
     for name in ['app/CMakeLists.txt', 'mkdocs.yml', 'pixi.toml']:
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -275,6 +285,16 @@ def test_actual_cmake_configuration_emits_the_owner_selected_index(tmp_path):
         'uninvoked-function',
         'uninvoked-lambda',
         'extra-nonliteral',
+        'comparison',
+        'slice-call',
+        'slice-literal',
+        'comprehension-call',
+        'assignment-target',
+        'annotated',
+        'expression',
+        'chained-target',
+        'other-target',
+        'bare-project',
     ],
 )
 def test_check_requires_an_executable_load_in_both_tutorial_forms(tmp_path, damage):
@@ -294,6 +314,20 @@ def test_check_requires_an_executable_load_in_both_tutorial_forms(tmp_path, dama
         'uninvoked-lambda': 'loader = lambda: ' + line.split(' = ', 1)[1],
         'extra-nonliteral': line + '\nother = edi.Project.load(project_path)',
     }
+    load = line.split(' = ', 1)[1]
+    wrong = f"edi.Project.load('../cli/{SELECTED[0]}/project')"
+    variants.update({
+        'comparison': 'project = 1 > 2 > ' + load,
+        'slice-call': line + '\nextra = [0][(edi.Project.load(other_path), 0)[1]:]',
+        'slice-literal': line + f'\nextra = [0][({wrong}, 0)[1]:]',
+        'comprehension-call': line + '\nextra = [x for x in edi.Project.load(other_path)]',
+        'assignment-target': line + '\nextra[edi.Project.load(other_path)] = 0',
+        'annotated': 'project: object = ' + load,
+        'expression': load,
+        'chained-target': 'project = other = ' + load,
+        'other-target': 'other = ' + load,
+        'bare-project': line.replace('edi.Project.load', 'Project.load'),
+    })
     replacement = variants[damage]
     replace(tutorial, tutorial.read_text().replace(line, replacement))
     document = json.loads(notebook.read_text())
@@ -309,6 +343,6 @@ def test_check_requires_an_executable_load_in_both_tutorial_forms(tmp_path, dama
     write_json(notebook, document)
     result = check(root)
     assert result.returncode != 0, (
-        'The real catalogue command must refuse inert loads and extra nonliteral loads'
+        'Tutorials require the fixed project assignment and refuse every other Project.load call'
     )
     assert 'Traceback' not in result.stderr, 'Inert tutorial forms require a normal diagnostic'
