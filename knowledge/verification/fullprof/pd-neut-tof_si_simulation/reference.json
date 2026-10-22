@@ -14,7 +14,7 @@
   ],
   "scope": "calculation",
   "staging": "none",
-  "cycles": 200,
+  "cycles": 1,
   "artifacts_sha256": {
     "start.dat": "f939e93c8488c962cf50db38abf92711680d55d47d6864a70039ff21f6984661",
     "start.log": "44ef2c77118720a7ab50184e6394aa53b309ee2bb09e518f3bda1902eccfb32d",

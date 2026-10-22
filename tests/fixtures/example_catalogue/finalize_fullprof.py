@@ -38,6 +38,7 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
     home = ROOT / 'knowledge' / kind / 'fullprof' / case
     path = home / 'reference.json'
     record = json.loads(path.read_text())
+    record['cycles'] = 1 if simulation else 200
     stems = ['start'] if simulation else ['start', 'fit', 'fixed']
     twin = ROOT / 'knowledge/verification/fullprof' / case
     for stem in stems:
