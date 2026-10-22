@@ -212,8 +212,8 @@ Item {
             click(named(chart, "chart.toolbar.legend"));
             click(named(chart, "chart.toolbar.hover"));
             click(named(chart, "chart.toolbar.pan"));
-            select(named(chart, "chart.toolbar.yscale"), 1);
-            select(named(chart, "chart.toolbar.xaxis"), 1);
+            select(named(chart, "chart.toolbar.yscale"), before.yScale === 0 ? 1 : 0);
+            select(named(chart, "chart.toolbar.xaxis"), before.xAxis === 0 ? 1 : 0);
             const actualSelector = Render.descendants(page(data.origin)).find(item => item.model === Session.project.experiments && typeof item.currentIndex === "number" && item.visible);
             verify(actualSelector !== undefined, "Every Pattern page offers a real experiment selector over the current project");
             select(actualSelector, actualSelector.currentIndex === 0 ? 1 : 0);

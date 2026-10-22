@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.approved_palettes.reference import lab
+
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCES = json.loads((ROOT / 'tests/fixtures/scan_views/maps.json').read_text())
 OFFERED = sorted((ROOT / 'data/colormaps').glob('*.tsv'))
@@ -39,3 +41,23 @@ def test_each_offered_map_equals_its_independent_published_table(path):
         'Every offered sample equals the published source table, including interior intensities'
     )
     assert len(set(reference['colours'])) > 1, 'A map must contain a real intensity encoding'
+
+
+def test_light_ended_candidates_are_offered_without_fixing_their_names():
+    light = []
+    for path in OFFERED:
+        reference = REFERENCES.get(path.stem)
+        assert reference is not None, (
+            'Light-ended candidates also require independent published tables'
+        )
+        first, last = reference['colours'][0], reference['colours'][-1]
+        if lab(first)[0] >= 0.85 and lab(first)[0] > lab(last)[0]:
+            light.append(path.stem)
+            assert reference['license'] and reference['license_source'], (
+                'Every offered light-ended candidate records its bundling licence'
+            )
+    assert len(light) >= 2, (
+        'The owner comparison offers several light-ended candidates with independently sourced '
+        'low-end '
+        'Oklab lightness at least 0.85 and a darker high end, without a fixed final catalogue'
+    )

@@ -316,14 +316,14 @@ Item {
             verify(y !== null, "Analysis Settings exposes settings.chart.yScale; actual " + y);
             tryVerify(() => y.visible && y.mapToItem(chartGroup, 0, 0).y + y.height <= chartGroup.height, 2000, "settings.chart.yScale clears its expanded group's clip before pointer input");
             choose(y, 2);
-            tryVerify(() => SettingsProof.value(location, "Analysis", "yScale") === "log", 2000, "settings.chart.yScale index 2 reads log at QSettings Analysis/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "yScale")));
+            tryVerify(() => SettingsProof.value(location, "PatternChart", "yScale") === "log", 2000, "settings.chart.yScale index 2 reads log at QSettings PatternChart/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "PatternChart", "yScale")));
             tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
             const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
-            verify(!restored.error, "A fresh configured engine reads the saved page group");
-            compare(restored.axis, "log", "A fresh engine reads QSettings Analysis/yScale after selecting settings.chart.yScale index 2; actual token " + restored.axis);
+import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "PatternChart"; property string yScale: "linear" }; property string axis: settings.yScale }');
+            verify(!restored.error, "A fresh configured engine reads the shared pattern chart group");
+            compare(restored.axis, "log", "A fresh engine reads QSettings PatternChart/yScale after selecting settings.chart.yScale index 2; actual token " + restored.axis);
         }
         function test_report_library_preference_seeds_only_created_projects() {
             verify(typeof Preferences.newReportLibraries === "string", "The Projects preference exposes the new-report libraries token");

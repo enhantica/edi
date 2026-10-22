@@ -270,7 +270,7 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // Exact Edi Natural coordinates: tests/fixtures/approved_palettes/colours.json.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,"#039EDC","#71CBFE",2},
+        {edi::SeriesKind::Measured,"#829DB9","#B2C8E0",2},
         {edi::SeriesKind::Calculated,"#CA5C6E","#EE8795",2},
         {edi::SeriesKind::Background,"#8A8A8A","#969696",1},
         {edi::SeriesKind::Residual,"#737373","#B0B0B0",1},

@@ -24,11 +24,18 @@ CASES = {
 
 
 @pytest.fixture(scope='module')
-def shared_chart_receipts():
+def shared_chart_receipts(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Shared-chart acceptance requires the current native Qt test host'
+    selected = {
+        item.callspec.params['group']
+        for item in request.session.items
+        if item.module is request.module and hasattr(item, 'callspec')
+    }
     receipts = {}
     for group, cases in CASES.items():
+        if group not in selected:
+            continue
         parts = []
         for case in cases:
             command = [

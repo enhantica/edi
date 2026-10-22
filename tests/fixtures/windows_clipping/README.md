@@ -65,6 +65,29 @@ and unrelated animated content must not add pixels outside the reference mask.
 
 ## Cases and independent controls
 
+The first argument to `ediClippingAcceptance(scenario, theme, phase)` is exactly
+one of the following ids. Each id receives all three phases above, with `theme`
+`light` or `dark`, once per kit. Reject unknown ids; do not silently use a default.
+
+| Scenario id | Production scene or preset | Trusted action and required observation |
+| --- | --- | --- |
+| `rows` | Saturated rows crossing nested bounds | Wheel; changing `contentY`, `contentHeight` larger than the viewport |
+| `antialiased-border` | Clipped antialiased border | Preset action; `antialiasing: true` |
+| `outer-off` | Inner clip with outer clipping disabled | Preset action; `outerClip: false`, pixels escape the outer bounds |
+| `both-clips` | Both nested clips enabled | Preset action; `innerClip: true`, `outerClip: true` |
+| `layer` | Clipped content in a layer | Preset action; `layerEnabled: true` |
+| `cover` | Opaque cover over unclipped sentinel | Preset action; `outerClip: false`, `coverVisible: true`, no escaped ink |
+| `structure-table` | Actual populated Structure table | Wheel; `contentY` changes, enough rows to overflow |
+| `experiment-table` | Actual populated Experiment table | Wheel; `contentY` changes, enough rows to overflow |
+| `analysis-table` | Actual populated Analysis table | Wheel; `contentY` changes, enough rows to overflow |
+| `sidebar-collapse` | Actual expanded sidebar group | Click; `expanded` changes from true to false |
+| `popup-close` | Actual open QML popup | Click; `popupVisible` changes from true to false |
+
+`prepare.action` has `kind` (`wheel` or `click`), finite `x` and `y`, and, for
+wheel input, nonzero `dy`. Preset actions must still be real input with a completed
+native observation; the host does not mutate state during `read`.
+
+
 Exercise every combination of the two kits and light/dark themes. The six
 minimal presets named in the task brief are clipped rows, an antialiased clipped
 border, outer clipping off, both clips on, `layer.enabled`, and an opaque cover

@@ -18,6 +18,7 @@ TestCase {
     property var chart
     property int savedTheme
     property string savedAnalysisYScale
+    property string savedPointerMode
     property string savedExperimentYScale
     Component {
         id: application
@@ -39,6 +40,8 @@ TestCase {
     }
     property var animation
     function init() {
+        savedPointerMode = Preferences.patternPointerMode;
+        Preferences.patternPointerMode = "zoom";
         savedAnalysisYScale = Preferences.analysisYScale;
         savedExperimentYScale = Preferences.experimentYScale;
         Preferences.analysisYScale = "linear";
@@ -56,6 +59,7 @@ TestCase {
         Session.closeProject();
         appWindow.destroy();
         Style.Colors.theme = savedTheme;
+        Preferences.patternPointerMode = savedPointerMode;
         Preferences.analysisYScale = savedAnalysisYScale;
         Preferences.experimentYScale = savedExperimentYScale;
     }
@@ -167,7 +171,7 @@ TestCase {
             const point = button.mapToItem(chart, 0, 0);
             verify(scaleAt.x + scale.width < point.x, "The y-scale drop-down precedes every toolbar button at the far left");
         });
-        verify(object("chart.toolbar.zoom").checked, " I27 box zoom starts active");
+        verify(object("chart.toolbar.zoom").checked, " I27 the explicitly selected shared box-zoom choice is active");
         verify(!object("chart.toolbar.pan").checked, " I27 pan and box zoom exclude each other");
         compare(maximum(ChartOracle.points(object("chart.series.calc"))), expected.maximum, " I18 calculated maximum survives chart decimation");
         verify(object("chart.measured") !== null, " I26 selected measured layer draws uncertainty bars and markers");

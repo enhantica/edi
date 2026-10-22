@@ -72,10 +72,8 @@ Rectangle {
             mouseClick(entry, entry.width / 2, entry.height / 2);
             tryCompare(selector, "currentIndex", index, 1000, "Actual pointer input selects d spacing");
             tryVerify(() => SettingsProof.points(measured).some(point => Math.abs(point.x - 3.6126) < 0.00005), 2000, "The actual measured layer uses d = wavelength / (2 sin(theta)) at 1.87 A and 30 degrees");
-            if (data.analysis)
-                compare(Session.project.modified, true, "The Analysis d-axis selector edits the project-owned report x axis");
-            else
-                compare(Session.project.modified, false, "The Experiment d-axis selector remains an app page setting");
+            compare(Session.project.modified, true, "Every Pattern selector edits the one project-owned x axis followed by the report");
+            compare(Session.project.patternDSpacing, true, "The project report follows the nontrivial d-spacing choice from either page");
         }
     }
 }

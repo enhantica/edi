@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -25,7 +26,6 @@ CASES = (
         f'test_independent_axis_type_buttons:{mode}-{axis}'
         for mode in ('stacked', 'map')
         for axis in ('x', 'y', 'z')
-        if mode == 'map' or axis != 'z'
     ]
     + [
         *[
@@ -38,6 +38,11 @@ CASES = (
         'test_selected_map_line_is_always_drawn',
         'test_antialiased_ink_observer',
         'test_map_interpolation_default',
+        *[
+            f'test_map_reverse_and_key:{direction}-{theme}'
+            for direction in ('forward', 'reversed')
+            for theme in ('light', 'dark')
+        ],
         *[
             f'test_map_interpolation_toggle:{mode}-{theme}'
             for mode in ('stepped', 'smooth')
@@ -53,40 +58,75 @@ CASES = (
 
 
 @pytest.fixture(scope='module')
-def scan_receipt():
+def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Scan content acceptance requires the actual native test host'
-    command = [
-        'bash',
-        str(ROOT / 'tests/fixtures/scan_views/run.sh'),
-        str(binary),
-        '-input',
-        str(ROOT / 'tests/unit/app/tst_scan_view_content.qml'),
-        '-o',
-        '-,txt',
+    groups = {}
+    for item in request.session.items:
+        if item.module is request.module and hasattr(item, 'callspec'):
+            case = item.callspec.params['case']
+            groups.setdefault(case.partition(':')[0], []).append(case)
+
+    def run(cases):
+        command = [
+            'bash',
+            str(ROOT / 'tests/fixtures/scan_views/run.sh'),
+            str(binary),
+            '-input',
+            str(ROOT / 'tests/unit/app/tst_scan_view_content.qml'),
+            '-o',
+            '-,txt',
+            *['ScanViewContent::' + case for case in cases],
+        ]
+        try:
+            result = subprocess.run(
+                command, capture_output=True, text=True, check=False, timeout=40
+            )
+            output = result.stdout + result.stderr
+            status = result.returncode
+        except subprocess.TimeoutExpired as error:
+            output = (
+                (error.stdout or b'').decode(errors='replace')
+                + (error.stderr or b'').decode(errors='replace')
+                + '\nThe scan acceptance function exceeded its unchanged actor watchdog'
+            )
+            status = 124
+        print(output)
+        return cases, status, output
+
+    receipts = {}
+    batches = [
+        cases[index : index + 2] for cases in groups.values() for index in range(0, len(cases), 2)
     ]
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=40)
-    except subprocess.TimeoutExpired as error:
-        pytest.fail('The real scan renderer exceeded its bounded actor watchdog: ' + str(error))
-    output = result.stdout + result.stderr
-    print(output)
-    assert (
-        result.returncode >= 0
-        and 'Totals:' in output
-        and '::ScanViewContent::cleanupTestCase()' in output
-    ), (
-        'A crashed or incomplete rendering session cannot supply passing per-case receipts: '
-        + output
+    batches.sort(
+        key=lambda cases: (
+            not cases[0].startswith('test_offered_maps'),
+            not cases[0].startswith('test_background_to_experiment'),
+            -len(cases),
+        )
     )
-    return output
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for cases, status, output in pool.map(run, batches):
+            for case in cases:
+                receipts[case] = status, output
+    return receipts
 
 
 @pytest.mark.parametrize('case', CASES)
 def test_scan_view_content(scan_receipt, case):
+    status, output = scan_receipt[case]
+    assert (
+        status >= 0
+        and status != 124
+        and 'Totals:' in output
+        and '::ScanViewContent::cleanupTestCase()' in output
+    ), (
+        'A crashed, skipped or incomplete acceptance function cannot supply passing receipts: '
+        + output
+    )
     name, _, tag = case.partition(':')
     witness = f'::ScanViewContent::{name}({tag})'
-    lines = [line for line in scan_receipt.splitlines() if witness in line]
+    lines = [line for line in output.splitlines() if witness in line]
     assert any(line.startswith('PASS ') for line in lines) and not any(
         re.match(r'FAIL|SKIP', line) for line in lines
     ), 'The requested production scan contract executes and passes without skipping: ' + '\n'.join(

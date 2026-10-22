@@ -15,20 +15,17 @@ Item {
     Component {
         id: experiments
 
-        ExperimentsGroup {
-        }
+        ExperimentsGroup {}
     }
     Component {
         id: adps
 
-        AtomSiteAdpGroup {
-        }
+        AtomSiteAdpGroup {}
     }
     Component {
         id: structures
 
-        StructuresGroup {
-        }
+        StructuresGroup {}
     }
     Component {
         id: parameters
@@ -81,10 +78,27 @@ Item {
                     table.currentRow = index;
                 else
                     group.selected = table.itemAtIndex(index).parameter;
-                tryVerify(() => {
-                    const cells = Render.cells(table.itemAtIndex(index));
-                    return cells.length > 0 && cells[0].font.bold && String(cells[0].color) === String(Style.Colors.themeAccent);
-                }, 1000, "The actual current row number becomes bold in the theme accent colour");
+                try {
+                    tryVerify(() => {
+                        const cells = Render.cells(table.itemAtIndex(index));
+                        return cells.length > 0 && cells[0].font.bold && String(cells[0].color) === String(Style.Colors.themeAccent);
+                    }, 1000, "The actual current row number becomes bold in the theme accent colour");
+                } finally {
+                    console.log("CURRENT_NUMBER_OBSERVATION " + JSON.stringify({
+                        kind: data.kind,
+                        dark: data.dark,
+                        requested: index,
+                        currentRow: table.currentRow,
+                        markerRow: table.markerRow,
+                        theme: Style.Colors.theme,
+                        accent: String(Style.Colors.themeAccent),
+                        rows: [0, 1].map(row => Render.cells(table.itemAtIndex(row)).map(cell => ({
+                                        text: cell.text,
+                                        bold: cell.font ? cell.font.bold : null,
+                                        colour: String(cell.color)
+                                    })))
+                    }));
+                }
                 const other = Render.cells(table.itemAtIndex(1 - index))[0];
                 verify(other !== undefined && !other.font.bold, "The previous current row number loses its bold selection");
                 surface.Window.window.update();

@@ -15,7 +15,7 @@ ACTORS = [
 
 
 @pytest.fixture(scope='module')
-def view_receipts():
+def view_receipts(request):
     override = os.environ.get('EDI_APP_TEST_RUNNER')
     candidates = (
         [Path(override)]
@@ -24,8 +24,15 @@ def view_receipts():
     )
     binary = next((path for path in candidates if path.is_file()), None)
     assert binary is not None, 'Rendered acceptance requires the current edi Qt Quick Test host'
+    selected = {
+        item.callspec.params['suite']
+        for item in request.session.items
+        if item.module is request.module and hasattr(item, 'callspec')
+    }
     receipts = {}
     for file, suite in ACTORS:
+        if suite not in selected:
+            continue
         phases = (
             [
                 'StructureScanViews::test_fresh_toolbar_observer_loads_actual_control',
