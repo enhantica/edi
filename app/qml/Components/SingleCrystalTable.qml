@@ -8,8 +8,8 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// A single crystal's reflections under its chart: the Miller indices, the measured F² and its su, the
-// calculated F² and the normalised residual (F²meas - F²calc) / su, with the app's one rule for numbers.
+// `refln` of a single crystal, in the Extra tab: the Miller indices, d, sinθ/λ, the measured F² and its su,
+// the calculated F² and the normalised residual (F²meas - F²calc) / su, with the app's one rule for numbers.
 DataTable {
     id: table
 
@@ -23,7 +23,7 @@ DataTable {
     defaultInfoText: qsTr("No reflections")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
-    columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1]
+    columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
@@ -43,6 +43,14 @@ DataTable {
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
+            text: qsTr("d (Å)")
+        }
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("sinθ/λ")
+        }
+        EaComponents.TableViewLabel {
+            horizontalAlignment: Text.AlignHCenter
             text: qsTr("F² meas")
         }
         EaComponents.TableViewLabel {
@@ -55,7 +63,7 @@ DataTable {
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("(meas − calc)/s.u.")
+            text: qsTr("Δ / s.u.")
         }
     }
 
@@ -81,6 +89,16 @@ DataTable {
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: row.model.l
+        }
+        NumberLabel {
+            horizontalAlignment: Text.AlignHCenter
+            number: table.shown(row.model.dSpacing)
+            full: NumberText.plainFull(row.model.dSpacing)
+        }
+        NumberLabel {
+            horizontalAlignment: Text.AlignHCenter
+            number: table.shown(row.model.sinThetaOverLambda)
+            full: NumberText.plainFull(row.model.sinThetaOverLambda)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter

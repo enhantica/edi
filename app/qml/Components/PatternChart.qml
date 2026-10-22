@@ -470,6 +470,8 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
+            hoverShown: Preferences.chartHoverShown
+            onHoverShownChanged: Preferences.chartHoverShown = hoverShown
             includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly

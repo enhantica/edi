@@ -9,9 +9,10 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// A single crystal's F²calc against F²meas: each reflection a point with its su as an error bar, drawn as the
-// pattern chart draws measured points (MeasuredLayer), and the y = x line a perfect model would put them on. A drag
-// zooms to its box, the wheel about the pointer, a right click or the reset button shows every reflection again.
+// A single crystal's F²calc against F²meas, or Fcalc against Fmeas (the toolbar's choice, kept in the preferences):
+// each reflection a point with its su as an error bar, drawn as the pattern chart draws measured points
+// (MeasuredLayer), and the y = x line a perfect model would put them on. A drag zooms to its box, the wheel about the
+// pointer, a right click or the reset button shows every reflection again.
 Item {
     id: chart
 
@@ -29,10 +30,13 @@ Item {
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
+    // F² or F on both axes.
+    readonly property bool squared: Preferences.singleCrystalQuantity !== "f"
+    readonly property string quantity: squared ? "F²" : "F"
     // The zoomed range, [min, max] on both axes; empty: every reflection.
     property list<real> zoom: []
-    readonly property real low: zoom.length === 2 ? zoom[0] : reflections ? reflections.low : 0
-    readonly property real high: zoom.length === 2 ? zoom[1] : reflections ? reflections.high : 1
+    readonly property real low: zoom.length === 2 ? zoom[0] : !reflections ? 0 : squared ? reflections.low : reflections.lowF
+    readonly property real high: zoom.length === 2 ? zoom[1] : !reflections ? 1 : squared ? reflections.high : reflections.highF
 
     function niceStep(span, count) {
         if (!(span > 0))
@@ -46,10 +50,29 @@ Item {
     function redraw() {
         if (!chart.reflections || !chart.shown)
             return;
-        layer.setPoints(chart.reflections.calculated, chart.reflections.measured, chart.reflections.measuredSu);
+        // Points only once F²calc is calculated: a reflection is placed by it.
+        if (chart.reflections.calculatedShown && chart.squared)
+            layer.setPoints(chart.reflections.calculated, chart.reflections.measured, chart.reflections.measuredSu);
+        else if (chart.reflections.calculatedShown)
+            layer.setPoints(chart.reflections.calculatedF, chart.reflections.measuredF, chart.reflections.measuredFSu);
+        else
+            layer.setPoints([], [], []);
     }
 
+    function drawDiagonal() {
+        diagonal.clear();
+        diagonal.append(chart.low, chart.low);
+        diagonal.append(chart.high, chart.high);
+    }
+
+    onLowChanged: drawDiagonal()
+    onHighChanged: drawDiagonal()
+    Component.onCompleted: drawDiagonal()
     onShownChanged: redraw()
+    onSquaredChanged: {
+        zoom = [];
+        redraw();
+    }
     onReflectionsChanged: redraw()
     Connections {
         target: chart.reflections
@@ -63,26 +86,46 @@ Item {
         color: chart.colors.chartBackground
     }
 
+    EaElements.Label {
+        x: chart.sideMargin
+        y: chart.em * 0.5 + (toolbar.height - height) / 2
+        color: chart.colors.chartLabels
+        text: chart.reflections && !chart.reflections.calculatedShown ? qsTr("Not calculated yet") : ""
+    }
+
+    // The toolbar line, centred as the pattern chart's: what both axes plot, then the tooltip and reset buttons.
     Row {
         id: toolbar
 
-        x: chart.sideMargin
+        x: Math.round((chart.width - width) / 2)
         y: chart.em * 0.5
-        spacing: AppSizes.toolbarSpacing
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            color: chart.colors.chartLabels
-            text: chart.reflections && !chart.reflections.calculatedShown ? qsTr("Not calculated yet") : ""
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+
+        ToolbarComboBox {
+            objectName: "singleCrystal.toolbar.quantity"
+            toolTip: qsTr("Plotted quantity")
+            model: [qsTr("F²"), qsTr("F")]
+            closedTexts: [qsTr("axes: F²"), qsTr("axes: F")]
+            currentIndex: chart.squared ? 0 : 1
+            onActivated: index => Preferences.singleCrystalQuantity = index === 0 ? "f_squared" : "f"
         }
-    }
-    ChartToolButton {
-        objectName: "singleCrystal.toolbar.reset"
-        anchors.right: parent.right
-        anchors.rightMargin: chart.toolbarRightInset
-        y: chart.em * 0.5
-        fontIcon: "home"
-        toolTip: qsTr("Reset axes")
-        onClicked: chart.zoom = []
+        Row {
+            spacing: AppSizes.toolbarSpacing
+
+            ChartToolButton {
+                objectName: "singleCrystal.toolbar.hover"
+                fontIcon: "comment-alt"
+                toolTip: qsTr("Show coordinates tooltip on hover")
+                checked: Preferences.chartHoverShown
+                onClicked: Preferences.chartHoverShown = !Preferences.chartHoverShown
+            }
+            ChartToolButton {
+                objectName: "singleCrystal.toolbar.reset"
+                fontIcon: "home"
+                toolTip: qsTr("Reset axes")
+                onClicked: chart.zoom = []
+            }
+        }
     }
 
     GraphsView {
@@ -129,18 +172,70 @@ Item {
             gridVisible: false
             subGridVisible: false
         }
-        // The y = x line.
+        // The y = x line, on the chart's own axes, refilled whenever their range changes.
         LineSeries {
+            id: diagonal
             color: chart.colors.chartAxis
             width: 1
-            XYPoint {
-                x: chart.low
-                y: chart.low
+        }
+    }
+
+    // The hover read-out of the reflection nearest the pointer (within about an em): h k l, the measured value with
+    // its su and the calculated one, in the plotted quantity; the pattern chart's look.
+    Rectangle {
+        id: hoverLabel
+
+        function hide() {
+            hoverText.text = "";
+        }
+        function read(px, py) {
+            const model = chart.reflections;
+            if (!model || !model.calculatedShown) {
+                hide();
+                return;
             }
-            XYPoint {
-                x: chart.high
-                y: chart.high
+            const xs = chart.squared ? model.calculated : model.calculatedF;
+            const ys = chart.squared ? model.measured : model.measuredF;
+            const sus = chart.squared ? model.measuredSu : model.measuredFSu;
+            const span = axisX.max - axisX.min;
+            let best = -1, bestDistance = chart.em * chart.em;
+            for (let i = 0; i < xs.length; ++i) {
+                const dx = (xs[i] - axisX.min) / span * plot.width - px;
+                const dy = (1 - (ys[i] - axisY.min) / (axisY.max - axisY.min)) * plot.height - py;
+                const distance = dx * dx + dy * dy;
+                if (isFinite(distance) && distance < bestDistance) {
+                    best = i;
+                    bestDistance = distance;
+                }
             }
+            if (best < 0) {
+                hide();
+                return;
+            }
+            const number = value => NumberText.plain(value, 6);
+            hoverText.text = `${model.text(best, "h")} ${model.text(best, "k")} ${model.text(best, "l")}<br>`
+                + `${chart.quantity} meas: ${number(ys[best])} ± ${number(sus[best])}<br>`
+                + `${chart.quantity} calc: ${number(xs[best])}`;
+            const atX = plot.x + (xs[best] - axisX.min) / span * plot.width;
+            const atY = plot.y + (1 - (ys[best] - axisY.min) / (axisY.max - axisY.min)) * plot.height;
+            x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
+            y = atY - height - chart.em * 0.5 >= 0 ? atY - height - chart.em * 0.5 : atY + chart.em;
+        }
+
+        objectName: "singleCrystal.hover"
+        z: 2
+        visible: hoverText.text !== ""
+        width: hoverText.implicitWidth + chart.em
+        height: hoverText.implicitHeight + chart.em * 0.5
+        color: chart.colors.mainContentBackgroundHalfTransparent
+        border.color: chart.colors.chartGridLine
+        border.width: EaStyle.Sizes.borderThickness
+
+        EaElements.Label {
+            id: hoverText
+            anchors.centerIn: parent
+            textFormat: Text.RichText
+            color: chart.colors.themeForeground
         }
     }
 
@@ -148,7 +243,7 @@ Item {
         x: view.x + view.plotArea.x + (view.plotArea.width - width) / 2
         y: view.y + view.height + chart.em * 0.6
         color: chart.colors.chartLabels
-        text: qsTr("F² calc")
+        text: qsTr("%1 calc").arg(chart.quantity)
     }
     EaElements.Label {
         x: chart.sideMargin - chart.em * 0.5
@@ -156,7 +251,7 @@ Item {
         rotation: -90
         transformOrigin: Item.TopLeft
         color: chart.colors.chartLabels
-        text: qsTr("F² meas")
+        text: qsTr("%1 meas").arg(chart.quantity)
     }
 
     Item {
@@ -208,7 +303,7 @@ Item {
             objectName: "singleCrystal.points"
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
-            markerSize: 6
+            markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
             yMin: axisY.min
@@ -230,6 +325,14 @@ Item {
 
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: Preferences.chartHoverShown
+            onPositionChanged: mouse => {
+                if (Preferences.chartHoverShown && !pressed)
+                    hoverLabel.read(mouse.x, mouse.y);
+                else
+                    hoverLabel.hide();
+            }
+            onExited: hoverLabel.hide()
             onPressed: mouse => {
                 pressX = mouse.x;
                 pressY = mouse.y;

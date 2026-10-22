@@ -128,6 +128,12 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_PROPERTY(double low READ low NOTIFY pointsChanged)
     Q_PROPERTY(double high READ high NOTIFY pointsChanged)
     Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY pointsChanged)
+    // The same points as F: Fcalc, Fmeas = sqrt(F²meas) and its su F²su / (2 Fmeas), where F²meas > 0 (NaN elsewhere).
+    Q_PROPERTY(QList<double> calculatedF READ calculatedF NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredF READ measuredF NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
+    Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
+    Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
 
    public:
     SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent);
@@ -138,6 +144,11 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double low() const { return low_; }
     double high() const { return high_; }
     bool calculatedShown() const { return calculated_shown_; }
+    QList<double> calculatedF() const { return calculated_f_; }
+    QList<double> measuredF() const { return measured_f_; }
+    QList<double> measuredFSu() const { return measured_f_su_; }
+    double lowF() const { return low_f_; }
+    double highF() const { return high_f_; }
 
    signals:
     void pointsChanged();
@@ -150,6 +161,11 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double low_ = 0.0;
     double high_ = 1.0;
     bool calculated_shown_ = false;
+    QList<double> calculated_f_;
+    QList<double> measured_f_;
+    QList<double> measured_f_su_;
+    double low_f_ = 0.0;
+    double high_f_ = 1.0;
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.

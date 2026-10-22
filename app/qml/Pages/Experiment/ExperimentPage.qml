@@ -30,7 +30,8 @@ WorkflowPage {
             "extinction": extinctionContent,
             "preferred_orientation": preferredOrientationContent,
             "scattering_source": scatteringSourceContent,
-            "refln": reflectionsContent
+            "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal
+                     ? singleCrystalReflectionsContent : reflectionsContent
         })
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
@@ -117,6 +118,12 @@ WorkflowPage {
     Component {
         id: peakContent
         PeakGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: singleCrystalReflectionsContent
+        SingleCrystalTable {
             experiment: page.experiment
         }
     }
