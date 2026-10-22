@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T14:03:46Z
+# measured_utc = 2026-10-22T18:33:51Z
 #
-# Recorded from: scoped calc facade stand-in with a false estimate preflight; existing output and dry persistence assertions unchanged
-# Collected tests: 16148; with a reported duration: 9468
+# Recorded from: measured test run (73 node(s) measured once, 14426 banked, 0 stale row(s) dropped)
+# Collected tests: 15850; with a reported duration: 9483
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,78 +29,11 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15777
+# inventory_python = 15850
 # inventory_cpp = 389
-# inventory_measured = 14426
-# inventory_unmeasured = 1740
+# inventory_measured = 14433
+# inventory_unmeasured = 1806
 
-
-# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
-# paid ONCE per module by whichever test triggers them, so they cannot be
-# per-test rows (and are spelled as comments so per-test consumers are
-# unaffected; excluding one test only moves the cost to the next sibling).
-# These rows mark and deselect NOTHING - kept for visibility
-# and the stale-module integrity refusal.
-# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
-# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
-# module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
-# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
-# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
-# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
-# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
-# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
-# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
-# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
-# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
-# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
-# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
-# module-cost: 1.201	tests/system/py/test_correlation_selection.py
-# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
-# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
-# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
-# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
-# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
-# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
-# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
-# module-cost: 179.025	tests/system/py/test_plain_data_app.py
-# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
-# module-cost: 2.346	tests/system/py/test_report_index_width.py
-# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
-# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
-# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
-# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
-# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
-# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
-# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
-# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
-# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
-# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 0.058	tests/system/py/test_scan_screen.py
-# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
-# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 6.259	tests/system/py/test_thread_selector.py
-# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
-# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
 0.300	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Uani-labels]
@@ -5580,6 +5513,76 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_cosio-d20]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_cosio-d20_scan]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_hs-hrpt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lbco-hrpt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lbco_simulation]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lmo-echidna]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_yalo3-al2o3-spodi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_cecoal-polaris]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ceo2-pearl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ferrite-austenite-beer]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_lbco-si-mcstas]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ncaf-wish]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_si-sepd]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_si_simulation]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-xray-cwl_pbso4-d1a-lab]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_latp-bm01_scan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_nacl_simulation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_pbso4-lab]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20_scan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_hs-hrpt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_lbco-hrpt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_lbco_simulation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_lmo-echidna]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_y2o3-spodi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_yalo3-al2o3-spodi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_cecoal-polaris]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_ceo2-pearl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_ferrite-austenite-beer]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_lbco-si-mcstas]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_ncaf-wish]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_si-sepd]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-tof_si_simulation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-xray-cwl_pbso4-d1a-lab]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_lam7o3-p021]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_latp-bm01_scan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_nacl_simulation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_pbso4-lab]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_exclusions_name_every_selected_notebook_and_its_runner
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-162f]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-324f]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-3f]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_start-1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_start-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_lbco-hrpt_start-2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_lbco-hrpt_start-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_pbso4_beba-asymmetry]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_y2o3_beta-adp]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_yap-spodi_3k]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_cecoal-polaris_chebyshev]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ceo2-pearl_polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_diamond-dream_basic]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_fe_pseudo-voigt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ferrite-austenite-beer_joint]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ncaf-wish-2bank_start-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ncaf-wish-3bank_start-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ncaf-wish-5bank_start-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_si-sepd_start-2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_si-sepd_start-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_lif_single]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_pbso4-lab_round-robin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[cli-page]
+0.000	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[metadata]
+0.010	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[registry]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[tutorial-page]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[cw]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[tof]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[cw]
@@ -9622,6 +9625,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 2.360	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[SequentialExtractRule]
 2.400	tests/system/py/test_c34_t28_value_storage.py::test_every_loop_stores_all_schema_cells_in_typed_value_columns[Structure]
 0.000	tests/system/py/test_c34_t28_value_storage.py::test_physical_reader_distinguishes_values_from_stable_column_handles
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
+UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[job]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[workflow]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_comparisons_cannot_hide_cancellation_or_replacement[case-pull_request-cancel-job]
@@ -16267,3 +16273,70 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-public-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-outside/edi-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_unknown_condition_cannot_invent_reachability
+
+# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
+# paid ONCE per module by whichever test triggers them, so they cannot be
+# per-test rows (and are spelled as comments so per-test consumers are
+# unaffected; excluding one test only moves the cost to the next sibling).
+# These rows mark and deselect NOTHING - kept for visibility
+# and the stale-module integrity refusal.
+# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
+# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
+# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 10.317	tests/integration/app/test_legend_marks.py
+# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
+# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
+# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
+# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
+# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
+# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
+# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
+# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
+# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
+# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
+# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
+# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
+# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
+# module-cost: 1.201	tests/system/py/test_correlation_selection.py
+# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
+# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
+# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
+# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
+# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
+# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
+# module-cost: 2.346	tests/system/py/test_report_index_width.py
+# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
+# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
+# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
+# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
+# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
+# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
+# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
+# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
+# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
+# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
+# module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
+# module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
+# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
