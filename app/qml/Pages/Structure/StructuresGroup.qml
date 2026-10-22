@@ -36,6 +36,10 @@ EaElements.GroupBox {
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
+            onRowActivated: row => {
+                if (group.project)
+                    group.project.currentStructureIndex = row;
+            }
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
@@ -62,10 +66,6 @@ EaElements.GroupBox {
                 required property StructureViewModel structure
 
                 objectName: `structures.row.${index}`
-                TapHandler {
-                    onTapped: group.project.currentStructureIndex = row.index
-                }
-
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     marksCurrentRow: true

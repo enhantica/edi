@@ -762,11 +762,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // same way (the owner, 2026-10-22): Atom sites and the parameter table. Run only when asked (`--demo-only rows-`).
     if (only.startsWith(QLatin1String("rows-"))) {
         steps_.push_back({"rows-1-atom-sites", {"resize:1280x960", "theme:light",
-                                                "open-cli-project:pd-neut-cwl_lbco-hrpt_start-2", "appBar.tab.structure",
-                                                basic}});
-        steps_.push_back({"rows-2-atom-sites-edit-row-3", {"atomSite.fractX.2"}});
-        steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "parameters.value.4"}});
-        steps_.push_back({"rows-4-parameters-free-row-2", {"key:Escape", "parameters.free.1"}});
+                                                "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", "appBar.tab.structure",
+                                                basic, "expand:group.atom_site"}});
+        steps_.push_back({"rows-2-atom-sites-edit-row-4", {"reveal:atomSite.fractX.3", "atomSite.fractX.3"}});
+        steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "reveal:parameters.value.4",
+                                                           "parameters.value.4"}});
+        steps_.push_back({"rows-4-parameters-name-row-2", {"key:Escape", "reveal:parameters.name.1", "parameters.name.1"}});
+        steps_.push_back({"rows-5-parameters-free-row-3", {"reveal:parameters.free.2", "parameters.free.2"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {

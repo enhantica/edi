@@ -14,22 +14,48 @@ EaComponents.ListViewDelegate {
     // arrow pointer, as nothing in it can be chosen.
     property bool highlightsHover: true
 
+    // The row becomes current as soon as one of its editors takes focus, by a click or by Tab.
+    onEditingChanged: {
+        if (row.editing)
+            row.activated();
+    }
+    function activated() {
+        if (row.listView !== null && row.listView.rowActivated !== undefined && row.index >= 0)
+            row.listView.rowActivated(row.index);
+    }
+
     Component.onCompleted: {
-        // Every control in the row takes focus when clicked, a check box or a combo box too (some platforms give a
-        // button focus only from the keyboard), so the click makes the row current as an editor's does.
+        // A control that takes focus from the keyboard only (a button or check box on some platforms) takes it from a
+        // click too, so the click makes the row current as an editor's does. Every item has a focus policy, labels and
+        // mouse areas too (NoFocus), and they keep theirs: one that took focus would take it from the editor under it.
         const focusOnClick = item => {
-            if ("focusPolicy" in item)
+            if (item.focusPolicy === Qt.TabFocus)
                 item.focusPolicy = Qt.StrongFocus;
             for (const child of item.children ?? [])
                 focusOnClick(child);
         };
         for (const cell of row.contentRowData)
             focusOnClick(cell);
-        if (row.highlightsHover)
-            return;
+        // The light row tint shows only under the mouse (the owner, 2026-10-22): the base also keeps it on a row whose
+        // cell is being edited, which read as a second current-row mark. Its tint is the full-row rectangle with the
+        // row's background click area; it follows the row's hover handler alone.
+        let hover = null;
         for (const child of row.data) {
             if (child instanceof HoverHandler)
-                child.enabled = false;
+                hover = child;
         }
+        for (const child of row.data) {
+            if (child instanceof Rectangle && child.anchors.fill === row && child.children.length > 0) {
+                child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0);
+                // The same rectangle holds the click area of the row's background: a click on a cell that is not an
+                // editor lands there.
+                for (const area of child.children) {
+                    if (area instanceof MouseArea)
+                        area.clicked.connect(row.activated);
+                }
+            }
+        }
+        if (!row.highlightsHover && hover !== null)
+            hover.enabled = false;
     }
 }

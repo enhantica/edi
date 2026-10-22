@@ -16,6 +16,9 @@ EaComponents.ListView {
     // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
     // focus selects its row, as a click on the row's background does.
     selectOnEdit: true
+    // A row the user made current, by a click on any of its cells or by moving into one of its editors: a table whose
+    // page holds its current row (marksCurrentRow) sets it from this.
+    signal rowActivated(int row)
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
     // the background, and a page's tables kept laying out for about a second after a project opened.
     cacheBuffer: 0

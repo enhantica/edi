@@ -60,7 +60,6 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignHCenter
                     marksCurrentRow: true
                     text: row.index + 1
-                    color: EaStyle.Colors.themeForegroundMinor
                 }
                 EaComponents.ListViewLabel {
                     objectName: `recentProjects.path.${row.index}`

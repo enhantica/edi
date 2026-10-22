@@ -339,6 +339,7 @@ EaElements.GroupBox {
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
@@ -427,13 +428,8 @@ EaElements.GroupBox {
                 required property real maximum
 
                 objectName: `parameters.row.${index}`
-                TapHandler {
-                    onTapped: group.selected = row.parameter
-                }
-
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
                     marksCurrentRow: true
                     text: row.index + 1
                 }
