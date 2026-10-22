@@ -585,17 +585,26 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                              QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
         steps_.push_back({"legend-2-dark", {"theme:dark"}});
     }
-    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, before a fit, while one runs and
-    // in the dark theme. Run only when asked (`--demo-only scanviews-`).
+    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
+    // while one runs, with the views' toolbars: the map on a log scale in magma, the stacked patterns in Edi Coast.
+    // Run only when asked (`--demo-only scanviews-`).
     if (only.startsWith(QLatin1String("scanviews-"))) {
-        steps_.push_back({"scanviews-1-stacked", QStringList{"resize:1280x960", "theme:light"} + start
-                                                     + open_example("pd-neut-cwl_cosio-d20_scan-162f")
-                                                     + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
-        steps_.push_back({"scanviews-2-map", {"mainArea.analysis.tab.map"}});
-        steps_.push_back({"scanviews-3-map-log", {"mainArea.analysis.tab.fitting", "chart.toolbar.yscale", "choose:log",
-                                                  "mainArea.analysis.tab.map"}});
-        steps_.push_back({"scanviews-4-map-running", {"reveal:fitting.start", "fitting.start", "wait-files:40", "capture-now"}});
-        steps_.push_back({"scanviews-5-stacked-dark", {"wait-fit", "choose:OK", "theme:dark", "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-1-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                           + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                           + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-2-map-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-3-map-light-log-magma", {"scanView.map.toolbar.yscale", "choose:log",
+                                                             "scanView.map.toolbar.colourMap", "choose:magma"}});
+        steps_.push_back({"scanviews-4-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
+                                                           "capture-now"}});
+        steps_.push_back({"scanviews-5-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
+                                                               "capture-now"}});
+        steps_.push_back({"scanviews-6-stacked-dark-running", {"theme:dark", "wait-files:80", "capture-now"}});
+        steps_.push_back({"scanviews-7-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
+        steps_.push_back({"scanviews-8-map-dark", {"wait-fit", "choose:OK", "scanView.map.toolbar.colourMap",
+                                                   "choose:viridis"}});
+        steps_.push_back({"scanviews-9-stacked-dark-coast", {"mainArea.analysis.tab.stacked",
+                                                             "scanView.stacked.toolbar.palette", "choose:Edi Coast"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
