@@ -1417,7 +1417,7 @@
       "sources": [
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/project.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/experiments/heidi.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/structures/tb2ti2o7.edi"
       ]
     },
@@ -1467,7 +1467,7 @@
       "sources": [
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/project.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/experiments/heidi.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/structures/tb2ti2o7.edi"
       ]
     },
@@ -1517,7 +1517,7 @@
       "sources": [
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/project.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/experiments/heidi.edi",
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/structures/tb2ti2o7.edi"
       ]
     },
