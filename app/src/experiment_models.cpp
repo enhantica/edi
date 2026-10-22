@@ -189,7 +189,7 @@ void ReflectionListModel::sync() {
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
                                                            const edi::Project& project, QObject* parent)
     : RowTableModel({"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas", "intensityMeasSu",
-                     "intensityCalc", "residual"},
+                     "intensityCalc", "residual", "wavelength"},
                     parent),
       experiment_(experiment),
       project_(project) {
@@ -218,7 +218,8 @@ void SingleCrystalReflectionModel::sync() {
             rows.append({reinterpret_cast<const void*>(i + 1),
                          {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i],
                           column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
-                          value, residual}});
+                          value, residual,
+                          i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN()}});
             calculated.append(value);
             measured.append(meas);
             su.append(sigma);
