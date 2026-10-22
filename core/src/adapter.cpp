@@ -1407,8 +1407,40 @@ PlainDataRows read_plain_data(const std::string& path) {
 
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
-    PlainDataRows read = read_plain_data(path);
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    if (experiment.reflections.has_value()) {
+        // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
+        // reader), taking a FullProf file's wavelength at constant wavelength.
+        const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+        const crysta::ReflectionFile file = crysta::read_reflection_file(
+            path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+        ReflnDataBase rows;
+        rows.index_h = file.index_h;
+        rows.index_k = file.index_k;
+        rows.index_l = file.index_l;
+        rows.intensity_meas = file.intensity;
+        rows.intensity_meas_su = file.sigma;
+        rows.wavelength = file.wavelength;
+        load.points = rows.size();
+        load.experiment.reflections = std::move(rows);
+        if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
+            load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
+        }
+        load.experiment.data_file = load.file_name;
+        if (take_file_name) {
+            std::string stem = std::filesystem::path(path).stem().string();
+            for (char& character : stem) {
+                const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                                  (character >= '0' && character <= '9') || character == '_' || character == '-';
+                character = keep ? character : '_';
+            }
+            if (persistable_name(stem)) {
+                load.experiment.name = stem;
+            }
+        }
+        return load;
+    }
+    PlainDataRows read = read_plain_data(path);
     load.points = read.x.size();
     load.skipped = read.skipped;
     load.nonpositive = read.nonpositive;

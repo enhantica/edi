@@ -717,6 +717,11 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     const std::string value = token.toStdString();
     if (axis == QLatin1String("sampleForm")) {
         type.sample_form = value;
+        // A single crystal is computed for neutrons at constant wavelength only.
+        if (value == "single crystal") {
+            type.beam_mode = "constant wavelength";
+            type.radiation_probe = "neutron";
+        }
     } else if (axis == QLatin1String("beamMode")) {
         type.beam_mode = value;
     } else if (axis == QLatin1String("radiationProbe")) {
@@ -734,7 +739,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     try {
         edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structures);
         // Within one beam mode the grid stays as it was set.
-        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
+        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value() &&
+            !replacement.reflections.has_value()) {
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;

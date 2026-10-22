@@ -1592,12 +1592,13 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
+    // A single crystal made in the app holds no reflections until its data are loaded.
     const Loop* refln = block.loop_with("_refln.index_h");
-    if (refln == nullptr) {
-        fail_schema(where, "missing-reflections",
-                    "a single crystal declares its measured reflections in a _refln loop");
-    }
     ReflnDataBase rows;
+    if (refln == nullptr) {
+        experiment.reflections = std::move(rows);
+        return experiment;
+    }
     const auto index = [&](const std::vector<std::string>& row, const char* tag) {
         const std::string& text = loop_cell(*refln, row, tag, where);
         const double value = to_double(text, where);
@@ -3204,6 +3205,30 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    if (type.sample_form == "single crystal") {
+        // A single crystal: its wavelength (constant wavelength), the Becker-Coppens extinction off (radius 0)
+        // and no reflections until its data are loaded.
+        if (type.radiation_probe != "neutron") {
+            throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
+        }
+        std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+        text += "_experiment_type.sample_form \"single crystal\"\n";
+        text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+        text += "_experiment_type.radiation_probe \"neutron\"\n";
+        text += "_experiment_type.scattering_type \"bragg\"\n\n";
+        if (constant_wavelength) {
+            text += "_instrument.setup_wavelength 1.\n\n";
+        }
+        text += "_extinction.type becker-coppens\n_extinction.model gauss\n_extinction.radius 0\n"
+                "_extinction.mosaicity 0\n";
+        if (!structure_ids.empty()) {
+            text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+            for (const std::string& structure_id : structure_ids) {
+                text += structure_id + " 1.\n";
+            }
+        }
+        return experiment_from_edi_text(text);
+    }
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
     text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";

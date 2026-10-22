@@ -89,6 +89,9 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString linkedStructureId READ linkedStructureId WRITE setLinkedStructureId NOTIFY linkedStructureIdChanged)
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
     Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
+    // The type axes may change while nothing measured is held: a calculation grid, or a single crystal with no
+    // reflections loaded yet.
+    Q_PROPERTY(bool typeEditable READ typeEditable CONSTANT)
     // Load data… reads a plain-data file into this experiment, in place of any data it has: every experiment but a
     // scan's (the owner, 2026-10-11). `dataFile`: the plain-data file its data came from, or empty.
     Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
@@ -199,6 +202,9 @@ class ExperimentViewModel : public QObject {
     void setDatasetWeight(double weight);
     bool calculationOnly() const { return experiment_.calculation_only; }
     bool canLoadData() const { return can_load_data_; }
+    bool typeEditable() const {
+        return experiment_.calculation_only || (experiment_.reflections.has_value() && experiment_.reflections->size() == 0);
+    }
     QString dataFile() const { return QString::fromStdString(experiment_.data_file); }
     // Set by the project, which knows how the experiment was made.
     void setCanLoadData(bool can_load_data);
