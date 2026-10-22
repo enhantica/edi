@@ -151,6 +151,56 @@
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-155f/project/structures/cosio.edi"
       ]
     },
+    "pd-neut-cwl_hs-hrpt_basic": {
+      "samples": [
+        "ZnCu₃(OD)₆Cl₂ [R-3m]"
+      ],
+      "origin": "HRPT @ PSI",
+      "detail": "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "PSI"
+        ],
+        "instruments": [
+          "HRPT"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_hs-hrpt_basic",
+        "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI",
+        "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/experiments/hrpt.edi",
+        "docs/user/cli/pd-neut-cwl_hs-hrpt_basic/project/structures/hs.edi"
+      ]
+    },
     "pd-neut-xray-cwl_pbso4-d1a-lab_joint": {
       "samples": [
         "PbSO₄ [Pnma]"

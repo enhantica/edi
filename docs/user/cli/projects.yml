@@ -88,6 +88,9 @@ projects:
   - id: pd-neut-cwl_cosio-d20_scan-155f
     executing: false
     user-facing: true
+  - id: pd-neut-cwl_hs-hrpt_basic
+    executing: false
+    user-facing: true
   - id: pd-neut-xray-cwl_pbso4-d1a-lab_joint
     executing: false
     user-facing: true

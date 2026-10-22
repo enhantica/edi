@@ -1,0 +1,10 @@
+_edi.schema_version 3
+
+_metadata.name pd_neut_cwl_hs_hrpt_basic
+_metadata.title "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI"
+_metadata.description "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "HRPT"
+_metadata.facility "PSI"
+_metadata.polarisation "none"
