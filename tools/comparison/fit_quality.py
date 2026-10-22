@@ -40,8 +40,11 @@ PAGE = Path('docs/user/guides/fit-quality.md')
 BEGIN = '<!-- fit-quality tables: written by tools/comparison/fit_quality.py -->'
 END = '<!-- end of the fit-quality tables -->'
 FIELDS = ('observed', 'calculated', 'sigma', 'included')
-# FullProf writes its profile with x to three decimals.
+# FullProf's x is rounded (its profile to three decimals, its input data to the converter's
+# digits), so a point matches FullProf's nearest one within this, or within a quarter of the
+# spacing to the neighbouring point, whichever is larger. A quarter keeps the match unique.
 X_TOLERANCE = 2e-3
+X_SPACING_SHARE = 0.25
 # A row where edi's R_wp exceeds FullProf's by more than this relative amount needs an issue.
 WORSE = 0.05
 
@@ -133,7 +136,7 @@ def measured_cases(root: Path) -> list[str]:
 
 
 def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict:
-    """FullProf's calculated curve on each bank's points; the points it lacks are left out."""
+    """FullProf's calculated curve on each bank's points; ``found`` is false where it has none."""
     home = root / FULLPROF / case
     names = read_json(home / 'reference.json')['banks']
     if names != banks:
@@ -146,7 +149,10 @@ def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict
         grid = grids[bank]
         nearest = np.clip(np.searchsorted(x, grid['x']), 1, x.size - 1)
         nearest -= (grid['x'] - x[nearest - 1]) < (x[nearest] - grid['x'])
-        found = np.abs(x[nearest] - grid['x']) <= X_TOLERANCE
+        gaps = np.diff(grid['x'])
+        spacing = np.minimum(np.append(gaps, np.inf), np.insert(gaps, 0, np.inf))
+        tolerance = np.maximum(X_TOLERANCE, X_SPACING_SHARE * spacing)
+        found = np.abs(x[nearest] - grid['x']) <= tolerance
         values = np.where(found, calculated[nearest], np.nan)
         out[bank] = {
             'calculated': values,
@@ -170,50 +176,77 @@ def fullprof_cells(root: Path, case: str) -> dict[str, list[float]]:
     return cells
 
 
+def fullprof_gap(case: str, banks: list[str], grids: dict, fp_curves: dict) -> str | None:
+    """Why FullProf's curve cannot be compared: included points its profile lacks, if any."""
+    lacking = []
+    for bank in banks:
+        grid = grids[bank]
+        missing = grid['included'] & ~fp_curves[bank]['found']
+        if missing.any():
+            x = grid['x'][missing]
+            lacking.append(f'{int(missing.sum())} in {bank} (x {x.min():g} to {x.max():g})')
+        both = grid['included'] & fp_curves[bank]['found']
+        apart = np.abs(fp_curves[bank]['observed'][both] - grid['observed'][both])
+        if (apart > 0.01 + 1e-6 * np.abs(grid['observed'][both])).any():
+            raise ValueError(f'{case}: FullProf and edi observed counts differ in {bank}')
+    if not lacking:
+        return None
+    return "FullProf's profile lacks included points: " + '; '.join(lacking) + '.'
+
+
+def diffraction_lib_curves(root: Path, case: str, grids: dict) -> dict[str, np.ndarray]:
+    """diffraction-lib's calculated curve per bank, on edi's points."""
+    curves = {}
+    for bank, grid in grids.items():
+        dl = read_curves(root / COMPARISON / case / 'diffraction-lib' / f'{bank}.csv')
+        if not np.allclose(dl['x'], grid['x'], rtol=0, atol=1e-6):
+            raise ValueError(f'{case}: diffraction-lib and edi points differ in {bank}')
+        curves[bank] = dl['calculated']
+    return curves
+
+
 def compare(root: Path, case: str) -> dict:
-    """Every program's factors for one case, on the points edi fits that FullProf also has."""
+    """Every program's factors for one case, on the points edi fits.
+
+    A program whose curve does not cover every one of those points is not compared, and the
+    reason says which points it lacks; the points are never dropped to make it fit.
+    """
     edi_dir = root / COMPARISON / case / 'edi'
     edi = read_json(edi_dir / 'reference.json')
     banks = edi['banks']
     grids = {bank: read_curves(edi_dir / f'{bank}.csv') for bank in banks}
     fullprof = read_json(root / FULLPROF / case / 'reference.json')
     fp_curves = fullprof_banks(root, case, banks, grids)
-    for bank in banks:
-        grids[bank]['included'] &= fp_curves[bank]['found']
-        both = grids[bank]['included']
-        apart = np.abs(fp_curves[bank]['observed'][both] - grids[bank]['observed'][both])
-        if (apart > 0.01 + 1e-6 * np.abs(grids[bank]['observed'][both])).any():
-            raise ValueError(f'{case}: FullProf and edi observed counts differ in {bank}')
+    reasons = {}
     calculated = {'edi': {bank: grids[bank]['calculated'] for bank in banks}}
     free = {'edi': edi['n_free'], 'FullProf': fullprof['n_free']}
-    calculated['FullProf'] = {bank: fp_curves[bank]['calculated'] for bank in banks}
-    dl_dir = root / COMPARISON / case / 'diffraction-lib'
-    dl = read_json(dl_dir / 'reference.json')
+    gap = fullprof_gap(case, banks, grids, fp_curves)
+    if gap:
+        reasons['FullProf'] = gap
+    else:
+        calculated['FullProf'] = {bank: fp_curves[bank]['calculated'] for bank in banks}
+    dl = read_json(root / COMPARISON / case / 'diffraction-lib' / 'reference.json')
     if dl['model_compatible']:
         free['diffraction-lib'] = dl['n_free']
-        dl_curves = {bank: read_curves(dl_dir / f'{bank}.csv') for bank in banks}
-        for bank in banks:
-            if not np.allclose(dl_curves[bank]['x'], grids[bank]['x'], rtol=0, atol=1e-6):
-                raise ValueError(f'{case}: diffraction-lib and edi points differ in {bank}')
-        calculated['diffraction-lib'] = {bank: dl_curves[bank]['calculated'] for bank in banks}
+        calculated['diffraction-lib'] = diffraction_lib_curves(root, case, grids)
+    else:
+        reasons['diffraction-lib'] = dl['reason']
     rows = {}
     for program, curves in calculated.items():
-        rows[program] = agreement_factors(
-            [
-                {
-                    'observed': grids[bank]['observed'],
-                    'calculated': curves[bank],
-                    'sigma': grids[bank]['sigma'],
-                    'included': grids[bank]['included'],
-                }
-                for bank in banks
-            ],
-            free[program],
-        ) | {'n_free': free[program]}
+        banks_data = [
+            {
+                'observed': grids[bank]['observed'],
+                'calculated': curves[bank],
+                'sigma': grids[bank]['sigma'],
+                'included': grids[bank]['included'],
+            }
+            for bank in banks
+        ]
+        rows[program] = agreement_factors(banks_data, free[program]) | {'n_free': free[program]}
     cells = {'edi': edi['cells'], 'FullProf': fullprof_cells(root, case)}
     if dl['model_compatible']:
         cells['diffraction-lib'] = dl['cells']
-    return {'rows': rows, 'dl': dl, 'fullprof': fullprof, 'edi': edi, 'cells': cells}
+    return {'rows': rows, 'reasons': reasons, 'free': free, 'cells': cells}
 
 
 def percent(value: float) -> str:
@@ -232,8 +265,9 @@ FACTOR_HEADER = (
     '| example | program | N | P | R<sub>p</sub> (%) | R<sub>wp</sub> (%) '
     '| R<sub>exp</sub> (%) | reduced χ² |'
 )
-CELL_HEADER = '| example | phase | edi a, b, c (Å) | FullProf | diffraction-lib |'
+CELL_HEADER = '| example | phase | edi (Å) | FullProf (Å) | diffraction-lib (Å) |'
 NONE = '\u2013'  # an en dash: nothing to show
+CELL_TIE = 2e-5  # Å
 
 
 def factor_row(link: str, program: str, row: dict | None) -> str:
@@ -250,44 +284,75 @@ def factor_row(link: str, program: str, row: dict | None) -> str:
     return f'| {link} | {program} | ' + ' | '.join(numbers) + ' |'
 
 
+def independent(lengths: list) -> list:
+    """The lengths symmetry leaves free: a; a and c; or a, b and c."""
+    a, b, c = lengths
+    # FullProf's .new rounds a tied length on its own, so ties are judged to its last digit.
+    tied = lambda x, y: abs(x[0] - y[0]) <= CELL_TIE  # noqa: E731
+    if tied(a, b) and tied(a, c):
+        return [a]
+    if tied(a, b):
+        return [a, c]
+    return [a, b, c]
+
+
 def cell_text(cell: dict | list | None) -> str:
     if not cell:
         return NONE
     if isinstance(cell, dict):
-        return ', '.join(itertools.starmap(with_su, cell.values()))
-    return ', '.join(f'{value:.5f}' for value in cell)
+        return ', '.join(itertools.starmap(with_su, independent(list(cell.values()))))
+    lengths = independent([(value, None) for value in cell])
+    return ', '.join(f'{value:.5f}' for value, _ in lengths)
+
+
+def case_lines(root: Path, case: str, out: dict[str, list[str]]) -> None:
+    """Add one example's table rows and list entries to ``out``."""
+    result = compare(root, case)
+    link = first = f'[`{case}`](../cli/{case}/index.md)'
+    for program in ('edi', 'FullProf', 'diffraction-lib'):
+        row = result['rows'].get(program)
+        if row is None:
+            out['marked'].append(f'- {first}, {program}: {result["reasons"][program]}')
+        out['factors'].append(factor_row(link, program, row))
+        link = ''
+    counts = result['free']
+    if len(set(counts.values())) > 1:
+        out['unequal'].append(
+            f'- `{case}`: ' + ', '.join(f'{name} {count}' for name, count in counts.items())
+        )
+    fullprof = result['rows'].get('FullProf')
+    edi_rwp = result['rows']['edi']['r_wp']
+    if fullprof and edi_rwp > fullprof['r_wp'] * (1 + WORSE):
+        out['worse'].append(
+            f'- `{case}`: edi {percent(edi_rwp)} %, FullProf {percent(fullprof["r_wp"])} %'
+        )
+    cells = result['cells']
+    for phase, edi_cell in cells['edi'].items():
+        fp = cells['FullProf'].get(phase)
+        dl = cells.get('diffraction-lib', {}).get(phase)
+        out['cells'].append(
+            f'| `{case}` | {phase} | {cell_text(edi_cell)} | {cell_text(fp)} | {cell_text(dl)} |'
+        )
 
 
 def tables(root: Path) -> str:
-    factors = [FACTOR_HEADER, '|' + ' --- |' * 8]
-    cell_rows = [CELL_HEADER, '|' + ' --- |' * 5]
-    worse, marked = [], []
+    out = {
+        'factors': [FACTOR_HEADER, '|' + ' --- |' * 8],
+        'cells': [CELL_HEADER, '|' + ' --- |' * 5],
+        'marked': [],
+        'worse': [],
+        'unequal': [],
+    }
     for case in measured_cases(root):
-        result = compare(root, case)
-        link = f'[`{case}`](../cli/{case}/index.md)'
-        for program in ('edi', 'FullProf', 'diffraction-lib'):
-            row = result['rows'].get(program)
-            if row is None:
-                marked.append(f'- {link}: {result["dl"]["reason"]}')
-            factors.append(factor_row(link, program, row))
-            link = ''
-        edi_rwp, fp_rwp = result['rows']['edi']['r_wp'], result['rows']['FullProf']['r_wp']
-        if edi_rwp > fp_rwp * (1 + WORSE):
-            worse.append(f'- `{case}`: edi {percent(edi_rwp)} %, FullProf {percent(fp_rwp)} %')
-        cells = result['cells']
-        for phase, edi_cell in cells['edi'].items():
-            fp = cells['FullProf'].get(phase)
-            dl = cells.get('diffraction-lib', {}).get(phase)
-            cell_rows.append(
-                f'| `{case}` | {phase} | {cell_text(edi_cell)} | {cell_text(fp)} '
-                f'| {cell_text(dl)} |'
-            )
+        case_lines(root, case, out)
     worse_title = (
         f"Examples where edi's R<sub>wp</sub> exceeds FullProf's by more than {100 * WORSE:.0f} %:"
     )
-    lines = [BEGIN, '', *factors, '', '¹ diffraction-lib cannot express the model:', '', *marked]
-    lines += ['', worse_title, '', *(worse or ['- none']), '', '### Cell lengths', '']
-    lines += [*cell_rows, '', END]
+    lines = [BEGIN, '', *out['factors'], '', '¹ Not compared, and why:', '']
+    lines += [*out['marked'], '', worse_title, '', *(out['worse'] or ['- none'])]
+    lines += ['', 'Examples whose programs free different numbers of parameters:', '']
+    lines += [*(out['unequal'] or ['- none']), '', '### Cell lengths', '']
+    lines += [*out['cells'], '', END]
     return '\n'.join(lines)
 
 
