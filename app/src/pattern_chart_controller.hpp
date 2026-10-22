@@ -334,6 +334,8 @@ class PatternChartController : public QObject {
                    std::optional<double> y_max);
     // A running animation ends at once at its target: what changes the view another way starts from there.
     void finishAnimation();
+    // The same without drawing, for a caller that draws next.
+    void stopAnimation();
     void animationFrame(double progress);
     // The presented point nearest the pointer in `pane` and no farther than `within` pixels, or none.
     struct Nearest {

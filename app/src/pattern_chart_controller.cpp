@@ -82,6 +82,18 @@ void replace(const QPointer<QXYSeries>& target, const QList<QPointF>& list) {
     }
 }
 
+// A style's colour from a style table already built: building the table takes longer than drawing the chart.
+QColor style_colour(const std::vector<edi::SeriesStyle>& table, const std::string& key, bool dark) {
+    for (const edi::SeriesStyle& style : table) {
+        if (style.key == key) {
+            QColor out(QString::fromStdString(dark ? style.dark : style.light));
+            out.setAlphaF(static_cast<float>(style.opacity));
+            return out;
+        }
+    }
+    return {};
+}
+
 // The tick series a `bragg.<place>` style draws in: its structure's own.
 std::size_t bragg_place(const std::string& style) {
     std::size_t place = 0;
@@ -164,7 +176,9 @@ void PatternChartController::setAnimationDuration(int milliseconds) {
 
 void PatternChartController::animateTo(std::optional<double> x_min, std::optional<double> x_max,
                                        std::optional<double> y_min, std::optional<double> y_max) {
-    finishAnimation();
+    // A running animation stops where it is shown, and the new one starts there: drawing its end first would be
+    // thrown away by the frame below.
+    stopAnimation();
     const double from[4] = {shown_x_min_, shown_x_max_, shown_y_min_, shown_y_max_};
     x_min_ = x_min;
     x_max_ = x_max;
@@ -223,7 +237,7 @@ void PatternChartController::setViewRanges(const QList<double>& ranges) {
     if (same) {
         return;
     }
-    finishAnimation();
+    stopAnimation();
     x_min_ = values[0];
     x_max_ = values[1];
     y_min_ = values[2];
@@ -258,6 +272,13 @@ void PatternChartController::animationFrame(double progress) {
 }
 
 void PatternChartController::finishAnimation() {
+    if (animating_) {
+        stopAnimation();
+        invalidate();
+    }
+}
+
+void PatternChartController::stopAnimation() {
     if (!animating_) {
         return;
     }
@@ -267,7 +288,6 @@ void PatternChartController::finishAnimation() {
     x_max_ = target_[1];
     y_min_ = target_[2];
     y_max_ = target_[3];
-    invalidate();
 }
 
 void PatternChartController::publishColors() {
@@ -282,9 +302,10 @@ void PatternChartController::publishColors() {
 
 QList<QColor> PatternChartController::braggColors() const {
     QList<QColor> colours;
-    for (const edi::SeriesStyle& style : styles()) {
+    const std::vector<edi::SeriesStyle> table = styles();
+    for (const edi::SeriesStyle& style : table) {
         if (style.key.starts_with("bragg.")) {
-            colours.append(color(QString::fromStdString(style.key)));
+            colours.append(style_colour(table, style.key, dark_));
         }
     }
     return colours;
@@ -548,15 +569,7 @@ void PatternChartController::cycleYScale() {
 }
 
 QColor PatternChartController::color(const QString& styleKey) const {
-    const std::string key = styleKey.toStdString();
-    for (const edi::SeriesStyle& style : styles()) {
-        if (style.key == key) {
-            QColor out(QString::fromStdString(dark_ ? style.dark : style.light));
-            out.setAlphaF(static_cast<float>(style.opacity));
-            return out;
-        }
-    }
-    return {};
+    return style_colour(styles(), styleKey.toStdString(), dark_);
 }
 
 void PatternChartController::invalidate() {
@@ -629,10 +642,13 @@ void PatternChartController::refresh() {
     std::vector<QList<QPointF>> ticks(static_cast<std::size_t>(bragg_series_.size()));
     std::vector<const edi::PatternSeries*> structure_curves;
     QList<ChartLegendModel::Entry> legend;
+    // The style table, built once for the whole drawing.
+    const std::vector<edi::SeriesStyle> table = styles();
+    const auto colour_of = [&](const std::string& key) { return style_colour(table, key, dark_); };
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
         double width = 1.0;
-        for (const edi::SeriesStyle& style : styles()) {
+        for (const edi::SeriesStyle& style : table) {
             if (style.key == series.style) {
                 width = style.width_px;
             }
@@ -641,12 +657,12 @@ void PatternChartController::refresh() {
         QStringList texts, colours;
         for (const edi::TitleSegment& segment : edi::legend_label(shown_, series)) {
             texts.append(QString::fromStdString(segment.text));
-            colours.append(segment.style.empty() ? QString() : color(QString::fromStdString(segment.style)).name(QColor::HexArgb));
+            colours.append(segment.style.empty() ? QString() : colour_of(segment.style).name(QColor::HexArgb));
         }
-        const QColor mark = color(QString::fromStdString(series.style));
+        const QColor mark = colour_of(series.style);
         // A dashed series has a dashed sample.
         bool dashed = false;
-        for (const edi::SeriesStyle& style : styles()) {
+        for (const edi::SeriesStyle& style : table) {
             dashed = dashed || (style.key == series.style && style.mark.find("dash") != std::string::npos);
         }
         legend.append({QString::fromStdString(series.label), mark,
@@ -803,7 +819,7 @@ void PatternChartController::refresh() {
     QList<QColor> curve_colours, curve_fills;
     for (std::size_t index = 0; index < structure_curves.size(); ++index) {
         const edi::PatternSeries& series = *structure_curves[index];
-        const QColor fill = color(QString::fromStdString(series.style));
+        const QColor fill = colour_of(series.style);
         QColor outline = fill;
         outline.setAlphaF(1.0F);
         curve_colours.append(outline);
@@ -831,7 +847,8 @@ void PatternChartController::refresh() {
     publish(structure_curve_colors_, curve_colours, &PatternChartController::structureCurveColorsChanged);
     publish(has_calculated_, calculated != nullptr, &PatternChartController::hasCalculatedChanged);
     // More structures than tick series: the chart makes the rest, each handed over in turn.
-    if (const qsizetype count = braggColors().size(); count != bragg_colour_count_) {
+    if (const auto count = static_cast<qsizetype>(std::ranges::count_if(table, [](const edi::SeriesStyle& style) { return style.key.starts_with("bragg."); }));
+        count != bragg_colour_count_) {
         bragg_colour_count_ = count;
         emit braggColorsChanged();
     }
@@ -858,7 +875,7 @@ void PatternChartController::refresh() {
     publish(x_title_, QString::fromStdString(shown_.x.title), &PatternChartController::xTitleChanged);
     // A y title as its coloured pieces, each series' word in its colour (the legend box being hidden by default);
     // the plain title when it has none.
-    const auto styled = [this](const edi::AxisDescription& axis) {
+    const auto styled = [&colour_of](const edi::AxisDescription& axis) {
         if (axis.segments.empty()) {
             return QString::fromStdString(axis.title).toHtmlEscaped();
         }
@@ -867,7 +884,7 @@ void PatternChartController::refresh() {
             const QString piece = QString::fromStdString(segment.text).toHtmlEscaped();
             text += segment.style.empty() ? piece
                                           : QStringLiteral("<font color=\"%1\">%2</font>")
-                                                .arg(color(QString::fromStdString(segment.style)).name(QColor::HexRgb), piece);
+                                                .arg(colour_of(segment.style).name(QColor::HexRgb), piece);
         }
         return text;
     };
@@ -876,7 +893,7 @@ void PatternChartController::refresh() {
     // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
     QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
-        labels.append({QString::fromStdString(label.text), color(QString::fromStdString(label.style)), label.centre});
+        labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
@@ -914,19 +931,22 @@ void PatternChartController::wheelAt(double x, int angleDelta) {
     }
     // From where a running animation is going, so notches in quick succession add up.
     const double anchor = xOf(x);
-    finishAnimation();
+    const double low = animating_ ? to_[0] : shown_x_min_, high = animating_ ? to_[1] : shown_x_max_;
+    stopAnimation();
     const double factor = std::pow(kWheelFactor, angleDelta / kWheelNotch);
-    animateTo(anchor - (anchor - shown_x_min_) * factor, anchor + (shown_x_max_ - anchor) * factor, y_min_, y_max_);
+    animateTo(anchor - (anchor - low) * factor, anchor + (high - anchor) * factor, y_min_, y_max_);
 }
 
 void PatternChartController::panBy(double dx) {
     if (report_ || plot_width_ <= 0.0 || dx == 0.0) {
         return;
     }
-    finishAnimation();
-    const double shift = dx / plot_width_ * (shown_x_max_ - shown_x_min_);
-    x_min_ = shown_x_min_ - shift;
-    x_max_ = shown_x_max_ - shift;
+    // From where a running animation is going, as a notch is.
+    const double low = animating_ ? to_[0] : shown_x_min_, high = animating_ ? to_[1] : shown_x_max_;
+    stopAnimation();
+    const double shift = dx / plot_width_ * (high - low);
+    x_min_ = low - shift;
+    x_max_ = high - shift;
     emit viewRangesChanged();
     invalidate();
 }
