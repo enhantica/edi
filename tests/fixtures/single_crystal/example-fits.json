@@ -1,0 +1,282 @@
+{
+  "binary_sha256": "b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f",
+  "cases": {
+    "tb2ti2o7": {
+      "scale_factor": 1,
+      "parameters": [
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.00099,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.00099,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00099,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "12",
+          "value": -0.00047999999999999996,
+          "su": 5e-05
+        },
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "13",
+          "value": -0.00047999999999999996,
+          "su": 5e-05
+        },
+        {
+          "atom": "Tb",
+          "kind": "beta",
+          "component": "23",
+          "value": -0.00047999999999999996,
+          "su": 5e-05
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.00091,
+          "su": 0.0001
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.00091,
+          "su": 0.0001
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00091,
+          "su": 0.0001
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "12",
+          "value": -0.00016,
+          "su": 0.00011999999999999999
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "13",
+          "value": -0.00016,
+          "su": 0.00011999999999999999
+        },
+        {
+          "atom": "Ti",
+          "kind": "beta",
+          "component": "23",
+          "value": -0.00016,
+          "su": 0.00011999999999999999
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.00123,
+          "su": 9e-05
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.00078,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00078,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "23",
+          "value": 0.00041,
+          "su": 7e-05
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.00061,
+          "su": 8e-05
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.00061,
+          "su": 8e-05
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00061,
+          "su": 8e-05
+        },
+        {
+          "kind": "scale",
+          "value": 4.581705,
+          "su": 0.069385
+        }
+      ],
+      "artifacts": {
+        "input.pcr": "07e865c6c258bca54ca5852c19f1696e2b38aacf68af806bd6e5949eb8349346",
+        "tbti.int": "874e13be93bf127da728d84923c45de53d1f3f2ff0c04ed9cdfe3d8c13490043",
+        "tbti.out": "b015bd09f69fd8047b00ce6807daf2045fabdc618ed32ddfdd9b1acaf09496bc",
+        "tbti.sum": "2de3a4e6bb9c9477b5c6c86f20fb7308446528e28a2c30390fb50effa3c86190"
+      }
+    },
+    "pr2nio4": {
+      "scale_factor": 64,
+      "parameters": [
+        {
+          "atom": "Pr",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.0071,
+          "su": 0.00016999999999999999
+        },
+        {
+          "atom": "Pr",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.0071,
+          "su": 0.00016999999999999999
+        },
+        {
+          "atom": "Pr",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00084,
+          "su": 4e-05
+        },
+        {
+          "atom": "Ni",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.0028,
+          "su": 0.00013000000000000002
+        },
+        {
+          "atom": "Ni",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.0028,
+          "su": 0.00013000000000000002
+        },
+        {
+          "atom": "Ni",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00151,
+          "su": 2.9999999999999997e-05
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.005,
+          "su": 0.00016
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.005,
+          "su": 0.00016
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00413,
+          "su": 5e-05
+        },
+        {
+          "atom": "O1",
+          "kind": "beta",
+          "component": "12",
+          "value": -0.0014,
+          "su": 0.00014
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.017159999999999998,
+          "su": 0.00041
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.017159999999999998,
+          "su": 0.00041
+        },
+        {
+          "atom": "O2",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00045,
+          "su": 5.9999999999999995e-05
+        },
+        {
+          "atom": "Oi",
+          "kind": "beta",
+          "component": "11",
+          "value": 0.010440000000000001,
+          "su": 0.0037
+        },
+        {
+          "atom": "Oi",
+          "kind": "beta",
+          "component": "22",
+          "value": 0.011770000000000001,
+          "su": 0.0036200000000000004
+        },
+        {
+          "atom": "Oi",
+          "kind": "beta",
+          "component": "33",
+          "value": 0.00098,
+          "su": 0.00045999999999999996
+        },
+        {
+          "kind": "scale",
+          "value": 4.030592,
+          "su": 0.036224
+        }
+      ],
+      "artifacts": {
+        "input.pcr": "92c9c4f6173491d1961ebca541cbff9c345d6426c425889e50bdbe5489a06975",
+        "prnio.int": "f88f9d39b820852d6ccd589d822eca864db4fb59af82bd7506ffe730ebd24735",
+        "prnio.out": "ce442c6a72b45a292aa766b57ea40d5fdc9a092793fd5ce260817403391ce2bb",
+        "prnio.sum": "87326e5fe8fb814eee55a609b9ca2cb834cc22e0abb014b93b5270a32426f250"
+      }
+    }
+  }
+}

@@ -85,3 +85,22 @@ Decimal square roots and first-order uncertainty propagation. `hover.json`
 uses the separate `report_units/iucr_reference.py` implementation of IUCr
 Statistical Descriptors recommendation 12 for the project's default display
 rule. It contains no output from the application.
+
+`generate_example_fits.py` authors additional fitted-value references in
+`example_fits/`, separate from all fixed parity inputs. The Tb input frees scale,
+O1 x and eight independent site-tensor parameters (ten total). Tensor ties follow the four site symmetries. The
+Pr input is the installed FullProf Suite's original `Examples/prnio.pcr` and
+`prnio.int`, with its twenty fitted variables, occupancies and empirical
+extinction model unchanged. Each input is retained before FullProf rewrites
+its working PCR. The generator requires normal completion and a convergence
+marker; the manifest seals the binary and each input/output file.
+
+Pr's original occupancy normalization is eight times the canonical parity
+input, so its scale and scale s.u. are multiplied by 64. Coordinates and beta
+tensors retain their conventions; `.sum` tensor values and uncertainties are
+printed as beta times 10000. The app gate compares the common scale, coordinate
+and tensor quantities within their FullProf s.u. plus half a printed digit.
+These runs do not establish an equivalence between FullProf empirical
+extinction and Becker-Coppens, nor do they prove that different free-parameter
+sets have the same optimum. Those acceptance questions remain explicit in the
+hub evidence receipt; no extinction parameter is assigned an invented oracle.
