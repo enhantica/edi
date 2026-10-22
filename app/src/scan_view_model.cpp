@@ -421,6 +421,16 @@ void ScanViewModel::setDSpacing(bool on) {
     }
 }
 
+void ScanViewModel::setIncludedOnly(bool on) {
+    if (on != included_only_) {
+        included_only_ = on;
+        emit includedOnlyChanged();
+        placeRange();
+        ++revision_;
+        emit revisionChanged();
+    }
+}
+
 void ScanViewModel::setRowsByIndex(bool on) {
     if (on != rows_by_index_) {
         rows_by_index_ = on;
@@ -479,7 +489,8 @@ void ScanViewModel::placeRange() {
     double low = std::numeric_limits<double>::infinity(), high = -low;
     for (const Pattern& pattern : patterns_) {
         for (const double x : pattern.shown) {
-            if (std::isfinite(x)) {
+            const bool excluded = included_only_ && excludedAt(pattern, x);
+            if (std::isfinite(x) && !excluded) {
                 low = std::min(low, x);
                 high = std::max(high, x);
             }
@@ -509,6 +520,11 @@ void ScanViewModel::placeAxis() {
             d || !native_shared_ ? QStringLiteral("d (Å)")
               : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),
             &ScanViewModel::xTitleChanged);
+}
+
+bool ScanViewModel::excludedAt(const Pattern& pattern, double x) {
+    return std::any_of(pattern.excluded_shown.begin(), pattern.excluded_shown.end(),
+                       [x](const std::pair<double, double>& range) { return x >= range.first && x <= range.second; });
 }
 
 int ScanViewModel::datasetAt(double row) const {

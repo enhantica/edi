@@ -589,8 +589,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
     // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
     // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
-    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; the excluded regions off and
-    // on; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
+    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
+    // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
@@ -618,9 +618,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                    "scanView.stacked.toolbar.xaxis", "choose:2θ",
                                                                    "drag:scanView.stacked.pointer:0.40,0.02,0.46,0.6"}});
         steps_.push_back({"scanviews-14-stacked-dark-secondary-reset", {"right-click:scanView.stacked.pointer"}});
-        steps_.push_back({"scanviews-15-stacked-dark-excluded-off", {"scanView.stacked.toolbar.excluded"}});
-        steps_.push_back({"scanviews-16-stacked-light-excluded-on", {"theme:light", "scanView.stacked.toolbar.excluded"}});
-        steps_.push_back({"scanviews-17-map-light-excluded", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-15-stacked-dark-included-only", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"scanviews-16-stacked-light-included-only", {"theme:light"}});
+        steps_.push_back({"scanviews-17-map-light-included-only", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-17b-map-light-full-range", {"scanView.map.toolbar.includedRange"}});
         steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:1000x960"}});
         steps_.push_back({"scanviews-19-joint-stacked-light-d",
                           {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,

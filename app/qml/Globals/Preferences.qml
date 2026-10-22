@@ -71,7 +71,7 @@ QtObject {
         preferences.scanMapColours = "viridis";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
-        preferences.scanExcludedShown = true;
+        preferences.chartIncludedOnly = false;
     }
 
     property Settings settings: Settings {
@@ -128,8 +128,14 @@ QtObject {
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
     property bool scanMapReversed: false
-    // Whether the Stacked and Map views mark the excluded regions, as the pattern chart does.
-    property bool scanExcludedShown: true
+    // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
+    property bool chartIncludedOnly: false
+
+    property Settings chartSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Charts"
+        property alias includedOnly: preferences.chartIncludedOnly
+    }
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -155,7 +161,6 @@ QtObject {
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
-        property alias excludedShown: preferences.scanExcludedShown
     }
 
     property Binding fitPatternUpdates: Binding {
@@ -181,6 +186,13 @@ QtObject {
         // change must find it.
         developSettings.setValue("engineThreads", engineThreads);
         developSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+    // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
+    // for the settings' own schedule when the window closes.
+    onChartIncludedOnlyChanged: {
+        chartSettings.setValue("includedOnly", chartIncludedOnly);
+        chartSettings.sync();
         ApplicationInfo.storeSettings();
     }
 

@@ -19,7 +19,7 @@ namespace edi_app {
 // one dataset to the next. Both reduce each dataset's measured points for the range shown at the plot's own pixel
 // columns every time they draw, so a zoomed view shows the points themselves (the owner, 2026-10-22). Intensity is
 // taken on the chart's y scale and spread over every dataset's lowest to highest value. Each dataset's excluded ranges
-// are marked over its row, as the pattern chart marks them, when `excludedShown` is on.
+// are tinted over its row, as the pattern chart tints them; with `includedOnly` the points inside them are not drawn.
 class ScanLayer : public QQuickPaintedItem {
     Q_OBJECT
     QML_ELEMENT
@@ -41,7 +41,8 @@ class ScanLayer : public QQuickPaintedItem {
     // The map's colours run from their high end at the lowest intensity, reversed.
     Q_PROPERTY(bool reversed MEMBER reversed_ WRITE setReversed NOTIFY reversedChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
-    Q_PROPERTY(bool excludedShown MEMBER excluded_shown_ WRITE setExcludedShown NOTIFY excludedShownChanged)
+    // Only the included range: the points inside an excluded region are not drawn, which leaves its tint as a gap.
+    Q_PROPERTY(bool includedOnly MEMBER included_only_ WRITE setIncludedOnly NOTIFY includedOnlyChanged)
     // The shown dataset, drawn over the others in the stacked view.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
@@ -66,7 +67,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setReversed(bool reversed);
     void setDark(bool dark);
     void setCurrent(int dataset);
-    void setExcludedShown(bool shown);
+    void setIncludedOnly(bool on);
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     // The colour map's colour at `t` in [0, 1].
@@ -89,7 +90,7 @@ class ScanLayer : public QQuickPaintedItem {
     void reversedChanged();
     void darkChanged();
     void currentChanged();
-    void excludedShownChanged();
+    void includedOnlyChanged();
     void displayMinChanged();
     void displayMaxChanged();
 
@@ -116,7 +117,7 @@ class ScanLayer : public QQuickPaintedItem {
     bool reversed_ = false;
     bool dark_ = false;
     int current_ = -1;
-    bool excluded_shown_ = true;
+    bool included_only_ = false;
     double display_min_ = 0.0, display_max_ = 1.0;
 };
 

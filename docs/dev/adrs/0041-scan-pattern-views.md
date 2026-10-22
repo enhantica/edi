@@ -82,12 +82,15 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    when the chart is too narrow for one toolbar line, the buttons take a second line, each line centred as the
    pattern chart's. An axis box names its choice as its list does (`x: d` for the list's `d`; the owner, 2026-10-22),
    on the pattern chart too, and d can be chosen only once a calculation has given a current d column: until then
-   the box is off and shows the axis drawn. A switch on the toolbar marks the excluded regions as the pattern chart does (ADR-0021 §4; the owner, 2026-10-22):
-   the pattern chart's grey band under the Stacked patterns, a wash towards the plot's background over the Map's
-   colours, each on whole pixels so two rows' bands meet without a line. A scan's datasets share the template's
-   regions, so its bands run the plot's height; a joint fit's experiment's run over its own row. The pattern chart
-   has no such switch: it always draws its bands, and on these views a band hides colours worth seeing. The colours
-   and the switches are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
+   the box is off and shows the axis drawn. The excluded regions are marked as the pattern chart marks them (ADR-0021 §4): its grey tint under the Stacked
+   patterns, a wash towards the plot's background over the Map's colours, each on whole pixels so two rows' bands meet
+   without a line. A scan's datasets share the template's regions, so its bands run the plot's height; a joint fit's
+   experiment's run over its own row. The pattern chart's eraser button, *Show only the included range*, is on these
+   toolbars too, with the same app setting, so the three charts switch together (the owner, 2026-10-22; the setting is
+   `Charts/includedOnly`): on, x runs from the first to the last point
+   outside every excluded region and the points inside them are not drawn, which leaves their tint as empty gaps, the
+   pattern chart's tint on the Map too; off, the full range with the marks. The colours and the Map's switches are app
+   settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
 8. **Following a running scan.** A line marks the shown dataset's row at all times, the same line as the Evolution
    tab's mark of the shown dataset (the owner, 2026-10-22): 2 px, edged on each side by 1 px of half-transparent
    colour, black edged in white in the light theme and white edged in black in the dark one, so it shows on the plot

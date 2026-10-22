@@ -45,6 +45,9 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
     // Rows by file index although the scan extracts a value (the Map's y choice).
     Q_PROPERTY(bool rowsByIndex READ rowsByIndex WRITE setRowsByIndex NOTIFY rowsByIndexChanged)
+    // Only the included range (the pattern charts' eraser button, one app setting): xMin and xMax run from the first
+    // to the last point outside every excluded region.
+    Q_PROPERTY(bool includedOnly READ includedOnly WRITE setIncludedOnly NOTIFY includedOnlyChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     // Whether the pattern's own axis is time-of-flight (else 2θ), and the title of the extracted value the rows can
     // be placed by (empty without an extract rule).
@@ -105,6 +108,8 @@ class ScanViewModel : public QObject {
     bool dShown() const { return d_shown_; }
     bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
+    bool includedOnly() const { return included_only_; }
+    void setIncludedOnly(bool on);
     void setRowsByIndex(bool on);
     double rowMin() const { return row_min_; }
     double rowMax() const { return row_max_; }
@@ -127,6 +132,8 @@ class ScanViewModel : public QObject {
         std::vector<double> d;                                            // a joint fit's experiment's own d column
     };
     const std::vector<Pattern>& patterns() const { return patterns_; }
+    // Whether `x`, on the axis shown, falls in one of the pattern's excluded regions.
+    static bool excludedAt(const Pattern& pattern, double x);
     const std::vector<double>& rows() const { return rows_; }
     const std::vector<edi::ScanRowSpan>& spans() const { return spans_; }
 
@@ -143,6 +150,7 @@ class ScanViewModel : public QObject {
     void dShownChanged();
     void dAvailableChanged();
     void rowsByIndexChanged();
+    void includedOnlyChanged();
     void rowTitleChanged();
     void xMinChanged();
     void xMaxChanged();
@@ -206,7 +214,7 @@ class ScanViewModel : public QObject {
     double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0, stack_height_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
-    bool native_shared_ = true;
+    bool native_shared_ = true, included_only_ = false;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's

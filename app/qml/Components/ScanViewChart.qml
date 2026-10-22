@@ -110,6 +110,10 @@ Item {
         function onCountChanged() {
             chart.resetZoom();
         }
+        // The range changed to or from the included one: the view starts over on it.
+        function onIncludedOnlyChanged() {
+            chart.resetZoom();
+        }
     }
     // Each axis type is one setting with every other selector for the same quantity (the owner, 2026-10-22): x is the
     // project's own, as the pattern chart's (edi ADR-0017 §15), its native quantity or d-spacing; the rows' places
@@ -118,6 +122,13 @@ Item {
         target: chart.scan
         property: "dSpacing"
         value: chart.project !== null && chart.project.patternDSpacing
+        when: chart.scan !== null
+    }
+    // Only the included range, the pattern charts' one setting.
+    Binding {
+        target: chart.scan
+        property: "includedOnly"
+        value: Preferences.chartIncludedOnly
         when: chart.scan !== null
     }
     Binding {
@@ -277,7 +288,7 @@ Item {
             background: chart.colors.chartBackground
             smoothRows: Preferences.scanMapSmooth
             reversed: chart.mode === "map" && Preferences.scanMapReversed
-            excludedShown: Preferences.scanExcludedShown
+            includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
@@ -586,13 +597,14 @@ Item {
                 checked: Preferences.scanMapReversed
                 onClicked: Preferences.scanMapReversed = !Preferences.scanMapReversed
             }
-            // The excluded regions, marked as the pattern chart marks them (the owner, 2026-10-22), or not.
+            // Only the included range: the pattern chart's eraser button and its one app setting, so the three charts
+            // switch together (the owner, 2026-10-22).
             ChartToolButton {
-                objectName: "scanView." + chart.mode + ".toolbar.excluded"
-                fontIcon: "ban"
-                toolTip: Preferences.scanExcludedShown ? qsTr("Hide the excluded regions") : qsTr("Show the excluded regions")
-                checked: Preferences.scanExcludedShown
-                onClicked: Preferences.scanExcludedShown = !Preferences.scanExcludedShown
+                objectName: "scanView." + chart.mode + ".toolbar.includedRange"
+                fontIcon: "eraser"
+                toolTip: qsTr("Show only the included range")
+                checked: Preferences.chartIncludedOnly
+                onClicked: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
             }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"

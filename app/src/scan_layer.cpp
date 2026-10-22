@@ -59,7 +59,7 @@ void ScanLayer::setSmoothRows(bool smooth) { assign(smooth_rows_, smooth, &ScanL
 void ScanLayer::setReversed(bool reversed) { assign(reversed_, reversed, &ScanLayer::reversedChanged); }
 void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
 void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
-void ScanLayer::setExcludedShown(bool shown) { assign(excluded_shown_, shown, &ScanLayer::excludedShownChanged); }
+void ScanLayer::setIncludedOnly(bool on) { assign(included_only_, on, &ScanLayer::includedOnlyChanged); }
 
 void ScanLayer::setScale(const QString& scale) {
     if (scale != scale_) {
@@ -124,9 +124,6 @@ void ScanLayer::paint(QPainter* painter) {
     // The excluded ranges (edi ADR-0021 §4), each over its dataset's row, on whole pixels so that two rows' bands meet
     // without a line between them; a scan's datasets share the template's ranges, so its bands run the plot's height.
     const auto excluded = [&](const QColor& colour) {
-        if (!excluded_shown_) {
-            return;
-        }
         const auto band = [&](double a, double b, int top, int bottom) {
             const int left = std::clamp(static_cast<int>(std::lround(px(std::min(a, b)))), 0, pixel_columns);
             const int right = std::clamp(static_cast<int>(std::lround(px(std::max(a, b)))), 0, pixel_columns);
@@ -154,6 +151,29 @@ void ScanLayer::paint(QPainter* painter) {
         }
     };
 
+    // The pattern chart's tint of an excluded region (edi::pattern_style_table's `excluded`).
+    QColor tint;
+    for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
+        if (style.key == "excluded") {
+            tint = QColor(QString::fromStdString(dark_ ? style.dark : style.light));
+            tint.setAlphaF(static_cast<float>(style.opacity));
+        }
+    }
+    // With only the included range, a dataset's points inside its excluded regions are taken out, so neither view draws
+    // or joins across them.
+    const auto intensity_of = [this](const ScanViewModel::Pattern& pattern) {
+        if (!included_only_ || pattern.excluded_shown.empty()) {
+            return pattern.intensity;
+        }
+        std::vector<double> out = pattern.intensity;
+        for (std::size_t i = 0; i < out.size() && i < pattern.shown.size(); ++i) {
+            if (ScanViewModel::excludedAt(pattern, pattern.shown[i])) {
+                out[i] = std::numeric_limits<double>::quiet_NaN();
+            }
+        }
+        return out;
+    };
+
     if (mode_ == QLatin1String("map")) {
         // The datasets read, in row order, each as its pixel columns' values on the y scale.
         std::vector<std::size_t> order;
@@ -169,7 +189,7 @@ void ScanLayer::paint(QPainter* painter) {
         std::vector<std::vector<float>> values(order.size());
         for (std::size_t i = 0; i < order.size(); ++i) {
             const ScanViewModel::Pattern& pattern = patterns[order[i]];
-            values[i] = edi::scan_pixel_values(pattern.shown, pattern.intensity, x_min_, x_max_,
+            values[i] = edi::scan_pixel_values(pattern.shown, intensity_of(pattern), x_min_, x_max_,
                                                static_cast<std::size_t>(pixel_columns));
             for (float& value : values[i]) {
                 value = static_cast<float>(edi::to_display(value, scale));
@@ -212,21 +232,16 @@ void ScanLayer::paint(QPainter* painter) {
             }
         }
         painter->drawImage(QRectF(0, 0, static_cast<double>(pixel_columns), static_cast<double>(pixel_rows)), image);
-        // Over the colours, the excluded ranges wash them towards the plot's background, as a band greys a pattern.
+        // Over the colours, the excluded ranges wash them towards the plot's background, as a band greys a pattern;
+        // with only the included range they hold no colours, and take the pattern chart's tint as empty gaps.
         QColor wash = background_;
         wash.setAlphaF(0.6F);
-        excluded(wash);
+        excluded(included_only_ ? tint : wash);
         return;
     }
 
     // Stacked: the excluded bands under the patterns, as on the pattern chart.
-    for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
-        if (style.key == "excluded") {
-            QColor band(QString::fromStdString(dark_ ? style.dark : style.light));
-            band.setAlphaF(static_cast<float>(style.opacity));
-            excluded(band);
-        }
-    }
+    excluded(tint);
     // Each dataset over the range shown at the plot's pixel columns: the measured points joined while they are no
     // more than the columns, else each column a vertical stroke from its lowest to its highest value, joined column to
     // column, so a narrow peak stays at its height whatever the width.
@@ -255,7 +270,7 @@ void ScanLayer::paint(QPainter* painter) {
         if (pattern.x.empty()) {
             return;
         }
-        const edi::ScanTrace trace = edi::scan_trace(pattern.shown, pattern.intensity, x_min_, x_max_,
+        const edi::ScanTrace trace = edi::scan_trace(pattern.shown, intensity_of(pattern), x_min_, x_max_,
                                                      static_cast<std::size_t>(pixel_columns));
         QPainterPath path;
         bool open = false;
