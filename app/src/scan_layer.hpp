@@ -71,6 +71,8 @@ class ScanLayer : public QQuickPaintedItem {
     // On the stacked view, how high a dataset's line reaches over the x range shown, on the vertical axis; NaN when it
     // draws nothing there.
     Q_INVOKABLE double peakOf(int dataset) const;
+    // The colour the stacked view draws a dataset's line in, by the colour choice: what its row label takes.
+    Q_INVOKABLE QColor colourOf(int dataset) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     // The colour map's colour at `t` in [0, 1].

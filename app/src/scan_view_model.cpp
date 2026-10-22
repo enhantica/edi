@@ -2,6 +2,7 @@
 #include "scan_view_model.hpp"
 
 #include <QCoreApplication>
+#include <QFileInfo>
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
@@ -93,6 +94,7 @@ void ScanViewModel::clear() {
     source_.reset();
     patterns_.clear();
     values_.clear();
+    value_texts_.clear();
 }
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
@@ -121,6 +123,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     emit valueTitleChanged();
     patterns_.assign(files_.size(), {});
     values_.assign(files_.size(), kNaN);
+    value_texts_.assign(files_.size(), QString());
     placeAxis();
     placeRows();
     emit countChanged();
@@ -201,6 +204,7 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     }
     patterns_ = std::move(next);
     values_.assign(patterns_.size(), kNaN);
+    value_texts_.assign(patterns_.size(), QString());
     loaded_ = static_cast<int>(patterns_.size());
     publish(failed_, empty, &ScanViewModel::failedChanged);
     publish(d_available_, every_d, &ScanViewModel::dAvailableChanged);
@@ -286,6 +290,7 @@ void ScanViewModel::readNext() {
                     double value = 0.0;
                     if (!extracted.empty() && edi::parse_scan_number(extracted.front(), value)) {
                         read.value = value;
+                        read.value_text = QString::fromStdString(extracted.front()).trimmed();
                     } else {
                         read.value_problem = QString::fromStdString(file) +
                                              (extracted.empty() ? QStringLiteral(": nothing is extracted")
@@ -333,6 +338,7 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         pattern.excluded = template_excluded_;
         placePattern(pattern);
         values_[dataset] = read.value;
+        value_texts_[dataset] = read.value_text;
     }
     placeRange();
     placeRows();
@@ -349,13 +355,34 @@ void ScanViewModel::placeRows() {
     rows_ = by_value ? edi::scan_row_positions(values_)
                      : edi::scan_row_positions(std::vector<double>(patterns_.size(), kNaN));
     spans_ = edi::scan_row_spans(rows_);
-    const QString title = by_value ? extracted_title_ : joint_ ? tr("experiment") : tr("file index");
-    // Every dataset read and still placed by file index although the scan extracts a value: say why.
+    publish(rows_by_value_, by_value, &ScanViewModel::rowsByValueChanged);
+    const QString title = by_value ? extracted_title_ : orderName();
+    // Every dataset read and still placed by file although the scan extracts a value: say why.
     publish(row_note_,
             has_values_ && !rows_by_index_ && !by_value && loaded_ == count() && !value_problem_.isEmpty()
-                ? tr("Rows by file index: %1").arg(value_problem_)
+                ? tr("Rows by file: %1").arg(value_problem_)
                 : QString(),
             &ScanViewModel::rowNoteChanged);
+    // Each row's label: the value with the unit the extract rule's title gives in brackets ("temperature (K)"), the
+    // file's name, or the datablock's.
+    const qsizetype open = extracted_title_.lastIndexOf(QLatin1Char('('));
+    const QString unit = open >= 0 && extracted_title_.endsWith(QLatin1Char(')'))
+                             ? extracted_title_.mid(open + 1, extracted_title_.size() - open - 2).trimmed()
+                             : QString();
+    QStringList texts;
+    for (std::size_t i = 0; i < patterns_.size(); ++i) {
+        if (by_value) {
+            const QString value = i < value_texts_.size() && !value_texts_[i].isEmpty() ? value_texts_[i]
+                                                                                        : QString::number(values_[i], 'g', 6);
+            texts.append(unit.isEmpty() ? value : value + QLatin1Char(' ') + unit);
+        } else if (joint_) {
+            texts.append(static_cast<qsizetype>(i) < row_labels_.size() ? row_labels_[static_cast<qsizetype>(i)] : QString());
+        } else {
+            texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
+        }
+    }
+    publish(row_texts_, texts, &ScanViewModel::rowTextsChanged);
+    emit orderNameChanged();
     double low = 0.0, high = 1.0;
     if (!spans_.empty()) {
         low = std::min_element(spans_.begin(), spans_.end(), [](const auto& a, const auto& b) { return a.low < b.low; })->low;

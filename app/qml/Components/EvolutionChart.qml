@@ -69,6 +69,52 @@ Item {
         return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
     }
 
+    // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
+    Component {
+        id: xTickLabel
+
+        Item {
+            id: xTick
+
+            property string text: ""
+
+            implicitWidth: xTickText.implicitWidth
+            implicitHeight: xTickText.implicitHeight
+
+            EaElements.Label {
+                id: xTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: xTick.text
+            }
+        }
+    }
+    Component {
+        id: yTickLabel
+
+        Item {
+            id: yTick
+
+            property string text: ""
+
+            implicitWidth: yTickText.implicitWidth
+            implicitHeight: yTickText.implicitHeight
+
+            EaElements.Label {
+                id: yTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: yTick.text
+            }
+        }
+    }
+
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
         if (!(span > 0))
@@ -160,6 +206,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: xTickLabel
             gridVisible: false
             subGridVisible: false
         }
@@ -170,6 +217,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: yTickLabel
             gridVisible: false
             subGridVisible: false
         }

@@ -674,6 +674,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"stackrange-2-dark", {"theme:dark"}});
         steps_.push_back({"stackrange-3-map-dark", {"mainArea.analysis.tab.map"}});
     }
+    // The scan views' rows labelled by scan value, by file and, thinned, on cosio's 162 patterns; the Map's scale with a
+    // tick per dataset by scan value, its bands labelled by file; a zoom bringing labels back; the three-dataset scan
+    // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
+    if (only.startsWith(QLatin1String("rowlabels-"))) {
+        steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-02-map-value-ticks-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-03-map-file-light", {"scanView.map.toolbar.rows", "choose:file"}});
+        steps_.push_back({"rowlabels-04-stacked-file-light", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-05-stacked-file-zoom-light", {"drag:scanView.stacked.pointer:0.1,0.55,0.9,0.85"}});
+        steps_.push_back({"rowlabels-06-stacked-file-dark", {"theme:dark", "right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:temperature (K)"}});
+        steps_.push_back({"rowlabels-08-map-value-dark", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-09-three-stacked-light",
+                          QStringList{"theme:light"} + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                              + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-10-three-map-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+    }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
     if (only.startsWith(QLatin1String("mapcands-"))) {

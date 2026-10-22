@@ -54,6 +54,14 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(bool timeOfFlight READ timeOfFlight NOTIFY timeOfFlightChanged)
     Q_PROPERTY(QString valueTitle READ valueTitle NOTIFY valueTitleChanged)
     Q_PROPERTY(QString rowTitle READ rowTitle NOTIFY rowTitleChanged)
+    // The other order the rows can take, by name (the owner, 2026-10-22): "file" for a scan's datasets, which share a
+    // datablock and differ by file, "datablock" for a joint fit's experiments.
+    Q_PROPERTY(QString orderName READ orderName NOTIFY orderNameChanged)
+    // Each dataset's label for its row, by the order shown: its scan value with its unit, its file's name, or its
+    // datablock's name.
+    Q_PROPERTY(QStringList rowTexts READ rowTexts NOTIFY rowTextsChanged)
+    // Whether the rows sit at their scan values (else in order, by file or datablock, one equal band each).
+    Q_PROPERTY(bool rowsByValue READ rowsByValue NOTIFY rowsByValueChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double rowMin READ rowMin NOTIFY rowMinChanged)
@@ -101,6 +109,9 @@ class ScanViewModel : public QObject {
     QStringList rowLabels() const { return row_labels_; }
     QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
     QString rowTitle() const { return row_title_; }
+    QString orderName() const { return joint_ ? tr("datablock") : tr("file"); }
+    QStringList rowTexts() const { return row_texts_; }
+    bool rowsByValue() const { return rows_by_value_; }
     double xMin() const { return axis_min_; }
     double xMax() const { return axis_max_; }
     bool dSpacing() const { return d_spacing_; }
@@ -155,6 +166,9 @@ class ScanViewModel : public QObject {
     void rowsByIndexChanged();
     void includedOnlyChanged();
     void rowTitleChanged();
+    void orderNameChanged();
+    void rowTextsChanged();
+    void rowsByValueChanged();
     void xMinChanged();
     void xMaxChanged();
     void rowMinChanged();
@@ -176,6 +190,7 @@ class ScanViewModel : public QObject {
     struct Read {
         std::vector<double> x, intensity;
         double value = std::numeric_limits<double>::quiet_NaN();
+        QString value_text;  // the value as the file writes it
         QString error, value_problem;
     };
     void readNext();
@@ -205,6 +220,8 @@ class ScanViewModel : public QObject {
     edi::BeamModeEnum mode_ = edi::BeamModeEnum::CONSTANT_WAVELENGTH;
     std::vector<Pattern> patterns_;
     std::vector<double> values_;  // each dataset's first extracted value, NaN when it has none
+    std::vector<QString> value_texts_;  // the same as the file writes it
+    QStringList row_texts_;
     std::vector<double> rows_;
     std::vector<edi::ScanRowSpan> spans_;
     std::size_t next_ = 0;  // the next dataset to read
@@ -217,7 +234,7 @@ class ScanViewModel : public QObject {
     double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0, stack_height_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
-    bool native_shared_ = true, included_only_ = false;
+    bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's

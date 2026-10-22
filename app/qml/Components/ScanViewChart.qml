@@ -27,6 +27,10 @@ Item {
     readonly property ScanViewModel scan: project ? project.scanViews : null
     readonly property bool scanProject: project !== null && (project.scan || (scan !== null && scan.joint))
     readonly property bool joint: scan !== null && scan.joint
+    // Rows labelled left of the plot instead of a numeric scale: always on the Stacked view, and on the Map when the
+    // rows are in order by file or datablock, one band each; by scan value the Map keeps its scale, a position on it
+    // being a real value its colour is interpolated at, with a tick at each dataset's row (the owner, 2026-10-22).
+    readonly property bool rowLabels: mode === "stacked" || (scan !== null && !scan.rowsByValue)
     // Experiments on different native axes show on d only, so not before a calculation gives it.
     readonly property bool hasData: scan !== null && scan.loaded - scan.failed > 0 && (scan.nativeShared || scan.dAvailable)
     property FigureColors colors: FigureColors {}
@@ -140,6 +144,30 @@ Item {
         when: chart.scan !== null
     }
 
+    // An x tick's label in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
+    Component {
+        id: xLabel
+
+        Item {
+            id: xTick
+
+            property string text: ""
+
+            implicitWidth: xTickText.implicitWidth
+            implicitHeight: xTickText.implicitHeight
+
+            EaElements.Label {
+                id: xTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: xTick.text
+            }
+        }
+    }
+
     // A y tick's label. On the Stacked view only the scan values the rows cover are labelled (the owner, 2026-10-22):
     // above the top row the patterns rise into height that stands for no scan value.
     Component {
@@ -192,7 +220,7 @@ Item {
         width: parent.width - chart.barWidth
         height: parent.height - y - chart.xTitleHeight - chart.em
         // A joint fit's row labels stand left of the plot, where a scan's tick labels are.
-        marginLeft: chart.sideMargin + chart.titleGutter + (chart.joint ? chart.rowLabelsRoom + chart.rowLabelGap : 0)
+        marginLeft: chart.sideMargin + chart.titleGutter + (chart.rowLabels ? chart.rowLabelsRoom + chart.rowLabelGap : 0)
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
@@ -216,6 +244,7 @@ Item {
             max: chart.zoomX.length === 2 ? chart.zoomX[1] : chart.scan ? chart.scan.xMax : 1
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
+            labelDelegate: xLabel
             lineVisible: false
             gridVisible: false
             subGridVisible: false
@@ -227,7 +256,7 @@ Item {
             tickInterval: chart.niceStep(chart.zoomY.length === 2 ? max - min : chart.scan ? chart.scan.rowMax - chart.scan.rowMin : 1, chart.yTicks)
             tickAnchor: 0
             // A joint fit's rows are its experiments, named at each row instead of numbered.
-            labelsVisible: !chart.joint
+            labelsVisible: !chart.rowLabels
             labelDelegate: yLabel
             lineVisible: false
             gridVisible: false
@@ -385,8 +414,9 @@ Item {
         }
     }
 
-    // A joint fit's rows, each labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22):
-    // the experiment's icon and name in its colour, at its row's height. The widest label sets the room left for them.
+    // The rows labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22): the
+    // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
+    // dataset's colour, at its row's height. The widest label sets the room left for them.
     readonly property real rowLabelGap: Math.round(em * 0.4)
     readonly property real rowLabelsRoom: {
         let widest = 0;
@@ -397,18 +427,59 @@ Item {
         }
         return Math.ceil(widest);
     }
+    // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
+    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit.
+    readonly property var shownRowLabels: {
+        const shown = [];
+        const texts = rowLabels && scan !== null ? scan.rowTexts : [];
+        if (texts.length === 0 || scan.revision < 0 || !(axisY.max > axisY.min) || plot.height <= 0)
+            return shown;
+        const gap = AppSizes.legendRowHeight;
+        const placed = [];
+        for (let i = 0; i < texts.length; ++i) {
+            const at = scan.rowOf(i);
+            shown.push(false);
+            if (!isNaN(at) && at >= axisY.min && at <= axisY.max)
+                placed.push({
+                    "index": i,
+                    "px": (axisY.max - at) / (axisY.max - axisY.min) * plot.height
+                });
+        }
+        placed.sort((a, b) => a.px - b.px);
+        // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
+        let stride = 1;
+        const apart = k => {
+            for (let n = k; n < placed.length; n += k)
+                if (placed[n].px - placed[n - k].px < gap)
+                    return false;
+            return true;
+        };
+        while (stride < placed.length && !apart(stride))
+            ++stride;
+        const current = project ? project.currentExperimentIndex : -1;
+        const currentPlace = placed.find(row => row.index === current);
+        for (let n = 0; n < placed.length; n += stride) {
+            if (!currentPlace || Math.abs(placed[n].px - currentPlace.px) >= gap || placed[n].index === current)
+                shown[placed[n].index] = true;
+        }
+        if (currentPlace)
+            shown[current] = true;
+        return shown;
+    }
     Repeater {
         id: rowLabelRepeater
 
-        model: chart.joint ? chart.scan.rowLabels : []
+        model: chart.rowLabels && chart.scan !== null ? chart.scan.rowTexts : []
         delegate: IconLine {
             required property string modelData
             required property int index
             readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
-            readonly property color colour: AppColors.experiment(index, chart.colors.isDarkPalette)
+            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own.
+            // The colour choice and the theme are read here, so the label follows them.
+            readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
 
             objectName: "scanView." + chart.mode + ".rowLabel." + index
-            visible: chart.hasData && !isNaN(at) && at >= axisY.min && at <= axisY.max
+            visible: chart.hasData && chart.shownRowLabels[index] === true
             height: AppSizes.legendRowHeight
             textColor: colour
             segments: [
@@ -422,6 +493,23 @@ Item {
             ]
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
             y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
+        }
+    }
+
+    // The Map's datasets on its scan-value scale: a short tick just left of the plot at each dataset's row.
+    Repeater {
+        model: chart.mode === "map" && !chart.rowLabels && chart.scan !== null && chart.hasData ? chart.scan.count : 0
+        delegate: Rectangle {
+            required property int index
+            readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+
+            objectName: "scanView.map.rowTick." + index
+            visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
+            x: plot.x - width - 1
+            y: Math.round(plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height)
+            width: Math.round(chart.em * 0.4)
+            height: 1
+            color: chart.colors.chartLabels
         }
     }
 
@@ -572,17 +660,19 @@ Item {
             }
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.rows"
-                // A joint fit's rows are its experiments, in the project's order: nothing to choose.
-                visible: !chart.joint
-                enabled: chart.scan !== null && chart.scan.valueTitle !== ""
+                // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
+                // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
+                readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
+                readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
+                enabled: hasValue
                 toolTip: qsTr("Y axis: the rows' places")
-                readonly property var entries: [chart.scan !== null && chart.scan.valueTitle !== "" ? chart.scan.valueTitle : qsTr("scan value"), qsTr("file index")]
+                readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
                 model: entries
                 closedTexts: entries.map(text => qsTr("y: %1").arg(text))
-                currentIndex: chart.scan !== null && (chart.scan.rowsByIndex || chart.scan.valueTitle === "") ? 1 : 0
+                currentIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
                 onActivated: index => {
                     if (chart.project && chart.project.evolution)
-                        chart.project.evolution.xMode = index;
+                        chart.project.evolution.xMode = hasValue ? index : 1;
                 }
             }
             ToolbarComboBox {

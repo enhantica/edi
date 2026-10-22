@@ -126,6 +126,25 @@ double ScanLayer::peakOf(int dataset) const {
     return model_->rows()[static_cast<std::size_t>(dataset)] + (high - display_min_) / span * model_->stackHeight();
 }
 
+QColor ScanLayer::colourOf(int dataset) const {
+    // A scheme's colours (ADR-0038), or a colour map's, a dataset at its place along the scan between a tenth and nine
+    // tenths of the map, whose ends can be as dark or as light as a background.
+    const std::size_t count = model_ ? model_->patterns().size() : 0;
+    if (dataset < 0 || static_cast<std::size_t>(dataset) >= count) {
+        return {};
+    }
+    const std::string choice = colour_scheme_.toStdString();
+    const std::vector<std::string>& maps = edi::scan_colour_map_names();
+    if (std::find(maps.begin(), maps.end(), choice) == maps.end()) {
+        return QColor(QString::fromStdString(
+            edi::pattern_colour(edi::colour_scheme_or_default(choice), static_cast<std::size_t>(dataset), count, dark_)));
+    }
+    const double place = count > 1 ? static_cast<double>(dataset) / static_cast<double>(count - 1) : 1.0;
+    const edi::ScanMapColour c = edi::scan_table_colour(
+        edi::scan_colour_table(choice, background_.name().toStdString(), dark_), 0.1 + 0.8 * place);
+    return QColor(c.r, c.g, c.b);
+}
+
 QColor ScanLayer::mapColour(double t) const {
     const edi::ScanMapColour colour = edi::scan_table_colour(
         edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_), t);
@@ -273,25 +292,8 @@ void ScanLayer::paint(QPainter* painter) {
     // more than the columns, else each column a vertical stroke from its lowest to its highest value, joined column to
     // column, so a narrow peak stays at its height whatever the width.
     const double lift = model_->stackHeight();
-    // The patterns' colours: a scheme's (ADR-0038); or a colour map's, a dataset at its place along the scan between
-    // a tenth and nine tenths of the map, whose ends can be as dark or as light as a background; or a ramp from the
-    // background to a scheme's first colour, starting a quarter of the way so the first pattern shows.
-    const std::string choice = colour_scheme_.toStdString();
-    const bool ramp = choice.starts_with("ramp:");
-    const std::vector<std::string>& maps = edi::scan_colour_map_names();
-    const bool map = std::find(maps.begin(), maps.end(), choice) != maps.end();
-    const edi::ColourScheme scheme = edi::colour_scheme_or_default(ramp ? choice.substr(5) : choice);
-    const std::vector<edi::ScanMapColour> table = ramp || map
-                                                      ? edi::scan_colour_table(choice, background_.name().toStdString(), dark_)
-                                                      : std::vector<edi::ScanMapColour>();
-    const auto colour_of = [&](std::size_t d) {
-        if (!ramp && !map) {
-            return QColor(QString::fromStdString(edi::pattern_colour(scheme, d, count, dark_)));
-        }
-        const double place = count > 1 ? static_cast<double>(d) / static_cast<double>(count - 1) : 1.0;
-        const edi::ScanMapColour c = edi::scan_table_colour(table, ramp ? 0.25 + 0.75 * place : 0.1 + 0.8 * place);
-        return QColor(c.r, c.g, c.b);
-    };
+    // The patterns' colours, as their row labels take them (colourOf).
+    const auto colour_of = [this](std::size_t d) { return colourOf(static_cast<int>(d)); };
     const auto draw = [&](std::size_t d, qreal width_px) {
         const ScanViewModel::Pattern& pattern = patterns[d];
         if (pattern.x.empty()) {

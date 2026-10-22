@@ -22,9 +22,15 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
 2. **What they draw.** Every dataset's measured pattern; for a joint fit, every experiment's. x across is the
    pattern's axis (§7) over every dataset's range together. Up is a scan dataset's first extracted value (the scan
    parameter, titled as the extract rule's column) once every dataset has one; until then, in a scan without an
-   extract rule, and when the file index is chosen (§7), the file index. A joint fit's experiments are rows in the
-   project's order, each labelled left of the plot as the pattern chart labels a Bragg row: the experiment's icon and
-   name in its colour, at its row's height, in place of a scan's tick labels (the owner, 2026-10-22). Each row spans halfway to its neighbours.
+   extract rule, and when the order is chosen (§7), the datasets in order: by file for a scan, whose datasets share a
+   datablock, by datablock for a joint fit's experiments. Each row spans halfway to its neighbours, so in order each
+   is one band of equal height. The rows are labelled as the pattern chart labels a Bragg row, left of the plot, at
+   each row's height: the experiment's icon and the row's scan value with its unit, its file's name or its datablock's,
+   in the dataset's colour (the owner, 2026-10-22). The Stacked view always labels its rows so, with no numeric scale;
+   the Map does in order, and by scan value keeps its numeric scale, a position on it being a real value its colour is
+   interpolated at, with a short tick beside the plot at each dataset's row. When labels would come too close to
+   read, an evenly spread share of them shows, the shown dataset's always among them, and the rest come back as a zoom
+   spreads the rows.
 3. **What is kept.** A scan's datasets are read in the background, a few at a time, the first time either tab shows;
    a joint fit's experiments are taken from the project after each edit and calculation. Each dataset keeps its
    measured points (x and intensity). Every time the views draw, each dataset is reduced for the range shown at the
@@ -35,11 +41,10 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    as the reads arrive, with a count of how many are read. Results read again over the same files (after a run or an
    undo) keep what was read. A dataset that cannot be read is not drawn, and the views say so above the plot: how many
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
-   a dataset gives none, the rows stay by file index and the views name that dataset.
+   a dataset gives none, the rows stay in order by file and the views name that dataset.
 4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
-   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The scan-value
-   axis labels only the values the rows cover, from the lowest row's to the highest's: the height the patterns rise
-   into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
+   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. Its rows are labelled (§2), not
+   scaled: the height the patterns rise into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as the pattern chart's measured
    line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
    the shown dataset is marked by the selected-pattern line (§8), not by a wider curve (the owner, 2026-10-22).
@@ -79,7 +84,7 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    d offered once every experiment has one; a joint fit's experiments on different native axes, 2θ beside TOF, are
    shown on d only, since no one native scale holds them, and wait for a calculation to give it; the owner,
    2026-10-22, confirmed every joint fit and every axis the user picks), y places the rows by the scan value or the
-   file index as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
+   datasets in order (by file or by datablock) as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
    pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
    can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
    reset, a secondary click (a touchpad's two-finger click, as on the pattern chart), another scan, another x axis or
@@ -96,6 +101,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    outside every excluded region and the points inside them are not drawn, which leaves their tint as empty gaps, the
    pattern chart's tint on the Map too; off, the full range with the marks. The colours and the Map's switches are app
    settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
+   Every axis's tick labels and titles, and the colour bar's, take the app's label font and size, as the pattern
+   chart's axes do; the Evolution tab's tick labels too (the owner, 2026-10-22).
 8. **Following a running scan.** The shown dataset is marked at all times by an open rectangle across the plot (the
    owner, 2026-10-22): its border is the Evolution tab's selected-pattern line at 1 px, black in the light theme and
    white in the dark, with a 1 px half-transparent line of the opposite colour just outside and another just inside,
