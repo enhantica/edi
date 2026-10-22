@@ -343,10 +343,13 @@ ScanTemplate scan_template_of(const Project& scan) {
     return out;
 }
 
-// The structure view as the app's opens: the default scene options, the home view, the report's viewport.
-void add_scene(ReportStructure& out, const Structure& structure) {
+// The structure view as the app's opens: the default scene options in the view's element colours, the home view, the
+// report's viewport.
+void add_scene(ReportStructure& out, const Structure& structure, ColorScheme colours) {
     const SceneSource source = capture_scene(structure);
-    out.scene = present_structure(source, SceneOptions{});
+    SceneOptions options;
+    options.colors = colours;
+    out.scene = present_structure(source, options);
     // The element legend is drawn flat on the report's white paper, so its colours are made readable there
     // (ADR-0046); the spheres keep the scheme's.
     for (SceneLegendEntry& entry : out.scene.legend) {
@@ -362,7 +365,7 @@ void add_scene(ReportStructure& out, const Structure& structure) {
     for (int axis = 0; axis != 3; ++axis) {
         out.along.push_back(view_along(out.scene, axis));
     }
-    SceneOptions labelled;
+    SceneOptions labelled = options;
     labelled.labels = true;
     out.labels = present_structure(source, labelled).labels;
 }
@@ -888,7 +891,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     for (const auto& structure : project.structures) {
         ReportStructure built = structure_of(*structure, rule);
         if (charts) {
-            add_scene(built, *structure);
+            add_scene(built, *structure, options.element_colours);
         }
         model.structures.push_back(std::move(built));
     }

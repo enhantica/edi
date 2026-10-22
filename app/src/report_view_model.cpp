@@ -31,6 +31,10 @@ ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : Q
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
     // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
+    // The structure figures take the structure view's element colours.
+    if (StructureViewOptions* view = project_.structureViewOptions()) {
+        connect(view, &StructureViewOptions::colorSchemeChanged, this, &ReportViewModel::refresh);
+    }
     refresh();
 }
 
@@ -134,6 +138,9 @@ bool ReportViewModel::build() const {
     edi::ReportModel next;
     try {
         options_ = edi::effective_report_options(project, choices);
+        const StructureViewOptions* view = project_.structureViewOptions();
+        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
         next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
         options_ = {};

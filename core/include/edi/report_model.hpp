@@ -45,6 +45,7 @@ struct ReportOptions {
     std::string generated;                    ///< the report's time; empty: now, in UTC
     ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' colours, and the structures' unless...
     std::optional<ColourScheme> structure_colour_scheme;  ///< ...the structures' are given apart (the app's choice)
+    ColorScheme element_colours = ColorScheme::Jmol;  ///< the structure figures' element colours, the app's view's
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
