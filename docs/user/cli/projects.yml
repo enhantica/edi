@@ -6,7 +6,7 @@
 # is the id. Older test fixtures keep their three-part ids.
 # `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
 # (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
-# `user-facing: true`: one of the example catalogue's cases, listed in the app's examples in registry
+# `user-facing` set to `true`: one of the example catalogue's cases, listed in the app's examples in registry
 # order; every other project is a test fixture.
 schema: 1
 projects:
