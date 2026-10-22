@@ -48,7 +48,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    pixel row, covered twice in part, let the background show through as a thin light line.
    A colour bar at the right is drawn through the same lookup as the map, and labelled with the intensities its ends
    stand for, each label centred on its end.
-6. **Colours** (the owner, 2026-10-22). Both views offer the same choices beside their own: the colour maps viridis
+6. **Colours** (the owner, 2026-10-22). The Stacked and Map colours are chosen in the app's Preferences with the
+   structures' and patterns' (ADR-0038 §3); the Map keeps a box on its toolbar for the same setting, beside its
+   reverse and stepped or smooth switches. Both views offer the same choices beside their own: the colour maps viridis
    (the Map's default), magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
    provenance), all perceptually uniform, reading in grey and to the common colour-vision deficiencies, and in either
    app theme; and for each colour scheme a ramp from the pattern chart's plot background in the current theme to the
@@ -64,7 +66,7 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    tempo, ColorBrewer's Blues, Purples and YlOrRd and CET L17 and L18 joined them, and the Map's toolbar gained a
    reverse switch, remembered with the other settings, that runs any map the other way; the colour key follows it.
 7. **Axes and toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has (the owner,
-   2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
+   2026-10-22): the axes' types, the Map's colours, the zoom and the reset. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d
    column through its own axis, the pattern chart's rule, ADR-0017 §15; a joint fit's experiment by its own d column,
    d offered once every experiment has one; a joint fit's experiments on different native axes, 2θ beside TOF, are

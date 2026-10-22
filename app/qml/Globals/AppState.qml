@@ -38,12 +38,16 @@ QtObject {
     // and every one follows these ranges (PatternChartController.viewRanges) and the toolbar's choices, which are app
     // settings (Preferences.patternLegendShown, patternHoverShown, patternPointerMode, structureCurves).
     property var patternViewRanges: []
+    // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
+    // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
+    property var scanZoom: ({})
     // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
     // choices stay.
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
             AppState.patternViewRanges = [undefined, undefined, undefined, undefined];
+            AppState.scanZoom = {};
         }
     }
 

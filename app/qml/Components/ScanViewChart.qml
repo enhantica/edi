@@ -43,7 +43,7 @@ Item {
     readonly property var stackedChoices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps), Array.from(ApplicationInfo.scanColourRamps))
     readonly property var mapChoices: Array.from(ApplicationInfo.scanColourMaps).concat(Array.from(ApplicationInfo.scanColourRamps))
     readonly property string stackedPalette: {
-        const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme;
+        const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours;
         return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(stored);
     }
     readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "viridis"
@@ -56,6 +56,24 @@ Item {
         zoomX = [];
         zoomY = [];
     }
+    // The zoom is one per view across the pages (the owner, 2026-10-22): the shown chart writes it, and a chart
+    // takes it up when it is shown.
+    readonly property var sharedZoom: AppState.scanZoom[mode] ?? ({
+            "x": [],
+            "y": []
+        })
+    function publishZoom() {
+        if (!shown)
+            return;
+        const next = Object.assign({}, AppState.scanZoom);
+        next[mode] = {
+            "x": zoomX,
+            "y": zoomY
+        };
+        AppState.scanZoom = next;
+    }
+    onZoomXChanged: publishZoom()
+    onZoomYChanged: publishZoom()
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property real barWidth: mode === "map" ? em * 6 : 0
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
@@ -66,8 +84,14 @@ Item {
     objectName: "scanView." + mode
 
     // Shown once: the datasets are read from then on, for either view.
-    onShownChanged: if (shown && scan !== null)
-        scan.wanted = true
+    onShownChanged: {
+        if (shown) {
+            zoomX = sharedZoom.x;
+            zoomY = sharedZoom.y;
+        }
+        if (shown && scan !== null)
+            scan.wanted = true;
+    }
     Component.onCompleted: if (shown && scan !== null)
         scan.wanted = true
     onScanChanged: {
@@ -499,16 +523,8 @@ Item {
                 currentIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
                 onActivated: index => Preferences.patternYScale = tokens[index]
             }
-            ToolbarComboBox {
-                objectName: "scanView.stacked.toolbar.palette"
-                visible: chart.mode === "stacked"
-                toolTip: qsTr("The patterns' colours")
-                readonly property var entries: chart.stackedChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
-                model: entries
-                closedTexts: entries
-                currentIndex: Math.max(0, chart.stackedChoices.indexOf(chart.stackedPalette))
-                onActivated: index => Preferences.scanStackedPalette = chart.stackedChoices[index]
-            }
+            // The Stacked view's colours are chosen in Preferences; the Map keeps its box here, on the same setting
+            // (the owner, 2026-10-22).
             ToolbarComboBox {
                 objectName: "scanView.map.toolbar.colourMap"
                 visible: chart.mode === "map"
