@@ -520,7 +520,7 @@ Item {
         delegate: IconLine {
             required property string modelData
             required property int index
-            readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own.
             // The colour choice and the theme are read here, so the label follows them.
             readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
@@ -552,7 +552,7 @@ Item {
         model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
         delegate: Rectangle {
             required property int index
-            readonly property real at: chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
 
             objectName: "scanView." + chart.mode + ".rowTick." + index
             visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
