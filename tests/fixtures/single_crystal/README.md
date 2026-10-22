@@ -1,5 +1,9 @@
 # Single-crystal references
 
+The separate [fitting references](fitting/README.md) retain one measured-data
+FullProf fit per page, with PCR/NEW/OUT artifacts, uncertainties and explicit
+model/observation-selection limits. The fixed references below are unchanged.
+
 The source is diffraction-lib commit
 `cb2cda7be6117199be8f8cac0a666a7bccd32d90` (`origin/develop` at authoring),
 under `docs/docs/verification/fullprof/sc-*`. The local working checkout had
@@ -66,7 +70,8 @@ The decimal samples describe one Ni site at (0.13, 0.27, 0.39), occupancy
 bare F² is `(1.03 * 0.73)^2 * exp(-2 * B * s²)` in `(10^-12 cm)^2`;
 1.03 is the FullProf/Sears Ni scattering length. Inputs cover both sides
 of 2θ = 90°, both distributions, zero radius and zero mosaicity. Radius
-is in μm and mosaicity is in arcminutes. Comparisons at distinct scales
+is in μm. Stored mosaicity is a dimensionless inverse-width quantity; the
+upstream pi/10800 factor is a numerical convention, not a spread-angle unit. Comparisons at distinct scales
 check that extinction uses unscaled F². The acceptance tolerance is
 2e-11 relative plus 1e-12 absolute for double arithmetic; these are
 formula values, not engine regression pins.
