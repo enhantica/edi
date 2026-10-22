@@ -166,6 +166,24 @@ ScanMapColour scan_map_colour(ScanColourMap map, double t) {
 
 ScanMapColour scan_map_colour(double t) { return scan_map_colour(ScanColourMap::Viridis, t); }
 
+ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth) {
+    ScanRowPair pair;
+    if (rising.empty()) {
+        return pair;
+    }
+    // The last row at or below y, and the one after it.
+    const auto above = static_cast<std::size_t>(std::upper_bound(rising.begin(), rising.end(), y) - rising.begin());
+    pair.first = pair.second = above == 0 ? 0 : above - 1;
+    if (above > 0 && above < rising.size() && y > rising[pair.first]) {
+        pair.second = above;
+        pair.share = (y - rising[pair.first]) / (rising[pair.second] - rising[pair.first]);
+        if (!smooth) {
+            pair.share = pair.share < 0.5 ? 0.0 : 1.0;
+        }
+    }
+    return pair;
+}
+
 const std::vector<std::string>& scan_colour_choices() {
     static const std::vector<std::string> choices = [] {
         std::vector<std::string> out = scan_colour_map_names();

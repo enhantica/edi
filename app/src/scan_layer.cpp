@@ -155,24 +155,20 @@ void ScanLayer::paint(QPainter* painter) {
         QImage image(pixel_columns, pixel_rows, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         const double low_edge = spans[order.front()].low, high_edge = spans[order.back()].high;
-        std::size_t below = 0;
+        // The datasets' rows in rising order; each pixel row finds the pair around its own scan value, whatever the
+        // order the pixel rows are visited in.
+        std::vector<double> placed(order.size());
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            placed[i] = rows[order[i]];
+        }
         for (int j = 0; j < pixel_rows; ++j) {
             const double y = y_max_ - (static_cast<double>(j) + 0.5) / static_cast<double>(pixel_rows) * (y_max_ - y_min_);
             if (y < low_edge || y > high_edge) {
                 continue;
             }
-            while (below + 1 < order.size() && rows[order[below + 1]] <= y) {
-                ++below;
-            }
-            std::size_t a = below, b = below;
-            double f = 0.0;
-            if (y > rows[order[below]] && below + 1 < order.size()) {
-                b = below + 1;
-                f = (y - rows[order[a]]) / (rows[order[b]] - rows[order[a]]);
-                if (!smooth_rows_) {
-                    f = f < 0.5 ? 0.0 : 1.0;
-                }
-            }
+            const edi::ScanRowPair pair = edi::scan_row_pair(placed, y, smooth_rows_);
+            const std::size_t a = pair.first, b = pair.second;
+            const double f = pair.share;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const int c = column_of[static_cast<std::size_t>(i)];

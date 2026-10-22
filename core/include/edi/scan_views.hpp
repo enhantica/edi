@@ -33,6 +33,15 @@ struct ScanRowSpan {
 };
 std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions);
 
+/// The two datasets whose rows bracket `y` on the Map's vertical axis, from `rising` (their rows in rising order), and
+/// how far y is from the first towards the second: `first == second` and `share == 0` at or beyond the end rows. In
+/// stepped mode the share is 0 or 1, the nearer row's. Empty input gives {0, 0, 0}.
+struct ScanRowPair {
+    std::size_t first = 0, second = 0;
+    double share = 0.0;
+};
+ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth);
+
 /// The 2D map's colour maps (data/colormaps/PROVENANCE.md), in the order the app offers them; viridis is the default.
 enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
 /// Every map's name, the enum's four first ("viridis", "magma", "inferno", "plasma"), then the candidates the owner
