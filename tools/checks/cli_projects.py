@@ -71,7 +71,8 @@ _NUMBER = re.compile(r'(?P<value>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<e
 def registry(root: Path) -> list[dict]:
     """The registered projects, fail-closed: ``[{'id': str, 'executing': bool}]``.
 
-    An optional boolean ``offline`` is only meaningful on an executing project.
+    An optional boolean ``offline`` is only meaningful on an executing project; an optional boolean
+    ``user-facing`` puts the project in the app's example list.
     """
     path = root / REGISTRY
     data = yaml.safe_load(path.read_text(encoding='utf-8'))
@@ -82,8 +83,10 @@ def registry(root: Path) -> list[dict]:
         raise ValueError(f'{path}: projects must be a non-empty list')
     seen: set[str] = set()
     for row in projects:
-        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline'}:
-            raise ValueError(f'{path}: each project is {{id, executing[, offline]}}, got {row!r}')
+        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline', 'user-facing'}:
+            raise ValueError(
+                f'{path}: each project is {{id, executing[, offline][, user-facing]}}, got {row!r}'
+            )
         pid = row.get('id')
         if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
             raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>_<variant>')
@@ -91,6 +94,8 @@ def registry(root: Path) -> list[dict]:
             raise TypeError(f'{path}: {pid}: executing must be true or false')
         if 'offline' in row and not isinstance(row['offline'], bool):
             raise TypeError(f'{path}: {pid}: offline must be true or false')
+        if 'user-facing' in row and not isinstance(row['user-facing'], bool):
+            raise TypeError(f'{path}: {pid}: user-facing must be true or false')
         if row.get('offline') and not row['executing']:
             raise ValueError(f'{path}: {pid}: offline applies only to an executing project')
         if pid in seen:

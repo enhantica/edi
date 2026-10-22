@@ -5,6 +5,8 @@
 # a project reproducing a diffraction-lib page keeps its stem lowercased.
 # `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
 # (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
+# `user-facing: true`: one of the example catalogue's cases, listed in the app's examples in registry
+# order; every other project is a test fixture.
 schema: 1
 projects:
   - id: pd-neut-cwl_cosio-d20_start-1
@@ -76,3 +78,4 @@ projects:
     executing: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
+  # The example catalogue: its user-facing cases, in the order the app lists them.

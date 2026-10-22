@@ -8,9 +8,10 @@ experiment axes and fitting mode belong to their ordinary native categories.
 
 import argparse
 import json
-import re
 import shlex
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / 'app/examples/metadata.json'
@@ -29,14 +30,11 @@ def scalars(path: Path) -> dict[str, str]:
 
 
 def generate() -> dict[str, object]:
-    ids = re.findall(
-        r'^  - id: (.+)$', (ROOT / 'docs/user/cli/projects.yml').read_text(), re.MULTILINE
-    )
-    ids.append('pd-xray-cwl_lif')
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text(encoding='utf-8'))
+    ids = [row['id'] for row in registry['projects'] if row.get('user-facing')]
     entries = {}
     for example_id in ids:
-        base = 'app/examples' if example_id == 'pd-xray-cwl_lif' else 'docs/user/cli'
-        project = ROOT / base / example_id / 'project'
+        project = ROOT / 'docs/user/cli' / example_id / 'project'
         record = project / 'project.edi'
         analysis = project / 'analysis/analysis.edi'
         metadata = scalars(record)

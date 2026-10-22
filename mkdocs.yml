@@ -165,6 +165,7 @@ exclude_docs: |
   /user/cli/*/project/
   /user/cli/*/PROVENANCE.md
   /user/cli/*/fullprof/
+  /user/cli/*/data/
 
 # Defining `plugins` drops the implicit default, so `search` is restated explicitly.
 # mkdocs-jupyter renders the Verification notebooks PRE-EXECUTED (the CI docs job runs
