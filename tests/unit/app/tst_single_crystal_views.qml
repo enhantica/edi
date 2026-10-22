@@ -736,4 +736,96 @@ TestCase {
             verify(Number.isFinite(value) && Math.abs(value - target.value) <= target.su + (target.kind === "coordinate" ? 5e-6 : target.kind === "beta" ? 5e-6 : 5e-7 * oracle.scale_factor), "The compound app fit must reach each independent FullProf coordinate, ADP and scale value within its printed uncertainty; atom=" + (target.atom || "scale") + ", component=" + (target.component || "") + ", actual=" + value + ", expected=" + target.value + ", su=" + target.su);
         }
     }
+    function chooseTypeToken(name, token) {
+        const box = Ui.find(Ui.page(appWindow), name, true);
+        verify(box !== null && box.enabled, "An experiment without loaded data must expose an enabled type selector");
+        Ui.scrollIntoView(box);
+        verify(waitForPolish(appWindow.contentItem), "The type selector must finish layout before real input");
+        const index = box.permittedValues.indexOf(token);
+        verify(index >= 0, "The type selector must offer the requested supported token");
+        mouseClick(box, box.width / 2, box.height / 2);
+        tryCompare(box.popup, "opened", true, 2000, "A real pointer click must open the experiment type choices");
+        const list = box.popup.contentItem;
+        list.positionViewAtIndex(index, ListView.Contain);
+        const item = list.itemAtIndex(index);
+        verify(item !== null && item.enabled, "The actual popup must render the requested experiment type choice");
+        mouseClick(item, item.width / 2, item.height / 2);
+    }
+    function test_create_single_crystal_then_load_reflections_data() {
+        let cases = [];
+        for (const extension of ["int", "dat"])
+            for (const dark of [false, true])
+                cases.push({
+                    tag: extension + "-" + (dark ? "dark" : "light"),
+                    extension: extension,
+                    dark: dark,
+                    page: "experiment"
+                });
+        return cases;
+    }
+    function test_create_single_crystal_then_load_reflections(data) {
+        // Existing TOF view gates still require that path independently; this witness selects only working modes.
+        const tofOpened = Session.openProject(Probe.referenceUrl("projects/sc-neut-tof_taurine_basic"));
+        if (tofOpened)
+            tryCompare(Session.project, "calculating", false, 10000, "The TOF capability witness must finish before choosing available beam modes");
+        const tofAvailable = tofOpened && Session.project.currentExperiment.singleCrystalReflections.calculatedShown && Session.project.currentExperiment.singleCrystalReflections.count > 0;
+        openSingle(data);
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        expand("group.experiments");
+        const count = Session.project.experiments.count;
+        const create = Ui.find(Ui.page(appWindow), "experiments.create", true);
+        verify(create !== null && create.enabled, "The actual Experiment sidebar must expose Create experiment");
+        Ui.scrollIntoView(create);
+        Ui.click(test, Probe, appWindow, "experiments.create");
+        tryCompare(Session.project.experiments, "count", count + 1, 2000, "Clicking Create experiment must add a real empty experiment");
+        const form = Ui.find(Ui.page(appWindow), "experimentType.sampleForm", true);
+        verify(form !== null && form.enabled, "A newly created experiment must allow powder or single crystal before its data are loaded");
+        compare(JSON.stringify(Array.from(form.permittedValues).sort()), JSON.stringify(["powder", "single crystal"]), "The pre-data sample-form selector must offer both implemented sample forms");
+        chooseTypeToken("experimentType.sampleForm", "single crystal");
+        tryCompare(Session.project.currentExperiment, "sampleFormToken", "single crystal", 2000, "Choosing single crystal through the real popup must replace the created experiment's type");
+        let groups = [];
+        for (const tab of ["basic", "extras"]) {
+            Ui.click(test, Probe, appWindow, "sideBar.tab." + tab);
+            tryVerify(() => Ui.groupNames(Ui.page(appWindow)).length > 0, 2000, "The selected sidebar tier must finish loading its type-specific groups");
+            groups = groups.concat(Ui.groupNames(Ui.page(appWindow)));
+        }
+        verify(groups.includes("extinction") && groups.includes("refln"), "Choosing single crystal before data must expose extinction and reflection categories");
+        verify(["background", "peak", "peak_profile", "excluded_region", "excluded_regions"].every(name => !groups.includes(name)), "A created single crystal must omit all powder-only categories before data loading");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        const probe = Ui.find(Ui.page(appWindow), "experimentType.radiationProbe", true);
+        const beam = Ui.find(Ui.page(appWindow), "experimentType.beamMode", true);
+        verify(probe !== null && !probe.enabled && probe.value === "neutron", "Single crystal must fix the probe to neutron and disable the unavailable X-ray choice");
+        const expectedModes = tofAvailable ? ["constant wavelength", "time-of-flight"] : ["constant wavelength"];
+        compare(JSON.stringify(Array.from(beam.permittedValues)), JSON.stringify(expectedModes), "The single-crystal beam selector must offer only independently working beam modes");
+        compare(beam.enabled, expectedModes.length > 1, "The beam selector must be disabled exactly while only one single-crystal mode works");
+        Ui.scrollIntoView(probe.parent);
+        mouseMove(probe.parent, probe.parent.width / 2, probe.parent.height / 2);
+        tryVerify(() => Probe.objectsWithProperty(probe.parent, "enterAnimationDuration").some(tip => tip.visible && /neutron|single crystal/i.test(tip.text)), 3000, "Hovering the unavailable single-crystal probe must explain its supported choice");
+        if (!tofAvailable) {
+            Ui.scrollIntoView(beam.parent);
+            mouseMove(beam.parent, beam.parent.width / 2, beam.parent.height / 2);
+            tryVerify(() => Probe.objectsWithProperty(beam.parent, "enterAnimationDuration").some(tip => tip.visible && /constant wavelength|not.*implement/i.test(tip.text)), 3000, "An unavailable beam-mode choice must explain why it is fixed");
+        }
+        chooseTypeToken("experimentType.sampleForm", "powder");
+        tryCompare(Session.project.currentExperiment, "sampleFormToken", "powder", 2000, "The created experiment must switch back to powder while still empty");
+        chooseTypeToken("experimentType.sampleForm", "single crystal");
+        tryCompare(Session.project.currentExperiment, "sampleFormToken", "single crystal", 2000, "The final pre-data choice must again be single crystal");
+        const index = Session.project.currentExperimentIndex;
+        const load = Ui.find(Ui.page(appWindow), "experiments.loadData." + index, true);
+        verify(load !== null && load.enabled, "The created single crystal must expose its real Load data action");
+        Ui.scrollIntoView(load);
+        Ui.click(test, Probe, appWindow, "experiments.loadData." + index);
+        const dialog = Probe.objectsWithProperty(appWindow, "selectedFile").find(item => item.visible && /reflection/i.test(item.title));
+        verify(dialog !== undefined, "The real Load data action must open the reflection-file chooser");
+        verify(dialog.nameFilters.some(filter => filter.includes("*.int") && filter.includes("*.dat")), "The reflection chooser must offer FullProf int and plain reflection dat files");
+        dialog.selectedFile = Probe.referenceUrl("fullprof/sc-neut-cwl_tbti_basic/tbti." + data.extension);
+        dialog.accept();
+        const expected = JSON.parse(Probe.readReferenceFile("fullprof.json")).cases["sc-neut-cwl_tbti_basic"].input_rows;
+        tryVerify(() => Session.project.currentExperiment.singleCrystalReflections.count === expected.length, 5000, "Completing the real chooser must load every reflection into the created single crystal");
+        const rows = Probe.rows(Session.project.currentExperiment.singleCrystalReflections);
+        verify(rows.every((row, i) => row.h === expected[i][0] && row.k === expected[i][1] && row.l === expected[i][2] && row.intensityMeas === expected[i][3] && row.intensityMeasSu === expected[i][4]), "Both reflection file formats must preserve the independent signed indices, measured values and uncertainties");
+        const fixedForm = Ui.find(Ui.page(appWindow), "experimentType.sampleForm", true);
+        verify(fixedForm !== null && !fixedForm.enabled && fixedForm.value === "single crystal", "Loading reflections must fix the created experiment's sample form");
+        verify(!Ui.find(Ui.page(appWindow), "experimentType.radiationProbe", true).enabled && !Ui.find(Ui.page(appWindow), "experimentType.beamMode", true).enabled, "Loaded reflection data must fix the experiment type axes");
+    }
 }
