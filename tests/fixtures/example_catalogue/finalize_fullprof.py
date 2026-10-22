@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from capture_logs import copy_public_log
 from fullprof_inputs import ROOT, Writer
 
 EXTENSIONS = {'.pcr', '.new', '.dat', '.prf', '.sum', '.out', '.log'}
@@ -122,9 +123,7 @@ def finish(case, directories):  # noqa: PLR0914 - complete external output recei
             source = max(existing, key=lambda p: p.stat().st_mtime_ns)
             destination = twin if stem == 'fixed' else home
             destination.mkdir(parents=True, exist_ok=True)
-            (destination / f'{stem}.log').write_text(
-                source.read_text(errors='replace').replace(str(ROOT), '<checkout>')
-            )
+            copy_public_log(source, destination / f'{stem}.log')
     if not simulation:
         output = (home / 'fit.out').read_text(errors='replace')
         summary = (home / 'fit.sum').read_text(errors='replace')

@@ -6,6 +6,7 @@ import re
 import shutil
 from pathlib import Path
 
+from capture_logs import copy_public_log
 from run_fullprof import ROOT, digest, execute, fixed_twin
 
 CASE = 'pd-xray-cwl_lam7o3-p021'
@@ -23,15 +24,11 @@ def capture(executable, logs):
     (home / 'fit.pcr').write_text(text)
     shutil.copyfile(source / 'fit.dat', home / 'fit.dat')
     execute(executable, home, 'fit', logs)
-    (home / 'fit.log').write_text(
-        (logs / 'continuation-fit.log').read_text().replace(str(ROOT), '<checkout>')
-    )
+    copy_public_log(logs / 'continuation-fit.log', home / 'fit.log')
     fixed_twin(home / 'fit.new', twin / 'fixed.pcr')
     shutil.copyfile(home / 'fit.dat', twin / 'fixed.dat')
     execute(executable, twin, 'fixed', logs)
-    (twin / 'fixed.log').write_text(
-        (logs / 'continuation-fixed.log').read_text().replace(str(ROOT), '<checkout>')
-    )
+    copy_public_log(logs / 'continuation-fixed.log', twin / 'fixed.log')
     summary = (home / 'fit.sum').read_text()
     all_points = summary.split('RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:')[1]
     rwp = float(re.search(r'Rwp\s*[:=]\s*([\d.Ee+-]+)[^\n]*L.S.', all_points)[1]) / 100
