@@ -110,16 +110,34 @@ double ScanLayer::peakOf(int dataset) const {
     }
     const ScanViewModel::Pattern& pattern = model_->patterns()[static_cast<std::size_t>(dataset)];
     const edi::YScale scale = scale_of(scale_);
-    double high = -std::numeric_limits<double>::infinity();
-    for (std::size_t i = 0; i < pattern.shown.size() && i < pattern.intensity.size(); ++i) {
+    // The line's highest point in the range shown: a point inside, or where the line joining two neighbouring points
+    // crosses an edge of the range (the only part shown when no point is inside), as the line is drawn.
+    const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
+    const auto value_at = [&](std::size_t i) {
         const double x = pattern.shown[i];
-        if (!(x >= std::min(x_min_, x_max_) && x <= std::max(x_min_, x_max_)) ||
-            (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
+        if (!std::isfinite(x) || (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
+            return kNaN;
+        }
+        return edi::to_display(pattern.intensity[i], scale);
+    };
+    const double lo = std::min(x_min_, x_max_), hi = std::max(x_min_, x_max_);
+    double high = -std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0; i < points; ++i) {
+        const double x = pattern.shown[i], value = value_at(i);
+        if (x >= lo && x <= hi && std::isfinite(value)) {
+            high = std::max(high, value);
+        }
+        if (i + 1 == points) {
             continue;
         }
-        const double value = edi::to_display(pattern.intensity[i], scale);
-        if (std::isfinite(value)) {
-            high = std::max(high, value);
+        const double xb = pattern.shown[i + 1], next = value_at(i + 1);
+        if (!std::isfinite(value) || !std::isfinite(next) || x == xb) {
+            continue;
+        }
+        for (const double edge : {lo, hi}) {
+            if (edge > std::min(x, xb) && edge < std::max(x, xb)) {
+                high = std::max(high, value + (next - value) * (edge - x) / (xb - x));
+            }
         }
     }
     const double span = display_max_ - display_min_;

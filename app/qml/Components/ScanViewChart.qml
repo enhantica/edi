@@ -352,6 +352,14 @@ Item {
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
+        // The plot's border, under the shown dataset's rectangle, so that rectangle's outer line shows at the plot's
+        // edges too.
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: chart.colors.chartAxis
+            border.width: 1
+        }
         // The shown dataset, at all times, marked by an open rectangle (the owner, 2026-10-22): on the map round its
         // row's band, halfway to each neighbour; on the stacked view from its row up to its line's highest point in
         // the range shown. It moves with the shown dataset, so with a followed scan as it runs, and with the rows when
@@ -373,20 +381,17 @@ Item {
             readonly property real ownTop: Math.round(topPx) - clear
             readonly property real ownBottom: Math.round(bottomPx) + clear
             readonly property bool thin: ownBottom - ownTop < minimum
+            // Only a dataset whose band reaches into the range shown is marked: one outside it is never drawn at an
+            // edge, where it would mark another row.
+            readonly property bool inView: !isNaN(low) && !isNaN(high) && Math.max(low, high) >= axisY.min && Math.min(low, high) <= axisY.max
 
             objectName: "scanView." + chart.mode + ".current"
             dark: chart.colors.isDarkPalette
-            visible: !isNaN(low) && !isNaN(high) && height > 0
+            visible: inView && height > 0
             x: 0
             y: thin ? Math.max(0, Math.min(plot.height - minimum, Math.round(rowPx - minimum / 2))) : Math.max(0, ownTop)
             width: plot.width
             height: thin ? Math.min(minimum, plot.height) : Math.min(plot.height, ownBottom) - y
-        }
-        Rectangle {
-            anchors.fill: parent
-            color: "transparent"
-            border.color: chart.colors.chartAxis
-            border.width: 1
         }
         // The box a drag draws, which the view zooms to on release.
         Rectangle {
