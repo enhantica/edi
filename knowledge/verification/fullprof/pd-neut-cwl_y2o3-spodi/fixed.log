@@ -1,0 +1,63 @@
+<checkout>/knowledge/verification/fullprof/pd-neut-cwl_y2o3-spodi: fixed.pcr through /home/andrewsazonov/Applications/fullprof/fp2k
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 20:51:31.582
+ => Reading control file *.PCR ... fixed
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =fixed):
+ => Reading intensity file of pattern  1  fixed
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: fixed
+ => Pattern:   1  fixed
+ => Ordering reflections contributing to each point for pattern:       1
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Writing results for cycle       1
+ => R-Factors:   1.12      1.34     Chi2:  1.18     DW-Stat.:  1.2732   Patt#:  1
+ => Expected :            1.24                                1.8759
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.66                        Chi2:  1.18
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.178
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   1.12      1.34     Chi2:  1.18     DW-Stat.:  1.2732   Patt#:  1
+ => Expected :            1.24                                1.8759
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.66                        Chi2:  1.18
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.178
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+  
+  
+ =>               CPU Time:     0.250 seconds
+ =>                             0.004 minutes
+  
+ => END   Date:22/10/2026  Time => 20:51:31.824
+  
+ => Data Files :
+ =>             - fixed.dat
+ => PCR  File  : fixed
+ => Do you want to continue (<cr>=N)? 
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/2989050/fd/0
+Image              PC                Routine            Line        Source             
+fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
+fp2k               000000000068C8CB  Unknown               Unknown  Unknown
+fp2k               0000000000405B3D  Unknown               Unknown  Unknown
+libc.so.6          00007F9229424D90  Unknown               Unknown  Unknown
+libc.so.6          00007F9229424E40  __libc_start_main     Unknown  Unknown
+fp2k               0000000000405A55  Unknown               Unknown  Unknown
+         (s:same, a:another problem): 

@@ -354,13 +354,13 @@ class Writer:
                         origin,
                         width,
                         cthm,
-                        0,
+                        number(v.get('_absorption.mu_r', '0')),
                         180,
                         0,
                         0,
                     ]),
                 )
-        cycles = [1 if self.fixed else 200, 0.001, 0.2, 0.2, 0.2, 0.2]
+        cycles = [1 if self.fixed else 200, 0.1, 0.2, 0.2, 0.2, 0.2]
         self.put('!NCY Eps R_at R_an R_pr R_gl')
         if multi:
             self.put(line(cycles))

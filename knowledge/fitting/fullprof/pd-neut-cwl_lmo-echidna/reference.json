@@ -1,0 +1,78 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/pd-neut-cwl_lmo-echidna/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "15de9a58c3c93c2e535daeeefe2973c5ea43b7e6a2e389c356d82b4fa9a058a3",
+    "experiments/echidna.edi": "56c050bdeb4188c636ef5afbacc5d1d36353690dfb3c2689ae48b85642612d6d",
+    "project.edi": "4aa689feef827ee8de58921b970ea639720550330301b7f92f582aec419720c0",
+    "structures/lmo.edi": "e8c8b1f872ce6fb5fa9dd8f26d43261ff9e58bb0e43ef6add2429b2ab0796ff5"
+  },
+  "banks": [
+    "echidna"
+  ],
+  "scope": "fit",
+  "staging": "none",
+  "cycles": 200,
+  "n_free": 24,
+  "exit": 24,
+  "twin_exit": 0,
+  "fit_output_complete": false,
+  "artifacts_sha256": {
+    "fit.dat": "b8624d669feb9a14800bbba7e4e71cfb4c23aba323f884ba89c57c9345cdbc20",
+    "fit.log": "2a2c37b1e459b0447a52bd6c607fcca672d969d7dc6aec793100a99313d57be6",
+    "fit.new": "da2d6cc1df71b89c9cad5fcc9f765c00fa6651f3147bf4f1b82b3d85265a53b6",
+    "fit.out": "bd5adf28a313ce4075b08955190a3fe9337246f9ac379f8734410ffb6bc73145",
+    "fit.pcr": "d82a783366811ab6d7e5e23e00860eae765093de76cf2efea35998205b418b90",
+    "fit.prf": "6b4279b9222fdb9543146d107dcaa8721537f477fe37dc67677a877f1c364cca",
+    "fit.sum": "bb435d389350aff0a62667092fa060b1d13ff5debd49b13a339fdc5d406c5656",
+    "start.dat": "b8624d669feb9a14800bbba7e4e71cfb4c23aba323f884ba89c57c9345cdbc20",
+    "start.log": "0b8c8518fd1c4da56d728f833a2ceaa71c297030e4e4e9469a76e94fa24e0518",
+    "start.new": "e265467d68a699cc1c268bdd7a4f87cb7d5bf5042d439944e78626fcbab967a3",
+    "start.out": "b6d41298791116f51533b90093c7d5d004be215aabf2fd3d3cd0d7516a6ce755",
+    "start.pcr": "5bf934cbe2069063216e68dde643015f4ac3c811a3ff26a027ca2380e0086fda",
+    "start.prf": "d2eb7a4103c005395d67f12fa390f0671749f8ad018dc75c629d3c339dace127",
+    "start.sum": "38f733bf698fc47c48586265e6c2bf695ec0fc0f969ed3ff3672df230a565335"
+  },
+  "finite_fit": false,
+  "converged": false,
+  "fullprof_parameters": {},
+  "parameter_codes": {
+    "echidna.background.1.intensity": 1,
+    "echidna.background.2.intensity": 2,
+    "echidna.background.3.intensity": 3,
+    "echidna.background.4.intensity": 4,
+    "echidna.background.5.intensity": 5,
+    "echidna.background.6.intensity": 6,
+    "echidna.background.7.intensity": 7,
+    "echidna.background.8.intensity": 8,
+    "echidna.background.9.intensity": 9,
+    "echidna.instrument.calib_twotheta_offset": 10,
+    "echidna.instrument.calib_sample_displacement": 11,
+    "echidna.instrument.calib_sample_transparency": 12,
+    "lmo.atom_site.O.fract_z": 13,
+    "lmo.atom_site.O.adp_iso": 14,
+    "lmo.atom_site.Li1.adp_iso": 15,
+    "lmo.atom_site.Li1.occupancy": 16,
+    "lmo.atom_site.Ni2.adp_iso": 17,
+    "echidna.linked_structure.lmo.scale": 18,
+    "echidna.peak.broad_gauss_u": 19,
+    "echidna.peak.broad_gauss_v": 20,
+    "echidna.peak.broad_gauss_w": 21,
+    "echidna.peak.broad_lorentz_y": 22,
+    "lmo.cell.length_a": 23,
+    "lmo.cell.length_c": 24
+  },
+  "r_wp_by_bank": {
+    "echidna": 0.273
+  },
+  "parameters": {},
+  "twin_artifacts_sha256": {
+    "fixed.dat": "b8624d669feb9a14800bbba7e4e71cfb4c23aba323f884ba89c57c9345cdbc20",
+    "fixed.log": "7da673b1d64e8c675e78f50dc67b71f066a053eb81618dd35d11e058e09c754c",
+    "fixed.out": "9117b07017ffe102e98724b2a0b9183817124e8bf69bffbca1df9bfd926013cd",
+    "fixed.pcr": "55a08facbe641bff718a185bd1ad7e2b9c4498ed72e9e3dbab8ff18734414ceb",
+    "fixed.sum": "9117b07017ffe102e98724b2a0b9183817124e8bf69bffbca1df9bfd926013cd"
+  }
+}
