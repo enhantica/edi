@@ -1,8 +1,8 @@
 COMM pd-xray-cwl_lam7o3-p021
-! Current global Chi2 (Bragg contrib.) =      241.5    
+! Current global Chi2 (Bragg contrib.) =      245.7    
 ! Files => DAT-file: start.dat,  PCR-file: start
 !Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
-   0   7   1  20   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1
+   0   7   1  20   0   9   0   0   0   0   0   0   0   0   0   0   0   1   1
 !
 !Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
    2   2   1   0   2   0   4   0   0   2  10   1   1   0   0   1   1
@@ -35,6 +35,16 @@ COMM pd-xray-cwl_lam7o3-p021
         14.7069       300.0000          0.00
         14.9909       300.0000          0.00
 ! 
+! Additional scattering factors for Pattern#  1
+la     -0.48697    1.69911   2
+ti     -0.01291    0.03804   2
+cr     -0.01108    0.05509   2
+mn     -0.00900    0.06551   2
+fe     -0.00799    0.07731   2
+co     -0.00532    0.09057   2
+ni     -0.00561    0.10555   2
+cu     -0.00234    0.12213   2
+o      -0.00536    0.00037   2
 !
        0    !Number of refined parameters
 !

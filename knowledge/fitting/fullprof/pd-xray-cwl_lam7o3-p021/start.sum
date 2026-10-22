@@ -8,7 +8,7 @@
                  Refinement of X-ray and/or Neutron Data
 
 
-    Date: 22/10/2026  Time: 21:13:43.243                              
+    Date: 23/10/2026  Time: 00:11:08.961                              
 
  => PCR file code: start
  => DAT file code: start                -> Relative contribution: 1.0000                                                            
@@ -32,7 +32,7 @@
  =>-------> Pattern#  1
  => Crystal Structure Refinement for phase: 1
  => The density (volumic mass) of phase 1 is:    6.926 g/cm3
- => Scor: 4.6718
+ => Scor: 4.6235
 
  ==> RESULTS OF REFINEMENT:
 
@@ -109,26 +109,26 @@
   => Cycle:  1 => MaxCycle:  1
  => N-P+C:  1236
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  42.9     Rwp:  60.1     Rexp:    3.86 Chi2:  241.      L.S. refinement
+ => Rp:  43.2     Rwp:  60.6     Rexp:    3.86 Chi2:  246.      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  77.8     Rwp:  97.8     Rexp:    6.29 Chi2:  241.    
- => Deviance:  0.271E+06     Dev*  :   219.2    
- => DW-Stat.:    0.4336     DW-exp:     1.8227
- => N-sigma of the GoF:     5978.308
+ => Rp:  78.3     Rwp:  98.6     Rexp:    6.29 Chi2:  246.    
+ => Deviance:  0.272E+06     Dev*  :   220.3    
+ => DW-Stat.:    0.4356     DW-exp:     1.8227
+ => N-sigma of the GoF:     6082.810
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
  => N-P+C:  1236
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  42.9     Rwp:  60.1     Rexp:    3.86 Chi2:  241.      L.S. refinement
+ => Rp:  43.2     Rwp:  60.6     Rexp:    3.86 Chi2:  246.      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  77.8     Rwp:  97.8     Rexp:    6.29 Chi2:  241.    
- => Deviance:  0.271E+06     Dev*  :   219.2    
- => DW-Stat.:    0.4336     DW-exp:     1.8227
- => N-sigma of the GoF:     5978.308
+ => Rp:  78.3     Rwp:  98.6     Rexp:    6.29 Chi2:  246.    
+ => Deviance:  0.272E+06     Dev*  :   220.3    
+ => DW-Stat.:    0.4356     DW-exp:     1.8227
+ => N-sigma of the GoF:     6082.810
 
- => Global user-weigthed Chi2 (Bragg contrib.):   241.    
- => Scor: 4.6718
+ => Global user-weigthed Chi2 (Bragg contrib.):   246.    
+ => Scor: 4.6235
 
  ==> RESULTS OF REFINEMENT:
 
@@ -205,36 +205,36 @@
   => Cycle:  1 => MaxCycle:  1
  => N-P+C:  1236
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  42.9     Rwp:  60.1     Rexp:    3.86 Chi2:  241.      L.S. refinement
+ => Rp:  43.2     Rwp:  60.6     Rexp:    3.86 Chi2:  246.      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  77.8     Rwp:  97.8     Rexp:    6.29 Chi2:  241.    
- => Deviance:  0.271E+06     Dev*  :   219.2    
- => DW-Stat.:    0.4336     DW-exp:     1.8227
- => N-sigma of the GoF:     5978.308
+ => Rp:  78.3     Rwp:  98.6     Rexp:    6.29 Chi2:  246.    
+ => Deviance:  0.272E+06     Dev*  :   220.3    
+ => DW-Stat.:    0.4356     DW-exp:     1.8227
+ => N-sigma of the GoF:     6082.810
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
  => N-P+C:  1236
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  42.9     Rwp:  60.1     Rexp:    3.86 Chi2:  241.      L.S. refinement
+ => Rp:  43.2     Rwp:  60.6     Rexp:    3.86 Chi2:  246.      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  77.8     Rwp:  97.8     Rexp:    6.29 Chi2:  241.    
- => Deviance:  0.271E+06     Dev*  :   219.2    
- => DW-Stat.:    0.4336     DW-exp:     1.8227
- => N-sigma of the GoF:     5978.308
+ => Rp:  78.3     Rwp:  98.6     Rexp:    6.29 Chi2:  246.    
+ => Deviance:  0.272E+06     Dev*  :   220.3    
+ => DW-Stat.:    0.4356     DW-exp:     1.8227
+ => N-sigma of the GoF:     6082.810
 
- => Global user-weigthed Chi2 (Bragg contrib.):   241.    
+ => Global user-weigthed Chi2 (Bragg contrib.):   246.    
 
      -----------------------------------------------------
      BRAGG R-Factors and weight fractions for Pattern #  1
      -----------------------------------------------------
 
  => Phase:  1     lam7o3
- => Bragg R-factor:   32.8       Vol:  232.925( 0.000)  Fract(%):  100.00( 0.00)
- => Rf-factor=  22.7             ATZ:         971.521   Brindley:  1.0000
+ => Bragg R-factor:   32.3       Vol:  232.925( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  22.5             ATZ:         971.521   Brindley:  1.0000
 
  
-              CPU Time:     0.219 seconds
+              CPU Time:     0.234 seconds
                             0.004 minutes
 
- => Run finished at:     Date: 22/10/2026  Time: 21:13:43.455                              
+ => Run finished at:     Date: 23/10/2026  Time: 00:11:09.192                              
