@@ -252,10 +252,9 @@ void ScanLayer::paint(QPainter* painter) {
             std::reverse(table.begin(), table.end());
         }
         // One image pixel per plot pixel, so no row of the plot is drawn twice and nothing shows between datasets. Up,
-        // between two datasets' rows the value is interpolated linearly, so the colour changes smoothly, or, stepped,
-        // is the nearer dataset's, each dataset one band out to halfway to its neighbours; beyond the first or the last
-        // row, out to its extent, it is that dataset's. A column one of the two leaves empty takes the other's value,
-        // and one both leave empty stays clear.
+        // each dataset is one band out to halfway to its neighbours, blended into the next only near their edge when
+        // smooth (below); beyond the first or the last row, out to its extent, it is that dataset's. A column left
+        // empty stays clear.
         QImage image(pixel_columns, pixel_rows, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         const double low_edge = spans[order.front()].low, high_edge = spans[order.back()].high;
@@ -277,7 +276,15 @@ void ScanLayer::paint(QPainter* painter) {
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const double va = a[static_cast<std::size_t>(i)], vb = b[static_cast<std::size_t>(i)];
-                const double value = !std::isfinite(va) ? vb : !std::isfinite(vb) ? va : va + (vb - va) * f;
+                // A band is its own dataset's, out to halfway to each neighbouring row, empty where that dataset has no
+                // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in a zone a quarter of
+                // the way between the two rows either side of their edge, and never into or out of an empty column, so
+                // no band shows a neighbour's data. One rule for scan values, files and datablocks (the owner,
+                // 2026-10-22): blending from row to row had invented patterns between a sparse scan's rows.
+                const double own = f < 0.5 ? va : vb;
+                const double edge = std::clamp((f - 0.25) / 0.5, 0.0, 1.0);
+                const double value =
+                    !smooth_rows_ || !std::isfinite(va) || !std::isfinite(vb) ? own : va + (vb - va) * edge;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
                 line[i] = qRgba(colour.r, colour.g, colour.b, colour.a);
             }

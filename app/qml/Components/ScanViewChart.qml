@@ -518,7 +518,9 @@ Item {
                 }
             ]
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
-            y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
+            // On Stacked a label stands on its curve's baseline, its bottom at the row (the owner, 2026-10-22); on the
+            // Map it is centred on its band.
+            y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - (chart.mode === "stacked" ? height : height / 2)
         }
     }
 
@@ -771,7 +773,7 @@ Item {
                 objectName: "scanView.map.toolbar.smooth"
                 visible: chart.mode === "map"
                 fontIcon: "water"
-                toolTip: Preferences.scanMapSmooth ? qsTr("Colour changes smoothly between datasets: click for one band per dataset") : qsTr("One band of colour per dataset: click for a smooth change between datasets")
+                toolTip: Preferences.scanMapSmooth ? qsTr("Bands blend into each other at their edges: click for hard edges") : qsTr("Hard edges between the bands: click to blend them at their edges")
                 checked: Preferences.scanMapSmooth
                 onClicked: Preferences.scanMapSmooth = !Preferences.scanMapSmooth
             }

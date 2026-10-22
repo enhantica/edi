@@ -703,6 +703,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                            "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-11b-joint-stacked-tof-reversed-light", {"scanView.stacked.toolbar.reverse"}});
         steps_.push_back({"rowlabels-12-joint-map-datablock-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+        // A datablock Map, each band its own bank: smooth, blended only across each band's edge; stepped, hard edges.
+        // On d each bank's coverage ends at its own band's edges either way.
+        steps_.push_back({"rowlabels-13-joint-map-d-smooth-dark", {"scanView.map.toolbar.xaxis", "choose:d",
+                                                                   "drag:scanView.map.pointer:0.5,0.5,0.5,0.5"}});
+        steps_.push_back({"rowlabels-14-joint-map-d-smooth-light", {"theme:light"}});
+        steps_.push_back({"rowlabels-15-joint-map-d-stepped-light", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"rowlabels-16-joint-map-d-stepped-dark", {"theme:dark", "scanView.map.toolbar.smooth"}});
     }
     // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
     // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).

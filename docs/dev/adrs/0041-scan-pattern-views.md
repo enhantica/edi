@@ -26,7 +26,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    datablock, by datablock for a joint fit's experiments. Each row spans halfway to its neighbours, so in order each
    is one band of equal height. The rows are labelled as the pattern chart labels a Bragg row, left of the plot, at
    each row's height: the experiment's icon and the row's scan value with its unit, its file's name or its datablock's,
-   in the dataset's colour (the owner, 2026-10-22). The Stacked view always labels its rows so, with no numeric scale;
+   in the dataset's colour (the owner, 2026-10-22); on Stacked a label stands on its curve's baseline, its bottom at
+   the row, and on the Map it is centred on its band. The Stacked view always labels its rows so, with no numeric scale;
    the Map does in order, and by scan value keeps its numeric scale, a position on it being a real value its colour is
    interpolated at. Both views always mark each dataset's row with a short tick just right of the plot's right edge, in
    the dataset's Stacked colour, kept inside the plot's height (the owner, 2026-10-22). When labels would come too close to
@@ -50,10 +51,14 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
    the shown dataset is marked by the selected-pattern line (§8), not by a wider curve (the owner, 2026-10-22).
 5. **Map.** Each pixel column takes the colour of its highest value, or, with no more points than columns, of the
-   line joining the points at the column's centre. Between two datasets' rows the value is interpolated
-   linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next (the
-   owner, 2026-10-22); a toolbar toggle switches to stepped colour, each dataset one band out to halfway to its
-   neighbours, and back, smooth being the default. Beyond the first and the last row, out to their extent, the colour
+   line joining the points at the column's centre. Up, each dataset is one band, out to halfway to its neighbouring
+   rows, drawn from that dataset only and empty where it has no point. A toolbar toggle chooses stepped colour, the
+   bands' edges hard, or smooth, the default, where a band blends into its neighbour's only in a zone a quarter of the
+   way between the two rows either side of their edge, and never into or out of a column either leaves empty, so no
+   band shows a neighbour's data. The rule is the same for scan values, files and datablocks (the owner, 2026-10-22):
+   the first build blended from one row's centre to the next, which invented patterns between a sparse scan's rows
+   (three files at 52, 299 and 497 K blended over about 250 K each) and filled half of a WISH bank's band with its
+   neighbour's values where the bank had no data. Beyond the first and the last row, out to their extent, the colour
    is that dataset's. Either way the map is one image of the plot's own pixels, so no line shows between datasets: the
    first build drew each dataset as its own antialiased image rectangle with fractional edges, and every boundary
    pixel row, covered twice in part, let the background show through as a thin light line.
