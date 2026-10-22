@@ -375,12 +375,19 @@ Item {
             // The stacked line sits inside its box: the border stands three pixels clear of its top and its row.
             readonly property real clear: chart.mode === "map" ? 0 : 3
             // Never thinner than its three lines either side and an empty inside (the owner, 2026-10-22): a thinner
-            // band, in a dense part of a scan, takes this height centred on the dataset's row.
+            // band, in a dense part of a scan, takes this height centred on the dataset's row, and a band the zoom
+            // leaves only a sliver of takes it centred on that sliver.
             readonly property real minimum: 8
             readonly property real rowPx: chart.scan ? (axisY.max - chart.scan.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
             readonly property real ownTop: Math.round(topPx) - clear
             readonly property real ownBottom: Math.round(bottomPx) + clear
             readonly property bool thin: ownBottom - ownTop < minimum
+            // What is left of the band inside the plot: the minimum applies to it, so a tall band zoomed down to a
+            // sliver at an edge keeps a readable box there too.
+            readonly property real shownTop: Math.max(0, ownTop)
+            readonly property real shownBottom: Math.min(plot.height, ownBottom)
+            readonly property bool small: shownBottom - shownTop < minimum
+            readonly property real centre: thin ? rowPx : (shownTop + shownBottom) / 2
             // Only a dataset whose band reaches into the range shown is marked: one outside it is never drawn at an
             // edge, where it would mark another row.
             readonly property bool inView: !isNaN(low) && !isNaN(high) && Math.max(low, high) >= axisY.min && Math.min(low, high) <= axisY.max
@@ -389,9 +396,9 @@ Item {
             dark: chart.colors.isDarkPalette
             visible: inView && height > 0
             x: 0
-            y: thin ? Math.max(0, Math.min(plot.height - minimum, Math.round(rowPx - minimum / 2))) : Math.max(0, ownTop)
+            y: small ? Math.max(0, Math.min(plot.height - minimum, Math.round(centre - minimum / 2))) : shownTop
             width: plot.width
-            height: thin ? Math.min(minimum, plot.height) : Math.min(plot.height, ownBottom) - y
+            height: small ? Math.min(minimum, plot.height) : shownBottom - shownTop
         }
         // The box a drag draws, which the view zooms to on release.
         Rectangle {
