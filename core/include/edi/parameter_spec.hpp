@@ -471,11 +471,11 @@ inline const ParameterSpec absorption_mu_r{
 // crystal's mean radius in micrometres and its mosaicity in arc minutes).
 inline const ParameterSpec extinction_radius{
     "extinction", "radius", "micrometres", "Mean radius of the crystal",
-    {0.0, detail::kInf}, "Radius", "μm", "r", "\\mu\\mathrm{m}", detail::kExtinctionRadius,
+    {0.0, detail::kInf}, "Crystal radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionRadius,
     detail::kExtinctionRadiusCif};
 inline const ParameterSpec extinction_mosaicity{
     "extinction", "mosaicity", "arcminutes", "Mosaicity of the crystal",
-    {0.0, detail::kInf}, "Mosaicity", "arcmin", "g", "\\mathrm{arcmin}",
+    {0.0, detail::kInf}, "Mosaicity", "arcmin", "", "\\mathrm{arcmin}",
     detail::kExtinctionMosaicity, detail::kExtinctionMosaicityCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
