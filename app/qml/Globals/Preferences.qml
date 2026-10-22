@@ -59,6 +59,7 @@ QtObject {
         preferences.patternPointerMode = "zoom";
         preferences.scanStackedPalette = "";
         preferences.scanMapColours = "viridis";
+        preferences.scanMapSmooth = true;
     }
 
     property Settings settings: Settings {
@@ -106,6 +107,8 @@ QtObject {
     // ApplicationInfo.scanColourMaps).
     property string scanStackedPalette: ""
     property string scanMapColours: "viridis"
+    // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
+    property bool scanMapSmooth: true
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -128,6 +131,7 @@ QtObject {
         category: "ScanViews"
         property alias stackedPalette: preferences.scanStackedPalette
         property alias mapColours: preferences.scanMapColours
+        property alias mapSmooth: preferences.scanMapSmooth
     }
 
     property Binding fitPatternUpdates: Binding {

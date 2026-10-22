@@ -34,6 +34,8 @@ class ScanLayer : public QQuickPaintedItem {
     // ramp too (`ramp:<scheme>`), for the stacked patterns.
     Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
     Q_PROPERTY(QColor background MEMBER background_ WRITE setBackground NOTIFY backgroundChanged)
+    // The map's colour between two datasets' rows: smooth (interpolated) or stepped (each dataset one band).
+    Q_PROPERTY(bool smoothRows MEMBER smooth_rows_ WRITE setSmoothRows NOTIFY smoothRowsChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // The shown dataset, drawn over the others in the stacked view.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
@@ -55,6 +57,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setColourScheme(const QString& scheme);
     void setColourMap(const QString& map);
     void setBackground(const QColor& colour);
+    void setSmoothRows(bool smooth);
     void setDark(bool dark);
     void setCurrent(int dataset);
     double displayMin() const { return display_min_; }
@@ -75,6 +78,7 @@ class ScanLayer : public QQuickPaintedItem {
     void colourSchemeChanged();
     void colourMapChanged();
     void backgroundChanged();
+    void smoothRowsChanged();
     void darkChanged();
     void currentChanged();
     void displayMinChanged();
@@ -99,6 +103,7 @@ class ScanLayer : public QQuickPaintedItem {
     QString colour_scheme_;
     QString colour_map_ = QStringLiteral("viridis");
     QColor background_ = Qt::white;
+    bool smooth_rows_ = true;
     bool dark_ = false;
     int current_ = -1;
     double display_min_ = 0.0, display_max_ = 1.0;

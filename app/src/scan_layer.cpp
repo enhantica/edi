@@ -55,6 +55,7 @@ void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxCh
 void ScanLayer::setColourScheme(const QString& scheme) { assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged); }
 void ScanLayer::setColourMap(const QString& map) { assign(colour_map_, map, &ScanLayer::colourMapChanged); }
 void ScanLayer::setBackground(const QColor& colour) { assign(background_, colour, &ScanLayer::backgroundChanged); }
+void ScanLayer::setSmoothRows(bool smooth) { assign(smooth_rows_, smooth, &ScanLayer::smoothRowsChanged); }
 void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
 void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
 
@@ -138,10 +139,12 @@ void ScanLayer::paint(QPainter* painter) {
         }
         const std::vector<edi::ScanMapColour> table =
             edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_);
-        // One image pixel per plot pixel. Across, each pixel takes the column its x falls in, on the axis shown (so on
-        // d-spacing too). Up, between two datasets' rows the value is interpolated linearly, so the colour changes
-        // smoothly; beyond the first or the last row, out to its extent, it is that dataset's. A column one of the two
-        // leaves empty takes the other's value, and one both leave empty stays clear.
+        // One image pixel per plot pixel, so no row of the plot is drawn twice and nothing shows between datasets. Across,
+        // each pixel takes the column its x falls in, on the axis shown (so on d-spacing too). Up, between two datasets'
+        // rows the value is interpolated linearly, so the colour changes smoothly, or, stepped, is the nearer dataset's,
+        // each dataset one band out to halfway to its neighbours; beyond the first or the last row, out to its extent,
+        // it is that dataset's. A column one of the two leaves empty takes the other's value, and one both leave empty
+        // stays clear.
         const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
         const int pixel_columns = std::max(1, static_cast<int>(std::ceil(width())));
         std::vector<int> column_of(static_cast<std::size_t>(pixel_columns));
@@ -166,6 +169,9 @@ void ScanLayer::paint(QPainter* painter) {
             if (y > rows[order[below]] && below + 1 < order.size()) {
                 b = below + 1;
                 f = (y - rows[order[a]]) / (rows[order[b]] - rows[order[a]]);
+                if (!smooth_rows_) {
+                    f = f < 0.5 ? 0.0 : 1.0;
+                }
             }
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {

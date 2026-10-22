@@ -31,8 +31,12 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones.
 5. **Map.** Each column takes the colour of its highest value. Between two datasets' rows the value is interpolated
-   linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next with
-   no bands (the owner, 2026-10-22); beyond the first and the last row, out to their extent, it is that dataset's.
+   linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next (the
+   owner, 2026-10-22); a toolbar toggle switches to stepped colour, each dataset one band out to halfway to its
+   neighbours, and back, smooth being the default. Beyond the first and the last row, out to their extent, the colour
+   is that dataset's. Either way the map is one image of the plot's own pixels, so no line shows between datasets: the
+   first build drew each dataset as its own antialiased image rectangle with fractional edges, and every boundary
+   pixel row, covered twice in part, let the background show through as a thin light line.
    A colour bar at the right is drawn through the same lookup as the map, and labelled with the intensities its ends
    stand for, each label centred on its end.
 6. **Colours** (the owner, 2026-10-22). Both views offer the same choices beside their own: the colour maps viridis
@@ -52,7 +56,7 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
    can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
    reset, another scan, another x axis or another row placing returns to the whole range. The plot starts below the
-   toolbar, so nothing is cut at the top. The colours are app settings (ADR-0031 §7, `ScanViews`).
+   toolbar, so nothing is cut at the top. The colours are app settings (ADR-0031 §7, `ScanViews`, with the Map's smooth or stepped choice).
 8. **Following a running scan.** A line marks the shown dataset's row at all times, white edged in black on the map
    so it shows on every colour, in the accent colour on the stacked view; it moves when the rows are placed again (by
    scan value once every dataset is read). The shown dataset is the one the Pattern tab shows: with Follow on, a

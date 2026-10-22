@@ -218,6 +218,7 @@ Item {
             colourScheme: chart.stackedPalette
             colourMap: chart.mapColours
             background: chart.colors.chartBackground
+            smoothRows: Preferences.scanMapSmooth
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
         }
@@ -443,6 +444,14 @@ Item {
         Row {
             spacing: AppSizes.toolbarSpacing
 
+            ChartToolButton {
+                objectName: "scanView.map.toolbar.smooth"
+                visible: chart.mode === "map"
+                fontIcon: "water"
+                toolTip: Preferences.scanMapSmooth ? qsTr("Colour changes smoothly between datasets: click for one band per dataset") : qsTr("One band of colour per dataset: click for a smooth change between datasets")
+                checked: Preferences.scanMapSmooth
+                onClicked: Preferences.scanMapSmooth = !Preferences.scanMapSmooth
+            }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
                 fontIcon: "expand"

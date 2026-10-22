@@ -594,7 +594,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                            + open_example("pd-neut-cwl_cosio-d20_scan-162f")
                                                            + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-2-map-light", {"mainArea.analysis.tab.map"}});
-        steps_.push_back({"scanviews-3-map-light-log-magma", {"scanView.map.toolbar.yscale", "choose:log",
+        steps_.push_back({"scanviews-2s-map-light-stepped", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"scanviews-3-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale", "choose:log",
                                                              "scanView.map.toolbar.colourMap", "choose:magma"}});
         steps_.push_back({"scanviews-4-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
                                                            "capture-now"}});
