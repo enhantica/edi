@@ -1,4 +1,4 @@
-data_tb2ti2o7
+data_heidi
 
 _edi.schema_version 3
 
@@ -20,7 +20,7 @@ _extinction.mosaicity 0
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-tb2ti2o7 3.653()
+tb2ti2o7 4.6()
 
 loop_
 _refln.id
