@@ -30,8 +30,10 @@ class ScanLayer : public QQuickPaintedItem {
     // The chart's y scale: "linear", "sqrt" or "log".
     Q_PROPERTY(QString scale MEMBER scale_ WRITE setScale NOTIFY scaleChanged)
     Q_PROPERTY(QString colourScheme MEMBER colour_scheme_ WRITE setColourScheme NOTIFY colourSchemeChanged)
-    // The map's colour map, one of edi::scan_colour_map_names.
+    // The map's colours, one of edi::scan_colour_choices; a ramp starts at `background`. `colourScheme` may name a
+    // ramp too (`ramp:<scheme>`), for the stacked patterns.
     Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
+    Q_PROPERTY(QColor background MEMBER background_ WRITE setBackground NOTIFY backgroundChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // The shown dataset, drawn over the others in the stacked view.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
@@ -52,6 +54,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setScale(const QString& scale);
     void setColourScheme(const QString& scheme);
     void setColourMap(const QString& map);
+    void setBackground(const QColor& colour);
     void setDark(bool dark);
     void setCurrent(int dataset);
     double displayMin() const { return display_min_; }
@@ -71,6 +74,7 @@ class ScanLayer : public QQuickPaintedItem {
     void scaleChanged();
     void colourSchemeChanged();
     void colourMapChanged();
+    void backgroundChanged();
     void darkChanged();
     void currentChanged();
     void displayMinChanged();
@@ -94,28 +98,37 @@ class ScanLayer : public QQuickPaintedItem {
     QString scale_ = QStringLiteral("linear");
     QString colour_scheme_;
     QString colour_map_ = QStringLiteral("viridis");
+    QColor background_ = Qt::white;
     bool dark_ = false;
     int current_ = -1;
     double display_min_ = 0.0, display_max_ = 1.0;
 };
 
-// The map's colour bar: the colour map from its low end at the bottom to its high end at the top, each pixel row
-// coloured by the lookup the map's own pixels take (edi::scan_map_colour), so the key and the image agree.
+// The map's colour bar: the map's colours from the low end at the bottom to the high end at the top, each pixel row
+// coloured by the lookup the map's own pixels take (edi::scan_colour_table), so the key and the image agree.
 class ScanColourBar : public QQuickPaintedItem {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
+    Q_PROPERTY(QColor background MEMBER background_ WRITE setBackground NOTIFY backgroundChanged)
+    Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
 
    public:
     explicit ScanColourBar(QQuickItem* parent = nullptr);
     void setColourMap(const QString& map);
+    void setBackground(const QColor& colour);
+    void setDark(bool dark);
     void paint(QPainter* painter) override;
 
    signals:
     void colourMapChanged();
+    void backgroundChanged();
+    void darkChanged();
 
    private:
     QString colour_map_ = QStringLiteral("viridis");
+    QColor background_ = Qt::white;
+    bool dark_ = false;
 };
 
 }  // namespace edi_app

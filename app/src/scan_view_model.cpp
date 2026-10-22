@@ -5,6 +5,7 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <limits>
 
@@ -26,9 +27,26 @@ ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {}
 ScanViewModel::~ScanViewModel() { stop(); }
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
+    // The template's d column, as the last calculation left it: what d-spacing is read from.
+    template_x_.clear();
+    template_d_.clear();
+    if (project != nullptr && !project->experiments.empty()) {
+        const edi::PdDataBase* data = project->experiment().data ? &*project->experiment().data : nullptr;
+        if (data != nullptr) {
+            const std::vector<double>& x = data->axis();
+            const std::vector<double>& d = data->d_spacing.values();
+            for (std::size_t i = 0; i < x.size() && i < d.size(); ++i) {
+                if (std::isfinite(x[i]) && std::isfinite(d[i])) {
+                    template_x_.push_back(x[i]);
+                    template_d_.push_back(d[i]);
+                }
+            }
+        }
+    }
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (session != nullptr && project != nullptr && session->datasets().files == files_ &&
         session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
+        placeAxis();
         return;
     }
     stop();
@@ -47,11 +65,12 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         directory_ = session->datasets().directory;
         source_ = std::make_shared<const edi::Project>(*project);
         mode_ = project->experiment().effective_beam_mode();
+        emit timeOfFlightChanged();
     }
     has_values_ = source_ != nullptr && !source_->sequential_fit.extract.empty() && !extracted_title.isEmpty();
     extracted_title_ = extracted_title;
-    publish(x_title_, mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),
-            &ScanViewModel::xTitleChanged);
+    emit valueTitleChanged();
+    placeAxis();
     columns_.assign(files_.size(), {});
     values_.assign(files_.size(), std::numeric_limits<double>::quiet_NaN());
     placeRows();
@@ -169,8 +188,9 @@ void ScanViewModel::readNext() {
                         self->value_problem_ = read.value_problem;
                     }
                     if (dataset == 0 && read.x_max > read.x_min) {
-                        self->publish(self->x_min_, read.x_min, &ScanViewModel::xMinChanged);
-                        self->publish(self->x_max_, read.x_max, &ScanViewModel::xMaxChanged);
+                        self->x_min_ = read.x_min;
+                        self->x_max_ = read.x_max;
+                        self->placeAxis();
                     }
                     self->columns_[dataset] = std::move(read.columns);
                     self->values_[dataset] = read.value;
@@ -188,14 +208,14 @@ void ScanViewModel::readNext() {
 
 void ScanViewModel::placeRows() {
     // By value once every dataset has one; until then, and without an extract rule, by place.
-    const bool by_value = has_values_ && loaded_ == count() &&
+    const bool by_value = has_values_ && !rows_by_index_ && loaded_ == count() &&
                           std::all_of(values_.begin(), values_.end(), [](double value) { return std::isfinite(value); });
     rows_ = by_value ? edi::scan_row_positions(values_) : edi::scan_row_positions(std::vector<double>(files_.size(), std::numeric_limits<double>::quiet_NaN()));
     spans_ = edi::scan_row_spans(rows_);
     const QString title = by_value ? extracted_title_ : tr("file index");
     // Every dataset read and still placed by file index although the scan extracts a value: say why.
     publish(row_note_,
-            has_values_ && !by_value && loaded_ == count() && !value_problem_.isEmpty()
+            has_values_ && !rows_by_index_ && !by_value && loaded_ == count() && !value_problem_.isEmpty()
                 ? tr("Rows by file index: %1").arg(value_problem_)
                 : QString(),
             &ScanViewModel::rowNoteChanged);
@@ -210,6 +230,81 @@ void ScanViewModel::placeRows() {
     // Four rows' height: how far up the stacked view draws a pattern's highest point above its row.
     publish(stack_height_, 4.0 * (high - low) / std::max<double>(1.0, static_cast<double>(files_.size())),
             &ScanViewModel::stackHeightChanged);
+}
+
+void ScanViewModel::setDSpacing(bool on) {
+    if (on != d_spacing_) {
+        d_spacing_ = on;
+        emit dSpacingChanged();
+        placeAxis();
+        ++revision_;
+        emit revisionChanged();
+    }
+}
+
+void ScanViewModel::setRowsByIndex(bool on) {
+    if (on != rows_by_index_) {
+        rows_by_index_ = on;
+        emit rowsByIndexChanged();
+        placeRows();
+        ++revision_;
+        emit revisionChanged();
+    }
+}
+
+// The columns' edges on the axis shown, and its range and title. d is read off the template's d column by linear
+// interpolation in its own axis; an edge beyond that column has no d.
+void ScanViewModel::placeAxis() {
+    const bool d = d_spacing_ && template_x_.size() >= 2;
+    const std::size_t columns = kColumns;
+    edges_.assign(columns + 1, std::numeric_limits<double>::quiet_NaN());
+    const bool rising = template_x_.size() >= 2 && template_x_.back() > template_x_.front();
+    for (std::size_t c = 0; c <= columns; ++c) {
+        const double x = x_min_ + (x_max_ - x_min_) * static_cast<double>(c) / static_cast<double>(columns);
+        if (!d) {
+            edges_[c] = x;
+            continue;
+        }
+        const auto at = rising ? std::lower_bound(template_x_.begin(), template_x_.end(), x)
+                               : std::lower_bound(template_x_.begin(), template_x_.end(), x, std::greater<>());
+        if (at == template_x_.begin() || at == template_x_.end()) {
+            if (at != template_x_.end() && *at == x) {
+                edges_[c] = template_d_[static_cast<std::size_t>(at - template_x_.begin())];
+            }
+            continue;
+        }
+        const std::size_t hi = static_cast<std::size_t>(at - template_x_.begin()), lo = hi - 1;
+        const double f = (x - template_x_[lo]) / (template_x_[hi] - template_x_[lo]);
+        edges_[c] = template_d_[lo] + (template_d_[hi] - template_d_[lo]) * f;
+    }
+    double low = std::numeric_limits<double>::infinity(), high = -low;
+    for (const double edge : edges_) {
+        if (std::isfinite(edge)) {
+            low = std::min(low, edge);
+            high = std::max(high, edge);
+        }
+    }
+    if (!(high > low)) {
+        low = x_min_;
+        high = x_max_;
+    }
+    publish(axis_min_, low, &ScanViewModel::xMinChanged);
+    publish(axis_max_, high, &ScanViewModel::xMaxChanged);
+    publish(d_shown_, d, &ScanViewModel::dShownChanged);
+    publish(x_title_,
+            d ? QStringLiteral("d (Å)")
+              : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),
+            &ScanViewModel::xTitleChanged);
+}
+
+int ScanViewModel::columnAt(double x) const {
+    for (std::size_t c = 0; c + 1 < edges_.size(); ++c) {
+        const double a = edges_[c], b = edges_[c + 1];
+        if (std::isfinite(a) && std::isfinite(b) && x >= std::min(a, b) && x <= std::max(a, b)) {
+            return static_cast<int>(c);
+        }
+    }
+    return -1;
 }
 
 int ScanViewModel::datasetAt(double row) const {

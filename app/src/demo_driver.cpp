@@ -586,7 +586,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"legend-2-dark", {"theme:dark"}});
     }
     // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
-    // while one runs, with the views' toolbars: the map on a log scale in magma, the stacked patterns in Edi Coast.
+    // while one runs, with the views' toolbars: the map on a log scale in magma and in shades of a palette's first
+    // colour, zoomed on d-spacing; the stacked patterns in shades, then reset, in plasma.
     // Run only when asked (`--demo-only scanviews-`).
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-1-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
@@ -601,10 +602,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                "capture-now"}});
         steps_.push_back({"scanviews-6-stacked-dark-running", {"theme:dark", "wait-files:80", "capture-now"}});
         steps_.push_back({"scanviews-7-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
-        steps_.push_back({"scanviews-8-map-dark", {"wait-fit", "choose:OK", "scanView.map.toolbar.colourMap",
-                                                   "choose:viridis"}});
-        steps_.push_back({"scanviews-9-stacked-dark-coast", {"mainArea.analysis.tab.stacked",
-                                                             "scanView.stacked.toolbar.palette", "choose:Edi Coast"}});
+        steps_.push_back({"scanviews-8-map-dark-shades", {"wait-fit", "choose:OK", "scanView.map.toolbar.colourMap",
+                                                          "choose:Edi Natural shades"}});
+        steps_.push_back({"scanviews-9-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:d-spacing",
+                                                          "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
+        steps_.push_back({"scanviews-10-stacked-dark-shades", {"mainArea.analysis.tab.stacked",
+                                                               "scanView.stacked.toolbar.palette",
+                                                               "choose:Edi Coast shades"}});
+        steps_.push_back({"scanviews-11-stacked-light-plasma", {"theme:light", "scanView.stacked.toolbar.reset",
+                                                                "scanView.stacked.toolbar.palette", "choose:plasma"}});
     }
     // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {

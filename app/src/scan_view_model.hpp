@@ -32,7 +32,17 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(int failed READ failed NOTIFY failedChanged)
     // Bumped whenever the columns or the rows change, for the views to draw again.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
+    // The x axis: the pattern's own (2θ or TOF), or d-spacing when asked for and the template has a current d column
+    // (as the pattern chart: without one the views stay on their own axis). xMin and xMax are on the axis shown.
+    Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
+    Q_PROPERTY(bool dShown READ dShown NOTIFY dShownChanged)
+    // Rows by file index although the scan extracts a value (the Map's y choice).
+    Q_PROPERTY(bool rowsByIndex READ rowsByIndex WRITE setRowsByIndex NOTIFY rowsByIndexChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
+    // Whether the pattern's own axis is time-of-flight (else 2θ), and the title of the extracted value the rows can
+    // be placed by (empty without an extract rule).
+    Q_PROPERTY(bool timeOfFlight READ timeOfFlight NOTIFY timeOfFlightChanged)
+    Q_PROPERTY(QString valueTitle READ valueTitle NOTIFY valueTitleChanged)
     Q_PROPERTY(QString rowTitle READ rowTitle NOTIFY rowTitleChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
@@ -64,9 +74,20 @@ class ScanViewModel : public QObject {
     int failed() const { return failed_; }
     int revision() const { return revision_; }
     QString xTitle() const { return x_title_; }
+    bool timeOfFlight() const { return mode_ != edi::BeamModeEnum::CONSTANT_WAVELENGTH; }
+    QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
     QString rowTitle() const { return row_title_; }
-    double xMin() const { return x_min_; }
-    double xMax() const { return x_max_; }
+    double xMin() const { return axis_min_; }
+    double xMax() const { return axis_max_; }
+    bool dSpacing() const { return d_spacing_; }
+    void setDSpacing(bool on);
+    bool dShown() const { return d_shown_; }
+    bool rowsByIndex() const { return rows_by_index_; }
+    void setRowsByIndex(bool on);
+    // The columns' edges on the axis shown, kColumns + 1 of them, rising or falling; NaN where the axis has no value.
+    const std::vector<double>& edges() const { return edges_; }
+    // The column whose edges hold `x` on the axis shown, or -1.
+    int columnAt(double x) const;
     double rowMin() const { return row_min_; }
     double rowMax() const { return row_max_; }
     double stackHeight() const { return stack_height_; }
@@ -90,6 +111,11 @@ class ScanViewModel : public QObject {
     void failedChanged();
     void revisionChanged();
     void xTitleChanged();
+    void timeOfFlightChanged();
+    void valueTitleChanged();
+    void dSpacingChanged();
+    void dShownChanged();
+    void rowsByIndexChanged();
     void rowTitleChanged();
     void xMinChanged();
     void xMaxChanged();
@@ -104,6 +130,7 @@ class ScanViewModel : public QObject {
     void stop();
     void readNext();
     void placeRows();
+    void placeAxis();
     // One property's value and its own signal: only what changed notifies (the app's per-property rule).
     template <typename T>
     void publish(T& member, const T& value, void (ScanViewModel::*changed)()) {
@@ -130,7 +157,11 @@ class ScanViewModel : public QObject {
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;
     QString value_problem_;  // the first dataset with no value to place its row by
-    double x_min_ = 0.0, x_max_ = 1.0, row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;
+    double x_min_ = 0.0, x_max_ = 1.0, row_min_ = 0.0, row_max_ = 1.0, stack_height_ = 0.0;  // x on the pattern's own axis
+    double axis_min_ = 0.0, axis_max_ = 1.0;
+    bool d_spacing_ = false, d_shown_ = false, rows_by_index_ = false;
+    std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
+    std::vector<double> edges_;
     std::uint64_t generation_ = 0;  // bumped by every listing; a read delivers only to its own
     std::shared_ptr<std::atomic<bool>> stop_;
 };

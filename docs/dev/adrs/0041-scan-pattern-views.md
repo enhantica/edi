@@ -17,10 +17,10 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
 ## Decision
 
 1. **Two tabs.** The Analysis page gains *Stacked* and *Map* after *Evolution*, enabled for a scan project only.
-2. **What they draw.** Every dataset's measured pattern. x across is the pattern's own axis (2θ or TOF) over the
-   first dataset's range. Up is the dataset's first extracted value (the scan parameter, titled as the extract rule's
-   column) once every dataset has one; until then, and in a scan without an extract rule, the file index. Each
-   dataset's row spans halfway to its neighbours.
+2. **What they draw.** Every dataset's measured pattern. x across is the pattern's axis (§7) over the first
+   dataset's range. Up is the dataset's first extracted value (the scan parameter, titled as the extract rule's
+   column) once every dataset has one; until then, in a scan without an extract rule, and when the file index is
+   chosen (§7), the file index. Each dataset's row spans halfway to its neighbours.
 3. **Kept small.** The datasets are read in the background, a few at a time, the first time either tab shows, and
    each is kept only as 1024 columns across the x range: the lowest and highest intensity in each. The views fill in
    as the reads arrive, with a count of how many are read. Results read again over the same files (after a run or an
@@ -29,21 +29,31 @@ patterns are files read when asked for, never all held at once (ADR-0026), so th
    a dataset gives none, the rows stay by file index and the views name that dataset.
 4. **Stacked.** Each dataset is drawn as a line rising from its row, joining each column's lowest and highest value,
    so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. The datasets take
-   the colours of a palette (ADR-0038: by place, a gradient past five), the app's palette unless the view's toolbar picks
-   another of the five. Lower rows are drawn over higher ones.
+   the colours §6 describes. Lower rows are drawn over higher ones.
 5. **Map.** Each column takes the colour of its highest value. Between two datasets' rows the value is interpolated
    linearly in proportion to the distance from each, so the colour changes smoothly from one dataset to the next with
    no bands (the owner, 2026-10-22); beyond the first and the last row, out to their extent, it is that dataset's.
-   The colour map is **viridis** by default, or magma, inferno or plasma from the view's toolbar (Smith, van der Walt
-   and Firing; CC0; `data/colormaps` with their provenance): all four are perceptually uniform and read in grey and to
-   the common colour-vision deficiencies. A colour bar at the right is drawn through the same lookup as the map, and
-   labelled with the intensities its ends stand for, each label centred on its end.
-6. **The chart's y scale.** Both views take intensity on the pattern chart's y scale (linear, square root or log),
-   spread over the scan's lowest to highest value, so a weak peak can be seen on the map as on the pattern.
-   **Toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has: the y scale, which is the
-   pattern chart's, and the view's colours, the stacked view's palette or the map's colour map, kept as app settings
-   (ADR-0031 §7, `ScanViews`). The plot starts below it, so nothing is cut at the top (the owner, 2026-10-22).
-7. **Following a running scan.** A line marks the shown dataset's row at all times, white edged in black on the map
+   A colour bar at the right is drawn through the same lookup as the map, and labelled with the intensities its ends
+   stand for, each label centred on its end.
+6. **Colours** (the owner, 2026-10-22). Both views offer the same choices beside their own: the colour maps viridis
+   (the Map's default), magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
+   provenance), all perceptually uniform, reading in grey and to the common colour-vision deficiencies, and in either
+   app theme; and for each colour scheme a ramp from the pattern chart's plot background in the current theme to the
+   scheme's first measured colour, mixed in Oklab (ADR-0038's gradients). The Stacked view also offers the five
+   schemes' own colours (ADR-0038: by place, a gradient past five), its default the app's scheme. A pattern on the
+   Stacked view takes a map's colour at its place along the scan between a tenth and nine tenths of the map, or a
+   ramp's from a quarter of the way, so no line takes the background's colour. cividis and turbo were left out: their
+   tables come under other licences, and turbo is not perceptually uniform.
+7. **Axes and toolbar.** Each view has a toolbar line above its plot, as the Pattern tab has (the owner,
+   2026-10-22): the axes' types, the colours, the zoom and the reset. Every axis type is one setting with each other
+   selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d
+   column through its own axis, the pattern chart's rule, ADR-0017 §15), y places the rows by the scan value or the
+   file index as the Evolution tab's x does, and the intensity scale (linear, square root or log; the Map's z) is the
+   pattern chart's y scale. Intensity is spread over the scan's lowest to highest value on that scale, so a weak peak
+   can be seen on the map as on the pattern. The box zoom is always on: a drag over the plot zooms to its box, and the
+   reset, another scan, another x axis or another row placing returns to the whole range. The plot starts below the
+   toolbar, so nothing is cut at the top. The colours are app settings (ADR-0031 §7, `ScanViews`).
+8. **Following a running scan.** A line marks the shown dataset's row at all times, white edged in black on the map
    so it shows on every colour, in the accent colour on the stacked view; it moves when the rows are placed again (by
    scan value once every dataset is read). The shown dataset is the one the Pattern tab shows: with Follow on, a
    running scan moves it to each dataset as it is fitted, so the line moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
