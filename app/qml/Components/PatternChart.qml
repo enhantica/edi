@@ -433,11 +433,7 @@ Item {
             spacing: AppSizes.toolbarSpacing
 
             ToolbarComboBox {
-                id: yScaleBox
-
                 objectName: "chart.toolbar.yscale"
-                // The two axis boxes have one width, the wider one's (the owner, 2026-10-14).
-                matchWidth: xAxisBox.naturalWidth
                 toolTip: qsTr("Y scale")
                 model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
                 // The closed box names its axis (owner, 2026-10-05).
@@ -453,10 +449,7 @@ Item {
                 }
             }
             ToolbarComboBox {
-                id: xAxisBox
-
                 objectName: "chart.toolbar.xaxis"
-                matchWidth: yScaleBox.naturalWidth
                 enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
                 model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]

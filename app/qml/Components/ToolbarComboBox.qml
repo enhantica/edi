@@ -30,11 +30,7 @@ EaElements.ComboBox {
 
     displayText: box.closedTexts.length > box.currentIndex && box.currentIndex >= 0 ? box.closedTexts[box.currentIndex] : box.currentText
 
-    // The box's own width, and a width to match: another box's, so a row of boxes can share one width.
-    readonly property real naturalWidth: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
-    property real matchWidth: 0
-
-    width: Math.max(naturalWidth, matchWidth)
+    width: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
     height: AppSizes.toolbarControlSize
     backgroundColor: Qt.tint(EaStyle.Colors.contentBackground, !box.hovered ? EaStyle.Colors.appBarComboBoxBackground : box.pressed ? EaStyle.Colors.appBarComboBoxBackgroundPressed : EaStyle.Colors.appBarComboBoxBackgroundHovered)
 

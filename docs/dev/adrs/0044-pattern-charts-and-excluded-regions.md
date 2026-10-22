@@ -30,8 +30,9 @@ is fitted.
    is on, the x axis runs from the first to the last included point, interior excluded regions are empty tinted gaps
    with no measured points or curves, and reset view returns to that range. When it is off the chart
    shows the full measured range with the tint. The choice is an app setting kept between sessions.
-4. **The axis selectors match.** The x-axis selector has the width of the y-axis selector, and reads `x: d-spacing`
-   once d-spacing is chosen.
+4. **The axis selectors fit their text.** Each selector in the chart's toolbar is as wide as its longest entry or
+   closed text needs, no wider, so the two need not match (the owner, 2026-10-22). The x-axis selector reads
+   `x: d-spacing` once d-spacing is chosen.
 
 ## Consequences
 
