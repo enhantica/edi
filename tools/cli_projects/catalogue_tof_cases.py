@@ -369,8 +369,8 @@ def source_background(pid: str, experiment: str) -> list[tuple[str, bool]]:
 
 # The owner's NCAF start (2026-10-22): peaks about 30 % narrower than the fitted ones, with the
 # Gaussian/Lorentzian balance and the asymmetry moved too. sigma_1 and sigma_2 are terms of the
-# Gaussian variance, so 0.7 in width is 0.49 here; the Lorentzian narrows more than the Gaussian and
-# the rise and decay edges sharpen.
+# Gaussian variance, so 0.7 in width is 0.49 here; the Lorentzian narrows more than the Gaussian
+# and the rise and decay edges sharpen.
 NCAF_START_FACTORS = {'broad_gauss': 0.49, 'broad_lorentz': 0.6, 'rise': 1.3, 'decay': 1.15}
 
 
