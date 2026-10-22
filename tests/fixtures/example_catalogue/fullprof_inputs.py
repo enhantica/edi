@@ -221,7 +221,10 @@ def register_parameters(codes, structures, experiments):  # noqa: PLR0912 - expl
 class Writer:
     """Write the documented PCR records with their value/code pairs together."""
 
-    def __init__(self, case, fixed):
+    def __init__(self, case, fixed, cycles=200):
+        if cycles < 1:
+            raise ValueError('The FullProf cycle budget must be positive')
+        self.cycles = cycles
         self.project, self.structures, self.experiments = load_case(case)
         self.codes = Codes(self.project / 'analysis/analysis.edi', fixed)
         self.parameters = register_parameters(self.codes, self.structures, self.experiments)
@@ -360,7 +363,7 @@ class Writer:
                         0,
                     ]),
                 )
-        cycles = [1 if self.fixed else 200, 0.1, 0.2, 0.2, 0.2, 0.2]
+        cycles = [1 if self.fixed else self.cycles, 0.1, 0.2, 0.2, 0.2, 0.2]
         self.put('!NCY Eps R_at R_an R_pr R_gl')
         if multi:
             self.put(line(cycles))
