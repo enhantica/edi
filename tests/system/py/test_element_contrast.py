@@ -11,7 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.palette_sources.oklab_reference import contrast, hue_chroma_preserved
+from tests.fixtures.palette_sources.oklab_reference import (
+    contrast,
+    gamut_hue_chroma_preserved,
+    hue_chroma_preserved,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 TAGS = [f'{scheme}-{theme}' for scheme in ('jmol', 'vesta') for theme in ('light', 'dark')]
@@ -68,7 +72,16 @@ def test_independent_contrast_and_colour_observers_reject_escapes():
     assert not hue_chroma_preserved('#ffff30', '#949494'), (
         'Replacing sulfur with a passing neutral cannot defeat the hue/chroma observer'
     )
-    assert not hue_chroma_preserved('#ff0d0d', '#0d0dff'), (
+    assert contrast('#909090', '#ffffff') >= 3 > contrast('#909090', '#f7f7f7'), (
+        'The published carbon witness separates page-white contrast from alternating-row contrast'
+    )
+    assert contrast('#909090', '#e6f5fc') < 3, (
+        'The published carbon witness also fails on the independent hovered-row underlay'
+    )
+    assert not gamut_hue_chroma_preserved('#ffff30', '#949494'), (
+        'The gamut amendment cannot admit neutral replacement or gratuitous desaturation'
+    )
+    assert not gamut_hue_chroma_preserved('#ff0d0d', '#0d0dff'), (
         'A rotated element hue cannot defeat the independent Oklab observer'
     )
 
@@ -85,23 +98,32 @@ def observations():
         '-o',
         '-,txt',
     ]
-    process = subprocess.Popen(
-        command,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-    try:
-        output, _ = process.communicate(timeout=60)
-    except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGKILL)
-        output, _ = process.communicate()
-        pytest.fail('Element colour observations exceeded their bounded actor watchdog: ' + output)
-    print(output)
-    assert process.returncode == 0 and 'ElementContrast::cleanupTestCase()' in output, (
-        'All real element consumers must execute completely before their colours count: ' + output
-    )
+    outputs = []
+    for case in ['ElementContrast::test_observe'] + [
+        'ElementContrast::test_underlays:' + tag for tag in TAGS
+    ]:
+        process = subprocess.Popen(
+            [*command, case],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        try:
+            output, _ = process.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            output, _ = process.communicate()
+            pytest.fail(
+                'Element colour observations exceeded their bounded actor watchdog: ' + output
+            )
+        print(output)
+        assert process.returncode == 0 and 'ElementContrast::cleanupTestCase()' in output, (
+            'All real element consumers must execute completely before their colours count: '
+            + output
+        )
+        outputs.append(output)
+    output = '\n'.join(outputs)
     rows = [
         json.loads(line.partition('ELEMENT_CONTRAST ')[2])
         for line in output.splitlines()
@@ -131,6 +153,26 @@ def observations():
             fact['reportBackground'] = composite(
                 fact['reportLegendFill'], fact['reportBackground']
             )
+    underlays = [
+        json.loads(line.partition('ELEMENT_UNDERLAYS ')[2])
+        for line in output.splitlines()
+        if 'ELEMENT_UNDERLAYS ' in line
+    ]
+    assert len(underlays) == len(TAGS) and {row['tag'] for row in underlays} == set(TAGS), (
+        'Both actual tables execute both row parities and hover states on each theme and scheme'
+    )
+    for row in rows:
+        row['underlays'] = next(item['samples'] for item in underlays if item['tag'] == row['tag'])
+        assert {(item['use'], item['index'], item['hovered']) for item in row['underlays']} == {
+            (use, index, hovered)
+            for use in ('table', 'parameter')
+            for index in (0, 1)
+            for hovered in (False, True)
+        }, 'The rendered underlay inventory reaches both table consumers and every row state'
+        for sample in row['underlays']:
+            assert [fact['symbol'] for fact in sample['facts']] == [
+                r['symbol'] for r in reference
+            ], 'Every real underlay observes the complete published element inventory'
     return {row['tag']: row for row in rows}
 
 
@@ -146,9 +188,15 @@ def test_all_2d_element_uses_reach_three_to_one(observations, tag):
             ('legend', 'legendBackground'),
             ('report', 'reportBackground'),
         ]:
-            value = contrast(row[use], row[background])
-            if value < 3:
-                failures.append((row['symbol'], use, row[use], row[background], value))
+            backgrounds = (
+                {sample['background'] for sample in observations[tag]['underlays']}
+                if use in {'accessor', 'table', 'parameter', 'parameterLabel'}
+                else {row[background]}
+            )
+            for underlay in backgrounds:
+                value = contrast(row[use], underlay)
+                if value < 3:
+                    failures.append((row['symbol'], use, row[use], underlay, value))
     assert not failures, (
         'Every element icon, parameter label and live/report legend reaches WCAG 3:1 '
         + repr(failures)
@@ -161,10 +209,10 @@ def test_all_2d_element_uses_keep_oklab_hue_and_chroma(observations, tag):
         (row['symbol'], use, row['source'], row[use])
         for row in observations[tag]['facts']
         for use in ('accessor', 'table', 'parameter', 'parameterLabel', 'legend', 'report')
-        if not hue_chroma_preserved(row['source'], row[use])
+        if not gamut_hue_chroma_preserved(row['source'], row[use])
     ]
     assert not failures, (
-        'Hue and chroma stay within independent half-LSB RGB quantisation bounds: '
+        'Hue stays fixed and chroma is maximal in sRGB within independent half-LSB RGB bounds: '
         + repr(failures)
     )
 
@@ -181,7 +229,15 @@ def test_already_passing_elements_are_exactly_unchanged(observations, tag):
             ('legend', 'legendBackground'),
             ('report', 'reportBackground'),
         ]:
-            if contrast(row['source'], row[background]) >= 3 and row[use].lower() != row['source']:
+            backgrounds = (
+                [sample['background'] for sample in observations[tag]['underlays']]
+                if use in {'accessor', 'table', 'parameter', 'parameterLabel'}
+                else [row[background]]
+            )
+            if (
+                all(contrast(row['source'], bg) >= 3 for bg in backgrounds)
+                and row[use].lower() != row['source']
+            ):
                 failures.append((row['symbol'], use, row['source'], row[use]))
     assert not failures, (
         'Every colour already passing 3:1 retains the exact published bytes: ' + repr(failures)
@@ -209,4 +265,36 @@ def test_scheme_selector_explains_display_adjustment(observations, tag):
     )
     assert re.search(r'adjusted.*contrast.*labels.*tables', row['tooltip'], re.IGNORECASE), (
         'The real scheme selector explains contrast adjustment in labels and tables'
+    )
+
+
+@pytest.mark.parametrize('tag', TAGS)
+@pytest.mark.parametrize('use', ['table', 'parameter'])
+@pytest.mark.parametrize('state', ['odd', 'even', 'odd-hover', 'even-hover'])
+def test_elements_contrast_against_rendered_row_underlays(observations, tag, use, state):
+    sample = next(
+        row
+        for row in observations[tag]['underlays']
+        if row['use'] == use
+        and row['index'] == int(state.startswith('even'))
+        and row['hovered'] == state.endswith('hover')
+    )
+    backgrounds = {row['background'] for row in observations[tag]['underlays']}
+    failures = []
+    for row in sample['facts']:
+        for key in ('color', 'labelColor'):
+            actual = row[key]
+            if contrast(actual, sample['background']) < 3:
+                failures.append((row['symbol'], key, actual, sample['background'], 'contrast'))
+            if not gamut_hue_chroma_preserved(row['source'], actual):
+                failures.append((row['symbol'], key, actual, 'hue/maximal sRGB chroma'))
+            if (
+                all(contrast(row['source'], bg) >= 3 for bg in backgrounds)
+                and actual.lower() != row['source']
+            ):
+                failures.append((row['symbol'], key, actual, 'unnecessary adjustment'))
+    assert not failures, (
+        'Every element icon and label reaches 3:1 on its rendered alternating/hover underlay, '
+        'keeps hue and maximal feasible chroma, and retains already-passing bytes: '
+        + repr(failures)
     )

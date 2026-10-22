@@ -282,7 +282,7 @@ Item {
             tryVerify(() => {
                 const at = control.mapToItem(surface, 0, 0);
                 return at.x >= 0 && at.y >= 0 && at.x + control.width <= surface.width && at.y + control.height <= surface.height;
-            }, 2000, "The actual " + control.objectName + " finishes sliding inside the test window before pointer input");
+            }, 2000, "The actual " + control.objectName + " finishes sliding inside the test window before pointer input; geometry=" + JSON.stringify(control.mapToItem(surface, 0, 0)) + " size=" + control.width + "," + control.height);
             verify(waitForRendering(control), "The actual " + control.objectName + " is rendered before opening its popup");
             mouseClick(control, control.width / 2, control.height / 2);
             tryVerify(() => control.popup.opened, 1000, "Pointer input opens " + control.objectName + ".popup; initial opened " + control.popup.opened + "; control centre " + JSON.stringify(control.mapToItem(surface, control.width / 2, control.height / 2)));
@@ -300,12 +300,14 @@ Item {
             const modified = Session.project.modified;
             Preferences.scanPatternUpdates = 0;
             const page = createTemporaryObject(analysisFactory, surface, {
-                width: 1200,
+                width: surface.width,
                 height: 800,
                 current: true
             });
             verify(page !== null && waitForPolish(page), "The actual Analysis page lays out its view controls");
-            const y = findChild(page, "chart.toolbar.yscale");
+            const chart = findChild(page, "chart");
+            verify(chart !== null, "The active Pattern chart exists on Analysis before its settings are changed");
+            const y = findChild(chart, "chart.toolbar.yscale");
             verify(y !== null, "The chart is the visible home of the Analysis y-axis display choice");
             choose(y, 2);
             const tab = findChild(page, "sideBar.tab.settings");
@@ -313,14 +315,14 @@ Item {
             mouseClick(tab, tab.width / 2, tab.height / 2);
             tryCompare(tab, "checked", true, 1000, "The populated Analysis Settings tab opens through pointer input");
             verify(findChild(page, "settings.chart.yScale") === null, "Analysis Settings no longer duplicates the y-axis selector kept on the chart");
-            tryVerify(() => SettingsProof.value(location, "Analysis", "yScale") === "log", 2000, "The chart y-axis selector index 2 reads log at QSettings Analysis/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "yScale")));
+            tryVerify(() => SettingsProof.value(location, "PatternChart", "yScale") === "log", 2000, "The chart y-axis selector index 2 reads log at QSettings PatternChart/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "PatternChart", "yScale")));
             tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
             const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
+import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "PatternChart"; property string yScale: "linear" }; property string axis: settings.yScale }');
             verify(!restored.error, "A fresh configured engine reads the saved page group");
-            compare(restored.axis, "log", "A fresh engine reads QSettings Analysis/yScale after selecting the chart y-axis index 2; actual token " + restored.axis);
+            compare(restored.axis, "log", "A fresh engine reads QSettings PatternChart/yScale after selecting the chart y-axis index 2; actual token " + restored.axis);
         }
         function patternPage(name) {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real pattern project supplies both chart and Settings controls");

@@ -330,38 +330,37 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert 'THIRD-PARTY-NOTICES' in cmake and 'qt_add_resources' in cmake, (
         'the app resource bundle must include the actual dependency notice file'
     )
-    # Before: only the renamed Licence label was checked. After: the labelled app
-    # link must open the local notice, whose GPL/BSD split replaces the sentence.
     assert all(
         name in about
         for name in (
-            'about.licence.summary',
-            'ApplicationInfo.copyingUrl',
-            'ApplicationInfo.licenseUrl',
+            'about.licences',
+            'ApplicationInfo.appLicenceIds',
+            'ApplicationInfo.appLicenceUrls',
+            'about.thirdParty',
         )
-    ), 'The user licence view must retain its short summary and access to both complete licences'
-    assert 'about.licence"' not in about and 'This app is distributed under' not in about, (
-        'the About window must omit the superseded distribution sentence'
+    ), 'The identifier links expose both complete own licences and bundled component terms'
+    assert all(token in info for token in ('BSD-3-Clause', 'GPL-3.0-only')) and re.search(
+        r'QStringList appLicenceUrls\(\) const\s*\{\s*return \{licenseUrl\(\), copyingUrl\(\)\};',
+        info,
+    ), 'The two displayed licence identifiers resolve in order to complete BSD and GPL resources'
+    assert 'about.licence.summary' not in about and 'This app is distributed under' not in about, (
+        'The identifier links replace the superseded distribution summary'
     )
     assert re.search(
         r'QString appLicenseUrl\(\) const\s*\{\s*return QStringLiteral\('
         r'"qrc:/app/DISTRIBUTION-LICENSE\.md"\);\s*\}',
         info,
-    ), 'the About app link must target its distribution notice rather than the source licence'
+    ), 'The application distribution notice remains a bundled resource'
     assert '${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md' in cmake, (
-        'the app resources must include the application distribution notice file'
+        'The app resources must include the application distribution notice file'
     )
     assert '"app/DISTRIBUTION-LICENSE.md"' in info, (
-        'the licence resource reader must admit the application notice linked from About'
+        'The licence resource reader must admit the application distribution notice'
     )
-    # About uses tabs and inline complete texts instead of stacked dialogs.
-    # Bundled-resource and distribution-term assertions above/below remain unchanged.
-    assert 'LicenceTextDialog {' not in about, (
-        'About licence navigation must remain in one window instead of opening a stacked dialog'
-    )
-    assert 'ApplicationInfo.licenceText(' in about and all(
-        name in about for name in ('about.tab.licence', 'about.tab.thirdParty')
-    ), 'About retains access to the selected bundled licence through its single-window views'
+    assert all(name in about for name in ('about.licencePopup', 'about.thirdPartyPopup')) and (
+        'ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index])' in about
+        and 'onActivated: thirdPartyPopup.open()' in about
+    ), 'The identifier and third-party links open their actual local licence and component popups'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (
         'both the built application GPL status and source BSD status must be reachable from About'

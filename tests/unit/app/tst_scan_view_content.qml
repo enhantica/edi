@@ -768,6 +768,43 @@ Rectangle {
             const bounds = data.kind === "value" ? [25, 175, 475, 775] : data.kind === "file" ? [-.5, .5, 1.5, 2.5] : [-.5, .5, 1.5];
             checkEdgePixels(bounds, data.kind === "datablock" ? [0, 255] : [0, 128, 255], data.kind === "datablock" ? [[10000, 50000], [30000, 90000]] : [[10, 50], [30, 90], [20, 80]], data.kind === "datablock" ? [40000, 20000, 70000] : [40, 20, 85], data.smooth);
         }
+        function test_map_centre_crossing_data() {
+            const rows = [];
+            for (const near of [true, false])
+                for (const smooth of [false, true])
+                    for (const dark of [false, true])
+                        rows.push({
+                            tag: (near ? "near" : "far") + (smooth ? "-smooth" : "-stepped") + (dark ? "-dark" : "-light"),
+                            near,
+                            smooth,
+                            dark
+                        });
+            return rows;
+        }
+        function test_map_centre_crossing(data) {
+            const coordinates = data.near ? [100, 110, 1000] : [100, 990, 1000];
+            const scan = open("map", data.near ? "uneven-near" : "uneven-far");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            compare([scan.rowOf(0), scan.rowOf(1), scan.rowOf(2)], coordinates, "The unequal-band witness uses the independently specified row coordinates");
+            const toggle = interpolationToggle(chart);
+            if (toggle.checked !== data.smooth)
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+            const bounds = data.near ? [95, 105, 555, 1005] : [-345, 545, 995, 1005];
+            chart.setZoom([30, 60], data.near ? [95, 235] : [860, 1005]);
+            named("current").visible = false;
+            verify(waitForRendering(chart), "The highly uneven Map draws its zoomed edge without selection ink");
+            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const dy = (axes.axisY.max - axes.axisY.min) / layer.height;
+            const colours = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            const witnesses = data.near ? [100, 103, 107, 109, 110, 111, 130, 170, 210, 217.5, 225] : [870, 882.5, 900, 950, 989, 990, 991, 993, 997, 1000];
+            for (const y of witnesses) {
+                const point = layer.mapToItem(chart, layer.width / 2, (axes.axisY.max - y) / dy);
+                const actual = frame.pixel(Math.round(point.x), Math.round(point.y));
+                const candidates = [-2, -1, 0, 1, 2].map(offset => edgeValue(y + offset * dy, 45, bounds, [0, 128, 255], [[10, 112.4], [10, 112.4], [10, 112.4]], data.smooth)).map(value => rgb(colours[Math.max(0, Math.min(255, Math.round(value)))]));
+                verify(candidates.some(value => ["r", "g", "b"].every(channel => Math.abs(value[channel] - actual[channel]) <= 2 / 255)), "Actual Map blending follows edge-zone ownership through the middle row centre to its quarter-band endpoint; y=" + y + " smooth=" + data.smooth + " actual=" + actual);
+            }
+        }
         function test_map_intensity_labels_data() {
             const cases = [];
             for (const scale of ["linear", "sqrt", "log"])

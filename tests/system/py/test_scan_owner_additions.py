@@ -142,6 +142,13 @@ CASES += tuple(
     for theme in ('light', 'dark')
 )
 
+CASES += tuple(
+    'test_map_centre_crossing:' + side + '-' + mode + '-' + theme
+    for side in ('near', 'far')
+    for mode in ('stepped', 'smooth')
+    for theme in ('light', 'dark')
+)
+
 
 @pytest.fixture(scope='module')
 def scan_receipt(request):

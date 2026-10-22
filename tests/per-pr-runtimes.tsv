@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T17:55:41Z
+# measured_utc = 2026-10-22T19:30:38Z
 #
-# Recorded from: measured test run (276 node(s) measured once, 14583 banked, 0 stale row(s) dropped)
-# Collected tests: 16280; with a reported duration: 9490
+# Recorded from: measured test run (40 node(s) measured once, 14725 banked, 0 stale row(s) dropped)
+# Collected tests: 16320; with a reported duration: 9490
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16280
+# inventory_python = 16320
 # inventory_cpp = 393
-# inventory_measured = 14725
-# inventory_unmeasured = 1948
+# inventory_measured = 14729
+# inventory_unmeasured = 1984
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -12138,6 +12138,38 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_all
 0.000	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[jmol-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[vesta-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_already_passing_elements_are_exactly_unchanged[vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-parameter-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-parameter-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-parameter-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-parameter-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-table-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-table-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-table-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-hover-table-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-parameter-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-parameter-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-parameter-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-parameter-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-table-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-table-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-table-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[even-table-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-parameter-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-parameter-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-parameter-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-parameter-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-table-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-table-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-table-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-hover-table-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-parameter-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-parameter-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-parameter-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-parameter-vesta-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-table-jmol-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-table-jmol-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-table-vesta-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_elements_contrast_against_rendered_row_underlays[odd-table-vesta-light]
 0.000	tests/system/py/test_element_contrast.py::test_independent_contrast_and_colour_observers_reject_escapes
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[jmol-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[jmol-light]
@@ -14455,6 +14487,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-mixed]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_joint_user_chosen_axes:stacked-tof]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:far-smooth-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:far-smooth-light]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:far-stepped-dark]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:far-stepped-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:near-smooth-dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:near-smooth-light]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:near-stepped-dark]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_centre_crossing:near-stepped-light]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_default_and_saved_choice]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_edge_bands:datablock-smooth-dark]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_map_edge_bands:datablock-smooth-light]
@@ -16758,7 +16798,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 13.931	tests/system/py/test_element_contrast.py
+# module-cost: 86.934	tests/system/py/test_element_contrast.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
@@ -16778,7 +16818,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 18.238	tests/system/py/test_scan_owner_additions.py
+# module-cost: 9.019	tests/system/py/test_scan_owner_additions.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py

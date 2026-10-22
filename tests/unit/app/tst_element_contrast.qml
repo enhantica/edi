@@ -1,10 +1,12 @@
 import QtQuick
+import QtQuick.Window
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
 import EdiStructureReference 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
+import "../../fixtures/current_row_style/reference.js" as RowStyle
 
 Rectangle {
     id: surface
@@ -23,6 +25,18 @@ Rectangle {
             width: 950
             height: 700
         }
+    }
+    Component {
+        id: parameterFactory
+        ParametersGroup {
+            width: 950
+            y: 220
+            tableViewportHeight: 500
+        }
+    }
+    ListModel {
+        id: parameterRows
+        dynamicRoles: true
     }
     TestCase {
         name: "ElementContrast"
@@ -56,6 +70,89 @@ Rectangle {
                         dark
                     });
             return rows;
+        }
+        function test_underlays_data() {
+            return test_observe_data();
+        }
+        function test_underlays(data) {
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            verify(Session.openProject(Qt.resolvedUrl("../../fixtures/element_contrast/project")), "The independent complete element project supplies actual atom and parameter items");
+            Session.project.structureViewOptions.colorScheme = data.scheme;
+            const atoms = createTemporaryObject(tableFactory, surface, {
+                structure: Session.project.currentStructure
+            });
+            const parameters = createTemporaryObject(parameterFactory, surface);
+            verify(atoms !== null && parameters !== null, "Both actual production element table owners instantiate");
+            const atomList = findChild(atoms, "atomSites.list"), parameterList = findChild(parameters, "parameters.list");
+            verify(atomList !== null && parameterList !== null, "Both actual element-bearing lists expose their delegates");
+            parameterRows.clear();
+            for (let i = 0; i < 2; ++i) {
+                const parameter = atoms.sites.item(i, "fractX");
+                verify(parameter !== null, "Each parameter row uses the real atom coordinate item");
+                parameterRows.append({
+                    parameter,
+                    path: "elements.atom_site.fract_x",
+                    units: "",
+                    minimum: -Infinity,
+                    maximum: Infinity
+                });
+            }
+            parameterList.sourceModel = parameterRows;
+            for (const list of [atomList, parameterList]) {
+                list.maxRowCountShow = 2;
+                list.forceLayout();
+            }
+            verify(waitForPolish(surface), "The actual first and alternating element rows complete layout");
+            const samples = [];
+            const theme = data.dark ? "dark" : "light";
+            for (const [use, list] of [["table", atomList], ["parameter", parameterList]])
+                for (const index of [0, 1])
+                    for (const hovered of [false, true]) {
+                        const row = list.itemAtIndex(index);
+                        verify(row !== null, "Both ordinary and alternating rows are actual materialized production delegates");
+                        const cells = Render.cells(row);
+                        const left = cells[0].mapToItem(surface, cells[0].width, 4), right = cells[1].mapToItem(surface, 0, 4);
+                        const point = {
+                            x: (left.x + right.x) / 2,
+                            y: left.y
+                        };
+                        if (hovered)
+                            mouseMove(surface, point.x, point.y);
+                        else
+                            mouseMove(surface, surface.width - 2, surface.height - 2);
+                        const expected = (hovered ? RowStyle.reference.hover : index ? RowStyle.reference.even : RowStyle.reference.odd)[theme];
+                        function pixel() {
+                            surface.Window.window.update();
+                            return String(grabImage(surface).pixel(Math.round(point.x), Math.round(point.y))).toLowerCase();
+                        }
+                        tryVerify(() => pixel() === expected, 1500, "The actual table underlay matches the independently frozen alternating or hovered base colour; use=" + use + " row=" + index + " hover=" + hovered);
+                        const background = pixel(), facts = [];
+                        for (const published of reference) {
+                            atoms.sites.setText(index, "typeSymbol", published.symbol);
+                            const icon = use === "table" ? findChild(atoms, "atomSite.icon." + index) : Render.descendants(findChild(parameters, "parameters.name." + index)).find(item => item.segments !== undefined);
+                            verify(icon !== null && icon !== undefined, "Each complete element inventory entry reaches the actual table colour consumer");
+                            const pieces = icon.segments;
+                            const segment = use === "table" ? pieces[0] : pieces[1];
+                            verify(segment !== undefined, "Each element has a rendered atom or parameter icon colour");
+                            facts.push({
+                                symbol: published.symbol,
+                                source: published[data.scheme],
+                                color: String(segment.color),
+                                labelColor: use === "parameter" ? String(pieces[2].color) : String(segment.color)
+                            });
+                        }
+                        samples.push({
+                            use,
+                            index,
+                            hovered,
+                            background,
+                            facts
+                        });
+                    }
+            console.log("ELEMENT_UNDERLAYS " + JSON.stringify({
+                tag: data.tag,
+                samples
+            }));
         }
         function test_observe(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;

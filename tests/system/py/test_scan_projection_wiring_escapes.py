@@ -20,10 +20,10 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
         ),
         'number-width': ('columnWidths: [numberColumnWidth,', 'columnWidths: [0,'),
         'number-label': (
-            'header: EaComponents.ListViewHeader {\n                EaComponents.TableViewLabel {',
+            'header: EaComponents.ListViewHeader {\n                EaComponents.ListViewLabel {',
             (
                 'header: EaComponents.ListViewHeader {\n'
-                '                EaComponents.TableViewLabel {\n'
+                '                EaComponents.ListViewLabel {\n'
                 '                    text: "unexpected"'
             ),
         ),
