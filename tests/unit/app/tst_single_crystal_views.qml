@@ -828,4 +828,127 @@ TestCase {
         verify(fixedForm !== null && !fixedForm.enabled && fixedForm.value === "single crystal", "Loading reflections must fix the created experiment's sample form");
         verify(!Ui.find(Ui.page(appWindow), "experimentType.radiationProbe", true).enabled && !Ui.find(Ui.page(appWindow), "experimentType.beamMode", true).enabled, "Loaded reflection data must fix the experiment type axes");
     }
+    function fittedReport(data) {
+        const location = SettingsProof.copyProject(Probe.referenceUrl("projects/sc-neut-cwl_tbti_isotropic-extinction"));
+        openSingle({
+            dark: data.dark,
+            page: "analysis"
+        }, location);
+        const project = Session.project;
+        project.currentExperiment.scale.free = true;
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
+        verify(start !== null && start.enabled, "The report witness must fit actual single-crystal reflections through Start fitting");
+        Ui.scrollIntoView(start);
+        verify(waitForPolish(appWindow.contentItem), "The report witness's fit action must settle before input");
+        const point = Ui.clickPoint(start);
+        verify(point !== null, "The report witness's fitting button must be in its sidebar viewport");
+        mouseClick(start, point.x, point.y);
+        const dialog = findChild(appWindow, "fit.results");
+        tryVerify(() => dialog !== null && dialog.opened && !project.fit.running, 15000, "The report witness must complete a normal fit before inspecting agreement factors");
+        dialog.close();
+        Ui.click(test, Probe, appWindow, "appBar.tab.report");
+        const preview = Review.find(Ui.page(appWindow), "report.preview");
+        verify(preview !== null, "The actual Report workflow must expose its live production preview");
+        tryVerify(() => preview.model.experiments && preview.model.experiments.length === 1, 5000, "The report model must contain its fitted single-crystal experiment");
+        return {
+            location: location,
+            project: project,
+            preview: preview
+        };
+    }
+    function reportChartValues(model, expected) {
+        const experiment = model.experiments[0];
+        const crystal = experiment.single_crystal;
+        verify(crystal !== undefined && crystal !== null, "The report model must carry a populated single-crystal chart rather than an empty pattern chart");
+        compare(crystal.calc.length, expected.length, "The report must carry every calculated reflection point");
+        for (let i = 0; i < expected.length; ++i) {
+            compare(JSON.stringify([crystal.h[i], crystal.k[i], crystal.l[i]]), JSON.stringify([expected[i].h, expected[i].k, expected[i].l]), "The report chart must preserve each reflection's signed identity");
+            compare(crystal.meas[i], expected[i].intensityMeas, "The report chart must use the project's measured reflection values");
+            compare(crystal.su[i], expected[i].intensityMeasSu, "The report chart's bars must use the project's own reflection uncertainties");
+            compare(crystal.calc[i], expected[i].intensityCalc, "The report chart must use the project's current calculated reflection values");
+        }
+        verify(!experiment.pattern || experiment.pattern.series.length === 0, "A single-crystal report must not retain an empty powder-series substitute");
+        return crystal;
+    }
+    function savedReportFiles(witness) {
+        const report = witness.project.report;
+        report.embedLibraries = true;
+        report.writesHtml = true;
+        report.writesPdf = true;
+        report.setIncluded("charts", true);
+        const action = Ui.find(Ui.page(appWindow), "report.save", true);
+        verify(action !== null && action.enabled, "The report workflow must expose its actual Save report action");
+        Ui.scrollIntoView(action);
+        Ui.click(test, Probe, appWindow, "report.save");
+        tryVerify(() => report.savedReports.some(row => row.format === "html" && row.state === "current") && report.savedReports.some(row => row.format === "pdf" && row.state === "current"), 30000, "The actual export action must publish both HTML and PDF for the fitted single crystal");
+        return {
+            html: SettingsProof.childUrl(witness.location, "reports/" + report.savedReports.find(row => row.format === "html").name),
+            pdf: SettingsProof.childUrl(witness.location, "reports/" + report.savedReports.find(row => row.format === "pdf").name)
+        };
+    }
+    function test_single_crystal_report_chart_and_outputs_data() {
+        return [
+            {
+                tag: "light",
+                dark: false
+            },
+            {
+                tag: "dark",
+                dark: true
+            }
+        ];
+    }
+    function test_single_crystal_report_chart_and_outputs(data) {
+        const witness = fittedReport(data);
+        const expected = Probe.rows(witness.project.currentExperiment.singleCrystalReflections);
+        const model = witness.preview.model;
+        const crystal = reportChartValues(model, expected);
+        const categories = model.experiments[0].categories;
+        const rows = categories.reduce((all, category) => all.concat(category.rows || []), []);
+        verify(rows.some(row => /wavelength|λ/i.test(row.label)), "The single-crystal report must list its wavelength");
+        verify(rows.some(row => /extinction|model/i.test(row.label) && /gauss|lorentz|becker/i.test(row.text)), "The single-crystal report must list its extinction model");
+        verify(rows.some(row => /radius/i.test(row.label)) && rows.some(row => /mosaicity/i.test(row.label)), "The single-crystal report must list the descriptive extinction values");
+        verify(rows.some(row => /reflection/i.test(row.label) && Number(row.text) === expected.length), "The single-crystal report must state the actual reflection count");
+        const fitRows = model.analysis_categories.reduce((all, category) => all.concat(category.rows || []), []);
+        const rRow = fitRows.find(row => /R\(F²\)/.test(row.label) && !/wR\(F²\)/.test(row.label));
+        const wrRow = fitRows.find(row => /wR\(F²\)/.test(row.label));
+        verify(rRow !== undefined && wrRow !== undefined && !fitRows.some(row => /Rwp|profile R/i.test(row.label)), "The report must label single-crystal R-F-squared and weighted-R-F-squared agreement factors");
+        const r = 100 * expected.reduce((sum, row) => sum + Math.abs(row.intensityMeas - row.intensityCalc), 0) / expected.reduce((sum, row) => sum + Math.abs(row.intensityMeas), 0);
+        const wr = 100 * Math.sqrt(expected.reduce((sum, row) => sum + Math.pow((row.intensityMeas - row.intensityCalc) / row.intensityMeasSu, 2), 0) / expected.reduce((sum, row) => sum + Math.pow(row.intensityMeas / row.intensityMeasSu, 2), 0));
+        verify(matchesDisplayed(rRow.text, r) && matchesDisplayed(wrRow.text, wr), "The report's agreement percentages must match independent residual formulas");
+        const chart = Review.find(witness.preview, "report.singleCrystal");
+        verify(chart !== null, "The live Report page must draw its single-crystal chart");
+        Ui.scrollIntoView(chart);
+        verify(waitForPolish(chart) && waitForRendering(chart), "The report's single-crystal chart must reach a visible rendered frame");
+        const layer = Review.find(chart, "singleCrystal.points");
+        const points = SettingsProof.points(layer);
+        verify(points.length === expected.length && points.every((point, i) => point.x === crystal.calc[i] && point.y === crystal.meas[i]), "The actual report preview must plot every calculated/measured reflection pair");
+        const graph = ChartOracle.graph(chart);
+        verify(graph !== null && Array.from(graph.seriesList).some(series => {
+            const values = ChartOracle.points(series);
+            return values.length >= 2 && values[0].x !== values[values.length - 1].x && values.every(point => point.x === point.y);
+        }), "The actual report chart must draw a nonzero-length equality diagonal");
+        checkErrorBar(chart, layer, JSON.parse(Probe.readReferenceFile("fullprof.json")).cases["sc-neut-cwl_tbti_isotropic-extinction"].input_rows, false);
+        const files = savedReportFiles(witness);
+        reportChartValues(SettingsProof.htmlModel(files.html), expected);
+        const html = SettingsProof.htmlEvolutionFacts(files.html);
+        verify(!html.error && html.wide.ready && html.narrow.ready, "The saved single-crystal HTML must render in the actual browser at both viewports");
+        for (const view of [html.wide, html.narrow]) {
+            verify(view.patterns.length === 1 && view.patterns[0].svgCount > 0, "The saved HTML must draw one populated single-crystal SVG or canvas chart");
+            const plot = view.patterns[0];
+            const trace = plot.traces.find(trace => trace.mode === "markers" && trace.x.length === expected.length);
+            verify(trace !== undefined && trace.x.every((value, i) => value === expected[i].intensityCalc) && trace.y.every((value, i) => value === expected[i].intensityMeas), "Actual HTML plot traces must contain the project's own reflection coordinates");
+            verify(trace.error_y && trace.error_y.visible && trace.error_y.array.every((value, i) => value === expected[i].intensityMeasSu), "The saved HTML's rendered plot must carry every measured uncertainty bar");
+            verify(plot.traces.some(trace => trace.mode === "lines" && trace.x.length >= 2 && trace.x[0] !== trace.x[trace.x.length - 1] && trace.x.every((value, i) => value === trace.y[i])), "The actual HTML chart must draw the equality diagonal");
+            verify(/F².*calc/.test(plot.xTitle) && /F².*meas/.test(plot.yTitle), "The saved HTML chart must label its calculated and measured F-squared axes");
+        }
+        const pdf = SettingsProof.pdfFacts(files.pdf);
+        verify(!pdf.error && pdf.pages.length > 0, "The actual exported PDF must be parseable and contain pages");
+        verify(/R\(F²\)/.test(pdf.text) && /wR\(F²\)/.test(pdf.text) && /wavelength|λ/i.test(pdf.text) && /mosaicity|radius/i.test(pdf.text), "The exported PDF must carry the single-crystal fields and agreement factors");
+        const colour = model.pattern_styles.find(style => style.key === "meas.0").light;
+        const ink = SettingsProof.pdfImageColours(files.pdf, [colour]);
+        verify(!ink.error && ink.images >= model.structures.length + 1 && ink.counts[colour] > expected.length, "The PDF must contain a populated reflection figure in addition to its structure figures");
+        verify(ink.maxVerticalRun && ink.maxVerticalRun[colour] > Math.ceil(layer.markerSize * 2) + 2, "The PDF reflection image must draw uncertainty bars longer than its doubled-size point markers");
+    }
 }
