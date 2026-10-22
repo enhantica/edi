@@ -14,7 +14,7 @@ A terminal EOF after completed output is not a numerical failure. Logs are retai
 
 `fit.pcr` uses Pcr=2. `fit.new` is the independent fitted model.
 Its fixed twin zeros every value/code field in that emitted file.
-Finite output: False. Converged: False.
+Finite output: True. Converged: False.
 The output parameter table and its code-index mapping are retained.
 Rwp uses all-point least-squares factors, pooled with observed weighted sums.
 The scan rows claim only their single template fit.
