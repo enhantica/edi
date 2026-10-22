@@ -125,7 +125,8 @@ class PatternChartController : public QObject {
     // Whether the chart presents a calculated pattern, which the structure curves need.
     Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
     // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or null for the data's own
-    // range. Several charts that follow one view share it (edi ADR-0017 §15); setting it draws without an animation.
+    // range, then the title of the x axis they are on. Several charts that follow one view share it (edi ADR-0017
+    // §15); setting it draws without an animation.
     Q_PROPERTY(QVariantList viewRanges READ viewRanges WRITE setViewRanges NOTIFY viewRangesChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
@@ -347,6 +348,7 @@ class PatternChartController : public QObject {
     bool structure_curves_ = false, has_calculated_ = false;
     QVariantList structure_curve_colors_;
     std::string presented_x_;  // the x axis last presented, its quantity and unit
+    std::string ranges_axis_;  // the x axis the ranges were given on, empty when they were not given
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;

@@ -518,15 +518,16 @@ Saving is active:
 **One pattern view on every page** (the owner, 2026-10-21). The Experiment page, the Analysis page and the Structure
 page's second main-area tab, *Pattern*, beside *Structure* and disabled until an experiment exists, show the same chart
 in full sync: the experiment and dataset selector (on the Structure page's Pattern tab the block selector lists the
-experiments), the axis selectors, zoom and pan, and every toolbar toggle. Its view settings are one set: the y scale
-and the structure-curves switch are app settings (ADR-0031 §7), and the x axis is the project's own, which the report
-follows. The first build moved one app-owned chart into the shown page by reparenting; the owner's Mac then showed a
+experiments), the axis selectors, zoom and pan, and every toolbar toggle. Its view settings are one set: the y scale,
+the legend, hover-coordinate and structure-curve switches and the pan or box-zoom choice are app settings (ADR-0031
+§7), and the x axis is the project's own, which the report follows. The first build moved one app-owned chart into the shown page by reparenting; the owner's Mac then showed a
 stale copy of the pattern after a zoom and kept the structure fills after the switch went off, neither of which an
 OpenGL capture on Linux shows. So the fallback is taken: each page has its own chart, and every one follows one shared
-view (`AppState.patternViewRanges` and the toolbar's choices; only the shown chart writes them). A hidden chart draws
-nothing and is drawn once when shown. Switching the structure curves makes each chart anew, as Qt Graphs kept an area's
-last drawing when the area was hidden or removed; the new chart takes the shared view, so the zoom stays. The Report
-page's charts stay separate.
+view (`AppState.patternViewRanges`, the ranges with the title of the x axis they were set on, and the toolbar's
+choices; only the shown chart writes them). A hidden chart draws nothing and is drawn once when shown; a range is reset
+when the x axis changes, once, on the chart where it changes, so a chart shown again after the change keeps the ranges
+given for its new axis. The structure curves switch in place: a curve not drawn holds no points (Qt Graphs kept an
+area's last drawing when the area was hidden or removed). The Report page's charts stay separate.
 
 **Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
 widest tick-row label (the structure's icon and name), so a name never runs into the plot.

@@ -542,19 +542,19 @@ Item {
     Binding {
         target: toolbar
         property: "legendShown"
-        value: AppState.patternLegendShown
+        value: Preferences.patternLegendShown
         when: chart.followsSharedView
     }
     Binding {
         target: toolbar
         property: "hoverShown"
-        value: AppState.patternHoverShown
+        value: Preferences.patternHoverShown
         when: chart.followsSharedView
     }
     Binding {
         target: toolbar
         property: "pointerMode"
-        value: AppState.patternPointerMode
+        value: Preferences.patternPointerMode
         when: chart.followsSharedView
     }
     Connections {
@@ -571,13 +571,13 @@ Item {
         target: toolbar
         enabled: chart.followsSharedView && chart.shown
         function onLegendShownChanged() {
-            AppState.patternLegendShown = toolbar.legendShown;
+            Preferences.patternLegendShown = toolbar.legendShown;
         }
         function onHoverShownChanged() {
-            AppState.patternHoverShown = toolbar.hoverShown;
+            Preferences.patternHoverShown = toolbar.hoverShown;
         }
         function onPointerModeChanged() {
-            AppState.patternPointerMode = toolbar.pointerMode;
+            Preferences.patternPointerMode = toolbar.pointerMode;
         }
     }
 

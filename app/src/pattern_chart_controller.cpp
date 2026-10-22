@@ -164,6 +164,8 @@ QVariantList PatternChartController::viewRanges() const {
         const std::optional<double>& value = animating_ ? target_[i] : i == 0 ? x_min_ : i == 1 ? x_max_ : i == 2 ? y_min_ : y_max_;
         out.append(value ? QVariant(*value) : QVariant());
     }
+    // The x axis the ranges are on, so a chart that last showed another axis keeps them rather than resetting.
+    out.append(QString::fromStdString(ranges_axis_.empty() ? presented_x_ : ranges_axis_));
     return out;
 }
 
@@ -184,6 +186,7 @@ void PatternChartController::setViewRanges(const QVariantList& ranges) {
     x_max_ = values[1];
     y_min_ = values[2];
     y_max_ = values[3];
+    ranges_axis_ = ranges.size() > 4 ? ranges[4].toString().toStdString() : std::string();
     emit viewRangesChanged();
     invalidate();
 }
@@ -513,11 +516,12 @@ void PatternChartController::refresh() {
         static const edi::PatternSource kNothing;
         const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
         shown_ = edi::present_pattern(source, view());
-        // A range chosen on one x quantity or unit means nothing on another: the new axis starts with its full view.
+        // A range chosen on one x quantity or unit means nothing on another: the new axis starts with its full view,
+        // unless the ranges held were given for the new axis (a hidden chart catching up with the shared view).
         if (shown_.x.title != presented_x_) {
             const bool changed = !presented_x_.empty();
             presented_x_ = shown_.x.title;
-            if (changed && (x_min_ || x_max_ || y_min_ || y_max_)) {
+            if (changed && ranges_axis_ != presented_x_ && (x_min_ || x_max_ || y_min_ || y_max_)) {
                 finishAnimation();
                 x_min_.reset();
                 x_max_.reset();
@@ -527,6 +531,7 @@ void PatternChartController::refresh() {
                 shown_ = edi::present_pattern(source, view());
             }
         }
+        ranges_axis_ = presented_x_;
         if (experiment_ && active_) {
             experiment_->notePresented();
         }

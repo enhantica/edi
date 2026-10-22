@@ -54,6 +54,9 @@ QtObject {
         preferences.colourScheme = "ediNatural";
         preferences.patternYScale = "linear";
         preferences.structureCurves = true;
+        preferences.patternLegendShown = false;
+        preferences.patternHoverShown = true;
+        preferences.patternPointerMode = "zoom";
     }
 
     property Settings settings: Settings {
@@ -86,12 +89,16 @@ QtObject {
 
     // ADR-0031 §2: the one pattern chart's settings (every page shows the same chart): its y scale ("linear", "sqrt"
     // or "log"; the x axis is the project's), whether it draws each structure's curve over the background (the chart
-    // toolbar's switch; off by default, the owner, 2026-10-21), and how a followed scan redraws.
+    // toolbar's switch; on by default, the owner, 2026-10-21), the toolbar's legend and hover-coordinate switches and
+    // its pointer mode ("zoom" or "pan"), and how a followed scan redraws.
     property string patternYScale: "linear"
     // The two pages' former names of the one y scale.
     property alias analysisYScale: preferences.patternYScale
     property alias experimentYScale: preferences.patternYScale
     property bool structureCurves: true
+    property bool patternLegendShown: false
+    property bool patternHoverShown: true
+    property string patternPointerMode: "zoom"
 
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -104,6 +111,9 @@ QtObject {
         category: "PatternChart"
         property alias yScale: preferences.patternYScale
         property alias structureCurves: preferences.structureCurves
+        property alias legendShown: preferences.patternLegendShown
+        property alias hoverShown: preferences.patternHoverShown
+        property alias pointerMode: preferences.patternPointerMode
     }
 
     property Binding fitPatternUpdates: Binding {

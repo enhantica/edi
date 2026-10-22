@@ -35,11 +35,9 @@ QtObject {
     }
 
     // The pattern charts' one view (edi ADR-0017 §15): the Structure, Experiment and Analysis pages each show a chart,
-    // and every one follows these: the view's ranges (PatternChartController.viewRanges) and the toolbar's choices.
+    // and every one follows these ranges (PatternChartController.viewRanges) and the toolbar's choices, which are app
+    // settings (Preferences.patternLegendShown, patternHoverShown, patternPointerMode, structureCurves).
     property var patternViewRanges: []
-    property bool patternLegendShown: false
-    property bool patternHoverShown: true
-    property string patternPointerMode: "zoom"
     // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
     // choices stay.
     property Connections patternViewReset: Connections {
