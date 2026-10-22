@@ -32,6 +32,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("linked_structure"), {T::Basic, "layer-group"}},
         {QStringLiteral("excluded_region"), {T::Basic, "eraser"}},
         {QStringLiteral("absorption"), {T::Extras, "tint"}},
+        {QStringLiteral("extinction"), {T::Basic, "gem"}},
         {QStringLiteral("preferred_orientation"), {T::Extras, "compass"}},
         {QStringLiteral("scattering_source"), {T::Extras, "atom"}},
         {QStringLiteral("refln"), {T::Extras, "list"}},

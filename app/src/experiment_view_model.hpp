@@ -110,6 +110,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::BackgroundTermListModel* backgroundTerms READ backgroundTerms CONSTANT)
     Q_PROPERTY(edi_app::ExcludedRegionListModel* excludedRegions READ excludedRegions CONSTANT)
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
+    Q_PROPERTY(edi_app::SingleCrystalReflectionModel* singleCrystalReflections READ singleCrystalReflections CONSTANT)
+    Q_PROPERTY(edi_app::ParameterListModel* extinction READ extinction CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
     Q_PROPERTY(edi_app::LinkedStructureListModel* linkedStructures READ linkedStructures CONSTANT)
     Q_PROPERTY(edi_app::ScatteringSourceViewModel* scatteringSource READ scatteringSource CONSTANT)
@@ -209,6 +211,8 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peakLorentzian() const { return peak_families_[2]; }
     ParameterListModel* peakOther() const { return peak_families_[3]; }
     ParameterListModel* absorption() const { return absorption_; }
+    ParameterListModel* extinction() const { return extinction_; }
+    SingleCrystalReflectionModel* singleCrystalReflections() const { return single_crystal_reflections_; }
     ParameterItem* scale() const { return scale_; }
     BackgroundListModel* background() const { return background_; }
     BackgroundTermListModel* backgroundTerms() const { return background_terms_; }
@@ -340,11 +344,13 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peak_asymmetry_;
     ParameterListModel* peak_families_[4] = {};
     ParameterListModel* absorption_;
+    ParameterListModel* extinction_;
     ParameterItem* scale_ = nullptr;
     BackgroundListModel* background_;
     BackgroundTermListModel* background_terms_;
     ExcludedRegionListModel* excluded_regions_;
     ReflectionListModel* reflections_;
+    SingleCrystalReflectionModel* single_crystal_reflections_;
     PrefOrientListModel* preferred_orientation_;
     LinkedStructureListModel* linked_structures_;
     ScatteringSourceViewModel* scattering_source_;

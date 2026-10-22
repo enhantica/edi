@@ -115,6 +115,43 @@ class ReflectionListModel : public RowTableModel {
     const edi::ExperimentBase& experiment_;
 };
 
+// A single crystal's reflections: `h`, `k`, `l`, the measured F² and its su, the calculated F² and the
+// normalised residual (F²meas - F²calc) / su, one row per measured reflection; NaN where nothing is
+// calculated yet. The point lists feed the F²calc-vs-F²meas chart.
+class SingleCrystalReflectionModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(QList<double> calculated READ calculated NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measured READ measured NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredSu READ measuredSu NOTIFY pointsChanged)
+    Q_PROPERTY(double low READ low NOTIFY pointsChanged)
+    Q_PROPERTY(double high READ high NOTIFY pointsChanged)
+    Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY pointsChanged)
+
+   public:
+    SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, QObject* parent);
+    void sync();
+    QList<double> calculated() const { return calculated_; }
+    QList<double> measured() const { return measured_; }
+    QList<double> measuredSu() const { return measured_su_; }
+    double low() const { return low_; }
+    double high() const { return high_; }
+    bool calculatedShown() const { return calculated_shown_; }
+
+   signals:
+    void pointsChanged();
+
+   private:
+    const edi::ExperimentBase& experiment_;
+    QList<double> calculated_;
+    QList<double> measured_;
+    QList<double> measured_su_;
+    double low_ = 0.0;
+    double high_ = 1.0;
+    bool calculated_shown_ = false;
+};
+
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.
 class ExcludedRegionListModel : public RowTableModel {
     Q_OBJECT
