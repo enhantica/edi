@@ -3,6 +3,7 @@
 #define EDI_APP_FIT_VIEW_MODEL_HPP
 
 #include <QElapsedTimer>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QTimer>
@@ -45,13 +46,56 @@ struct ScanSummary {
     QString outcome;
 };
 
+// One column of the agreement factors: `factor` (its name in Qt rich text, with the subscript), `structure` (the
+// structure's name, empty for a profile factor) and `place` (the structure's colour place, -1 for none). QML reads a
+// list of them as an array (edi ADR-0030).
+struct AgreementColumn {
+    Q_GADGET
+    QML_VALUE_TYPE(agreementColumn)
+    Q_PROPERTY(QString factor MEMBER factor CONSTANT)
+    Q_PROPERTY(QString structure MEMBER structure CONSTANT)
+    Q_PROPERTY(int place MEMBER place CONSTANT)
+
+   public:
+    QString factor;
+    QString structure;
+    int place = -1;
+    bool operator==(const AgreementColumn&) const = default;
+};
+
+// The agreement factors of the fit the project records (edi ADR-0045): one row per dataset, after an "All datasets"
+// row when there are several, and one column per factor: Rp, Rwp, Rexp, cRp, cRwp, then R_Bragg and R_F for each
+// linked structure. Roles `label`, `place` (the experiment's colour place, -1 for the global row) and `values` (the
+// columns' texts, in per cent; empty where a factor is not defined for the row).
+class FitAgreementModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the fit results")
+    Q_PROPERTY(QList<edi_app::AgreementColumn> columns READ columns NOTIFY columnsChanged)
+
+   public:
+    explicit FitAgreementModel(QObject* parent);
+    void setRecord(const edi::Project& project);
+    void clear();
+    QList<AgreementColumn> columns() const { return columns_; }
+
+   signals:
+    void columnsChanged();
+
+   private:
+    QList<AgreementColumn> columns_;
+};
+
 class FitResultListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the fit")
+    // The second table of the fit results: the agreement factors (empty for a scan's summary).
+    Q_PROPERTY(edi_app::FitAgreementModel* agreement READ agreement CONSTANT)
 
    public:
     explicit FitResultListModel(QObject* parent);
+    FitAgreementModel* agreement() const { return agreement_; }
     // The rows of the result the project records (`_fit_result`): after a fit and after a project that holds
     // one is opened alike.
     void setRecord(const edi::Project& project);
@@ -59,6 +103,9 @@ class FitResultListModel : public RowTableModel {
     // range, from `analysis/results.csv`.
     void setScan(const ScanSummary& summary);
     void clear();
+
+   private:
+    FitAgreementModel* agreement_;
 };
 
 // Start fitting (edi ADR-0020 §9): the fit of the open project runs on its worker (edi::FitJob); its
@@ -73,6 +120,8 @@ class FitViewModel : public QObject {
     // the first unfitted one. `canReset`: Reset fits can clear the scan's fit results (one Undo step).
     Q_PROPERTY(bool continuable READ continuable NOTIFY continuableChanged)
     Q_PROPERTY(bool canReset READ canReset NOTIFY canResetChanged)
+    // The fitting mode is a scan's, sequential or independent: the Evolution tab and Follow are shown only then.
+    Q_PROPERTY(bool scanMode READ scanMode NOTIFY scanModeChanged)
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
@@ -83,6 +132,9 @@ class FitViewModel : public QObject {
     // The patterns a scan has drawn since it started, and the file drawn last.
     Q_PROPERTY(int scanPatternUpdates READ scanPatternUpdates NOTIFY scanPatternUpdatesChanged)
     Q_PROPERTY(QString scanShownFile READ scanShownFile NOTIFY scanShownFileChanged)
+    // Some experiment holds measured data. Without any, nothing can be fitted: Start fitting and every "free" toggle
+    // are disabled, while values stay editable and the calculated pattern follows them (edi ADR-0046).
+    Q_PROPERTY(bool measured READ measured NOTIFY measuredChanged)
     // The project's fitting mode is one Start fitting runs (single, joint); otherwise `unavailableReason`.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString unavailableReason READ unavailableReason NOTIFY unavailableReasonChanged)
@@ -123,6 +175,7 @@ class FitViewModel : public QObject {
     bool running() const { return running_; }
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
+    bool scanMode() const { return scan_mode_; }
     bool scanning() const { return scanning_; }
     // The completed files (fitted or skipped) of all the scan's files.
     double scanProgress() const {
@@ -150,6 +203,7 @@ class FitViewModel : public QObject {
     // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
     // `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
     void followRendered(std::uint64_t token, const std::string& file, bool drawn);
+    bool measured() const { return measured_; }
     bool available() const { return available_; }
     QString unavailableReason() const { return unavailable_reason_; }
     bool canUndo() const { return can_undo_; }
@@ -190,11 +244,13 @@ class FitViewModel : public QObject {
     void runningChanged();
     void continuableChanged();
     void canResetChanged();
+    void scanModeChanged();
     void scanningChanged();
     void followingChanged();
     void patternUpdatesChanged();
     void scanPatternUpdatesChanged();
     void scanShownFileChanged();
+    void measuredChanged();
     void availableChanged();
     void unavailableReasonChanged();
     void canUndoChanged();
@@ -282,8 +338,9 @@ class FitViewModel : public QObject {
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;
-    bool running_ = false, available_ = false, can_undo_ = false, following_ = true;
+    bool running_ = false, available_ = false, can_undo_ = false, following_ = true, measured_ = false;
     bool can_reset_ = false;
+    bool scan_mode_ = false;
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;

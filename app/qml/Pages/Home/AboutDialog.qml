@@ -243,7 +243,8 @@ AppDialog {
                 objectName: "about.components"
                 width: parent.width
                 maxRowCountShow: 8
-                maximumTextColumnShare: 0.4
+                // Wide enough for the longest licence expression whole ("GPL-3.0-only WITH GCC-exception-3.1").
+                maximumTextColumnShare: 0.45
                 defaultInfoText: ""
                 sourceModel: componentRows
 

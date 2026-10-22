@@ -48,8 +48,9 @@ class ParameterTableModel : public RowTableModel {
     int fixed_count_ = 0;
 };
 
-// One entry of the Analysis category picker: the filter key, its title with the parameter count, its icon, and
-// whether it stands for a whole datablock kind (shown bold). QML reads a list of them as an array (edi ADR-0030).
+// One entry of an Analysis filter picker (datablocks or categories): the filter key, its title with the parameter
+// count, its icon, whether it stands for a whole datablock kind (shown bold), and for a datablock entry its kind and
+// name, which give its colour. QML reads a list of them as an array (edi ADR-0030).
 struct CategoryGroup {
     Q_GADGET
     QML_VALUE_TYPE(categoryGroup)
@@ -58,6 +59,8 @@ struct CategoryGroup {
     Q_PROPERTY(QString icon MEMBER icon CONSTANT)
     Q_PROPERTY(bool datablock MEMBER datablock CONSTANT)
     Q_PROPERTY(int count MEMBER count CONSTANT)
+    Q_PROPERTY(QString blockKind MEMBER block_kind CONSTANT)
+    Q_PROPERTY(QString blockName MEMBER block_name CONSTANT)
 
    public:
     QString key;
@@ -65,18 +68,28 @@ struct CategoryGroup {
     QString icon;
     bool datablock = false;
     int count = 0;
+    QString block_kind;
+    QString block_name;
     bool operator==(const CategoryGroup&) const = default;
 };
 
-// The Analysis table's filter: a name substring and the variability (all, free or fixed).
+// The Analysis table's filters (edi ADR-0046): the datablock, the category, the variability (all, free or fixed) and a
+// name substring. Each narrows the next: the categories listed are those of the selected datablocks, the variability
+// counts those of the selected datablocks and category, and the name searches only what the three leave. Every count
+// is a number of parameters, and a selection that no longer exists after a change returns to all.
 class ParameterFilterModel : public QSortFilterProxyModel {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QString nameFilter READ nameFilter WRITE setNameFilter NOTIFY nameFilterChanged)
     Q_PROPERTY(Variability variability READ variability WRITE setVariability NOTIFY variabilityChanged)
+    Q_PROPERTY(QString datablockFilter READ datablockFilter WRITE setDatablockFilter NOTIFY datablockFilterChanged)
+    Q_PROPERTY(QStringList datablocks READ datablocks NOTIFY datablocksChanged)
+    Q_PROPERTY(QList<edi_app::CategoryGroup> datablockGroups READ datablockGroups NOTIFY datablockGroupsChanged)
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
     Q_PROPERTY(QList<edi_app::CategoryGroup> categoryGroups READ categoryGroups NOTIFY categoryGroupsChanged)
+    // The parameters the datablock and category selections leave: all of them, the free ones and the fixed ones.
+    Q_PROPERTY(QList<int> variabilityCounts READ variabilityCounts NOTIFY variabilityCountsChanged)
 
    public:
     enum Variability { All, Free, Fixed };
@@ -88,8 +101,15 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Variability variability() const { return variability_; }
     void setVariability(Variability variability);
     void setSourceModel(QAbstractItemModel* source) override;
+    QString datablockFilter() const { return datablock_filter_; }
+    void setDatablockFilter(const QString& datablock);
+    QStringList datablocks() const { return datablocks_; }
+    QList<CategoryGroup> datablockGroups() const { return datablock_groups_; }
     QString categoryFilter() const { return category_filter_; }
     void setCategoryFilter(const QString& category);
+    QList<int> variabilityCounts() const { return variability_counts_; }
+    // Every filter back to all, and the name filter empty, in one step.
+    Q_INVOKABLE void clearFilters();
     QStringList categories() const { return categories_; }
     QList<CategoryGroup> categoryGroups() const { return category_groups_; }
     Q_INVOKABLE QString text(int row, const QString& role) const;
@@ -102,15 +122,24 @@ class ParameterFilterModel : public QSortFilterProxyModel {
    signals:
     void nameFilterChanged();
     void variabilityChanged();
+    void datablockFilterChanged();
+    void datablocksChanged();
+    void datablockGroupsChanged();
     void categoryFilterChanged();
     void categoriesChanged();
     void categoryGroupsChanged();
+    void variabilityCountsChanged();
 
    protected:
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
 
    private:
-    void refreshCategories();
+    // Rebuilds the pickers' lists and counts from the current selections; one that is no longer listed returns to all.
+    void refresh();
+    QString datablock_filter_;
+    QStringList datablocks_{QString()};
+    QList<CategoryGroup> datablock_groups_;
+    QList<int> variability_counts_{0, 0, 0};
     QString category_filter_;
     QStringList categories_{QString()};
     QList<CategoryGroup> category_groups_;

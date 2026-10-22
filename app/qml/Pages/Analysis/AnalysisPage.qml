@@ -17,6 +17,12 @@ WorkflowPage {
     readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    readonly property bool scanMode: project !== null && project.fit.scanMode
+    // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
+    onScanModeChanged: {
+        if (!scanMode)
+            page.showMainTab(0);
+    }
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -44,10 +50,14 @@ WorkflowPage {
             objectName: "mainArea.analysis.tab.correlations"
             text: qsTr("Correlations")
         },
-        // A fitted parameter across a scan's datasets (edi ADR-0017 §19); a scan project's only.
+        // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
+        // independent fitting modes, and enabled in a scan project (edi ADR-0046).
         IconTabButton {
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
+            visible: page.scanMode
+            // The base tab's own width, and none while hidden, so the tab bar keeps no gap for it.
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: page.project !== null && page.project.scan
         }
     ]
@@ -96,12 +106,9 @@ WorkflowPage {
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): its chart's y scale, and how a followed scan redraws.
+    // The page's view options (edi ADR-0031 §2): how a followed scan redraws. The chart's own choices are on the chart.
     settingsItem: Component {
         EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "analysis"
-            }
             PatternUpdatesGroup {}
         }
     }

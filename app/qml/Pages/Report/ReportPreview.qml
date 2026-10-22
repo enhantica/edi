@@ -35,6 +35,14 @@ Flickable {
     function shown(name) {
         return sections.indexOf(name) >= 0;
     }
+
+    // The Text tab's background, under the scrolling content (the owner, 2026-10-21).
+    Rectangle {
+        parent: preview
+        anchors.fill: parent
+        z: -1
+        color: EaStyle.Colors.textViewBackground
+    }
     // The figures for the PDF as images, each at twice its size and named as the static report names it
     // (structure-0, pattern-1, ...). They are copies of the preview's figures in the light colours, as a PDF is for
     // print, made outside the view, given a few frames to draw, then grabbed and removed. `done` gets the images once

@@ -327,6 +327,11 @@ struct wraps_written : std::false_type {};
 template <template <typename...> class Wrapper, typename... A>
 struct wraps_written<Wrapper<A...>>
     : std::bool_constant<(is_written<std::remove_cvref_t<A>>::value || ...)> {};
+// A class iterator never compares with a field's value. Ruling it out first keeps the comparisons
+// with other types from being considered for iterators over the field's own type, where checking
+// their constraint would need that same constraint (libc++ 23's optional and destroy).
+template <typename U>
+concept class_iterator = std::is_class_v<U> && requires { typename U::iterator_category; };
 
 // A model field that records its own writes. Every assignment — an equal value, a
 // self-assignment and a whole-object assignment included — gives the field a new write identity
@@ -657,7 +662,7 @@ class Written {
     // Comparison with whatever the value compares with. A type that compares through a template
     // (an optional, a container) would not find the conversion alone.
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t == u; }
     friend bool operator==(const Written& a, const U& b) {
         return a.state_.v() == b;
@@ -695,7 +700,7 @@ class Written {
         return a.state_.v() <=> b.state_.v();
     }
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t <=> u; }
     friend auto operator<=>(const Written& a, const U& b) {
         return a.state_.v() <=> b;

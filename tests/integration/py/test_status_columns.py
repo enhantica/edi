@@ -94,9 +94,14 @@ def test_status_columns_use_shared_icons_with_word_tooltips(path):
     cells = [
         (kind, body)
         for kind, body in table_cells(source)
-        if kind in {'IconCell', 'TextCell', 'ParameterCell', 'Item'}
+        if kind in {'IconCell', 'TextCell', 'NumberLabel', 'ParameterCell', 'Item'}
         or kind.startswith('EaComponents.TableView')
     ]
+    if any(kind == 'NumberLabel' for kind, _ in cells):
+        numeric_cell = (ROOT / 'app/qml/Components/NumberLabel.qml').read_text()
+        assert re.search(r'^EaComponents\.TableViewLabel\s*\{', numeric_cell, re.MULTILINE), (
+            'Numeric cells counted in the status census inherit the canonical table label'
+        )
     index = COLUMNS[path][1]
     assert len(cells) > index, 'The declared status column has an actual row cell'
     kind, body = cells[index]

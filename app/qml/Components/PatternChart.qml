@@ -320,6 +320,7 @@ Item {
         colourScheme: Preferences.colourScheme
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
+        includedOnly: !chart.report && Preferences.chartIncludedOnly
         yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
@@ -452,7 +453,7 @@ Item {
                 enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
                 model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
+                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d-spacing")]
                 currentIndex: controller.dSpacing ? 1 : 0
                 onActivated: index => {
                     if (chart.axisProject)
@@ -469,7 +470,9 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
+            includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
+            onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
         }
     }
 
@@ -711,7 +714,8 @@ Item {
         x: mainView.x + mainView.plotArea.x
         y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
         color: chart.colors.chartLabels
-        text: chart.reliability
+        textFormat: Text.RichText
+        text: FactorText.rich(chart.reliability)
     }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,

@@ -389,6 +389,17 @@ void PatternChartController::setDSpacing(bool on) {
     }
 }
 
+void PatternChartController::setIncludedOnly(bool on) {
+    if (on != included_only_) {
+        finishAnimation();
+        included_only_ = on;
+        x_min_.reset();
+        x_max_.reset();
+        emit includedOnlyChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::cycleYScale() {
     setYScale(y_scale_ == Linear ? Sqrt : y_scale_ == Sqrt ? Log10 : Linear);
 }
@@ -418,6 +429,7 @@ edi::PatternView PatternChartController::view() const {
     view.x_max = x_max_;
     view.columns = plot_width_ > 0.0 ? edi::pixel_columns(plot_width_, device_pixel_ratio_) : 0;
     view.y_scale = core_scale(y_scale_);
+    view.included_only = included_only_;
     return view;
 }
 

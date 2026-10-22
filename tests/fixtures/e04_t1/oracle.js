@@ -1107,7 +1107,7 @@ var frozen = {
       "files": {
         "project.edi": "2df73c15c9ade1937ba7ab0729c7c4cf73331cf6b735ef80a40ab1a947221e31",
         "structures/cosio.edi": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
-        "experiments/d20.edi": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
+        "experiments/d20.edi": "89c14df4a88f6eeedc8d42647ad4bda32c52856d2fe58e6a64f041062e5d86c7",
         "analysis/analysis.edi": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726"
       }
     },
@@ -6547,8 +6547,8 @@ var frozen = {
       "files": {
         "project.edi": "06de1407f4dfeb5784c0dbcb5078f3f3bb54782d9cf2c0a7af35937726e8af85",
         "structures/ncaf.edi": "f61f4922cf075908b47b4fd3b14c32f7aefef8e339d6161a5fece184396f865b",
-        "experiments/wish_4_7.edi": "15a16d72f02eb93f4aa0eda13b5cfb77a05c2abcee6689821caba5b47f37636d",
-        "experiments/wish_5_6.edi": "936b75830a0eb724abc277846c574328b303f95568fa74b067bfc812b3224bfc",
+        "experiments/wish_4_7.edi": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+        "experiments/wish_5_6.edi": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
         "analysis/analysis.edi": "362967ebcac29cd81a538ba27f01b70d61eb04bfcbf8d2de0ba4e13bb271e428"
       }
     },
@@ -8069,7 +8069,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
       "experiment": "d20",
-      "sha256": "0c97d871957341359beee76e7029f77d1bf0ed4eb8e4709733fe794fe3516a1c",
+      "sha256": "89c14df4a88f6eeedc8d42647ad4bda32c52856d2fe58e6a64f041062e5d86c7",
       "peakType": "cwl-tch-pseudo-voigt",
       "mode": "cwl",
       "peakFields": [
@@ -10345,7 +10345,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
       "experiment": "wish_4_7",
-      "sha256": "15a16d72f02eb93f4aa0eda13b5cfb77a05c2abcee6689821caba5b47f37636d",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
       "peakType": "tof-jorgensen",
       "mode": "tof",
       "peakFields": [
@@ -10473,7 +10473,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
       "experiment": "wish_5_6",
-      "sha256": "936b75830a0eb724abc277846c574328b303f95568fa74b067bfc812b3224bfc",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
       "peakType": "tof-jorgensen",
       "mode": "tof",
       "peakFields": [

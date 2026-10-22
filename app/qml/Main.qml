@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 import QtCore
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -112,6 +113,7 @@ EaComponents.ApplicationWindow {
             ToolTip.text: qsTr("Crystal structure page")
         },
         EaElements.AppBarTabButton {
+            id: experimentTab
             objectName: "appBar.tab.experiment"
             enabled: AppState.experimentPageEnabled
             fontIcon: "microscope"
@@ -219,6 +221,14 @@ EaComponents.ApplicationWindow {
             WebFiles.downloadProject(Session.project.path);
         else
             saveError.open();
+    }
+
+    // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
+    // 2026-10-22), read from where the centred tabs are, so it follows the window and any change to the buttons.
+    Binding {
+        target: EaStyle.Sizes
+        property: "sideBarWidth"
+        value: Math.round(window.width - (window.appBarCentralTabs.x + window.appBarCentralTabs.leftPadding + experimentTab.x + experimentTab.width / 2))
     }
 
     Shortcut {

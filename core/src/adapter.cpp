@@ -182,6 +182,9 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                              [&s](crysta::Structure& built) {
                                  // Crysta proves a texture row's key against this identity
                                  built.name = s.name;
+                                 // A calculation of this structure (a fit's quality) reads the declared
+                                 // scattering lengths from it, as the fit reads them from select_scattering.
+                                 built.scattering_lengths_fm = s.scattering_lengths_fm;
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =
@@ -986,7 +989,6 @@ std::vector<crysta::Structure> to_crysta_structures(const Project& model) {
     for (const auto& structure : model.structures) {
         // NOLINTNEXTLINE(modernize-make-unique) — make_unique would move the built prvalue
         built.emplace_back(new crysta::Structure(to_crysta_structure(*structure)));
-        built.back()->scattering_lengths_fm = structure->scattering_lengths_fm;
     }
     const auto values = std::views::transform(
         built, [](const std::unique_ptr<crysta::Structure>& structure) -> const crysta::Structure& {
@@ -4857,10 +4859,6 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
-        if (!phases) {
-            cproject.structure().name = structure().name;
-            cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
-        }
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.

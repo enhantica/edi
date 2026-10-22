@@ -35,6 +35,14 @@ EaComponents.TableViewParameter {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
+    readonly property bool measured: Session.project === null || Session.project.fit.measured
+    Binding {
+        target: cell.fitCheckBox
+        when: cell.fitCheckBox !== null
+        property: "enabled"
+        value: cell.measured
+    }
 
     // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
     // the end, without an ellipsis (ADR-0029).
@@ -43,10 +51,32 @@ EaComponents.TableViewParameter {
     property int significantDigits: 6
     // With fitDigits, the text is made smaller when its significant digits would not fit the cell, so all of them show
     // (a beta component's small values). Measured at the full size, in the cell's family and weight; only a fitDigits
-    // cell measures, as every value change runs these bindings again in every cell.
+    // cell measures for this, as every value change runs these bindings again in every cell.
     property bool fitDigits: false
     readonly property real room: width - leftPadding - rightPadding
-    readonly property string fullText: fitDigits && item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // The value as its rule writes it, and as the cell shows it: in scientific notation when that text would not fit
+    // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
+    // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
+    readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // Its scientific form, whose digits also follow the uncertainty and the project's rule when the plain text does not
+    // change (9e5 or 9.0e5 for 900000 ± 200000).
+    readonly property string narrowText: item !== null && !fitDigits ? NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
+    // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
+    property string shownValue: valueText
+    function refit() {
+        const sized = Math.abs(width - implicitWidth) >= 0.5;
+        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, narrowText);
+    }
+    onRoomChanged: refit()
+    onValueTextChanged: refit()
+    onNarrowTextChanged: refit()
+    onFontChanged: refit()
+    Component.onCompleted: refit()
+    readonly property FontMetrics shownMetrics: FontMetrics {
+        font: cell.font
+    }
+    readonly property string fullText: fitDigits ? valueText : ""
     readonly property FontMetrics fullMetrics: FontMetrics {
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -83,17 +113,18 @@ EaComponents.TableViewParameter {
     }
     onTextChanged: if (!activeFocus)
         cursorPosition = 0
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+    // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     EaElements.ToolTip {
-        text: cell.text
-        visible: cell.contentWidth > cell.width && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+        text: cell.shownValue !== cell.valueText ? NumberText.plainFull(cell.item.value) : cell.text
+        visible: (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width) && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, cell.significantDigits),
+        "value": cell.shownValue,
         "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,

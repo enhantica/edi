@@ -24,11 +24,20 @@ EaElements.ParamTextField {
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
+    readonly property bool measured: Session.project === null || Session.project.fit.measured
+    Binding {
+        target: field.fitCheckBox
+        when: field.fitCheckBox !== null
+        property: "enabled"
+        value: field.measured
+    }
     // A value outside its range (a fit writes its values unchecked) is red with the range, as in a table cell.
     readonly property bool outsideRange: item !== null && item.outsideRange
     readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
 
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+    // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
