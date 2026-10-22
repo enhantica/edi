@@ -1,8 +1,9 @@
 # The CLI project registry: every project under docs/user/cli/<id>/ and whether it is in the EXECUTING
 # set — the set CI and `pixi run verify` run through `python -m edi` and compare against the project's
 # expected.json (tools/checks/cli_projects.py). A C33 feature task `add`s a project here or `extend`s
-# one. Project ids are <technique>_<sample>[-<instrument>]_<variant>, lowercase, each part kebab-case;
-# a project reproducing a diffraction-lib page keeps its stem lowercased.
+# one. Project ids are <technique>_<sample>[-<instrument>][_<variant>], lowercase, each part kebab-case,
+# with a variant only when it tells the user something (simulation, scan); the project's _metadata.name
+# is the id. Older test fixtures keep their three-part ids.
 # `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
 # (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
 # `user-facing: true`: one of the example catalogue's cases, listed in the app's examples in registry

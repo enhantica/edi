@@ -53,8 +53,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CLI_DIR = Path('docs') / 'user' / 'cli'
 REGISTRY = CLI_DIR / 'projects.yml'
-# <technique>_<sample>[-<instrument>]_<variant>, three kebab-case parts (owner, 2026-09-24).
-PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}')
+# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only when it tells the
+# user something, such as simulation or scan.
+PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}')
 RESULTS_KEY = re.compile(r'results\[(?P<key>[^\]]+)\]\.(?P<column>.+)')
 FIT_TIMEOUT_S = 900
 
@@ -89,7 +90,7 @@ def registry(root: Path) -> list[dict]:
             )
         pid = row.get('id')
         if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
-            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>_<variant>')
+            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>[_<variant>]')
         if not isinstance(row.get('executing'), bool):
             raise TypeError(f'{path}: {pid}: executing must be true or false')
         if 'offline' in row and not isinstance(row['offline'], bool):
