@@ -113,7 +113,9 @@ TestCase {
         const pointer = Review.descendants(chart).find(item => typeof item.pressX === "number" && typeof item.pressY === "number");
         const reset = Review.find(chart, "singleCrystal.toolbar.reset");
         verify(pointer !== undefined && reset !== null && Ui.exposed(reset), "The scatter chart must expose the shared zoom surface and reset control");
-        mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .3, pointer.height * .4);
+        verify(waitForPolish(chart), "The chart pointer geometry must finish layout before a real drag");
+        verify(Ui.exposed(pointer), "The actual chart pointer must be exposed before a zoom drag");
+        mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .3, pointer.height * .4, Qt.LeftButton, Qt.NoModifier, 20);
         tryVerify(() => layer.xMax - layer.xMin < initial[1] - initial[0], 2000, "A real drag must zoom the single-crystal plot");
         mouseClick(reset, reset.width / 2, reset.height / 2);
         tryVerify(() => [layer.xMin, layer.xMax, layer.yMin, layer.yMax].every((value, i) => Math.abs(value - initial[i]) < 1e-7), 2000, "Reset must restore both single-crystal axes after zoom");
@@ -369,6 +371,8 @@ TestCase {
         const chart = openSingle(data);
         const reference = JSON.parse(Probe.readReferenceFile("fullprof.json")).cases["sc-neut-cwl_tbti_basic"];
         const inputs = reference.input_rows;
+        const oracle = JSON.parse(Probe.readReferenceFile("hover.json"));
+        compare(Session.project.suRule, oracle.rule, "The independent tooltip oracle must match the project's declared IUCr display rule");
         const model = Session.project.currentExperiment.singleCrystalReflections;
         const layer = Review.find(chart, "singleCrystal.points");
         const pointer = Review.descendants(chart).find(item => typeof item.pressX === "number");
@@ -378,7 +382,7 @@ TestCase {
         for (const amplitude of [false, true]) {
             selectQuantity(chart, amplitude ? 1 : 0);
             const points = SettingsProof.points(layer);
-            const index = 4;
+            const index = oracle.index;
             const point = points[index], input = inputs[index];
             mouseMove(pointer, 1, 1);
             mouseMove(pointer, (point.x - layer.xMin) / (layer.xMax - layer.xMin) * pointer.width, (1 - (point.y - layer.yMin) / (layer.yMax - layer.yMin)) * pointer.height);
@@ -389,9 +393,9 @@ TestCase {
             const meas = text.match(/meas:\s*([-+\d.eE]+)\s*±\s*([-+\d.eE]+)/);
             const calc = text.match(/calc:\s*([-+\d.eE]+)/);
             verify(meas !== null && calc !== null, "A reflection hover must show measured value plus-or-minus uncertainty and calculated value");
-            const expectedMeas = amplitude ? Math.sqrt(input[3]) : input[3];
-            const expectedSu = amplitude ? input[4] / (2 * Math.sqrt(input[3])) : input[4];
-            verify(matchesDisplayed(meas[1], expectedMeas) && matchesDisplayed(meas[2], expectedSu), "The tooltip's measured value and uncertainty must independently follow the plotted F squared or F quantity");
+            const shown = oracle.quantities[amplitude ? "f" : "f_squared"];
+            compare(Number(meas[1]), shown.shown, "The tooltip's measured F squared or F must follow independent Decimal conversion and the project's IUCr rounding rule");
+            compare(Number(meas[2]), shown.shown_su, "The tooltip's F squared or propagated F uncertainty must follow the independent IUCr display value");
             const independentCalc = reference.calculated_rows[index].f2_calc;
             const calcValue = amplitude ? Math.sqrt(independentCalc) : independentCalc;
             const printBudget = independentCalc * 1e-4 + 5.1e-5;

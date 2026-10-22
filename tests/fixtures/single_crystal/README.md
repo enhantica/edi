@@ -79,3 +79,9 @@ do not claim to supply the missing FullProf fitted-parameter oracle.
 `capture_powder.py` from the recorded pre-feature engine commit. It makes
 no independent correctness claim. The same powder input and calculated
 array are used by both products to detect changes to the prior path.
+
+`generate_hover.py` derives the selected Tb tooltip witness with 80-digit
+Decimal square roots and first-order uncertainty propagation. `hover.json`
+uses the separate `report_units/iucr_reference.py` implementation of IUCr
+Statistical Descriptors recommendation 12 for the project's default display
+rule. It contains no output from the application.
