@@ -1421,6 +1421,106 @@
         "docs/user/cli/sc-neut-cwl_tb2ti2o7_basic/project/structures/tb2ti2o7.edi"
       ]
     },
+    "sc-neut-cwl_tb2ti2o7_isotropic-extinction": {
+      "samples": [
+        "Tb₂Ti₂O₇ [Fd-3m]"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Becker-Coppens extinction · Scale and radius fit",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_tb2ti2o7_isotropic-extinction",
+        "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Becker-Coppens extinction · Scale and radius fit"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_isotropic-extinction/project/structures/tb2ti2o7.edi"
+      ]
+    },
+    "sc-neut-cwl_tb2ti2o7_anisotropic-adp": {
+      "samples": [
+        "Tb₂Ti₂O₇ [Fd-3m]"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Anisotropic β tensors · Scale-only fit",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_tb2ti2o7_anisotropic-adp",
+        "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Anisotropic β tensors · Scale-only fit"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/experiments/tb2ti2o7.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7_anisotropic-adp/project/structures/tb2ti2o7.edi"
+      ]
+    },
     "pd-xray-cwl_lif": {
       "samples": [
         "LiF [Fm-3m]"

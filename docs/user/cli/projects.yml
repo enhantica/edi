@@ -80,3 +80,7 @@ projects:
     executing: false
   - id: sc-neut-cwl_tb2ti2o7_basic
     executing: false
+  - id: sc-neut-cwl_tb2ti2o7_isotropic-extinction
+    executing: false
+  - id: sc-neut-cwl_tb2ti2o7_anisotropic-adp
+    executing: false
