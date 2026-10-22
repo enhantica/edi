@@ -124,6 +124,7 @@ TestCase {
             Ui.expandGroup(test, Probe, appWindow, "group.su_format");
             const picker = Ui.control(Probe, appWindow, "project.suRule");
             verify(picker !== null, "The live Project page exposes its standard uncertainty rule selector");
+            appWindow.requestActivate();
             picker.forceActiveFocus();
             tryCompare(picker, "activeFocus", true, 2000, "The actual Project rule selector receives keyboard focus");
             verify(SettingsProof.key(picker, Qt.Key_Home), "The Project selector receives a real Home key event");
@@ -185,7 +186,7 @@ TestCase {
             for (const ref of references[rule])
                 for (const column of ["value", "su"])
                     cases.push({
-                        tag: rule + "-" + ref.value + "-" + column,
+                        tag: rule + "-" + ref.value + "-su" + ref.su + "-" + column,
                         rule,
                         ref,
                         column
