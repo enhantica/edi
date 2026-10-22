@@ -40,11 +40,11 @@ PAGE = Path('docs/user/guides/fit-quality.md')
 BEGIN = '<!-- fit-quality tables: written by tools/comparison/fit_quality.py -->'
 END = '<!-- end of the fit-quality tables -->'
 FIELDS = ('observed', 'calculated', 'sigma', 'included')
-# FullProf's x is rounded (its profile to three decimals, its input data to the converter's
-# digits), so a point matches FullProf's nearest one within this, or within a quarter of the
-# spacing to the neighbouring point, whichever is larger. A quarter keeps the match unique.
-X_TOLERANCE = 2e-3
-X_SPACING_SHARE = 0.25
+# FullProf holds x in single precision and prints its profile to three decimals, so its x is
+# within one float32 step of the true x plus 0.0005. A point is matched only to a FullProf row
+# within that, and only when no other row is: an absent or ambiguous row is not matched.
+FLOAT32_STEP = 2.0**-23
+PRINT_ROUNDING = 5e-4
 # A row where edi's R_wp exceeds FullProf's by more than this relative amount needs an issue.
 WORSE = 0.05
 
@@ -135,6 +135,24 @@ def measured_cases(root: Path) -> list[str]:
     return cases
 
 
+def match_rows(reference: np.ndarray, x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Match each point of ``x`` to one ``reference`` row.
+
+    A point is matched when exactly one row lies within the rounding tolerance and no other point
+    claims that row. Returns the matched flags and each point's candidate row index.
+    """
+    order = np.argsort(reference, kind='stable')
+    sorted_ref = reference[order]
+    tolerance = np.abs(x) * FLOAT32_STEP + PRINT_ROUNDING
+    low = np.searchsorted(sorted_ref, x - tolerance, side='left')
+    high = np.searchsorted(sorted_ref, x + tolerance, side='right')
+    nearest = order[np.clip(low, 0, max(reference.size - 1, 0))] if reference.size else low
+    found = (high - low) == 1
+    claimed = np.bincount(nearest[found], minlength=max(reference.size, 1))
+    found &= claimed[nearest] == 1
+    return found, nearest
+
+
 def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict:
     """FullProf's calculated curve on each bank's points; ``found`` is false where it has none."""
     home = root / FULLPROF / case
@@ -146,13 +164,7 @@ def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict
         x, observed, calculated = read_prf(
             home / ('fit.prf' if len(banks) == 1 else f'fit_{index}.prf')
         )
-        grid = grids[bank]
-        nearest = np.clip(np.searchsorted(x, grid['x']), 1, x.size - 1)
-        nearest -= (grid['x'] - x[nearest - 1]) < (x[nearest] - grid['x'])
-        gaps = np.diff(grid['x'])
-        spacing = np.minimum(np.append(gaps, np.inf), np.insert(gaps, 0, np.inf))
-        tolerance = np.maximum(X_TOLERANCE, X_SPACING_SHARE * spacing)
-        found = np.abs(x[nearest] - grid['x']) <= tolerance
+        found, nearest = match_rows(x, grids[bank]['x'])
         values = np.where(found, calculated[nearest], np.nan)
         out[bank] = {
             'calculated': values,
