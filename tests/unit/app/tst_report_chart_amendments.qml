@@ -85,6 +85,8 @@ Item {
             verify(Session.createProject("palette_witness", "Independent empty experiments"), "The palette gate creates a real project without calculated data");
             for (let i = 0; i < data.count; ++i)
                 verify(Session.project.createExperiment(), "The palette gate gives each requested place a real experiment identity");
+            for (let i = 0; i < 5; ++i)
+                verify(Session.project.createStructure(), "The icon witness creates each actual structure identity before checking its colour");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             verify(typeof Preferences.colourScheme === "string", "The scheme preference is available to every actual colour consumer");
             Preferences.colourScheme = data.scheme;
@@ -93,10 +95,10 @@ Item {
                 length: data.count
             }, (_, i) => String(AppColors.experiment(i)).toLowerCase());
             compare(JSON.stringify(colors), JSON.stringify(expected), "Every app pattern place equals the approved categorical or independently computed whole-group Oklab gradient");
-            const structures = Approved.colours(SettingsProof, data.scheme, "structures", 0 + Session.project.structures.count || 1, data.dark);
-            if (Session.project.structures.count)
-                for (let i = 0; i < structures.length; ++i)
-                    compare(String(AppColors.structure(i)).toLowerCase(), structures[i], "Structure icons consume their own independent count-aware group");
+            const structures = Approved.colours(SettingsProof, data.scheme, "structures", Session.project.structures.count, data.dark);
+            compare(structures.length, 5, "All five real structure icons reach their independent categorical reference");
+            for (let i = 0; i < structures.length; ++i)
+                compare(String(AppColors.structure(i)).toLowerCase(), structures[i], "Structure icons consume their own independent count-aware group");
         }
 
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {

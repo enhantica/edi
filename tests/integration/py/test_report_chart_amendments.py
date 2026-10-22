@@ -133,9 +133,7 @@ def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
             'total_calculation',
             'background',
             'difference',
-        }, (
-            'Role colours replace gradient stops; each gradient spans its group first to second'
-        )
+        }, 'Role colours replace gradient stops; each gradient spans its group first to second'
         assert (
             len({row[theme] for row in rows if row['role'] in {'measured', 'structure'}}) == 10
         ), 'The two categorical groups keep ten distinct entries'

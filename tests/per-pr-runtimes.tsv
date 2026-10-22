@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T05:30:30Z
+# measured_utc = 2026-10-22T05:44:07Z
 #
-# Recorded from: measured native test durations
-# Collected tests: 16139; with a reported duration: 9461
+# Recorded from: measured test run (5 node(s) measured once, 14431 banked, 0 stale row(s) dropped)
+# Collected tests: 15757; with a reported duration: 9463
 # Module-scoped fixture costs recorded: 68
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15750
+# inventory_python = 15757
 # inventory_cpp = 389
-# inventory_measured = 14429
-# inventory_unmeasured = 1710
+# inventory_measured = 14435
+# inventory_unmeasured = 1711
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -269,8 +269,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test_scan_axis_quantity_is_shared[x-experiment-Pattern]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test_scan_axis_quantity_is_shared[x-structure-Pattern]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_antialiased_ink_observer]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:dark]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:map-light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:stacked-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_background_to_experiment_ramp:stacked-light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:map]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
@@ -281,6 +283,11 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-x]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:stacked-y]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolates_between_neighboring_patterns]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_default]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:smooth-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:smooth-light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:stepped-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_interpolation_toggle:stepped-light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_map_key_and_image_use_frozen_interior_samples]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:map-dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_offered_maps_are_readable_in_both_themes:map-light]
@@ -298,11 +305,11 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[current]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[fills]
 0.002	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[observer]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[hidden_work]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[identity]
-0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[observer_control]
+0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[hidden_work]
+0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[identity]
+0.004	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[observer_control]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[state]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[structure_tab]
+0.000	tests/integration/app/test_shared_pattern_chart.py::test_shared_chart_acceptance[structure_tab]
 0.000	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[off]
 0.002	tests/integration/app/test_structure_toolbar.py::test_structure_toolbar_saved_state[on]
 0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
@@ -5775,13 +5782,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#F44336-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_exactly_five_approved_tables_and_attribution_are_published
-0.460	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
-0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
+0.420	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.120	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
 0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#4CAF50light]
-0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
-0.200	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
+0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
+0.190	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
 0.130	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Tol#CCBB44light]
-0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
+0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#010100-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#808080-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#FF0000-False]
@@ -5995,11 +6002,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 0.000	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
 0.010	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
 0.000	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
+0.010	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[False]
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[True]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_unfitted_scan_evolution_names_every_free_parameter_without_points
+0.010	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
+0.040	tests/integration/py/test_report_chart_amendments.py::test_unfitted_scan_evolution_names_every_free_parameter_without_points
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[first-fallback]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[later-template]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[correlation_matrix-correlation_view_model.cpp]
@@ -6111,11 +6118,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-as-iucr_99]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_19]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_99]
-0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediCoast]
-0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediContrast]
-0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediGarden]
-0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediNatural]
-0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediStudio]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediCoast]
+0.060	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediContrast]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediGarden]
+0.089	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediNatural]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediStudio]
 0.010	tests/integration/py/test_report_pdf_image_identity.py::test_pdf_image_identity_reaches_bytes_dimensions_and_alpha
 0.010	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_19]
 0.020	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_99]
@@ -6394,7 +6401,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[inferno]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[magma]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[plasma]
-0.010	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[viridis]
+0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[viridis]
 0.000	tests/integration/py/test_scan_map_sources.py::test_scan_offers_multiple_published_maps_without_fixing_the_final_set
 0.340	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-human]
 0.330	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-machine]
@@ -16189,16 +16196,16 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 3.933	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 8.814	tests/integration/app/test_scan_view_content.py
+# module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
+# module-cost: 10.163	tests/integration/app/test_scan_view_content.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
-# module-cost: 67.290	tests/integration/app/test_shared_pattern_chart.py
+# module-cost: 187.976	tests/integration/app/test_shared_pattern_chart.py
 # module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
 # module-cost: 37.517	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.080	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 0.091	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py

@@ -28,12 +28,21 @@ CASES = (
         if mode == 'map' or axis != 'z'
     ]
     + [
-        'test_background_to_experiment_ramp:light',
-        'test_background_to_experiment_ramp:dark',
+        *[
+            f'test_background_to_experiment_ramp:{mode}-{theme}'
+            for mode in ('stacked', 'map')
+            for theme in ('light', 'dark')
+        ],
         'test_map_key_and_image_use_frozen_interior_samples',
         'test_map_interpolates_between_neighboring_patterns',
         'test_selected_map_line_is_always_drawn',
         'test_antialiased_ink_observer',
+        'test_map_interpolation_default',
+        *[
+            f'test_map_interpolation_toggle:{mode}-{theme}'
+            for mode in ('stepped', 'smooth')
+            for theme in ('light', 'dark')
+        ],
         *[
             f'test_offered_maps_are_readable_in_both_themes:{mode}-{theme}'
             for mode in ('stacked', 'map')

@@ -317,43 +317,59 @@ Rectangle {
             compare(zoom.checked, true, "Zoom remains on after reset");
         }
         function test_background_to_experiment_ramp_data() {
-            return [
-                {
-                    tag: "light",
-                    dark: false
-                },
-                {
-                    tag: "dark",
-                    dark: true
-                }
-            ];
+            return ["stacked", "map"].flatMap(mode => [false, true].map(dark => ({
+                            tag: mode + (dark ? "-dark" : "-light"),
+                            mode,
+                            dark
+                        })));
         }
         function test_background_to_experiment_ramp(data) {
-            const scan = open("map");
+            const scan = open(data.mode, data.mode === "stacked" ? "rows" : "bands");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
-            const controls = Render.descendants(chart).filter(item => item.visible && item.count > 1 && typeof item.currentIndex === "number" && typeof item.textAt === "function");
-            let selector, ramp = -1;
-            for (const control of controls)
-                for (let index = 0; index < control.count; ++index)
-                    if (/background|experiment|mono|single|ramp|natural/i.test(control.textAt(index))) {
-                        selector = control;
-                        ramp = index;
-                        break;
-                    }
-            verify(selector !== undefined && ramp >= 0, "The actual palette menu offers a background-to-main-experiment-colour ramp beside the ordinary colour maps");
-            choose(selector, ramp);
-            const palette = Approved.reference(SettingsProof).schemes[0].palette;
+            const choices = data.mode === "map" ? chart.mapChoices : chart.stackedChoices;
+            verify(choices !== undefined, "The actual scan menu exposes the offered ramp choices");
+            const selector = findChild(chart, "scanView." + data.mode + ".toolbar." + (data.mode === "map" ? "colourMap" : "palette"));
+            verify(selector !== null, "The ramp observer operates the actual palette selector");
+            const schemes = Approved.reference(SettingsProof).schemes;
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment
             });
             verify(pattern !== null, "The ramp reference is the actual single-pattern chart in the current theme");
-            const expected = [String(pattern.colors.chartBackground), palette[data.dark ? "dark" : "light"].measured[0]];
-            const layer = named("layer"), frame = grabImage(chart);
-            for (const index of [0, 1]) {
-                const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : 0.5) / 7, layer.height * 0.2);
-                compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "The actual Map ramp endpoint is the owner's theme background or independently approved main experiment colour");
+            let offered = 0;
+            for (let choice = 0; choice < choices.length; ++choice) {
+                if (!String(choices[choice]).startsWith("ramp:"))
+                    continue;
+                ++offered;
+                const scheme = schemes.find(row => row.id === choices[choice].slice(5));
+                verify(scheme !== undefined, "Every offered ramp ends at an independently approved experiment colour");
+                choose(selector, choice);
+                const expected = [String(pattern.colors.chartBackground), scheme.palette[data.dark ? "dark" : "light"].measured[0]];
+                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+                for (const index of [0, 1]) {
+                    if (data.mode === "map") {
+                        const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : 0.5) / 7, layer.height * 0.2);
+                        compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Every Map ramp starts at the Pattern plot background and ends at its main experiment colour");
+                    } else {
+                        const coordinate = index ? 700 + scan.stackHeight : 100;
+                        const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                        const point = layer.mapToItem(chart, layer.width * 0.4, py);
+                        const colour = expected[index];
+                        const rgb = {
+                            r: parseInt(colour.slice(1, 3), 16) / 255,
+                            g: parseInt(colour.slice(3, 5), 16) / 255,
+                            b: parseInt(colour.slice(5, 7), 16) / 255
+                        };
+                        let present = false;
+                        for (let dy = -2; dy <= 2; ++dy) {
+                            const pixel = frame.pixel(Math.round(point.x), Math.round(point.y) + dy);
+                            present = present || (index ? ink(pixel, rgb, chart.colors.chartBackground) : ["r", "g", "b"].every(channel => Math.abs(pixel[channel] - rgb[channel]) <= 1 / 255));
+                        }
+                        verify(present, "Every Stacked ramp uses the Pattern plot background and its main experiment colour at the end patterns");
+                    }
+                }
             }
+            verify(offered > 0, "Both scan palette selectors offer background-to-experiment ramps in both themes");
         }
         function test_offered_maps_are_readable_in_both_themes_data() {
             const rows = [];
@@ -415,6 +431,86 @@ Rectangle {
                 verify(chart.colors.chartLabels !== chart.colors.chartBackground, "The map's axis and key labels remain visible against the theme background");
             }
             verify(offered > 1, "Both views offer multiple sourced maps beside the background ramps");
+        }
+        function interpolationToggle(root) {
+            return Render.descendants(root).find(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip));
+        }
+        function mapStrip() {
+            const layer = named("layer"), axes = named("axes"), marker = named("current"), frame = grabImage(chart), strip = [];
+            for (let py = 2; py < layer.height - 2; ++py) {
+                if (Math.abs(py - marker.y) <= marker.height + 1)
+                    continue;
+                const at = layer.mapToItem(chart, layer.width * 0.4, py);
+                const value = axes.axisY.max - py / layer.height * (axes.axisY.max - axes.axisY.min);
+                strip.push({
+                    pixel: frame.pixel(Math.round(at.x), Math.round(at.y)),
+                    value,
+                    py
+                });
+            }
+            return strip;
+        }
+        function smoothStrip(strip) {
+            return new Set(strip.map(row => String(row.pixel))).size > 3;
+        }
+        function test_map_interpolation_default() {
+            Preferences.resetToDefaults();
+            const scan = open("map", "rows");
+            ready(scan);
+            verify(interpolationToggle(chart) !== undefined, "The Map toolbar exposes its actual stepped/smooth toggle");
+            verify(smoothStrip(mapStrip()), "A new profile defaults to smoothly interpolated colour between the analytic datasets");
+        }
+        function test_map_interpolation_toggle_data() {
+            const rows = [];
+            for (const smooth of [false, true])
+                for (const dark of [false, true])
+                    rows.push({
+                        tag: (smooth ? "smooth" : "stepped") + (dark ? "-dark" : "-light"),
+                        smooth,
+                        dark
+                    });
+            return rows;
+        }
+        function test_map_interpolation_toggle(data) {
+            const scan = open("map", "rows");
+            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+            ready(scan);
+            const toggle = interpolationToggle(chart);
+            verify(toggle !== undefined && toggle.visible && toggle.enabled, "A real Map toolbar toggle chooses stepped or smooth colour");
+            if (smoothStrip(mapStrip()) !== data.smooth) {
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+                surface.Window.window.update();
+                verify(waitForRendering(chart), "The actual interpolation toggle reaches a completed Map frame");
+            }
+            const strip = mapStrip(), background = String(chart.colors.chartBackground);
+            compare(smoothStrip(strip), data.smooth, "Real input selects the requested interpolation rather than only changing its icon");
+            verify(strip.length > 20 && strip.every(row => String(row.pixel) !== background), "Neither interpolation mode exposes background seams between any neighboring datasets");
+            const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            if (!data.smooth) {
+                for (const row of strip) {
+                    // Exact bands meet at the independently known neighbour midpoints.
+                    if (Math.abs(row.value - 175) < (chart.yMax - chart.yMin) / named("layer").height || Math.abs(row.value - 475) < (chart.yMax - chart.yMin) / named("layer").height)
+                        continue;
+                    const expected = table[row.value < 175 ? 0 : row.value < 475 ? 128 : 255];
+                    compare(String(row.pixel).toLowerCase(), expected.toLowerCase(), "Each stepped dataset band keeps its independent published intensity colour, without a gradient inside the band");
+                }
+            } else {
+                let maximumStep = 0;
+                for (let index = 1; index < table.length; ++index)
+                    for (const offset of [1, 3, 5])
+                        maximumStep = Math.max(maximumStep, Math.abs(parseInt(table[index].slice(offset, offset + 2), 16) - parseInt(table[index - 1].slice(offset, offset + 2), 16)));
+                const minimumPixels = named("layer").height * 150 / (chart.yMax - chart.yMin);
+                const bound = (Math.ceil(128 / minimumPixels) + 1) * maximumStep + 1;
+                for (let index = 1; index < strip.length; ++index) {
+                    if (strip[index].py !== strip[index - 1].py + 1)
+                        continue;
+                    verify(["r", "g", "b"].every(channel => Math.abs(strip[index].pixel[channel] - strip[index - 1].pixel[channel]) * 255 <= bound), "Smooth colour has no band jump beyond the independently derived table and pixel-step bound");
+                }
+            }
+            const checked = toggle.checked;
+            const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property Item view: ScanViewChart { mode: "map" }; function walk(item) { let all = [item]; for (const child of item.children || []) all = all.concat(walk(child)); return all; } property var toggles: walk(view).filter(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip)); property bool acceptanceReady: toggles.length === 1; property bool saved: toggles.length === 1 ? toggles[0].checked : false }');
+            verify(!fresh.error && fresh.acceptanceReady, "A fresh production QML engine reloads the real interpolation control");
+            compare(fresh.saved, checked, "Both actual stepped and smooth choices are remembered in a fresh engine");
         }
         function test_scan_toolbar_and_top_margin_data() {
             return test_current_row_tracks_async_coordinates_data();
