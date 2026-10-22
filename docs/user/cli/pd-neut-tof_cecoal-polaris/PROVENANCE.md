@@ -7,8 +7,8 @@ Chebyshev background. The example catalogue's CeCoAl₃ case, started the way a 
 
 - **Data and model:** `pd-neut-tof_cecoal-polaris_chebyshev`, built from FullProf's own example (the fitting project
   `knowledge/fitting/fullprof/pd-neut-tof_cecoal-polaris_chebyshev/`). The points are read from its `_data` loop by
-  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied. The data come with FullProf's examples; no licence is
-  recorded for them. Pmma, bank 2θ 145°, DIFC 6176.03076 fixed,
+  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied. The data are a POLARIS (ISIS) measurement from FullProf's
+  examples; licence not recorded. Pmma, bank 2θ 145°, DIFC 6176.03076 fixed,
   cut-off 4.2 FWHM, the same excluded regions and Chebyshev domain (3001.5891 to 19004.6582 µs).
 
 ## The start
