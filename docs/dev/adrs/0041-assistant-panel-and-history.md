@@ -2617,3 +2617,177 @@ source, generated input and partial kit remain separate retained evidence.
 Duplicate-definition, unchanged/changed HEAD, clean/dirty transition and all
 module-consumer build closure require independent reached checks on the new
 source; old executable success is not current consumer proof.
+
+
+###691 original-operation control failure classification
+
+FIRST is the existing relation reveal flag and control_unavailable/relation pair,
+plus the canonical mapped RecipeRefusal/guidance and admitted outgoing Result
+projection. The shared NativeRecord now owns one optional fixed typed cause for
+the original operation. NativeWidget, NativeCreateWidget and their actual children
+already share that record, so child capture/retention/cleanup cannot erase or
+reconstruct it. This replaces the relation-only flag; fresh records start absent,
+first cause stays fixed, and final/discarded/retired/replaced owners cannot latch.
+
+Existing explicit workflow/Main/Extra/control/manual-input and actual delivery/
+commit confirmation predicates capture closed causes before translated diagnostic
+construction or optional logging/report collection. The existing input helper's
+Request/stop/completed path carries the optional cause; its per-request fixed
+transfer slot preserves it through cleanup, never inferring a cause merely from
+false delivery. Unknown exceptions and cleanup-only failures remain unclassified.
+No predicates, geometry rules, navigation, input, timing, retries or scientific
+setters are replaced. The owner's historical Mac Main cause remains unreproduced.
+
+Only existing action_error/action_field fields cross the original Result
+projection. New fixed error literals describe observed workflow/Main/Extra
+prerequisites, delivery/commit confirmation and existing manual input. Parameter
+and background join the original closed target classes. The original relation
+reveal pair stays exact; specific reader/input/type errors retain precedence.
+Actual complete/applied/published/adopted/uncertain/prefix facts remain original.
+No human message, exception, path, object identity or geometry is projected, and
+no diagnostic authorizes a retry, mode switch, bypass or changed scientific value.
+
+The original native maximum admits the longest finite pair's JSON and Qt owners
+before work and carries it through outcome, row and escaped response ceilings.
+Projection independently admits its key/value owners. POD and Request growth use
+the existing sizeof-based record/frame/callback ownership; the synchronous helper
+adapter admits its local identity/Request copy before launch. Original inclusive
+caps, output charging, fallbacks, once/retirement guards and work-report schemas
+remain unchanged. Local nativeOutcome and actual projected_reply keep their
+original call/turn/scope ownership and truthful disposition; optional reports are
+not needed to produce the provider diagnostic.
+
+Affected tool descriptions and developerInstructions share one fixed declaration
+through compile-time literal composition, preserving original catalogue/policy/
+consent digest identity and input schemas. Project-assistance registered version,
+body marker and content digest move together to1.5.55; its former body1.5.53 marker
+was prose, while actual registered index1.5.54 was version authority. Historical
+captured versions are not rewritten. Unchanged refinement-strategy remains1.2.17.
+Report688/689 build identity ownership and source/science/default/Save/Undo/Draft
+contracts remain exact. This private source candidate has no compiler/runtime
+qualification; independent whole review and reached origin/partial/once/currentness/
+resource/projection checks are required before application or publication.
+
+
+###692 capture the original helper request before diagnostic translation
+
+FIRST is the original helper's sequence, shared Request and QPointer lifetime
+fence around currentness, input and cleanup callbacks. Translation is another
+synchronous callback boundary: QTranslator can cancel the original action,
+admit a replacement or destroy the helper. fail and stop therefore require the
+already captured original Request and sequence from start/advance/cancel. fail
+retains its lifetime and original Request before translation, records only that
+request's first cause, and calls the expected-original stop only if the helper
+survives. stop refuses any replacement before touching its cause, timer or state.
+A throwing translator uses the existing original-identity exception/fallback
+path; it cannot classify or settle a successor. Unknown reasons stay absent.
+
+The same mandatory identity parameters cover direct successful/failed readback,
+manual cancellation and generic fallback calls. Observable final property
+readback finishes before the caller's lifetime check and expected-original stop.
+The original cleanup, restoration, finishCommit, pointer notification and single
+completion order remains unchanged. stop owns a QString header for its original
+diagnostic before callbacks, so preowned member fallbacks survive helper deletion
+inside completion. No member access follows that completion. The original Request
+preparation/retention roles also reserve the bounded guard and QString headers;
+no cap, pacing, timer, retry, event path or scientific behavior changes.
+
+The closed cause/literal maps, provider/history/report projection and original
+partial receipts retain691 semantics. Registered skill1.5.55 body/index/digest,
+report writer and common build-identity ownership remain exact. This correction
+is private source only; callback/translator replacement, destruction, throw,
+once/retirement and resource escapes still require independent reached checks.
+
+
+###694 primary native facts survive provider publication
+
+FIRST is native_row's accepted NativeRecord outcome/purpose attachment and
+native_reply's direct-refusal primary-row latch. The primary archive/history row
+is the sole durable owner in both cases. Direct replies capture the original
+row/call/item, thread/turn, FileProjection and transport generation before response
+construction or callbacks. All callers now supply explicit original call identity;
+there is no default callId that silently omits attachment. Only the matching live
+original dynamic call may latch. A missing/mismatched/final/replayed/admitted-
+record owner cannot acquire another call's facts. The first retained direct local
+outcome remains authoritative; later optional evidence uses that same captured
+owner and actual response disposition. This latch runs independently of report
+availability or collection. Invalid supplied purpose is not a validated caption;
+the actual refusal outcome can still be retained.
+
+Provider public payloads discard the Edi-owned purpose/nativeOutcome fields before
+accepted NativeRecord facts are reattached. publish preserves original local facts
+on the same primary row and exact dynamic-item identity before capturing
+originalNext. Thus either optional preparation or admission fallback keeps those
+facts, or publication refuses without replacing the original row. Changed identity
+on the same row refuses; Clear may still remove rows. A matching original
+NativeRecord may publish its actual stronger settlement, including genuine Undo
+facts. Provider completion cannot reconstruct or replace native truth. The wire
+projection, public/report row schema and scientific/Undo semantics are unchanged.
+
+Mandatory row detachment and archive writer owners are admitted before mutation;
+primary native fact backing is counted independently of optional work metadata in
+native_bytes. The prospective primary destination fits before commit, and its
+role transfers only after the old local archive alias is released. Original hard
+caps, fallback, response delivery/error and at-most-once transport ownership stay
+binding. A failed local retention cannot fabricate durability or veto the owed
+original response. No second ledger, report history clone, retry actor, navigation
+repair, raw-message provider export or new scientific operation exists. Private
+source and historical692 qualification are not694 compiler/runtime evidence.
+
+
+###695 original response conversion precedes capture-only admission
+
+The direct native_reply response role is restored to its original source formula.
+It constructs native_response before reserving any capture-specific fixed headers,
+row source or backing owners. Projection/encoding/writer/Unicode scratch is dead
+when capture admission starts. A capture role that cannot coexist with the actual
+returned response is dropped, with its aliases destroyed before their charges;
+the same original response still reaches its original once-owned answer path.
+Actual response-conversion failure remains outside the capture catch and preserves
+its original exception/error behavior. This also applies without report collection.
+
+The pre-conversion FileProjection and exact transport generation remain original.
+The successful native_response path performs JSON/encoding and callback-free
+capacity operations; retainOutput failure can notify/reenter but then throws out
+of conversion. It never continues into row capture on that failure. Capture of the
+original row/thread/turn/call follows successful conversion and precedes every
+callback-capable primary publication, optional observation and transport answer.
+All694 expected-item, first-outcome, reentry, retirement, publication-fallback,
+retained-primary and scientific/Undo rules remain. No source alias is retained
+without its admitted role, no hard cap increases, and historical syntax/source
+review is not actual pressure or runtime proof for695.
+
+
+###696 original response wire ownership precedes native capture
+
+FIRST is CodexAgent::write's existing required-wire preparation boundary, shared
+with request preparation. Native answer uses that same synchronous boundary via
+borrowed context/function pointers, with no allocating function wrapper, retained
+callback, actor, ledger or wire-schema change. Original response conversion and
+wire/line/writer/deferred/future-queue admission happen before native capture.
+The deferred path additionally protects its nested flush queue peak while
+considering capture; if that extra joint room is absent, only capture is skipped.
+Its future reservation transfers callback-free into the existing flush owners.
+
+Both direct native_reply and accepted NativeRecord normal/fallback publication
+use this admitted-wire boundary. Reentrant provider canonical updates during the
+same finishing NativeCall borrow already-retained primary facts; they do not
+publish a new outcome ahead of that wire boundary. Original caller-owned thread/turn/item/RPC scope
+remains bound before callbacks, without new owning capture aliases before wire
+admission. Capture's fixed/source/temporary/primary-destination roles see actual
+wire owners and decline when they cannot coexist. Wire-local declined publication
+does not retain another held row. A closed capacity result distinguishes local
+room refusal from original storage/identity failure; the former leaves the owed
+response and original record facts/Undo intact rather than emitting a native
+failure. Original storage/owner failure and original one-attempt answer remain.
+
+Every reserve_disclosure now propagates its already-proved joint VM growth into
+the live transport cache before constructing owners. Rollback and release guards
+keep their original owner/generation fences; successful updates are callback-free.
+Primary backing transfer and optional metadata therefore cannot leave write/read/
+flush using an older smaller VM charge. Captured aliases die before role release,
+and new permanent primary backing stays counted. This completes conversion,
+capture/publication, immediate wire, deferred holding/flush and post-answer
+metadata ownership under unchanged hard limits. All695/694/692 first-fact,
+projection, partial/once/reentry/retirement/science/Undo contracts remain. Source
+reasoning is not reached pressure, compiler, runtime, Mac or CI qualification.

@@ -1373,11 +1373,17 @@ struct AssistantViewModel::State {
         const QPointer<CodexAgent> transport(agent.get());
         const auto transport_generation = transport ? transport->outputGeneration() : 0;
         disclosure_preparing_bytes += bytes;
-        return qScopeGuard([this, publication, transport, transport_generation, bytes] {
+        auto reservation=qScopeGuard([this, publication, transport, transport_generation, bytes] {
             if (!publication.receiver || publication.receiver->state_.get() != this) return;
             disclosure_preparing_bytes -= bytes;
             native_release_charge(publication, transport, transport_generation);
         });
+        // native_room already proved this exact joint total without callbacks.
+        // Propagate admitted growth BEFORE any new owner is constructed; a
+        // release-only update cannot communicate a larger VM role to write().
+        if(transport && publication.input_current() && agent.get()==transport.data() && transport->outputGeneration()==transport_generation)
+            native_charge();
+        return reservation;
     }
     void work_merge(const QString& rowId,const Object& fields,bool newlyCommitted=false) noexcept {
         if(!work_reports.collecting() || rowId.isEmpty())return;
@@ -2366,6 +2372,8 @@ struct AssistantViewModel::State {
         QString key, thread, turn, call, tool, purpose, row;
         Object original, canonical, outcome, response, terminal;
         std::shared_ptr<NativeFitUndo> fit_undo;
+        ControlDiagnostic control_diagnostic;
+        bool control_capacity = false;
         quint64 row_bytes = 0, outcome_bytes = 0, response_bytes = 0;
         bool reserved = true, retired = false, discarded = false, completed = false, answered = false;
         bool outcome_ready = false; // Chosen host result; independent of provider/native completion.
@@ -2433,7 +2441,6 @@ struct AssistantViewModel::State {
         Object relation_args;
         qsizetype relation_row = 0, relation_field = 0;
         bool relation_constraint = false, relation_visible = false;
-        bool relation_viewport_unavailable = false; // Exact local reach refusal, not backend validation.
         qsizetype relation_base = 0, completed_steps = 0;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
@@ -2518,6 +2525,62 @@ struct AssistantViewModel::State {
     std::shared_ptr<NativeCreateWidget> native_create_widget;
     std::vector<std::weak_ptr<NativeCreateWidget>> creation_widget_frames;
 
+    static ControlField control_target(const QString& tool) noexcept {
+        if(tool=="set_parameters" || tool=="set_free")return ControlField::Parameter;
+        if(tool=="edit_background" || tool=="background_names")return ControlField::Background;
+        if(tool=="add_relations" || tool=="edit_relation")return ControlField::Relation;
+        if(structure_app_action(tool))return ControlField::Structure;
+        if(tool=="edit_experiment" || tool=="create_experiment" || tool=="set_experiment_type" || tool=="load_data")return ControlField::Experiment;
+        if(tool=="load_structure")return ControlField::File;
+        return ControlField::Project;
+    }
+    static ControlField control_target(const std::shared_ptr<NativeCreateWidget>& run) noexcept {
+        if(run->individual_tool=="edit_experiment" && experiment_phase(run->arguments))return ControlField::Phase;
+        if(!run->individual_tool.isEmpty())return control_target(run->individual_tool);
+        if(run->page=="structure")return ControlField::Structure;
+        if(run->page=="experiment")return ControlField::Experiment;
+        return ControlField::Project;
+    }
+    static ControlField control_target(const std::shared_ptr<NativeWidget>& run) noexcept {
+        if(run->tool=="create_expose")if(const auto parent=run->create_parent.lock())return control_target(parent);
+        return control_target(run->tool);
+    }
+    void control_latch(const NativeCall& call,ControlCause cause,ControlField field) noexcept {
+        if(cause==ControlCause::None || !native_call || native_call->record!=call.record ||
+            native_call->receipt!=call.receipt || native_call->rpc!=call.rpc || !call.record ||
+            !call.record->control_capacity || native_call->finishing || native_call->resolved || native_call->retiring ||
+            call.record->answered || call.record->retired || call.record->discarded || call.record->completed ||
+            !call.receipt || call.receipt->retired)return;
+        call.record->control_diagnostic.latch(cause,field);
+    }
+    void control_failure(const std::shared_ptr<NativeWidget>& run,ControlCause cause) noexcept {
+        if(widget_owned(run))control_latch(run->call,cause,control_target(run));
+    }
+    void control_failure(const std::shared_ptr<NativeCreateWidget>& run,ControlCause cause) noexcept {
+        if(create_widget_owned(run))control_latch(run->call,cause,control_target(run));
+    }
+    static void control_append(Object& outcome,const std::shared_ptr<NativeRecord>& record) {
+        if(!record || !record->control_capacity || !record->control_diagnostic ||
+            outcome.value("complete").toBool() || outcome.contains("action_error") || outcome.contains("action_field"))return;
+        // The original future result/row/escaped-response roles own this fixed pair (ADR-0041).
+        outcome["action_error"]=QLatin1StringView(control_error(record->control_diagnostic.cause));
+        outcome["action_field"]=QLatin1StringView(control_field(record->control_diagnostic.field));
+    }
+    std::uint64_t control_start(const NativeCall& call,ControlField field,AssistantWidgetInput::Request request) {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<AssistantWidgetInput> input(widget_input.get());
+        const auto original=call;
+        const auto role=reserve_disclosure(sizeof(NativeCall)+sizeof(QPointer<AssistantViewModel>)+sizeof(QPointer<AssistantWidgetInput>)+(sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+sizeof(ControlInputRefusal));
+        if(!receiver || receiver->state_.get()!=this)return 0;
+        if(!input || widget_input.get()!=input || !native_call || native_call->record!=original.record ||
+            native_call->receipt!=original.receipt || native_call->rpc!=original.rpc)
+            throw ControlInputRefusal(ControlCause::Superseded,"The original visible input owner retired");
+        try {return input->start(std::move(request));}
+        catch(const ControlInputRefusal& refusal) {
+            if(receiver && receiver->state_.get()==this)control_latch(original,refusal.cause,field);
+            throw;
+        }
+    }
     const QString widget_outcome_error = QStringLiteral("The actual widget outcome could not be confirmed; inspect the project");
     bool widget_owned(const std::shared_ptr<NativeWidget>& run) const {
         return run && run->receiver && run->receiver->state_.get() == this && native_widget == run && native_call && native_call->record == run->call.record &&
@@ -3106,6 +3169,7 @@ struct AssistantViewModel::State {
                 const auto* entry=widget_parameter_entry(run);
                 const bool actual = input && input->consumed && input->outcome.applied && input->outcome.published &&
                     entry && widget_parameter_binding_current(*entry) && run->parameter->value() == run->value && entry->member->value.get()==run->value;
+                if(delivered && !actual)control_failure(run,ControlCause::Commit);
                 create_widget_take_child(parent, run);
                 widget_end(run);
                 if (!receiver || !create_widget_owned(parent)) return;
@@ -3161,6 +3225,7 @@ struct AssistantViewModel::State {
                     if(next==run->parameter_at)actual=false;
                     const bool settled=delivered && input && input->consumed && input->outcome.applied && input->outcome.published && actual;
                     run->parameter_uncertain=input && input->outcome.applied;
+                    if(delivered && !settled)control_failure(run,ControlCause::Commit);
                     widget_sequence_retain(run);
                     if(!widget_entry_owned(run,entry))return;
                     if(!settled){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
@@ -3182,6 +3247,7 @@ struct AssistantViewModel::State {
                 const bool settled=delivered && input && input->consumed && input->outcome.applied && input->outcome.published && actual;
                 run->parameter_uncertain = run->parameter_uncertain || (input && input->outcome.applied);
                 if(input && input->consumed && !input->outcome.applied && delivered)run->parameter_uncertain=false;
+                if(delivered && !settled)control_failure(run,ControlCause::Commit);
                 widget_sequence_retain(run); // Factual applied prefix survives refresh/notification failure.
                 if (!widget_entry_owned(run,entry)) return;
                 if (!settled) { widget_refuse(run,message.isEmpty()?widget_outcome_error:message); return; }
@@ -3197,12 +3263,13 @@ struct AssistantViewModel::State {
                 return;
             }
             const auto input = run->input;
-            if (!input || !input->consumed) { widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine parameter control did not commit its expected input") : message); return; }
+            if (!input || !input->consumed) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine parameter control did not commit its expected input") : message); return; }
             const auto* entry=widget_parameter_entry(run);
             const bool actual = entry && widget_parameter_binding_current(*entry) &&
                 (run->tool == "set_parameters" ? run->parameter->value() == run->value && entry->member->value.get()==run->value :
                     run->parameter->isFree() == run->free && entry->member->free.get()==run->free);
             const auto& result = input->outcome;
+            if(delivered && (!actual || !result.applied || !result.published))control_failure(run,ControlCause::Commit);
             native_finish(delivered && actual && result.applied && result.published,
                 {{"status", !result.applied ? "refused" : delivered && actual && result.published ? "edited" : "applied_unconfirmed"},
                  {"calculation_pending", run->project && run->project->calculating()},
@@ -3303,8 +3370,8 @@ struct AssistantViewModel::State {
             const char* cause, const QString& message,
             std::source_location caller = std::source_location::current()) {
         if (!widget_owned(run)) return;
-        run->relation_viewport_unavailable = run->tool == "add_relations" || run->tool == "edit_relation";
-        if (!run->relation_viewport_unavailable || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
+        control_failure(run,ControlCause::Unavailable);
+        if ((run->tool != "add_relations" && run->tool != "edit_relation") || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
             widget_refuse(run,message,caller); return;
         }
         const auto receiver=run->receiver;
@@ -3402,7 +3469,7 @@ struct AssistantViewModel::State {
         }
         if (group && group->property("collapsed").toBool()) {
             auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
-            if (!title || title->window() != run->window) { widget_refuse(run, QObject::tr("The actual owning group header is unavailable")); return false; }
+            if (!title || title->window() != run->window) { control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The actual owning group header is unavailable")); return false; }
             wanted = title;
             viewport.clear();
             for (auto* a = title->parentItem(); a; a = a->parentItem()) {
@@ -3444,10 +3511,12 @@ struct AssistantViewModel::State {
             request.kind = AssistantWidgetInput::Kind::Navigate; request.target = wanted;
             request.current = [this, run, entry] { return widget_entry_current(run, entry) && widget_page_selected(run); };
             request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-            request.completed = [this, run, entry, group](bool delivered, const QString& message) noexcept {
+            request.completed = [this, run, entry, group](bool delivered, const QString& message, ControlCause cause) noexcept {
                 if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
                 try {
                     if (!delivered || !group || group->property("collapsed").toBool()) {
+                        if(delivered)control_failure(run,ControlCause::Commit);
                         widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine group click did not expand its controls") : message); return;
                     }
                     QTimer::singleShot(500, &owner, [this, run, entry] {
@@ -3457,7 +3526,7 @@ struct AssistantViewModel::State {
                     });
                 } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
             };
-            widget_input->start(std::move(request)); return false;
+            control_start(run->call,control_target(run),std::move(request)); return false;
         }
         if(viewport && viewport->property("tableRowHeight").isValid()) {
             const auto receiver=run->receiver;
@@ -3502,27 +3571,28 @@ struct AssistantViewModel::State {
         request.scrollDirection = bounds.top() < 0 ? 1 : -1;
         request.current = [this, run, entry, viewport] { return viewport && widget_entry_current(run, entry) && widget_page_selected(run); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, entry, viewport, before](bool delivered, const QString& message) noexcept {
+        request.completed = [this, run, entry, viewport, before](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, entry, viewport, before] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
-                        if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+                        if (!widget_entry_current(run, entry)) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
                         if (!viewport || viewport->property("contentY").toDouble() == before) {
-                            widget_refuse(run, QObject::tr("The genuine wheel did not move the current viewport")); return;
+                            control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The genuine wheel did not move the current viewport")); return;
                         }
                         widget_resume_revealed(run);
                     } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
                 });
             } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
         };
-        widget_input->start(std::move(request)); return false;
+        control_start(run->call,control_target(run),std::move(request)); return false;
     }
     void widget_reach_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
-        if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        if (!widget_entry_current(run, entry)) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         // The existing diagnostic stays bounded per lookup and disabled by
         // default. Reveal continuations belong to this same original call;
         // requested-tab conversion still precedes detailed ancestry.
@@ -3675,7 +3745,7 @@ struct AssistantViewModel::State {
         }
         if (!target) {
             if(run->parameter) {widget_scroll_parameter(run);return;}
-            widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters")); return;
+            control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters")); return;
         }
         if (!widget_reveal_parameter(run, target)) return;
         AssistantWidgetInput::Request request;
@@ -3689,8 +3759,9 @@ struct AssistantViewModel::State {
             return widget_entry_owned(run,entry);
         };
         request.finishCommit = [] {};
-        request.completed = [this, run, entry](bool delivered, const QString& message) {
+        request.completed = [this, run, entry](bool delivered, const QString& message, ControlCause cause) {
             if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if(delivered && run->tool!="run_fit")widget_apply_parameter(run,false);
                 if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
@@ -3698,7 +3769,7 @@ struct AssistantViewModel::State {
                 else widget_input_finished(run,delivered,message);
             } catch (...) { if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error); }
         };
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     std::pair<std::size_t,std::size_t> widget_free_group_range(const std::shared_ptr<NativeWidget>& run) const {
         const auto at=run->parameter_at;
@@ -3747,7 +3818,7 @@ struct AssistantViewModel::State {
         const QPointer<QQuickItem> header(widget_named("parameters.freeHeader"));
         const QPointer<QObject> menu(header?header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu")):nullptr);
         const QPointer<QQuickItem> target(opened?widget_named(entry->free?"parameters.freeHeader.free":"parameters.freeHeader.fixed"):header.data());
-        if(!menu || !target){widget_refuse(run,widget_outcome_error);return;}
+        if(!menu || !target){control_failure(run,ControlCause::Unavailable);widget_refuse(run,widget_outcome_error);return;}
         if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
         request.kind=opened?AssistantWidgetInput::Kind::FileLoadCue:AssistantWidgetInput::Kind::Navigate;request.target=target;
@@ -3756,8 +3827,9 @@ struct AssistantViewModel::State {
                 (!opened || menu->property("visible").toBool());
         };
         auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
-        auto captured_completed=[this,run,entry,menu,opened](bool delivered,const QString& message) {
+        auto captured_completed=[this,run,entry,menu,opened](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_entry_owned(run,entry))return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if(opened) {
                     {
@@ -3788,7 +3860,7 @@ struct AssistantViewModel::State {
         callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
         native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={}) {
         const auto* entry=widget_parameter_entry(run);
@@ -3925,12 +3997,13 @@ struct AssistantViewModel::State {
                 filter->categories().indexOf(filter->categoryFor(run->parameter))==option;
         };
         auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
-        auto captured_completed=[this,run,entry,filter,target,option](bool delivered,const QString& message) {
+        auto captured_completed=[this,run,entry,filter,target,option](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_entry_owned(run,entry))return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if(!delivered || !filter || !target || !widget_entry_current(run,entry) ||
                     filter->categories().indexOf(filter->categoryFilter())!=option ||
-                    filter->categoryFilter()!=filter->categoryFor(run->parameter)) {widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
+                    filter->categoryFilter()!=filter->categoryFor(run->parameter)) {if(delivered)control_failure(run,ControlCause::Commit);widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                 QTimer::singleShot(500,&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
                     try {widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
@@ -3950,11 +4023,11 @@ struct AssistantViewModel::State {
         callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
         native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     void widget_reset_parameter_filters(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
-        if (!widget_entry_current(run, entry) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         if (run->tab != "appBar.tab.analysis" || !run->parameter) { widget_reach_parameter(run); return; }
         const QPointer<ParameterFilterModel> filter([&]() -> ParameterFilterModel* {
             auto* table=widget_named("parameters.list");
@@ -3967,13 +4040,14 @@ struct AssistantViewModel::State {
             widget_filter_parameter(run);return;
         }
         auto* target = widget_named("parameters.resetFilters");
-        if (!target) { widget_refuse(run, QObject::tr("The genuine parameter filter reset is unavailable")); return; }
+        if (!target) { control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The genuine parameter filter reset is unavailable")); return; }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
         request.current = [this, run, entry] { return widget_entry_current(run, entry); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, entry](bool delivered, const QString& message) noexcept {
+        request.completed = [this, run, entry](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, entry] {
@@ -3983,7 +4057,7 @@ struct AssistantViewModel::State {
                 });
             } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
         };
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     Object work_call_evidence(const NativeCall& call,const char* disposition) {
         const auto& record=*call.record;const auto m=work_report_missing();
@@ -4175,9 +4249,9 @@ struct AssistantViewModel::State {
     }
     void widget_main_ready(const std::shared_ptr<NativeWidget>& run, const QPointer<QQuickItem>& target) {
         const auto* entry=widget_parameter_entry(run);
-        if (!widget_entry_current(run, entry) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "basic") != target || !target->property("checked").toBool()) {
-            widget_refuse(run, QObject::tr("The genuine Main sidebar click did not select the expected tab; no parameter input was sent")); return;
+            control_failure(run,ControlCause::MainSidebar); widget_refuse(run, QObject::tr("The genuine Main sidebar click did not select the expected tab; no parameter input was sent")); return;
         }
         if (run->tool == "edit_background" && run->tab=="appBar.tab.experiment") widget_background_begin(run);
         else if(run->tool == "background_names")widget_background_names(run);
@@ -4185,11 +4259,12 @@ struct AssistantViewModel::State {
     }
     void widget_click_main(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
-        if (!widget_entry_current(run, entry) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-        if (!widget_page_selected(run)) { widget_refuse(run, QObject::tr("The expected workflow page is not selected")); return; }
+        if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        if (!widget_page_selected(run)) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The expected workflow page is not selected")); return; }
         const char* lookupCause="main_named_absent";QPointer<QQuickItem> named;
         const QPointer<QQuickItem> target(widget_sidebar_tab(run,"basic",&lookupCause,&named));
         if (!target) {
+            control_failure(run,ControlCause::MainSidebar);
             try {
             std::array<QPointer<QQuickItem>,8> facts{nullptr,named,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr};
             if(named) {
@@ -4220,8 +4295,9 @@ struct AssistantViewModel::State {
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
         request.current = [this, run, entry] { return widget_entry_current(run, entry); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, entry, target](bool delivered, const QString& message) noexcept {
+        request.completed = [this, run, entry, target](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, entry, target] {
@@ -4231,7 +4307,7 @@ struct AssistantViewModel::State {
                 });
             } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
         };
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     void widget_background_names(const std::shared_ptr<NativeWidget>& run) {
         if(!widget_entry_current(run,nullptr) || !widget_page_selected(run) || !widget_input || !run->project->currentExperiment() ||
@@ -4273,8 +4349,9 @@ struct AssistantViewModel::State {
             if(run->project)run->project->finishWidgetBackground(run->background_input);
             if(run->receiver && run->receiver->state_.get()==this && run->edit_scope){end_own_edit(run->edit_scope);run->edit_scope=0;}
         };
-        auto captured_completed=[this,run](bool delivered,const QString& message) {
+        auto captured_completed=[this,run](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_owned(run))return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 const auto parent=run->create_parent.lock();const auto input=run->background_input;
                 const bool settled=delivered && input && input->consumed && input->outcome.applied && input->outcome.published;
@@ -4297,6 +4374,7 @@ struct AssistantViewModel::State {
                     for(std::size_t i=0;actual && i<points.size();++i)
                         actual=points[i].get()==input->members[i] && points[i]->id.value()==names[i];
                 }
+                if(delivered && !actual)control_failure(run,ControlCause::Commit);
                 if(!parent) {
                     if(!actual){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                     native_finish(true,widget_sequence_progress(run,QObject::tr("Background IDs assigned by the original button with ordinary Undo"),true));return;
@@ -4321,7 +4399,7 @@ struct AssistantViewModel::State {
         callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
         native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     bool widget_background_current(const std::shared_ptr<NativeWidget>& run) const {
         if(!widget_current(run))return false;
@@ -4375,9 +4453,9 @@ struct AssistantViewModel::State {
     void widget_background_scroll(const std::shared_ptr<NativeWidget>& run) {
         if(!widget_background_current(run) || !widget_background_member_current(run)){widget_refuse(run,widget_outcome_error);return;}
         const QPointer<QQuickItem> table(widget_background_target(run,"background.list"));
-        if(!table){widget_refuse(run,QObject::tr("The original background table is unavailable"));return;}
+        if(!table){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The original background table is unavailable"));return;}
         if(!widget_reveal_parameter(run,table))return;
-        if(++run->reveal_steps>64){widget_refuse(run,QObject::tr("The actual background row could not be revealed"));return;}
+        if(++run->reveal_steps>64){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The actual background row could not be revealed"));return;}
         const auto& rows=run->background_experiment->background;
         const auto at=std::find_if(rows.begin(),rows.end(),[&](const auto& row){return row.get()==run->background_key;});
         if(at==rows.end()){widget_refuse(run,widget_outcome_error);return;}
@@ -4405,10 +4483,10 @@ struct AssistantViewModel::State {
         const bool applied = (run->background_input && run->background_input->consumed && run->background_input->outcome.applied) ||
             (run->input && run->input->consumed && run->input->outcome.applied);
         const bool published = run->background_input ? run->background_input->outcome.published : run->input && run->input->outcome.published;
-        if (!applied) { widget_refuse(run, message.isEmpty() ? QObject::tr("The original background control refused its change") : message); return; }
+        if (!applied) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, message.isEmpty() ? QObject::tr("The original background control refused its change") : message); return; }
         ++run->completed_steps; run->step_counted = true; native_call->may_have_written = true;
         widget_sequence_retain(run);
-        if (!delivered || !published) { widget_refuse(run, widget_outcome_error); return; }
+        if (!delivered || !published) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
         const auto original_call=*native_call;native_refresh(original_call);
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         if (!widget_background_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
@@ -4451,8 +4529,9 @@ struct AssistantViewModel::State {
             if(run->project){run->project->finishWidgetBackground(run->background_input);run->project->finishWidgetInput(run->input);}
             if(run->edit_scope && run->receiver){end_own_edit(run->edit_scope);run->edit_scope=0;}
         };
-        auto captured_completed=[this,run,parameter_input,row_text,original,step](bool delivered,const QString& message) {
+        auto captured_completed=[this,run,parameter_input,row_text,original,step](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_owned(run))return;
+            if(run->receiver && run->receiver->state_.get()==this && run->background_step==step)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if(delivered && parameter_input)widget_apply_parameter(run,false);
                 else if(delivered && row_text) {
@@ -4487,7 +4566,7 @@ struct AssistantViewModel::State {
         callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
         native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     void widget_background_next(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_background_current(run) || !widget_input) { widget_refuse(run, widget_outcome_error); return; }
@@ -4563,7 +4642,7 @@ struct AssistantViewModel::State {
             if (run->background_group) { widget_refuse(run, widget_outcome_error); return; }
             run->background_group = item;
         }
-        if (!run->background_group) { widget_refuse(run, QObject::tr("The original Background group is unavailable")); return; }
+        if (!run->background_group) { control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The original Background group is unavailable")); return; }
         run->background_id = run->background_request.action == edi::BackgroundPointInput::Action::Add
             ? background_append_input(*run->background_experiment).id : run->background_request.id;
         if(!run->create_parent.expired() && run->background_request.action==edi::BackgroundPointInput::Action::Add)
@@ -4623,9 +4702,6 @@ struct AssistantViewModel::State {
         Object result{{"status", complete ? "edited" : count ? "partial" : "refused"}, {"steps_completed", static_cast<qint64>(count)},
             {"complete", complete}, {"atomic", false}, {"calculation_pending", run->project && run->project->calculating()},
             {"message", bounded_error(message)}};
-        if(!complete && run->tool=="add_relations" && run->relation_viewport_unavailable) {
-            result["action_error"]="control_unavailable"; result["action_field"]="relation";
-        }
         if(complete && run->tool=="edit_background" && run->background_request.action!=edi::BackgroundPointInput::Action::Remove)
             result["background_id"]=QString::fromStdString(run->background_id);
         return result;
@@ -4635,6 +4711,7 @@ struct AssistantViewModel::State {
         // This original frame owns factual completion even when Stop arrived during publication.
         if (run->call.record->discarded || run->call.record->answered) return;
         auto result = widget_sequence_progress(run, QObject::tr("Visible edits are separate Undo steps; the sequence may be incomplete"));
+        control_append(result,run->call.record);
         auto response = native_response(false, result);
         auto row = native_row(*run->call.record, result, false);
         if (generic_size(result, Limits::context_bytes) > run->call.record->outcome_bytes ||
@@ -4664,11 +4741,11 @@ struct AssistantViewModel::State {
         // Append is outside the DataTable; only an existing original row is positioned here.
         if(!widget_relation_row_current(run) || !run->relation_field){widget_refuse(run,widget_outcome_error);return;}
         const QPointer<QQuickItem> table(widget_relation_named(run,run->relation_constraint?"constraints.list":"aliases.list"));
-        if(!table){widget_refuse(run,QObject::tr("The original relation table is unavailable"));return;}
+        if(!table){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The original relation table is unavailable"));return;}
         if(!widget_reveal_parameter(run,table))return;
         if(++run->reveal_steps>64){widget_refuse(run,QObject::tr("The original relation row could not be revealed"));return;}
         const auto at=run->constraint_draft.serial && run->constraint_model ? run->constraint_model->draftRow(run->constraint_draft) : run->relation_base+run->relation_row;
-        if(at<0 || at>=table->property("count").toLongLong()){widget_refuse(run,widget_outcome_error);return;}
+        if(at<0 || at>=table->property("count").toLongLong()){control_failure(run,ControlCause::Unavailable);widget_refuse(run,widget_outcome_error);return;}
         const int index=static_cast<int>(at);const auto receiver=run->receiver;
         bool revealed=false;
         const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,index));
@@ -4690,6 +4767,7 @@ struct AssistantViewModel::State {
         if (!widget_owned(run)) return;
         const auto input = run->relation_input;
         if (!input || !input->consumed || !input->outcome.applied) {
+            if(delivered)control_failure(run,ControlCause::Commit);
             widget_refuse(run, message.isEmpty() ? QObject::tr("The original relation control refused its edit") : message); return;
         }
         ++run->completed_steps; run->step_counted = true;
@@ -4718,7 +4796,7 @@ struct AssistantViewModel::State {
         case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[position].get() == expected.row && declaration.constraints[position]->enabled.get() == expected.enabled; break;
         default: actual = false;
         }
-        if (!delivered || !input->outcome.published || !actual) { widget_refuse(run, widget_outcome_error); return; }
+        if (!delivered || !input->outcome.published || !actual) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
         native_refresh(*native_call);
         if (!widget_relation_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
         const auto& model = *run->project->assistantProject();
@@ -4829,7 +4907,7 @@ struct AssistantViewModel::State {
         if (!target || !model || !control || !widget_relation_current(run) || run->relation_row != row || run->relation_field != field) {
             widget_refuse(run, widget_outcome_error); return;
         }
-        if (widget_input->manualDraftPresent()) { widget_refuse(run, QObject::tr("Finish the current manual input first")); return; }
+        if (widget_input->manualDraftPresent()) { control_failure(run,ControlCause::ManualInput); widget_refuse(run, QObject::tr("Finish the current manual input first")); return; }
         if (!append && !run->relation_input) {
             run->relation_action = {}; run->relation_action.kind = ProjectEditor::RelationAction::Kind::ConstraintCommit;
             run->relation_action.commit = run->constraint_commit;
@@ -4845,8 +4923,9 @@ struct AssistantViewModel::State {
                 (append ? !model->currentDraft() : model->draftCommitCurrent(run->constraint_commit));
         };
         auto restore = current; auto prepare = current; auto finish = [] {};
-        auto completed = [this,run,receiver,target,model,control,row,field,append](bool delivered,const QString& message) {
+        auto completed = [this,run,receiver,target,model,control,row,field,append](bool delivered,const QString& message, ControlCause cause) {
             if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return;
+            if(run->receiver && run->receiver->state_.get()==this && run->relation_row==row && run->relation_field==field)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered || !target || !model || !control || !widget_relation_current(run) || run->relation_row != row || run->relation_field != field) {
                     widget_refuse(run, message); return;
@@ -4930,7 +5009,7 @@ struct AssistantViewModel::State {
         request.current = std::move(current); request.restoreCurrent = std::move(restore); request.prepareCommit = std::move(prepare);
         request.finishCommit = std::move(finish); request.completed = std::move(completed);
         native_charge(); if (!widget_owned(run)) return;
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     QString relation_target_name(const QString& path) {
         auto* registry=widget_parameter_registry();
@@ -4961,9 +5040,6 @@ struct AssistantViewModel::State {
             {"applied",applied},{"published",published},{"complete",complete},{"atomic",!run->relation_visible},
             {"steps_completed",complete?1:0},{"uncertain",applied && !complete},
             {"calculation_pending",run->project && run->project->calculating()}};
-        if(!complete && run->relation_viewport_unavailable) {
-            result["action_error"]="control_unavailable"; result["action_field"]="relation";
-        }
         if(complete) {
             using K=ProjectEditor::RelationAction::Kind;
             const auto kind=run->relation_action.kind;
@@ -4982,7 +5058,7 @@ struct AssistantViewModel::State {
         const auto row=run->relation_row,field=run->relation_field,base=run->relation_base;
         const auto key=run->relation_key;const bool constraint=run->relation_constraint;
         if(widget_input && widget_input->manualDraftPresent()) {
-            if(receiver && receiver->state_.get()==this && widget_owned(run))widget_refuse(run,QObject::tr("Finish the current manual input first"));return;
+            if(receiver && receiver->state_.get()==this && widget_owned(run)){control_failure(run,ControlCause::ManualInput);widget_refuse(run,QObject::tr("Finish the current manual input first"));}return;
         }
         if(!receiver || receiver->state_.get()!=this || !target || !widget_current(run) ||
             run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
@@ -5086,14 +5162,15 @@ struct AssistantViewModel::State {
             const auto options=target->property("model").toStringList();
             if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
                 run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
-            if(!options.contains(run->relation_action.text)){widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
+            if(!options.contains(run->relation_action.text)){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
         AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
         auto current=[this,run,target,row,field,base,key,constraint]{return run->receiver && run->receiver->state_.get()==this && target &&
             run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run);};
         auto restore=current;auto prepare=current;auto finish=[]{};
-        auto completed=[this,run,target,row,field,base,key,constraint](bool delivered,const QString& message) {
+        auto completed=[this,run,target,row,field,base,key,constraint](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_owned(run) || run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {if(!delivered || !target || !widget_relation_row_current(run)){widget_refuse(run,message);return;}
                 widget_relation_edit_apply(run);}
             catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
@@ -5104,7 +5181,7 @@ struct AssistantViewModel::State {
         request.finishCommit=std::move(finish);request.completed=std::move(completed);
         native_charge();if(!widget_owned(run))return;
         if(run->tool=="add_relations")run->relation_input.reset(); // No prior step receipt during this new cue.
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     Object fit_undo_result(const std::shared_ptr<NativeWidget>& run, bool complete) const {
         const auto undo = run->call.record->fit_undo;
@@ -5158,7 +5235,7 @@ struct AssistantViewModel::State {
     void native_start_fit_undo() {
         if (!project || !native_call || native_widget) throw std::runtime_error("No current project Undo is available");
         const auto role = reserve_disclosure(sizeof(NativeWidget) + sizeof(NativeFitUndo) + sizeof(ProjectViewModel::FitUndoInput) +
-            sizeof(AssistantWidgetInput::Request) +
+            (sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes()) +
             sizeof("undo_fit") * sizeof(QChar) + 2 * 256 * sizeof(QChar));
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project;
@@ -5225,8 +5302,9 @@ struct AssistantViewModel::State {
                 run->project->fitUndoAvailable() && helper->usableTarget(*target);
         };
         auto restore = current; auto prepare = current; auto finish = [] {};
-        auto completed = [this, run, target, helper](bool delivered, const QString&) {
+        auto completed = [this, run, target, helper](bool delivered, const QString&, ControlCause cause) {
             if (!run->receiver || run->receiver->state_.get() != this || !widget_owned(run)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered || !target || !helper || widget_input.get() != helper || !widget_current(run) || !helper->usableTarget(*target)) {
                     widget_refuse(run, widget_outcome_error); return;
@@ -5240,7 +5318,7 @@ struct AssistantViewModel::State {
         request.current = std::move(current); request.restoreCurrent = std::move(restore); request.prepareCommit = std::move(prepare);
         request.finishCommit = std::move(finish); request.completed = std::move(completed);
         native_charge();
-        if (widget_current(run)) widget_input->start(std::move(request));
+        if (widget_current(run)) control_start(run->call,control_target(run),std::move(request));
     }
     void native_start_relation_edit(const Object& args) {
         if(!project || !native_call || native_widget)throw ActionRefusal("target_unavailable","relation");
@@ -5250,7 +5328,7 @@ struct AssistantViewModel::State {
         const auto text_units=skill_json_text_units(args.value(QLatin1StringView{"purpose"}))+
             skill_json_text_units(args.value(QLatin1StringView{"id"}))+skill_json_text_units(args.value(QLatin1StringView{"operation"}))+
             (args.value(QLatin1StringView{"value"}).isString()?skill_json_text_units(args.value(QLatin1StringView{"value"})):0);
-        const auto role=reserve_disclosure(sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetRelationInput)+sizeof(AssistantWidgetInput::Request)+
+        const auto role=reserve_disclosure(sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetRelationInput)+(sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+
             2*generic_size(args,Limits::context_bytes)+4*text_units*sizeof(QChar)+8*Limits::id_bytes*sizeof(QChar));
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;
         run->tool=QStringLiteral("edit_relation");run->tab=QStringLiteral("appBar.tab.analysis");run->relation_args=args;
@@ -5312,57 +5390,59 @@ struct AssistantViewModel::State {
     void widget_relation_extra(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run) || !widget_input) { widget_refuse(run, widget_outcome_error); return; }
         auto* analysisTab = widget_named("appBar.tab.analysis");
-        if (!analysisTab || !analysisTab->property("checked").toBool()) { widget_refuse(run, QObject::tr("The real Analysis page did not become current")); return; }
+        if (!analysisTab || !analysisTab->property("checked").toBool()) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The real Analysis page did not become current")); return; }
         const QPointer<QQuickItem> target(widget_sidebar_tab(run, "extras"));
-        if (!target) { widget_refuse(run, QObject::tr("The real Analysis Extra tab is not exposed")); return; }
+        if (!target) { control_failure(run,ControlCause::ExtraSidebar); widget_refuse(run, QObject::tr("The real Analysis Extra tab is not exposed")); return; }
         if (target->property("checked").toBool()) { widget_relation_begin(run); return; }
         AssistantWidgetInput::Request input;
         input.kind = AssistantWidgetInput::Kind::Navigate; input.target = target;
         input.current = [this, run] { return widget_current(run); };
         input.prepareCommit = [] { return true; }; input.finishCommit = [] {};
-        input.completed = [this, run, target](bool delivered, const QString& message) noexcept {
+        input.completed = [this, run, target](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_owned(run)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, target] {
                     try {
                         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "extras") != target || !target->property("checked").toBool()) {
-                            widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
+                            control_failure(run,ControlCause::ExtraSidebar); widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
                         }
                         widget_relation_begin(run);
                     } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
                 });
             } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         };
-        widget_input->start(std::move(input));
+        control_start(run->call,control_target(run),std::move(input));
     }
     void widget_click_tab(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
-        if (!widget_entry_current(run, entry) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         const QPointer<QQuickItem> target(widget_named(run->tab));
-        if (!target) { widget_refuse(run, QObject::tr("The actual workflow tab is unavailable")); return; }
+        if (!target) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The actual workflow tab is unavailable")); return; }
         if (target->property("checked").toBool()) { if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_extra(run); else widget_click_main(run); return; }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
         request.current = [this, run, entry] { return widget_entry_current(run, entry); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, entry, target](bool delivered, const QString& message) noexcept {
+        request.completed = [this, run, entry, target](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_entry_owned(run, entry)) return;
+            if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, entry, target] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
-                        if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+                        if (!widget_entry_current(run, entry)) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
                         if (!target || widget_named(run->tab) != target || !target->property("checked").toBool()) {
-                            widget_refuse(run, QObject::tr("The genuine workflow click did not select the expected page; no parameter input was sent")); return;
+                            control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The genuine workflow click did not select the expected page; no parameter input was sent")); return;
                         }
                         if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_extra(run); else widget_click_main(run);
                     } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
                 });
             } catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
         };
-        widget_input->start(std::move(request));
+        control_start(run->call,control_target(run),std::move(request));
     }
     void native_start_widget(const QString& tool, const Object& args) {
         if (tool != "set_parameters" && tool != "set_free" && tool != "run_fit" && tool != "add_relations" && tool != "edit_background")
@@ -5371,7 +5451,7 @@ struct AssistantViewModel::State {
             throw std::runtime_error("The real application window is unavailable for visible actions");
         // Before revealing the sidebar, changing focus or clicking a tab: any
         // actual manual numeric draft belongs to the user, including free/fit.
-        if (widget_input->manualDraftPresent()) throw std::runtime_error("Finish the current manual input first");
+        if (widget_input->manualDraftPresent()) { control_latch(*native_call,ControlCause::ManualInput,control_target(tool)); throw std::runtime_error("Finish the current manual input first"); }
         const bool parameter_tool=tool=="set_parameters" || tool=="set_free";
         const auto parameter_rows = parameter_tool
             ? args.value(tool=="set_parameters"?"values":"flags").toArray() : QJsonArray{};
@@ -5379,7 +5459,7 @@ struct AssistantViewModel::State {
         const bool batch=parameter_rows.size()>1;
         std::optional<decltype(reserve_disclosure(0))> cursor_role;
         if(parameter_tool) {
-            quint64 prospective=sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetParameterInput)+sizeof(AssistantWidgetInput::Request)+
+            quint64 prospective=sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetParameterInput)+(sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+
                 2*256*sizeof(QChar)+(batch?static_cast<quint64>(parameter_rows.size())*sizeof(NativeWidget::ParameterEntry):0)+
                 generic_size(native_call->rpc,Limits::context_bytes)+generic_size(tool,Limits::context_bytes);
             const auto tab_bytes=generic_size(QStringLiteral("appBar.tab.experiment"),Limits::context_bytes);
@@ -5775,6 +5855,20 @@ struct AssistantViewModel::State {
         add(stamps.relations.size()); add(1);
         return bytes;
     }
+    quint64 native_primary_bytes(const QJsonArray& rows) const {
+        quint64 total=0;
+        for(const auto& value:rows) {
+            const auto row=value.toObject(),payload=row.value("payload").toObject();
+            if(row.value("kind")!="activity" || payload.value("type")!="dynamicToolCall")continue;
+            for(const char* key:{"purpose","nativeOutcome"})if(payload.contains(key)) {
+                const auto bytes=work_report_metadata_retained(payload.value(key));
+                const auto framing=sizeof(QJsonValue)+3*std::char_traits<char>::length(key)+3;
+                if(framing>Limits::stream_retained_bytes-total || bytes>Limits::stream_retained_bytes-total-framing)throw std::length_error("Native primary retention exceeds capacity");
+                total+=bytes+framing;
+            }
+        }
+        return total;
+    }
     quint64 native_bytes() const {
         quint64 total = assistant_work_report_retained_bytes();
         const auto raw = [&](quint64 bytes) {
@@ -5790,6 +5884,7 @@ struct AssistantViewModel::State {
             if(row.value("workDiagnostic").toBool()){raw(work_report_metadata_retained(row));continue;}
             for(const char* field:{"workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn"})if(row.contains(field))
                 {raw(work_report_metadata_retained(row.value(field)));raw(sizeof(QJsonValue)+3*std::char_traits<char>::length(field)+3);}}
+        raw(native_primary_bytes(history));
         raw(disclosure_capabilities.size()); raw(disclosure_preparing_bytes);raw(skill_source_settings_digest.size());
         value(skill_source_rows); value(skill_source_invalid_rows); value(skill_source_error); value(skill_source_operation_error); value(skill_source_invalid_error); value(skill_source_store);
         if(skill_source_selection){raw(sizeof(SkillSourceSelection));value(skill_source_selection->id);}
@@ -5924,7 +6019,7 @@ struct AssistantViewModel::State {
             widgets.insert(widget.get());
             // One finite real-input task, its original response identity and
             // exact editor receipt are admitted before visibility or input.
-            raw(sizeof(NativeWidget) + sizeof(AssistantWidgetInput::Request));
+            raw(sizeof(NativeWidget) + (sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes()));
             if (widget->tool != "undo_fit") raw(sizeof(ProjectViewModel::WidgetParameterInput));
             raw(widget->callback_bytes);
             if (widget->tool == "background_names") {
@@ -5995,7 +6090,7 @@ struct AssistantViewModel::State {
         const auto creation_frame = [&](const std::shared_ptr<NativeCreateWidget>& frame) {
             if(!frame || creation_frames.contains(frame.get()))return;
             creation_frames.insert(frame.get());
-            raw(sizeof(NativeCreateWidget) + sizeof(FileProjection) + sizeof(QPointer<CodexAgent>) + sizeof(quint64) + sizeof(AssistantWidgetInput::Request) +
+            raw(sizeof(NativeCreateWidget) + sizeof(FileProjection) + sizeof(QPointer<CodexAgent>) + sizeof(quint64) + (sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes()) +
                 static_cast<quint64>(frame->inputs.capacity()) * sizeof(NativeCreateWidget::Input));
             raw(2 * Limits::error_bytes * sizeof(QChar));
             raw(frame->setup_sites.capacity()*sizeof(const edi::AtomSite*));
@@ -6176,7 +6271,8 @@ struct AssistantViewModel::State {
         const auto recipe_projection_extra=outcome.contains(QLatin1StringView("refusal_guidance")) &&
             outgoing::recipe_guidance_owned_bytes>2*outgoing::recipe_guidance_json_bytes?
             outgoing::recipe_guidance_owned_bytes-2*outgoing::recipe_guidance_json_bytes:0;
-        const auto projected_role=reserve_disclosure(2*bytes+fit_projection_extra+recipe_projection_extra);
+        const auto control_projection_extra=outcome.contains("action_error")?outgoing::control_pair_owned_bytes:0;
+        const auto projected_role=reserve_disclosure(2*bytes+fit_projection_extra+recipe_projection_extra+control_projection_extra);
         const auto projected=outgoing::project(outcome,outgoing::Role::Result,bytes);
         CodexJsonEncoding encoding;
         if(!codex_json_encoding(projected,Limits::context_bytes,encoding) || encoding.encoded!=bytes)
@@ -6215,37 +6311,101 @@ struct AssistantViewModel::State {
         transfer.dismiss();
         return staged;
     }
-    void native_reply(const QJsonValue& id, bool success, const Object& outcome, const QString& callId = {}) {
+    static bool native_same_item(const Object& left,const Object& right) {
+        return left.value("type")=="dynamicToolCall" && right.value("type")=="dynamicToolCall" &&
+            left.value("id").isString() && !left.value("id").toString().isEmpty() && left.value("id")==right.value("id") &&
+            left.value("tool")==right.value("tool") && left.value("namespace")==right.value("namespace") &&
+            left.value("arguments")==right.value("arguments");
+    }
+    void native_reply(const QJsonValue& id, bool success, const Object& outcome, const QString& callId, const Object& expected, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication = file_projection();
         const QPointer<CodexAgent> transport(agent.get());
         const auto transport_generation=transport?transport->outputGeneration():0;
         // Direct refusals have no pending NativeRecord destination slot.
         const auto response_role=reserve_disclosure(2*(outgoing::size(outcome,outgoing::Role::Result)+1)+
             sizeof(Object)+sizeof(QJsonArray)+5*sizeof(QJsonValue)+sizeof("successcontentItemstypeinputTexttext")*sizeof(QChar));
+        // Complete original conversion before admitting capture-only owners.
+        // Its successful path is callback-free; retainOutput failure notifies
+        // but throws out of conversion, never into a replacement's capture.
         const auto response=native_response(success,outcome);
         if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
             transport->outputGeneration()!=transport_generation)return;
+        struct Capture {QString thread,turn,rowId;Object primary;bool latched=false;};
+        std::optional<decltype(reserve_disclosure(0))> captureRole,primaryRole;
+        std::optional<Capture> capture; // Dies before its guards; empty until admission.
+        const auto current=[&] {
+            if(!(publication.input_current() && transport && agent.get()==transport.data() &&
+                transport->outputGeneration()==transport_generation && capture && generic_thread==capture->thread && generic_turn==capture->turn &&
+                !generic_retiring && !generic_revoke_pending && !generic_clear_pending && !generic_context_pending &&
+                !capture->primary.isEmpty() && generic_item_rows.value(callId)==capture->rowId &&
+                native_same_item(generic_item_snapshot(callId),capture->primary.value("payload").toObject()) &&
+                !native_records.contains(native_key(capture->thread,capture->turn,callId))))return false;
+            for(const auto& value:history)if(value.toObject().value("id")==capture->rowId) {
+                const auto payload=value.toObject().value("payload").toObject();
+                return native_same_item(payload,capture->primary.value("payload").toObject()) &&
+                    (capture->latched ? payload.value("nativeOutcome").toObject()==outcome : !payload.contains("nativeOutcome"));
+            }
+            return false;
+        };
         const auto latch=[&](const char* disposition) noexcept {
-            if(!work_reports.collecting())return;
             try {
-                const auto rowId=generic_item_rows.value(callId);
-                if(rowId.isEmpty()){work_reports.missEvidence();return;}
-                const auto reportRole=reserve_disclosure(work_source_preparation({history,outcome,response}));
-                const auto m=work_report_missing();Object payload;
-                for(const auto& value:history)if(value.toObject().value("id")==rowId){payload=value.toObject().value("payload").toObject();break;}
-                payload["nativeOutcome"]=outcome;
-                const Object evidence{{"event_id",work_reports.newEvent()},{"thread_id",work_report_observed(generic_thread)},
-                    {"turn_id",work_report_observed(generic_turn)},{"call_id",work_report_observed(callId)},
+                if(!current())return;
+                if(!capture->latched) {
+                    auto row=capture->primary;auto payload=row.value("payload").toObject();
+                    payload["nativeOutcome"]=outcome;
+                    try {payload["purpose"]=assistant_native_purpose(payload.value("arguments").toObject());}catch(const std::invalid_argument&){}
+                    row["payload"]=payload;
+                    // Local native truth belongs to the primary archive even
+                    // when optional report collection is unavailable.
+                    const bool retained=generic_present(std::move(row),false);
+                    if(!publication.input_current())return;
+                    if(!retained){work_reports.missEvidence();return;}
+                    capture->latched=true;
+                    if(!current())return;
+                }
+                if(!work_reports.collecting())return;
+                const auto reportRole=reserve_disclosure(work_source_preparation({capture->primary,outcome,response}));
+                const auto m=work_report_missing();const auto payload=capture->primary.value("payload").toObject();
+                const Object evidence{{"event_id",work_reports.newEvent()},{"thread_id",work_report_observed(capture->thread)},
+                    {"turn_id",work_report_observed(capture->turn)},{"call_id",work_report_observed(callId)},
                     {"rpc_id",work_report_observed(id)},{"tool",payload.contains("tool")?work_report_observed(payload.value("tool")):m},
                     {"arguments_relation","unknown"},{"original_item",m},{"projected_reply",work_report_observed(response)},
                     {"reply_disposition",QLatin1StringView(disposition)},{"completed",m},{"retired",m},{"elapsed_ms",m},
                     {"skill_capture_ids",QJsonArray{}},{"ui_event_ids",QJsonArray{}},{"science_event_ids",QJsonArray{}}};
-                work_merge(rowId,{{"payload",payload},{"workEvidence",evidence}});
-            }catch(...){work_reports.missEvidence();}
+                if(current())work_merge(capture->rowId,{{"workEvidence",evidence}});
+            }catch(...){if(publication.receiver && publication.receiver->state_.get()==this)work_reports.missEvidence();}
         };
-        latch("prepared");
+        auto prepare=[&]() noexcept {
+            if(!publication.input_current() || !transport || agent.get()!=transport.data() || transport->outputGeneration()!=transport_generation)return false;
+            if(generic_thread!=expectedThread || generic_turn!=expectedTurn)return true; // Decline only capture for a changed row owner.
+            try {
+                captureRole.emplace(reserve_disclosure(sizeof(Capture)+3*sizeof(Object)+sizeof(QString)+sizeof(QJsonValue)+sizeof(FileProjection)));
+                capture.emplace(Capture{expectedThread,expectedTurn,generic_item_rows.value(callId),{},false});
+                if(!capture->rowId.isEmpty() && !generic_final_items.contains(callId) &&
+                   !native_records.contains(native_key(capture->thread,capture->turn,callId)))
+                    for(const auto& value:history) {
+                        if(value.toObject().value("id")!=capture->rowId)continue;
+                        const auto payload=value.toObject().value("payload").toObject();
+                        const auto space=payload.value("namespace"),expectedSpace=expected.value("namespace");
+                        const bool sameSpace=space==expectedSpace || ((space.isNull() || space.isUndefined()) && (expectedSpace.isNull() || expectedSpace.isUndefined()));
+                        if(value.toObject().value("kind")!="activity" || payload.value("type")!="dynamicToolCall" ||
+                           payload.value("id")!=callId || payload.value("tool")!=expected.value("tool") ||
+                           !sameSpace || payload.value("arguments")!=expected.value("arguments") ||
+                           payload.contains("nativeOutcome"))break;
+                        primaryRole.emplace(reserve_disclosure(work_source_preparation({value,outcome,expected})));
+                        capture->primary=value.toObject();break;
+                    }
+            }catch(...) {
+                capture.reset();primaryRole.reset();captureRole.reset(); // Drop aliases before their charges.
+                if(publication.receiver && publication.receiver->state_.get()==this)work_reports.missEvidence();
+            }
+            if(publication.input_current() && (!capture || capture->primary.isEmpty()))work_reports.missEvidence();
+            latch("prepared");
+            return publication.input_current() && transport && agent.get()==transport.data() && transport->outputGeneration()==transport_generation;
+        };
         if(!publication.input_current() || !transport || agent.get()!=transport.data() || transport->outputGeneration()!=transport_generation)return;
-        const bool delivered=transport->answer(id,response);
+        const bool delivered=transport->answer(id,response,&prepare,[](void* context) noexcept {return (*static_cast<decltype(prepare)*>(context))();});
+        if(publication.input_current() && (!capture || capture->primary.isEmpty()))work_reports.missEvidence();
         if(publication.input_current() && transport && agent.get()==transport.data() && transport->outputGeneration()==transport_generation)latch(delivered?"attempted":"unknown");
         if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
             transport->outputGeneration()!=transport_generation)return;
@@ -6542,6 +6702,7 @@ struct AssistantViewModel::State {
             // The original record already owns every known Undo effect before
             // a weaker generic result can be selected, stored or answered.
             auto actual = undo_facts == NativeUndoFacts::Applied ? record->outcome : outcome;
+            if(!success && undo_facts!=NativeUndoFacts::Applied)control_append(actual,record);
             if (undo_facts == NativeUndoFacts::Applied || (undo_facts == NativeUndoFacts::Typed &&
                 !actual.value(QLatin1StringView("complete")).toBool())) success = false;
             const bool authorized = native_owner(call.receipt);
@@ -6576,22 +6737,42 @@ struct AssistantViewModel::State {
             try { native_refresh(call); }
             catch (...) { if (!original_call()) return; native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired)); native_fence(); }
             if (!original_call()) return;
-            stage = "FINISH_HISTORY"; role = "HISTORY"; bound = Limits::ui_history_bytes;
-            if (visible) retained = generic_present(record->terminal);
-            else retained = true; // No append into a discarded conversation; no durability claim.
-            record->reserved = !retained;
-            if (!retained) { native_failure(stage, role, bound, "REFUSAL", &call, &outcome, int(request_retired)); native_fence(); }
-            if (!original_call()) return;
+            bool presented=false;
+            auto present=[&]() noexcept {
+                if(!original_call())return false;
+                presented=true;bool capacity=false;
+                stage="FINISH_HISTORY";role="HISTORY";bound=Limits::ui_history_bytes;
+                try {retained=!visible || generic_present(record->terminal,false,&capacity);}
+                catch(const std::bad_alloc&){capacity=true;}
+                catch(const std::length_error&){capacity=true;}
+                catch(...) {
+                    if(!original_call())return false;
+                    native_failure(stage,role,bound,native_failure_class(),&call,&outcome,int(request_retired));native_fence();
+                    return original_call(); // The original exception already owns its single fence.
+                }
+                if(!original_call())return false;
+                record->reserved=!retained;
+                if(!retained) {
+                    if(capacity)work_reports.missEvidence(); // Decline local capture; the owed response still fits.
+                    else {native_failure(stage,role,bound,"REFUSAL",&call,&outcome,int(request_retired));native_fence();}
+                }
+                return original_call();
+            };
             if (!call.resolved && !record->answered) {
                 record->answered = true; // Transfer the original ID at most once, including write failure.
                 stage = "FINISH_ANSWER"; role = "RESPONSE"; bound = Limits::message_bytes;
-                work_latch_call(call,"prepared");
+                auto prepare=[&]() noexcept {
+                    if(!present())return false;
+                    work_latch_call(call,"prepared");
+                    if(!original_call())return false;
+                    stage="FINISH_ANSWER";role="RESPONSE";bound=Limits::message_bytes;return true;
+                };
+                const bool attempted=original_transport->answer(call.rpc,record->response,&prepare,[](void* context) noexcept {return (*static_cast<decltype(prepare)*>(context))();});
                 if (!original_call()) return;
-                const bool attempted=original_transport->answer(call.rpc, record->response);
-                if (!original_call()) return;
+                if(!presented)work_reports.missEvidence();
                 work_latch_call(call,attempted?"attempted":"unknown");
                 if (!attempted) throw std::runtime_error("Native response delivery is uncertain");
-            }
+            }else if(!present())return;
             if (!original_call()) return;
             record->completed = true;
             work_latch_call(call,"attempted");
@@ -6641,13 +6822,16 @@ struct AssistantViewModel::State {
                 // Admit it before optional callbacks or the original transport.
                 try {native_charge();}catch(...){return;}
                 if(!receiver || !original_call())return;
-                try { if(native_visible(call))(void)generic_present(record->terminal); }
-                catch (...) {} // Optional presentation cannot veto the owed ID.
-                if(!receiver || !original_call())return;
+                auto present=[&]() noexcept {
+                    if(!original_call())return false;
+                    try {if(native_visible(call))(void)generic_present(record->terminal,false);}
+                    catch(...) {if(original_call())work_reports.missEvidence();}
+                    return original_call();
+                };
                 if(!call.resolved && !record->answered) {
                     record->answered=true; // At most one attempt, including uncertain writes.
-                    try {(void)original_transport->answer(call.rpc,record->response);}catch(...){}
-                }
+                    try {(void)original_transport->answer(call.rpc,record->response,&present,[](void* context) noexcept {return (*static_cast<decltype(present)*>(context))();});}catch(...){}
+                }else (void)present();
             }
         }
     }
@@ -6735,7 +6919,7 @@ struct AssistantViewModel::State {
         // IDs reject controls: each original UTF-8 byte needs at most two JSON
         // bytes. False is the longest boolean; the fixed object covers every
         // extra result field/status, including already present common fields.
-        const quint64 relation_extra=name=="edit_relation"?2*Limits::id_bytes+sizeof(R"({"relation_id":"","applied":false,"published":false,"removed":false,"uncertain":false,"steps_completed":1,"complete":false,"atomic":false,"action_error":"operation_superseded","action_field":"relation","status":"applied_unconfirmed"})")-1:0;
+        const quint64 relation_extra=name=="edit_relation"?2*Limits::id_bytes+sizeof(R"({"relation_id":"","applied":false,"published":false,"removed":false,"uncertain":false,"steps_completed":1,"complete":false,"atomic":false,"status":"applied_unconfirmed"})")-1:0;
         // This fixed field has no synthetic maximum owner. Bound both its JSON
         // spelling and the key/value owners counted by codex_json_encoding;
         // the latter counts one QJsonValue for each key and each value.
@@ -6743,15 +6927,11 @@ struct AssistantViewModel::State {
         constexpr auto undo_json = sizeof(R"({"status":"applied_unconfirmed","applied":false,"published":false,"complete":false,"uncertain":false,"steps_completed":1,"calculation_pending":false})") - 1;
         constexpr auto undo_owned = undo_json * sizeof(QChar) + 14 * sizeof(QJsonValue) + sizeof(Object);
         const quint64 undo_extra = name == "undo_fit" ? std::max<quint64>(undo_json, undo_owned) : 0;
-        // The existing-row relation ceiling already includes these closed fields.
-        // Admit the new append-sequence diagnostic before any visible work,
-        // covering both its wire fragment and actual incremental Qt owners.
-        constexpr auto relation_viewport_json=sizeof(R"(,"action_error":"control_unavailable","action_field":"relation")")-1;
-        constexpr auto relation_viewport_owned=4*sizeof(QJsonValue)+
-            (sizeof("action_error")-1+sizeof("control_unavailable")-1+sizeof("action_field")-1+sizeof("relation")-1)*sizeof(QChar);
-        const quint64 relation_viewport_extra=name=="add_relations" && show_actions?
-            std::max<quint64>(relation_viewport_json,relation_viewport_owned):0;
-        const auto result_extra=relation_extra+fit_extra+undo_extra+relation_viewport_extra;
+        const bool control_capacity=(show_actions && (name=="set_parameters" || name=="set_free" || name=="add_relations" || name=="edit_relation" ||
+            name=="edit_background" || name=="create_cwl_project" || name=="run_fit" || name=="undo_fit" || name=="save_project")) || individual_app_action(name);
+        record->control_capacity=control_capacity;
+        const auto control_extra=control_capacity?outgoing::control_pair_role:0;
+        const auto result_extra=relation_extra+fit_extra+undo_extra+control_extra;
         if(name=="edit_background")maximum["background_id"]=QString(static_cast<qsizetype>(Limits::id_bytes),QChar(1));
         if (!read_result.isEmpty()) maximum = read_result;
         maximum["request_retired"] = true;
@@ -6798,7 +6978,7 @@ struct AssistantViewModel::State {
         const auto finish=[&](bool success,const Object& result) {
             if(!owned())return;
             if(record)native_finish(success,result);
-            else native_reply(rpc,success,result,id);
+            else native_reply(rpc,success,result,id,original,receipt->thread,receipt->turn);
         };
         if(!owned())return;
         try {
@@ -7188,9 +7368,9 @@ struct AssistantViewModel::State {
             if (receiver && receiver->state_.get() == this) --generic_item_depth;
         });
     }
-    void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage) {
+    void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
-        const auto reply=[&](bool success,const Object& outcome){native_reply(rpc,success,outcome,params.value("callId").toString());};
+        const auto reply=[&](bool success,const Object& outcome){native_reply(rpc,success,outcome,params.value("callId").toString(),params,expectedThread,expectedTurn);};
         const bool inspecting = params.value("tool") == "inspect_project";
         if (inspecting && (!policy_current() || generic_connecting)) {
             reply(false, {{"status", "refused"}, {"code", "policy_mismatch"}, {"message", "The original thread settings are not current."}}); return;
@@ -8144,8 +8324,9 @@ struct AssistantViewModel::State {
         input.finishCommit = [] {};
         const auto step = run->save_step;
         const QPointer<QQuickItem> field(target);
-        input.completed = [this,run,task,step,field](bool delivered,const QString& message) {
+        input.completed = [this,run,task,step,field](bool delivered,const QString& message, ControlCause cause) {
             if (!widget_owned(run)) return;
+            if(run->receiver && run->receiver->state_.get()==this && run->save_step==step)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if (run->save_started) { widget_end(run); return; }
                 if (!delivered || !field) { widget_refuse(run,message); return; }
@@ -8160,7 +8341,7 @@ struct AssistantViewModel::State {
                 });
             } catch (...) { if (widget_owned(run)) widget_refuse(run,widget_outcome_error); }
         };
-        widget_input->start(std::move(input));
+        control_start(run->call,control_target(run),std::move(input));
     }
     void native_start_visible_save(const std::shared_ptr<NativeSave>& task) {
         if (!action_window || !widget_input || native_widget || !native_save_current(task) || widget_input->manualDraftPresent())
@@ -8394,15 +8575,16 @@ struct AssistantViewModel::State {
         auto current=[this,receiver,task,target,window]{return receiver && receiver->state_.get()==this && target && window &&
             action_window==window && target->window()==window && native_save_current(task);};
         auto prepare=[] {return true;};auto finish=[] {};
-        auto completed=[this,receiver,task](bool delivered,const QString&) {
+        auto completed=[this,receiver,task](bool delivered,const QString&, ControlCause cause) {
             if(!receiver || receiver->state_.get()!=this || native_save!=task)return;
+            control_latch(task->call,delivered ? ControlCause::None : cause,ControlField::Project);
             task->visible_pending=false;
             try {
                 if(!delivered || !native_save_current(task)){native_pending_save_cancelled(task);return;}
                 native_ordinary_save(task);
             } catch(...) {if(receiver && receiver->state_.get()==this && native_save==task)native_pending_save_cancelled(task);}
         };
-        constexpr quint64 callbacks=2*(sizeof(AssistantWidgetInput::Request)+sizeof(current)+sizeof(prepare)+sizeof(finish)+sizeof(completed));
+        constexpr quint64 callbacks=2*((sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+sizeof(current)+sizeof(prepare)+sizeof(finish)+sizeof(completed));
         auto preparing=reserve_disclosure(callbacks);
         request.current=std::move(current);request.prepareCommit=std::move(prepare);
         request.finishCommit=std::move(finish);request.completed=std::move(completed);
@@ -8411,7 +8593,7 @@ struct AssistantViewModel::State {
         native_charge();
         if(!receiver || receiver->state_.get()!=this || !native_save_current(task))return;
         if(!widget_input || !target || action_window!=window){native_pending_save_cancelled(task);return;}
-        widget_input->start(std::move(request)); // Visual cue ONLY; no Save click/key/intent.
+        control_start(task->call,ControlField::Project,std::move(request)); // Visual cue ONLY; no Save click/key/intent.
     }
     void native_start_save(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args,const char*& save_stage) {
         const QPointer<AssistantViewModel> receiver(&owner);
@@ -8770,7 +8952,8 @@ struct AssistantViewModel::State {
         Object result{{"status",complete?(applied?"completed":"no_change"):applied?"applied_unconfirmed":"refused"},
             {"applied",applied},{"published",run->operation_published || (complete && !applied)},
             {"complete",complete},{"calculation_pending",run->project && run->project->calculating()}};
-        if(!complete){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]="structure";}
+        if(!complete && !run->call.record->control_diagnostic){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]="structure";}
+        if(!complete)control_append(result,run->call.record);
         if(!individual_member_current(run))return result;
         if(run->result_structure || run->operation_structure)result["structures"]=QJsonArray{structure_metadata(run)};
         const auto* atom=run->result_site?run->result_site:run->operation_site;
@@ -8849,8 +9032,9 @@ struct AssistantViewModel::State {
         Object result{{"status",complete?(run->selection_entered?"completed":"no_change"):"refused"},
             {"complete",complete},{"applied",false},{"published",complete},{"steps_completed",complete?1:0},
             {"uncertain",!complete && (run->selection_entered || entering)}};
-        if(!complete) {result["action_error"]=(run->selection_entered || entering)?"operation_superseded":"control_unavailable";
+        if(!complete && !run->call.record->control_diagnostic) {result["action_error"]=(run->selection_entered || entering)?"operation_superseded":"control_unavailable";
             result["action_field"]=run->individual_tool=="edit_structure"?"structure":"experiment";}
+        if(!complete)control_append(result,run->call.record);
         if(complete && selection_current(run))result["native_state"]=Object{{run->individual_tool=="edit_structure"?
             QStringLiteral("selected_structure_id"):QStringLiteral("selected_experiment_id"),run->arguments.value(run->individual_tool=="edit_structure"?"structure":"experiment")}};
         return result;
@@ -8859,7 +9043,7 @@ struct AssistantViewModel::State {
         if(!create_widget_current(run) || !selection_target_current(run) || run->project->scan())throw ActionRefusal("target_unavailable","project");
         if(run->selection_entered)return; // A reentrant old completion never invokes the void setter twice.
         if(selection_current(run)){native_finish(true,selection_progress(run,true));return;}
-        if(widget_input && widget_input->manualDraftPresent())throw ActionRefusal("control_unavailable","project");
+        if(widget_input && widget_input->manualDraftPresent())throw ActionRefusal("manual_input_pending","project");
         const auto receiver=run->receiver;
         const QPointer<Session> session(result_session());
         const int index=run->individual_tool=="edit_structure"?structure_member_index(run):individual_member_index(run);
@@ -8879,7 +9063,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         if(!create_widget_current(run) || !session || result_session()!=session)throw ActionRefusal("operation_superseded","project");
         if(!selection_target_current(run) || index!=(run->individual_tool=="edit_structure"?structure_member_index(run):individual_member_index(run)))throw ActionRefusal("target_unavailable","project");
-        if(widget_input && widget_input->manualDraftPresent())throw ActionRefusal("control_unavailable","project");
+        if(widget_input && widget_input->manualDraftPresent())throw ActionRefusal("manual_input_pending","project");
         static_assert(std::is_nothrow_copy_assignable_v<Object>);
         run->fallback_outcome=pending;run->fallback_response=response;run->fallback_row=row;run->fallback_ready=true;
         run->call.record->outcome=pending;run->call.record->response=response;run->call.record->terminal=row;run->call.record->outcome_ready=true;
@@ -9006,7 +9190,8 @@ struct AssistantViewModel::State {
         Object result{{"status",complete?(applied?"completed":"no_change"):applied?"applied_unconfirmed":"refused"},
             {"applied",applied},{"published",run->operation_published || (complete && !applied)},{"complete",complete},
             {"steps_completed",complete || (experiment_phase(run->arguments) && applied)?1:0},{"calculation_pending",run->project && run->project->calculating()}};
-        if(!complete){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]=experiment_phase(run->arguments)?"phase":"experiment";}
+        if(!complete && !run->call.record->control_diagnostic){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]=experiment_phase(run->arguments)?"phase":"experiment";}
+        if(!complete)control_append(result,run->call.record);
         if(!individual_member_current(run) || !run->operation_member)return result;
         const auto* member=run->operation_member;
         Object dataset{{"id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))}};
@@ -9268,11 +9453,13 @@ struct AssistantViewModel::State {
         AssistantWidgetInput::Request cue;cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=target;
         auto current=[this,run,target] {return run->receiver && run->receiver->state_.get()==this && target && structure_control_current(run,target);};
         auto prepare=[] {return true;};auto finish=[] {};
-        auto completed=[this,run,target](bool delivered,const QString& message) {
+        const auto cue_step=run->step;
+        auto completed=[this,run,target,cue_step](bool delivered,const QString& message, ControlCause cause) {
             if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_owned(run))return;
             if(selection_action(run) && run->selection_entered)return;
+            if(run->receiver && run->receiver->state_.get()==this && run->step==cue_step)control_failure(run, delivered ? ControlCause::None : cause);
             try {
-                if(!delivered || !target || !structure_control_current(run,target)) {create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message,false,"structure-cue",int(delivered),int(bool(target)));return;}
+                if(!delivered || !target || !structure_control_current(run,target)) {if(delivered)control_failure(run,ControlCause::Commit);create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message,false,"structure-cue",int(delivered),int(bool(target)));return;}
                 if(run->individual_tool=="edit_experiment")experiment_normal(run);else structure_normal(run);
                 if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_end(run);
             } catch(...) {if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"structure-cue-catch");}
@@ -9285,7 +9472,7 @@ struct AssistantViewModel::State {
         run->file_cue_roles=std::max(run->file_cue_roles,roles);
         callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
         if(!receiver || receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
-        widget_input->start(std::move(cue));
+        control_start(run->call,control_target(run),std::move(cue));
         } catch(...) {
             // Observe only the original escaping local failure, before the outer
             // normalized refusal/cleanup. No UI predicate is evaluated for logging.
@@ -9395,7 +9582,7 @@ struct AssistantViewModel::State {
         Object result{{"status",complete?"completed":applied?"applied_unconfirmed":"refused"},
             {"applied",applied},{"published",run->operation_published || (complete && !applied)},{"complete",complete},
             {"calculation_pending",run->project && run->project->calculating()}};
-        if(!complete) {
+        if(!complete && !run->call.record->control_diagnostic) {
             result["action_error"]=applied?"operation_superseded":"control_unavailable";
             result["action_field"]=run->individual_tool=="load_structure"?"file_id":"experiment";
         }
@@ -9408,6 +9595,7 @@ struct AssistantViewModel::State {
             result["action_error"] = "unsupported_input";
             result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
         }
+        if(!complete)control_append(result,run->call.record);
         if(!individual_member_current(run))return result;
         if(run->result_structure) {
             const auto& name=run->result_structure->name.value();
@@ -9491,7 +9679,7 @@ struct AssistantViewModel::State {
         const auto publication=file_projection();const auto receipt=native_receipt;
         const QPointer<AssistantViewModel> receiver(&owner);
         // Reserve preparation owners before the schema/result/cursor exists.
-        const auto plan_role=reserve_disclosure(sizeof(NativeCreateWidget)+sizeof(FileProjection)+sizeof(QPointer<CodexAgent>)+sizeof(quint64)+sizeof(AssistantWidgetInput::Request)+
+        const auto plan_role=reserve_disclosure(sizeof(NativeCreateWidget)+sizeof(FileProjection)+sizeof(QPointer<CodexAgent>)+sizeof(quint64)+(sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+
             5*sizeof(NativeCreateWidget::Input)+6*Limits::id_bytes*sizeof(QChar)+
             generic_size(args,Limits::context_bytes)+(name=="edit_experiment"?experiment_profile_preparation_bytes(args):0));
         auto run=make_creation_frame();run->individual_tool=name;run->ordinary=true;
@@ -9559,7 +9747,7 @@ struct AssistantViewModel::State {
             if(!readable){prepare_refusal("unsupported_input","file_id");return;}
         }
         if(selection_action(run) && !no_change && widget_input && widget_input->manualDraftPresent()) {
-            prepare_refusal("control_unavailable","project");return;
+            prepare_refusal("manual_input_pending","project");return;
         }
         if(show_actions && !no_change && (!widget_input || !action_window || native_widget || native_create_widget || widget_input->manualDraftPresent())) {
             prepare_refusal("control_unavailable","project");return;
@@ -10031,9 +10219,11 @@ struct AssistantViewModel::State {
             return false;
         };
         cue.prepareCommit=[] { return true; };cue.finishCommit=[] {};
-        auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment](bool delivered,const QString& message) {
+        const auto cue_step=run->step;
+        auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment,cue_step](bool delivered,const QString& message, ControlCause cause) {
             const auto receiver=run->receiver;
             if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+            if(run->receiver && run->receiver->state_.get()==this && run->step==cue_step)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 // Inspect the original target even on helper rejection: only a
                 // still-current target can attribute refusal to its source.
@@ -10093,7 +10283,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         const bool current=create_widget_current(run);
         if(!receiver || receiver->state_.get()!=this || !current || !widget_input)return;
-        widget_input->start(std::move(cue));
+        control_start(run->call,control_target(run),std::move(cue));
     }
     QQuickItem* create_widget_named(const std::shared_ptr<NativeCreateWidget>& run, const QString& name) const {
         QQuickItem* found = nullptr;
@@ -10138,6 +10328,7 @@ struct AssistantViewModel::State {
     void create_widget_retain(const std::shared_ptr<NativeCreateWidget>& run) {
         if (run->call.record->answered || run->call.record->discarded || (selection_action(run) && run->call.record->completed)) return;
         auto result = create_widget_progress(run, false, QObject::tr("Original controls keep their actual edits and Undo; setup may be incomplete"));
+        control_append(result,run->call.record);
         auto response = native_response(false, result); auto row = native_row(*run->call.record, result, false);
         if (generic_size(result, Limits::context_bytes) > run->call.record->outcome_bytes ||
             generic_size(response, Limits::message_bytes) > run->call.record->response_bytes ||
@@ -10173,7 +10364,7 @@ struct AssistantViewModel::State {
         if (native_widget || !create_widget_current(run) || !run->project) throw std::runtime_error("An original creation substep is unavailable");
         std::optional<decltype(reserve_disclosure(0))> child_role;
         child_role.emplace(reserve_disclosure(sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetParameterInput)+
-            sizeof(AssistantWidgetInput::Request)+2*256*sizeof(QChar)+static_cast<quint64>(step.target.size())*sizeof(QChar)+
+            (sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())+2*256*sizeof(QChar)+static_cast<quint64>(step.target.size())*sizeof(QChar)+
             generic_size(step.target,Limits::context_bytes)+generic_size(run->call.rpc,Limits::context_bytes)));
         auto child = std::make_shared<NativeWidget>(); child->call = run->call; child->project = run->project;
         child->receiver = run->receiver; child->window = run->window; child->create_parent = run;
@@ -10207,8 +10398,11 @@ struct AssistantViewModel::State {
         widget_click_tab(child);
     }
     bool create_widget_reveal(const std::shared_ptr<NativeCreateWidget>& run, QQuickItem* target) {
-        if (!create_widget_current(run) || native_widget || !target || ++run->reveal_steps > 64)
+        const bool current=create_widget_current(run);
+        if (!current || native_widget || !target || ++run->reveal_steps > 64) {
+            control_failure(run,current?ControlCause::Unavailable:ControlCause::Superseded);
             throw std::runtime_error("The original control cannot be genuinely revealed within this operation");
+        }
         const auto receiver=run->receiver;const auto step=run->step;
         const QPointer<AssistantWidgetInput> helper(widget_input.get());
         auto child=std::make_shared<NativeWidget>(); child->call=run->call;child->project=run->project;
@@ -10222,8 +10416,10 @@ struct AssistantViewModel::State {
             widget_end(child); // Its balancing helper release can notify/reenter.
             if(!receiver || receiver->state_.get()!=this || native_widget || native_create_widget!=run ||
                 run->step!=step || widget_input.get()!=helper || !create_widget_current(run))return false;
-            if(!original || !helper || !helper->usableTarget(*original) || !widget_full_row_visible(original))
+            if(!original || !helper || !helper->usableTarget(*original) || !widget_full_row_visible(original)) {
+                control_failure(run,ControlCause::Unavailable);
                 throw std::runtime_error("The original control row cannot be fully exposed");
+            }
             return true;
         }
         return false;
@@ -10396,11 +10592,14 @@ struct AssistantViewModel::State {
             auto* group = create_widget_named(run, "group.getStarted"); QVariant ok;
             run->create_group = group;
             if (!group || !QMetaObject::invokeMethod(group, "prepareAssistantCreate", Qt::DirectConnection,
-                Q_RETURN_ARG(QVariant, ok), Q_ARG(QVariant, QVariant(run->id))) || !ok.toBool()) throw std::runtime_error("The original Create dialog is unavailable");
+                Q_RETURN_ARG(QVariant, ok), Q_ARG(QVariant, QVariant(run->id))) || !ok.toBool()) { control_failure(run,ControlCause::Unavailable); throw std::runtime_error("The original Create dialog is unavailable"); }
             if (!run->receiver || run->receiver->state_.get()!=this || !create_widget_current(run)) return;
         }
         if (!target) {
             if (create_widget_missing_target(run,step)) return;
+            const auto cause=step.target.startsWith("appBar.tab.")?ControlCause::WorkflowPage:
+                step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:step.target=="sideBar.tab.extras"?ControlCause::ExtraSidebar:ControlCause::Unavailable;
+            control_failure(run,cause);
             throw std::runtime_error("The original human control is unavailable");
         }
         if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && target->property("checked").toBool()) { create_widget_advance(run); return; }
@@ -10443,8 +10642,10 @@ struct AssistantViewModel::State {
         auto captured_finishCommit = [this,run,step] {
             if(!step.structure_action && step.kind!=AssistantWidgetInput::Kind::Text && step.kind!=AssistantWidgetInput::Kind::Value)create_widget_finish_control(run);
         };
-        auto captured_completed = [this, run, step, target = QPointer<QQuickItem>(target), option](bool delivered, const QString& message) {
+        const auto control_step=run->step;
+        auto captured_completed = [this, run, step, target = QPointer<QQuickItem>(target), option, control_step](bool delivered, const QString& message, ControlCause cause) {
             if (!create_widget_owned(run)) return;
+            if(run->receiver && run->receiver->state_.get()==this && run->step==control_step)control_failure(run, delivered ? ControlCause::None : cause);
             const char* branch="control.capture";
             try {
                 if(delivered && (step.structure_action || step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)) {
@@ -10489,38 +10690,41 @@ struct AssistantViewModel::State {
                 if(structure_app_action(run->individual_tool) && step.target.startsWith("structures.row.") &&
                     (!individual_member_current(run) || run->project->currentStructure()!=run->structure_view))throw ActionRefusal("target_unavailable","structure");
                 branch="control.delivery";
-                if (!delivered || !target) { create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "control-delivery", int(delivered), int(bool(target))); return; }
+                if (!delivered || !target) { if(delivered)control_failure(run,ControlCause::Commit); create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "control-delivery", int(delivered), int(bool(target))); return; }
                 branch="control.tab";
-                if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && !target->property("checked").toBool()) throw std::runtime_error("The original tab was not selected");
+                if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && !target->property("checked").toBool()) {
+                    const auto cause=step.target.startsWith("appBar.tab.")?ControlCause::WorkflowPage:step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:ControlCause::ExtraSidebar;
+                    control_failure(run,cause);throw std::runtime_error("The original tab was not selected");
+                }
                 branch="control.choice";
-                if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) throw std::runtime_error("The original choice was refused");
+                if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original choice was refused"); };
                 branch="control.text";
-                if (step.kind == AssistantWidgetInput::Kind::FormText && target->property("text").toString() != step.text) throw std::runtime_error("The original text was refused");
+                if (step.kind == AssistantWidgetInput::Kind::FormText && target->property("text").toString() != step.text) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original text was refused"); };
                 if (step.kind == AssistantWidgetInput::Kind::Text) {
                     const auto* input=run->control_input.get();
                     const auto* session=result_session();
                     if (!input || !input->consumed || !input->outcome.applied || !input->outcome.published ||
                         !create_widget_owned(run) || !run->project || project!=run->project || !session || session->project()!=run->project ||
                         !text_matches(*run->project->assistantProject(),input->expected))
-                        throw std::runtime_error("The original text model action was not confirmed");
+                        { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original text model action was not confirmed"); };
                 }
-                if(step.structure_action && !setup_structure_matches(run,step))throw std::runtime_error("The original setup Structure action was not confirmed");
+                if(step.structure_action && !setup_structure_matches(run,step)){ control_failure(run,ControlCause::Commit); throw std::runtime_error("The original setup Structure action was not confirmed"); };
                 branch="control.receipt";
-                if (run->control_input && (!run->control_input->consumed || !run->control_input->outcome.applied || !run->control_input->outcome.published)) throw std::runtime_error("The original model action was not confirmed");
+                if (run->control_input && (!run->control_input->consumed || !run->control_input->outcome.applied || !run->control_input->outcome.published)) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original model action was not confirmed"); };
                 branch="parameter.receipt";
-                if (run->parameter_input && (!run->parameter_input->consumed || !run->parameter_input->outcome.applied || !run->parameter_input->outcome.published || !run->control_parameter || run->control_parameter->value() != step.text.toDouble())) throw std::runtime_error("The original parameter action was not confirmed");
+                if (run->parameter_input && (!run->parameter_input->consumed || !run->parameter_input->outcome.applied || !run->parameter_input->outcome.published || !run->control_parameter || run->control_parameter->value() != step.text.toDouble())) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original parameter action was not confirmed"); };
                 branch="control.cleanup";
                 run->control_input.reset(); run->parameter_input.reset(); run->control_parameter.clear();
                 branch="control.create-dialog";
                 if (step.target == "project.create") {
                     QObject* found = nullptr;
                     for (auto* object : run->window->findChildren<QObject*>()) if (object->objectName() == "createProject.dialog" && object->property("visible").toBool() && object->property("assistantIntentId").toString() == run->id) {
-                        if (found) throw std::runtime_error("The original Create dialog is ambiguous"); found = object;
+                        if (found) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create dialog is ambiguous"); }; found = object;
                     }
-                    if (!found) throw std::runtime_error("The original Create dialog did not open"); run->form = found;
+                    if (!found) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create dialog did not open"); }; run->form = found;
                 }
                 branch="control.create-owner";
-                if (step.target == "createProject.accept" && (!run->project || !result_session() || result_session()->project() != run->project)) throw std::runtime_error("The original Create did not commit its owner");
+                if (step.target == "createProject.accept" && (!run->project || !result_session() || result_session()->project() != run->project)) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create did not commit its owner"); };
                 branch="control.advance";
                 create_widget_advance(run);
             } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, branch, int(delivered), int(bool(target))); }
@@ -10533,7 +10737,7 @@ struct AssistantViewModel::State {
         run->file_cue_roles=std::max(run->file_cue_roles,callbacks);
         callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
-        widget_input->start(std::move(input));
+        control_start(run->call,control_target(run),std::move(input));
     }
     void start_prepared_visible_creation(const std::shared_ptr<NativeCreation>& creation) {
         if(!native_creation_current(creation) || !creation->candidate || !action_window || !widget_input ||
@@ -10595,7 +10799,7 @@ struct AssistantViewModel::State {
         // Declared before run: an untracked local frame must die before its
         // source handoff reservation is released on any preparation failure.
         std::optional<decltype(reserve_disclosure(0))> frame_role, handoff_role;
-        frame_role.emplace(reserve_disclosure(sizeof(NativeCreateWidget)+sizeof(FileProjection)+sizeof(QPointer<CodexAgent>)+sizeof(quint64)+sizeof(AssistantWidgetInput::Request)));
+        frame_role.emplace(reserve_disclosure(sizeof(NativeCreateWidget)+sizeof(FileProjection)+sizeof(QPointer<CodexAgent>)+sizeof(quint64)+(sizeof(AssistantWidgetInput::Request)+AssistantWidgetInput::failurePreparationBytes())));
         auto run=make_creation_frame();run->ordinary=true;run->complete_setup=true;run->id=QUuid::createUuid().toString(QUuid::WithoutBraces);
         run->epoch=creation->epoch;run->project=project;run->completed_existing=project!=nullptr;
         run->receiver=receiver;run->window=action_window;
@@ -10769,7 +10973,8 @@ struct AssistantViewModel::State {
         if (!codex_encoded_size(value, cap, bytes)) throw std::length_error("Agent payload exceeds its limit");
         return bytes;
     }
-    bool generic_present(Object row) {
+    bool generic_present(Object row, bool hold = true, bool* capacity = nullptr) {
+        if(capacity)*capacity=false;
         if (generic_clear_pending || generic_context_pending) return true; // Retired UI context never republishes old work; protocol proof still settles.
         const auto id = row.value("id").toString();
         quint64 bytes = 2;
@@ -10777,11 +10982,11 @@ struct AssistantViewModel::State {
         for (const auto& value : history) {
             if (value.toObject().value("id") == id) { existing = true; continue; }
             const auto size = generic_size(value, Limits::ui_history_bytes);
-            if (size + 1 > Limits::ui_history_bytes - bytes) return false;
+            if (size + 1 > Limits::ui_history_bytes - bytes) {if(capacity)*capacity=true;return false;}
             bytes += size + 1;
         }
         const auto size = generic_size(row, Limits::message_bytes);
-        if (size > Limits::ui_history_bytes - bytes || (!existing && history.size() >= static_cast<qsizetype>(Limits::ui_messages))) return false;
+        if (size > Limits::ui_history_bytes - bytes || (!existing && history.size() >= static_cast<qsizetype>(Limits::ui_messages))) {if(capacity)*capacity=true;return false;}
         auto next = history;
         bool replaced = false;
         for (qsizetype i = 0; i < next.size(); ++i)
@@ -10789,7 +10994,7 @@ struct AssistantViewModel::State {
         if (!replaced) next.append(row);
         // The public archive is the sole persisted/displayed row owner. Complete
         // output is retained separately only while its publication is unsettled.
-        if (!publish(std::move(next))) { generic_held_row = std::move(row); return false; }
+        if (!publish(std::move(next),nullptr,false,false,false,capacity)) { if(hold)generic_held_row = std::move(row); return false; }
         return true;
     }
     QJsonValue generic_detach_question() noexcept {
@@ -11534,6 +11739,7 @@ struct AssistantViewModel::State {
         Object params{{"cwd",generic_workspace},{"ephemeral",true},{"sandbox","read-only"},
             {"approvalPolicy","never"},{"approvalsReviewer","user"},{"modelProvider","openai"}};
         params["developerInstructions"] = QStringLiteral(
+            EDI_ASSISTANT_CONTROL_GUIDANCE
             "For delegated full setup in BOTH modes, read and map the complete admitted inputs first, then finish pages in this order. Structure: identity/symmetry, COMPLETE cell, then Atom sites. Reuse the actual initial atom and finish EACH ROW: label/type, requested Wyckoff position, all independent coordinates and chemical occupancy BEFORE appending the next site; never append all placeholders then backfill. After ALL site rows, finish ALL ADP types/values together in Atomic displacement, not per-atom ADP visits. Finish ALL requested Structure members before creating/configuring ANY requested Experiment member; never alternate Structure and Experiment per phase. Only then create/configure Experiment; do not create experiment scaffolding while Structure is unfinished. Use fresh native_state.interface_groups for the actual member/tier and finish each requested group top-to-bottom before the next. Choose the profile in its own group before its coefficients, not ahead of unrelated upper groups. Only a genuine scientific type/data dependency justifies an explained prerequisite; inspect reset settings/actual IDs afterward. For compound create_cwl_project supply recipe.background as a direct array of exact position/intensity rows only: fixed is implicit, with no free/id fields or anchors wrapper. For delegated standalone edit_background add/update supply explicit free=false during setup; retain final source flags separately for later Analysis. After completing ALL requested Structure and Experiment members, plan Analysis ONE justified group at a time: free that group, fit, inspect the actual outcome, then choose the next group. For a delegated whole eligible category whose requested flags are uniform, send its complete actual current eligible membership in ONE set_free flags array so the native Free menu can prove exact membership; do not split that group into per-point calls. Preserve explicit subsets, supplied flags-array order and per-call scope; never add unrequested members, merge separate mutations or replay equal/partial/uncertain work. Use the Free header only for the exact whole eligible uniformly requested category, otherwise actual subset controls. Fit only authorized stages. Compare canonical values and skip equal setters/cues/Undo. This plans new delegated calls: explicit immediate user scope, caller-array order/dependencies, normal atomic edits and supplied operation operands remain unchanged; never silently override a free flag. Preserve actual IDs, currentness, partial/uncertain outcomes and Undo. "
             "For authorized refinement ONLY after ALL requested Structure setup is complete and ONLY THEN ALL requested Experiment setup is complete: in Analysis release ONE scientifically justified parameter group, run the actual fit, then inspect its status/adopted/converged facts, comparable objective, parameter/uncertainty and physical validity BEFORE choosing the next group. Retain good stages. If an actual adopted stage is undesired, restore only through an actually offered ordinary Undo that still refers to that fit; verify the restored owner/state/free flags before changing groups. An unadopted refusal is NOT a reason to undo earlier science. Unknown/partial/uncertain effects require inspection, not replay. If suitable Undo/restore is unavailable, report that recovery limit and do not claim a rollback or continue candidates from an unrestored rejected state. Reassess actual state and flags before another justified group; no blind retry/spin or promise of a perfect fit. A fill-only request/source flags do not authorize fitting. Explicit user constraints, known-wavelength anchors and incoming arrays remain authoritative. "
             "Before ANY FullProf occupancy setter, establish nuclear normalization and actual site/general multiplicities m/M: qraw=OccFP*M/m; for an established common positive phase factor c, OccEDI=qraw/c for EVERY phase site/species and mapped phase scale=mapped(SFP)*c*c once. Preserve partial/shared fractions and multiplicity-weighted composition. Never copy raw PCR0.5 as chemical conversion, infer c from max occupancy, clamp, force all ones or guess unresolved c. Use the detailed verified fullprof-intake mapping and read back actual chemical occupancies, scale/profile before completion. "
@@ -12128,9 +12334,18 @@ struct AssistantViewModel::State {
             const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
             Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
                 {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString("completed")) : "in_progress"}, {"payload", type == "agentMessage" ? Object{} : item}};
+            std::optional<decltype(reserve_disclosure(0))> nativeFieldsRole;
             if (type == "dynamicToolCall") {
+                // These public fields are owned by Edi, never provider input.
+                auto payload=row.value("payload").toObject();
+                if(payload.contains("purpose") || payload.contains("nativeOutcome")) {
+                    nativeFieldsRole.emplace(reserve_disclosure(work_source_preparation({row})));
+                    payload.remove("purpose");payload.remove("nativeOutcome");row["payload"]=payload;
+                }
                 const auto record = native_records.value(native_key(generic_thread, generic_turn, id));
-                if (record) {
+                // A reentrant canonical update cannot publish new backing
+                // ahead of the original finishing call's admitted wire.
+                if (record && (record->completed || !native_call || native_call->record!=record || !native_call->finishing)) {
                     auto payload = row.value("payload").toObject(); payload["purpose"] = record->purpose;
                     if (record->completed || record->outcome_ready) payload["nativeOutcome"] = record->outcome;
                     row["payload"] = payload;
@@ -12590,7 +12805,7 @@ struct AssistantViewModel::State {
                 usage_epoch == account && generic_thread == thread && generic_turn == turn; };
             const char*& save_stage = diagnostic.stage; // Same original local stage, also observed by the outer catch.
             save_stage = "DISPATCH";
-            try { native_dispatch(id, params, save_stage); }
+            try { native_dispatch(id, params, save_stage, thread, turn); }
             catch (const std::exception& failure) {
                 const char* const dispatch_stage = save_stage;
                 if (!diagnostic.first_class) {
@@ -12658,7 +12873,7 @@ struct AssistantViewModel::State {
                             ? "resource_exhausted" : dynamic_cast<const std::invalid_argument*>(&failure) ? "invalid_arguments" : "unclassified";
                     }
                     diagnostic.stage = "NATIVE_REPLY";
-                    native_reply(id, false, outcome,params.value("callId").toString());
+                    native_reply(id, false, outcome,params.value("callId").toString(),params,thread,turn);
                 }
             }
             return;
@@ -13867,8 +14082,61 @@ struct AssistantViewModel::State {
                file.write(bytes) == bytes.size() && file.commit();
     }
     bool publish(QJsonArray next, const Lease* except = nullptr, bool remaining_terminal = false,
-                 bool release_failure = false, bool report_only = false) {
+                 bool release_failure = false, bool report_only = false, bool* capacity = nullptr) {
+        if(capacity)*capacity=false;
         const auto originalError=error;
+#ifndef __EMSCRIPTEN__
+        // Mandatory native facts precede BOTH optional fallback aliases. The
+        // primary archive is their sole durable owner, including direct refusals.
+        std::optional<decltype(reserve_disclosure(0))> nativeRole;
+        try {
+            quint64 preparation=0,growth=0;CodexJsonEncoding archive;
+            const auto needs=[&](const Object& row,const Object& old) {
+                const auto before=old.value("payload").toObject(),after=row.value("payload").toObject();
+                if(!before.contains("nativeOutcome") && !before.contains("purpose"))return false;
+                if(old.value("kind")!="activity" || before.value("type")!="dynamicToolCall")return false;
+                if(row.value("kind")!="activity" || !native_same_item(before,after))
+                    throw std::logic_error("Native primary row identity changed");
+                const auto record=native_records.value(native_key(generic_thread,generic_turn,after.value("id").toString()));
+                const bool authoritative=record && record->row==row.value("id") && native_same_item(record->canonical,after) &&
+                    after.value("purpose")==record->purpose && record->outcome_ready && record->outcome==after.value("nativeOutcome").toObject();
+                if(authoritative)return false; // Original native settlement may strengthen its own facts.
+                return (before.contains("purpose") && before.value("purpose")!=after.value("purpose")) ||
+                    (before.contains("nativeOutcome") && before.value("nativeOutcome")!=after.value("nativeOutcome"));
+            };
+            for(const auto& value:next)for(const auto& old:history) {
+                if(old.toObject().value("id")!=value.toObject().value("id"))continue;
+                if(needs(value.toObject(),old.toObject())) {
+                    CodexJsonEncoding source;if(!codex_json_encoding(old,Limits::message_bytes,source))throw std::length_error("Native primary source exceeds capacity");
+                    const auto role=work_source_preparation({value,old});
+                    if(role>Limits::stream_retained_bytes-preparation || source.encoded>Limits::ui_history_bytes-growth)
+                        throw std::length_error("Native primary preparation exceeds capacity");
+                    preparation+=role;growth+=source.encoded;
+                }
+                break;
+            }
+            if(preparation) {
+                if(!codex_json_encoding(next,Limits::ui_history_bytes,archive) || growth>Limits::ui_history_bytes-archive.encoded)
+                    throw std::length_error("Native primary archive exceeds capacity");
+                const auto framing=2*(sizeof(QJsonArray)+static_cast<quint64>(next.size())*sizeof(QJsonValue))+
+                    archive.writer_scratch+codex_json_capacity(archive.encoded+growth);
+                if(framing>Limits::stream_retained_bytes-preparation)throw std::length_error("Native primary framing exceeds capacity");
+                nativeRole.emplace(reserve_disclosure(preparation+framing)); // BEFORE any detachment.
+                for(qsizetype i=0;i<next.size();++i)for(const auto& old:history) {
+                    auto row=next[i].toObject();if(old.toObject().value("id")!=row.value("id"))continue;
+                    if(needs(row,old.toObject())) {
+                        auto payload=row.value("payload").toObject();const auto before=old.toObject().value("payload").toObject();
+                        for(const char* key:{"purpose","nativeOutcome"})if(before.contains(key))payload[key]=before.value(key);
+                        row["payload"]=payload;
+                        (void)generic_size(row,Limits::message_bytes);next[i]=row;
+                    }
+                    break;
+                }
+            }
+        }catch(const std::bad_alloc&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(const std::length_error&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(...){error=originalError;return false;} // Never replace native truth by a weaker candidate.
+#endif
         // Preserve the exact ordinary candidate before optional detachment. A
         // refused supplement restores this alias, without rebuilding/stripping
         // arbitrary legacy or scientific rows under a failed admission.
@@ -13909,14 +14177,25 @@ struct AssistantViewModel::State {
             work_reports.missEvidence();error=originalError;if(report_only)return false;
         }
 #endif
+#ifndef __EMSCRIPTEN__
+        quint64 primaryBytes=0;
+        std::optional<decltype(reserve_disclosure(0))> primaryDestination;
+        try {primaryBytes=native_primary_bytes(next);if(primaryBytes)primaryDestination.emplace(reserve_disclosure(primaryBytes));}
+        catch(const std::bad_alloc&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(const std::length_error&){if(capacity)*capacity=true;error=originalError;return false;}
+        catch(...){error=originalError;return false;}
+#endif
         if (!admit(next, except, remaining_terminal ? except : nullptr, true, release_failure)) {
             next=originalNext;
 #ifndef __EMSCRIPTEN__
             retainedRole.reset();temporaryRole.reset();retainedBytes=0;
 #endif
             work_reports.missEvidence();error=originalError;
-            if(report_only || !admit(next,except,remaining_terminal?except:nullptr,true,release_failure))return false;
+            if(report_only || !admit(next,except,remaining_terminal?except:nullptr,true,release_failure)){if(capacity)*capacity=!archive_refused;return false;}
         }
+#ifndef __EMSCRIPTEN__
+        if(native_primary_bytes(next)!=primaryBytes){error=originalError;return false;}
+#endif
         const auto bytes = QJsonDocument(next).toJson(QJsonDocument::Compact);
         // Queue allocations precede the disk/memory commit. The callback reads
         // canonical history later; a failed write cannot expose a completed T.
@@ -13925,6 +14204,10 @@ struct AssistantViewModel::State {
         if(retainedRole){retainedRole->dismiss();disclosure_preparing_bytes-=retainedBytes;}
 #endif
         history.swap(next);
+#ifndef __EMSCRIPTEN__
+        next={}; // Drop the old primary archive before its destination role transfers.
+        if(primaryDestination){primaryDestination->dismiss();disclosure_preparing_bytes-=primaryBytes;}
+#endif
         work_reports.changed();
         return true;
     }

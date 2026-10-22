@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <QObject>
+#include "assistant_action_refusal.hpp"
 #include <QEvent>
 #include <QEventPoint>
 #include <memory>
@@ -34,8 +35,13 @@ class AssistantWidgetInput final : public QObject {
         // own recorded edit/real FitReport delivery before this returns true.
         std::function<bool()> prepareCommit;
         std::function<void()> finishCommit;
-        std::function<void(bool delivered, const QString& diagnostic)> completed;
+        std::function<void(bool delivered, const QString& diagnostic, ControlCause cause)> completed;
+        ControlCause failure = ControlCause::None;
     };
+    // Fixed original-identity guards and QString owners used by fail/stop.
+    static constexpr quint64 failurePreparationBytes() noexcept {
+        return 2*(sizeof(QPointer<AssistantWidgetInput>)+sizeof(std::shared_ptr<Request>)+2*sizeof(std::uint64_t))+2*sizeof(QString);
+    }
     explicit AssistantWidgetInput(QQuickWindow& window, QObject* parent = nullptr);
     ~AssistantWidgetInput() override;
     std::uint64_t start(Request request); // Not exposed to QML/provider tools.
@@ -75,7 +81,9 @@ class AssistantWidgetInput final : public QObject {
     bool mouse(QEvent::Type type, Qt::MouseButton button);
     bool scroll();
     bool key(int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier, const QString& text = {});
-    void stop(bool delivered, const QString& diagnostic, bool restoreDraft) noexcept;
+    void fail(const std::shared_ptr<Request>& expected, std::uint64_t expectedId, ControlCause cause, const char* diagnostic, bool restoreDraft);
+    void stop(const std::shared_ptr<Request>& expected, std::uint64_t expectedId, bool delivered, const QString& diagnostic,
+              bool restoreDraft, ControlCause cause = ControlCause::None) noexcept;
     void restoreDraft() noexcept;
     QPointer<QQuickWindow> window_;
     QPointer<MouseOwnership> mouse_owner_; // Application-owned: rejects old replays across helper/window teardown.

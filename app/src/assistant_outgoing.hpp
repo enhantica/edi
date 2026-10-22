@@ -31,6 +31,14 @@ inline constexpr quint64 fit_reason_owned_bytes=2*sizeof(QJsonValue)+
 inline constexpr quint64 recipe_guidance_json_bytes=sizeof(R"(,"refusal_guidance":"")")-1+mapped_structure_guidance.size();
 inline constexpr quint64 recipe_guidance_owned_bytes=2*sizeof(QJsonValue)+
     (sizeof("refusal_guidance")-1+mapped_structure_guidance.size())*sizeof(QChar);
+template<std::size_t N> inline constexpr quint64 longest_action_literal(const std::array<const char*,N>& names) {
+    quint64 longest=0;for(const auto* name:names){const auto size=std::char_traits<char>::length(name);if(size>longest)longest=size;}return longest;
+}
+inline constexpr quint64 control_pair_json_bytes=sizeof(R"(,"action_error":"","action_field":"")")-1+
+    longest_action_literal(action_errors)+longest_action_literal(action_fields);
+inline constexpr quint64 control_pair_owned_bytes=4*sizeof(QJsonValue)+
+    (sizeof("action_error")-1+sizeof("action_field")-1+longest_action_literal(action_errors)+longest_action_literal(action_fields))*sizeof(QChar);
+inline constexpr quint64 control_pair_role=control_pair_json_bytes>control_pair_owned_bytes?control_pair_json_bytes:control_pair_owned_bytes;
 enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch, RequestStale, ContextUnready, OwnerUnavailable, PendingOperation, ItemMismatch, DuplicateCall, InvalidArguments, CalculationBusy, VisibleUnmapped, ProjectRequired, Unclassified };
 inline constexpr std::array<std::string_view,18> result_codes={
     "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch",
@@ -177,6 +185,12 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         throw std::invalid_argument("Outgoing recipe refusal is incomplete");
     if(role==Role::Result && source.contains("action_error")!=source.contains("action_field"))
         throw std::invalid_argument("Outgoing action refusal is incomplete");
+    if(role==Role::Result && source.contains("action_error")) {
+        const auto error=source.value("action_error").toStringView();
+        for(std::size_t i=13;i<action_errors.size();++i)
+            if(error==QLatin1StringView(action_errors[i]) && source.value("complete").toBool())
+                throw std::invalid_argument("Outgoing control failure contradicts completed work");
+    }
     if(role==Role::Result && source.contains("refusal_guidance")) {
         if(source.value("status")!="refused" || source.value("refusal_field")!="mapped_structure" || !source.contains("refusal_reason") ||
             source.value("applied").toBool() || source.value("published").toBool() || source.value("adopted").toBool() ||

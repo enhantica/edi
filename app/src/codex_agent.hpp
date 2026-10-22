@@ -35,7 +35,10 @@ public:
     bool start(const QString& executable, const QString& workspace);
     QString request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare = {});
     bool notification(const QString& method, const QJsonObject& params = {});
-    bool answer(const QJsonValue& originalId, const QJsonObject& result);
+    // Borrowed synchronous preparation runs only after the original wire peak fits.
+    // No callback/context is retained or wrapped in an allocating std::function.
+    bool answer(const QJsonValue& originalId, const QJsonObject& result, void* preparation = nullptr,
+                bool (*handoff)(void*) noexcept = nullptr);
     bool reject(const QJsonValue& originalId);
     void resolved(const QJsonValue& originalId);
     void activity();
@@ -110,14 +113,15 @@ private:
     bool accountWaits(qint64 now); // Success is callback-free, union of fixed owned roles.
     bool operationExpired(qint64 now) const noexcept;
     quint64 total_ms_ = 0, idle_ms_ = 0, wire_bytes_ = 0, event_count_ = 0;
-    bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false, bool optionalUsage = false);
+    bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false, bool optionalUsage = false,
+               void* preparation = nullptr, bool (*handoff)(void*) noexcept = nullptr);
     void read(QProcess* process, quint64 generation, bool finished = false);
     void receive(const QByteArray& record);
     void fail(const char* explanation, FailureKind kind = FailureKind::Other) noexcept;
     void checkDeadline();
     void retireOptionalUsage(const QString& id);
     void preemptOptionalUsage();
-    void flushRequired() noexcept;
+    void flushRequired(quint64 preownedQueue = 0) noexcept;
     static QString idKey(const QJsonValue& value);
 };
 } // namespace edi_app

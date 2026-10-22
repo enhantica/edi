@@ -346,7 +346,7 @@ void CodexAgent::preemptOptionalUsage() {
         if (!receiver || generation_ != scope || failed_) return;
     }
 }
-void CodexAgent::flushRequired() noexcept {
+void CodexAgent::flushRequired(quint64 preownedQueue) noexcept {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
     if(active_frames_==std::numeric_limits<quint64>::max())return;
     ++active_frames_;
@@ -359,9 +359,10 @@ void CodexAgent::flushRequired() noexcept {
         if (queued > Limits::request_bytes || static_cast<quint64>(deferred_required_.size()) > Limits::request_bytes - queued) return;
         const auto lineSize=static_cast<quint64>(deferred_required_.size());
         quint64 available=0;
-        if(!remainingOutput(output_bytes_,available) || lineSize>available)return;
-        request_bytes_+=lineSize; // Preown the future QProcess queue copy.
-        quint64 heldRole=lineSize;
+        const auto queueRole=lineSize-qMin(lineSize,preownedQueue);
+        if(!remainingOutput(output_bytes_,available) || queueRole>available)return;
+        request_bytes_+=queueRole; // The caller may already protect this exact queue copy across deadline callbacks.
+        quint64 heldRole=queueRole;
         const auto transfer=qScopeGuard([receiver,&heldRole] {
             if(receiver)receiver->request_bytes_-=heldRole;
         });
@@ -371,7 +372,7 @@ void CodexAgent::flushRequired() noexcept {
         // Transfer this exact prepared original once. Any partial write is a
         // fatal uncertain delivery; never replay or rebuild it from current UI.
         const auto written=process->write(line);
-        if(receiver && generation_==scope && process_==process){request_bytes_-=lineSize;heldRole-=lineSize;}
+        if(receiver && generation_==scope && process_==process){request_bytes_-=queueRole;heldRole-=queueRole;}
         if (written != line.size() && receiver && generation_ == scope && process_ == process)
             fail("The official agent request could not be delivered.");
     } catch (...) { if (receiver && generation_ == scope && process_ == process) fail("The official agent queued control could not be delivered."); }
@@ -534,7 +535,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     }
 }
 
-bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight, bool optionalUsage) {
+bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight, bool optionalUsage,
+                       void* preparation, bool (*handoff)(void*) noexcept) {
     const QPointer<CodexAgent> receiver(this);
     if(active_frames_==std::numeric_limits<quint64>::max())return false;
     ++active_frames_;
@@ -614,12 +616,25 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const auto priorHeld = deferred_required_.size();
     if (prepare && !prepare()) return false;
     if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
+    quint64 preparedFlush=0;
+    if (handoff) {
+        // Protect the nested flush's extra queue copy as well as the wire,
+        // line and deferred owners already admitted above. If it cannot fit,
+        // skip only local capture and keep the original response path.
+        const auto futureFlush=deferred?held+lineSize:0;
+        quint64 room=0;
+        if(!futureFlush || (remainingOutput(output_bytes_,room) && futureFlush<=room)) {
+            request_bytes_+=futureFlush;retainedRequest+=futureFlush;preparedFlush=futureFlush;
+            if(!handoff(preparation))return false; // Keep queue protection through flush/deadline callbacks and return.
+        }
+    }
+    if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
     if (deferred) {
         deferred_required_.swap(heldWire); // Nonallocating ownership commit; original deadline stays armed.
         const auto transferred=static_cast<quint64>(deferred_required_.capacity());
         request_bytes_-=transferred;retainedRequest-=transferred; // Actual new member backing transferred; old heldWire stays local.
         if (deferred_deadline_ < 0) deferred_deadline_ = clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms);
-        flushRequired(); return receiver && process_ == process && generation_ == epoch && !failed_;
+        flushRequired(preparedFlush); return receiver && process_ == process && generation_ == epoch && !failed_;
     }
     if (optionalUsage) optional_queued_bytes_ = lineSize;
     if (process->write(line) != line.size()) {
@@ -669,13 +684,14 @@ QString CodexAgent::request(const QString& method, const QJsonObject& params, co
 bool CodexAgent::notification(const QString& method, const QJsonObject& params) {
     return write({{QStringLiteral("method"), method}, {QStringLiteral("params"), params}});
 }
-bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result) {
+bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result, void* preparation,
+                        bool (*handoff)(void*) noexcept) {
     const auto key = idKey(originalId);
     if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
     if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
     // Retire before delivery: an uncertain write never permits a repeated answer.
     const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
-    return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}});
+    return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}}, {}, false, false, preparation, handoff);
 }
 bool CodexAgent::reject(const QJsonValue& originalId) {
     const auto key = idKey(originalId);

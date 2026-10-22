@@ -265,14 +265,14 @@ bool AssistantWidgetInput::manualDraftPresent() const {
 std::uint64_t AssistantWidgetInput::start(Request request) {
     if (request_ || !window_ || !request.target || !request.current || !request.prepareCommit ||
         !request.finishCommit || !request.completed || serial_ == UINT64_MAX)
-        throw std::runtime_error("A visible input owner is unavailable");
+        throw ControlInputRefusal(ControlCause::Unavailable,"A visible input owner is unavailable");
     const QPointer<AssistantWidgetInput> self(this);
     const auto originalSerial=serial_;
     const bool admitted=request.current();
     if(!self || serial_!=originalSerial || request_)return 0;
     QPointF center;
     if (!admitted || !request.target || !visibleCenter(*request.target, center, request.kind == Kind::Scroll))
-        throw std::runtime_error("The genuine input control is not visible and current");
+        throw ControlInputRefusal(admitted ? ControlCause::Unavailable : ControlCause::Superseded,"The genuine input control is not visible and current");
     if(!self || serial_!=originalSerial || request_)return 0;
     if (request.kind == Kind::Value || request.kind == Kind::Text)
         throw std::invalid_argument("Scientific text uses its ordinary app setter, not draft input");
@@ -287,7 +287,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
         throw std::invalid_argument("The original single-line field cannot accept control characters");
     // Applies to navigation/free/fit too: their click can commit an unrelated
     // pre-existing manual draft through ordinary focus loss.
-    if (manualDraftPresent()) throw std::runtime_error("Finish the current manual input first");
+    if (manualDraftPresent()) throw ControlInputRefusal(ControlCause::ManualInput,"Finish the current manual input first");
     if (request.kind == Kind::Scroll && request.scrollDirection != 1 && request.scrollDirection != -1)
         throw std::runtime_error("The bounded viewport scroll is unavailable");
     original_text_ = request.kind == Kind::StagedText ? request.target->property("editText").toString() : QString{};
@@ -296,8 +296,9 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
         (request.kind == Kind::Choose && request.target->property("count").toInt() > static_cast<int>(edi::assistant::Limits::stream_items)) ||
         (request.kind == Kind::SearchChoice && (!request.target->property("searchable").toBool() || request.value.isEmpty() || request.value.size() > static_cast<qsizetype>(edi::assistant::Limits::id_bytes)))))
         throw std::runtime_error("The actual ComboBox option is unavailable");
+    request.failure=ControlCause::None;
     auto prepared = std::make_shared<Request>(std::move(request)); // All job/callback allocation precedes visibility.
-    if (!mouse_owner_) throw std::runtime_error("The visible mouse window is unavailable");
+    if (!mouse_owner_) throw ControlInputRefusal(ControlCause::Unavailable,"The visible mouse window is unavailable");
     mouse_stamp_ = mouse_owner_->begin(*this);
     request_ = std::move(prepared);
     const auto original = request_;
@@ -308,12 +309,12 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (!self) return id;
     const bool ready = self->current(id);
     if (!self) return id;
-    if (!ready) { if (serial_ == id && request_ == original) stop(false, tr("Visible input ownership changed"), false); return id; }
+    if (!ready) { if (serial_ == id && request_ == original) self->fail(original,id,ControlCause::Superseded, QT_TR_NOOP("Visible input ownership changed"), false); return id; }
     emit pointerShown();
     if (!self) return id;
     const bool shown = self->current(id);
     if (!self) return id;
-    if (!shown) { if (serial_ == id && request_ == original) stop(false, tr("Visible input ownership changed"), false); return id; }
+    if (!shown) { if (serial_ == id && request_ == original) self->fail(original,id,ControlCause::Superseded, QT_TR_NOOP("Visible input ownership changed"), false); return id; }
     timer_.start(0);
     return id;
 }
@@ -403,19 +404,19 @@ void AssistantWidgetInput::advance() noexcept {
     try {
         const bool valid = current(id);
         if (!self) return;
-        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
+        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (self && serial_ == id && request_ == request) self->fail(request,id,valid ? ControlCause::Unavailable : ControlCause::Superseded, QT_TR_NOOP("Visible action target changed or is unavailable"), true); return; }
         // Keep the same step and original authority while another application
         // is active. Never request activation or inject into an inactive window.
         if (!window_->isActive()) { timer_.start(navigation_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
-            stop(false, interrupted_, false); return;
+            if(self)self->stop(request,id,false, interrupted_, false, ControlCause::ManualInput); return;
         }
         switch (step_) {
         case Step::Move:
             emit pointerMoved(center_);
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
+              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; pace(move_ms); return;
         case Step::Press:
             if (request->kind == Kind::FileLoadCue) {
@@ -424,80 +425,83 @@ void AssistantWidgetInput::advance() noexcept {
                 if (!self || serial_ != id || request_ != request) return;
                 const bool valid = current(id);
                 if (!self || serial_ != id || request_ != request) return;
-                if (!valid) { stop(false, tr("Visible file cue ownership changed"), false); return; }
+                if (!valid) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible file cue ownership changed"), false); return; }
                 step_ = Step::Release; pace(press_ms); return;
             }
             if (request->kind == Kind::DismissMenu) {
                 choice_popup_ = request->target->property("contextMenu").value<QObject*>();
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned()) { stop(false, tr("The original parameter menu lost keyboard ownership"), false); return; }
+                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original parameter menu lost keyboard ownership"), false); return; }
                 step_ = Step::ChooseCommit; timer_.start(0); return;
             }
             if (request->kind == Kind::Scroll) {
                 // Wheel movement changes only the actual existing viewport; it
                 // never focuses/blurs an editor or synthesizes a button click.
-                if (!scroll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The viewport did not receive its wheel input"), false); return; }
-                if (self && serial_ == id && request_ == request) stop(true, {}, false);
+                if (!scroll()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The viewport did not receive its wheel input"), false); return; }
+                if (self && serial_ == id && request_ == request) self->stop(request,id,true, {}, false);
                 return;
             }
-            if (!mouse(QEvent::MouseMove, Qt::NoButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The target did not receive pointer movement"), false); return; }
+            if (!mouse(QEvent::MouseMove, Qt::NoButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The target did not receive pointer movement"), false); return; }
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
+              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             emit pointerPressed();
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
+              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
-            if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its press"), true); return; }
+            if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Release; pace(press_ms); return;
         case Step::Release:
-            if (request->kind == Kind::FileLoadCue) { stop(true, {}, false); return; }
+            if (request->kind == Kind::FileLoadCue) { if(self)self->stop(request,id,true, {}, false); return; }
             if (request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice && request->kind != Kind::FormText) {
                 commit_prepared_ = true; // Exact finish is owed even if preparation reenters/cancels.
-                if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The native input could not be prepared"), false); return; }
+                if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The native input could not be prepared"), false); return; }
                 if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
+              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             }
             pressed_ = false;
-            if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its release"), true); return; }
+            if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its release"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
                 choice_popup_ = request_->target->property("popup").value<QObject*>();
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { stop(false, tr("The genuine ComboBox popup did not open"), false); return; }
+                if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open"), false); return; }
                 step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
                 pace(click_relaxation_ms); return;
             }
-            if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { stop(true, {}, false); return; }
+            if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { if(self)self->stop(request,id,true, {}, false); return; }
             step_ = Step::Select; pace(click_relaxation_ms); return;
         case Step::ChooseHome:
-            if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
+            if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original ComboBox lost keyboard ownership"), false); return; }
             if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; pace(navigation_ms); }
             return;
         case Step::ChooseDown:
             if (option_step_ < request->option) {
-                if (!key(Qt::Key_Down)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
+                if (!key(Qt::Key_Down)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original ComboBox lost keyboard ownership"), false); return; }
                 if (self && serial_ == id && request_ == request) { ++option_step_; pace(navigation_ms); }
                 return;
             }
             step_ = Step::ChooseCommit; timer_.start(0); return;
         case Step::ChooseCommit:
             commit_prepared_ = true;
-            if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox choice was retired"), false); return; }
+            if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original ComboBox choice was retired"), false); return; }
             if (!self || serial_ != id || request_ != request) return;
-            if (!current(id) || !key(request->kind == Kind::DismissMenu ? Qt::Key_Escape : Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The actual menu key could not be delivered"), false); return; }
-            if (self && serial_ == id && request_ == request)
-                stop(request->kind == Kind::DismissMenu ? choice_popup_ && !choice_popup_->property("visible").toBool()
-                    : request->target && request->target->property("currentIndex").toInt() == request->option, {}, false);
+            { const bool owned=current(id);
+            if (!owned || !key(request->kind == Kind::DismissMenu ? Qt::Key_Escape : Qt::Key_Return)) { if (self && serial_ == id && request_ == request) self->fail(request,id,owned ? ControlCause::Delivery : ControlCause::Superseded, QT_TR_NOOP("The actual menu key could not be delivered"), false); return; } }
+            if (self && serial_ == id && request_ == request) {
+                const bool selected=request->kind == Kind::DismissMenu ? choice_popup_ && !choice_popup_->property("visible").toBool()
+                    : request->target && request->target->property("currentIndex").toInt() == request->option;
+                if(self)self->stop(request,id,selected,{},false,ControlCause::Commit);
+            }
             return;
         case Step::Select: {
             if (request->kind == Kind::StagedText) {
-                if (!QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The original staged draft has no safe owner"), false); return; }
+                if (!QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original staged draft has no safe owner"), false); return; }
                 if (!self || serial_ != id || request_ != request) return;
-                if (!request->target || !request->target->property("assistantEditing").toBool()) { stop(false, tr("The original staged draft was not admitted"), false); return; }
+                if (!request->target || !request->target->property("assistantEditing").toBool()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original staged draft was not admitted"), false); return; }
                 draft_ = true;
             }
             // Only genuine form/filter/staged drafts are edited here. Scientific
@@ -506,13 +510,13 @@ void AssistantWidgetInput::advance() noexcept {
             // still validates and activates the offered choice exactly once.
             const QPointer<QQuickItem> editor(request->kind == Kind::SearchChoice ? window_->activeFocusItem() : request->target.data());
             if (!editor || (!editor->inherits("QQuickTextInput") && !editor->inherits("QQuickTextEdit")) ||
-                !choiceKeyboardOwned() || editor->property("inputMethodComposing").toBool()) { stop(false, tr("The original draft lost keyboard ownership"), true); return; }
+                !choiceKeyboardOwned() || editor->property("inputMethodComposing").toBool()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original draft lost keyboard ownership"), true); return; }
             if (!self || serial_ != id || request_ != request || !editor) return;
             const auto old = injecting_; injecting_ = true;
             {
                 const auto release = qScopeGuard([self,old] { if (self) self->injecting_ = old; });
                 if (editor->property("text").toString() != request->value && !editor->setProperty("text", request->value)) {
-                    if (self && serial_ == id && request_ == request) stop(false, tr("The original draft refused its text"), true);
+                    if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original draft refused its text"), true);
                     return;
                 }
             }
@@ -522,7 +526,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (!valid || !editor || !choiceKeyboardOwned() ||
                 (request->kind == Kind::SearchChoice && window_->activeFocusItem() != editor) ||
                 editor->property("text").toString() != request->value) {
-                stop(false, tr("The original draft owner or text changed"), true); return;
+                if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The original draft owner or text changed"), true); return;
             }
             emit inputProgress();
             if (!self || serial_ != id || request_ != request) return;
@@ -530,23 +534,23 @@ void AssistantWidgetInput::advance() noexcept {
         }
         case Step::Commit:
             commit_prepared_ = true;
-            if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The recorded native input could not be prepared"), true); return; }
+            if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The recorded native input could not be prepared"), true); return; }
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
-            if ((request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
+              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            if ((request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             // Staged/form drafts have no scientific blur/Return commit. Their
             // original Apply/Create/Save action remains the sole final commit.
-            if (request->kind != Kind::StagedText && request->kind != Kind::FormText && !key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input commit was not confirmed"), true); return; }
+            if (request->kind != Kind::StagedText && request->kind != Kind::FormText && !key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The numeric input commit was not confirmed"), true); return; }
             if (self && serial_ == id && request_ == request) {
                 draft_ = false;
                 const bool selected = request->kind != Kind::SearchChoice || (request->target && request->target->property("currentIndex").toInt() == request->option);
-                stop(selected, {}, false);
+                if(self)self->stop(request,id,selected, {}, false, selected ? ControlCause::None : ControlCause::Commit);
             }
             return;
         }
-    } catch (...) { if (self && serial_ == id && request_ == request) stop(false, failed_, true); }
+    } catch (...) { if (self && serial_ == id && request_ == request) self->stop(request,id,false, failed_, true); }
 }
 void AssistantWidgetInput::restoreDraft() noexcept {
     if (!draft_ || !request_ || !request_->target) return;
@@ -561,11 +565,28 @@ void AssistantWidgetInput::restoreDraft() noexcept {
         if (self && request_ == request) draft_ = false;
     } catch (...) {}
 }
-void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool restore) noexcept {
-    if (!request_) return;
+void AssistantWidgetInput::fail(const std::shared_ptr<Request>& expected, std::uint64_t expectedId,
+                                ControlCause cause, const char* diagnostic, bool restore) {
+    // Translation is a virtual callback boundary. Capture the original before it.
     const QPointer<AssistantWidgetInput> self(this);
-    const auto id = serial_;
-    const auto original = request_;
+    const auto original=expected;
+    if(!original || request_!=original || serial_!=expectedId)return;
+    if(original->failure==ControlCause::None)original->failure=cause;
+    const auto translated=tr(diagnostic);
+    if(!self || self->request_!=original || self->serial_!=expectedId)return;
+    self->stop(original,expectedId,false,translated,restore,cause);
+}
+void AssistantWidgetInput::stop(const std::shared_ptr<Request>& expected, std::uint64_t expectedId,
+                                bool delivered, const QString& diagnostic, bool restore, ControlCause cause) noexcept {
+    const QPointer<AssistantWidgetInput> self(this);
+    if(!expected || request_!=expected || serial_!=expectedId)return;
+    const auto id = expectedId;
+    const auto original = expected;
+    const auto settled_diagnostic = diagnostic; // Own the original fallback across completion reentry.
+    if(!delivered){
+        if(original->failure==ControlCause::None)original->failure=cause;
+        cause=original->failure;
+    }else cause=ControlCause::None;
     try { timer_.stop(); } catch (...) { delivered = false; }
     if (mouse_owner_) mouse_owner_->retire(*this, mouse_stamp_);
     if (pressed_ || (mouse_owner_ && mouse_owner_->heldBy(*this, mouse_stamp_))) {
@@ -595,9 +616,14 @@ void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool 
     if (!self) return;
     // Never alter a replacement's UI. The old completion still carries only
     // its original native record; its adapter must independently fence that ID.
-    try { original->completed(delivered, diagnostic); } catch (...) {}
+    try { original->completed(delivered, settled_diagnostic, cause); } catch (...) {}
 }
-void AssistantWidgetInput::cancel() { stop(false, interrupted_, true); }
+void AssistantWidgetInput::cancel() {
+    const QPointer<AssistantWidgetInput> self(this);
+    const auto original=request_;
+    const auto id=serial_;
+    if(self)self->stop(original,id,false,interrupted_,true,ControlCause::Superseded);
+}
 bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The retained application filter separately consumes stale own events, even
     // when this helper is inactive/replaced. Genuine devices remain manual.
