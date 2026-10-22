@@ -2,11 +2,17 @@
 
 Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.py`).
 
-- **Data:** the HRPT (PSI) pattern of `pd-neut-cwl_lbco-hrpt_start-4`, read from its `_data` loop unchanged. That
-  project's `PROVENANCE.md` names where the pattern comes from.
+## Sources
+
+- **Data:** the HRPT (PSI) pattern of `pd-neut-cwl_lbco-hrpt_start-4`, read from its `_data` loop unchanged: the 3098
+  points of diffraction-lib's dataset `meas-lbco-hrpt` (`data/measured/lbco-hrpt.xye` in `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`, sha256
+  `70dba3f642b394f0e7e7802a8637e0e287164562671993ee0701b813c902e360`), licence BSD-3-Clause.
 - **Model:** diffraction-lib's tutorial `refine-lbco-hrpt-from-data` (develop `cb2cda7b`): La0.5Ba0.5CoO3 in
   `P m -3 m`, La and Ba sharing the `1a` site, Thompson-Cox-Hastings pseudo-Voigt, wavelength 1.494 Å fixed, excluded
   regions 0-5° and 165-180°, five background points. As in the tutorial's last step, Ba's Biso is tied to La's.
+
+## The start
+
 - **Start:** the 2θ zero at 0.3°, half HRPT's calibrated 0.6° (the tutorial's start), by the owner's choice;
   U, V, W, Y at one significant figure of the fitted values (0.08, -0.1, 0.1, 0.08); Biso 0.5 on every site; cell
   3.88 Å as the tutorial starts it; scale 9; a flat background at the level read off the pattern.

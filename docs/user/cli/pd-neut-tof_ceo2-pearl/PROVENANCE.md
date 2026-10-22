@@ -8,7 +8,8 @@ fitted. The example catalogue's CeO₂ case, started the way a user's own measur
 
 - **Data and model:** `pd-neut-tof_ceo2-pearl_polynomial`, built from FullProf's own example (the fitting project
   `knowledge/fitting/fullprof/pd-neut-tof_ceo2-pearl_polynomial/`). The points are read from its `_data` loop by
-  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied. Fm-3m, cell 5.410495 Å fixed, bank 2θ 90°,
+  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied. The data come with FullProf's examples; no licence is
+  recorded for them. Fm-3m, cell 5.410495 Å fixed, bank 2θ 90°,
   cut-off 8 FWHM, the same excluded regions, polynomial origin 7000 µs.
 
 ## The start

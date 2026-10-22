@@ -3,6 +3,12 @@
 A calculated constant-wavelength neutron pattern of La0.5Ba0.5CoO3, with no measured data: the model and an instrument
 are enough for edi to calculate the pattern, and changing a value shows its effect at once.
 
+## Sources
+
+- **Data:** none; the pattern is calculated.
+- **Model:** diffraction-lib's tutorial `simulate-lbco-cwl` (repository `easyscience/diffraction-lib`, develop
+  `cb2cda7b`), licence BSD-3-Clause, as described below.
+
 The structure is diffraction-lib's dataset `struct-lbco` (`structures/lbco.cif` in the data repository
 `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`, BSD-3-Clause, sha256
 `a8a8970e26c4a932098d73502f720bc2092ea6585bc527c5c35c531a8b05d9ae`): Pm-3m, a = 3.88 Å, La and Ba sharing the

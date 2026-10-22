@@ -5,6 +5,16 @@ the previous file's result. The model follows diffraction-lib's tutorial `refine
 `cb2cda7b`): space group, cell start, excluded regions, background positions, the free set and the Co1 and Co2 Biso
 constraint.
 
+## Sources
+
+- **Data:** the patterns of diffraction-lib's D20 cooling scan, dataset `meas-cosio-d20-scan-156f`
+  (`data/measured/cosio-d20-scan-156f.zip` in `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`, sha256
+  `5ce20209ce52382f547269d93d511707ab6795d5f681b7cb77ba713705be5baa`), licence BSD-3-Clause. The files here are
+  named by their order and temperature; matched by temperature, each holds every point of its file in that
+  dataset, with one or two more rows at the ends of the range.
+- **Model:** diffraction-lib's tutorial `refine-cosio-d20-tscan` (repository `easyscience/diffraction-lib`, develop
+  `cb2cda7b`), licence BSD-3-Clause.
+
 ## The patterns
 
 The files are the first 155 of the 162-file cooling run in `pd-neut-cwl_cosio-d20_scan-162f`, copied byte for byte:
