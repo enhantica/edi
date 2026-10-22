@@ -328,6 +328,11 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' links no structure; link one before fitting");
         }
+        if (bank.reflections.has_value()) {
+            throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
+                                        "' is a single crystal, which cannot be fitted jointly yet; fit it in a "
+                                        "project where it is the only experiment");
+        }
         if (!bank.data.has_value() || bank.calculation_only) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' carries no measured data (a calculation-only or "
