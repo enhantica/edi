@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T22:15:45Z
+# measured_utc = 2026-10-22T22:42:11Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 14535 banked, 0 stale row(s) dropped)
-# Collected tests: 16014; with a reported duration: 9538
+# Recorded from: measured test run (18 node(s) measured once, 14540 banked, 0 stale row(s) dropped)
+# Collected tests: 16032; with a reported duration: 9556
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16014
+# inventory_python = 16032
 # inventory_cpp = 389
-# inventory_measured = 14540
+# inventory_measured = 14558
 # inventory_unmeasured = 1863
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -9768,9 +9768,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[wrong-project-name]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-capital-boolean]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_check_refuses_each_broken_catalogue_form[yaml-extra-indent]
+0.320	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[annotated]
+0.570	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[assignment-target]
+0.330	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[bare-project]
+0.320	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[chained-target]
 0.320	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[comment]
+0.330	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[comparison]
+0.350	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[comprehension-call]
 0.340	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[dead-branch]
+0.350	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[expression]
 0.290	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[extra-nonliteral]
+0.320	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[other-target]
+0.370	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[slice-call]
+0.400	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[slice-literal]
 0.330	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[string]
 0.350	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[uninvoked-function]
 0.390	tests/system/py/test_catalogue_check_escapes.py::test_check_requires_an_executable_load_in_both_tutorial_forms[uninvoked-lambda]
@@ -12212,6 +12222,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_zero_
 0.030	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-selected-empty-explicit-single]
 0.050	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-joint]
 0.040	tests/system/py/test_fit_participants_native.py::test_native_explicit_pattern_atom_check_matches_its_selected_banks[reverse-unused-empty-first-explicit-single]
+0.170	tests/system/py/test_fit_quality_observation_coverage.py::test_complete_or_excluded_reference_points_remain_comparable[excluded-gap]
+0.170	tests/system/py/test_fit_quality_observation_coverage.py::test_complete_or_excluded_reference_points_remain_comparable[rounded-complete]
+0.400	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[0-banks0]
+0.360	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[0-banks1]
+0.350	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[1-banks0]
+0.390	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[1-banks1]
+0.330	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[3-banks0]
+0.330	tests/system/py/test_fit_quality_observation_coverage.py::test_published_comparison_never_silently_drops_a_required_observation[3-banks1]
 0.510	tests/system/py/test_fullprof_powder_factors.py::test_fitted_lbco_factors_agree_with_the_committed_fullprof_summary
 0.570	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
 0.321	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
