@@ -556,6 +556,58 @@
         "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/experiments/wish_5_6.edi",
         "docs/user/cli/pd-neut-tof_ncaf-wish_basic/project/structures/ncaf.edi"
       ]
+    },
+    "pd-neut-tof_lbco-si-mcstas_two-phase": {
+      "samples": [
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
+        "Silicon [Fd-3m]"
+      ],
+      "origin": "McStas simulation",
+      "detail": "Two phases · Simulated TOF pattern · Jorgensen profile",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          "McStas"
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_lbco-si-mcstas_two-phase",
+        "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation",
+        "Two phases · Simulated TOF pattern · Jorgensen profile"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/project.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/experiments/mcstas.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/lbco.edi",
+        "docs/user/cli/pd-neut-tof_lbco-si-mcstas_two-phase/project/structures/si.edi"
+      ]
     }
   }
 }

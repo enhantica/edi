@@ -112,3 +112,6 @@ projects:
   - id: pd-neut-tof_ncaf-wish_basic
     executing: false
     user-facing: true
+  - id: pd-neut-tof_lbco-si-mcstas_two-phase
+    executing: false
+    user-facing: true
