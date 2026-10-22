@@ -130,3 +130,6 @@ projects:
   - id: pd-neut-tof_diamond-dream_mcstas
     executing: false
     user-facing: true
+  - id: pd-neut-cwl_lab6-11b-echidna_basic
+    executing: false
+    user-facing: true
