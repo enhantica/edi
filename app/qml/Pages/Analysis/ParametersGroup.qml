@@ -343,37 +343,37 @@ EaElements.GroupBox {
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("value")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: ""
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("min")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
                 // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow are centred together
                 // over the checkboxes.
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     id: freeTitle
                     objectName: "parameters.freeHeader"
                     horizontalAlignment: Text.AlignHCenter
@@ -431,9 +431,10 @@ EaElements.GroupBox {
                     onTapped: group.selected = row.parameter
                 }
 
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 // The iconified name on one centre line (edi ADR-0017 §8, §10), with the path in a tooltip on
@@ -465,7 +466,7 @@ EaElements.GroupBox {
                     onActiveFocusChanged: if (activeFocus)
                         group.selected = row.parameter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     color: EaStyle.Colors.themeForegroundMinor
                     horizontalAlignment: Text.AlignLeft
                     text: row.units
@@ -488,7 +489,7 @@ EaElements.GroupBox {
                     number: group.bound(row.maximum)
                     full: NumberText.plainFull(row.maximum)
                 }
-                EaComponents.TableViewCheckBox {
+                EaComponents.ListViewCheckBox {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `parameters.free.${row.index}`
                     enabled: group.measured
