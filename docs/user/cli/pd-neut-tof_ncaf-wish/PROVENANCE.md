@@ -8,7 +8,12 @@ catalogue's NCAF case, started the way a user's own measurement would be.
 
 - **Data, excluded regions, background positions and free set:** `pd-neut-tof_ncaf-wish-5bank_start-5`, whose free
   set is FullProf's (193 parameters, that project's `PROVENANCE.md`). The points are read from its `_data` loops by
-  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied.
+  `tools/cli_projects/catalogue_tof_cases.py`; no fitted value is copied. Banks 4+7 and 5+6 are the 4043 and 4114
+  included points of diffraction-lib's datasets `meas-ncaf-wish-b47` and `meas-ncaf-wish-b56` (`data/measured/` in
+  `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`, sha256
+  `e24493511795e5dc3390ad055ea43d346ef39c63dab68349a9deba00dfde2671` and
+  `bcbb403374e705e2864d48b2dc803778252da9320ac5dc33bce4e94a225ef9dc`), licence BSD-3-Clause. Banks 1+10, 2+9 and
+  3+8 come with that project's FullProf five-bank input; no licence is recorded for them.
 - **Model:** the same project and diffraction-lib's NCAF WISH tutorial (`docs/docs/tutorials/` at develop
   `cb2cda7b`), which fits two of the five banks only to keep its run short. I2₁3, cell 10.250256 Å fixed (each
   bank's DIFC is free), cut-off 8 FWHM, joint weights 1.

@@ -6,7 +6,9 @@ started the way a user's own measurement would be.
 ## Sources
 
 - **Data:** the measured points of `pd-neut-tof_si-sepd_start-2` (diffraction-lib's dataset `meas-si-sepd`), read
-  from that project's `_data` loop by `tools/cli_projects/catalogue_tof_cases.py`. No fitted value is copied.
+  from that project's `_data` loop by `tools/cli_projects/catalogue_tof_cases.py`. No fitted value is copied. They are
+  the 5600 points of `data/measured/si-sepd.xye` in `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669` (sha256
+  `b798ebf3ad0b845e27d3f3ff95a5497899e60b7bee7d21771d06925a98127eab`), licence BSD-3-Clause.
 - **Model:** diffraction-lib's Si SEPD tutorial (`docs/docs/tutorials/` at develop `cb2cda7b`) and the same edi
   project: Fd-3m (origin choice 2), Si on 8a, bank 2θ 144.845°, DIFC 7476.91 and DIFA −1.54 µs/Å² fixed, α₁ 0.5971
   fixed, cut-off 8.2 FWHM.
