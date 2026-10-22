@@ -345,13 +345,47 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2_fit") + sc_report_steps});
     steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
     steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
-                      QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.1",
+                      QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.0", "parameters.free.1",
                                   "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"}});
     steps_.push_back({"sccheck-06-pr2nio4-extinction-fixed-refitted",
                       {"parameters.free.0", "parameters.free.1", "reveal:fitting.start", "fitting.start", "wait-fit",
                        "choose:OK"}});
     steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
+    steps_.push_back({"sccheck-09-created-single-crystal",
+                      QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments", "experiments.create",
+                                        "experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sccheck-09b-created-back-to-powder", {"experimentType.sampleForm", "choose:powder"}});
+    // A single crystal saved in another project, loaded where its structure is missing: the message, the link in
+    // red, the structure's own text, then the link pointed at the project's structure.
+    steps_.push_back({"sccheck-09c-loaded-missing-link",
+                      start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments",
+                                        "load-experiments:sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi"}});
+    steps_.push_back({"sccheck-09d-missing-link-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-09e-missing-link-red", {"choose:OK", "expand:group.linked_structure"}});
+    steps_.push_back({"sccheck-09f-structure-text", {"appBar.tab.structure", text}});
+    steps_.push_back({"sccheck-09g-relinked", {experiment, basic, "linkedStructure.structureId.0", "choose:tb2ti2o7"}});
+    // A single crystal's reflections through the row's Load data: FullProf's .int (its wavelength taken), a plain
+    // h k l F² su file, then a malformed one; each into a created experiment linked to the project's structure.
+    // The files are named by EDI_DEMO_SC_FILES, a folder holding prnio.int, tbti.dat and malformed.dat.
+    const QString sc_files = qEnvironmentVariable("EDI_DEMO_SC_FILES");
+    const QStringList create_sc{experiment, basic, "expand:group.experiments", "experiments.create",
+                                "experimentType.sampleForm", "choose:single crystal"};
+    steps_.push_back({"sccheck-10a-int-loaded", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/prnio.int"}});
+    steps_.push_back({"sccheck-10b-int-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
+    steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-10e-int-joint-refused", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10e2-int-fitted-alone", {"choose:OK", experiment, basic, "expand:group.experiments", "experiments.remove.0",
+                                                        analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
+    steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
+                                                "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
@@ -889,14 +923,15 @@ bool DemoDriver::perform(const QString& action) {
         session->project()->pinTimestamps(action.mid(9));
         return true;
     }
-    if (action == QLatin1String("load-reflections")) {
-        // Load data into the current experiment from the reflection file EDI_DEMO_REFLECTIONS names, through the
-        // call the file dialog's accept makes; without it the step only captures what is shown.
-        const QString path = qEnvironmentVariable("EDI_DEMO_REFLECTIONS");
+    if (action == QLatin1String("load-reflections") || action.startsWith(QLatin1String("load-reflections:"))) {
+        // Load data into the current experiment from the file the action names, else the one EDI_DEMO_REFLECTIONS
+        // names, through the call the row's file dialog makes on accept; without either the step only captures.
+        const QString path = action.contains(QLatin1Char(':')) ? action.section(QLatin1Char(':'), 1)
+                                                                : qEnvironmentVariable("EDI_DEMO_REFLECTIONS");
         QQmlEngine* engine = qmlEngine(window_.contentItem());
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
-            session->project()->loadData(session->project()->currentExperimentIndex(), QUrl::fromLocalFile(path));
+            session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path));
         }
         return true;
     }
