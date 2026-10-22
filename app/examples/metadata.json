@@ -1621,6 +1621,106 @@
         "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi"
       ]
     },
+    "sc-neut-tof_taurine_basic": {
+      "samples": [
+        "Taurine [P2₁/c]"
+      ],
+      "origin": "Unknown instrument",
+      "detail": "Single crystal · Time of flight · Isotropic ADPs · Scale-only fit",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "verification"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-tof_taurine_basic",
+        "Taurine [P2₁/c] · Unknown instrument",
+        "Single crystal · Time of flight · Isotropic ADPs · Scale-only fit"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-tof_taurine_basic/project/project.edi",
+        "docs/user/cli/sc-neut-tof_taurine_basic/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-tof_taurine_basic/project/experiments/taurine.edi",
+        "docs/user/cli/sc-neut-tof_taurine_basic/project/structures/taurine.edi"
+      ]
+    },
+    "sc-neut-tof_taurine_fit": {
+      "samples": [
+        "Taurine [P2₁/c]"
+      ],
+      "origin": "Unknown instrument",
+      "detail": "Single crystal · Time of flight · Isotropic displacements from a rough start",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-tof_taurine_fit",
+        "Taurine [P2₁/c] · Unknown instrument",
+        "Single crystal · Time of flight · Isotropic displacements from a rough start"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/taurine.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi"
+      ]
+    },
     "pd-xray-cwl_lif": {
       "samples": [
         "LiF [Fm-3m]"
