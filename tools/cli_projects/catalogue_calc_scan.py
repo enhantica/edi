@@ -263,6 +263,7 @@ def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
         'experiments/d20.edi': text(
             ['data_d20', '', '_edi.schema_version 3'],
             experiment_type('constant wavelength', 'neutron'),
+            [f'_data_source.file_name {template.name}'],
             [
                 '_peak.type cwl-tch-pseudo-voigt',
                 f'_peak.broad_gauss_u {free(0.2)}',
