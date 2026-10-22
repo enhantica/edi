@@ -865,7 +865,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     if (load.derived != 0) {
         notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
     }
-    QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
+    // A single crystal's rows are reflections.
+    QString text = record.experiment->reflections.has_value()
+                       ? tr("%1 loaded into '%2': %n reflection(s)", nullptr, static_cast<int>(load.points))
+                       : tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points));
+    text = text.arg(file_name, loaded_name);
     if (!notes.isEmpty()) {
         text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
     }
