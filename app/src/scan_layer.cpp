@@ -245,9 +245,11 @@ void ScanLayer::paint(QPainter* painter) {
 
     if (mode_ == QLatin1String("map")) {
         // The datasets read, in row order, each as its pixel columns' values on the y scale.
+        // Every placed row, a dataset not read (or not readable) included: its band stays empty, and no neighbour
+        // blends into it.
         std::vector<std::size_t> order;
         for (std::size_t d = 0; d < count; ++d) {
-            if (!patterns[d].x.empty() && std::isfinite(rows[d])) {
+            if (std::isfinite(rows[d])) {
                 order.push_back(d);
             }
         }
