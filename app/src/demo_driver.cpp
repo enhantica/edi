@@ -333,6 +333,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sc-07f-pr2nio4-created-loaded", {"load-reflections"}});
     steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
     steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
+    // Both single-crystal fitting examples' report charts after loading and after a fit; then the extinction's s.u.
+    // after it is fixed and fitted again, and the reflection table filling the Extras sidebar. Run only when asked
+    // (`--demo-only sccheck-`).
+    const QStringList fit_sc{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"};
+    const QStringList sc_report_steps{QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"};
+    steps_.push_back({"sccheck-01-tb2ti2o7-report-loaded",
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + sc_report_steps});
+    steps_.push_back({"sccheck-02-tb2ti2o7-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2_fit") + sc_report_steps});
+    steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
+                      QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.1",
+                                  "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"sccheck-06-pr2nio4-extinction-fixed-refitted",
+                      {"parameters.free.0", "parameters.free.1", "reveal:fitting.start", "fitting.start", "wait-fit",
+                       "choose:OK"}});
+    steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
