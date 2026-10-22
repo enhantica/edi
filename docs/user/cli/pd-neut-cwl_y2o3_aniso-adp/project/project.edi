@@ -1,0 +1,10 @@
+_edi.schema_version 3
+
+_metadata.name pd_neut_cwl_y2o3_aniso_adp
+_metadata.title "Y₂O₃ [Ia-3] · Unknown instrument"
+_metadata.description "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?
+_metadata.polarisation "none"

@@ -1013,6 +1013,56 @@
         "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/experiments/pearl.edi",
         "docs/user/cli/pd-neut-tof_ceo2-pearl_basic/project/structures/ceo2.edi"
       ]
+    },
+    "pd-neut-cwl_y2o3_aniso-adp": {
+      "samples": [
+        "Y₂O₃ [Ia-3]"
+      ],
+      "origin": "Unknown instrument",
+      "detail": "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "none"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_y2o3_aniso-adp",
+        "Y₂O₃ [Ia-3] · Unknown instrument",
+        "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/experiments/y2o3.edi",
+        "docs/user/cli/pd-neut-cwl_y2o3_aniso-adp/project/structures/y2o3.edi"
+      ]
     }
   }
 }
