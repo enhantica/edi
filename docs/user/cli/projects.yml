@@ -78,6 +78,10 @@ projects:
     executing: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
+  - id: pd-neut-cwl_lab6-11b-echidna_basic
+    executing: false
+  - id: pd-neut-tof_diamond-dream_mcstas
+    executing: false
   # The example catalogue: its user-facing cases, in the order the app lists them.
   - id: pd-neut-cwl_lbco-hrpt_basic
     executing: false
@@ -127,10 +131,6 @@ projects:
   - id: pd-neut-cwl_yap-spodi_two-phase
     executing: false
     user-facing: true
-  - id: pd-neut-tof_diamond-dream_mcstas
-    executing: false
-  - id: pd-neut-cwl_lab6-11b-echidna_basic
-    executing: false
   - id: pd-neut-tof_cecoal-polaris_basic
     executing: false
     user-facing: true
