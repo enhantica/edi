@@ -3587,8 +3587,7 @@ void Project::publish_calculation() {
         columns.intensity_bkg = shared_column(computed.intensity_bkg);
         columns.calc_status = status_column(computed.calc_status);
         columns.component_intensities_net = shared_column(computed.component_intensities_net);
-        columns.component_order =
-            ComputedColumn<std::string>(std::make_shared<const std::vector<std::string>>(computed.component_order));
+        columns.component_order = shared_column(computed.component_order);
         columns.residual = shared_column(crysta::residual(engine.experiments[index]));
         data.push_back(std::move(columns));
 
@@ -4798,7 +4797,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
                                       view.refln.index_l.values(), names);
     // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
     const crysta::ComputedData& computed = fitted.experiment().computed().data();
-    source.components = structure_components(computed.component_order, computed.component_intensities_net.values(),
+    source.components = structure_components(computed.component_order.values(), computed.component_intensities_net.values(),
                                              view.data.axis.size(), names);
     return source;
 }
