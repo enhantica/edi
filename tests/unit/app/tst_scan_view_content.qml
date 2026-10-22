@@ -849,19 +849,37 @@ Rectangle {
         }
 
         function test_owner_axis_name_data() {
-            return test_current_row_tracks_async_coordinates_data();
+            return ["pattern", "stacked", "map"].map(mode => ({
+                        tag: mode,
+                        mode
+                    }));
         }
         function test_owner_axis_name(data) {
-            const scan = open(data.mode);
+            const scan = open(data.mode === "pattern" ? "stacked" : data.mode);
             ready(scan);
-            const selector = axisControl("x");
-            for (let index = 0; index < selector.count; ++index) {
-                if (!selector.enabled)
-                    continue;
-                choose(selector, index);
-                compare(selector.displayText.replace(/^x:\s*/, ""), selector.textAt(index), "An opened x-axis entry and its selected quantity have exactly the same name");
+            if (data.mode === "pattern") {
+                chart.destroy();
+                chart = patternReferenceFactory.createObject(surface, {
+                    experiment: Session.project.currentExperiment,
+                    shown: true,
+                    visible: true
+                });
             }
-            verify(selector.count > 1, "The name witness exercises both native and d quantities");
+            const selector = data.mode === "pattern" ? findChild(chart, "chart.toolbar.xaxis") : axisControl("x");
+            verify(selector !== null, "Each actual chart exposes its x selector before caption input");
+            tryVerify(() => selector.enabled, 8000, "Calculated data make the real d-spacing entry selectable");
+            let dSeen = false;
+            for (let index = 0; index < selector.count; ++index) {
+                choose(selector, index);
+                const entry = selector.textAt(index);
+                if (/^(x:\s*)?d(?:-spacing)?$/.test(entry)) {
+                    dSeen = true;
+                    compare(selector.displayText, "x: d-spacing", "The selected d-axis caption is the owner's full quantity name on every chart");
+                    compare(entry, "x: d-spacing", "The d-axis list entry uses the same full x: d-spacing caption as its selection");
+                } else
+                    compare(selector.displayText.replace(/^x:\s*/, ""), entry.replace(/^x:\s*/, ""), "Every other opened x-axis entry and selected quantity retain the same name");
+            }
+            verify(dSeen && selector.count > 1, "The name witness exercises both native and d quantities");
         }
         function test_owner_d_availability_data() {
             return test_current_row_tracks_async_coordinates_data();

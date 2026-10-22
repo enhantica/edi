@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-22T09:39:24Z
+# measured_utc = 2026-10-22T09:44:26Z
 #
-# Recorded from: measured test run (12 node(s) measured once, 14542 banked, 0 stale row(s) dropped)
-# Collected tests: 15945; with a reported duration: 9468
+# Recorded from: measured test run (1 node(s) measured once, 14552 banked, 0 stale row(s) dropped)
+# Collected tests: 15946; with a reported duration: 9468
 # Module-scoped fixture costs recorded: 70
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15945
+# inventory_python = 15946
 # inventory_cpp = 393
 # inventory_measured = 14552
-# inventory_unmeasured = 1786
+# inventory_unmeasured = 1787
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -6978,6 +6978,7 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::tes
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:dark]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_map_numeric_dataset_ticks:light]
 0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:map]
+UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:pattern]
 0.000	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_axis_name:stacked]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_d_availability:map]
 UNMEASURED:failed-in-this-run	tests/system/app/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_d_availability:stacked]
@@ -16403,7 +16404,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 3.896	tests/system/app/test_pattern_owner_styles.py
-# module-cost: 6.021	tests/system/app/test_scan_owner_additions.py
+# module-cost: 4.688	tests/system/app/test_scan_owner_additions.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py

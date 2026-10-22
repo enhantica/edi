@@ -18,6 +18,7 @@ CASES = (
     'test_joint_labels_outside_axis:map-dark',
     'test_stacked_schemes_and_line_width:light',
     'test_stacked_schemes_and_line_width:dark',
+    'test_owner_axis_name:pattern',
     'test_owner_axis_name:stacked',
     'test_owner_axis_name:map',
     'test_owner_d_availability:stacked',
