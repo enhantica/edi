@@ -58,15 +58,19 @@ EaComponents.TableViewParameter {
     // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
     // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
     readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // Its scientific form, whose digits also follow the uncertainty and the project's rule when the plain text does not
+    // change (9e5 or 9.0e5 for 900000 ± 200000).
+    readonly property string narrowText: item !== null && !fitDigits ? NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText
     function refit() {
         const sized = Math.abs(width - implicitWidth) >= 0.5;
-        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits));
+        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, narrowText);
     }
     onRoomChanged: refit()
     onValueTextChanged: refit()
+    onNarrowTextChanged: refit()
     onFontChanged: refit()
     Component.onCompleted: refit()
     readonly property FontMetrics shownMetrics: FontMetrics {
