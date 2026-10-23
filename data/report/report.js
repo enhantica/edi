@@ -300,7 +300,7 @@ function drawPattern(figure, pattern) {
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
-// A single crystal's chart (edi ADR-0048), as the app draws it: each reflection's F²meas with its s.u. bar against its
+// A single crystal's chart (edi ADR-0049), as the app draws it: each reflection's F²meas with its s.u. bar against its
 // F²calc, the y = x line a perfect model puts them on, one range on both axes; "Not calculated yet" before a
 // calculation.
 function drawSingleCrystal(figure, crystal) {
