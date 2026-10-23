@@ -109,3 +109,20 @@ function gap(proof, root, dense, narrow = false) {
             throw Error("The independent sparse or dense gap dataset could not be written");
     }
 }
+
+function coincident(proof, root, allEqual) {
+    const original = ["all594687.dat", "all594791.dat", "all594842.dat"];
+    for (const name of original)
+        if (!proof.remove(root, "experiments/d20_scan/" + name))
+            throw Error("The coincident fixture replaces every original scan file");
+    const temperatures = allEqual ? [250, 250, 250] : [250, 100, 250, 700, 250];
+    const intensities = allEqual ? [0, 128, 255] : [0, 64, 128, 192, 255];
+    for (let row = 0; row < temperatures.length; ++row) {
+        let text = "XYDATA independent coincident datasets\nTEMP " + temperatures[row] + "\n";
+        for (let i = 0; i <= 256; ++i)
+            text += (10 + i * .4).toFixed(3) + " " + intensities[row] + " 1\n";
+        if (!proof.write(root, "experiments/d20_scan/row_" + row + ".dat", text))
+            throw Error("Every coincident dataset retains its own constant intensity");
+    }
+    return {temperatures, intensities};
+}

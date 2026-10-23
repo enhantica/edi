@@ -72,3 +72,11 @@ endpoints, positive full-range ink and restored full-range drawing. Captures map
 plot coordinates into a chart image explicitly; the sampled-column reference
 retains the chart's own grid underlay. Selection outlines are transparent during
 these data-only observations.
+
+The coincident-value generator writes three equal temperatures (250 K), or five
+files with temperatures 250, 100, 250, 700, 250 K and constant intensities
+0, 64, 128, 192, 255. Equal interior values occur apart in file order. The
+all-equal intensities are 0, 128, 255. Pixel ownership uses the frozen viridis
+samples or approved categorical colours, without prescribing row positions.
+Real mouse selection on Map pixels or a Stacked baseline must agree with the
+independently identified data and its open box. Explicit file ordering is the control in both Map modes and Stacked.

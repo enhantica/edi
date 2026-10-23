@@ -137,7 +137,13 @@ Rectangle {
                 const marker = named("current"), rectangle = marker.mapToItem(layer, 0, 0);
                 const near = Math.round(inside === 1 ? rectangle.y + 1 : rectangle.y + marker.height - 2);
                 const y = [near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).find(candidate => [.25, .5, .75].every(place => coreAt(Math.round(layer.width * place), candidate)));
-                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge" + "; expectedCore=" + core + " bound=" + bound + " candidates=" + JSON.stringify([near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).map(candidate => ({y: candidate, pixels: [.25, .5, .75].map(place => ({x: Math.round(layer.width * place), colour: String(actual(Math.round(layer.width * place), candidate))}))}))));
+                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge" + "; expectedCore=" + core + " bound=" + bound + " candidates=" + JSON.stringify([near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).map(candidate => ({
+                            y: candidate,
+                            pixels: [.25, .5, .75].map(place => ({
+                                        x: Math.round(layer.width * place),
+                                        colour: String(actual(Math.round(layer.width * place), candidate))
+                                    }))
+                        }))));
                 for (const place of [.25, .5, .75]) {
                     const x = Math.round(layer.width * place);
                     for (const offset of [-1, 1]) {
@@ -387,7 +393,13 @@ Rectangle {
             tryVerify(() => {
                 at = Ui.clickPoint(control);
                 return at !== null;
-            }, 2000, "The real selector finishes its tab transition inside the input viewport" + "; step=exposure selector=" + control.objectName + " targetIndex=" + index + " observedAtPollStart=" + JSON.stringify({point: Ui.clickPoint(control), visible: control.visible, enabled: control.enabled, width: control.width, height: control.height}));
+            }, 2000, "The real selector finishes its tab transition inside the input viewport" + "; step=exposure selector=" + control.objectName + " targetIndex=" + index + " observedAtPollStart=" + JSON.stringify({
+                point: Ui.clickPoint(control),
+                visible: control.visible,
+                enabled: control.enabled,
+                width: control.width,
+                height: control.height
+            }));
             mouseClick(control, at.x, at.y);
             tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector" + "; step=open selector=" + control.objectName + " targetIndex=" + index + " click=" + JSON.stringify(at));
             const windowRoot = control.Window.window.contentItem;
@@ -544,7 +556,23 @@ Rectangle {
                         verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (bg[c] + alpha * (expected[c] - bg[c]))) <= 3 / 255), "Every width sample is a composite of the independent scheme colour over the plot background");
                         coverage += Math.max(0, Math.min(1, alpha));
                     }
-                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({x: px, yMin: py - 6, yMax: py + 6, coordinate: coordinate, rowValue: [100, 250, 700][row], level: [0, 128, 255][row], stackHeight: scan.stackHeight, domain: [axes.axisY.min, axes.axisY.max], layerSize: [layer.width, layer.height]}) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({length: 13}, (_, i) => ({x: px, y: py + i - 6, colour: String(frame.pixel(Math.round(layer.mapToItem(chart, px, py + i - 6).x), Math.round(layer.mapToItem(chart, px, py + i - 6).y)))}))));
+                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({
+                        x: px,
+                        yMin: py - 6,
+                        yMax: py + 6,
+                        coordinate: coordinate,
+                        rowValue: [100, 250, 700][row],
+                        level: [0, 128, 255][row],
+                        stackHeight: scan.stackHeight,
+                        domain: [axes.axisY.min, axes.axisY.max],
+                        layerSize: [layer.width, layer.height]
+                    }) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({
+                        length: 13
+                    }, (_, i) => ({
+                                x: px,
+                                y: py + i - 6,
+                                colour: String(frame.pixel(Math.round(layer.mapToItem(chart, px, py + i - 6).x), Math.round(layer.mapToItem(chart, px, py + i - 6).y)))
+                            }))));
                 }
             }
         }
@@ -1044,7 +1072,14 @@ Rectangle {
             const left = Math.min(...tools.map(item => item.mapToItem(chart, 0, 0).x));
             const right = Math.max(...tools.map(item => item.mapToItem(chart, item.width, 0).x));
             const layer = named("layer"), centre = layer.mapToItem(chart, layer.width / 2, 0).x;
-            verify(Math.abs((left + right) / 2 - centre) <= 1, "The second toolbar line is horizontally centred above its plot like the Pattern toolbar" + "; expectedPlotCentre=" + centre + " readLineCentre=" + ((left + right) / 2) + " readExtents=" + JSON.stringify([left, right]) + " plot=" + JSON.stringify({left: layer.mapToItem(chart, 0, 0).x, width: layer.width}) + " tools=" + JSON.stringify(tools.map(item => ({name: item.objectName, left: item.mapToItem(chart, 0, 0).x, right: item.mapToItem(chart, item.width, 0).x}))));
+            verify(Math.abs((left + right) / 2 - centre) <= 1, "The second toolbar line is horizontally centred above its plot like the Pattern toolbar" + "; expectedPlotCentre=" + centre + " readLineCentre=" + ((left + right) / 2) + " readExtents=" + JSON.stringify([left, right]) + " plot=" + JSON.stringify({
+                left: layer.mapToItem(chart, 0, 0).x,
+                width: layer.width
+            }) + " tools=" + JSON.stringify(tools.map(item => ({
+                        name: item.objectName,
+                        left: item.mapToItem(chart, 0, 0).x,
+                        right: item.mapToItem(chart, item.width, 0).x
+                    }))));
         }
         function test_owner_secondary_click_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -1455,7 +1490,13 @@ Rectangle {
                 for (let dx = -2; dx <= 2; ++dx)
                     for (let dy = -2; dy <= 2; ++dy)
                         hit = hit || ink(frame.pixel(Math.round(at.x) + dx, Math.round(at.y) + dy), expected, chart.colors.chartBackground);
-                verify(hit, "Each bank's independently placed peak aligns at physical d=1.8 on the same actual chart scale" + "; row=" + row + " expectedPeakD=1.8 readDomain=" + JSON.stringify([axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max]) + " centre=" + JSON.stringify(at) + " expectedColour=" + expected + " sampleWindow=" + JSON.stringify(Array.from({length: 25}, (_, i) => ({x: Math.round(at.x) + i % 5 - 2, y: Math.round(at.y) + Math.floor(i / 5) - 2, colour: String(frame.pixel(Math.round(at.x) + i % 5 - 2, Math.round(at.y) + Math.floor(i / 5) - 2))}))));
+                verify(hit, "Each bank's independently placed peak aligns at physical d=1.8 on the same actual chart scale" + "; row=" + row + " expectedPeakD=1.8 readDomain=" + JSON.stringify([axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max]) + " centre=" + JSON.stringify(at) + " expectedColour=" + expected + " sampleWindow=" + JSON.stringify(Array.from({
+                    length: 25
+                }, (_, i) => ({
+                            x: Math.round(at.x) + i % 5 - 2,
+                            y: Math.round(at.y) + Math.floor(i / 5) - 2,
+                            colour: String(frame.pixel(Math.round(at.x) + i % 5 - 2, Math.round(at.y) + Math.floor(i / 5) - 2))
+                        }))));
             }
             const pointer = named("pointer"), marker = named("current");
             const py = (axes.axisY.max - 1) / (axes.axisY.max - axes.axisY.min) * pointer.height;
@@ -1515,7 +1556,12 @@ Rectangle {
                 const label = control.contentItemLabel;
                 verify(label !== undefined, "The actual selector exposes its rendered text padding and arrow clearance");
                 const clearance = label.leftPadding + label.rightPadding + control.leftPadding + control.rightPadding;
-                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance) + " entries=" + JSON.stringify(entries) + " font=" + JSON.stringify(control.font) + " measuredFont=" + JSON.stringify(metrics.font) + " cachedLongest=" + control.widestEntry + " maximumTextWidth=" + maximum + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({labelLeft: label.leftPadding, labelRight: label.rightPadding, controlLeft: control.leftPadding, controlRight: control.rightPadding}));
+                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance) + " entries=" + JSON.stringify(entries) + " font=" + JSON.stringify(control.font) + " measuredFont=" + JSON.stringify(metrics.font) + " cachedLongest=" + control.widestEntry + " maximumTextWidth=" + maximum + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({
+                    labelLeft: label.leftPadding,
+                    labelRight: label.rightPadding,
+                    controlLeft: control.leftPadding,
+                    controlRight: control.rightPadding
+                }));
                 widths.push(control.width);
             }
             verify(Math.max(...widths) - Math.min(...widths) > 1, "Unequal longest texts produce individual selector widths rather than one shared width");
@@ -1619,14 +1665,29 @@ Rectangle {
                 const series = Render.series(pattern), measured = series.find(item => item.objectName === "chart.series.meas"), bragg = series.find(item => item.objectName === "chart.series.bragg.0");
                 verify(measured !== undefined && bragg !== undefined, "The colour-split witness reaches real measured and structure drawing series");
                 const expectedMeasured = Approved.colours(SettingsProof, patterns, "measured", 3, data.dark)[1], expectedStructure = Approved.colours(SettingsProof, structures, "structures", 1, data.dark)[0];
-                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices" + "; chosen=" + JSON.stringify({patterns: patterns, structures: structures}) + " expected=" + JSON.stringify({measured: expectedMeasured, bragg: expectedStructure}) + " observedAtPollStart=" + JSON.stringify({measured: String(measured.color), bragg: String(bragg.color)}));
+                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices" + "; chosen=" + JSON.stringify({
+                    patterns: patterns,
+                    structures: structures
+                }) + " expected=" + JSON.stringify({
+                    measured: expectedMeasured,
+                    bragg: expectedStructure
+                }) + " observedAtPollStart=" + JSON.stringify({
+                    measured: String(measured.color),
+                    bragg: String(bragg.color)
+                }));
                 Session.project.report.active = true;
                 tryVerify(() => Session.project.report.model.pattern_styles !== undefined, 3000, "The colour split reaches the actual report style model");
                 const reportMeas = Approved.colours(SettingsProof, patterns, "measured", 3, false)[1], reportStructure = Approved.colours(SettingsProof, structures, "structures", 1, false)[0];
                 tryVerify(() => {
                     const styles = Session.project.report.model.pattern_styles;
                     return styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure);
-                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update" + "; chosen=" + JSON.stringify({patterns: patterns, structures: structures}) + " expected=" + JSON.stringify({"meas.1": reportMeas, "bragg.0": reportStructure}) + " observedAtPollStart=" + JSON.stringify(Session.project.report.model.pattern_styles));
+                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update" + "; chosen=" + JSON.stringify({
+                    patterns: patterns,
+                    structures: structures
+                }) + " expected=" + JSON.stringify({
+                    "meas.1": reportMeas,
+                    "bragg.0": reportStructure
+                }) + " observedAtPollStart=" + JSON.stringify(Session.project.report.model.pattern_styles));
                 pattern.visible = false;
             }
             choosePreference("Structures", refs[1].label);
@@ -1735,7 +1796,14 @@ Rectangle {
             tryVerify(() => fullyExposed(named("pointer")), 2000, "The shown scan plot finishes its SwipeView transition inside every actual clip before capture");
             tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "Shared measured views finish their real asynchronous data reads");
             if (!Session.project.scanViews.nativeShared) {
-                tryCompare(Session.project.scanViews, "dAvailable", true, 8000, "Unlike native quantities wait for every calculated bank d column before observing a shared physical plot; observedAtPollStart=" + JSON.stringify({loaded: Session.project.scanViews.loaded, count: Session.project.scanViews.count, dAvailable: Session.project.scanViews.dAvailable, dShown: Session.project.scanViews.dShown, calculating: Session.project.calculating, lastError: Session.project.lastError}));
+                tryCompare(Session.project.scanViews, "dAvailable", true, 8000, "Unlike native quantities wait for every calculated bank d column before observing a shared physical plot; observedAtPollStart=" + JSON.stringify({
+                    loaded: Session.project.scanViews.loaded,
+                    count: Session.project.scanViews.count,
+                    dAvailable: Session.project.scanViews.dAvailable,
+                    dShown: Session.project.scanViews.dShown,
+                    calculating: Session.project.calculating,
+                    lastError: Session.project.lastError
+                }));
                 tryCompare(Session.project.scanViews, "dShown", true, 1000, "Mixed native axes are actually placed on their only common d quantity");
             }
             applicationWindow.update();
@@ -2438,7 +2506,16 @@ Rectangle {
                         top: item.mapToItem(chart, 0, 0).y,
                         bottom: item.mapToItem(chart, 0, item.height).y
                     })).sort((a, b) => a.top - b.top);
-            verify(labels.slice(1).every((box, i) => box.top >= labels[i].bottom), "Visible thinned labels do not collide, including the always-kept selected row" + "; expected=each top >= previous bottom; readBoxes=" + JSON.stringify(labels) + " collidingPairs=" + JSON.stringify(labels.slice(1).map((box, i) => ({previous: labels[i], current: box})).filter(pair => pair.current.top < pair.previous.bottom)) + " labelRectangles=" + JSON.stringify(rowLabels().map(item => ({text: item.text, x: item.mapToItem(chart, 0, 0).x, y: item.mapToItem(chart, 0, 0).y, width: item.width, height: item.height}))));
+            verify(labels.slice(1).every((box, i) => box.top >= labels[i].bottom), "Visible thinned labels do not collide, including the always-kept selected row" + "; expected=each top >= previous bottom; readBoxes=" + JSON.stringify(labels) + " collidingPairs=" + JSON.stringify(labels.slice(1).map((box, i) => ({
+                        previous: labels[i],
+                        current: box
+                    })).filter(pair => pair.current.top < pair.previous.bottom)) + " labelRectangles=" + JSON.stringify(rowLabels().map(item => ({
+                        text: item.text,
+                        x: item.mapToItem(chart, 0, 0).x,
+                        y: item.mapToItem(chart, 0, 0).y,
+                        width: item.width,
+                        height: item.height
+                    }))));
             const step = data.kind === "value" ? 7 : 1, top = (axes.axisY.max - (row + 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height, bottom = (axes.axisY.max - (row - 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseDrag(pointer, pointer.width * .2, top, pointer.width * .6, bottom - top, Qt.LeftButton);
             verify(waitForRendering(chart), "Actual drag zoom gives the formerly crowded rows room to reappear");
@@ -2474,6 +2551,103 @@ Rectangle {
             chart.resetZoom();
             verify(waitForRendering(chart), "Reset restores the fully visible natural selection");
             verify(marker.visible && marker.height > 8, "An ordinary tall selected band keeps its natural height after the edge zoom resets");
+        }
+        function test_coincident_dataset_identity_data() {
+            const cases = [];
+            for (const shape of ["all", "interior", "file"])
+                for (const style of ["stepped", "smooth", "stacked"])
+                    for (const subject of ["pixels", "selection"])
+                        cases.push({
+                            tag: shape + "-" + style + "-" + subject,
+                            shape,
+                            style,
+                            subject
+                        });
+            return cases;
+        }
+        function test_coincident_dataset_identity(data) {
+            Style.Colors.theme = Style.Colors.LightTheme;
+            Preferences.resetToDefaults();
+            Preferences.patternYScale = "linear";
+            Preferences.scanMapColours = "viridis";
+            Preferences.scanStackedPalette = "ediNatural";
+            const root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
+            const fixture = Input.coincident(SettingsProof, root, data.shape === "all");
+            verify(Session.openProject(root), "Coincident datasets open through the ordinary project and scan reader");
+            const scan = Session.project.scanViews;
+            chart = factory.createObject(surface, {
+                project: Session.project,
+                mode: data.style === "stacked" ? "stacked" : "map"
+            });
+            ready(scan);
+            compare(scan.count, fixture.intensities.length, "Every independently authored coincident dataset is retained");
+            compare(scan.failed, 0, "Repeated finite scientific values are valid readable inputs");
+            compare(scan.error, "", "Equal extracted values do not conceal a file-read refusal");
+            if (data.shape === "file") {
+                const selector = axisControl("y");
+                let index = -1;
+                for (let i = 0; i < selector.count; ++i)
+                    if (selector.textAt(i) === "file")
+                        index = i;
+                verify(index >= 0, "The control reaches explicit file ordering through the real row selector");
+                choose(selector, index);
+            }
+            if (chart.mode === "map") {
+                const toggle = interpolationToggle(chart);
+                if (toggle.checked !== (data.style === "smooth"))
+                    mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+            }
+            const layer = named("layer"), marker = named("current"), pointer = named("pointer");
+            marker.opacity = 0;
+            verify(waitForRendering(chart), "The independent identity observer captures completed data pixels without the selection border");
+            const frame = grabImage(chart);
+            const colours = chart.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", fixture.intensities.length, false).map(rgb) : fixture.intensities.map(level => {
+                const sample = samples.find(value => value.index === level);
+                return {
+                    r: Math.round(sample.rgb[0] * 255) / 255,
+                    g: Math.round(sample.rgb[1] * 255) / 255,
+                    b: Math.round(sample.rgb[2] * 255) / 255
+                };
+            });
+            function matches(row, y) {
+                return [.31, .57, .79].every(fraction => {
+                    const at = layer.mapToItem(chart, Math.round(layer.width * fraction), y);
+                    const pixel = frame.pixel(Math.round(at.x), Math.round(at.y));
+                    return chart.mode === "stacked" ? ink(pixel, colours[row], chart.colors.chartBackground) : ["r", "g", "b"].every(c => Math.abs(pixel[c] - colours[row][c]) <= 1 / 255);
+                });
+            }
+            const locations = colours.map((_, row) => {
+                const ys = [];
+                for (let y = 4; y < layer.height - 4; ++y)
+                    if (matches(row, y))
+                        ys.push(y);
+                return ys;
+            });
+            if (data.subject === "pixels") {
+                for (let row = 0; row < colours.length; ++row)
+                    verify(locations[row].length > 0, "Every dataset has its own independent constant-intensity Map pixels or approved Stacked ink, irrespective of coincident-coordinate layout; row=" + row + " level=" + fixture.intensities[row] + " temperatures=" + JSON.stringify(fixture.temperatures) + " pixelRows=" + JSON.stringify(locations));
+                return;
+            }
+            marker.opacity = 1;
+            const boxes = [];
+            for (let row = 0; row < colours.length; ++row) {
+                Session.project.currentExperimentIndex = row;
+                verify(waitForRendering(chart), "Every programmatically selected dataset publishes its actual open box");
+                verify(marker.visible && marker.height >= 8, "Every coincident dataset has a visible readable selection box");
+                const top = marker.mapToItem(layer, 0, 0).y;
+                const own = locations[row].filter(y => y >= top - 1 && y <= top + marker.height + 1);
+                verify(own.length > 0, "The selected dataset box identifies its own independently coloured data, rather than a coincident neighbour; row=" + row + " box=" + JSON.stringify([top, marker.height]) + " ownPixelRows=" + JSON.stringify(locations[row]));
+                const box = [Math.round(top), Math.round(marker.height)];
+                verify(!boxes.some(prior => prior[0] === box[0] && prior[1] === box[1]), "Changing the selected dataset cannot reuse an indistinguishable box for a different measurement; row=" + row + " boxes=" + JSON.stringify(boxes) + " current=" + JSON.stringify(box));
+                boxes.push(box);
+                Session.project.currentExperimentIndex = (row + 1) % colours.length;
+                verify(waitForRendering(chart), "The real-input witness starts with a different selected dataset");
+                const axes = named("axes");
+                const y = chart.mode === "map" ? own[Math.floor(own.length / 2)] : (axes.axisY.max - scan.rowOf(row)) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const point = layer.mapToItem(pointer, layer.width * .57, y);
+                mouseClick(pointer, point.x, point.y);
+                tryCompare(Session.project, "currentExperimentIndex", row, 1000, "Clicking each dataset's Map pixels or Stacked row selects that exact dataset; row=" + row + " level=" + fixture.intensities[row] + " click=" + JSON.stringify([point.x, point.y]));
+            }
         }
         function test_failed_middle_map_band_data() {
             return [

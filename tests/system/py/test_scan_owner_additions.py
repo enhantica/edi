@@ -150,6 +150,14 @@ CASES += tuple(
 )
 
 
+CASES += tuple(
+    'test_coincident_dataset_identity:' + shape + '-' + style + '-' + subject
+    for shape in ('all', 'interior', 'file')
+    for style in ('stepped', 'smooth', 'stacked')
+    for subject in ('pixels', 'selection')
+)
+
+
 @pytest.fixture(scope='module')
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
@@ -229,6 +237,9 @@ def test_scan_owner_addition(scan_receipt, case):
     lines = [line for line in output.splitlines() if witness in line]
     assert any(line.startswith('PASS ') for line in lines) and not any(
         re.match(r'FAIL|SKIP', line) for line in lines
-    ), 'The requested production scan contract executes and passes without skipping: ' + '\n'.join(
-        lines
-    ) + '\nNative failure receipt:\n' + output
+    ), (
+        'The requested production scan contract executes and passes without skipping: '
+        + '\n'.join(lines)
+        + '\nNative failure receipt:\n'
+        + output
+    )
