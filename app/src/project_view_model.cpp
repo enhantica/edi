@@ -2004,6 +2004,14 @@ int ProjectViewModel::structureIndex(const QString& name) const {
     return -1;
 }
 
+QList<ExperimentViewModel*> ProjectViewModel::singleCrystalExperiments() const {
+    const bool all = experiment_models_.size() > 1 &&
+                     std::all_of(experiment_models_.begin(), experiment_models_.end(), [](const ExperimentViewModel* model) {
+                         return model->sampleForm() == ExperimentViewModel::SingleCrystal;
+                     });
+    return all ? experiment_models_ : QList<ExperimentViewModel*>{};
+}
+
 void ProjectViewModel::removeExperiment(int index) {
     if (index < 0 || index >= experiment_models_.size()) {
         return;
@@ -2699,6 +2707,7 @@ void ProjectViewModel::syncBlocks() {
         }
         experiment_models_ = next;
     }
+    emit experimentModelsChanged();  // a sample form may have changed too
     syncLoadState();
     structure_list_->setStructures(structure_models_);
     syncDatasets();
