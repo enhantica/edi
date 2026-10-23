@@ -13,11 +13,16 @@ EaElements.Label {
     readonly property bool working: assistant !== null && assistant.state === "agent_active"
     visible: presented && working
     clip: true
-    text: qsTr("Agent working...")
+    text: elapsedSeconds < 60
+        ? qsTr("%1s · Agent working...").arg(elapsedSeconds)
+        : qsTr("%1m %2s · Agent working...").arg(Math.floor(elapsedSeconds / 60)).arg(elapsedSeconds % 60)
     textFormat: Text.PlainText
     color: EaStyle.Colors.themeAccent
     Accessible.name: text
-    property int variant: 0
+    property int variant: Math.floor(Math.random() * 3)
+    property double workingSince: 0
+    property int elapsedSeconds: 0
+    property double rotationStartedAt: 0
     readonly property bool animating: working && EaStyle.Times.translationChange > 0
     readonly property real iconExtent: AppSizes.assistantIconExtent
     readonly property real rotationExtent: variant === 2 ? iconExtent * Math.SQRT2 : iconExtent
@@ -38,8 +43,64 @@ EaElements.Label {
         renderType: workStatus.renderType
         text: "H"
     }
-    onWorkingChanged: if (working)
-        variant = Math.floor(Math.random() * 3)
+    onWorkingChanged: {
+        workingSince = working ? Date.now() : 0
+        elapsedSeconds = 0
+    }
+    onAnimatingChanged: if (!animating && peakSwitch.running) {
+        peakSwitch.stop()
+        changeVariant()
+    }
+    Component.onCompleted: {
+        if (working)
+            workingSince = Date.now()
+        scheduleVariantChange()
+    }
+    function scheduleVariantChange() {
+        variantCadence.interval = 30000 + Math.floor(Math.random() * 28001)
+        variantCadence.start()
+    }
+    function changeVariant() {
+        const wasLinear = variant === 0
+        variant = (variant + 1 + Math.floor(Math.random() * 2)) % 3
+        if (animating && wasLinear !== (variant === 0))
+            rotationAnimator.restart()
+        scheduleVariantChange()
+    }
+    Timer {
+        interval: 1000
+        repeat: true
+        running: workStatus.working
+        onTriggered: workStatus.elapsedSeconds = Math.max(0, Math.floor((Date.now() - workStatus.workingSince) / 1000))
+    }
+    Timer {
+        id: variantCadence
+        onTriggered: {
+            if (workStatus.animating && workStatus.variant !== 0) {
+                // OutInElastic is fastest at its cycle boundary; see ADR-0041.
+                const phase = ((Date.now() - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
+                peakSwitch.interval = Math.max(1, Math.ceil(2000 - phase))
+                peakSwitch.start()
+            } else {
+                workStatus.changeVariant()
+            }
+        }
+    }
+    Timer {
+        id: peakSwitch
+        onTriggered: {
+            if (workStatus.animating && workStatus.variant !== 0) {
+                const phase = ((Date.now() - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
+                // A delayed GUI callback must wait for the next fast phase.
+                if (phase > 32) {
+                    peakSwitch.interval = Math.max(1, Math.ceil(2000 - phase))
+                    peakSwitch.start()
+                    return
+                }
+            }
+            workStatus.changeVariant()
+        }
+    }
     Item {
         width: workStatus.rotationExtent
         height: width
@@ -87,7 +148,9 @@ EaElements.Label {
     }
 
     RotationAnimator {
+        id: rotationAnimator
         target: workGlyph
+        onStarted: workStatus.rotationStartedAt = Date.now()
         running: workStatus.animating
         onStopped: if (!workStatus.animating)
             workGlyph.rotation = 0

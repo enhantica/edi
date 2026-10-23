@@ -1893,9 +1893,34 @@ notification is not ordered against that synchronization.
 The original status Stop receiver retains a circle independent of its square ink;
 its current peer sizing with the speed control is specified below. Native foreground/background functions, actual
 canCancel, pressed-slot retention and the same explicit cancel handler remain.
-There is no new timer, backend state, cancellation path or promise that animation
+There is no new backend state or cancellation path, or promise that animation
 continues while the operating system suspends rendering. Genuine frames and native
 input remain separate qualification.
+
+The shared AssistantWorking component owns icon selection for both the panel and
+status bar. Its initial choice is random; subsequent changes choose one of the other
+two icons on a component-lifetime cadence independent of requests or presentation.
+Each change schedules the next deadline randomly between 30 and 58 seconds. Linear,
+idle and reduced-motion cues change at that deadline. An active elastic cue waits
+at most its remaining 2000ms cycle, keeping the nominal change interval within the
+requested 30–60 seconds. The pinned Qt OutInElastic amplitude 1/period 0.3 curve has
+its fastest spin at the cycle boundary. A clock anchored at RotationAnimator start
+schedules that boundary without reading its unsynchronized QML rotation property.
+The infinite render-thread animator remains in place; only a change between linear
+and elastic curves restarts it. Switching between the two elastic assets leaves the
+same animation running. The pending switch rechecks the same start-clock phase
+when its GUI timer fires. It accepts the first 32ms after a cycle boundary; a later
+callback rearms for the next boundary instead of changing mid-cycle. An idle,
+static or linear cue may change immediately. Timers follow ordinary GUI event
+delivery, so suspension or a blocked GUI can delay the visible change beyond the
+nominal cadence.
+
+Elapsed text starts at 0s for each actual agent_active period, updates in whole
+seconds, and uses minutes and remaining seconds from 60s (for example,
+1m 56s). The label and accessible name
+share the same translated text. Elapsed timing does not choose an icon, restart its
+cadence, or infer progress. Existing assets, optical layout and reduced-motion
+rotation reset remain unchanged.
 
 
 ### Native response maximum includes closed outgoing metadata
