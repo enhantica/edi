@@ -85,6 +85,9 @@ Firefox, `credentialless`, leaves Safari without isolation on every load after t
 cannot run, the single-thread build loads, and a start that fails names the build it chose and why. The page keeps why
 it chose a build in `window.ediBuildInfo`, which the app's diagnostics view (Preferences, Develop) shows. The site is one folder: the page, both builds, the shim, a README naming the
 hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack.sh`, `build/wasm/edi-webapp.zip`).
+A dispatch of `pages.yml` may name a crysta commit (`crysta_commit`): the web app is then built from that commit's
+source instead of the pinned SDK's, to preview crysta work no SDK carries yet, and the notebooks are published
+unexecuted, since the native build would use the pin (owner, 2026-10-23).
 
 ### 5. The browser's files and settings
 
