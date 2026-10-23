@@ -180,7 +180,7 @@ struct ReportPattern {
     bool legend = false;
 };
 
-/// A single crystal's chart (edi ADR-0048), as the app draws it: per reflection its Miller indices, its measured F²
+/// A single crystal's chart (edi ADR-0049), as the app draws it: per reflection its Miller indices, its measured F²
 /// and s.u., and its calculated F², which is empty before a calculation; F²meas against F²calc with the y = x line.
 struct ReportSingleCrystal {
     std::vector<int> h, k, l;

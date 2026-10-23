@@ -600,7 +600,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         } else if (listed.id == "instrument" || listed.id == "absorption") {
             add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "extinction") {
-            // Becker-Coppens, with a Gaussian or a Lorentzian mosaic spread (edi ADR-0048).
+            // Becker-Coppens, with a Gaussian or a Lorentzian mosaic spread (edi ADR-0049).
             next.rows.push_back({"Type", "Becker-Coppens", ""});
             next.rows.push_back(
                 {"Mosaic spread", experiment.extinction.model.value_or("gauss") == "lorentz" ? "Lorentzian" : "Gaussian",
@@ -656,7 +656,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
     }
     // A single crystal's measured reflections: where they were read from and how many, after the experiment type;
     // then each reflection with its calculated F² and normalised residual, as the app's reflection group writes them
-    // (edi ADR-0048).
+    // (edi ADR-0049).
     if (experiment.reflections.has_value()) {
         const ReflnDataBase& reflections = *experiment.reflections;
         ReportCategory measured{"measured_reflections", "Measured reflections", {}, {}};
