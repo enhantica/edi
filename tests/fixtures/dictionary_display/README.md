@@ -27,3 +27,26 @@ itself and combines their aliases with the separately frozen upstream inventory.
 It records the source digests in `structure_names.json`. Neither production
 extraction is called. The import gate exercises each resulting name in both
 notations at nontrivial values, and independently reads the published CIF with gemmi.
+
+`fetch_published.py` reproduces both CIF fixtures from their pinned COD sources.
+`published_sources.json` records the downloaded and normalized digests. The only
+normalization replaces COD's local SVN URL comment with its public COD URL;
+all data and the public-domain notice remain. `--check` checks the committed
+fixtures without network access.
+
+## Coordinate-derived Wyckoff letters
+
+The expected letters in `wyckoff_sources.json` are transcribed from International
+Tables for Crystallography (2006), volume A: groups 194 (pp. 600–601),
+199 (pp. 612–613), 225 (pp. 688–689), and 227 origin choice 2 (pp. 700–701).
+The consulted volume is [available here](https://ncm.unn.ru/files/2021/01/International-Tables-for-crystallography.pdf).
+No engine Wyckoff table or classifier generates this reference. In particular
+227:2 has 16d (1/2,1/2,1/2), 16c (0,0,0), 48f (x,1/8,1/8),
+and 8b (3/8,3/8,3/8); group 199 includes the general position 24c.
+
+`fetch_wyckoff.py` fetches the pinned external diffraction data CIF for
+Tb2Ti2O7 and COD 9008506 (Wyckoff, Crystal Structures 1, 1963) for magnesium.
+It keeps public source URLs in COD headers. `--check` verifies the local pins
+without fetching. Published NaCl and elpasolite witnesses use the COD fixtures
+already described above. Hidden gates remove any letter and multiplicity
+columns before import; the publication supplies coordinates, not expected letters.

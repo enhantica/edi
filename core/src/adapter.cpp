@@ -6,6 +6,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <locale>
 #include <memory>
 #include <mutex>
@@ -53,6 +54,12 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/cif_report.hpp")
+#include "crysta/cif_report.hpp"
+#endif
+#if __has_include("crysta/dictionary_items.hpp")
+#include "crysta/dictionary_items.hpp"
+#endif
 #if __has_include("crysta/report_settings.hpp")
 #include "crysta/report_settings.hpp"
 #endif
@@ -2173,12 +2180,14 @@ std::string report_settings_text(const Project& model) {
 #endif
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
-    // Edi does not write — it asks crysta to. Build the full engine project from the model
-    // through the one conversion choke point (completed cell, start-carrying parameters),
-    // fill the persistence-only fields the calculation conversion never needed, stamp the
-    // loader-grade identity with crysta's own exported stamp, and hand crysta::save_project
-    // the write (staging, atomic publish and fail-closed validation are its own).
+namespace {
+
+// The engine project a save writes, handed to `use`. Edi does not write — it asks crysta to. Build
+// the full engine project from the model through the one conversion choke point (completed cell,
+// start-carrying parameters), fill the persistence-only fields the calculation conversion never
+// needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
+// cannot move, so it is lent rather than returned.
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2428,12 +2437,32 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
     }
-    try {
-        crysta::save_project(cproject, directory);
-    } catch (const std::exception& error) {
-        raise_coded(error);
-        throw;
-    }
+    use(cproject);
+}
+
+}  // namespace
+
+void save_project_via_crysta(const Project& model, const std::string& directory) {
+    // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
+    with_saved_project(model, [&directory](crysta::Project& project) {
+        try {
+            crysta::save_project(project, directory);
+        } catch (const std::exception& error) {
+            raise_coded(error);
+            throw;
+        }
+    });
+}
+
+std::string cif_report_text(const Project& model) {
+#if __has_include("crysta/cif_report.hpp")  // drop the guard when the pin moves
+    std::string text;
+    with_saved_project(model, [&text](crysta::Project& project) { text = crysta::cif_report(project); });
+    return text;
+#else
+    (void)model;
+    throw std::invalid_argument("the CIF report needs a newer crysta");
+#endif
 }
 
 namespace detail {
@@ -2462,6 +2491,24 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
+}
+
+// The older spellings are crysta's dictionary's; against an SDK without them every name is current.
+std::string current_edi_name(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    const crysta::DictionaryItem* item = crysta::find_dictionary_item_by_edi_name(tag);
+    if (item == nullptr) {
+        return tag;
+    }
+    const auto same = [&tag](const std::string& alias) {
+        return std::ranges::equal(alias, tag, [](char a, char b) {
+            return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+        });
+    };
+    return std::ranges::any_of(item->edi_aliases, same) ? item->edi_tag : tag;
+#else
+    return tag;
+#endif
 }
 
 // The CIF import is crysta's; against an SDK without it a text is read as `.edi`.

@@ -4590,6 +4590,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "save_cif": {
+     "need": {
+      "by": "deviation",
+      "ref": "D83",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "save_html": {
      "need": {
       "by": "deviation",
@@ -7496,6 +7505,7 @@
     "model",
     "pdf",
     "save",
+    "save_cif",
     "save_html",
     "x_axis"
    ]
