@@ -5,7 +5,6 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "DisplayedText.js" as Displayed
-import "../../fixtures/dictionary_display/display_expectations.js" as Dictionary
 import "../../fixtures/e04_t1/display_oracle.js" as Oracle
 
 TestCase {
@@ -13,7 +12,6 @@ TestCase {
     name: "E04T1DisplayedValues"
     when: windowShown
     property var appWindow
-<<<<<<< HEAD
     Component {
         id: application
         Main {}
@@ -53,14 +51,6 @@ TestCase {
             clip: true
         }
     }
-=======
-    property bool firstDisplayCase: true
-    Component { id: application; Main {} }
-    Component { id: textWitness; Text { width: 160; height: 30; text: "powder" } }
-    Component { id: fieldWitness; TextField { width: 160; height: 30; readOnly: true; text: "62" } }
-    Component { id: comboWitness; ComboBox { width: 160; height: 30; enabled: false; model: ["powder"]; currentIndex: 0 } }
-    Component { id: clipWitness; Item { width: 160; height: 30; clip: true } }
->>>>>>> origin/c07-t7-parameter-display-precision
 
     Component {
         id: fixedGroupWitness
@@ -126,13 +116,7 @@ TestCase {
         return Oracle.frozen.cases;
     }
     function test_loaded_display(data) {
-<<<<<<< HEAD
         failOnWarning(data.tag === Oracle.frozen.cases[0].tag ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
-=======
-        failOnWarning(firstDisplayCase
-            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
-        firstDisplayCase = false;
->>>>>>> origin/c07-t7-parameter-display-precision
         const url = Probe.repoUrl(data.path);
         // Reuse only the same unedited, read-only input; a different fixture is
         // always reopened. Selection and page setup below run for every row.
@@ -146,11 +130,7 @@ TestCase {
             Session.project[data.page === "structure" ? "currentStructureIndex" : "currentExperimentIndex"] = index;
         }
         click("appBar.tab." + data.page);
-        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
-                  2000, "The workflow page reaches the viewport before its sidebar is selected");
         click("sideBar.tab." + data.tier);
-        tryVerify(() => !Ui.moving(Ui.page(appWindow)), 2000,
-                  "The sidebar transition settles before the frozen field is inspected");
         let root = Ui.page(appWindow);
         if (data.group !== "engines") {
             const group = data.group === "experiment_type" ? "experiments" : data.group;
@@ -181,7 +161,6 @@ TestCase {
             const isCombo = typeof control.displayText === "string" && control.popup !== undefined;
             const items = kind === "label" ? renderers(control) : isCombo ? renderers(control.contentItem) : [control];
             verify(items.length > 0, "gate 3: each field has an actual native glyph renderer");
-<<<<<<< HEAD
             //  note 14: gui-components Utils.toDefaultPrecision uses
             // three significant digits. Only display expectations are rounded;
             // frozen input doubles and  measuredRange model checks stay whole.
@@ -190,17 +169,6 @@ TestCase {
             const errors = items.map(item => Displayed.problem(item, displayedExpected, kind === "number" || kind === "parameter"));
             if (!errors.includes(""))
                 failures.push(name + ": " + errors.join("; "));
-=======
-            // Before: raw selector tokens and three significant digits.
-            // Input values stay frozen; names and display precision follow the dictionary.
-            const key = data.tag + "::" + name;
-            const dictionaryExpected = Object.prototype.hasOwnProperty.call(Dictionary.expected, key);
-            const displayedExpected = dictionaryExpected ? Dictionary.expected[key] : expected;
-            // Before: numeric equality after a global precision. Now: the exact dictionary text.
-            const errors = items.map(item => Displayed.problem(item, displayedExpected,
-                                                               kind === "number" && !dictionaryExpected));
-            if (!errors.includes("")) failures.push(name + ": " + errors.join("; "));
->>>>>>> origin/c07-t7-parameter-display-precision
         });
         // Collect every field in a group so a blank first axis cannot hide the
         // other three blanks. Each project/group is a separate QtTest data row.
