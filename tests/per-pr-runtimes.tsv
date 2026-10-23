@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-21T14:03:46Z
+# measured_utc = 2026-10-23T08:19:43Z
 #
-# Recorded from: scoped calc facade stand-in with a false estimate preflight; existing output and dry persistence assertions unchanged
-# Collected tests: 16148; with a reported duration: 9468
+# Recorded from: measured test run (3 node(s) measured once, 14430 banked, 0 stale row(s) dropped)
+# Collected tests: 15853; with a reported duration: 9483
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,78 +29,11 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15777
+# inventory_python = 15853
 # inventory_cpp = 389
-# inventory_measured = 14426
-# inventory_unmeasured = 1740
+# inventory_measured = 14430
+# inventory_unmeasured = 1812
 
-
-# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
-# paid ONCE per module by whichever test triggers them, so they cannot be
-# per-test rows (and are spelled as comments so per-test consumers are
-# unaffected; excluding one test only moves the cost to the next sibling).
-# These rows mark and deselect NOTHING - kept for visibility
-# and the stale-module integrity refusal.
-# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
-# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
-# module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
-# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
-# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
-# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
-# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
-# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
-# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
-# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
-# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
-# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
-# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
-# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
-# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
-# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
-# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
-# module-cost: 1.201	tests/system/py/test_correlation_selection.py
-# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
-# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
-# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
-# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
-# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
-# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
-# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
-# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
-# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
-# module-cost: 179.025	tests/system/py/test_plain_data_app.py
-# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
-# module-cost: 2.346	tests/system/py/test_report_index_width.py
-# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
-# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
-# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
-# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
-# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
-# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
-# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
-# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
-# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
-# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
-# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 0.058	tests/system/py/test_scan_screen.py
-# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
-# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 6.259	tests/system/py/test_thread_selector.py
-# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
-# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
-# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
 0.300	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Uani-labels]
@@ -2178,6 +2111,80 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[Bani-B_11-0.52]
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[Uani-U_11-0.0123]
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[beta-beta_11-0.00045678]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_cif_and_edi_brackets_keep_their_distinct_meanings
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.Wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.Wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_Wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_x-_atom_site.fract_x]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_x-_atom_site_fract_x]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_y-_atom_site.fract_y]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_y-_atom_site_fract_y]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_z-_atom_site.fract_z]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_z-_atom_site_fract_z]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site.id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site.label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site_id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site_label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.occupancy-_atom_site.occupancy]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.occupancy-_atom_site_occupancy]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.type_symbol-_atom_site.type_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.type_symbol-_atom_site_type_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_alpha-_cell.angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_alpha-_cell_angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_beta-_cell.angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_beta-_cell_angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_gamma-_cell.angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_gamma-_cell_angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_a-_cell.length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_a-_cell_length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_b-_cell.length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_b-_cell_length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_c-_cell.length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_c-_cell_length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group.IT_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group.it_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group_IT_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group_it_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry.Int_Tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry.int_tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry_Int_Tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry_int_tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group.name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group.name_h-m_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group_name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group_name_h-m_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry.space_group_name_H-M]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry.space_group_name_h-m]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry_space_group_name_H-M]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry_space_group_name_h-m]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_matched_cif_adp_name_selects_type_without_unit_conversion[_atom_site.U_iso_or_equiv-Uiso-0.0066]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_matched_cif_adp_name_selects_type_without_unit_conversion[_atom_site_B_iso_or_equiv-Biso-0.52]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_x-2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_y-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_z-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_space_group.name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-dot]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-underscore]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-upper]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-dot]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-underscore]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-upper]
+0.010	tests/integration/py/test_cif_structure_import.py::test_published_fixture_is_parsed_by_gemmi_independently_of_the_product
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_second_published_cod_structure_retains_rocksalt_cell_and_sites[from_cif_path]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_second_published_cod_structure_retains_rocksalt_cell_and_sites[from_cif_str]
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
@@ -10539,6 +10546,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
 0.167	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]
 0.000	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
+UNMEASURED:failed-in-this-run	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = 1/0]
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = a.__class__]
 0.180	tests/system/py/test_constraint_surfaces.py::test_cli_warns_and_ignores_a_loaded_dependent_free_flag
@@ -16267,3 +16276,70 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-public-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-outside/edi-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_unknown_condition_cannot_invent_reachability
+
+# Module-scoped fixture costs, from tools/checks/fixture_costs.py:
+# paid ONCE per module by whichever test triggers them, so they cannot be
+# per-test rows (and are spelled as comments so per-test consumers are
+# unaffected; excluding one test only moves the cost to the next sibling).
+# These rows mark and deselect NOTHING - kept for visibility
+# and the stale-module integrity refusal.
+# module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
+# module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
+# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 300.163	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 10.317	tests/integration/app/test_legend_marks.py
+# module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
+# module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
+# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
+# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
+# module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
+# module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
+# module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
+# module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
+# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
+# module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
+# module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
+# module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
+# module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
+# module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 3.683	tests/system/py/test_ci_native_modes.py
+# module-cost: 1.201	tests/system/py/test_correlation_selection.py
+# module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
+# module-cost: 0.044	tests/system/py/test_e04_t12_public_release.py
+# module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
+# module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
+# module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
+# module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 3.929	tests/system/py/test_fit_participants_native.py
+# module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 12.618	tests/system/py/test_linear_row_admission.py
+# module-cost: 179.025	tests/system/py/test_plain_data_app.py
+# module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
+# module-cost: 2.346	tests/system/py/test_report_index_width.py
+# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
+# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
+# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
+# module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
+# module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
+# module-cost: 717.517	tests/system/py/test_scan_app_execution.py
+# module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
+# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
+# module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
+# module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
+# module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
+# module-cost: 0.058	tests/system/py/test_scan_screen.py
+# module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
+# module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.549	tests/system/py/test_web_parallel_build.py
+# module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
+# module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
