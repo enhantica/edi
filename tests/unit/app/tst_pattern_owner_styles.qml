@@ -55,11 +55,11 @@ Rectangle {
             app = null;
             Session.closeProject();
         }
-        function open() {
+        function open(balanced = false) {
             Preferences.resetToDefaults();
             Preferences.patternYScale = "linear";
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
-            Input.prepare(SettingsProof, root);
+            Input.prepare(SettingsProof, root, balanced);
             verify(Session.openProject(root), "The style actor opens its independent zero-scale, six-count-background input: " + Session.lastError);
             tryCompare(Session.project, "calculating", false, 8000, "The real style fixture calculation finishes before observing its chart");
             const rows = Probe.rows(Session.project.currentExperiment.pattern);
@@ -184,7 +184,7 @@ Rectangle {
             return rows;
         }
         function test_each_mode_marks(data) {
-            open();
+            open(data.token === "band");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             standalone();
             select(chart, data.token);
@@ -192,7 +192,7 @@ Rectangle {
             const line = series(chart, "meas"), layer = findChild(chart, "chart.measured");
             verify(layer !== null, "The measured marker/error-bar layer is independently observable");
             const hasLine = data.token === "line" || data.token === "linePoints", hasPoints = data.token === "points" || data.token === "linePoints";
-            compare(nearInk(chart, "main", 46, 26.5, measured), hasLine || data.token === "band", "The line joins independent samples exactly when the selected style draws a line or band");
+            compare(nearInk(chart, "main", 46, data.token === "band" ? 7.5 : 26.5, measured), hasLine || data.token === "band", "The line joins independent samples exactly when the selected style draws a line or band");
             compare(layer.visible && layer.count > 0, hasPoints, "Markers and uncertainty bars are present exactly for Points and Line-and-points");
             if (data.token !== "band")
                 compare(nearInk(chart, "main", 52, 31.5, measured), hasPoints, "The independent middle sample has error-bar ink between its centre and lower s.u. edge only in the two marker styles; the band interior is checked separately");
@@ -200,13 +200,15 @@ Rectangle {
                 verify(nearInk(chart, "main", 40, 18, measured) && nearInk(chart, "main", 40, 22, measured), "The actual marker styles draw both independent error-bar ends");
             }
             if (data.token === "band") {
-                edges(chart, "meas.band.top", [22, 36, 29]);
-                edges(chart, "meas.band.bottom", [18, 30, 21]);
-                edges(chart, "resid.band.top", [16, 30, 23]);
-                edges(chart, "resid.band.bottom", [12, 24, 15]);
-                for (const [name, pane, y] of [["meas.band", "main", 26.5], ["resid.band", "residual", 20.5]]) {
+                edges(chart, "meas.band.top", [7, 10, 10]);
+                edges(chart, "meas.band.bottom", [3, 4, 2]);
+                edges(chart, "resid.band.top", [1, 4, 4]);
+                edges(chart, "resid.band.bottom", [-3, -2, -4]);
+                for (const [name, pane, y] of [["meas.band", "main", 7.5], ["resid.band", "residual", .75]]) {
                     const area = series(chart, name);
                     verify(area.visible && area.color.a > 0 && area.color.a < 1, "Measured and residual uncertainty bands have actual semi-transparent fills" + "; series=" + name + " expected=visible and 0<alpha<1 readVisible=" + area.visible + " readColour=" + area.color + " readAlpha=" + area.color.a);
+                    const view = findChild(chart, "chart.view." + pane);
+                    verify(view.axisX.min < 46 && 46 < view.axisX.max && view.axisY.min < y && y < view.axisY.max, "The independent band interior sample lies inside its actual pane");
                     const value = pixel(chart, pane, 46, y), colour = area.color, bg = chart.colors.chartBackground;
                     verify(["r", "g", "b"].every(c => Math.abs(value[c] - (colour[c] * colour.a + bg[c] * (1 - colour.a))) <= 2 / 255), "Rendered band interior uses the independent declared area with a semi-transparent colour over the plot background" + "; series=" + name + " pane=" + pane + " dataPoint=" + JSON.stringify([46, y]) + " declaredAlpha=" + colour.a + " read=" + value + " readAlpha=" + value.a + " colour=" + colour + " background=" + bg + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => colour[c] * colour.a + bg[c] * (1 - colour.a))) + " inferredCoverageRGB=" + JSON.stringify(["r", "g", "b"].map(c => colour[c] === bg[c] ? null : (value[c] - bg[c]) / (colour[c] - bg[c]))));
                 }

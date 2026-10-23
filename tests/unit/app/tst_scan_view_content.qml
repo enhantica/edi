@@ -404,8 +404,8 @@ Rectangle {
         function plotDigest() {
             const layer = named("layer"), frame = grabImage(chart), colours = [];
             for (let x = 1; x < 16; ++x)
-                for (let y = 1; y < 16; ++y) {
-                    const at = layer.mapToItem(chart, layer.width * x / 16, layer.height * y / 16);
+                for (let y = 1; y < Math.floor(layer.height); ++y) {
+                    const at = layer.mapToItem(chart, layer.width * x / 16, y);
                     colours.push(String(frame.pixel(Math.round(at.x), Math.round(at.y))));
                 }
             return colours.join(",");
@@ -426,9 +426,9 @@ Rectangle {
             ready(scan);
             const control = axisControl(data.axis), original = control.currentIndex, before = plotDigest();
             choose(control, (original + 1) % control.count);
-            verify(plotDigest() !== before, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText);
+            tryVerify(() => plotDigest() !== before, 1000, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText);
             choose(control, original);
-            compare(plotDigest(), before, "Restoring the axis type restores the same actual analytic scan drawing");
+            tryVerify(() => plotDigest() === before, 1000, "Restoring the axis type restores the same actual analytic scan drawing");
         }
         function test_zoom_stays_on_and_reset_restores_axes_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -513,6 +513,7 @@ Rectangle {
             ready(scan);
             const choices = chart.stackedChoices, schemes = Approved.reference(SettingsProof).schemes;
             verify(choices.every(name => !String(name).startsWith("ramp:")), "Stacked offers no background-to-colour shades after the owner's removal decision");
+            named("current").opacity = 0;
             const selector = paletteSelector("stacked");
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment
@@ -525,18 +526,21 @@ Rectangle {
                 const index = choices.indexOf(scheme.id);
                 verify(index >= 0, "Every approved categorical Edi scheme remains offered for Stacked");
                 choose(selector, index);
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(layer);
+                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
                 const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark);
                 for (let row = 0; row < 3; ++row) {
                     const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
                     const py = Math.round((axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height), px = Math.round(layer.width * .4), expected = rgb(colours[row]);
                     let coverage = 0;
                     for (let dy = -6; dy <= 6; ++dy) {
-                        const pixel = frame.pixel(px, py + dy);
-                        if (["r", "g", "b"].every(channel => Math.abs(pixel[channel] - expected[channel]) <= 3 / 255))
-                            coverage += pixel.a;
+                        const at = layer.mapToItem(chart, px, py + dy), pixel = frame.pixel(Math.round(at.x), Math.round(at.y));
+                        const bg = chart.colors.chartBackground;
+                        const channel = ["r", "g", "b"].sort((a, b) => Math.abs(expected[b] - bg[b]) - Math.abs(expected[a] - bg[a]))[0];
+                        const alpha = (pixel[channel] - bg[channel]) / (expected[channel] - bg[channel]);
+                        verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (bg[c] + alpha * (expected[c] - bg[c]))) <= 3 / 255), "Every width sample is a composite of the independent scheme colour over the plot background");
+                        coverage += Math.max(0, Math.min(1, alpha));
                     }
-                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({x: px, yMin: py - 6, yMax: py + 6, coordinate: coordinate, rowValue: [100, 250, 700][row], level: [0, 128, 255][row], stackHeight: scan.stackHeight, domain: [axes.axisY.min, axes.axisY.max], layerSize: [layer.width, layer.height]}) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({length: 13}, (_, i) => ({x: px, y: py + i - 6, colour: String(frame.pixel(px, py + i - 6)), alpha: frame.pixel(px, py + i - 6).a}))));
+                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({x: px, yMin: py - 6, yMax: py + 6, coordinate: coordinate, rowValue: [100, 250, 700][row], level: [0, 128, 255][row], stackHeight: scan.stackHeight, domain: [axes.axisY.min, axes.axisY.max], layerSize: [layer.width, layer.height]}) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({length: 13}, (_, i) => ({x: px, y: py + i - 6, colour: String(frame.pixel(Math.round(layer.mapToItem(chart, px, py + i - 6).x), Math.round(layer.mapToItem(chart, px, py + i - 6).y)))}))));
                 }
             }
         }
@@ -1017,8 +1021,9 @@ Rectangle {
             tryVerify(() => selector.enabled, 8000, "The first real nonzero-wavelength calculation makes d selectable without recreating the chart");
             choose(selector, 1);
             const axes = named("axes");
-            const expected = [10, 112.4].map(x => 1.87 / (2 * Math.sin((x - .29) * Math.PI / 360))).sort((a, b) => a - b);
-            tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Selecting newly available d actually uses the independent nontrivial Bragg conversion at both domain ends" + "; expected=" + JSON.stringify(expected) + " observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText + " nativeEndpoints=[10,112.4] wavelength=1.87 zero=0.29");
+            // The chart uses the core point column, whose CW angle is raw (ADR-0041).
+            const expected = [10, 112.4].map(x => 1.87 / (2 * Math.sin(x * Math.PI / 360))).sort((a, b) => a - b);
+            tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Selecting newly available d uses the declared raw-angle Bragg point column at both nontrivial domain ends" + "; expected=" + JSON.stringify(expected) + " observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText + " nativeEndpoints=[10,112.4] wavelength=1.87 zero=0.29 convention=raw-angle");
         }
         function test_owner_toolbar_centred_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -1441,7 +1446,7 @@ Rectangle {
                 const x = (1.8 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 const y = data.mode === "stacked" ? row + scan.stackHeight : row;
                 const at = layer.mapToItem(chart, x, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height + (data.mode === "map" ? (row === 0 ? -5 : 5) : 0));
-                const expected = data.mode === "stacked" ? rgb(measured[row]) : rgb("#fde725");
+                const expected = data.mode === "stacked" ? rgb(measured[row]) : rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 1, false)[0]);
                 let hit = false;
                 for (let dx = -2; dx <= 2; ++dx)
                     for (let dy = -2; dy <= 2; ++dy)
@@ -1788,7 +1793,7 @@ Rectangle {
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real scan-view input selects a non-default measured dataset before changing pages");
             const pointer = named("pointer"), axes = named("axes");
             mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .6, pointer.height * .6, Qt.LeftButton);
-            const ranges = [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max];
+            let ranges = [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max];
             const controls = Render.descendants(chart).filter(item => item.visible && typeof item.currentIndex === "number" && String(item.objectName).includes("toolbar"));
             const types = controls.map(item => [item.objectName, item.currentIndex]);
             const row = Session.project.currentExperimentIndex;
@@ -1809,9 +1814,15 @@ Rectangle {
                 verify(marker.visible && marker.width === layer.width && Math.abs(top - firstTop) <= 2 / layer.height && Math.abs(top + marker.height / layer.height - firstBottom) <= 2 / layer.height, "The selected dataset keeps the same open-rectangle bounds on both pages after the same user axes and zoom choices");
                 const p = named("pointer");
                 mouseClick(p, p.width * .5, p.height * .5, Qt.RightButton);
+                verify(waitForPolish(chart) && waitForRendering(chart), "Reset finishes the native-axis label layout before the next pixel drag");
                 const native = [actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max];
-                mouseDrag(p, p.width * .2, p.height * .2, p.width * .6, p.height * .6, Qt.LeftButton);
-                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) <= Math.abs(native[i % 2 ? 1 : 0]) * 1e-10 + 1e-9), "Both pages accept real reset and re-zoom input while retaining the same shared visible ranges" + "; origin=" + data.origin + " page=" + pageName + " expectedOriginRanges=" + JSON.stringify(ranges) + " readResetRanges=" + JSON.stringify(native) + " readRezoomRanges=" + JSON.stringify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max]));
+                const origin = p.mapToItem(p.Window.window.contentItem, 0, 0);
+                const start = [Math.round(origin.x + p.width * .2) - origin.x, Math.round(origin.y + p.height * .2) - origin.y];
+                const end = [Math.round(origin.x + p.width * .8) - origin.x, Math.round(origin.y + p.height * .8) - origin.y];
+                const wanted = [native[0] + start[0] / p.width * (native[1] - native[0]), native[0] + end[0] / p.width * (native[1] - native[0]), native[3] - end[1] / p.height * (native[3] - native[2]), native[3] - start[1] / p.height * (native[3] - native[2])];
+                mouseDrag(p, start[0], start[1], end[0] - start[0], end[1] - start[1], Qt.LeftButton);
+                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - wanted[i]) <= Math.abs(native[i % 2 ? 1 : 0]) * 1e-10 + 1e-9), "Both pages accept real reset and re-zoom input while retaining the same shared visible ranges" + "; origin=" + data.origin + " page=" + pageName + " expectedOriginRanges=" + JSON.stringify(ranges) + " readResetRanges=" + JSON.stringify(native) + " expectedPixelDragRanges=" + JSON.stringify(wanted) + " readRezoomRanges=" + JSON.stringify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max]));
+                ranges = [actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max];
             }
         }
         function test_chart_colour_selector_location() {
@@ -2515,7 +2526,8 @@ Rectangle {
             verify(button !== undefined, "Each scan view exposes its ordinary included-only control");
             const layer = named("layer"), axes = named("axes");
             function shown(x) {
-                return data.falling ? 1.87 / (2 * Math.sin((x - .29) * Math.PI / 360)) : x;
+                // Exclusion locations follow the same raw-angle point column (ADR-0041).
+                return data.falling ? 1.87 / (2 * Math.sin(x * Math.PI / 360)) : x;
             }
             if (data.falling) {
                 const selector = axisControl("x");
