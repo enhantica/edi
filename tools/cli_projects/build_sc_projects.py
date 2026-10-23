@@ -16,6 +16,7 @@ Usage (writes ``docs/user/cli/<id>/project/``, every project or the ids given)::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -172,10 +173,14 @@ TAURINE_SITES = [
 ]
 
 PROJECTS = {
-    'sc-neut-tof_taurine-unknown_basic': {
+    'sc-neut-tof_taurine-senju_isotropic-adp': {
         'source': 'sc-neut-tof_taurine_basic/taurine.int',
+        'reference': 'sc-neut-tof_taurine-unknown_basic',
         'structure': 'taurine',
-        'title': 'Taurine [P2₁/c] · Unknown instrument',
+        'experiment': 'senju',
+        'title': 'Taurine [P2₁/c] · SENJU @ J-PARC',
+        'instrument': 'SENJU',
+        'facility': 'J-PARC',
         'description': 'Single crystal · Time of flight · Isotropic ADPs · Scale-only fit',
         'space_group': ('P 21/c', 'b1'),
         'cell': ('5.272901', '11.656488', '7.838297', '90', '94.010994', '90'),
@@ -186,10 +191,14 @@ PROJECTS = {
         # FullProf fits only the reflections it does not exclude (I > 3 sigma, and one more).
         'select': 'sc-neut-tof_taurine-unknown_basic/taurine.out',
     },
-    'sc-neut-cwl_pr2nio4-5c2_basic': {
+    'sc-neut-cwl_pr2nio4-5c2_anisotropic-adp': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
+        'reference': 'sc-neut-cwl_pr2nio4-5c2_basic',
         'structure': 'pr2nio4',
-        'title': 'Pr₂NiO₄ [Fmmm] · Unknown instrument',
+        'experiment': 'llb_5c2',
+        'title': 'Pr₂NiO₄ [Fmmm] · 5C2 @ LLB',
+        'instrument': '5C2',
+        'facility': 'LLB',
         'description': 'Single crystal · Anisotropic β tensors · Scale-only fit',
         'space_group': ('F m m m', None),
         'cell': ('5.417799', '5.4146', '12.483399', '90', '90', '90'),
@@ -197,8 +206,9 @@ PROJECTS = {
         'scale': '4.031()',
         'extinction': ('gauss', '0', '0'),
     },
-    'sc-neut-cwl_tb2ti2o7-heidi_basic': {
+    'sc-neut-cwl_tb2ti2o7-heidi_isotropic-adp': {
         'source': 'sc-neut-cwl_tbti_basic/tbti.int',
+        'reference': 'sc-neut-cwl_tb2ti2o7-heidi_basic',
         'structure': 'tb2ti2o7',
         'experiment': 'heidi',
         'title': 'Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)',
@@ -304,10 +314,14 @@ PR2NIO4_FIT_SITES = [
     ('Od', 'O', '0.0750()', '0.0750()', '0.1750()', 'p', '0.074654', 'Biso', '0.5()', None),
 ]
 FIT_PROJECTS = {
-    'sc-neut-tof_taurine_fit': {
+    'sc-neut-tof_taurine-senju': {
         'source': 'sc-neut-tof_taurine_basic/taurine.int',
+        'data': 'taurine-senju.xye',
         'structure': 'taurine',
-        'title': 'Taurine [P2₁/c] · Unknown instrument',
+        'experiment': 'senju',
+        'title': 'Taurine [P2₁/c] · SENJU @ J-PARC',
+        'instrument': 'SENJU',
+        'facility': 'J-PARC',
         'description': (
             'Single crystal · Time of flight · Isotropic displacements from a rough start'
         ),
@@ -322,8 +336,9 @@ FIT_PROJECTS = {
         'extinction': ('gauss', '0', '0'),
         'tof': True,
     },
-    'sc-neut-cwl_tb2ti2o7-heidi_fit': {
+    'sc-neut-cwl_tb2ti2o7-heidi': {
         'source': 'sc-neut-cwl_tbti_basic/tbti.int',
+        'data': 'tbti-heidi.xye',
         'structure': 'tb2ti2o7',
         'experiment': 'heidi',
         'title': 'Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)',
@@ -339,8 +354,9 @@ FIT_PROJECTS = {
         'scale': '4()',
         'extinction': ('gauss', '25', '0()'),
     },
-    'sc-neut-cwl_pr2nio4-5c2_fit': {
+    'sc-neut-cwl_pr2nio4-5c2': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
+        'data': 'prnio.int',
         'structure': 'pr2nio4',
         'experiment': 'llb_5c2',
         'title': 'Pr₂NiO₄ [Fmmm] · 5C2 @ LLB',
@@ -363,6 +379,214 @@ FIT_PROJECTS = {
 }
 
 
+# The catalogue cases' pages and provenance (edi ADR-0048): what each case is, where its data
+# and model come from, how it starts and what this start reaches. The data file under `data/` is
+# the one the project's reflections are read from.
+DATA_REPOSITORY = (
+    'the repository `easyscience/diffraction` at commit `3ec801667904578ea39f1a4f4aa941866543a669`'
+)
+DIFFRACTION_LIB = 'diffraction-lib (develop `cb2cda7be6117199be8f8cac0a666a7bccd32d90`)'
+CASES = {
+    'sc-neut-cwl_tb2ti2o7-heidi': {
+        'heading': 'Single-crystal fit: Tb₂Ti₂O₇, HEiDi',
+        'lede': (
+            'Fit the pyrochlore Tb₂Ti₂O₇ to constant-wavelength neutron single-crystal data '
+            'from HEiDi at MLZ, with anisotropic displacements and Becker-Coppens extinction.'
+        ),
+        'start': (
+            'The project starts from rough values: anisotropic displacements at a small '
+            'isotropic-equivalent value, the free O1 x moved off its refined value, the crystal '
+            'radius fixed at 25 μm and the mosaicity free from 0, and the scale to one '
+            'significant figure.'
+        ),
+        'model': (
+            "{lib}'s verification page `sc-neut-cwl_tbti_anisotropic-adp` (FullProf "
+            '`tbti.pcr`): the Fd-3m structure, its sites and the wavelength 0.793 Å. The '
+            'tutorial `refine-tbti-heidi` fits the same data.'
+        ),
+        'data': (
+            '`data/tbti-heidi.xye`, dataset `meas-tbti-heidi` of {repo} (path '
+            '`data/measured/tbti-heidi.xye`), licence BSD-3-Clause. The project embeds its 220 '
+            'reflections unchanged (h, k, l, F², su).'
+        ),
+        'start_detail': (
+            'Uani on every site from an isotropic-equivalent 0.0026 Å², tied by site symmetry; '
+            'O1 x moved off its refined value; the crystal radius fixed at 25 μm and the '
+            'mosaicity free from 0 (the owner, 2026-10-22); the scale 4. Free: the scale, O1 x, '
+            'the eight independent tensor components and the mosaicity (11 parameters).'
+        ),
+        'differences': [
+            (
+                'The tutorial refines isotropic displacements, occupancies and the radius first '
+                'and the anisotropic tensors after; here the tensors are free from the start '
+                'and the occupancies are fixed.'
+            ),
+            (
+                'The tutorial frees the crystal radius at a fixed mosaicity; here the radius is '
+                'fixed and the mosaicity free.'
+            ),
+        ],
+        'result': (
+            'From this start edi converges in 13 iterations to reduced χ² 3.26 over the 220 '
+            'reflections, with the scale 5.656(46) and the mosaicity 32006(3997).'
+        ),
+    },
+    'sc-neut-cwl_pr2nio4-5c2': {
+        'heading': 'Single-crystal fit: Pr₂NiO₄, 5C2',
+        'lede': (
+            'Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal '
+            'data from 5C2 at LLB, with isotropic displacements and Becker-Coppens extinction.'
+        ),
+        'start': (
+            'The project starts from rough values: Biso 0.5 on every site, the free coordinates '
+            'moved off their refined values, the crystal radius free from 1 μm at a fixed '
+            'mosaicity of 0, and the scale to one significant figure.'
+        ),
+        'model': (
+            "FullProf Suite's example `prnio.pcr` (Pr₂NiO₄+δ, SXTAL), as {lib} reads it on its "
+            'verification page `sc-neut-cwl_pr2nio4_basic`: the Fmmm structure, its sites, '
+            'occupancies and the wavelength 0.8302 Å.'
+        ),
+        'data': (
+            "`data/prnio.int`, the reflections of FullProf Suite's example `prnio.int` as {lib} "
+            'commits them '
+            '(`docs/docs/verification/fullprof/sc-neut-cwl_pr2nio4_basic/prnio.int`, licence '
+            'BSD-3-Clause). The project embeds its reflections unchanged (h, k, l, F², su).'
+        ),
+        'start_detail': (
+            'Biso 0.5 Å² on every site; the free coordinates moved off their refined values (Pr '
+            'z 0.362, O2 z 0.176, Od 0.075, 0.075, 0.175); the crystal radius free from 1 μm '
+            'with the mosaicity fixed at 0, so only primary extinction acts (the owner, '
+            '2026-10-23); the scale 4. Free: the scale, the radius, every Biso and the free '
+            'coordinates (13 parameters).'
+        ),
+        'differences': [
+            (
+                "FullProf's example refines anisotropic β tensors with its empirical extinction "
+                'model; here the displacements are isotropic (the owner, 2026-10-22) and the '
+                'extinction is Becker-Coppens.'
+            ),
+        ],
+        'result': (
+            'From this start edi converges in 28 iterations to reduced χ² 308.9 over 198 '
+            'reflections, with the scale 4.128(185). These reflections show no extinction, as '
+            "FullProf's refinement has none: the radius goes to 0, where it has no effect and "
+            "no uncertainty can be given. FullProf's isotropic fit of the same reflections "
+            'reports χ² 305 and the scale 4.143(156); every displacement and coordinate agrees '
+            'within its uncertainty.'
+        ),
+    },
+    'sc-neut-tof_taurine-senju': {
+        'heading': 'Single-crystal fit: taurine, SENJU',
+        'lede': (
+            'Fit the amino-sulfonic acid taurine to time-of-flight neutron single-crystal data '
+            'from SENJU at J-PARC, each reflection measured at its own wavelength.'
+        ),
+        'start': (
+            'The project starts from rough values: Biso 1.5 on every site and the scale 1, with '
+            'the extinction off.'
+        ),
+        'model': (
+            "{lib}'s verification page `sc-neut-tof_taurine_basic` (FullProf `taurine.pcr`): "
+            'the P2₁/c structure and its 14 sites. The tutorial `refine-taurine-senju` fits the '
+            'same data.'
+        ),
+        'data': (
+            '`data/taurine-senju.xye`, dataset `meas-taurine-senju` of {repo} (path '
+            '`data/measured/taurine-senju.xye`), licence BSD-3-Clause. The project embeds its '
+            '286 reflections unchanged (h, k, l, F², su, wavelength).'
+        ),
+        'start_detail': (
+            'Biso 1.5 Å² on every site; the scale 1; the Becker-Coppens radius and mosaicity 0. '
+            'Free: the scale and every Biso (15 parameters).'
+        ),
+        'differences': [
+            (
+                'The tutorial starts with Becker-Coppens extinction (radius 100 μm, mosaicity '
+                '1000) and frees the radius, then refines anisotropic displacements; here the '
+                'extinction is off and the displacements are isotropic, as on the verification '
+                'page.'
+            ),
+        ],
+        'result': (
+            'From this start edi converges in 6 iterations to reduced χ² 24.22 over the 286 '
+            'reflections, with the scale 2.751(47).'
+        ),
+    },
+}
+
+
+def write_case_pages(root: Path, pid: str, spec: dict) -> None:
+    """Write a catalogue case's index.md and PROVENANCE.md (edi ADR-0048)."""
+    case = {
+        key: [line.format(lib=DIFFRACTION_LIB, repo=DATA_REPOSITORY) for line in value]
+        if isinstance(value, list)
+        else value.format(lib=DIFFRACTION_LIB, repo=DATA_REPOSITORY)
+        for key, value in CASES[pid].items()
+    }
+    data = root / pid / 'data' / spec['data']
+    digest = hashlib.sha256(data.read_bytes()).hexdigest()
+    (root / pid / 'index.md').write_text(
+        f"""---
+title: "{case['heading']}"
+description: >-
+  {case['lede']}
+---
+
+# {case['heading']}
+
+{case['lede']}
+
+The app lists it as **{spec['title']}**.
+
+## Three ways to run it
+
+- **Command line:** `python -m edi fit docs/user/cli/{pid}/project --dry` (fits
+  without writing back; drop `--dry` to save the result into the project).
+- **App:** open it from the Examples on the Home page.
+- **Python:** the tutorial [{pid}](../../tutorials/{pid}.ipynb) loads this project and works
+  through it.
+
+All three read the same files, in `docs/user/cli/{pid}/project`.
+
+## The start
+
+{case['start']}
+
+## Sources
+
+Where the data and the model come from, with the data file's checksum and licence:
+[`PROVENANCE.md`](https://github.com/enhantica/edi/blob/main/docs/user/cli/{pid}/PROVENANCE.md).
+""",
+        encoding='utf-8',
+    )
+    differences = '\n'.join(f'- {line}' for line in case['differences'])
+    (root / pid / 'PROVENANCE.md').write_text(
+        f"""# {pid} — provenance
+
+{case['lede']}
+
+## Sources
+
+- **Model:** {case['model']}
+- **Data:** {case['data']} Its sha256 is `{digest}`.
+
+## Start
+
+Built by `tools/cli_projects/build_sc_projects.py`: {case['start_detail']}
+
+## Differences from the source
+
+{differences}
+
+## Result from this start (local diagnostic)
+
+{case['result']}
+""",
+        encoding='utf-8',
+    )
+
+
 def read_int(path: Path) -> tuple[float, list[tuple[int, int, int, str, str]]]:
     """Return the wavelength and the (h, k, l, F², su) rows of a FullProf .int file."""
     lines = path.read_text(encoding='utf-8').splitlines()
@@ -381,6 +605,29 @@ def read_int(path: Path) -> tuple[float, list[tuple[int, int, int, str, str]]]:
             fields[6] if len(fields) > 6 else None,
         ))
     return wavelength, rows
+
+
+def read_data(path: Path) -> list[tuple[int, int, int, str, str, str | None]]:
+    """Return the (h, k, l, F², su, wavelength) rows of a case's data file.
+
+    The file is FullProf's .int, or the data repository's h k l F² su [wavelength] columns.
+    """
+    if path.suffix == '.int':
+        return read_int(path)[1]
+    rows = []
+    for line in path.read_text(encoding='utf-8').splitlines():
+        fields = line.split()
+        if len(fields) < 5 or fields[0].startswith('#'):
+            continue
+        rows.append((
+            int(fields[0]),
+            int(fields[1]),
+            int(fields[2]),
+            fields[3],
+            fields[4],
+            fields[5] if len(fields) > 5 else None,
+        ))
+    return rows
 
 
 def included(path: Path) -> set[tuple[int, int, int]]:
@@ -414,6 +661,8 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     for sub in ('structures', 'experiments', 'analysis'):
         (project / sub).mkdir(parents=True, exist_ok=True)
     wavelength, rows = read_int(FP / spec['source'])
+    if 'data' in spec:
+        rows = read_data(root / pid / 'data' / spec['data'])
     if 'select' in spec:
         kept = included(FITTED / spec['select'])
         rows = [row for row in rows if row[:3] in kept]
@@ -421,10 +670,11 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     experiment = spec.get('experiment', name)
     (project / 'project.edi').write_text(
         '_edi.schema_version 3\n\n'
-        f'_metadata.name             {pid.replace("-", "_")}\n'
+        f'_metadata.name             {pid if "data" in spec else pid.replace("-", "_")}\n'
         f'_metadata.title "{spec["title"]}"\n'
         f'_metadata.description "{spec["description"]}"\n'
-        '_metadata.created          "22 Oct 2026 18:00:00"\n'
+        + ('_metadata.authors .\n' if 'data' in spec else '')
+        + '_metadata.created          "22 Oct 2026 18:00:00"\n'
         '_metadata.last_modified    "22 Oct 2026 18:00:00"\n'
         '_metadata.timestamp        ?\n'
         f'_metadata.purpose "{spec.get("purpose", "verification")}"\n'
@@ -544,8 +794,9 @@ def write_references(root: Path, pid: str) -> None:
     The reference is FullProf's own fit of the same parameters on the same reflections, or, for
     the Becker-Coppens extinction FullProf does not have, the independent closed-form fit.
     """
-    becker_coppens = BECKER_COPPENS / pid
-    folder = becker_coppens if becker_coppens.is_dir() else FITTED / pid
+    reference_id = PROJECTS[pid].get('reference', pid)
+    becker_coppens = BECKER_COPPENS / reference_id
+    folder = becker_coppens if becker_coppens.is_dir() else FITTED / reference_id
     reference = json.loads((folder / 'expected.json').read_text(encoding='utf-8'))
     artifact = '../../../../' + folder.relative_to(ROOT).as_posix() + '/'
     reference['source'] = {
@@ -612,6 +863,8 @@ def main() -> int:
             write_project(args.out, pid, spec)
             if pid in PROJECTS:
                 write_references(args.out, pid)
+            else:
+                write_case_pages(args.out, pid, spec)
             print('wrote', pid)
     return 0
 
