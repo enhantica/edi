@@ -142,7 +142,7 @@ Item {
         toolTip: qsTr("X axis")
         model: chart.evolution ? chart.evolution.xModes : []
         closedTexts: chart.evolution ? chart.evolution.xModes.map(mode => qsTr("x: %1").arg(mode)) : []
-        currentIndex: chart.evolution ? chart.evolution.xMode : 0
+        shownIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
     }
 

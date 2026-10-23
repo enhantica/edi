@@ -16,6 +16,13 @@ EaElements.ComboBox {
     id: box
 
     property string toolTip: ""
+    // The index the box shows, bound by its user to where the choice is kept (a preference, the project). A ComboBox's
+    // own currentIndex binding ends at the first choice made in it, after which a choice made elsewhere (Preferences)
+    // would no longer show here; the binding is made again after each choice, once the choice has been kept, so the
+    // box always shows the kept choice, and a refused one goes back.
+    property int shownIndex: 0
+    currentIndex: shownIndex
+    onActivated: Qt.callLater(() => box.currentIndex = Qt.binding(() => box.shownIndex))
     // What the closed box shows for each entry (an axis box's "y: linear"), when it differs from the list's entry.
     property var closedTexts: []
     // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries, and the closed

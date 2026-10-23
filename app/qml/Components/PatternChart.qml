@@ -440,7 +440,7 @@ Item {
                 model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
                 // The closed box names its axis (owner, 2026-10-05).
                 closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
-                currentIndex: controller.yScale
+                shownIndex: controller.yScale
                 onActivated: index => {
                     if (chart.settingsPage === "pattern")
                         Preferences.patternYScale = chart.scaleTokens[index];
@@ -458,7 +458,7 @@ Item {
                 readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")]
                 model: entries
                 closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
-                currentIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
+                shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
                 onActivated: index => {
                     if (chart.axisProject)
                         chart.axisProject.patternDSpacing = index === 1;
@@ -479,7 +479,7 @@ Item {
             toolTip: qsTr("How the measured data are drawn")
             model: entries
             closedTexts: entries.map(text => qsTr("meas: %1").arg(text))
-            currentIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
+            shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
             onActivated: index => Preferences.patternMeasuredStyle = tokens[index]
         }
         ChartToolbar {

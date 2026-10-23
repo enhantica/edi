@@ -710,7 +710,7 @@ Item {
                 readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
                 model: entries
                 closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
-                currentIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
+                shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
                 onActivated: index => {
                     if (chart.project && nativeOffered)
                         chart.project.patternDSpacing = index === 1;
@@ -727,7 +727,7 @@ Item {
                 readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
                 model: entries
                 closedTexts: entries.map(text => qsTr("y: %1").arg(text))
-                currentIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
+                shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
                 onActivated: index => {
                     if (chart.project && chart.project.evolution)
                         chart.project.evolution.xMode = hasValue ? index : 1;
@@ -742,7 +742,7 @@ Item {
                 toolTip: qsTr("How high each pattern rises")
                 model: entries
                 closedTexts: entries.map(text => qsTr("height: %1").arg(text))
-                currentIndex: Math.max(0, Math.min(4, Preferences.scanStackedHeight - 1))
+                shownIndex: Math.max(0, Math.min(4, Preferences.scanStackedHeight - 1))
                 onActivated: index => Preferences.scanStackedHeight = index + 1
             }
             ToolbarComboBox {
@@ -753,7 +753,7 @@ Item {
                 readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
                 model: entries
                 closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
-                currentIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
+                shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
                 onActivated: index => Preferences.patternYScale = tokens[index]
             }
         }
@@ -772,7 +772,7 @@ Item {
                 readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
                 model: entries
                 closedTexts: entries
-                currentIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
+                shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
                 onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
             }
             ChartToolButton {
