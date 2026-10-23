@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T12:08:01Z
+# measured_utc = 2026-10-23T12:42:17Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 14442 banked, 0 stale row(s) dropped)
-# Collected tests: 16015; with a reported duration: 9489
+# Recorded from: measured test run (60 node(s) measured once, 14446 banked, 0 stale row(s) dropped)
+# Collected tests: 16075; with a reported duration: 9544
 # Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16015
+# inventory_python = 16075
 # inventory_cpp = 391
-# inventory_measured = 14446
-# inventory_unmeasured = 1960
+# inventory_measured = 14502
+# inventory_unmeasured = 1964
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -7014,6 +7014,66 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-baseline]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
+0.180	tests/integration/py/test_sdk_untested_opt_in.py::test_a_fully_qualified_sdk_remains_accepted_without_an_override[linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_a_fully_qualified_sdk_remains_accepted_without_an_override[osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[corpus-linux-64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[corpus-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[cpp_tier-linux-64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-corpus-linux-64]
+0.120	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-cpp_tier-linux-64]
+0.130	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-corpus-linux-64]
+0.130	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-cpp_tier-osx-arm64]
+0.140	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-cpp_tier-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-corpus-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-corpus-osx-arm64]
+0.140	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-both-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-both-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-corpus-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-cpp_tier-linux-64]
+0.180	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-corpus-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-cpp_tier-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-both-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-both-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-corpus-linux-64]
+0.090	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-corpus-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[binary-libcrysta_core-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[binary-libcrysta_core-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[fingerprint-fingerprint-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[fingerprint-fingerprint-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[CI-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[CI-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[GITHUB_ACTIONS-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[GITHUB_ACTIONS-osx-arm64]
 0.097	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]
 0.079	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[single]
 0.004	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[scan]
