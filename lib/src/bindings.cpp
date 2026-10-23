@@ -3979,6 +3979,7 @@ NB_MODULE(_edi, m) {
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
             "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
+        .def("_report_cif_text", [](edi::Project& self) { return edi::cif_report_text(self); })
         .def(
             "_report_save",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
