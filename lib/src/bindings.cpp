@@ -2894,7 +2894,7 @@ NB_MODULE(_edi, m) {
         .def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
 
     // A single crystal's isotropic Becker-Coppens extinction: its type, mosaic distribution, domain
-    // radius and mosaic spread; a type's setter keeps that type's items alone (edi ADR-0049).
+    // radius, mosaic spread and crystal radius; a type's setter keeps that type's items alone (edi ADR-0049).
     nb::class_<edi::views::ExtinctionNode> extinction(m, "BeckerCoppensExtinction");
     extinction.def_prop_rw(
         "type", [](edi::views::ExtinctionNode& self) { return self.storage().type.value_or("none"); },
@@ -2911,6 +2911,8 @@ NB_MODULE(_edi, m) {
                                       edi::spec::extinction_domain_radius);
     def_view_optional_parameter_field(extinction, "mosaic_spread", &edi::ExtinctionBase::mosaic_spread,
                                       edi::spec::extinction_mosaic_spread);
+    def_view_optional_parameter_field(extinction, "crystal_radius", &edi::ExtinctionBase::crystal_radius,
+                                      edi::spec::extinction_crystal_radius);
 
     def_parameters(peak);
     def_parameters(instrument);

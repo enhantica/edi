@@ -3003,6 +3003,9 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     if (e.extinction.mosaic_spread) {
         built.extinction[1] = param(*e.extinction.mosaic_spread, crysta::CORRECTION, "mosaic_spread");
     }
+    if (e.extinction.crystal_radius) {
+        built.extinction[2] = param(*e.extinction.crystal_radius, crysta::CORRECTION, "crystal_radius");
+    }
     std::vector<crysta::LinkedStructure> links;
     for (const auto& link : e.linked_structures) {
         links.emplace_back(link->structure_id.value(), param(link->scale, crysta::SCALE, "scale"),

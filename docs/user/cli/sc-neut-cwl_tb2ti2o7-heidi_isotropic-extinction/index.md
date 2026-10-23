@@ -6,7 +6,7 @@ description: >-
 
 # Tb2Ti2O7 on HEiDi with extinction, scale and domain radius
 
-Tb2Ti2O7 on HEiDi (MLZ, constant wavelength) with isotropic Becker-Coppens extinction, mixed (Gaussian mosaic distribution, mosaic spread 101811 rad⁻¹). **The scale and the domain radius are free.** FullProf uses its own extinction model, so, as on diffraction-lib's page, the two agree only roughly.
+Tb2Ti2O7 on HEiDi (MLZ, constant wavelength) with isotropic Becker-Coppens extinction, mixed (Gaussian mosaic distribution, mosaic spread 101811 rad⁻¹). **The scale and the domain radius are free**, and the crystal radius follows the domain radius (a constraint), as the single radius of diffraction-lib's page. FullProf uses its own extinction model, so, as on diffraction-lib's page, the two agree only roughly.
 
 It is the CLI counterpart of diffraction-lib's `sc-neut-cwl_Tb2Ti2O7_isotropic-extinction` verification page: where the page compares calculated F² with FullProf's, this project fits the measured reflections FullProf computes.
 

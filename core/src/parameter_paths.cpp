@@ -246,6 +246,9 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         {"mosaic_spread",
          {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.mosaic_spread; },
           "extinction.mosaic_spread"}},
+        {"crystal_radius",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.crystal_radius; },
+          "extinction.crystal_radius"}},
     };
     if (const auto it = kPresenceTracked.find(label); it != kPresenceTracked.end()) {
         OptionalParameter& field = it->second.first(experiment);
