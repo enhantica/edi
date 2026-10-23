@@ -163,10 +163,10 @@ inline constexpr const char* kBackgroundCoefCif[] = {"_pd_background.Chebyshev_c
 inline constexpr const char* kAbscor1[] = {"_absorption.abscor1"};
 inline constexpr const char* kAbscor2[] = {"_absorption.abscor2"};
 inline constexpr const char* kMuR[] = {"_absorption.mu_r"};
-inline constexpr const char* kExtinctionRadius[] = {"_extinction.radius"};
-inline constexpr const char* kExtinctionRadiusCif[] = {"_easydiffraction_extinction.radius"};
-inline constexpr const char* kExtinctionMosaicity[] = {"_extinction.mosaicity"};
-inline constexpr const char* kExtinctionMosaicityCif[] = {"_easydiffraction_extinction.mosaicity"};
+inline constexpr const char* kExtinctionDomainRadius[] = {"_extinction.domain_radius"};
+inline constexpr const char* kExtinctionDomainRadiusCif[] = {"_easydiffraction_extinction.domain_radius"};
+inline constexpr const char* kExtinctionMosaicSpread[] = {"_extinction.mosaic_spread"};
+inline constexpr const char* kExtinctionMosaicSpreadCif[] = {"_easydiffraction_extinction.mosaic_spread"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -467,17 +467,18 @@ inline const ParameterSpec absorption_mu_r{
     "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
     "each reflection's Bragg theta",
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
-// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): the crystal's mean radius in
-// micrometres and its mosaicity g, an inverse width of the mosaic spread (larger is narrower). The value is
-// diffraction-lib's and CrysPy's, which call it arc minutes, but it is not an angle (edi ADR-0049).
-inline const ParameterSpec extinction_radius{
-    "extinction", "radius", "micrometres", "Mean radius of the crystal",
-    {0.0, detail::kInf}, "Crystal radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionRadius,
-    detail::kExtinctionRadiusCif};
-inline const ParameterSpec extinction_mosaicity{
-    "extinction", "mosaicity", "dimensionless", "Mosaicity g of the crystal, an inverse width of its mosaic spread",
-    {0.0, detail::kInf}, "Mosaicity", "", "", "",
-    detail::kExtinctionMosaicity, detail::kExtinctionMosaicityCif};
+// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the domain radius r in micrometres, which
+// also sets the crystal's mean path, and the mosaic spread g in inverse radians, the inverse width of the mosaic
+// distribution (larger is narrower), a plain number like any other.
+inline const ParameterSpec extinction_domain_radius{
+    "extinction", "domain_radius", "micrometres", "Becker-Coppens domain radius of the crystal",
+    {0.0, detail::kInf}, "Domain radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionDomainRadius,
+    detail::kExtinctionDomainRadiusCif};
+inline const ParameterSpec extinction_mosaic_spread{
+    "extinction", "mosaic_spread", "reciprocal_radians",
+    "Becker-Coppens mosaic spread of the crystal, the inverse width of its mosaic distribution",
+    {0.0, detail::kInf}, "Mosaic spread", "rad⁻¹", "", "\\mathrm{rad}^{-1}",
+    detail::kExtinctionMosaicSpread, detail::kExtinctionMosaicSpreadCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.

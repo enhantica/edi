@@ -12,10 +12,10 @@ _calculator.type crysta
 
 _instrument.setup_wavelength 0.793
 
-_extinction.type becker-coppens
-_extinction.model gauss
-_extinction.radius 25
-_extinction.mosaicity 0()
+_extinction.type becker-coppens-mixed
+_extinction.mosaic_distribution gaussian
+_extinction.domain_radius 25
+_extinction.mosaic_spread 0()
 
 loop_
 _linked_structure.structure_id

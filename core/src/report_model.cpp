@@ -25,6 +25,7 @@
 #include "edi/palette.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
+#include "edi/selectors.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/su_text.hpp"
 #include "edi/symmetry.hpp"
@@ -600,11 +601,18 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         } else if (listed.id == "instrument" || listed.id == "absorption") {
             add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "extinction") {
-            // Becker-Coppens, with a Gaussian or a Lorentzian mosaic spread (edi ADR-0049).
-            next.rows.push_back({"Type", "Becker-Coppens", ""});
-            next.rows.push_back(
-                {"Mosaic spread", experiment.extinction.model.value_or("gauss") == "lorentz" ? "Lorentzian" : "Gaussian",
-                 ""});
+            // The type's label, then its mosaic distribution and items (edi ADR-0049).
+            const std::vector<std::string> types = extinction_type_tokens();
+            const std::vector<std::string> labels = extinction_type_labels();
+            const std::string type = experiment.extinction.type.value_or("none");
+            const auto at = std::find(types.begin(), types.end(), type);
+            next.rows.push_back({"Type", at == types.end() ? type : labels[at - types.begin()], ""});
+            if (experiment.extinction.mosaic_distribution) {
+                next.rows.push_back({"Mosaic distribution",
+                                     *experiment.extinction.mosaic_distribution == "lorentzian" ? "Lorentzian"
+                                                                                                : "Gaussian",
+                                     ""});
+            }
             add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "peak") {
             next.rows.push_back({"Type", effective_peak_type(experiment), ""});
