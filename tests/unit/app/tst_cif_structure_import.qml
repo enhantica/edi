@@ -23,17 +23,25 @@ TestCase {
         Session.closeProject();
         appWindow.destroy();
     }
-    function test_load_published_cif() {
+    function test_load_published_cif_data() {
+        return [
+            {tag: "cod", file: "published_cod_1000236.cif", cell: 10.257, atoms: 6, group: 199},
+            {tag: "owner", file: "owner_tbti.cif", cell: 10.13, atoms: 4, group: 227}
+        ];
+    }
+    function test_load_published_cif(data) {
         const before = Probe.rows(Session.project.structures).length;
         verify(Session.project.loadStructure(Probe.repoUrl(
-                   "tests/fixtures/dictionary_display/published_cod_1000236.cif")),
+                   "tests/fixtures/dictionary_display/" + data.file)),
                "Load structure accepts the independently published CIF fixture");
         compare(Probe.rows(Session.project.structures).length, before + 1,
                 "Loading a CIF adds exactly one structure through the real project model");
-        const structure = Probe.rows(Session.project.structures)[before];
-        compare(structure.cell.lengthA.value, 10.257,
+        const structure = Session.project.currentStructure;
+        compare(structure.cell.lengthA.value, data.cell,
                 "Load CIF preserves the published COD lattice length");
-        compare(Probe.rows(structure.atomSites).length, 6,
+        compare(Probe.rows(structure.atomSites).length, data.atoms,
                 "Load CIF preserves every published atom site");
+        compare(structure.spaceGroup.itNumber, data.group,
+                "Load CIF preserves the independently stated published space group");
     }
 }

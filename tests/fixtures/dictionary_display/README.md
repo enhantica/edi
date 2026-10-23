@@ -50,3 +50,11 @@ It keeps public source URLs in COD headers. `--check` verifies the local pins
 without fetching. Published NaCl and elpasolite witnesses use the COD fixtures
 already described above. Hidden gates remove any letter and multiplicity
 columns before import; the publication supplies coordinates, not expected letters.
+
+The owner supplied `owner_tbti.cif` on 2026-10-23 after the dev web app
+saved missing Wyckoff letters as `.` and could not reopen its own `.edi`.
+`capture_owner.py SOURCE` reproduces this byte-pinned capture; without an
+argument it checks the pin. Its expected letters use the same independent
+International Tables 227:2 representatives, not the owner app output.
+The save/reload gate covers every published witness and this exact file, in
+both notations and through each Python import entrance.
