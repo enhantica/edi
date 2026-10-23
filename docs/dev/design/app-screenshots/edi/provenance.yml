@@ -264,3 +264,10 @@ reblessed:
       - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
       - ex-sc-neut-cwl_tb2ti2o7-heidi_fit.png
       - ex-sc-neut-tof_taurine_fit.png
+  - produced_at: ed47f85906c00758789c076be0cfc9d4115563e5
+    reason: >-
+      The Pr2NiO4 fitting example now starts with its mosaicity free from 0 beside a fixed 1 micrometre radius, so
+      its page shows the new extinction values. Captured with edi built against the same locally packed crysta SDK.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
