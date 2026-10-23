@@ -8,6 +8,7 @@
 #include <fstream>
 #include <locale>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <limits>
 #include <cmath>
@@ -65,6 +66,7 @@
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
@@ -3610,6 +3612,49 @@ void restore_dependents(Project& project, const std::set<const Parameter*>& rest
 
 int background_max_order(const std::string& type) {
     return crysta::background_max_order(crysta::background_form_of(type));
+}
+
+std::vector<AdpDefinitenessWarning> adp_definiteness_warnings(const Project& project) {
+    std::vector<AdpDefinitenessWarning> out;
+    for (const auto& structure : project.structures) {
+        try {
+            const crysta::Project engine(to_crysta_structure(*structure), std::vector<crysta::BraggPdExperiment>{});
+            for (const crysta::AdpDefinitenessWarning& warning : crysta::adp_definiteness_warnings(engine)) {
+                for (const auto& tensor : structure->atom_site_aniso) {
+                    if (tensor->id.value() == warning.site) {
+                        out.push_back({tensor.get(), warning.message});
+                    }
+                }
+            }
+        } catch (const std::exception&) {
+            // a structure that does not convert is refused where it is calculated
+        }
+    }
+    return out;
+}
+
+namespace {
+std::mutex engine_warnings_mutex;
+std::vector<std::string> engine_warnings;
+}  // namespace
+
+void collect_engine_warnings() {
+    crysta::set_warning_handler([](const std::string& code, const std::string& message) {
+        if (code == "crysta.domain.adp_not_positive_definite" || code == "crysta.domain.constraint_range") {
+            return;
+        }
+        const std::lock_guard<std::mutex> lock(engine_warnings_mutex);
+        if (std::find(engine_warnings.begin(), engine_warnings.end(), message) == engine_warnings.end()) {
+            engine_warnings.push_back(message);
+        }
+    });
+}
+
+std::vector<std::string> take_engine_warnings() {
+    const std::lock_guard<std::mutex> lock(engine_warnings_mutex);
+    std::vector<std::string> taken;
+    taken.swap(engine_warnings);
+    return taken;
 }
 
 std::vector<std::string> extinction_type_tokens() {

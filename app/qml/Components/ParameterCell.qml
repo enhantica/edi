@@ -34,7 +34,7 @@ EaComponents.ListViewParameter {
     readonly property bool outsideRange: item !== null && item.outsideRange
     // Why the value is red: refused, or outside its range. Its own binding, so a cell that gives the attached
     // tooltip help text (the ADP cells) keeps the warning and its style.
-    readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
+    readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : item !== null ? item.domainWarning : ""
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
