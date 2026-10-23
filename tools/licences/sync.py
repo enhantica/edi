@@ -6,8 +6,8 @@ Python package, CLI). From it this script writes:
 
 - each THIRD-PARTY-NOTICES section's `Licence:` and `In edi:` lines (the section's licence text
   stays as the component distributes it);
-- licenses/, one `<component>-LICENSE` file per component the Python package or the CLI carries, the
-  text of its notices section, and nothing else;
+- licenses/, one `<component>-LICENSE` file per component the Python package or the CLI
+  carries, the text of its notices section, and nothing else;
 - pyproject.toml's `license-files`: LICENSE and the Python package's files;
 - cli/licence-files.txt: the CLI's files, which its build puts beside the executable with LICENSE.
 
@@ -96,7 +96,7 @@ def licence_text(lines: list[str]) -> str:
 
 
 def expected(rows: list[dict[str, str]]) -> tuple[str, dict[str, str], str, str]:
-    """The notices, the licenses/ files, pyproject.toml and the CLI's list as DEPENDENCIES.md makes them."""
+    """The notices, licenses/ files, pyproject.toml and CLI list DEPENDENCIES.md makes."""
     notices = NOTICES.read_text(encoding='utf-8')
     sections = notices_sections(notices)
     names = [row['Component'] for row in rows]
