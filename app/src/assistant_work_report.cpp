@@ -5,6 +5,7 @@
 #include "assistant_result.hpp"
 #include "background.hpp"
 #include "codex_agent.hpp"
+#include "test_observer.hpp"
 #include "edi/assistant_limits.hpp"
 #include <QCoreApplication>
 #include <QCryptographicHash>
