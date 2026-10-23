@@ -186,14 +186,45 @@ void ReflectionListModel::sync() {
     setTableRows(rows);
 }
 
+namespace {
+// The reflection table's columns, in the order the delegates read them.
+const QStringList kSingleCrystalReflectionRoles{"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas",
+                                                "intensityMeasSu", "intensityCalc", "residual", "wavelength"};
+}  // namespace
+
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
                                                            const edi::Project& project, QObject* parent)
-    : RowTableModel({"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas", "intensityMeasSu",
-                     "intensityCalc", "residual", "wavelength"},
-                    parent),
+    : RowTableModel(kSingleCrystalReflectionRoles, parent),
       experiment_(experiment),
       project_(project) {
     sync();
+}
+
+void SingleCrystalReflectionModel::sortBy(const QString& role) {
+    if (!kSingleCrystalReflectionRoles.contains(role)) {
+        return;
+    }
+    sort_ascending_ = role == sort_role_ ? !sort_ascending_ : true;
+    sort_role_ = role;
+    emit sortChanged();
+    publish();
+}
+
+void SingleCrystalReflectionModel::publish() {
+    QList<Row> rows = file_rows_;
+    const qsizetype column = kSingleCrystalReflectionRoles.indexOf(sort_role_);
+    if (column >= 0) {
+        const bool ascending = sort_ascending_;
+        std::stable_sort(rows.begin(), rows.end(), [column, ascending](const Row& a, const Row& b) {
+            const double x = a.values.at(column).toDouble();
+            const double y = b.values.at(column).toDouble();
+            if (std::isnan(x) || std::isnan(y)) {
+                return !std::isnan(x) && std::isnan(y);
+            }
+            return ascending ? x < y : y < x;
+        });
+    }
+    setTableRows(rows);
 }
 
 void SingleCrystalReflectionModel::sync() {
@@ -232,7 +263,8 @@ void SingleCrystalReflectionModel::sync() {
         }
         shown = current;
     }
-    setTableRows(rows);
+    file_rows_ = rows;
+    publish();
     if (!(high > low)) {
         low = 0.0;
         high = 1.0;

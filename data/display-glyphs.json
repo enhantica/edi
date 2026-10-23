@@ -184,6 +184,26 @@
    "weight": 400
   },
   {
+   "char": "˄",
+   "code": "U+02C4",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/SingleCrystalTable.qml"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "˅",
+   "code": "U+02C5",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/SingleCrystalTable.qml"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
    "char": "Δ",
    "code": "U+0394",
    "font": "PT Sans",
