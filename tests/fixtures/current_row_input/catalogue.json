@@ -1,0 +1,270 @@
+[
+  {
+    "type": "StructuresGroup",
+    "table": "structures.list",
+    "path": "Pages/Structure/StructuresGroup.qml",
+    "owner": "project",
+    "editable": [
+      2
+    ],
+    "passive": false,
+    "textColumn": 2
+  },
+  {
+    "type": "AtomSitesGroup",
+    "table": "atomSites.list",
+    "path": "Pages/Structure/AtomSitesGroup.qml",
+    "owner": "structure",
+    "editable": [
+      1,
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "AtomSiteAdpGroup",
+    "table": "atomSiteAdps.list",
+    "path": "Pages/Structure/AtomSiteAdpGroup.qml",
+    "owner": "structure",
+    "editable": [
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 3
+  },
+  {
+    "type": "ScatteringLengthsGroup",
+    "table": "scatteringLengths.list",
+    "path": "Pages/Structure/ScatteringLengthsGroup.qml",
+    "owner": "structure",
+    "editable": [
+      1,
+      2
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "ExperimentsGroup",
+    "table": "experiments.list",
+    "path": "Pages/Experiment/ExperimentsGroup.qml",
+    "owner": "project",
+    "editable": [
+      3
+    ],
+    "passive": false,
+    "textColumn": 3
+  },
+  {
+    "type": "LinkedStructureGroup",
+    "table": "linkedStructure.list",
+    "path": "Pages/Experiment/LinkedStructureGroup.qml",
+    "owner": "experiment",
+    "editable": [
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 3
+  },
+  {
+    "type": "PreferredOrientationGroup",
+    "table": "preferredOrientation.list",
+    "path": "Pages/Experiment/PreferredOrientationGroup.qml",
+    "owner": "experiment",
+    "editable": [
+      1,
+      2,
+      5
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "BackgroundGroup",
+    "table": "background.list",
+    "path": "Pages/Experiment/BackgroundGroup.qml",
+    "owner": "experiment",
+    "editable": [
+      1,
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "BackgroundGroup",
+    "table": "background.terms",
+    "path": "Pages/Experiment/BackgroundGroup.qml",
+    "owner": "experiment",
+    "editable": [
+      1,
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "ExcludedRegionsGroup",
+    "table": "excludedRegions.list",
+    "path": "Pages/Experiment/ExcludedRegionsGroup.qml",
+    "owner": "experiment",
+    "editable": [
+      1,
+      2,
+      3
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "MeasuredRangeGroup",
+    "table": "data.list",
+    "path": "Pages/Experiment/MeasuredRangeGroup.qml",
+    "owner": "experiment",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "ReflectionsGroup",
+    "table": "reflections.list",
+    "path": "Pages/Experiment/ReflectionsGroup.qml",
+    "owner": "experiment",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "ParametersGroup",
+    "table": "parameters.list",
+    "path": "Pages/Analysis/ParametersGroup.qml",
+    "owner": "project",
+    "editable": [
+      2
+    ],
+    "passive": false,
+    "textColumn": 2
+  },
+  {
+    "type": "JointFitGroup",
+    "table": "jointFit.list",
+    "path": "Pages/Analysis/JointFitGroup.qml",
+    "owner": "project",
+    "editable": [
+      3
+    ],
+    "passive": false,
+    "textColumn": 3
+  },
+  {
+    "type": "AliasesGroup",
+    "table": "aliases.list",
+    "path": "Pages/Analysis/AliasesGroup.qml",
+    "owner": "analysis",
+    "editable": [
+      1,
+      2
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "ConstraintsGroup",
+    "table": "constraints.list",
+    "path": "Pages/Analysis/ConstraintsGroup.qml",
+    "owner": "analysis",
+    "editable": [
+      1,
+      2
+    ],
+    "passive": false,
+    "textColumn": 1
+  },
+  {
+    "type": "FitStartGroup",
+    "table": "fitStart.list",
+    "path": "Pages/Analysis/FitStartGroup.qml",
+    "owner": "analysis",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "SequentialExtractGroup",
+    "table": "sequentialExtract.list",
+    "path": "Pages/Analysis/SequentialExtractGroup.qml",
+    "owner": "analysis",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "ExamplesGroup",
+    "table": "examples.list",
+    "path": "Pages/Project/ExamplesGroup.qml",
+    "owner": "",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "RecentProjectsGroup",
+    "table": "recentProjects.list",
+    "path": "Pages/Project/RecentProjectsGroup.qml",
+    "owner": "",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "AboutDialog",
+    "table": "about.components",
+    "path": "Pages/Home/AboutDialog.qml",
+    "owner": "",
+    "editable": [],
+    "passive": true,
+    "textColumn": null
+  },
+  {
+    "type": "WarningsDialog",
+    "table": "warnings.list",
+    "path": "Components/WarningsDialog.qml",
+    "owner": "",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
+  },
+  {
+    "type": "FitResultsDialog",
+    "table": "fit.results.list",
+    "path": "Components/FitResultsDialog.qml",
+    "owner": "",
+    "editable": [],
+    "passive": true,
+    "textColumn": null
+  },
+  {
+    "type": "FitResultsDialog",
+    "table": "fit.results.agreement",
+    "path": "Components/FitResultsDialog.qml",
+    "owner": "",
+    "editable": [],
+    "passive": true,
+    "textColumn": null
+  },
+  {
+    "type": "ReportTable",
+    "table": "report.table",
+    "path": "Pages/Report/ReportTable.qml",
+    "owner": "",
+    "editable": [],
+    "passive": true,
+    "textColumn": null
+  }
+]

@@ -15,6 +15,9 @@ Row {
 
     property bool legendShown: true
     property bool hoverShown: true
+    // Whether the chart has a calculated pattern, which each structure's curve needs; the curves' own switch is
+    // Preferences.structureCurves, remembered between sessions.
+    property bool structureCurvesAvailable: false
     property string pointerMode: "zoom"  // "zoom" or "pan"
     // Only the included range (edi ADR-0044), with the Excluded regions group's eraser icon.
     property bool includedOnly: false
@@ -36,6 +39,14 @@ Row {
         toolTip: qsTr("Show coordinates tooltip on hover")
         checked: toolbar.hoverShown
         onClicked: toolbar.hoverShown = !toolbar.hoverShown
+    }
+    ChartToolButton {
+        objectName: "chart.toolbar.structureCurves"
+        visible: toolbar.structureCurvesAvailable
+        fontIcon: "layer-group"
+        toolTip: qsTr("Show each structure's curve")
+        checked: Preferences.structureCurves
+        onClicked: Preferences.structureCurves = !Preferences.structureCurves
     }
     ChartToolButton {
         objectName: "chart.toolbar.includedRange"

@@ -21,6 +21,7 @@
 
 #include "analysis_view_model.hpp"
 #include "edi/categories.hpp"
+#include "edi/palette.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
@@ -458,18 +459,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every colour scheme in both themes, on the Analysis page's chart of a two-structure example. Run only when asked
     // (`--demo-only schemes-`).
     if (only.startsWith(QLatin1String("schemes-"))) {
-        const QStringList schemes{"Coast",          "Garden",         "Peaceful",   "Fog forest",
-                                  "Sage",           "Okabe-Ito",      "Paul Tol bright", "Paul Tol muted",
-                                  "Tableau 10",     "Observable 10",  "IBM Carbon", "ColorBrewer Dark2",
-                                  "Petroff",        "Vivid",          "Nord",       "Solarized",
-                                  "Catppuccin",     "Apple"};
+        QStringList schemes;
+        for (const std::string_view name : edi::colour_scheme_names()) {
+            const std::string_view title = edi::colour_scheme_title(edi::colour_scheme_or_default(name));
+            schemes.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+        }
+        // The structures and the patterns each take the scheme, as the one choice did before they were split.
         const auto pick = [](const QString& scheme) {
-            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colourScheme",
-                               "choose:" + scheme, "choose:OK"};
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.structureColours",
+                               "choose:" + scheme, "preferences.patternColours", "choose:" + scheme, "choose:OK"};
         };
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
-                                                              "preferences.colourScheme"}});
+                                                              "preferences.patternColours"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             for (int i = 0; i < schemes.size(); ++i) {
                 QStringList actions = i == 0 && theme == QLatin1String("light")
@@ -484,6 +486,298 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                     {QStringLiteral("schemes-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(name),
                      actions});
             }
+        }
+    }
+    // The Structure page's tables, the current structure's row marked, in both themes. Run only when asked
+    // (`--demo-only tables-`).
+    if (only.startsWith(QLatin1String("tables-"))) {
+        steps_.push_back({"tables-1-structure-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{"appBar.tab.structure", basic, "group.atom_site_aniso"}});
+        steps_.push_back({"tables-2-structure-dark", {"theme:dark"}});
+        steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
+        steps_.push_back({"tables-4-report-light", {"theme:light"}});
+        steps_.push_back({"tables-5-report-again", {"theme:light"}});
+    }
+    // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
+    // data table with a column per structure. Run only when asked (`--demo-only curves-`).
+    if (only.startsWith(QLatin1String("curves-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"curves-1-analysis-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
+        steps_.push_back({"curves-2-analysis-zoomed", {"drag:chart.pointer:0.74,0.05,0.80,0.95"}});
+        steps_.push_back({"curves-3-analysis-dark", {"theme:dark"}});
+        steps_.push_back({"curves-4-data-table", {"theme:light", experiment, extras, "group.data"}});
+        steps_.push_back({"curves-5-analysis-off", {analysis, "chart.toolbar.structureCurves"}});
+    }
+    // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
+    // Run only when asked (`--demo-only onechart-`).
+    if (only.startsWith(QLatin1String("onechart-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"onechart-1-analysis-zoomed",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"onechart-2-experiment", {experiment}});
+        steps_.push_back({"onechart-3-structure-pattern", {"appBar.tab.structure", "mainArea.structure.tab.pattern"}});
+        steps_.push_back({"onechart-4-structure-view", {"mainArea.structure.tab.view"}});
+        steps_.push_back({"onechart-5-analysis-again", {analysis, "chart.toolbar.structureCurves"}});
+    }
+    // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
+    // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
+    if (only.startsWith(QLatin1String("latp-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic}});
+        steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
+        steps_.push_back({"latp-3-curves-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
+    }
+    // The owner's stray structure fill: ncaf's five banks, one structure, on log and square-root y with each
+    // structure's curve off, then on and off again. Run only when asked (`--demo-only ncaf-`).
+    if (only.startsWith(QLatin1String("ncaf-"))) {
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        steps_.push_back({"ncaf-1-log-off", {"resize:1280x960", "theme:dark", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5",
+                                             analysis, basic, yscale, "choose:log"}});
+        steps_.push_back({"ncaf-2-sqrt-off", {yscale, "choose:square root"}});
+        steps_.push_back({"ncaf-3-sqrt-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-4-log-on", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-5-linear-on", {yscale, "choose:linear"}});
+        steps_.push_back({"ncaf-6-linear-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-7-log-off", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:square root", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-9-bank2-sqrt-off", {"chart.toolbar.structureCurves"}});
+    }
+    // The owner's retest: each structure's curve on (the default), off and on again through the toolbar on latp_scan, on
+    // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
+    // Run only when asked (`--demo-only retest-`).
+    if (only.startsWith(QLatin1String("retest-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        const QString curves = QStringLiteral("chart.toolbar.structureCurves");
+        steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95"}});
+        steps_.push_back({"retest-02-latp-off", {curves}});
+        steps_.push_back({"retest-03-latp-on", {curves}});
+        steps_.push_back({"retest-04-latp-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-05-latp-sqrt", {yscale, "choose:square root"}});
+        steps_.push_back({"retest-06-cosio", {"open-cli-project:pd-neut-cwl_cosio-d20_start-4", analysis, basic}});
+        steps_.push_back({"retest-07-cosio-linear", {yscale, "choose:linear"}});
+        steps_.push_back({"retest-08-ncaf", {"open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic}});
+        steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-10-ncaf-off", {curves}});
+    }
+    // The owner's sequential fit: cosio's 162 patterns fitted with each structure's curve on (the default) and zoomed,
+    // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
+    if (only.startsWith(QLatin1String("seqfit-"))) {
+        steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                                "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
+                                                                "wait-files:30", "capture-now"}});
+        steps_.push_back({"seqfit-2-running", {"wait-files:60", "capture-now"}});
+        steps_.push_back({"seqfit-3-done", {"wait-fit", "choose:OK"}});
+    }
+    // The chart legend of latp_scan's three structures, each listed once as its Bragg peaks, in both themes. Run only
+    // when asked (`--demo-only legend-`).
+    if (only.startsWith(QLatin1String("legend-"))) {
+        steps_.push_back({"legend-1-light", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                             QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
+        steps_.push_back({"legend-2-dark", {"theme:dark"}});
+    }
+    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
+    // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
+    // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
+    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
+    // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
+    // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    if (only.startsWith(QLatin1String("scanviews-"))) {
+        steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                            + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                            + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"scanviews-04-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale",
+                                                              "choose:log", "scanView.map.toolbar.colourMap", "choose:magma"}});
+        steps_.push_back({"scanviews-05-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
+                                                            "capture-now"}});
+        steps_.push_back({"scanviews-06-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
+                                                                "capture-now"}});
+        steps_.push_back({"scanviews-07-evolution-light-running", {"mainArea.analysis.tab.evolution", "wait-files:70",
+                                                                  "capture-now"}});
+        steps_.push_back({"scanviews-08-stacked-dark-running", {"theme:dark", "mainArea.analysis.tab.stacked",
+                                                               "wait-files:80", "capture-now"}});
+        steps_.push_back({"scanviews-09-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
+        steps_.push_back({"scanviews-10-evolution-dark", {"wait-fit", "choose:OK", "mainArea.analysis.tab.evolution"}});
+        steps_.push_back({"scanviews-11-map-dark-shades", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
+                                                          "choose:Edi Natural shades"}});
+        steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
+                                                          "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
+        steps_.push_back({"scanviews-13-stacked-dark-narrow-zoom", {"mainArea.analysis.tab.stacked",
+                                                                   "scanView.stacked.toolbar.xaxis", "choose:2θ",
+                                                                   "drag:scanView.stacked.pointer:0.40,0.02,0.46,0.6"}});
+        steps_.push_back({"scanviews-14-stacked-dark-secondary-reset", {"right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"scanviews-15-stacked-dark-included-only", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"scanviews-16-stacked-light-included-only", {"theme:light"}});
+        steps_.push_back({"scanviews-17-map-light-included-only", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-17b-map-light-full-range", {"scanView.map.toolbar.includedRange"}});
+        steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:1000x960"}});
+        steps_.push_back({"scanviews-19-joint-stacked-light-d",
+                          {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+                           "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
+        steps_.push_back({"scanviews-20-joint-map-light-d", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-21-joint-map-dark-d", {"theme:dark"}});
+        steps_.push_back({"scanviews-22-joint-stacked-dark-d", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-23-joint-stacked-dark-tof", {"scanView.stacked.toolbar.xaxis", "choose:TOF"}});
+    }
+    // The pattern chart's four measured styles (the owner, 2026-10-22), in both themes, with the background dashed:
+    // the band of measured ± s.u. (the default) with the residual's band, the line, the points with their bars, and
+    // line and points; then the band zoomed in. Run only when asked (`--demo-only mstyle-`).
+    if (only.startsWith(QLatin1String("mstyle-"))) {
+        steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                     + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:band"}});
+        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle", "choose:line + points", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-5-linepoints-dark", {"theme:dark"}});
+        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle", "choose:band", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
+        steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
+    }
+    // The Experiment page's Stacked and Map tabs on cosio's scan before any fit, and the Preferences' four colour
+    // choices (the owner, 2026-10-22), the structures and the patterns then in different schemes, in both themes.
+    // Run only when asked (`--demo-only colours-`).
+    if (only.startsWith(QLatin1String("colours-"))) {
+        steps_.push_back({"colours-1-experiment-stacked-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start
+                              + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                              + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
+                                            "mainArea.experiment.tab.stacked"}});
+        steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
+        steps_.push_back({"colours-3-preferences", {"appBar.button.preferences", "preferences.tab.appearance"}});
+        steps_.push_back({"colours-4-structures-coast-patterns-contrast",
+                          {"preferences.structureColours", "choose:Edi Coast", "preferences.patternColours",
+                           "choose:Edi Contrast", "choose:OK", "mainArea.experiment.tab.chart"}});
+        steps_.push_back({"colours-5-dark", {"theme:dark"}});
+        steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
+    }
+    // A three-dataset scan's Stacked view, its scan-value axis labelled only over the rows (the owner, 2026-10-22), in
+    // both themes. Run only when asked (`--demo-only stackrange-`).
+    if (only.startsWith(QLatin1String("stackrange-"))) {
+        steps_.push_back({"stackrange-1-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                    + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                    + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"stackrange-2-dark", {"theme:dark"}});
+        steps_.push_back({"stackrange-3-map-dark", {"mainArea.analysis.tab.map"}});
+    }
+    // The scan views' rows labelled by scan value, by file and, thinned, on cosio's 162 patterns; the Map's scale with a
+    // tick per dataset by scan value, its bands labelled by file; a zoom bringing labels back; the three-dataset scan
+    // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
+    if (only.startsWith(QLatin1String("rowlabels-"))) {
+        steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
+        steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
+        steps_.push_back({"rowlabels-02-map-value-ticks-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-02b-map-bottom-zoom-light", {"drag:scanView.map.pointer:0.1,0.82,0.9,0.995"}});
+        steps_.push_back({"rowlabels-02c-map-reset-light", {"right-click:scanView.map.pointer"}});
+        steps_.push_back({"rowlabels-02d-map-dense-selected-light", {"drag:scanView.map.pointer:0.5,0.93,0.5,0.93"}});
+        steps_.push_back({"rowlabels-02e-stacked-dense-selected-light", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-03-map-file-light", {"mainArea.analysis.tab.map", "scanView.map.toolbar.rows", "choose:file"}});
+        steps_.push_back({"rowlabels-04-stacked-file-light", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-05-stacked-file-zoom-light", {"drag:scanView.stacked.pointer:0.1,0.55,0.9,0.85"}});
+        steps_.push_back({"rowlabels-06-stacked-file-dark", {"theme:dark", "right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:temperature (K)"}});
+        steps_.push_back({"rowlabels-08-map-value-dark", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-09-three-stacked-light",
+                          QStringList{"theme:light"} + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                              + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-10-three-map-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-11-joint-stacked-datablock-light",
+                          {"theme:light", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+                           "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-11b-joint-stacked-tof-reversed-light", {"scanView.stacked.toolbar.reverse"}});
+        steps_.push_back({"rowlabels-12-joint-map-datablock-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+        // A datablock Map, each band its own bank: smooth, blended only across each band's edge; stepped, hard edges.
+        // On d each bank's coverage ends at its own band's edges either way.
+        steps_.push_back({"rowlabels-13-joint-map-d-smooth-dark", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
+                                                                   "drag:scanView.map.pointer:0.5,0.5,0.5,0.5"}});
+        steps_.push_back({"rowlabels-14-joint-map-d-smooth-light", {"theme:light"}});
+        steps_.push_back({"rowlabels-15-joint-map-d-stepped-light", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"rowlabels-16-joint-map-d-stepped-dark", {"theme:dark", "scanView.map.toolbar.smooth"}});
+    }
+    // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
+    // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
+    if (only.startsWith(QLatin1String("mapcands-"))) {
+        const QStringList titles = {"viridis", "magma", "inferno", "plasma", "batlow (Crameri)", "oslo (Crameri)",
+                                    "lajolla (Crameri)", "acton (Crameri)", "devon (Crameri)", "lapaz (Crameri)",
+                                    "thermal (cmocean)", "haline (cmocean)", "deep (cmocean)", "dense (cmocean)",
+                                    "ice (cmocean)", "tempo (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)",
+                                    "PuBu (ColorBrewer)", "GnBu (ColorBrewer)", "Blues (ColorBrewer)",
+                                    "Purples (ColorBrewer)", "YlOrRd (ColorBrewer)", "gouldian (CET-L20)", "CET-L08",
+                                    "CET-L06", "CET-L17", "CET-L18"};
+        steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.map",
+                                                                "scanView.map.toolbar.yscale", "choose:log"}});
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            // The list is taller than the window, so a far entry cannot be clicked: the first map is chosen from the
+            // list, and each next one by a key on the closed box (open it to give it the keyboard, close it, step),
+            // down the list in the light theme and back up it in the dark.
+            for (qsizetype k = 0; k < titles.size(); ++k) {
+                const qsizetype i = theme == QLatin1String("light") ? k : titles.size() - 1 - k;
+                const bool first = theme == QLatin1String("light") && k == 0;
+                QStringList actions = first ? QStringList{"scanView.map.toolbar.colourMap", "choose:" + titles[i]}
+                                      : k == 0 ? QStringList{}
+                                               : QStringList{"scanView.map.toolbar.colourMap", "key:Escape",
+                                                             theme == QLatin1String("light") ? "key:Down" : "key:Up"};
+                if (k == 0) {
+                    actions.prepend("theme:" + theme);
+                }
+                if (theme == QLatin1String("dark") && i == 0) {
+                    actions << "scanView.map.toolbar.reverse";  // the last one reversed, to show the switch
+                }
+                const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
+                steps_.push_back({QStringLiteral("mapcands-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(slug),
+                                  actions});
+            }
+        }
+    }
+    // Element colours drawn flat, in both themes (edi ADR-0047): PbSO4's pale S and dark Pb in the Atom sites table, the
+    // structure view's legend and the parameter table. Run only when asked (`--demo-only elements-`).
+    if (only.startsWith(QLatin1String("elements-"))) {
+        steps_.push_back({"elements-1-structure-light", {"resize:1280x960", "theme:light",
+                                                         "open-cli-project:pd-xray-cwl_pbso4-lab_round-robin",
+                                                         "appBar.tab.structure", basic}});
+        steps_.push_back({"elements-2-analysis-light", {analysis, basic}});
+        steps_.push_back({"elements-3-structure-dark", {"theme:dark", "appBar.tab.structure", basic}});
+        steps_.push_back({"elements-4-analysis-dark", {analysis, basic}});
+    }
+    // A click on any cell makes its row current, an editable cell's too, and every table marks the current row the
+    // same way (the owner, 2026-10-22): Atom sites and the parameter table. Run only when asked (`--demo-only rows-`).
+    if (only.startsWith(QLatin1String("rows-"))) {
+        steps_.push_back({"rows-1-atom-sites", {"resize:1280x960", "theme:light",
+                                                "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", "appBar.tab.structure",
+                                                basic, "expand:group.atom_site"}});
+        steps_.push_back({"rows-2-atom-sites-edit-row-4", {"reveal:atomSite.fractX.3", "atomSite.fractX.3"}});
+        steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "reveal:parameters.value.4",
+                                                           "parameters.value.4"}});
+        steps_.push_back({"rows-4-parameters-name-row-2", {"key:Escape", "reveal:parameters.name.1", "parameters.name.1"}});
+        steps_.push_back({"rows-5-parameters-down-row-3", {"key:Down"}});
+        steps_.push_back({"rows-6-parameters-free-row-4", {"reveal:parameters.free.3", "parameters.free.3"}});
+    }
+    // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
+    if (only.startsWith(QLatin1String("about-"))) {
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString first = theme == QLatin1String("light") ? QStringLiteral("resize:1280x960") : QStringLiteral("key:Escape");
+            steps_.push_back({"about-" + theme + "-1-window", {first, "theme:" + theme, "appBar.tab.home", "home.about"}});
+            steps_.push_back({"about-" + theme + "-2-bsd", {"about.licence.BSD-3-Clause"}});
+            steps_.push_back({"about-" + theme + "-3-third-party", {"key:Escape", "about.thirdParty"}});
         }
     }
     if (only.startsWith(QLatin1String("perf-"))) {

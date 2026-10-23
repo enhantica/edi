@@ -84,14 +84,24 @@ Rectangle {
             verify(views.length > 0, "The scan report creates its actual structure figure rather than leaving its place blank");
             tryVerify(() => views.every(item => item.current && item.atomCount > 0 && item.cellEdgeCount > 0), 3000, "Every scan report structure figure carries current atoms and cell edges from its reported dataset");
         }
+        function finiteSeries(series) {
+            if (!series)
+                return false;
+            for (let index = 0; index < series.count; ++index)
+                if (Number.isFinite(series.at(index).x) && Number.isFinite(series.at(index).y))
+                    return true;
+            return false;
+        }
         function test_scan_report_fitted_calculated_residual_and_bragg_series_are_present() {
             open("docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project");
             const charts = Render.descendants(page).filter(item => item.objectName === "chart");
             const controllers = charts.reduce((all, chart) => all.concat(Probe.objectsWithProperty(chart, "calculatedSeries")), []);
             verify(controllers.length > 0, "The scan report creates an actual pattern controller with series targets");
-            tryVerify(() => controllers.some(item => item.report !== null && item.calculatedSeries && item.calculatedSeries.count > 0), 3000, "The reported scan dataset has calculated points in its actual chart series");
-            verify(controllers.some(item => item.report !== null && item.residualSeries && item.residualSeries.count > 0), "The reported scan dataset has residual points in its actual chart series");
-            verify(controllers.some(item => item.report !== null && [item.braggSeries0, item.braggSeries1, item.braggSeries2].some(series => series && series.count > 0)), "The reported scan dataset has Bragg ticks in its actual chart series");
+            tryVerify(() => controllers.some(item => item.report !== null && finiteSeries(item.calculatedSeries)), 3000, "The reported scan dataset has calculated points in its actual chart series");
+            verify(controllers.some(item => item.report !== null && finiteSeries(item.residualSeries)), "The reported scan dataset has residual points in its actual chart series");
+            const populated = charts.filter(chart => Probe.objectsWithProperty(chart, "calculatedSeries").some(item => item.report !== null && finiteSeries(item.calculatedSeries)));
+            verify(populated.length > 0, "The dynamic-slot witness reaches an actually populated reported chart");
+            verify(populated.some(chart => Render.series(chart).some(series => String(series.objectName).startsWith("chart.series.bragg.") && finiteSeries(series))), "The reported scan dataset has finite Bragg ticks in an actual dynamic per-structure series");
         }
     }
 }

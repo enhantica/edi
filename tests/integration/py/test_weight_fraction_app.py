@@ -1,10 +1,12 @@
 """Read-only linked-structure display while the app execution tiers are disabled."""
 
+import hashlib
 import re
 from pathlib import Path
 
 import pytest
 
+from tests.fixtures.table_display import gui_base
 from tests.integration.py.test_table_display import run_functions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -15,7 +17,7 @@ def source(path):
 
 
 def fraction_cell(text):
-    start = text.index('EaComponents.TableViewParameter {')
+    start = text.index('EaComponents.ListViewParameter {')
     depth = 0
     for index in range(text.index('{', start), len(text)):
         if text[index] == '{':
@@ -120,7 +122,19 @@ def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phas
             assert old in model, 'Fraction routing escapes must reach their actual model branch'
             with pytest.raises(AssertionError):
                 check_fraction_routing(model.replace(old, new))
-    control = source('app/qml/Base/Gui/Components/TableViewParameter.qml')
+    cmake = source('cmake/EdiGuiBase.cmake')
+    components = cmake[cmake.index('edi_gui_base_module(edi_gui_components') :]
+    assert re.search(r'\bListViewParameter\b', components.split('REPLACED')[0]), (
+        'The weight-fraction menu ships from the pinned upstream ListViewParameter'
+    )
+    assert 'ListViewParameter' not in components.split('REPLACED')[1].split(')')[0], (
+        'The upstream parameter menu is consumed without a local replacement'
+    )
+    reference = ROOT / 'tests/fixtures/table_display/ListViewParameter.qml'
+    assert hashlib.sha256(reference.read_bytes()).hexdigest() == gui_base.PARAMETER_SHA256, (
+        'The menu reference is the byte-exact upstream parameter cell at the pinned revision'
+    )
+    control = reference.read_text()
     assert 'control.openContextMenu(menuArea)' in control, (
         'The read-only parameter must retain its ordinary value context menu'
     )

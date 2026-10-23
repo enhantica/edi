@@ -1,0 +1,215 @@
+{
+  "source_sha256": "4a9d69c4d12257d9c9135a5a230e5c7720fa48cfe37bedb06c328182d20a4c4a",
+  "palettes": [
+    {
+      "name": "Edi Natural",
+      "default": true,
+      "light": {
+        "structures": [
+          "#D26E3C",
+          "#958508",
+          "#936844",
+          "#C28B0A",
+          "#71964E"
+        ],
+        "measured": [
+          "#829DB9",
+          "#039EDC",
+          "#6EA163",
+          "#479F93",
+          "#8989F7"
+        ],
+        "total_calculation": "#CA5C6E",
+        "background": "#8A8A8A",
+        "difference": "#737373"
+      },
+      "dark": {
+        "structures": [
+          "#F59B6F",
+          "#BAAD52",
+          "#BD9372",
+          "#EBB352",
+          "#98BB79"
+        ],
+        "measured": [
+          "#B2C8E0",
+          "#71CBFE",
+          "#A1CD97",
+          "#81CAC2",
+          "#C0B6E8"
+        ],
+        "total_calculation": "#EE8795",
+        "background": "#969696",
+        "difference": "#B0B0B0"
+      }
+    },
+    {
+      "name": "Edi Coast",
+      "default": false,
+      "light": {
+        "structures": [
+          "#CB4B16",
+          "#999933",
+          "#9C755F",
+          "#B28600",
+          "#66A61E"
+        ],
+        "measured": [
+          "#849BB3",
+          "#2C90D7",
+          "#3CA059",
+          "#079E92",
+          "#8978D7"
+        ],
+        "total_calculation": "#CC6677",
+        "background": "#8A8A8A",
+        "difference": "#737373"
+      },
+      "dark": {
+        "structures": [
+          "#FAB387",
+          "#DDCC77",
+          "#B09F85",
+          "#E69F00",
+          "#A3BE8C"
+        ],
+        "measured": [
+          "#C7D6E7",
+          "#71BFFF",
+          "#7CCD8E",
+          "#44D0C1",
+          "#B6AAFF"
+        ],
+        "total_calculation": "#F38BA8",
+        "background": "#969696",
+        "difference": "#B0B0B0"
+      }
+    },
+    {
+      "name": "Edi Garden",
+      "default": false,
+      "light": {
+        "structures": [
+          "#D95F02",
+          "#999933",
+          "#A96B59",
+          "#A6761D",
+          "#756E51"
+        ],
+        "measured": [
+          "#6D7C8D",
+          "#3D84A0",
+          "#668558",
+          "#42897C",
+          "#7172B6"
+        ],
+        "total_calculation": "#A57B7C",
+        "background": "#8A8A8A",
+        "difference": "#737373"
+      },
+      "dark": {
+        "structures": [
+          "#D08770",
+          "#DDCC77",
+          "#B78A66",
+          "#EBCB8B",
+          "#B9AC70"
+        ],
+        "measured": [
+          "#A9B9CB",
+          "#7CC3E0",
+          "#A2C393",
+          "#80C8B9",
+          "#ACAFF8"
+        ],
+        "total_calculation": "#EBA0AC",
+        "background": "#969696",
+        "difference": "#B0B0B0"
+      }
+    },
+    {
+      "name": "Edi Studio",
+      "default": false,
+      "light": {
+        "structures": [
+          "#FE640B",
+          "#999933",
+          "#9C755F",
+          "#DF8E1D",
+          "#46653C"
+        ],
+        "measured": [
+          "#87AACF",
+          "#1E66F5",
+          "#40A02B",
+          "#179299",
+          "#8839EF"
+        ],
+        "total_calculation": "#D20F39",
+        "background": "#7C7F93",
+        "difference": "#6C6F85"
+      },
+      "dark": {
+        "structures": [
+          "#FAB387",
+          "#EBCB8B",
+          "#B78A66",
+          "#F9E2AF",
+          "#A3BE8C"
+        ],
+        "measured": [
+          "#C7D6E7",
+          "#89B4FA",
+          "#A6E3A1",
+          "#94E2D5",
+          "#CBA6F7"
+        ],
+        "total_calculation": "#F38BA8",
+        "background": "#9399B2",
+        "difference": "#A6ADC8"
+      }
+    },
+    {
+      "name": "Edi Contrast",
+      "default": false,
+      "light": {
+        "structures": [
+          "#D35E40",
+          "#7D6500",
+          "#7A4E24",
+          "#C38900",
+          "#51905B"
+        ],
+        "measured": [
+          "#7C9AB9",
+          "#009DE2",
+          "#6FA065",
+          "#2D9894",
+          "#7264D0"
+        ],
+        "total_calculation": "#C6647F",
+        "background": "#8A8A8A",
+        "difference": "#737373"
+      },
+      "dark": {
+        "structures": [
+          "#FFA273",
+          "#B3A442",
+          "#B68965",
+          "#F5CD71",
+          "#91C999"
+        ],
+        "measured": [
+          "#B7CEE6",
+          "#91D4FF",
+          "#A4D89A",
+          "#60D1BD",
+          "#9E96F8"
+        ],
+        "total_calculation": "#EC8594",
+        "background": "#969696",
+        "difference": "#B0B0B0"
+      }
+    }
+  ]
+}
