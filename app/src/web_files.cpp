@@ -135,11 +135,10 @@ QByteArray WebFiles::pack(const QString& directory) {
     buffer.open(QIODevice::WriteOnly);
     QZipWriter writer(&buffer);
     writer.setCompressionPolicy(QZipWriter::AutoCompress);
-    // QZipWriter's default is owner read/write only, which unpacks the folder without its execute bit (unopenable).
-    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner | QFile::ReadGroup |
-                                  QFile::ExeGroup | QFile::ReadOther | QFile::ExeOther);
-    writer.addDirectory(top);
-    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther);
+    // No folder entries: QZipWriter stores a folder without its owner's execute bit, so macOS unpacks it unopenable.
+    // Unzip tools create the folders from the file paths instead. Files are rw-r--r-- rather than Qt's rw-------.
+    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser |
+                                  QFile::ReadGroup | QFile::ReadOther);
     QStringList files;
     QDirIterator it(directory, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -163,7 +162,8 @@ QByteArray WebFiles::packFiles(const QList<QPair<QString, QByteArray>>& files) {
     buffer.open(QIODevice::WriteOnly);
     QZipWriter writer(&buffer);
     writer.setCompressionPolicy(QZipWriter::AutoCompress);
-    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther);
+    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser |
+                                  QFile::ReadGroup | QFile::ReadOther);
     for (const auto& [path, data] : files) {
         writer.addFile(path, data);
     }
