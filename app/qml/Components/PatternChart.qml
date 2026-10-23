@@ -487,26 +487,10 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
-            hoverShown: Preferences.chartHoverShown
-            onHoverShownChanged: Preferences.chartHoverShown = hoverShown
-            pointerMode: Preferences.chartPointerMode
-            onPointerModeChanged: Preferences.chartPointerMode = pointerMode
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             includedOnly: Preferences.chartIncludedOnly
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
-        }
-        // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
-        // remembered settings again whenever another chart changes them.
-        Binding {
-            target: toolbar
-            property: "hoverShown"
-            value: Preferences.chartHoverShown
-        }
-        Binding {
-            target: toolbar
-            property: "pointerMode"
-            value: Preferences.chartPointerMode
         }
     }
 

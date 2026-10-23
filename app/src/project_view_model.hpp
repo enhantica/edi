@@ -179,6 +179,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
     // A scan's stacked patterns and 2D map (edi ADR-0041).
     Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
+    // A project of several single crystals and nothing else: its experiments, in order, for the Stacked chart; empty
+    // otherwise.
+    Q_PROPERTY(QList<edi_app::ExperimentViewModel*> singleCrystalExperiments READ singleCrystalExperiments NOTIFY
+                   experimentModelsChanged)
     // The Correlations tab: the last fit's parameter correlations for the shown experiment.
     Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -251,6 +255,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
     ScanViewModel* scanViews() const { return scan_views_; }
+    QList<ExperimentViewModel*> singleCrystalExperiments() const;
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
@@ -395,6 +400,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
+    void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
     void refused(const QString& message);
