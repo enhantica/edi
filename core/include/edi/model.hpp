@@ -3495,12 +3495,13 @@ struct AbsorptionBase {
 // A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the type (`none`,
 // `becker-coppens-type-1`, `-type-2` or `-mixed`) and the items of that type alone: the mosaic
 // distribution (`gaussian` or `lorentzian`) and mosaic spread g for types I and mixed, the domain
-// radius for types I, II and mixed. Engaged exactly on a single crystal.
+// radius for types II and mixed, the crystal radius for all three. Engaged exactly on a single crystal.
 struct ExtinctionBase {
     std::optional<std::string> type;
     std::optional<std::string> mosaic_distribution;
     OptionalParameter domain_radius;
     OptionalParameter mosaic_spread;
+    OptionalParameter crystal_radius;
 
     std::vector<Parameter*> parameters();
     detail::RowLink row;
@@ -5241,9 +5242,10 @@ static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, Absorpti
 struct ExtinctionCategory {
     using Owner = ExtinctionBase;
     static constexpr const char* name = "_extinction";
-    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution,
-                                               &ExtinctionBase::domain_radius, &ExtinctionBase::mosaic_spread};
-    static constexpr std::array items{"type", "mosaic_distribution", "domain_radius", "mosaic_spread"};
+    static constexpr auto columns =
+        std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution, &ExtinctionBase::domain_radius,
+                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius};
+    static constexpr std::array items{"type", "mosaic_distribution", "domain_radius", "mosaic_spread", "crystal_radius"};
     static constexpr std::array legacy{"_easydiffraction_extinction"};
 };
 static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
@@ -5667,6 +5669,7 @@ inline std::vector<Parameter*> ExtinctionBase::parameters() {
     std::vector<Parameter*> out;
     detail::push_optional(out, domain_radius);
     detail::push_optional(out, mosaic_spread);
+    detail::push_optional(out, crystal_radius);
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {

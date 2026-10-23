@@ -196,6 +196,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
             categories.push_back(instrument_category(experiment));
         }
         Category extinction{"extinction"};
+        detail::add_optional(extinction.fields, "crystal_radius", experiment.extinction.crystal_radius);
         detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
         detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
         categories.push_back(extinction);

@@ -110,6 +110,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     // A single crystal's extinction and the Miller indices (and wavelengths) it is calculated for.
     put_optional_parameter(out, experiment.extinction.domain_radius, scope);
     put_optional_parameter(out, experiment.extinction.mosaic_spread, scope);
+    put_optional_parameter(out, experiment.extinction.crystal_radius, scope);
     put_text(out, experiment.extinction.type.value_or(""));
     put_text(out, experiment.extinction.mosaic_distribution.value_or(""));
     out += experiment.reflections ? 'R' : '-';
