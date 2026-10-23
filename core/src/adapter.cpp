@@ -51,6 +51,9 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/dictionary_items.hpp")
+#include "crysta/dictionary_items.hpp"
+#endif
 #if __has_include("crysta/report_settings.hpp")
 #include "crysta/report_settings.hpp"
 #endif
@@ -2425,6 +2428,24 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
+}
+
+// The older spellings are crysta's dictionary's; against an SDK without them every name is current.
+std::string current_edi_name(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    const crysta::DictionaryItem* item = crysta::find_dictionary_item_by_edi_name(tag);
+    if (item == nullptr) {
+        return tag;
+    }
+    const auto same = [&tag](const std::string& alias) {
+        return std::ranges::equal(alias, tag, [](char a, char b) {
+            return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+        });
+    };
+    return std::ranges::any_of(item->edi_aliases, same) ? item->edi_tag : tag;
+#else
+    return tag;
+#endif
 }
 
 // The CIF import is crysta's; against an SDK without it a text is read as `.edi`.
