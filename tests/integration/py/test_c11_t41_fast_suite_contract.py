@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -11,6 +12,8 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 
 def _repo_root() -> Path:
@@ -25,6 +28,7 @@ def _repo_root() -> Path:
 
 ROOT = _repo_root()
 TESTS = ROOT / 'tests'
+LICENCE_MODULE = 'tests/system/py/test_distribution_licences.py'
 CONDITION_FIELDS = {
     'status',
     'window_utc',
@@ -356,6 +360,82 @@ def _assert_nightly_inclusion(switch, active):
                 )
 
 
+def _assert_licence_delivery(jobs, active):
+    job = jobs.get('app-wasm')
+    assert job and not job.get('continue-on-error'), (
+        'Delegated licence checks require the mandatory staged-artifact job'
+    )
+    commands = [step.get('run', '').split() for step in job['steps']]
+    required = [
+        'pixi run core-build',
+        'pixi run -e app --skip-deps wasm-build',
+        'pixi run -e app app-build',
+        'pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py',
+        'pixi run --skip-deps python -m pytest ' + LICENCE_MODULE,
+    ]
+    positions = []
+    for command in required:
+        tokens = command.split()
+        assert commands.count(tokens) == 1, (
+            'Delegated licence checks retain every actual build, staging and consumer command'
+        )
+        positions.append(commands.index(tokens))
+    assert positions == sorted(positions), (
+        'Delegated licence checks build and stage the real artifacts before consuming them'
+    )
+    for event in ('push', 'schedule', 'workflow_dispatch'):
+        for core_state in ('success', 'failure'):
+            context = {'states': {'changes': 'success', 'core': core_state}}
+            assert active(job, event, **context), (
+                'Delegated licence checks remain reachable on main, nightly and full manual runs'
+            )
+            for index in positions:
+                step = job['steps'][index]
+                assert not step.get('continue-on-error'), (
+                    'Delegated licence checks cannot forgive a failed producer or consumer'
+                )
+                # Staging and checks report missing inputs even after a build fails.
+                if index in positions[-2:]:
+                    assert active(step, event, **context), (
+                        'Delegated licence staging and checks execute after preceding failures'
+                    )
+
+
+def _assert_licence_delivery_controls(jobs, active):
+    for mutation in (
+        'missing-job',
+        'missing-stage',
+        'missing-check',
+        'order',
+        'job-off',
+        'stage-off',
+        'check-off',
+        'job-optional',
+        'stage-optional',
+        'check-optional',
+    ):
+        changed = copy.deepcopy(jobs)
+        job = changed['app-wasm']
+        stage, check = [
+            next(step for step in job['steps'] if fragment in step.get('run', ''))
+            for fragment in ('distribution_licences/stage.py', 'pytest ' + LICENCE_MODULE)
+        ]
+        if mutation == 'missing-job':
+            del changed['app-wasm']
+        elif mutation in {'missing-stage', 'missing-check'}:
+            job['steps'].remove(stage if mutation == 'missing-stage' else check)
+        elif mutation == 'order':
+            job['steps'].remove(stage)
+            job['steps'].append(stage)
+        else:
+            target = {'job': job, 'stage': stage, 'check': check}[mutation.split('-')[0]]
+            target[
+                'if' if mutation.endswith('-off') else 'continue-on-error'
+            ] = not mutation.endswith('-off')
+        with pytest.raises(AssertionError, match='Delegated licence'):
+            _assert_licence_delivery(changed, active)
+
+
 def _assert_platform_nightly_partition(groups, tasks, jobs, active):
     nightly_paths = [
         'tests/system/py/test_scan_app_execution.py',
@@ -377,6 +457,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
     for omitted in (False, True):
         result = _partition_transport(groups, omitted)
         ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
+        ignores.append('--ignore=' + LICENCE_MODULE)
         assert json.loads(result.stdout) == [
             '-m',
             'pytest',
@@ -394,7 +475,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
             '--store-durations',
         ], (
             'Production partitions retain the complete tier '
-            'with exactly the declared nightly-selection omissions'
+            'with exactly the nightly omissions and the staged-artifact licence delegation'
         )
 
     assert tasks['nightly-only-tests']['cmd'] == [
@@ -503,6 +584,8 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
                 'system partitioning retains the complete duration-based split'
             )
         _assert_platform_nightly_partition(groups, tasks, jobs, active)
+        _assert_licence_delivery(jobs, active)
+        _assert_licence_delivery_controls(jobs, active)
         for name in ('core', 'system'):
             assert_core_failure_reporting(jobs[name])
             for platform in ('linux-64', 'osx-arm64'):
