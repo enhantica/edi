@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 #$Date: 2015-01-27 21:58:39 +0200 (Tue, 27 Jan 2015) $
 #$Revision: 130149 $
-#$URL: file:///home/coder/svn-repositories/_RELOADED_COD/cod-reloaded/cif/1/00/00/1000041.cif $
+#$URL: https://www.crystallography.net/cod/1000041.cif $
 #------------------------------------------------------------------------------
 #
 # This file is available in the Crystallography Open Database (COD),
