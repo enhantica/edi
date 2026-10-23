@@ -426,7 +426,7 @@ Rectangle {
             ready(scan);
             const control = axisControl(data.axis), original = control.currentIndex, before = plotDigest();
             choose(control, (original + 1) % control.count);
-            verify(plotDigest() !== before, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText + " beforeDigest=" + before + " readDigest=" + plotDigest());
+            verify(plotDigest() !== before, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText + " readDomain=" + JSON.stringify([named("axes").axisX.min, named("axes").axisX.max, named("axes").axisY.min, named("axes").axisY.max]));
             choose(control, original);
             compare(plotDigest(), before, "Restoring the axis type restores the same actual analytic scan drawing");
         }
