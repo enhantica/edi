@@ -469,7 +469,7 @@ inline const ParameterSpec absorption_mu_r{
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
 // A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): the crystal's mean radius in
 // micrometres and its mosaicity g, an inverse width of the mosaic spread (larger is narrower). The value is
-// diffraction-lib's and CrysPy's, which call it arc minutes, but it is not an angle (edi ADR-0048).
+// diffraction-lib's and CrysPy's, which call it arc minutes, but it is not an angle (edi ADR-0049).
 inline const ParameterSpec extinction_radius{
     "extinction", "radius", "micrometres", "Mean radius of the crystal",
     {0.0, detail::kInf}, "Crystal radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionRadius,

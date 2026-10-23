@@ -1073,7 +1073,7 @@
         "Pr₂NiO₄ [Fmmm]"
       ],
       "origin": "5C2 @ LLB",
-      "detail": "Single crystal · Isotropic displacements, coordinates and extinction from a rough start",
+      "detail": "Single crystal · Anisotropic displacements and coordinates from a rough start",
       "values": {
         "sampleForm": [
           "single crystal"
@@ -1109,7 +1109,7 @@
       "searchAliases": [
         "sc-neut-cwl_pr2nio4-5c2_fit",
         "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB",
-        "Single crystal · Isotropic displacements, coordinates and extinction from a rough start"
+        "Single crystal · Anisotropic displacements and coordinates from a rough start"
       ],
       "sources": [
         "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi",

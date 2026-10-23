@@ -305,13 +305,17 @@ TBTI_FIT_SITES = [
         (U, '0.0026', '0.0026', '0', '0', '0'),
     ),
 ]
+# Pr2NiO4 starts every displacement at 0 and free: Bani on every site but Od, which is Biso (the
+# owner, 2026-10-23). O1's site leaves B12 free as well.
+B0 = ('0()', '0()', '0()', '0', '0', '0')
+B0_12 = ('0()', '0()', '0()', '0()', '0', '0')
 PR2NIO4_FIT_SITES = [
-    ('Pr', 'Pr', '0', '0', '0.3620()', 'i', '1', 'Biso', '0.5()', None),
-    ('Ni', 'Ni', '0', '0', '0', 'a', '1', 'Biso', '0.5()', None),
-    ('O1', 'O', '0.25', '0.25', '0', 'e', '1', 'Biso', '0.5()', None),
-    ('O2', 'O', '0', '0', '0.1760()', 'i', '0.722965', 'Biso', '0.5()', None),
-    ('Oi', 'O', '0.25', '0.25', '0.25', 'f', '0.074655', 'Biso', '0.5()', None),
-    ('Od', 'O', '0.0750()', '0.0750()', '0.1750()', 'p', '0.074654', 'Biso', '0.5()', None),
+    ('Pr', 'Pr', '0', '0', '0.3620()', 'i', '1', 'Bani', '0', B0),
+    ('Ni', 'Ni', '0', '0', '0', 'a', '1', 'Bani', '0', B0),
+    ('O1', 'O', '0.25', '0.25', '0', 'e', '1', 'Bani', '0', B0_12),
+    ('O2', 'O', '0', '0', '0.1760()', 'i', '0.722965', 'Bani', '0', B0),
+    ('Oi', 'O', '0.25', '0.25', '0.25', 'f', '0.074655', 'Bani', '0', B0),
+    ('Od', 'O', '0.0750()', '0.0750()', '0.1750()', 'p', '0.074654', 'Biso', '0()', None),
 ]
 FIT_PROJECTS = {
     'sc-neut-tof_taurine-senju': {
@@ -363,18 +367,15 @@ FIT_PROJECTS = {
         'instrument': '5C2',
         'facility': 'LLB',
         'description': (
-            'Single crystal · Isotropic displacements, coordinates and extinction '
-            'from a rough start'
+            'Single crystal · Anisotropic displacements and coordinates from a rough start'
         ),
         'purpose': 'refinement',
         'space_group': ('F m m m', None),
         'cell': ('5.417799', '5.4146', '12.483399', '90', '90', '90'),
         'sites': PR2NIO4_FIT_SITES,
         'scale': '4()',
-        # The radius is free from diffraction-lib's default 1 micrometre beside a fixed mosaicity
-        # of 0, so only primary extinction acts. FullProf's refinement of these reflections has
-        # no extinction, and the fit takes the radius to 0.
-        'extinction': ('gauss', '1()', '0'),
+        # No extinction, as in FullProf's refinement of these reflections (the owner, 2026-10-23).
+        'extinction': ('gauss', '0', '0'),
     },
 }
 

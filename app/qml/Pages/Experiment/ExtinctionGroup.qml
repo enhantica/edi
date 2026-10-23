@@ -8,7 +8,7 @@ Column {
     id: group
 
     property ExperimentViewModel experiment: null
-    // The mosaicity is Becker-Coppens' g, an inverse width with no angle unit (edi ADR-0048); its hint gives the mosaic
+    // The mosaicity is Becker-Coppens' g, an inverse width with no angle unit (edi ADR-0049); its hint gives the mosaic
     // spread it means. CrysPy reads g as the value times π/10800 beside the radius in μm and λ in Å, so g per radian is
     // that times 10⁴; a Gaussian spread's FWHM is √(2 ln 2/π)/g, a Lorentzian's 1/(πg).
     readonly property ParameterItem mosaicity: grid.fields && grid.fields.count >= 0 ? grid.fields.parameterNamed("mosaicity") : null
