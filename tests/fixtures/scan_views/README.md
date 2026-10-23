@@ -12,7 +12,7 @@ measured grids and TOF calibration coefficients: d=.8+i/64 (i=0..128), offsets
 13 and -19, slopes 1000 and 2500, quadratic and reciprocal coefficients zero.
 Its triangular peak has height 255 at d=1.8. Native domains are 813..2813 and
 1981..6981; both physical domains are .8..2.8. The saved project order and names
-are the presentation reference, never the producer's row order.
+are the presentation reference, never the producer's row order. CW banks retain the same d/intensity pairs in reverse row order so their measured 2θ grid rises, as required by the engine's sorted-grid contract.
 
 `freeze_candidates.py` consumes published raw source tables and bundling licences
 from a supplied directory, recording their URLs, pinned revisions and SHA256s in

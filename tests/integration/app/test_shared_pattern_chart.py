@@ -57,7 +57,8 @@ def shared_chart_receipts(request):
                     capture_output=True,
                     text=True,
                     check=False,
-                    timeout=25,
+                    # Toolbar cases visit every page for each toggle.
+                    timeout=120,
                 )
                 parts.append((result.returncode, result.stdout + result.stderr))
             except subprocess.TimeoutExpired as error:

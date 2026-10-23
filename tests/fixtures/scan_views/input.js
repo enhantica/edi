@@ -38,7 +38,8 @@ function joint(proof, root, independent, axes = "tof") {
         }
         text+="loop_\n_data."+(cwl?"two_theta":"time_of_flight")+"\n_data.intensity_meas\n_data.intensity_meas_su\n";
         for(let index=0;index<=128;++index) {
-            const d=(cwl?1.2:.8)+index/64, intensity=Math.max(0,255*(1-Math.abs(index-64)/16));
+            const sample=cwl?128-index:index;
+            const d=(cwl?1.2:.8)+sample/64, intensity=Math.max(0,255*(1-Math.abs(sample-64)/16));
             const x=cwl?Math.asin(wavelength/(2*d))*360/Math.PI:offset+slope*d;
             text+=x.toFixed(8)+" "+intensity+" 1\n";
         }
