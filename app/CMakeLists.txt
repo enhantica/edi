@@ -110,6 +110,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
+        qml/Components/ScanViewChart.qml
         qml/Components/SingleCrystalChart.qml
         qml/Components/SingleCrystalTable.qml
         qml/Components/ScanViewChart.qml

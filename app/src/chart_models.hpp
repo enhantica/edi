@@ -54,6 +54,17 @@ class ChartLegendModel : public QAbstractListModel {
 
 // A chart's excluded regions inside its view (edi ADR-0021 §4): one row per band. Roles `xMin` and `xMax`,
 // on the chart's x axis.
+// A legend whose rows its chart sets itself (the single-crystal charts, which have no controller): each row a map of
+// `label`, `color`, `mark` ("line" unless given) and `markWidth` (3 pixels unless given).
+class ListedLegendModel : public ChartLegendModel {
+    Q_OBJECT
+    QML_ELEMENT
+
+   public:
+    explicit ListedLegendModel(QObject* parent = nullptr) : ChartLegendModel(parent) {}
+    Q_INVOKABLE void setRows(const QVariantList& rows);
+};
+
 class ChartBandModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT

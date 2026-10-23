@@ -1424,6 +1424,8 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         const crysta::ReflectionFile file = crysta::read_reflection_file(
             path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
         load.unweighted = file.skipped_unweighted;
+        load.skipped_lines = file.skipped_lines;
+        load.skipped = file.skipped_lines.size();
         // One experiment per dataset of the file, in the order of their codes.
         std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
         std::sort(codes.begin(), codes.end());

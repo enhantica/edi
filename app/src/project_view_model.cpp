@@ -880,7 +880,20 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     }
     // One message: the points, then what the reader skipped or changed.
     QStringList notes;
-    if (load.skipped != 0) {
+    if (!load.skipped_lines.empty()) {
+        // A reflection file's lines that are not reflections, by number, the first few (the owner, 2026-10-23).
+        QStringList numbers;
+        for (std::size_t i = 0; i < load.skipped_lines.size() && i < 5; ++i) {
+            numbers.append(QString::number(load.skipped_lines[i]));
+        }
+        const QString listed = numbers.join(QStringLiteral(", ")) +
+                               (load.skipped_lines.size() > 5 ? QStringLiteral(", …") : QString());
+        notes.append(load.skipped_lines.size() == 1
+                         ? tr("1 line skipped that is not a reflection (line %1)").arg(listed)
+                         : tr("%1 lines skipped that are not reflections (lines %2)")
+                               .arg(load.skipped_lines.size())
+                               .arg(listed));
+    } else if (load.skipped != 0) {
         notes.append(tr("%n line(s) skipped that are not two or three numbers", nullptr, static_cast<int>(load.skipped)));
     }
     if (load.nonpositive != 0) {
@@ -2008,6 +2021,14 @@ int ProjectViewModel::structureIndex(const QString& name) const {
     return -1;
 }
 
+QList<ExperimentViewModel*> ProjectViewModel::singleCrystalExperiments() const {
+    const bool all = experiment_models_.size() > 1 &&
+                     std::all_of(experiment_models_.begin(), experiment_models_.end(), [](const ExperimentViewModel* model) {
+                         return model->sampleForm() == ExperimentViewModel::SingleCrystal;
+                     });
+    return all ? experiment_models_ : QList<ExperimentViewModel*>{};
+}
+
 void ProjectViewModel::removeExperiment(int index) {
     if (index < 0 || index >= experiment_models_.size()) {
         return;
@@ -2703,6 +2724,7 @@ void ProjectViewModel::syncBlocks() {
         }
         experiment_models_ = next;
     }
+    emit experimentModelsChanged();  // a sample form may have changed too
     syncLoadState();
     structure_list_->setStructures(structure_models_);
     syncDatasets();

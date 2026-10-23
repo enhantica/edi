@@ -5,6 +5,20 @@ namespace edi_app {
 
 ChartLegendModel::ChartLegendModel(QObject* parent) : QAbstractListModel(parent) {}
 
+void ListedLegendModel::setRows(const QVariantList& rows) {
+    QList<Entry> entries;
+    for (const QVariant& row : rows) {
+        const QVariantMap map = row.toMap();
+        Entry entry;
+        entry.label = map.value(QStringLiteral("label")).toString();
+        entry.color = map.value(QStringLiteral("color")).value<QColor>();
+        entry.mark = map.value(QStringLiteral("mark"), QStringLiteral("line")).toString();
+        entry.markWidth = map.value(QStringLiteral("markWidth"), 3.0).toDouble();  // the sample's thickness, pixels
+        entries.append(entry);
+    }
+    setEntries(entries);
+}
+
 void ChartLegendModel::setEntries(const QList<Entry>& entries) {
     if (entries == entries_) {
         return;
