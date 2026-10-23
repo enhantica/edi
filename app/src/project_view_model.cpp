@@ -1110,6 +1110,7 @@ bool ProjectViewModel::duplicateStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    scan_views_ = new ScanViewModel(this);
     connect(evolution_, &EvolutionViewModel::refused, this, [this](const QString& message) {
         setLastError(message);
         emit refused(message);
@@ -1682,6 +1683,7 @@ void ProjectViewModel::reloadScanResults() {
 void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
+    scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
     if (!scan_session_->index().error.empty()) {
         // A refused read has no rows to summarise: no summary is built from it, the refusal is shown instead.
@@ -2625,6 +2627,11 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project_));
     parameters_->setExperimentScope(scan && selected != nullptr ? selected->name() : QString());
     parameters_->sync();
+    // The Stacked and Map tabs show a joint fit's experiments too (edi ADR-0041; the owner, 2026-10-22), taken again
+    // after every edit, which may have switched the mode or changed the data; a scan's datasets are set by the scan.
+    if (scan_views_ != nullptr && !scan_) {
+        scan_views_->setJoint(project_.get());
+    }
     // The report keeps its composed text and counts this table's rows: a selection that changes the rows
     // changes the report in the same step. The status bar and the Analysis table bind the model itself.
     if (refresh_report && report_ != nullptr) {
@@ -2733,6 +2740,7 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
     for (StructureViewModel* structure : structure_models_) {
         structure->captureScene();
     }
+    scan_views_->setConversion(project_.get());  // a scan's d axis follows the calculation, as the pattern chart's
     saved_files_.reset();  // a save writes the calculated pattern too
     invalidateTexts();
     report_->refresh();

@@ -92,7 +92,25 @@ def load_project(path, text, grid=None, scale=1.0):
 
 
 def loop_rows(text, category):
-    tokens = shlex.split(text, comments=True)
+    lexer = shlex.shlex(text, posix=True, punctuation_chars='[]')
+    lexer.whitespace_split = True
+    tokens, parts, depth = [], [], 0
+    for token in lexer:
+        pieces = list(token) if token and set(token) <= {'[', ']'} else [token]
+        for piece in pieces:
+            if piece == '[':
+                depth += 1
+            if depth:
+                parts.append(piece)
+            else:
+                tokens.append(piece)
+            if piece == ']':
+                depth -= 1
+                assert depth >= 0, 'Saved CIF2 lists have a matching opening bracket'
+                if depth == 0:
+                    tokens.append(' '.join(parts))
+                    parts = []
+    assert depth == 0, 'Saved CIF2 lists have a matching closing bracket'
     result = []
     cursor = 0
     while cursor < len(tokens):
@@ -196,6 +214,17 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
 
 
 def test_an_absent_type_gets_the_biso_default(tmp_path):
+    literal = 'loop_\n_data.x\n_data.components\n_data.y\n12.5 [1.25 2.75] 4.5\n'
+    assert loop_rows(literal, '_data') == [
+        {
+            '_data.x': '12.5',
+            '_data.components': '[ 1.25 2.75 ]',
+            '_data.y': '4.5',
+        }
+    ], 'CIF2 lists occupy one loop column without moving either neighboring scalar'
+    for malformed in (literal.replace(']', ''), literal + ']'):
+        with pytest.raises(AssertionError):
+            loop_rows(malformed, '_data')
     project = load_project(tmp_path / 'input', structure_text(None, ORACLE['cells'][0]))
     assert project.structure.atom_sites[0].adp_type == 'Biso', (
         'An absent declared type must resolve to the Biso default'

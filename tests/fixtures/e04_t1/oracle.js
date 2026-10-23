@@ -7134,6 +7134,8 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "latp_scan",
+        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF",
+        "_metadata.description": "3 phases · 4 synchrotron patterns · Linked displacement parameters",
         "_metadata.created": "07 Oct 2026 11:30:00",
         "_metadata.last_modified": "07 Oct 2026 11:30:00",
         "_metadata.timestamp": "2026-10-07T09:30:00+00:00",
@@ -7190,12 +7192,10 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_verbosity.fit": "short",
-        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · Unknown instrument @ SNBL",
-        "_metadata.description": "3 phases · 4 synchrotron patterns · Linked displacement parameters",
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
-        "_metadata.instrument": "?",
-        "_metadata.facility": "SNBL"
+        "_metadata.instrument": "BM01",
+        "_metadata.facility": "ESRF"
       },
       "analysis": {
         "_edi.schema_version": {
@@ -7389,7 +7389,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "de470e851516df1846cbb8ebbd10300ebb1c859a29bcaaba821d57c6dd4e7cea",
+        "project.edi": "de55f35878c296f20d2c32e75365b3d694efdd5eb98d4e85f42615c68766a83f",
         "structures/alpo4_c2221.edi": "38397c4609196c2aa08d24019658331d13d3592249d9f5a9efc6f105b280af65",
         "structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
         "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d",
@@ -7799,15 +7799,15 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_y2o3_beta_adp",
+        "_metadata.title": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+        "_metadata.description": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
         "_metadata.created": "06 Oct 2026 16:43:16",
         "_metadata.last_modified": "06 Oct 2026 16:43:17",
         "_metadata.timestamp": "?",
-        "_metadata.title": "Y₂O₃ [Ia-3] · Unknown instrument",
-        "_metadata.description": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
-        "_metadata.instrument": "?",
-        "_metadata.facility": "?",
+        "_metadata.instrument": "SPODI",
+        "_metadata.facility": "FRM II",
         "_metadata.polarisation": "none"
       },
       "analysis": {
@@ -7840,7 +7840,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "eb50aaa2bdec7eacb505b37b1a63bcd6066031d38008e2b14b1d1addcf688628",
+        "project.edi": "b3034aba2b825a7b419707991aadd0dfbdea99cf63a446a1b83299246a7648c5",
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
         "experiments/y2o3.edi": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
         "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
@@ -9715,6 +9715,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
+        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
@@ -9760,7 +9761,6 @@ var frozen = {
         },
         "_absorption.type": "none",
         "_background.type": "line-segment",
-        "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.sample_form": "powder",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"

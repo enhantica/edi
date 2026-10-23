@@ -31,6 +31,10 @@ ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : Q
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
     // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
+    // The structure figures take the structure view's element colours.
+    if (StructureViewOptions* view = project_.structureViewOptions()) {
+        connect(view, &StructureViewOptions::colorSchemeChanged, this, &ReportViewModel::refresh);
+    }
     refresh();
 }
 
@@ -39,6 +43,14 @@ bool ReportViewModel::calculating() const {
     // fit's outcome.
     const FitViewModel* fit = project_.fit();
     return project_.calculating() || (fit != nullptr && fit->running());
+}
+
+void ReportViewModel::setStructureColourScheme(const QString& scheme) {
+    if (scheme != structure_colour_scheme_) {
+        structure_colour_scheme_ = scheme;
+        emit structureColourSchemeChanged();
+        refresh();
+    }
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
@@ -115,6 +127,9 @@ bool ReportViewModel::build() const {
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
+    if (edi::colour_scheme_from_name(structure_colour_scheme_.toStdString())) {
+        choices.structure_colour_scheme = structure_colour_scheme_.toStdString();
+    }
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
@@ -123,6 +138,9 @@ bool ReportViewModel::build() const {
     edi::ReportModel next;
     try {
         options_ = edi::effective_report_options(project, choices);
+        const StructureViewOptions* view = project_.structureViewOptions();
+        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
         next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
         options_ = {};

@@ -36,36 +36,35 @@ Column {
         columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("structure")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("scale")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("weight fraction")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string structureId
             required property int colorIndex
             // The Hill-Howard weight fraction: `value` and `uncertainty` (0 without one), empty when there is none.
@@ -73,9 +72,9 @@ Column {
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             IconCell {
@@ -121,9 +120,11 @@ Column {
             // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
             // the value's menu, never edited or fitted. A fraction keeps its decimal point, so a lone phase shows 1.0
             // as the saved file writes it.
-            EaComponents.TableViewParameter {
+            EaComponents.ListViewParameter {
                 id: fraction
 
+                errorTitle: qsTr("s.u.")
+                fitTitle: qsTr("free")
                 readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
                 readonly property real fractionValue: known ? row.weightFraction.value : 0
                 readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
@@ -149,14 +150,14 @@ Column {
                 ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
                 onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.remove.${row.index}`
                 enabled: group.rows !== null && group.rows.canRemove

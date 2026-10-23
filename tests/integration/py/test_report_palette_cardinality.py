@@ -1,39 +1,14 @@
-"""The real report's Bragg keys retain every frozen structure colour and wraparound."""
+"""The real report's Bragg keys retain every frozen structure colour and whole-group gradient."""
 
-import csv
 import json
 from pathlib import Path
 
 import edi
 import pytest
 
+from tests.fixtures.approved_palettes.reference import PALETTES, SCHEMES, assigned
+
 ROOT = Path(__file__).resolve().parents[3]
-SCHEMES = [
-    'coast',
-    'garden',
-    'peaceful',
-    'fogForest',
-    'sage',
-    'okabeIto',
-    'paulTolBright',
-    'paulTolMuted',
-    'tableau',
-    'observable',
-    'carbon',
-    'dark2',
-    'petroff',
-    'vivid',
-    'nord',
-    'solarized',
-    'catppuccin',
-    'apple',
-]
-
-
-def palette(token):
-    filename = ''.join('-' + char.lower() if char.isupper() else char for char in token)
-    with (ROOT / 'data/palettes' / (filename + '.tsv')).open() as file:
-        return [row for row in csv.DictReader(file, delimiter='\t') if row['role'] == 'structure']
 
 
 @pytest.fixture(scope='module')
@@ -45,17 +20,20 @@ def multiphase():
 
 @pytest.mark.parametrize('scheme', SCHEMES)
 def test_captured_report_serializes_all_structure_styles_and_row_labels(multiphase, scheme):
-    table = palette(scheme)
+    palette = PALETTES[SCHEMES.index(scheme)]
     model = json.loads(multiphase.report.model(colour_scheme=scheme).to_json())
     styles = {row['key']: row for row in model['pattern_styles']}
     pattern = model['experiments'][0]['pattern']
     series = [row for row in pattern['series'] if row['kind'] == 'bragg']
-    assert len(series) == len(multiphase.structures) and len(series) > 2 * len(table), (
-        'Every real structure, both complete palette cycles and the final '
-        'wraparound reach the report'
+    assert len(series) == len(multiphase.structures) and len(series) > 10, (
+        'Every real structure, the whole-group gradient beyond five, including the final '
+        'endpoint reach the report'
     )
     for place, row in enumerate(series):
-        expected = table[place % len(table)]
+        expected = {
+            theme: assigned(palette, 'structures', place, len(series), theme)
+            for theme in ('light', 'dark')
+        }
         assert styles[row['style']]['light'].lower() == expected['light'].lower(), (
             'Captured report Bragg ticks retain each frozen light-theme structure colour'
         )

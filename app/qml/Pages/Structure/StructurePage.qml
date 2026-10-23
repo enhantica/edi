@@ -33,6 +33,12 @@ WorkflowPage {
             objectName: "mainArea.structure.tab.view"
             // The view's name, text only (edi ADR-0017 §2).
             text: qsTr("Structure")
+        },
+        // The app's one pattern chart, as the Experiment and Analysis pages show it, once an experiment exists.
+        IconTabButton {
+            objectName: "mainArea.structure.tab.pattern"
+            text: qsTr("Pattern")
+            enabled: page.project !== null && page.project.experiments.count > 0
         }
     ]
     mainItems: [
@@ -42,8 +48,23 @@ WorkflowPage {
             structure: page.structure
             options: page.project ? page.project.structureViewOptions : null
             shown: page.current && SwipeView.isCurrentItem
+        },
+        ProjectPatternChart {
+            id: chartView
+            experiment: page.project ? page.project.currentExperiment : null
+            axisProject: page.project
+            settingsPage: "pattern"
+            shown: page.current && SwipeView.isCurrentItem
         }
     ]
+    // The Pattern tab selects among the experiments, as the Experiment and Analysis pages do; the Structure tab among the
+    // structures.
+    readonly property bool patternShown: mainTabIndex === 1
+    readonly property bool patternEnabled: project !== null && project.experiments.count > 0
+    onPatternEnabledChanged: {
+        if (!patternEnabled && patternShown)
+            showMainTab(0);
+    }
     extrasEnabled: structure !== null
     textEnabled: structure !== null
     basicItem: Component {
@@ -82,12 +103,21 @@ WorkflowPage {
     }
     // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
     blockSelectorShown: true
-    blockSelectorRightInset: structureView.toolbarRightInset
-    blocks: project ? project.structures : null
+    blockSelectorRightInset: patternShown ? chartView.toolbarRightInset : structureView.toolbarRightInset
+    blocks: project ? (patternShown ? project.experiments : project.structures) : null
     blocksTextRole: "label"
-    blockKind: "structure"
-    blockIndex: project ? project.currentStructureIndex : -1
-    onBlockActivated: index => page.project.currentStructureIndex = index
+    blockKind: patternShown ? "experiment" : "structure"
+    blockOutcomeRole: patternShown ? "fitOutcome" : ""
+    blockCurrentOutcome: patternShown && project && project.currentExperiment ? project.currentExperiment.fitOutcome : ""
+    blockTemplateRole: patternShown && project !== null && project.scan ? "isTemplate" : ""
+    blockCurrentTemplate: patternShown && project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? (patternShown ? project.currentExperimentIndex : project.currentStructureIndex) : -1
+    onBlockActivated: index => {
+        if (page.patternShown)
+            page.project.currentExperimentIndex = index;
+        else
+            page.project.currentStructureIndex = index;
+    }
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Experiment)
 

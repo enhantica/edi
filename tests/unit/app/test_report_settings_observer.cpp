@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
 #include <QAnimationDriver>
+#include <QElapsedTimer>
 #include <QPdfWriter>
 #include <QPainter>
 #include <QProcess>
@@ -489,6 +490,17 @@ public:
             for (const auto& error : component.errors()) errors.append(error.toString());
             result.insert("error", errors.join('\n'));
             return result;
+        }
+        // A fresh production page may first finish its real calculation. The
+        // optional readiness property is observation only; callers without it
+        // keep the original synchronous snapshot behavior.
+        if (object->metaObject()->indexOfProperty("acceptanceReady") >= 0) {
+            QElapsedTimer deadline;
+            deadline.start();
+            while (!object->property("acceptanceReady").toBool() && deadline.elapsed() < 5000)
+                QTest::qWait(10);
+            if (!object->property("acceptanceReady").toBool())
+                return {{"error", "The fresh production engine did not finish its declared setup"}};
         }
         const auto meta = object->metaObject();
         for (int index = QObject::staticMetaObject.propertyCount(); index < meta->propertyCount(); ++index) {

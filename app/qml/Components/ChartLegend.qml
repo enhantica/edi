@@ -13,7 +13,9 @@ import edi.app
 Rectangle {
     id: legend
 
-    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth` and `bragg`.
+    // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth`, `bragg`,
+    // `labelTexts` and `labelColors` (the label's pieces and their colours, drawn in place of `label` when there are
+    // any).
     property ChartLegendModel entries: null
     // The theme colours of the chart it belongs to.
     property FigureColors colors: FigureColors {}
@@ -25,11 +27,20 @@ Rectangle {
     // Each row's height.
     property real rowHeight: AppSizes.legendRowHeight
 
+    // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
+    // title is, never by the line's gaps between pieces.
+    function richLabel(pieces) {
+        return pieces.map(piece => {
+            const text = String(piece.text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return legend.labelInColor && piece.color ? "<font color=\"" + piece.color + "\">" + text + "</font>" : text;
+        }).join("");
+    }
+
     // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
     function markPiece(mark, width, color) {
         return mark === "atom" ? {
             "icon": "atom",
-            "color": color
+            "color": AppColors.readable(color, [legend.colors.mainContentBackgroundHalfTransparent])
         } : {
             "mark": mark,
             "width": width,
@@ -62,6 +73,8 @@ Rectangle {
                 required property string mark
                 required property bool bragg
                 required property real markWidth
+                required property list<string> labelTexts
+                required property list<string> labelColors
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
@@ -79,8 +92,17 @@ Rectangle {
                     }
                 ] : [legend.markPiece(mark, markWidth, color),
                     {
-                        "text": label,
-                        "color": legend.labelInColor ? color : legend.colors.themeForeground
+                        "text": legend.richLabel(labelTexts.length > 0 ? labelTexts.map((text, i) => ({
+                                    "text": text,
+                                    "color": labelColors[i]
+                                })) : [
+                            {
+                                "text": label,
+                                "color": color
+                            }
+                        ]),
+                        "rich": true,
+                        "color": legend.colors.themeForeground
                     }
                 ]
             }

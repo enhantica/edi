@@ -155,9 +155,9 @@ def test_experiment_data_header_and_link_are_declared():
         'The experiments table must label its data column Data file'
     )
     marker = source.index('id: loadData')
-    opening = source.rfind('EaComponents.TableViewLabel {', 0, marker)
+    opening = source.rfind('EaComponents.ListViewLabel {', 0, marker)
     assert opening >= 0, 'The load-data cell must be a plain table label'
-    cell = body(source[opening:], 'EaComponents.TableViewLabel')
+    cell = body(source[opening:], 'EaComponents.ListViewLabel')
     assert 'id: loadData' in cell and 'horizontalAlignment: Text.AlignLeft' in cell, (
         'The data-file link must use left-aligned plain text'
     )

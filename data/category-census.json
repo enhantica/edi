@@ -2126,6 +2126,32 @@
       ]
     },
     {
+      "name": "_pd_calc",
+      "form": "columns",
+      "columns": [
+        {
+          "member": "PdDataBase::component_intensities_net",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "component_intensities_net"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_pd_calc_overall",
+      "form": "columns",
+      "columns": [
+        {
+          "member": "PdDataBase::component_order",
+          "type": "ComputedColumn<std::string>",
+          "items": [
+            "component_presentation_order"
+          ]
+        }
+      ]
+    },
+    {
       "name": "_fit_parameter",
       "form": "derived",
       "why": "composed at save from the parameters' fit-start cells; read back into them at load"
@@ -3410,6 +3436,16 @@
       "category": "_data"
     },
     {
+      "member": "PdDataBase::component_intensities_net",
+      "type": "ComputedColumn<double>",
+      "category": "_pd_calc"
+    },
+    {
+      "member": "PdDataBase::component_order",
+      "type": "ComputedColumn<std::string>",
+      "category": "_pd_calc_overall"
+    },
+    {
       "member": "PdDataBase::residual",
       "type": "ComputedColumn<double>",
       "category": "_data"
@@ -4249,7 +4285,9 @@
       "member": "ExperimentBase::data",
       "type": "std::optional<PdDataBase>",
       "holds": [
-        "_data"
+        "_data",
+        "_pd_calc",
+        "_pd_calc_overall"
       ]
     },
     {

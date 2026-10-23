@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtTest
 import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
@@ -217,8 +218,8 @@ Rectangle {
             return left === right ? [] : [path + ": " + JSON.stringify(left) + " -> " + JSON.stringify(right)];
         }
         function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
-            const scheme = Preferences.colourScheme;
-            Preferences.colourScheme = "default";
+            const scheme = Approved.getSchemes(Preferences);
+            Approved.setSchemes(Preferences, "ediNatural");
             prepare("_edi.schema_version 3\n_report.html true\n_report.pdf true\n_report.html_offline false\n");
             const report = Session.project.report;
             if (data.browser)
@@ -269,7 +270,7 @@ Rectangle {
                 failures.push("Live and reopened row states differ: " + JSON.stringify(live) + " versus " + JSON.stringify(disk));
             if (live.length !== original.length)
                 failures.push("A failure duplicated or dropped named tracking rows");
-            Preferences.colourScheme = scheme;
+            Approved.setSchemes(Preferences, scheme);
             publicationFailed.target = null;
             compare(failures.length, 0, "Desktop and browser export preserve failed-format bytes, retain each successful format's row or roll back, and keep live/persisted state coherent on tracking failure; actual " + failures.join("; "));
         }
