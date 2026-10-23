@@ -550,8 +550,9 @@ class Report:
     (what ``save()`` writes) and ``html_offline`` and ``excluded`` in ``reports/report.edi``,
     ``correlation_threshold`` and ``x_axis`` in ``analysis/analysis.edi``. Each reads its default
     until stated, without stating it, and a value a file could not hold is refused, naming the
-    item. ``model``, ``as_html``, ``save_html`` and ``save`` take the same keywords, each None
-    keeping the stored setting and a given one replacing it for that call only; none of them
+    item. ``save_cif`` writes the CIF report alone. ``model``, ``as_html``, ``save_html`` and
+    ``save`` take the same keywords, each None keeping the stored setting and a given one
+    replacing it for that call only; none of them
     changes a setting. Two more keywords are choices of the call alone, as the app makes them
     from its Preferences and its Analysis page: ``colour_scheme``, a scheme's token as the app's
     Preferences list them (by default ``'ediNatural'``; ``'ediCoast'``, ``'ediGarden'``,
@@ -589,7 +590,7 @@ class Report:
 
     @property
     def cif(self) -> bool:
-        """Whether the CIF report is ticked (its writer comes later)."""
+        """Whether ``save()`` writes the CIF report (by default it does not)."""
         return bool(self._project._report_cif)
 
     @cif.setter
@@ -688,12 +689,6 @@ class Report:
 
         A failed write leaves the file already at ``path`` as it was. Returns the path written.
         """
-        if path is None:
-            folder = self._project.metadata.path
-            if folder is None:
-                raise ValueError('the project has no folder: save it first, or give a path')
-            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}.html'
-        path = _Path(path)
         text = self.as_html(
             offline=offline,
             x_axis=x_axis,
@@ -702,6 +697,24 @@ class Report:
             colour_scheme=colour_scheme,
             correlation_experiment=correlation_experiment,
         )
+        return self._write(path, '.html', text)
+
+    def save_cif(self, path: str | _Path | None = None) -> _Path:
+        """Write the report as a CIF to ``path``, by default ``<project>/reports/<name>.cif``.
+
+        Every item is written under its official CIF name, else its ``_edi_`` one, each value with
+        its s.u. A failed write leaves the file already at ``path`` as it was. Returns the path
+        written.
+        """
+        return self._write(path, '.cif', self._project._report_cif_text())
+
+    def _write(self, path: str | _Path | None, suffix: str, text: str) -> _Path:
+        if path is None:
+            folder = self._project.metadata.path
+            if folder is None:
+                raise ValueError('the project has no folder: save it first, or give a path')
+            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}{suffix}'
+        path = _Path(path)
         # Written whole and renamed over the old file as project output (edi ADR-0039), so a
         # failed write leaves the old file and nothing behind a link is written. A path outside
         # the project is the caller's own: only its folder is the root there.

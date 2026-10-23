@@ -8,9 +8,8 @@ shows it on the Report page and saves it; the command line and Python save the s
 The page shows the report as it will be saved, with its charts and structure views. The sidebar has two groups.
 
 **Export** says which formats Save report writes, two to a row: the interactive HTML and whether it embeds its chart
-libraries, then the PDF and the CIF report (the CIF report is not available yet). **Save report** writes each ticked
-format into the project's `reports/` folder as `<short name>.html` or `.pdf`; in the web app the files are also
-downloaded. Unticking a format never deletes a report saved before.
+libraries, then the PDF and the CIF report. **Save report** writes each ticked format into the project's `reports/`
+folder as `<short name>.html`, `.pdf` or `.cif`; in the web app the files are also downloaded. Unticking a format never deletes a report saved before.
 
 The reports saved so far are listed under the button with the time each was saved. One is marked **out of date** when
 the report the project would make now differs from it, for example after a fit or a change to the Contents, and
@@ -23,6 +22,12 @@ a scan, the evolution. The data are left out at first, as they are usually long.
 The HTML report keeps its charts interactive: zoom and hover on the patterns, and turn the structures, with the
 Structure page's buttons. Without the embedded libraries it loads them from the web when it opens. The PDF is laid out
 on A4 pages with its charts as images, always in the light colours.
+
+The CIF report holds the project's fit result, then one data block for each structure and each experiment. Every item
+is written under its official CIF name, or under an `_edi_` name when CIF has none, so any CIF reader opens it. Values
+are given with their standard uncertainties, a value symmetry fixes exactly, and each atom site says whether symmetry
+sets its position (`_atom_site.refinement_flags_posn S`) or a constraint its occupancy
+(`_atom_site.refinement_flags_occupancy P`). The calculated curves of each structure are left out.
 
 ## Where the settings live
 
@@ -64,6 +69,7 @@ project.report.excluded = []          # include every part
 project.report.save()                 # as Save report, the PDF aside
 project.report.check()                # [('lbco_hrpt_s2.html', 'current'), ...]
 html = project.report.as_html(offline=True)
+project.report.save_cif()             # reports/<short name>.cif
 ```
 
 `project.report.html_offline`, `correlation_threshold`, `x_axis` and `excluded` read and set the project's settings.

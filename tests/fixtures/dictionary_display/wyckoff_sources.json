@@ -1,0 +1,50 @@
+{
+  "tbti": {
+    "file": "published_tbti.cif",
+    "url": "https://raw.githubusercontent.com/easyscience/diffraction/master/data/structures/tbti.cif",
+    "sha256": "a918868ab9c46843207f5e1be68e834d40cef382853f690141cddc5cbaa75d94",
+    "group": 227,
+    "setting": "2",
+    "ita_pages": "700-701",
+    "sites": {
+      "Tb": "d",
+      "Ti": "c",
+      "O1": "f",
+      "O2": "b"
+    },
+    "fixture_sha256": "a918868ab9c46843207f5e1be68e834d40cef382853f690141cddc5cbaa75d94"
+  },
+  "nacl": {
+    "file": "published_cod_1000041.cif",
+    "group": 225,
+    "ita_pages": "688-689",
+    "sites": {
+      "Na1": "a",
+      "Cl1": "b"
+    }
+  },
+  "elpasolite": {
+    "file": "published_cod_1000236.cif",
+    "group": 199,
+    "ita_pages": "612-613",
+    "sites": {
+      "Ca1": "b",
+      "Al1": "a",
+      "Na1": "a",
+      "F1": "c",
+      "F2": "c",
+      "F3": "a"
+    }
+  },
+  "magnesium": {
+    "file": "published_cod_9008506.cif",
+    "url": "https://www.crystallography.net/cod/9008506.cif",
+    "group": 194,
+    "ita_pages": "600-601",
+    "sites": {
+      "Mg": "c"
+    },
+    "sha256": "22ae81b993c5f0ce2b81952fffd04747306ab8d182db4320a227d31101fc2c3f",
+    "fixture_sha256": "a8504649302b803b33fe5c13835f7d7d48291c89ba28d5ae56e781f8818f5ee3"
+  }
+}
