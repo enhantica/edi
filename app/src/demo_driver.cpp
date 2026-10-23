@@ -145,12 +145,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                        "|_instrument.calib_twotheta_offset 0.()=_instrument.calib_twotheta_offset 0.()\\n"
                        "_instrument.calib_sample_displacement 0.05\\n_instrument.calib_sample_transparency -0.02",
                        "group.instrument"}});
-    // ... and every Example's Experiment page with its peak group open, where the types differ most.
-    // The first returns to the light theme the rest are captured in.
+    // ... and every Example's Experiment page with its peak group open, where the types differ most; a single
+    // crystal has no peak, so its extinction group instead. The first returns to the light theme the rest are
+    // captured in.
     for (const QString& id : ExampleListModel::bundledIds()) {
         const QStringList theme = steps_.back().image.startsWith(QLatin1String("t2-")) ? QStringList{"theme:light"}
                                                                                         : QStringList{};
-        steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        const QString group = id.startsWith(QLatin1String("sc-")) ? "group.extinction" : "group.peak";
+        steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, group}});
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
