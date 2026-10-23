@@ -343,6 +343,7 @@ struct PlainDataLoad {
     // the rest, one experiment each named `<name>_<code>`; empty otherwise.
     std::vector<BraggPdExperiment> more;
     std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
+    std::vector<std::size_t> skipped_lines;  // a plain reflection file's lines that are not reflections
 };
 /// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
 /// a Windows reserved device name).

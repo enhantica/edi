@@ -19,6 +19,9 @@ WorkflowPage {
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
     // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
     readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
+    // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
+    // there is no Map.
+    readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -56,12 +59,12 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.experiment.tab.stacked"
             text: qsTr("Stacked")
-            enabled: page.patternViews
+            enabled: page.patternViews || page.singleCrystals
         },
         IconTabButton {
             objectName: "mainArea.experiment.tab.map"
             text: qsTr("Map")
-            enabled: page.patternViews
+            enabled: page.patternViews && !page.singleCrystals
         }
     ]
     mainItems: [
@@ -72,10 +75,25 @@ WorkflowPage {
             settingsPage: "pattern"
             shown: page.current && SwipeView.isCurrentItem
         },
-        ScanViewChart {
-            project: page.project
-            mode: "stacked"
-            shown: page.current && SwipeView.isCurrentItem
+        Item {
+            id: stackedTab
+
+            readonly property bool shown: page.current && SwipeView.isCurrentItem
+
+            ScanViewChart {
+                anchors.fill: parent
+                visible: !page.singleCrystals
+                project: page.project
+                mode: "stacked"
+                shown: stackedTab.shown && !page.singleCrystals
+            }
+            SingleCrystalChart {
+                objectName: "singleCrystal.stacked"
+                anchors.fill: parent
+                visible: page.singleCrystals
+                stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
+                shown: stackedTab.shown && page.singleCrystals
+            }
         },
         ScanViewChart {
             project: page.project
