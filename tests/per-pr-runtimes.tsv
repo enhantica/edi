@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T10:50:12Z
+# measured_utc = 2026-10-23T12:08:01Z
 #
-# Recorded from: focused Python receipts plus native expected-red cases; canonical writer API
-# Collected tests: 16009; with a reported duration: 9488
-# Module-scoped fixture costs recorded: 60
+# Recorded from: measured test run (6 node(s) measured once, 14442 banked, 0 stale row(s) dropped)
+# Collected tests: 16015; with a reported duration: 9489
+# Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16009
+# inventory_python = 16015
 # inventory_cpp = 391
-# inventory_measured = 14442
-# inventory_unmeasured = 1958
+# inventory_measured = 14446
+# inventory_unmeasured = 1960
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -14444,6 +14444,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_thread_selector.py::test_sele
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[serial-fill-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-browser]
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-desktop]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_directory_has_the_owner_execute_bit[packFiles]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_directory_has_the_owner_execute_bit[pack]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_member_has_the_owner_read_bit[packFiles]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_member_has_the_owner_read_bit[pack]
+0.000	tests/system/py/test_web_archive_permissions.py::test_owner_can_list_and_read_the_extracted_archive_with_stored_modes[packFiles]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_archive_permissions.py::test_owner_can_list_and_read_the_extracted_archive_with_stored_modes[pack]
 0.000	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
 0.001	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
 0.140	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
@@ -16498,6 +16504,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
