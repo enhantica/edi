@@ -339,6 +339,10 @@ struct PlainDataLoad {
     std::size_t duplicates = 0;
     std::size_t reordered = 0;
     std::size_t derived = 0;
+    // A FullProf reflection file holding several datasets (its code column): `experiment` takes the first and these
+    // the rest, one experiment each named `<name>_<code>`; empty otherwise.
+    std::vector<BraggPdExperiment> more;
+    std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
 };
 /// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
 /// a Windows reserved device name).

@@ -320,6 +320,9 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             return measured.fit_joint(forward, on_start, should_cancel);
         });
     }
+    // Single crystals fit together over their one structure from their own reflections: no pattern crosses.
+    const bool single_crystals = std::all_of(experiments.begin(), experiments.end(),
+                                             [](const auto& bank) { return bank->reflections.has_value(); });
     std::vector<PdDataBase> patterns;
     patterns.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
@@ -328,10 +331,13 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' links no structure; link one before fitting");
         }
+        if (single_crystals) {
+            continue;
+        }
         if (bank.reflections.has_value()) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
-                                        "' is a single crystal, which cannot be fitted jointly yet; fit it in a "
-                                        "project where it is the only experiment");
+                                        "' is a single crystal, which fits only with single crystals; fit the "
+                                        "powder experiments in a project of their own");
         }
         if (!bank.data.has_value() || bank.calculation_only) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +

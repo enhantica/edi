@@ -1423,15 +1423,39 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
         const crysta::ReflectionFile file = crysta::read_reflection_file(
             path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
-        ReflnDataBase rows;
-        rows.index_h = file.index_h;
-        rows.index_k = file.index_k;
-        rows.index_l = file.index_l;
-        rows.intensity_meas = file.intensity;
-        rows.intensity_meas_su = file.sigma;
-        rows.wavelength = file.wavelength;
-        load.points = rows.size();
-        load.experiment.reflections = std::move(rows);
+        load.unweighted = file.skipped_unweighted;
+        // One experiment per dataset of the file, in the order of their codes.
+        std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
+        std::sort(codes.begin(), codes.end());
+        codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+        const auto rows_of = [&file](std::optional<std::int32_t> code) {
+            std::vector<std::int32_t> h, k, l;
+            std::vector<double> f2, su, wavelength;
+            for (std::size_t i = 0; i < file.index_h.size(); ++i) {
+                if (code && file.dataset[i] != *code) {
+                    continue;
+                }
+                h.push_back(file.index_h[i]);
+                k.push_back(file.index_k[i]);
+                l.push_back(file.index_l[i]);
+                f2.push_back(file.intensity[i]);
+                su.push_back(file.sigma[i]);
+                if (!file.wavelength.empty()) {
+                    wavelength.push_back(file.wavelength[i]);
+                }
+            }
+            ReflnDataBase rows;
+            rows.index_h = std::move(h);
+            rows.index_k = std::move(k);
+            rows.index_l = std::move(l);
+            rows.intensity_meas = std::move(f2);
+            rows.intensity_meas_su = std::move(su);
+            rows.wavelength = std::move(wavelength);
+            return rows;
+        };
+        const bool split = codes.size() > 1;
+        load.points = file.index_h.size();
+        load.experiment.reflections = rows_of(split ? std::optional<std::int32_t>(codes.front()) : std::nullopt);
         load.experiment.calculation_only = false;
         if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
             load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
@@ -1446,6 +1470,16 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
             }
             if (persistable_name(stem)) {
                 load.experiment.name = stem;
+            }
+        }
+        if (split) {
+            const std::string base = load.experiment.name.value();
+            load.experiment.name = base + "_" + std::to_string(codes.front());
+            for (std::size_t c = 1; c < codes.size(); ++c) {
+                BraggPdExperiment next(load.experiment);
+                next.name = base + "_" + std::to_string(codes[c]);
+                next.reflections = rows_of(codes[c]);
+                load.more.push_back(std::move(next));
             }
         }
         return load;
@@ -5379,7 +5413,14 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
     // engine contact, so a malformed request can never partially mutate the model (ADR-0003 pt 5).
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit_joint");
-    detail::validate_joint_request(*this, experiments, patterns);
+    // Single crystals fit their own reflections together (crysta's stacked single-crystal residual).
+    const bool single_crystals =
+        !experiments.empty() && std::all_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
+            return experiment->reflections.has_value();
+        });
+    if (!single_crystals) {
+        detail::validate_joint_request(*this, experiments, patterns);
+    }
     for (std::size_t index = 0; index < experiments.size() && index < patterns.size(); ++index) {
         require_auto_background_for(*experiments[index], patterns[index].axis(),
                                     patterns[index].intensity_meas.get());
@@ -5401,6 +5442,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             std::any_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
                 return experiment->linked_structures.size() != 1 || !experiment->linked_structure().enabled.get();
             });
+        if (single_crystals && phases) {
+            throw std::invalid_argument(
+                "edi fit_joint: single crystals fit over one structure, each linking it once and enabled");
+        }
         crysta::Project project = [&]() -> crysta::Project {
             if (phases) {
                 return crysta::Project(to_crysta_structures(*this), experiment_list(built));
@@ -5431,6 +5476,11 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         // Points as READ across every bank, before any mask — the caller-owned authority for
         // `n_points_loaded`.
         std::size_t n_points_loaded = 0;
+        if (single_crystals) {
+            for (const auto& experiment : experiments) {
+                n_points_loaded += experiment->reflections->size();
+            }
+        }
         for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
             n_points_loaded += patterns[bank].axis().size();
             crysta::ResidualPattern pattern{patterns[bank].axis(), patterns[bank].intensity_meas,
@@ -5489,11 +5539,13 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             crysta::DescentRequest request =
                 declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
             const crysta::FitResultBase result = [&] {
-                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
-                    return crysta::fit_problem(
-                        provider, /*separable_linear=*/true, request.max_iterations,
-                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                        should_cancel);  // The cooperative cancel
+                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
+                    if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                        return crysta::fit_problem(
+                            provider, /*separable_linear=*/true, request.max_iterations,
+                            collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
+                            should_cancel);  // The cooperative cancel
+                    }
                 }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
@@ -5576,6 +5628,11 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // self-assignment was a write that staled bank 0's fresh calculation.
             return outcome;
         };
+        if (single_crystals) {
+            std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
+            crysta::SingleCrystalResidual provider(project, std::move(free));
+            return finish(provider);
+        }
         if (phases) {
             crysta::PhaseSumResidual provider(project);
             return finish(provider);
