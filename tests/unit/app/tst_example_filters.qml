@@ -158,6 +158,10 @@ Item {
                 refinement: "\uf140",
                 simulation: "\uf83e"
             };
+            const purposeLabels = {
+                refinement: qsTr("Fitting"),
+                simulation: qsTr("Simulation")
+            };
             const seenPurposes = new Set();
             for (let i = 0; i < witness.count; ++i) {
                 const row = witness.objectAt(i);
@@ -171,6 +175,7 @@ Item {
                 compare(purposes.length, 1);
                 verify(purposeIcons[purposes[0]] !== undefined, "Purpose has an owner-selected symbol: " + row.exampleId);
                 compare(row.tagIcons[0], purposeIcons[purposes[0]], "Purpose glyph follows its stored value: " + row.exampleId);
+                compare(row.tagLabels[0], purposeLabels[purposes[0]], "Purpose displays Fitting or Simulation while retaining its stored value: " + row.exampleId);
                 seenPurposes.add(purposes[0]);
                 compare(row.tagLabels[1], labels[mode]);
                 verify(row.tagIcons[1].length > 0, "Workflow symbol is populated: " + row.exampleId);
