@@ -24,7 +24,7 @@ number from the committed curves and fails if this page differs.
 
 | program | version | curves |
 | --- | --- | --- |
-| edi | the commit named in each `edi/reference.json` | `knowledge/comparison/<example>/edi/`, written by `tools/comparison/run_edi.py` |
+| edi | this repository, on the crysta SDK build named in each `edi/reference.json` | `knowledge/comparison/<example>/edi/`, written by `tools/comparison/run_edi.py` |
 | FullProf | 8.40 (February 2026) | the fitting references in `knowledge/fitting/fullprof/<example>/`, `fit.prf` |
 | diffraction-lib | 0.21.1+dev3, develop `cb2cda7b` | `knowledge/comparison/<example>/diffraction-lib/`, written by `tools/comparison/run_diffraction_lib.py` |
 

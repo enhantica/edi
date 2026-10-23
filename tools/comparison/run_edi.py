@@ -7,7 +7,8 @@
 Each case's committed project is fitted from its committed start, a scan on its template file
 only (FullProf's reference fits that file alone). The result goes to
 ``knowledge/comparison/<case>/edi/``: one ``<bank>.csv`` per experiment and ``reference.json``
-with the edi commit and the crysta SDK it ran on. An authoring command; no test runs it.
+with the crysta SDK build it ran on. It names no edi commit, since a squash merge does not keep
+branch commits. An authoring command; no test runs it.
 """
 
 from __future__ import annotations
@@ -17,7 +18,6 @@ import hashlib
 import json
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -90,12 +90,8 @@ def run(case: str) -> dict:
             write_curves(experiment, out / f'{experiment.name}.csv')
         banks = [experiment.name for experiment in project.experiments]
         cell = cells(project)
-    head = subprocess.run(
-        ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True
-    ).stdout.strip()
     record = {
         'program': 'edi',
-        'commit': head,
         'crysta_sdk': sdk_tag(),
         'banks': banks,
         'n_free': n_free,
