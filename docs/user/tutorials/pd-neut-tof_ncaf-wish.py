@@ -1,3 +1,4 @@
+"""Joint fit: Na₂Ca₃Al₂F₁₄, WISH."""
 # %% [markdown]
 # # Joint fit: Na₂Ca₃Al₂F₁₄, WISH
 #
@@ -5,7 +6,8 @@
 # pairs at once. Each bank has its own calibration and profile; the structure is shared.
 #
 # The project is the catalogue case `pd-neut-tof_ncaf-wish`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-tof_ncaf-wish/project` and the app opens from its Examples.
+# `python -m edi fit docs/user/cli/pd-neut-tof_ncaf-wish/project` and the app opens from its
+# Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -29,9 +31,9 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. The peaks start about 30 % narrower than they fit, with the shape
-# moved towards Gaussian.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. The peaks start about 30 % narrower than they fit, with the
+# shape moved towards Gaussian.
 #
 # The fit is free to change these parameters:
 
@@ -71,8 +73,8 @@ project.report.save_html('pd-neut-tof_ncaf-wish.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-tof_ncaf-wish')

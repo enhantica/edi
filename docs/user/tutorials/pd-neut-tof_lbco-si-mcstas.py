@@ -1,11 +1,12 @@
+"""Two-phase fit: La₀.₅Ba₀.₅CoO₃ and Si, McStas."""
 # %% [markdown]
 # # Two-phase fit: La₀.₅Ba₀.₅CoO₃ and Si, McStas
 #
 # Fit two phases, La₀.₅Ba₀.₅CoO₃ and silicon, to a time-of-flight pattern simulated with McStas.
 #
-# The project is the catalogue case `pd-neut-tof_lbco-si-mcstas`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-tof_lbco-si-mcstas/project` and the app opens from its
-# Examples.
+# The project is the catalogue case `pd-neut-tof_lbco-si-mcstas`: the files the command line fits
+# with `python -m edi fit docs/user/cli/pd-neut-tof_lbco-si-mcstas/project` and the app opens from
+# its Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -29,9 +30,9 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. As in diffraction-lib's tutorial, the zero shift stays fixed, and
-# so do the Co and La Biso.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. As in diffraction-lib's tutorial, the zero shift stays
+# fixed, and so do the Co and La Biso.
 #
 # The fit is free to change these parameters:
 
@@ -70,8 +71,8 @@ project.report.save_html('pd-neut-tof_lbco-si-mcstas.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-tof_lbco-si-mcstas')

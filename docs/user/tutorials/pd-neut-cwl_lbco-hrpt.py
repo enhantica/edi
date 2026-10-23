@@ -1,11 +1,13 @@
+"""Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT."""
 # %% [markdown]
 # # Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT
 #
-# Fit the cubic perovskite La₀.₅Ba₀.₅CoO₃ to constant-wavelength neutron powder data from HRPT at PSI.
-# La and Ba share one site, and Ba's displacement follows La's.
+# Fit the cubic perovskite La₀.₅Ba₀.₅CoO₃ to constant-wavelength neutron powder data from HRPT at
+# PSI. La and Ba share one site, and Ba's displacement follows La's.
 #
 # The project is the catalogue case `pd-neut-cwl_lbco-hrpt`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-cwl_lbco-hrpt/project` and the app opens from its Examples.
+# `python -m edi fit docs/user/cli/pd-neut-cwl_lbco-hrpt/project` and the app opens from its
+# Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -29,10 +31,10 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. One exception: the 2θ zero starts at 0.3°. From 0 the low-angle
-# peaks sit more than a peak width away and the fit settles in a wrong minimum; the case's
-# `PROVENANCE.md` has the measurements.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. One exception: the 2θ zero starts at 0.3°. From 0 the
+# low-angle peaks sit more than a peak width away and the fit settles in a wrong minimum; the
+# case's `PROVENANCE.md` has the measurements.
 #
 # The fit is free to change these parameters:
 
@@ -71,8 +73,8 @@ project.report.save_html('pd-neut-cwl_lbco-hrpt.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-cwl_lbco-hrpt')
