@@ -4282,8 +4282,8 @@ void apply_extinction_type(ExtinctionBase& extinction, const std::string& token)
     const bool domain = token == "becker-coppens-type-2" || token == "becker-coppens-mixed";
     keep(extinction.domain_radius, domain, spec::extinction_domain_radius, "0");
     keep(extinction.mosaic_spread, spread, spec::extinction_mosaic_spread, "0");
-    // 0.1 mm until the crystal's own radius is given, as GSAS-II's default.
-    keep(extinction.crystal_radius, token != "none", spec::extinction_crystal_radius, "0.1");
+    // 1 mm until the crystal's own radius is given (the owner, 2026-10-23).
+    keep(extinction.crystal_radius, token != "none", spec::extinction_crystal_radius, "1");
     if (!spread) {
         extinction.mosaic_distribution.reset();
     } else if (!extinction.mosaic_distribution) {

@@ -140,6 +140,9 @@ edi::Category ExperimentViewModel::category(const char* id) const {
     if (std::string(id) == "extinction") {
         edi::Category extinction{"extinction"};
         edi::detail::add_optional(extinction.fields, "crystal_radius", experiment_.extinction.crystal_radius);
+        if (experiment_.extinction.crystal_radius) {
+            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
+        }
         edi::detail::add_optional(extinction.fields, "domain_radius", experiment_.extinction.domain_radius);
         edi::detail::add_optional(extinction.fields, "mosaic_spread", experiment_.extinction.mosaic_spread);
         return extinction;
