@@ -309,16 +309,14 @@ QByteArray fileHash(int fd,quint64 expected) {
 QString identityToken(const Identity& id) {
     return QString::number(static_cast<qulonglong>(id.value.st_dev))+u':'+QString::number(static_cast<qulonglong>(id.value.st_ino));
 }
-FileResult publishFile(const QString& appData,const QByteArray& bytes,const QByteArray& digest) {
+FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const QByteArray& digest) {
     FileResult result;
     bool locked=false,created=false,changed=false,indeterminate=false,verified=false,oldPresent=false;
-    Fd root,assistant,folder,lock,candidate,oldFile;
-    std::optional<Identity> rootId,assistantId,folderId,lockId,candidateId,oldId;
+    Fd root,folder,lock,candidate,oldFile;
+    std::optional<Identity> rootId,folderId,lockId,candidateId,oldId;
     try {
-        // Only the ordinary application-owned root spelling is canonicalized.
-        if(!QDir().mkpath(appData))throw std::runtime_error("Work report root unavailable");
-        root=directory(appData);privateDirectory(root.n,false);rootId.emplace(root.n);
-        assistant=childDirectory(root.n,"assistant",false);assistantId.emplace(assistant.n);folder=childDirectory(assistant.n,"work-reports");folderId.emplace(folder.n);
+        root=directory(projectRoot);privateDirectory(root.n,false);rootId.emplace(root.n);
+        folder=childDirectory(root.n,"reports",false);folderId.emplace(folder.n);
         if(::mkdirat(folder.n,".writer",0700)) {
             result.disposition="writer_busy_or_recovery_required";result.recovery=true;return result;
         }
@@ -342,9 +340,8 @@ FileResult publishFile(const QString& appData,const QByteArray& bytes,const QByt
         if(!candidateId->object(named.n))throw std::runtime_error("Work report candidate changed");
         if(oldPresent){auto prior=below(folder.n,"work-report.json");if(!oldId->unchanged(prior.n))throw std::runtime_error("Work report prior changed");}
         const auto currentNamespace=[&] {
-            auto currentRoot=directory(appData);auto currentAssistant=below(currentRoot.n,"assistant",true);
-            auto currentFolder=below(currentAssistant.n,"work-reports",true);
-            if(!rootId->object(currentRoot.n) || !assistantId->object(currentAssistant.n) || !folderId->object(currentFolder.n))
+            auto currentRoot=directory(projectRoot);auto currentFolder=below(currentRoot.n,"reports",true);
+            if(!rootId->object(currentRoot.n) || !folderId->object(currentFolder.n))
                 throw std::runtime_error("Work report namespace changed");
         };
         currentNamespace();
@@ -370,7 +367,7 @@ FileResult publishFile(const QString& appData,const QByteArray& bytes,const QByt
         if(!lockId->object(sameLock.n) || ::unlinkat(folder.n,".writer",AT_REMOVEDIR))throw std::runtime_error("Work report lock cleanup refused");
         currentNamespace();
         verified=true;result.disposition="saved";
-        result.artifact={{"path",appData+QStringLiteral("/assistant/work-reports/work-report.json")},
+        result.artifact={{"path",projectRoot+QStringLiteral("/reports/work-report.json")},
             {"sha256",QString::fromLatin1(digest)},{"bytes",decimal(bytes.size())},{"physical_identity",identityToken(*candidateId)}};
     } catch(...) {
         if(indeterminate){result.disposition="publication_indeterminate";result.recovery=true;}
@@ -484,7 +481,7 @@ struct AssistantWorkReports::Control {
     Object last,activeReceipt;
     QVariantMap lastVariant;
     bool capturing=false;
-    QString activeScope;quint64 activeRevision=0;
+    QString activeScope,activeRoot;quint64 activeRevision=0;
 };
 AssistantWorkReports::AssistantWorkReports(AssistantWorkReportOptions options,AssistantViewModel* owner) noexcept
     :options_(options),owner_(owner),collection_requested_(options.automatic) {}
@@ -559,7 +556,7 @@ void AssistantWorkReports::settleCompletion(const std::shared_ptr<Control>& stat
     // Owner-thread checkpoint only. The cell/worker/callback still hold their
     // real lease; clearing this original active pointer cannot release them.
     if(state->completion!=cell)return;
-    state->busy=false;state->activeReceipt={};state->activeRole.reset();state->completion.reset();
+    state->busy=false;state->activeReceipt={};state->activeRoot.clear();state->activeRole.reset();state->completion.reset();
     if(state->scope==cell->scope && !state->closing) {
         const auto previous=std::move(state->lastRole);
         const auto& fallback=cell->fallback[cell->outcome.load(std::memory_order_acquire)];
@@ -588,10 +585,11 @@ QVariantMap AssistantWorkReports::immediate(const Object& receipt) {
 bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView storageRoot) const noexcept {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     try {const auto path=artifact.value("path").toString();
-        constexpr QStringView suffix=u"/assistant/work-reports/work-report.json";
+        constexpr QStringView suffix=u"/reports/work-report.json";
         if(!QStringView(path).endsWith(suffix) || QStringView(path).size()!=storageRoot.size()+suffix.size() ||
            QStringView(path).first(storageRoot.size())!=storageRoot)return false;
-        auto dir=assistant_files::directory(storageRoot.toString()+QStringLiteral("/assistant/work-reports"));privateDirectory(dir.n);
+        auto root=assistant_files::directory(storageRoot.toString());privateDirectory(root.n,false);
+        auto dir=assistant_files::below(root.n,"reports",true);privateDirectory(dir.n,false);
         auto file=assistant_files::below(dir.n,"work-report.json");privateFile(file.n);const Identity id(file.n);
         bool ok=false;const auto bytes=artifact.value("bytes").toString().toULongLong(&ok);
         return ok && bytes<=L::record_bytes && identityToken(id)==artifact.value("physical_identity").toString() &&
@@ -612,7 +610,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         std::shared_ptr<Control> state;
         std::shared_ptr<WriterCompletion> completion;
         Object document,receipt;
-        QString appData,scope;
+        QString projectRoot,scope;
         QPointer<AssistantViewModel> receiver;
         quint64 receiptRoleBytes;
     };
@@ -653,7 +651,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
     }
     if(state->capturing) {
         if(!state->serialExhausted && !state->exhausted && state->busy &&
-           state->activeScope==state->scope && state->activeRevision==state->revision) {
+           state->activeScope==state->scope && state->activeRevision==state->revision && QStringView(state->activeRoot)==storageRoot) {
             auto shared=state->activeReceipt;shared["disposition"]="coalesced";
             return shared.toVariantMap(); // No recursive signal; exact active identity only.
         }
@@ -674,14 +672,14 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         receipt["snapshot_revision"]=missing("capacity");receipt["error_code"]=observed("snapshot_revision_exhausted");
         receipt["coverage"]=work_report_receipt_coverage("capacity");return immediate(receipt);
     }
-    if(state->busy && state->activeScope==state->scope && state->activeRevision==state->revision) {
+    if(state->busy && state->activeScope==state->scope && state->activeRevision==state->revision && QStringView(state->activeRoot)==storageRoot) {
         auto r=state->activeReceipt;r["disposition"]="coalesced";return immediate(r);
     }
     if(!state->busy && state->last.value("scope_id").toObject().value("value")==state->scope &&
        state->last.value("snapshot_revision").toObject().value("value")==decimal(state->revision) &&
        (state->last.value("disposition")=="saved" || state->last.value("disposition")=="saved_incomplete")) {
         const auto artifact=state->last.value("artifact").toObject().value("value").toObject();
-        const quint64 pathUnits=static_cast<quint64>(storageRoot.size())+sizeof("/assistant/work-reports/work-report.json");
+        const quint64 pathUnits=static_cast<quint64>(storageRoot.size())+sizeof("/reports/work-report.json");
         // Original saved-artifact verification has path wrappers/hash/readback
         // owners too; refuse optional reuse before allocating them if no room.
         constexpr std::array pathOwners{0,1,2,3};
@@ -718,23 +716,22 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
     try {
         role=std::make_shared<Role>();role->bytes=admission.bytes;admission.bytes=0;
         const auto scope=state->scope;const auto revision=state->revision;
-        if(storageRoot.isEmpty() || storageRoot.size()>static_cast<qsizetype>(L::message_bytes)) {
+        if(storageRoot.isEmpty() || storageRoot.contains(QChar(0)) || storageRoot.size()>static_cast<qsizetype>(L::message_bytes)) {
             preparationCode="storage_root_unavailable";throw std::runtime_error("Report storage unavailable");
         }
-        // Root comes from the original history owner, never another settings or
-        // filesystem source. Admit full framing before copying/converting it.
-        const auto artifactFrame=fixed_observed(fixed_object({{"path",fixed_string(storageRoot.size()+sizeof("/assistant/work-reports/work-report.json"))},
+        // Freeze the admitted native project path for this writer (ADR-0041).
+        const auto artifactFrame=fixed_observed(fixed_object({{"path",fixed_string(storageRoot.size()+sizeof("/reports/work-report.json"))},
             {"sha256",fixed_string(64)},{"bytes",fixed_string(std::numeric_limits<quint64>::digits10+1)},
             {"physical_identity",fixed_string(L::id_bytes)}}));
         const quint64 receiptBound=2*(fixed_frame_role(immediate_frame())+fixed_frame_role(artifactFrame));
         if(receiptBound>available)throw std::length_error("Complete receipt preparation exceeds report room");
-        const auto appData=storageRoot.toString();
+        const auto projectRoot=storageRoot.toString();
         // Full future receipt framing/encoding/Variant delivery is reserved
         // separately from the actual document. Maximum values are sizing only.
         auto maximum=receipt;
         const auto maxId=QString(static_cast<qsizetype>(L::id_bytes),QChar(1));
         const auto maxCount=QString::number(std::numeric_limits<quint64>::max());
-        maximum["artifact"]=observed(Object{{"path",appData+QStringLiteral("/assistant/work-reports/work-report.json")},
+        maximum["artifact"]=observed(Object{{"path",projectRoot+QStringLiteral("/reports/work-report.json")},
             {"sha256",QString(64,u'f')},{"bytes",maxCount},{"physical_identity",maxId}});
         maximum["error_code"]=observed(maxId);
         maximum["disposition"]="writer_busy_or_recovery_required";
@@ -839,7 +836,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         completion=std::make_shared<WriterCompletion>(role,scope,completionFallbacks(receipt));
         const auto workerLease=std::make_shared<WriterWorkerLease>(completion);
         completion->observe(WorkReportBoundary::Frozen);
-        state->busy=true;state->activeScope=scope;state->activeRevision=revision;state->activeRole=role;state->activeReceipt=receipt;state->completion=completion;
+        state->busy=true;state->activeScope=scope;state->activeRoot=projectRoot;state->activeRevision=revision;state->activeRole=role;state->activeReceipt=receipt;state->completion=completion;
         const QJsonValue frozenValue(document);
         const WorkReportJsonView frozenOwner{WorkReportOwnerRole::FrozenExport,{WorkReportOwnerGroup::ReportCurrent,scope,nullptr},&frozenValue};
         const WorkReportTextView scopeOwner{WorkReportOwnerRole::FrozenExport,{WorkReportOwnerGroup::ReportCurrent,scope,scope.constData()},&scope};
@@ -847,10 +844,10 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         observe_work_report_boundary(frozenView);
         const auto acceptedVariant=receipt.toVariantMap();acceptedReply=acceptedVariant;accepted=true;
         present(receipt,acceptedVariant);
-        const auto input=std::make_shared<WorkCapture>(WorkCapture{role,workerLease,state,completion,std::move(document),receipt,appData,scope,receiver,receiptRoleBytes});
+        const auto input=std::make_shared<WorkCapture>(WorkCapture{role,workerLease,state,completion,std::move(document),receipt,projectRoot,scope,receiver,receiptRoleBytes});
         auto work=[input]() mutable {
             const auto& state=input->state;const auto& role=input->role;const auto& completion=input->completion;
-            auto& document=input->document;const auto& receipt=input->receipt;const auto& appData=input->appData;
+            auto& document=input->document;const auto& receipt=input->receipt;const auto& projectRoot=input->projectRoot;
             const auto& scope=input->scope;const auto& receiver=input->receiver;const auto receiptRoleBytes=input->receiptRoleBytes;
             // Worker mutates only its local Qt owners and this original cell's
             // fixed atomics. Never State/Project/QObject/owner-thread Qt data.
@@ -867,7 +864,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
                     const WorkReportTestView encodedView{WorkReportBoundary::AfterEncode,scope,{},L::stream_retained_bytes,0,report_bytes.load(),0,std::span(&output,1),{},{},{}};
                     observe_work_report_boundary(encodedView);
                     const auto hash=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
-                    auto result=publishFile(appData,bytes,hash);
+                    auto result=publishFile(projectRoot,bytes,hash);
                     completion->publication(result); // POD latch BEFORE fallible receipt assembly.
                     terminal["disposition"]=QLatin1StringView(result.disposition);terminal["recovery_required"]=result.recovery;
                     if(!result.artifact.isEmpty()) {
@@ -901,7 +898,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
                     // An unavailable old scope is never presented on a successor.
                     // A normal original delivery still settles its actual waiter.
                     if(state->completion==completion) {
-                        state->busy=false;state->activeRole.reset();state->activeReceipt={};state->completion.reset();
+                        state->busy=false;state->activeRoot.clear();state->activeRole.reset();state->activeReceipt={};state->completion.reset();
                     }
                     if(receiver) {
                         if(state->scope==scope && !state->closing) {
@@ -942,7 +939,7 @@ QVariantMap AssistantWorkReports::capture(quint64 available,bool automaticTrigge
         // Preparation did not admit a worker, even if local sizing fields had
         // already acquired the spelling "accepted". Retire only this cell.
         if(completion && state->completion==completion) {
-            state->busy=false;state->activeRole.reset();state->activeReceipt={};state->completion.reset();
+            state->busy=false;state->activeRoot.clear();state->activeRole.reset();state->activeReceipt={};state->completion.reset();
         }
         receipt["phase"]="terminal";receipt["disposition"]="report_capacity";
         receipt["coverage"]=coverage;receipt["error_code"]=observed(QLatin1StringView(preparationCode));

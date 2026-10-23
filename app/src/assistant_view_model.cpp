@@ -1029,6 +1029,26 @@ struct AssistantViewModel::State {
         snapshot.source_backing_bytes=sourceBacking;return snapshot;
     }
 #endif
+#ifndef __EMSCRIPTEN__
+    auto reserve_disclosure(quint64 bytes) {
+        disclosure_room(bytes);
+        const auto publication = file_projection();
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto transport_generation = transport ? transport->outputGeneration() : 0;
+        disclosure_preparing_bytes += bytes;
+        auto reservation=qScopeGuard([this, publication, transport, transport_generation, bytes] {
+            if (!publication.receiver || publication.receiver->state_.get() != this) return;
+            disclosure_preparing_bytes -= bytes;
+            native_release_charge(publication, transport, transport_generation);
+        });
+        // native_room already proved this exact joint total without callbacks.
+        // Propagate admitted growth BEFORE any new owner is constructed; a
+        // release-only update cannot communicate a larger VM role to write().
+        if(transport && publication.input_current() && agent.get()==transport.data() && transport->outputGeneration()==transport_generation)
+            native_charge();
+        return reservation;
+    }
+#endif
     QVariantMap work_capture(bool automatic=false) {
         const auto ownerLease=work_reports.releaseOwner();
         const auto expectedScope=work_reports.scope();const auto expectedRevision=work_reports.revision();
@@ -1042,12 +1062,26 @@ struct AssistantViewModel::State {
 #else
         const bool projectionBlocked=false;
 #endif
-        constexpr QStringView suffix=u"/assistant/history.json";
-        const auto historyPath=QStringView(history_path);
-        const auto root=historyPath.endsWith(suffix)?historyPath.first(historyPath.size()-suffix.size()):QStringView{};
+#ifndef __EMSCRIPTEN__
+        std::optional<decltype(reserve_disclosure(0))> rootRole;
+#endif
+        QString root;
         quint64 room=0;
 #ifndef __EMSCRIPTEN__
-        try {if(!projectionBlocked)room=native_room();}catch(...){}
+        try {
+            if(!projectionBlocked && project) {
+                const QPointer<ProjectViewModel> target(project);
+                const auto bytes=project->project().path.size();
+                if(bytes<=Limits::message_bytes) {
+                    rootRole.emplace(reserve_disclosure(codex_json_capacity((bytes+1)*sizeof(QChar))));
+                    if(!receiver || receiver->state_.get()!=this)return work_report_capacity_variant();
+                    if(target && project==target && project->project().path.size()<=bytes)
+                        root=project->path();
+                }
+            }
+            if(!projectionBlocked)room=native_room();
+        }catch(...){}
+        if(!receiver || receiver->state_.get()!=this)return work_report_capacity_variant();
         return work_reports.capture(room,automatic,work_counts(),root,[this](quint64 capacity){return work_snapshot(capacity);},expectedScope,expectedRevision,projectionBlocked);
 #else
         Q_UNUSED(room);Q_UNUSED(projectionBlocked);
@@ -1428,24 +1462,6 @@ struct AssistantViewModel::State {
         // cache, proof or temporary encoded metadata role.
         if (extra > native_room())
             throw std::length_error("Disclosure retention exceeds capacity");
-    }
-    auto reserve_disclosure(quint64 bytes) {
-        disclosure_room(bytes);
-        const auto publication = file_projection();
-        const QPointer<CodexAgent> transport(agent.get());
-        const auto transport_generation = transport ? transport->outputGeneration() : 0;
-        disclosure_preparing_bytes += bytes;
-        auto reservation=qScopeGuard([this, publication, transport, transport_generation, bytes] {
-            if (!publication.receiver || publication.receiver->state_.get() != this) return;
-            disclosure_preparing_bytes -= bytes;
-            native_release_charge(publication, transport, transport_generation);
-        });
-        // native_room already proved this exact joint total without callbacks.
-        // Propagate admitted growth BEFORE any new owner is constructed; a
-        // release-only update cannot communicate a larger VM role to write().
-        if(transport && publication.input_current() && agent.get()==transport.data() && transport->outputGeneration()==transport_generation)
-            native_charge();
-        return reservation;
     }
     void work_merge(const QString& rowId,const Object& fields,bool newlyCommitted=false) noexcept {
         if(!work_reports.collecting() || rowId.isEmpty())return;
