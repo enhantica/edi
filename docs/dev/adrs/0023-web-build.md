@@ -96,8 +96,9 @@ hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack
   a project (none current lacks it); the first build asked for a `.zip`, whose native picker entered a folder
   instead of opening it.
 - **Saving a project** writes it into memory and downloads its `.zip` archive (`WebFiles`): a page cannot write a
-  folder on the user's disk. To open it again the user unpacks it. Data files are asked for as files: one structure
-  file, as on the desktop, or several experiment files.
+  folder on the user's disk. To open it again the user unpacks it. The archive stores no folder entries and its files
+  as `rw-r--r--`, so an unzip tool, macOS's included, makes folders that open (owner, 2026-10-23). Data files are asked
+  for as files: one structure file, as on the desktop, or several experiment files.
 - **Requests and their answers.** A browser file chooser answers later, or never when it is dismissed, so each
   request (a folder, data files) has an id and exactly one answer carrying it: the files, a failure, or a
   cancellation. One request is active at a time, as the browser shows one chooser: a new request cancels the one
