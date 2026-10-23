@@ -90,3 +90,29 @@ def test_a_supplied_letter_is_kept_instead_of_reclassified(tmp_path, factory):
         'O1': 'f',
         'O2': 'b',
     }, 'Every supplied published letter survives loading'
+
+
+@pytest.mark.parametrize('reference', REFERENCES, ids=list(REFERENCES))
+@pytest.mark.parametrize('notation', ['dot', 'underscore'])
+@pytest.mark.parametrize('factory', ['from_cif_str', 'from_cif_path'])
+def test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts(
+    tmp_path, reference, notation, factory
+):
+    row = REFERENCES[reference]
+    text = cif_text(row, notation, 'absent')
+    structure = imported(tmp_path, text, factory)
+    api = importlib.import_module('edi')
+    project = api.Project.load(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment')
+    gemmi = importlib.import_module('gemmi')
+    name = gemmi.cif.read_string(text).sole_block().name
+    project.structures.add(structure)
+    destination = tmp_path / 'saved'
+    project.save_as(destination)
+    # Reopening comes before the letter assertion: a refused `.` must reach this boundary.
+    restored = api.Project.load(destination)
+    direct = api.StructureFactory.from_cif_path(destination / 'structures' / (name + '.edi'))
+    for reopened in [restored.structures[name], direct]:
+        actual = {str(site.id): site.wyckoff_letter for site in reopened.atom_sites}
+        assert actual == row['sites'], (
+            'Every imported CIF saves valid EDI letters through both project and structure loaders'
+        )
