@@ -412,6 +412,8 @@ void ScanLayer::paint(QPainter* painter) {
         QPen pen(colour_of(d));
         pen.setWidthF(width_px);
         pen.setCosmetic(true);
+        // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
+        pen.setCapStyle(Qt::FlatCap);
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
         painter->drawPath(path);
