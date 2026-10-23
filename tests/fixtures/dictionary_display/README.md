@@ -50,3 +50,33 @@ It keeps public source URLs in COD headers. `--check` verifies the local pins
 without fetching. Published NaCl and elpasolite witnesses use the COD fixtures
 already described above. Hidden gates remove any letter and multiplicity
 columns before import; the publication supplies coordinates, not expected letters.
+
+The owner supplied `owner_tbti.cif` on 2026-10-23 after the dev web app
+saved missing Wyckoff letters as `.` and could not reopen its own `.edi`.
+`capture_owner.py SOURCE` reproduces this byte-pinned capture; without an
+argument it checks the pin. Its expected letters use the same independent
+International Tables 227:2 representatives, not the owner app output.
+The save/reload gate covers every published witness and this exact file, in
+both notations and through each Python import entrance.
+
+## Display and report references
+
+`generate_formats.py` (crysta) applies Python formatting to the reviewed
+per-category numeric witnesses; `reference.py` normalizes signed zero and
+exponents as I4 specifies. `generate_metadata.py DICTIONARY_YAML` reads names,
+units, categories and options directly from YAML, independently of the
+production generated tables. The edi `adapt_display.py DICTIONARY_YAML`
+keeps the existing frozen input oracle and derives only its new displayed
+spellings, reading measured scan intervals from the original input parser.
+`generate_experiment_names.py CRYSTA_SOURCE` reads the official dictionaries
+and the frozen upstream inventory for the existing experiment CIF importer
+(instrument and peak); other experiment categories are exercised through
+their external EDI names, without expanding the pdCIF importer scope.
+
+IUCr recommendation 12 supplies 1.54249 ± 0.01532 → 1.542(16) and
+2.16352 ± 0.00481 → 2.164(5); the admitted alternative gives 2.1635(49).
+See [IUCr recommendations](https://www.iucr.org/resources/commissions/crystallographic-nomenclature/statdes/recomm).
+International Tables special-position representatives supply exact fractions.
+CIF reports are parsed by gemmi; its small-structure convenience converter
+is DDL1-only, so DDLm values are read through its notation-neutral CIF parser.
+Expected tensor values are hand-written in their native convention.
