@@ -3501,12 +3501,12 @@ struct ExtinctionBase {
 // crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of
 // flight (else empty), and crysta's calculated columns beside them, empty until a calculation.
 struct ReflnDataBase {
-    std::vector<std::int32_t> index_h;
-    std::vector<std::int32_t> index_k;
-    std::vector<std::int32_t> index_l;
-    std::vector<double> intensity_meas;
-    std::vector<double> intensity_meas_su;
-    std::vector<double> wavelength;
+    detail::Written<std::vector<std::int32_t>> index_h;
+    detail::Written<std::vector<std::int32_t>> index_k;
+    detail::Written<std::vector<std::int32_t>> index_l;
+    detail::Written<std::vector<double>> intensity_meas;
+    detail::Written<std::vector<double>> intensity_meas_su;
+    detail::Written<std::vector<double>> wavelength;
     ComputedColumn<double> d_spacing;
     ComputedColumn<double> sin_theta_over_lambda;
     ComputedColumn<double> intensity_calc;
@@ -3947,8 +3947,8 @@ struct KeyTraits<BraggPdExperiment> {
 };
 
 // An experiment is a row of the project's `experiments`; its parameter categories are the peak, the
-// instrument and the absorption (its linked-structure, background and texture rows are rows of their
-// own collections).
+// instrument, the absorption and the extinction (its linked-structure, background and texture rows are
+// rows of their own collections).
 template <>
 struct RowTraits<BraggPdExperiment> {
     static void link(BraggPdExperiment& experiment,
@@ -3956,11 +3956,13 @@ struct RowTraits<BraggPdExperiment> {
         experiment.peak.row.link(record);
         experiment.instrument.row.link(record);
         experiment.absorption.row.link(record);
+        experiment.extinction.row.link(record);
     }
     static void unlink(BraggPdExperiment& experiment) noexcept {
         experiment.peak.row.unlink();
         experiment.instrument.row.unlink();
         experiment.absorption.row.unlink();
+        experiment.extinction.row.unlink();
     }
     static const detail::RowLink* primary(const BraggPdExperiment& experiment) noexcept {
         return &experiment.peak.row;
@@ -5216,6 +5218,16 @@ struct AbsorptionCategory {
 };
 static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, AbsorptionCategory::items));
 
+// A single crystal's Becker-Coppens extinction.
+struct ExtinctionCategory {
+    using Owner = ExtinctionBase;
+    static constexpr const char* name = "_extinction";
+    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::model, &ExtinctionBase::radius, &ExtinctionBase::mosaicity};
+    static constexpr std::array items{"type", "model", "radius", "mosaicity"};
+    static constexpr std::array legacy{"_easydiffraction_extinction"};
+};
+static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
+
 // The selector and constants of the type-switched `_background` category. Its rows are the loop
 // schema of the selected type.
 struct BackgroundCategory {
@@ -5476,8 +5488,10 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position};
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight"};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
+    // A powder's computed reflections and a single crystal's measured ones with their calculated
+    // columns: one category on file, as in diffraction-lib, held by two classes.
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
