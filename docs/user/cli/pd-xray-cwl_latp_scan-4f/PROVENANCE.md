@@ -31,3 +31,15 @@ model), and per file the reduced χ² (relative tolerance 10⁻⁵) and the LATP
 The project rebuilt here replaced an earlier one made from a summed pattern of a different measurement, with
 synthetic frames for negative points and an empty frame; those cases are covered by the scan fixtures under
 `tests/fixtures/`.
+
+## Pins re-taken with crysta build-3fcc7925
+
+crysta build-3fcc7925 adds the tails of time-of-flight reflections centred just outside the measured range, and
+resumes a descent whose final polish shows it had not converged. Both move this fit, so its regression pins were
+re-taken from `python -m edi fit` with that build. Reference values are unchanged.
+
+| run | quantity | before | after |
+| --- | --- | --- | --- |
+| default | `results[latp_296.dat].fit_result.reduced_chi_square` | 147618082.77915654 | 147601939.75607044 |
+| default | `results[latp_288.dat].fit_result.reduced_chi_square` | 140897373.7295963 | 141240883.16532645 |
+| default | `results[latp_288.dat].latp.cell.length_c` | 20.850068 | 20.85029308919547 |

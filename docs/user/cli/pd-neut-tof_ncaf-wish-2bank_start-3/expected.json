@@ -9,7 +9,7 @@
     "ladder": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 15.69263995,
+          "value": 15.69270178,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
@@ -21,7 +21,7 @@
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.08189529811,
+          "value": 0.08189545944,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
@@ -31,7 +31,7 @@
     "fast-descent-linear-snap": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 15.69263662,
+          "value": 15.69269845,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
@@ -43,7 +43,7 @@
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.08189528941,
+          "value": 0.08189545075,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
