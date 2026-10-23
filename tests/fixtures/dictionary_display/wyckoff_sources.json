@@ -46,5 +46,19 @@
     },
     "sha256": "22ae81b993c5f0ce2b81952fffd04747306ab8d182db4320a227d31101fc2c3f",
     "fixture_sha256": "a8504649302b803b33fe5c13835f7d7d48291c89ba28d5ae56e781f8818f5ee3"
+  },
+  "owner-tbti": {
+    "file": "owner_tbti.cif",
+    "provenance": "Supplied by the owner, 2026-10-23",
+    "fixture_sha256": "a65cfae7f6f908535c12703561fb708389ab7f1c5228eabe094da46ce45c58db",
+    "group": 227,
+    "setting": "2",
+    "ita_pages": "700-701",
+    "sites": {
+      "Tb": "d",
+      "Ti": "c",
+      "O1": "f",
+      "O2": "b"
+    }
   }
 }

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T10:05:20Z
+# measured_utc = 2026-10-23T10:29:59Z
 #
-# Recorded from: measured test run (50 node(s) measured once, 14430 banked, 0 stale row(s) dropped)
-# Collected tests: 15903; with a reported duration: 9483
+# Recorded from: measured test run (33 node(s) measured once, 14430 banked, 0 stale row(s) dropped)
+# Collected tests: 15935; with a reported duration: 9483
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15903
+# inventory_python = 15935
 # inventory_cpp = 389
 # inventory_measured = 14430
-# inventory_unmeasured = 1862
+# inventory_unmeasured = 1894
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -2187,53 +2187,85 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py:
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_second_published_cod_structure_retains_rocksalt_cell_and_sites[from_cif_str]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_a_supplied_letter_is_kept_instead_of_reclassified[from_cif_path]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_a_supplied_letter_is_kept_instead_of_reclassified[from_cif_str]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-elpasolite]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-magnesium]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-owner-tbti]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-tbti]
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
