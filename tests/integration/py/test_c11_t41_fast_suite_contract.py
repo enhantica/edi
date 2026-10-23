@@ -6,6 +6,7 @@ import copy
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -360,80 +361,119 @@ def _assert_nightly_inclusion(switch, active):
                 )
 
 
-def _assert_licence_delivery(jobs, active):
-    job = jobs.get('app-wasm')
-    assert job and not job.get('continue-on-error'), (
-        'Delegated licence checks require the mandatory staged-artifact job'
-    )
-    commands = [step.get('run', '').split() for step in job['steps']]
-    required = [
-        'pixi run core-build',
-        'pixi run -e app --skip-deps wasm-build',
-        'pixi run -e app app-build',
-        'pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py',
-        'pixi run --skip-deps python -m pytest ' + LICENCE_MODULE,
+LICENCE_ROUTES = {
+    'app': ('desktop,python,cli', 'desktop or python or cli', 'pixi run -e app app-build'),
+    'app-wasm': ('web', 'web', 'pixi run -e app --skip-deps wasm-build'),
+}
+
+
+def _licence_commands(job, surfaces, selector):
+    stage = 'pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py'
+    check = 'pixi run --skip-deps python -m pytest ' + LICENCE_MODULE
+    commands = [shlex.split(step.get('run', '')) for step in job['steps']]
+    return commands, [
+        shlex.split(stage) + ['--surfaces', surfaces],
+        shlex.split(check) + ['-k', selector],
     ]
-    positions = []
-    for command in required:
-        tokens = command.split()
-        assert commands.count(tokens) == 1, (
-            'Delegated licence checks retain every actual build, staging and consumer command'
+
+
+def _assert_licence_delivery(jobs, active):
+    for name, (surfaces, selector, build) in LICENCE_ROUTES.items():
+        job = jobs.get(name)
+        assert job and not job.get('continue-on-error'), (
+            'Delegated licence checks require both mandatory staged-artifact jobs'
         )
-        positions.append(commands.index(tokens))
-    assert positions == sorted(positions), (
-        'Delegated licence checks build and stage the real artifacts before consuming them'
-    )
-    for event in ('push', 'schedule', 'workflow_dispatch'):
-        for core_state in ('success', 'failure'):
-            context = {'states': {'changes': 'success', 'core': core_state}}
-            assert active(job, event, **context), (
-                'Delegated licence checks remain reachable on main, nightly and full manual runs'
+        commands, delivery = _licence_commands(job, surfaces, selector)
+        required = [['pixi', 'run', 'core-build'], build.split(), *delivery]
+        positions = []
+        for tokens in required:
+            assert commands.count(tokens) == 1, (
+                'Delegated licence checks retain every actual build, staging and consumer command'
             )
-            for index in positions:
-                step = job['steps'][index]
-                assert not step.get('continue-on-error'), (
-                    'Delegated licence checks cannot forgive a failed producer or consumer'
+            positions.append(commands.index(tokens))
+        assert positions == sorted(positions), (
+            'Delegated licence checks build and stage the real artifacts before consuming them'
+        )
+        for event in ('push', 'schedule', 'workflow_dispatch'):
+            for core_state in ('success', 'failure'):
+                context = {'states': {'changes': 'success', 'core': core_state}}
+                assert active(job, event, **context), (
+                    'Delegated licence checks remain reachable on main, nightly '
+                    'and full manual runs'
                 )
-                # Staging and checks report missing inputs even after a build fails.
-                if index in positions[-2:]:
-                    assert active(step, event, **context), (
-                        'Delegated licence staging and checks execute after preceding failures'
-                    )
+                _assert_licence_steps(job, positions, name, event, context, active)
+
+
+def _assert_licence_steps(job, positions, name, event, context, active):
+    for index in positions:
+        step = job['steps'][index]
+        assert not step.get('continue-on-error'), (
+            'Delegated licence checks cannot forgive a failed producer or consumer'
+        )
+        if index in positions[-2:]:
+            condition = str(step.get('if', True))
+            for platform in ('Linux', 'macOS'):
+                platform_step = {
+                    **step,
+                    'if': condition.replace('matrix.platform', repr(platform)),
+                }
+                expected = name == 'app-wasm' or platform == 'Linux'
+                assert active(platform_step, event, **context) is expected, (
+                    'Delegated licence staging and checks execute after preceding '
+                    'failures on their declared build platform'
+                )
 
 
 def _assert_licence_delivery_controls(jobs, active):
-    for mutation in (
-        'missing-job',
-        'missing-stage',
-        'missing-check',
-        'order',
-        'job-off',
-        'stage-off',
-        'check-off',
-        'job-optional',
-        'stage-optional',
-        'check-optional',
-    ):
-        changed = copy.deepcopy(jobs)
-        job = changed['app-wasm']
-        stage, check = [
-            next(step for step in job['steps'] if fragment in step.get('run', ''))
-            for fragment in ('distribution_licences/stage.py', 'pytest ' + LICENCE_MODULE)
-        ]
-        if mutation == 'missing-job':
-            del changed['app-wasm']
-        elif mutation in {'missing-stage', 'missing-check'}:
-            job['steps'].remove(stage if mutation == 'missing-stage' else check)
-        elif mutation == 'order':
-            job['steps'].remove(stage)
-            job['steps'].append(stage)
-        else:
-            target = {'job': job, 'stage': stage, 'check': check}[mutation.split('-')[0]]
-            target[
-                'if' if mutation.endswith('-off') else 'continue-on-error'
-            ] = not mutation.endswith('-off')
-        with pytest.raises(AssertionError, match='Delegated licence'):
-            _assert_licence_delivery(changed, active)
+    for name in LICENCE_ROUTES:
+        for mutation in (
+            'missing-job',
+            'missing-build',
+            'missing-stage',
+            'missing-check',
+            'order',
+            'job-off',
+            'stage-off',
+            'check-off',
+            'job-optional',
+            'stage-optional',
+            'check-optional',
+            'surfaces',
+            'selector',
+            'platform',
+        ):
+            changed = copy.deepcopy(jobs)
+            job = changed[name]
+            stage, check = [
+                next(step for step in job['steps'] if fragment in step.get('run', ''))
+                for fragment in ('distribution_licences/stage.py', 'pytest ' + LICENCE_MODULE)
+            ]
+            if mutation == 'missing-job':
+                del changed[name]
+            elif mutation == 'missing-build':
+                job['steps'].remove(
+                    next(
+                        step for step in job['steps'] if step.get('run') == LICENCE_ROUTES[name][2]
+                    )
+                )
+            elif mutation in {'missing-stage', 'missing-check'}:
+                job['steps'].remove(stage if mutation == 'missing-stage' else check)
+            elif mutation == 'order':
+                job['steps'].remove(stage)
+                job['steps'].append(stage)
+            elif mutation == 'surfaces':
+                stage['run'] = stage['run'].replace('--surfaces ', '--surfaces invalid,')
+            elif mutation == 'selector':
+                check['run'] += ' -k desktop'
+            elif mutation == 'platform':
+                stage['if'] = "${{ !cancelled() && matrix.platform == 'macOS' }}"
+            else:
+                target = {'job': job, 'stage': stage, 'check': check}[mutation.split('-')[0]]
+                target[
+                    'if' if mutation.endswith('-off') else 'continue-on-error'
+                ] = not mutation.endswith('-off')
+            with pytest.raises(AssertionError, match='Delegated licence'):
+                _assert_licence_delivery(changed, active)
 
 
 def _assert_platform_nightly_partition(groups, tasks, jobs, active):
