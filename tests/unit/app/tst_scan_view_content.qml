@@ -628,8 +628,9 @@ Rectangle {
                 verify(reference !== undefined && reference.license && reference.source, "Every offered map has an independent published source and bundling licence, without a fixed whitelist: " + name);
                 ++offered;
                 choose(selector, index);
-                const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
+                const layer = named("layer"), axes = named("axes");
                 if (data.mode === "map") {
+                    const frame = logicalImage(chart);
                     for (const [band, place] of [[1, 32], [3, 96], [5, 192]]) {
                         const point = layer.mapToItem(chart, layer.width * (band + 0.5) / 7, layer.height * 0.2);
                         const pixel = frame.pixel(Math.round(point.x), Math.round(point.y));
@@ -639,6 +640,10 @@ Rectangle {
                     }
                 } else {
                     for (let row = 0; row < 3; ++row) {
+                        Session.project.currentExperimentIndex = (row + 1) % 3;
+                        surface.Window.window.update();
+                        verify(waitForRendering(chart), "The selection outline moves away before observing each published Stacked curve colour");
+                        const frame = logicalImage(chart);
                         const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
                         const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const point = layer.mapToItem(chart, layer.width * 0.4, py);
