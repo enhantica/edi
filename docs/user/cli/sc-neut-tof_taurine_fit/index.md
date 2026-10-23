@@ -1,12 +1,12 @@
 ---
-title: Taurine on SENJU, fitted from a rough start
+title: Taurine on SENJU, six datasets fitted together
 description: >-
-  Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
+  Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction: the six datasets of FullProf's taurine project, one experiment each with its own scale, fitted together from FullProf's positions and beta tensors, every one free, with no extinction yet.
 ---
 
-# Taurine on SENJU, fitted from a rough start
+# Taurine on SENJU, six datasets fitted together
 
-Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
+Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction: the six datasets of FullProf's taurine project, one experiment each with its own scale, fitted together from FullProf's positions and beta tensors, every one free, with no extinction yet.
 
 ## Run it
 
