@@ -178,6 +178,20 @@ QtObject {
         value: preferences.scanPatternUpdates
         when: Session.project !== null
     }
+    // The report's charts take the Patterns and Structures colours, bound here with the open project, not on the Report
+    // page, which loads only once reached.
+    property Binding reportPatternColours: Binding {
+        target: Session.project ? Session.project.report : null
+        property: "colourScheme"
+        value: preferences.patternColours
+        when: Session.project !== null
+    }
+    property Binding reportStructureColours: Binding {
+        target: Session.project ? Session.project.report : null
+        property: "structureColourScheme"
+        value: preferences.structureColours
+        when: Session.project !== null
+    }
 
     onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
     // A stored scheme no longer offered (one of the eighteen before the Edi palettes) becomes the default, so the
