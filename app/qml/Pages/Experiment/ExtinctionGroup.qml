@@ -36,6 +36,7 @@ Column {
     ParameterGrid {
         fields: group.experiment ? group.experiment.extinction : null
         prefix: "extinction"
-        fillRows: true
+        // Two columns, as the selectors above: a lone field keeps the width of the type selector.
+        maxColumns: 2
     }
 }
