@@ -3,6 +3,7 @@
 #define EDI_APP_EXPERIMENT_MODELS_HPP
 
 #include <QStringList>
+#include <QtNumeric>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 
@@ -134,6 +135,9 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
     Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
     Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
+    // The smallest and the largest reflection wavelength of a time-of-flight single crystal, NaN without one.
+    Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY pointsChanged)
+    Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY pointsChanged)
     // The column the table is sorted by (empty: file order) and its direction.
     Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortChanged)
@@ -160,6 +164,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     QList<double> measuredFSu() const { return measured_f_su_; }
     double lowF() const { return low_f_; }
     double highF() const { return high_f_; }
+    double wavelengthLow() const { return wavelength_low_; }
+    double wavelengthHigh() const { return wavelength_high_; }
 
    signals:
     void pointsChanged();
@@ -184,6 +190,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     QList<double> measured_f_su_;
     double low_f_ = 0.0;
     double high_f_ = 1.0;
+    double wavelength_low_ = qQNaN();
+    double wavelength_high_ = qQNaN();
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.

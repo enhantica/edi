@@ -436,12 +436,12 @@ CASES = {
         'heading': 'Single-crystal fit: Pr₂NiO₄, 5C2',
         'lede': (
             'Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal '
-            'data from 5C2 at LLB, with isotropic displacements and Becker-Coppens extinction.'
+            'data from 5C2 at LLB, with anisotropic displacements.'
         ),
         'start': (
-            'The project starts from rough values: Biso 0.5 on every site, the free coordinates '
-            'moved off their refined values, the crystal radius free from 1 μm at a fixed '
-            'mosaicity of 0, and the scale to one significant figure.'
+            'The project starts from zero: every displacement at 0 (Bani on every site but Od, '
+            'which is Biso) and free, the free coordinates moved off their refined values, no '
+            'extinction, and the scale to one significant figure.'
         ),
         'model': (
             "FullProf Suite's example `prnio.pcr` (Pr₂NiO₄+δ, SXTAL), as {lib} reads it on its "
@@ -455,26 +455,24 @@ CASES = {
             'BSD-3-Clause). The project embeds its reflections unchanged (h, k, l, F², su).'
         ),
         'start_detail': (
-            'Biso 0.5 Å² on every site; the free coordinates moved off their refined values (Pr '
-            'z 0.362, O2 z 0.176, Od 0.075, 0.075, 0.175); the crystal radius free from 1 μm '
-            'with the mosaicity fixed at 0, so only primary extinction acts (the owner, '
-            '2026-10-23); the scale 4. Free: the scale, the radius, every Biso and the free '
-            'coordinates (13 parameters).'
+            'Bani on every site but Od, every independent component from 0 (with B12 on O1, '
+            'whose site allows it), and Biso 0 on Od, all free (the owner, 2026-10-23); the '
+            'free coordinates moved off their refined values (Pr z 0.362, O2 z 0.176, Od 0.075, '
+            '0.075, 0.175); the Becker-Coppens radius and mosaicity 0 and fixed; the scale 4. '
+            'Free: the scale, 17 displacement components and the free coordinates (23 '
+            'parameters).'
         ),
         'differences': [
             (
                 "FullProf's example refines anisotropic β tensors with its empirical extinction "
-                'model; here the displacements are isotropic (the owner, 2026-10-22) and the '
-                'extinction is Becker-Coppens.'
+                'model left at zero; here the tensors are Bani, which is the same model in Å², '
+                'and there is no extinction.'
             ),
         ],
         'result': (
-            'From this start edi converges in 28 iterations to reduced χ² 308.9 over 198 '
-            'reflections, with the scale 4.128(185). These reflections show no extinction, as '
-            "FullProf's refinement has none: the radius goes to 0, where it has no effect and "
-            "no uncertainty can be given. FullProf's isotropic fit of the same reflections "
-            'reports χ² 305 and the scale 4.143(156); every displacement and coordinate agrees '
-            'within its uncertainty.'
+            'From this start edi converges in 11 iterations to reduced χ² 9.75 over the 198 '
+            "reflections, with the scale 4.022(28). FullProf's fit of the same reflections with "
+            'β tensors reports χ² 9.96 and the scale 4.031(36) on this occupancy scale.'
         ),
     },
     'sc-neut-tof_taurine-senju': {
