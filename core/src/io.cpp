@@ -2717,235 +2717,34 @@ void ProjectMetadata::update_last_modified() {
         star_timestamp_format(stored.has_value() && now <= *stored ? *stored + 1 : now);
 }
 
-// The bare element symbol from a CIF `_atom_site_type_symbol`, dropping any oxidation-state
-// suffix so a CIF structure's scattering species matches the
-// `.edi` twin's plain element symbol. Falls back to the raw token when there is no leading
-// alphabetic run.
-std::string element_from_type_symbol(const std::string& type_symbol) {
-    std::size_t end = 0;
-    while (end < type_symbol.size() &&
-           std::isalpha(static_cast<unsigned char>(type_symbol[end])) != 0) {
-        ++end;
-    }
-    return end == 0 ? type_symbol : type_symbol.substr(0, end);
-}
-
-// Classic IUCr CIF structure reader (`_cell_*` / `_atom_site_*` underscore tags) — the core
-// reader this task's necessity sweep removed with its binding, RESTORED per review-32 F1 with
-// two task-era adaptations: `esd` is spelled `uncertainty`, and each site keeps the ADP type the
-// file gives it.
-Structure structure_from_cif_block(const Block& block, const std::string& where) {
-    Structure structure;
-    structure.name = block.name;
-    // A CIF spells the bond increment `incr`; the model and a
-    // `.edi` file spell it `inc`. Both CIF forms are read: the DDLm data name and its classic alias.
-    for (const auto& [dotted, classic, field] :
-         {std::tuple<const char*, const char*, detail::Written<std::optional<double>> Geom::*>{
-              "_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff",
-              &Geom::min_bond_distance_cutoff},
-          {"_geom.bond_distance_incr", "_geom_bond_distance_incr", &Geom::bond_distance_inc}}) {
-        const std::string* text = block.find(dotted);
-        if (text == nullptr) {
-            text = block.find(classic);
-        }
-        if (text != nullptr) {
-            const double value = to_double(*text, where);
-            if (value < 0.0) {
-                fail_domain(where, "out-of-range",
-                            std::string(dotted) + " '" + *text + "' must be finite and >= 0");
-            }
-            structure.geom.*field = value;
-        }
-    }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
-    }
-    read_into(structure.cell.length_a,
-              parse_parameter(block.require("_cell_length_a", where), where), where);
-    read_into(structure.cell.length_b,
-              parse_parameter(block.require("_cell_length_b", where), where), where);
-    read_into(structure.cell.length_c,
-              parse_parameter(block.require("_cell_length_c", where), where), where);
-    read_into(structure.cell.angle_alpha,
-              parse_parameter(block.require("_cell_angle_alpha", where), where), where);
-    read_into(structure.cell.angle_beta,
-              parse_parameter(block.require("_cell_angle_beta", where), where), where);
-    read_into(structure.cell.angle_gamma,
-              parse_parameter(block.require("_cell_angle_gamma", where), where), where);
-    require_realizable_cell(structure.cell, where);
-
-    const Loop* loop = block.loop_with("_atom_site_label");
-    if (loop == nullptr) {
-        throw IoError(where + ": missing _atom_site loop (not a CIF structure)");
-    }
-
-    // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
-    // a site with one keeps it in that type (ADR-0027).
-    struct CifTensor {
-        std::string type;
-        AtomSiteAniso tensor;
-    };
-    std::map<std::string, CifTensor> tensors;
-    static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
-        {"Uani",
-         {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
-          "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
-        {"Bani",
-         {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
-          "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
-        {"beta",
-         {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
-          "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
-    }};
-    // A tensor column is the label or any component the three forms spell.
-    const auto is_tensor = [](const std::string& tag) {
-        if (tag == "_atom_site_aniso_label") {
-            return true;
-        }
-        return std::any_of(kForms.begin(), kForms.end(), [&tag](const auto& form) {
-            return std::find(form.second.begin(), form.second.end(), tag) != form.second.end();
-        });
-    };
-    if (const Loop* aniso = block.tensor_loop(is_tensor, "_atom_site_aniso_label", where)) {
-        bool found_form = false;
-        for (const auto& [type, tags] : kForms) {
-            if (aniso->column(tags[0]) < 0) {
-                continue;
-            }
-            found_form = true;
-            for (const auto& row : aniso->rows) {
-                const std::string& label = loop_cell(*aniso, row, "_atom_site_aniso_label", where);
-                CifTensor held{type, AtomSiteAniso{}};
-                held.tensor.id = label;
-                // The three diagonal columns are required; an off-diagonal column the file leaves
-                // out is zero.
-                const std::vector<Parameter*> components = held.tensor.parameters();
-                for (std::size_t k = 0; k < 6; ++k) {
-                    const std::string cell = k >= 3 && aniso->column(tags[k]) < 0
-                                                 ? std::string("0")
-                                                 : loop_cell(*aniso, row, tags[k], where);
-                    read_into(*components[k], parse_parameter(cell, where), where);
-                }
-                tensors.emplace(label, std::move(held));
-            }
-            break;
-        }
-        if (!found_form) {
-            throw IoError(where + ": the _atom_site_aniso loop has no U_11, B_11 or beta_11 column");
-        }
-    }
-
-    std::vector<std::pair<std::string, std::string>> declared_types;
-    std::set<std::string> consumed;
-    for (const auto& row : loop->rows) {
-        AtomSite site;
-        site.id = loop_cell(*loop, row, "_atom_site_label", where);
-        site.type_symbol =
-            element_from_type_symbol(loop_cell(*loop, row, "_atom_site_type_symbol", where));
-        const int wyckoff = loop->column("_atom_site_Wyckoff_symbol");
-        if (wyckoff >= 0) {
-            site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
-        }
-        read_into(site.fract_x,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_x", where), where),
-                  where);
-        read_into(site.fract_y,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_y", where), where),
-                  where);
-        read_into(site.fract_z,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_z", where), where),
-                  where);
-        read_into(site.occupancy,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_occupancy", where), where),
-                  where);
-        // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
-        // form the file spells them in (below, once the structure is complete). A site that declares
-        // none takes its tensor row's form (the row states the type), else the default, Biso, a
-        // U_iso_or_equiv value converted to B.
-        // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
-        // type with one, and a tensor row naming no site refuse (ADR-0027).
-        const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
-        const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
-        const int type_column = loop->column("_atom_site_adp_type");
-        const auto given = [&row](int column) {
-            return column >= 0 && row[static_cast<std::size_t>(column)] != "?" &&
-                   row[static_cast<std::size_t>(column)] != ".";
-        };
-        std::string type = "Biso";
-        if (given(b_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(b_iso_column)], where), where);
-        } else if (given(u_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(u_iso_column)], where), where);
-            type = "Uiso";
-        }
-        const std::string label = site.id.value();
-        const std::string declared =
-            given(type_column) ? row[static_cast<std::size_t>(type_column)] : std::string();
-        const auto tensor = tensors.find(label);
-        if (!declared.empty()) {
-            const std::string at = where + ": site '" + label + "'";
-            if (!is_adp_type(declared)) {
-                throw IoError(at + " declares _atom_site_adp_type '" + declared +
-                              "', which is not one of Biso, Uiso, Bani, Uani or beta");
-            }
-            if (is_anisotropic_adp_type(declared) && tensor == tensors.end()) {
-                throw IoError(at + " declares the anisotropic type '" + declared +
-                              "' but has no _atom_site_aniso row");
-            }
-            if (!is_anisotropic_adp_type(declared) && tensor != tensors.end()) {
-                throw IoError(at + " declares the isotropic type '" + declared +
-                              "' but has an _atom_site_aniso row");
-            }
-            declared_types.emplace_back(label, declared);
-        } else if (tensor == tensors.end() && type != "Biso") {
-            declared_types.emplace_back(label, "Biso");  // the default; the column gave U
-        }
-        if (tensor != tensors.end()) {
-            type = tensor->second.type;
-            structure.atom_site_aniso.push_back(tensor->second.tensor);
-            consumed.insert(label);
-        }
-        site.adp_type = type;
-        structure.atom_sites.push_back(std::move(site));
-    }
-    for (const auto& [label, tensor] : tensors) {
-        if (!consumed.contains(label)) {
-            throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
-        }
-    }
-    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
-    // each declared type, converted from the form the file spells it in, uncertainties with it.
-    if (!structure.atom_site_aniso.empty()) {
-        sync_atom_site_aniso(structure);
-    }
-    for (const auto& [label, declared] : declared_types) {
-        for (const auto& site : structure.atom_sites) {
-            if (site->id.value() == label) {
-                change_adp_type(structure, *site, declared);
-            }
-        }
-    }
-    return structure;
-}
-
 Structure structure_from_edi_text(const std::string& text) {
     const std::string where = "<from_cif_str>";
-    const Block block = parse_block(text, where);
-    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
-    // exactly one per document, decided by which cell vocabulary is present.
-    if (block.find("_cell.length_a") != nullptr) {
-        return structure_from_block(block, where);
+    // A CIF is read by crysta through its dictionary's CIF names into the `.edi`
+    // document a save would write, which the `.edi` reader then reads; a `.edi` text is read as it is.
+    std::optional<std::string> edi;
+    try {
+        edi = detail::structure_edi_from_cif(text);
+    } catch (const std::invalid_argument& error) {
+        throw IoError(where + ": " + error.what());
     }
-    if (block.find("_cell_length_a") != nullptr) {
-        return structure_from_cif_block(block, where);
+    const Block block = parse_block(edi.has_value() ? *edi : text, where);
+    return structure_from_block(block, where);
+}
+
+Structure load_structure_cif_file(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        throw IoError(path + ": cannot open the file");
     }
-    throw IoError(where +
-                  ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
-                  "present");
+    std::ostringstream text;
+    text << in.rdbuf();
+    std::optional<std::string> edi;
+    try {
+        edi = detail::structure_edi_from_cif(text.str());
+    } catch (const std::invalid_argument& error) {
+        throw IoError(path + ": " + error.what());
+    }
+    return structure_from_block(parse_block(edi.has_value() ? *edi : text.str(), path), path);
 }
 
 // ---- classic-CIF experiment translation (experiment half) ----------------------------
