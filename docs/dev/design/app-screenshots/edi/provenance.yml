@@ -253,3 +253,14 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-xray-cwl_pbso4-lab_round-robin.png
+  - produced_at: c326453c8a2074dac1cc79b5be2c1e9ca4b356a6
+    reason: >-
+      The three single-crystal fitting examples join the examples, so their pages are captured (new), each with its
+      extinction group open, since a single crystal has no peak. Captured with edi built against an unpublished crysta
+      SDK packed locally at a4728f02. Only these images are added; the five single-crystal verification projects are
+      not bundled in the app, so they have no page to capture.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
+      - ex-sc-neut-cwl_tb2ti2o7-heidi_fit.png
+      - ex-sc-neut-tof_taurine_fit.png
