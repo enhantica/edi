@@ -223,6 +223,10 @@ double parse_edi_double(const std::string& text, const std::string& where);
 // std::invalid_argument. The factory and the public type setter route every supported
 // selection through this, so a mutated model always matches what both loaders accept.
 void apply_absorption_family(AbsorptionBase& absorption, const std::string& token);
+// A single crystal's extinction switched to `token`: the items of that type kept, a missing one
+// started at 0 (a missing distribution Gaussian), the rest removed; an unknown type throws
+// std::invalid_argument. The loader, the app's selector and the Python `type` setter share it.
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token);
 
 // Undo the last fit (diffraction-lib `undo_fit`, the single-level pre-fit snapshot). Restores each
 // parameter carrying persisted start state to its start_value/start_uncertainty, clears the snapshot,

@@ -111,7 +111,8 @@
    "code": "U+00B9",
    "font": "PT Sans",
    "sites": [
-    "core/src/report_model.cpp"
+    "core/src/report_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -152,6 +153,7 @@
    "font": "PT Sans",
    "sites": [
     "app/qml/Components/SingleCrystalTable.qml",
+    "app/qml/Pages/Experiment/InstrumentGroup.qml",
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/qml/Pages/Structure/AppearanceGroup.qml",
@@ -341,6 +343,7 @@
    "code": "U+2013",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Pages/Experiment/InstrumentGroup.qml",
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/src/fit_view_model.cpp"
    ],
@@ -393,21 +396,12 @@
    "weight": 400
   },
   {
-   "char": "″",
-   "code": "U+2033",
-   "font": "PT Sans",
-   "sites": [
-    "app/qml/Pages/Experiment/ExtinctionGroup.qml"
-   ],
-   "drawn_by": "Noto Sans",
-   "weight": 400
-  },
-  {
    "char": "⁻",
    "code": "U+207B",
    "font": "PT Sans",
    "sites": [
-    "core/src/report_model.cpp"
+    "core/src/report_model.cpp",
+    "core/include/edi/parameter_spec.hpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400

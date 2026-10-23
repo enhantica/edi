@@ -1,12 +1,12 @@
 ---
 title: Tb2Ti2O7 on HEiDi, fitted from a rough start
 description: >-
-  Tb2Ti2O7 on HEiDi (MLZ, constant wavelength), starting from small anisotropic displacements (Uani), a displaced O1 coordinate and a rough scale. The crystal radius is fixed at 25 um and the mosaicity is free from 0.
+  Tb2Ti2O7 on HEiDi (MLZ, constant wavelength), starting from small anisotropic displacements (Uani), a displaced O1 coordinate and a rough scale. Its extinction is isotropic Becker-Coppens, mixed: the domain radius is fixed at 25 um and the mosaic spread is free from 0.
 ---
 
 # Tb2Ti2O7 on HEiDi, fitted from a rough start
 
-Tb2Ti2O7 on HEiDi (MLZ, constant wavelength), starting from small anisotropic displacements (Uani), a displaced O1 coordinate and a rough scale. The crystal radius is fixed at 25 um and the mosaicity is free from 0.
+Tb2Ti2O7 on HEiDi (MLZ, constant wavelength), starting from small anisotropic displacements (Uani), a displaced O1 coordinate and a rough scale. Its extinction is isotropic Becker-Coppens, mixed: the domain radius is fixed at 25 um and the mosaic spread is free from 0.
 
 ## Run it
 

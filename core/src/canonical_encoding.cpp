@@ -108,10 +108,10 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.absorption.abscor2, scope);
     put_optional_parameter(out, experiment.absorption.mu_r, scope);  // The CW body
     // A single crystal's extinction and the Miller indices (and wavelengths) it is calculated for.
-    put_optional_parameter(out, experiment.extinction.radius, scope);
-    put_optional_parameter(out, experiment.extinction.mosaicity, scope);
+    put_optional_parameter(out, experiment.extinction.domain_radius, scope);
+    put_optional_parameter(out, experiment.extinction.mosaic_spread, scope);
     put_text(out, experiment.extinction.type.value_or(""));
-    put_text(out, experiment.extinction.model.value_or(""));
+    put_text(out, experiment.extinction.mosaic_distribution.value_or(""));
     out += experiment.reflections ? 'R' : '-';
     if (experiment.reflections) {
         put_u64(out, experiment.reflections->size());
