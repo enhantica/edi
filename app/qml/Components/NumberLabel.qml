@@ -10,7 +10,7 @@ import edi.app
 // A read-only table cell that shows a number (an s.u., a range end, a fit result). When the number's text does not
 // fit the cell it is shown in scientific notation with the same significant digits, and hovering shows it in full
 // (NumberText.fitted; the owner, 2026-10-22), so no number is cut short.
-EaComponents.TableViewLabel {
+EaComponents.ListViewLabel {
     id: label
 
     // The number as written by its rule (NumberText), before it is fitted to the cell, and the shorter form the cell

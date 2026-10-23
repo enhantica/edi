@@ -9,15 +9,18 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// One parameter as a table cell (the base's TableViewParameter, as the original's tables use it): the
+// One parameter as a table cell (the base's ListViewParameter, as the original's tables use its TableViewParameter): the
 // value rounded by its uncertainty, bold when free, the vary toggle in the context menu; a typed value
 // goes through the core (ParameterItem.value -> assign_value); a refused one (typed text that is not a
 // number, or a value the core refuses) shows why and the cell returns to the model's value, as
 // ParameterField does; and, as there, a parameter the space group fixes or ties (edi ADR-0019) is shown
 // disabled, with the value symmetry implies. A value outside its admissible range — a fit writes its
 // values unchecked — is red, its tooltip naming the range.
-EaComponents.TableViewParameter {
+EaComponents.ListViewParameter {
     id: cell
+
+    errorTitle: qsTr("s.u.")
+    fitTitle: qsTr("free")
 
     property ParameterItem item: null
     // The value shown as usual, free in green bold, with its context menu (free or fixed), but not typed into: an

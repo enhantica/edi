@@ -99,6 +99,17 @@ QVariant PatternModel::data(const QModelIndex& index, int role) const {
         case DSpacingRole: return at(published_d_);
         case IntensityBkgRole: return at(published_bkg_);
         case ResidualRole: return at(published_residual_);
+        case ComponentIntensitiesRole: {
+            const auto structures = static_cast<std::size_t>(component_names_.size());
+            const auto row = static_cast<std::size_t>(index.row());
+            QList<double> values;
+            if (structures > 0 && published_components_.size() >= (row + 1) * structures) {
+                for (std::size_t k = 0; k < structures; ++k) {
+                    values.append(published_components_[row * structures + k]);
+                }
+            }
+            return QVariant::fromValue(values);
+        }
         case CalcStatusRole:
             return static_cast<std::size_t>(index.row()) < published_status_.size()
                        ? QVariant(QString::fromStdString(published_status_[index.row()])) : QVariant();
@@ -114,7 +125,8 @@ QHash<int, QByteArray> PatternModel::roleNames() const {
             {DSpacingRole, "dSpacing"},
             {IntensityBkgRole, "intensityBkg"},
             {CalcStatusRole, "calcStatus"},
-            {ResidualRole, "residual"}};
+            {ResidualRole, "residual"},
+            {ComponentIntensitiesRole, "componentIntensities"}};
 }
 
 void PatternModel::markStale() {
@@ -148,8 +160,18 @@ void PatternModel::calculated(const QString& error) {
     const auto bkg = current ? current->intensity_bkg.values() : std::vector<double>();
     const auto residual = current ? current->residual.values() : std::vector<double>();
     const auto status = current ? current->calc_status.values() : std::vector<std::string>();
-    const bool fields_changed = d != published_d_ || bkg != published_bkg_ ||
-                                residual != published_residual_ || status != published_status_;
+    const auto components = current ? current->component_intensities_net.values() : std::vector<double>();
+    QStringList names;
+    if (current != nullptr) {
+        for (const std::string& name : current->component_order.values()) {
+            names.append(QString::fromStdString(name));
+        }
+    }
+    const bool names_changed = names != component_names_;
+    const bool fields_changed = d != published_d_ || bkg != published_bkg_ || residual != published_residual_ ||
+                                status != published_status_ || components != published_components_ || names_changed;
+    published_components_ = components;
+    component_names_ = names;
     published_d_ = d;
     published_bkg_ = bkg;
     published_residual_ = residual;
@@ -159,7 +181,10 @@ void PatternModel::calculated(const QString& error) {
         endResetModel();
         emit countChanged();
     } else if (count_ > 0 && (calc_changed || fields_changed)) {
-        emit dataChanged(index(0), index(count_ - 1), {IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole});
+        emit dataChanged(index(0), index(count_ - 1), {IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole, ComponentIntensitiesRole});
+    }
+    if (names_changed) {
+        emit componentNamesChanged();
     }
     if (x_min_ != previous_min) {
         emit xMinChanged();

@@ -9,6 +9,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.approved_palettes.reference import PALETTES
 from tests.integration.py.test_report_iucr_persistence import project
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -103,58 +104,39 @@ def test_default_pattern_titles_are_coloured_segments_with_unstyled_separators(t
 
 @pytest.mark.parametrize('dark', [False, True])
 def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
-    directory = ROOT / 'data/palettes'
-    paths = sorted(directory.glob('*.tsv'))
-    assert len(paths) == 18, (
-        'The app ships the eighteen ADR-0038 schemes as data; '
-        f'actual palette tables={[path.name for path in paths]}'
+    theme = 'dark' if dark else 'light'
+    paths = sorted((ROOT / 'data/palettes').glob('*.tsv'))
+    assert len(paths) == len(PALETTES), (
+        'The report inputs ship exactly the five approved palette tables'
     )
-    schemes = {}
-
-    for path in paths:
-        rows = list(csv.DictReader(path.open(), delimiter='\t'))
+    for palette in PALETTES:
+        path = ROOT / 'data/palettes' / (palette['name'].lower().replace(' ', '-') + '.tsv')
+        with path.open() as stream:
+            rows = list(csv.DictReader(stream, delimiter='\t'))
         assert all(set(row) == {'role', 'index', 'light', 'dark'} for row in rows), (
-            'Each palette row declares role, index and both theme colours'
+            'Each palette input declares its role, index and both theme colours'
         )
         assert all(
-            re.fullmatch(r'#[0-9a-fA-F]{6}', row[theme])
-            for row in rows
-            for theme in ['light', 'dark']
-        ), 'Palette colours are complete RGB hex values in both themes'
-        pattern = [row for row in rows if row['role'] == 'pattern']
-        structure = [row for row in rows if row['role'] == 'structure']
-        gradient = [row for row in rows if row['role'] == 'gradient']
-        assert len(pattern) >= 3 and structure and len(gradient) >= 2, (
-            'Before ten rows with embedded endpoints; after each published distinct set '
-            'and its separate trimmed gradient stops and structure palette'
-        )
-        assert {row['role'] for row in rows} == {'pattern', 'structure', 'gradient'}, (
-            'The palette data has exactly the three documented colour roles'
-        )
-        assert [int(row['index']) for row in gradient] == list(range(len(gradient))), (
-            'Gradient stops keep contiguous indices in their published order'
-        )
-        assert [int(row['index']) for row in pattern] == list(range(len(pattern))), (
-            'Pattern palette rows have contiguous indices in their declared order'
-        )
-        theme = 'dark' if dark else 'light'
-        assert len({row[theme].lower() for row in pattern}) == len(pattern), (
-            'Every declared distinct pattern colour differs within a theme'
-        )
-        forbidden = {'#f44336', '#607d8b', '#8bc34a', '#8c8c8c'}
-        assert not forbidden.intersection(row[theme].lower() for row in rows), (
-            'No data colour can collide with calculated, background, residual or excluded roles'
-        )
-        schemes[path.stem.lower()] = pattern
-    default = schemes.get('coast')
-    assert default is not None, (
-        'Coast is the default palette with an explicit stable scheme identity'
-    )
-    # Before: the first blue was pinned to one Material shade. After: a published
-    # blue shade may change to satisfy the three-to-one contrast requirement.
-    blue = default[0]['dark' if dark else 'light'].lower()
-    red, green, channel_blue = (int(blue[index : index + 2], 16) for index in (1, 3, 5))
-    assert channel_blue > max(red, green), (
-        f'Coast keeps blue first in each theme while allowing contrast-safe published shades; '
-        f'actual first colour={blue}'
+            re.fullmatch(r'#[0-9a-fA-F]{6}', row[t]) for row in rows for t in ('light', 'dark')
+        ), 'Every report palette coordinate is valid complete sRGB hex'
+        for role, field in [('measured', 'measured'), ('structure', 'structures')]:
+            selected = [row for row in rows if row['role'] == role]
+            assert [int(row['index']) for row in selected] == list(range(5)), (
+                'Each categorical group retains all five consecutive approved places'
+            )
+            assert [row[theme] for row in selected] == palette[theme][field], (
+                'Report data inputs retain the exact approved categorical order in both themes'
+            )
+        assert {row['role'] for row in rows} == {
+            'measured',
+            'structure',
+            'total_calculation',
+            'background',
+            'difference',
+        }, 'Role colours replace gradient stops; each gradient spans its group first to second'
+        assert (
+            len({row[theme] for row in rows if row['role'] in {'measured', 'structure'}}) == 10
+        ), 'The two categorical groups keep ten distinct entries'
+    assert PALETTES[0]['name'] == 'Edi Natural' and PALETTES[0]['default'], (
+        'The independently approved report default is Edi Natural'
     )

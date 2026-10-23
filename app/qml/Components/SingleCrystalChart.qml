@@ -171,10 +171,10 @@ Item {
 
             legendAvailable: false
             includedRangeAvailable: false
-            hoverShown: Preferences.chartHoverShown
-            onHoverShownChanged: Preferences.chartHoverShown = hoverShown
-            pointerMode: Preferences.chartPointerMode
-            onPointerModeChanged: Preferences.chartPointerMode = pointerMode
+            hoverShown: Preferences.patternHoverShown
+            onHoverShownChanged: Preferences.patternHoverShown = hoverShown
+            pointerMode: Preferences.patternPointerMode
+            onPointerModeChanged: Preferences.patternPointerMode = pointerMode
             onResetClicked: chart.zoom = []
         }
         // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
@@ -182,12 +182,12 @@ Item {
         Binding {
             target: buttons
             property: "hoverShown"
-            value: Preferences.chartHoverShown
+            value: Preferences.patternHoverShown
         }
         Binding {
             target: buttons
             property: "pointerMode"
-            value: Preferences.chartPointerMode
+            value: Preferences.patternPointerMode
         }
     }
 
@@ -384,7 +384,7 @@ Item {
             property real pressY: 0
             property real lastX: 0
             property real lastY: 0
-            readonly property bool zooming: pressed && (pressedButtons & Qt.LeftButton) && Preferences.chartPointerMode === "zoom"
+            readonly property bool zooming: pressed && (pressedButtons & Qt.LeftButton) && Preferences.patternPointerMode === "zoom"
 
             function xAt(px: real): real {
                 return axisX.min + px / width * (axisX.max - axisX.min);
@@ -398,21 +398,21 @@ Item {
             // A report figure has no pointer, so the wheel scrolls the report.
             enabled: !chart.reportMode
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            hoverEnabled: Preferences.chartHoverShown
+            hoverEnabled: Preferences.patternHoverShown
             onPressed: mouse => {
                 pressX = lastX = mouse.x;
                 pressY = lastY = mouse.y;
                 hoverLabel.hide();
             }
             onPositionChanged: mouse => {
-                if (pressed && (pressedButtons & Qt.LeftButton) && Preferences.chartPointerMode === "pan") {
+                if (pressed && (pressedButtons & Qt.LeftButton) && Preferences.patternPointerMode === "pan") {
                     const dx = (mouse.x - lastX) / width * (axisX.max - axisX.min);
                     const dy = (mouse.y - lastY) / height * (axisY.max - axisY.min);
                     chart.zoom = [axisX.min - dx, axisX.max - dx, axisY.min + dy, axisY.max + dy];
                     lastX = mouse.x;
                     lastY = mouse.y;
                 }
-                if (Preferences.chartHoverShown && !pressed)
+                if (Preferences.patternHoverShown && !pressed)
                     hoverLabel.read(mouse.x, mouse.y);
                 else
                     hoverLabel.hide();
@@ -423,7 +423,7 @@ Item {
                     chart.zoom = [];
                     return;
                 }
-                if (Preferences.chartPointerMode !== "zoom" || Math.abs(mouse.x - pressX) < chart.em * 0.3 || Math.abs(mouse.y - pressY) < chart.em * 0.3)
+                if (Preferences.patternPointerMode !== "zoom" || Math.abs(mouse.x - pressX) < chart.em * 0.3 || Math.abs(mouse.y - pressY) < chart.em * 0.3)
                     return;
                 const box = [xAt(Math.min(pressX, mouse.x)), xAt(Math.max(pressX, mouse.x)), yAt(Math.max(pressY, mouse.y)), yAt(Math.min(pressY, mouse.y))];
                 if (box[1] > box[0] && box[3] > box[2] && isFinite(box[1] - box[0]) && isFinite(box[3] - box[2]))

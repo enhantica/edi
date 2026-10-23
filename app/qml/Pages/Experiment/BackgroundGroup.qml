@@ -150,37 +150,36 @@ Column {
                 columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignLeft
                         text: qsTr("id")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                         text: qsTr("position")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                         text: qsTr("intensity")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: row
 
-                    required property int index
                     required property var model
                     required property real position
                     required property ParameterItem intensity
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: row.index + 1
                     }
                     TextCell {
@@ -204,7 +203,7 @@ Column {
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
                         enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.remove.${row.index}`
@@ -272,37 +271,36 @@ Column {
                 columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), Math.min(textColumnWidth("order", qsTr("order")), width * 0.25), -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignLeft
                         text: qsTr("id")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                         text: qsTr("order")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                         text: qsTr("coefficient")
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: termRow
 
-                    required property int index
                     required property var model
                     required property int order
                     required property ParameterItem coef
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: termRow.index + 1
                     }
                     TextCell {
@@ -326,7 +324,7 @@ Column {
                         objectName: `background.coef.${termRow.index}`
                         item: termRow.coef
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
                         enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.removeTerm.${termRow.index}`

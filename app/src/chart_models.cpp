@@ -34,6 +34,8 @@ QVariant ChartLegendModel::data(const QModelIndex& index, int role) const {
         case MarkRole: return entry.mark;
         case BraggRole: return entry.bragg;
         case MarkWidthRole: return entry.markWidth;
+        case LabelTextsRole: return entry.labelTexts;
+        case LabelColorsRole: return entry.labelColors;
         default: return {};
     }
 }
@@ -43,7 +45,9 @@ QHash<int, QByteArray> ChartLegendModel::roleNames() const {
             {ColorRole, "color"},
             {MarkRole, "mark"},
             {BraggRole, "bragg"},
-            {MarkWidthRole, "markWidth"}};
+            {MarkWidthRole, "markWidth"},
+            {LabelTextsRole, "labelTexts"},
+            {LabelColorsRole, "labelColors"}};
 }
 
 ChartBandModel::ChartBandModel(QObject* parent) : QAbstractListModel(parent) {}

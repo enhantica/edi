@@ -411,36 +411,38 @@ TestCase {
         verify(copyright.text.includes("EasyScience") && !/all rights? reserved/i.test(copyright.text), "About names EasyScience contributors without the withdrawn reservation sentence");
         const components = Probe.visibleControl(appWindow, "about.components");
         verify(components === null || !Ui.rendered(components), "The component table is absent from the initially displayed About view");
-        const licenceTab = textInDialog(dialog, "about.tab.licence");
-        mouseClick(licenceTab, licenceTab.width / 2, licenceTab.height / 2);
-        verify(waitForPolish(appWindow), "The Licence view completes actual navigation layout");
-        singleAbout(original);
-        const summary = textInDialog(dialog, "about.licence.summary");
-        verify(summary.text.length < 650 && /GNU General Public License/.test(summary.text) && /BSD/.test(summary.text), "About provides a short user-facing licence summary for both distribution terms");
-        verify(!/ADR-\d|app\/|DISTRIBUTION-LICENSE|source repo/i.test(summary.text), "The short licence summary has no developer file or decision references");
-        verify(formatted(summary), "The user licence summary renders as formatted text");
-        for (const data of [["gpl", "app/DISTRIBUTION-LICENSE.md", TextEdit.MarkdownText], ["copying", "COPYING", TextEdit.PlainText], ["bsd", "LICENSE", TextEdit.PlainText]]) {
+        for (const data of [["BSD-3-Clause", "LICENSE"], ["GPL-3.0-only", "COPYING"]]) {
             const link = textInDialog(dialog, "about.licence." + data[0]);
+            compare(link.text, data[0], "Each own licence link displays its independent SPDX identifier");
             mouseClick(link, link.width / 2, link.height / 2);
-            verify(waitForPolish(appWindow), "A real licence request lays out the inline full text");
-            singleAbout(original);
-            const full = textInDialog(dialog, "about.licence.text");
-            compare(full.textFormat, data[2], "Each complete licence uses the format of its independent bundled file");
-            const completeText = data[2] === TextEdit.MarkdownText ? full.text : full.getText(0, full.length);
-            compare(normalized(completeText), normalized(Probe.readFile(data[1])), "The complete independent bundled licence text remains reachable inside About");
-            verify(full.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "Licence body text uses the app text size instead of oversized headings");
+            let popup;
+            tryVerify(() => {
+                popup = Probe.visibleDialogs(appWindow).find(item => item.objectName === "about.licencePopup");
+                return popup && popup.opened;
+            }, 2000, "A real identifier click opens the complete licence popup");
+            compare(popup.title, data[0], "The complete licence popup retains the clicked licence identity");
+            const full = textInDialog(popup, "about.licence.text");
+            compare(full.textFormat, TextEdit.PlainText, "Each complete bundled licence retains its original plain text");
+            compare(normalized(full.getText(0, full.length)), normalized(Probe.readFile(Qt.resolvedUrl("../../../" + data[1]).toString().replace("file://", ""))), "The complete independent bundled licence text remains reachable from About");
+            verify(full.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "Licence text retains app-sized typography");
             verify(full.readOnly, "The complete licence remains a read-only text view");
+            popup.close();
+            tryCompare(popup, "visible", false, 2000, "Closing the licence popup returns to About");
+            singleAbout(original);
         }
-        const noticesTab = textInDialog(dialog, "about.tab.thirdParty");
-        mouseClick(noticesTab, noticesTab.width / 2, noticesTab.height / 2);
-        verify(waitForPolish(appWindow), "A real Third-party software click reveals the components table");
-        singleAbout(original);
-        const table = textInDialog(dialog, "about.components");
-        const expected = JSON.parse(Probe.readFile("tests/fixtures/table_display/notices.json")).rows;
+        const notices = textInDialog(dialog, "about.thirdParty");
+        mouseClick(notices, notices.width / 2, notices.height / 2);
+        let popup;
+        tryVerify(() => {
+            popup = Probe.visibleDialogs(appWindow).find(item => item.objectName === "about.thirdPartyPopup");
+            return popup && popup.opened;
+        }, 2000, "The real third-party link opens the structured component popup");
+        const table = textInDialog(popup, "about.components");
+        const expected = JSON.parse(Probe.readFile(Qt.resolvedUrl("../../fixtures/table_display/notices.json").toString().replace("file://", ""))).rows;
         const rows = Probe.rows(table.model);
-        compare(rows.length, expected.length, "The structured notices table retains every independently frozen shipped component");
+        compare(rows.map(row => row.component), expected.map(row => row.component), "The structured notices table retains every independently frozen shipped component");
         const header = Render.cells(table.headerItem);
-        compare(header.map(item => item.text), ["Component", "Version", "Licence", "Used for"], "The structured table uses consistent component, version, licence and purpose columns");
+        compare(header.map(item => item.text), ["Component", "Version", "Licence"], "The structured table uses consistent component, version and licence columns");
         ink.font = header[2].font;
         const needed = Math.max(...expected.map(row => {
             ink.text = row.licence;
@@ -448,7 +450,7 @@ TestCase {
         }));
         verify(header[2].width >= Math.ceil(needed) && header[2].width <= Math.ceil(needed) + ink.font.pixelSize + 2, "The actual licence column is sized independently from the longest supplied expression");
         for (let i = 0; i < rows.length; ++i) {
-            for (const key of ["component", "version", "licence", "use"])
+            for (const key of ["component", "version", "licence"])
                 compare(rows[i][key], expected[i][key], "The actual structured notice row retains its independent component attribution");
             table.positionViewAtIndex(i, ListView.Center);
             table.forceLayout();
@@ -460,22 +462,21 @@ TestCase {
             ink.text = expected[i].licence;
             verify(cells[2].width >= Math.ceil(ink.advanceWidth), "The actual licence column fits each complete independently supplied licence expression");
         }
-        const licenceTexts = JSON.parse(Probe.readFile("tests/fixtures/table_display/notices.json")).licenceTexts;
-        for (const component of ["SLEEF", "Eigen"]) {
-            const index = expected.findIndex(row => row.component === component);
-            verify(index >= 0, "The frozen notice input contains each independently licensed component witness");
-            table.positionViewAtIndex(index, ListView.Center);
-            table.forceLayout();
-            const row = table.itemAtIndex(index);
-            verify(row !== null, "The selected independent component has a real visible row");
-            mouseClick(row, row.width / 2, row.height / 2);
-            const text = textInDialog(dialog, "about.components.licence");
-            tryVerify(() => normalized(text.getText(0, text.length)) === normalized(licenceTexts[component]), 2000, "Selecting different real components shows each complete independent licence below the table");
-            compare(text.textFormat, TextEdit.PlainText, "The complete component licence retains its original plain text");
-            verify(text.mapToItem(dialog.contentItem, 0, 0).y >= table.mapToItem(dialog.contentItem, 0, table.height).y, "The selected component licence is rendered below the structured table");
-            singleAbout(original);
-        }
-        for (const item of actualText(dialog.contentItem).filter(item => item.objectName.startsWith("about.tab.")))
-            verify(item.font.pixelSize <= Style.Sizes.fontPixelSize * 1.25, "About headings retain the app-sized typography");
+        verify(!table.selectable, "Component attribution rows remain enabled and passive");
+        const before = table.selectedIndexes.slice();
+        table.positionViewAtIndex(0, ListView.Contain);
+        table.forceLayout();
+        const row = table.itemAtIndex(0);
+        verify(row !== null && row.enabled, "The actual component attribution remains enabled for reading");
+        mouseClick(row, row.width / 2, row.height / 2);
+        compare(table.selectedIndexes, before, "A real attribution-row click never selects a dependency");
+        const bundled = normalized(ApplicationInfo.licenceText("qrc:/THIRD-PARTY-NOTICES"));
+        const fixture = JSON.parse(Probe.readFile(Qt.resolvedUrl("../../fixtures/table_display/notices.json").toString().replace("file://", "")));
+        for (const component of ["SLEEF", "Eigen"])
+            verify(bundled.includes(normalized(fixture.licenceTexts[component])), "The local component resource retains each complete independently frozen licence");
+        compare(Array.from(ApplicationInfo.componentUses), expected.map(item => item.use), "Each independent component purpose remains in the bundled catalogue instead of a fourth table column");
+        popup.close();
+        tryCompare(popup, "visible", false, 2000, "Closing the component popup returns to the original About");
+        singleAbout(original);
     }
 }

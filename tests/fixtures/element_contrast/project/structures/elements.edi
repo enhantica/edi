@@ -1,0 +1,137 @@
+data_elements
+_edi.schema_version 3
+_cell.length_a 30
+_cell.length_b 30
+_cell.length_c 30
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "P 1"
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.adp_type
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+H H a Biso 0.1 0.1 0.1 1 0.5
+He He a Biso 0.3 0.1 0.1 1 0.5
+Li Li a Biso 0.5 0.1 0.1 1 0.5
+Be Be a Biso 0.7 0.1 0.1 1 0.5
+B B a Biso 0.9 0.1 0.1 1 0.5
+C C a Biso 0.1 0.3 0.1 1 0.5
+N N a Biso 0.3 0.3 0.1 1 0.5
+O O a Biso 0.5 0.3 0.1 1 0.5
+F F a Biso 0.7 0.3 0.1 1 0.5
+Ne Ne a Biso 0.9 0.3 0.1 1 0.5
+Na Na a Biso 0.1 0.5 0.1 1 0.5
+Mg Mg a Biso 0.3 0.5 0.1 1 0.5
+Al Al a Biso 0.5 0.5 0.1 1 0.5
+Si Si a Biso 0.7 0.5 0.1 1 0.5
+P P a Biso 0.9 0.5 0.1 1 0.5
+S S a Biso 0.1 0.7 0.1 1 0.5
+Cl Cl a Biso 0.3 0.7 0.1 1 0.5
+Ar Ar a Biso 0.5 0.7 0.1 1 0.5
+K K a Biso 0.7 0.7 0.1 1 0.5
+Ca Ca a Biso 0.9 0.7 0.1 1 0.5
+Sc Sc a Biso 0.1 0.9 0.1 1 0.5
+Ti Ti a Biso 0.3 0.9 0.1 1 0.5
+V V a Biso 0.5 0.9 0.1 1 0.5
+Cr Cr a Biso 0.7 0.9 0.1 1 0.5
+Mn Mn a Biso 0.9 0.9 0.1 1 0.5
+Fe Fe a Biso 0.1 0.1 0.3 1 0.5
+Co Co a Biso 0.3 0.1 0.3 1 0.5
+Ni Ni a Biso 0.5 0.1 0.3 1 0.5
+Cu Cu a Biso 0.7 0.1 0.3 1 0.5
+Zn Zn a Biso 0.9 0.1 0.3 1 0.5
+Ga Ga a Biso 0.1 0.3 0.3 1 0.5
+Ge Ge a Biso 0.3 0.3 0.3 1 0.5
+As As a Biso 0.5 0.3 0.3 1 0.5
+Se Se a Biso 0.7 0.3 0.3 1 0.5
+Br Br a Biso 0.9 0.3 0.3 1 0.5
+Kr Kr a Biso 0.1 0.5 0.3 1 0.5
+Rb Rb a Biso 0.3 0.5 0.3 1 0.5
+Sr Sr a Biso 0.5 0.5 0.3 1 0.5
+Y Y a Biso 0.7 0.5 0.3 1 0.5
+Zr Zr a Biso 0.9 0.5 0.3 1 0.5
+Nb Nb a Biso 0.1 0.7 0.3 1 0.5
+Mo Mo a Biso 0.3 0.7 0.3 1 0.5
+Tc Tc a Biso 0.5 0.7 0.3 1 0.5
+Ru Ru a Biso 0.7 0.7 0.3 1 0.5
+Rh Rh a Biso 0.9 0.7 0.3 1 0.5
+Pd Pd a Biso 0.1 0.9 0.3 1 0.5
+Ag Ag a Biso 0.3 0.9 0.3 1 0.5
+Cd Cd a Biso 0.5 0.9 0.3 1 0.5
+In In a Biso 0.7 0.9 0.3 1 0.5
+Sn Sn a Biso 0.9 0.9 0.3 1 0.5
+Sb Sb a Biso 0.1 0.1 0.5 1 0.5
+Te Te a Biso 0.3 0.1 0.5 1 0.5
+I I a Biso 0.5 0.1 0.5 1 0.5
+Xe Xe a Biso 0.7 0.1 0.5 1 0.5
+Cs Cs a Biso 0.9 0.1 0.5 1 0.5
+Ba Ba a Biso 0.1 0.3 0.5 1 0.5
+La La a Biso 0.3 0.3 0.5 1 0.5
+Ce Ce a Biso 0.5 0.3 0.5 1 0.5
+Pr Pr a Biso 0.7 0.3 0.5 1 0.5
+Nd Nd a Biso 0.9 0.3 0.5 1 0.5
+Pm Pm a Biso 0.1 0.5 0.5 1 0.5
+Sm Sm a Biso 0.3 0.5 0.5 1 0.5
+Eu Eu a Biso 0.5 0.5 0.5 1 0.5
+Gd Gd a Biso 0.7 0.5 0.5 1 0.5
+Tb Tb a Biso 0.9 0.5 0.5 1 0.5
+Dy Dy a Biso 0.1 0.7 0.5 1 0.5
+Ho Ho a Biso 0.3 0.7 0.5 1 0.5
+Er Er a Biso 0.5 0.7 0.5 1 0.5
+Tm Tm a Biso 0.7 0.7 0.5 1 0.5
+Yb Yb a Biso 0.9 0.7 0.5 1 0.5
+Lu Lu a Biso 0.1 0.9 0.5 1 0.5
+Hf Hf a Biso 0.3 0.9 0.5 1 0.5
+Ta Ta a Biso 0.5 0.9 0.5 1 0.5
+W W a Biso 0.7 0.9 0.5 1 0.5
+Re Re a Biso 0.9 0.9 0.5 1 0.5
+Os Os a Biso 0.1 0.1 0.7 1 0.5
+Ir Ir a Biso 0.3 0.1 0.7 1 0.5
+Pt Pt a Biso 0.5 0.1 0.7 1 0.5
+Au Au a Biso 0.7 0.1 0.7 1 0.5
+Hg Hg a Biso 0.9 0.1 0.7 1 0.5
+Tl Tl a Biso 0.1 0.3 0.7 1 0.5
+Pb Pb a Biso 0.3 0.3 0.7 1 0.5
+Bi Bi a Biso 0.5 0.3 0.7 1 0.5
+Po Po a Biso 0.7 0.3 0.7 1 0.5
+At At a Biso 0.9 0.3 0.7 1 0.5
+Rn Rn a Biso 0.1 0.5 0.7 1 0.5
+Fr Fr a Biso 0.3 0.5 0.7 1 0.5
+Ra Ra a Biso 0.5 0.5 0.7 1 0.5
+Ac Ac a Biso 0.7 0.5 0.7 1 0.5
+Th Th a Biso 0.9 0.5 0.7 1 0.5
+Pa Pa a Biso 0.1 0.7 0.7 1 0.5
+U U a Biso 0.3 0.7 0.7 1 0.5
+Np Np a Biso 0.5 0.7 0.7 1 0.5
+Pu Pu a Biso 0.7 0.7 0.7 1 0.5
+Am Am a Biso 0.9 0.7 0.7 1 0.5
+Cm Cm a Biso 0.1 0.9 0.7 1 0.5
+Bk Bk a Biso 0.3 0.9 0.7 1 0.5
+Cf Cf a Biso 0.5 0.9 0.7 1 0.5
+Es Es a Biso 0.7 0.9 0.7 1 0.5
+Fm Fm a Biso 0.9 0.9 0.7 1 0.5
+Md Md a Biso 0.1 0.1 0.9 1 0.5
+No No a Biso 0.3 0.1 0.9 1 0.5
+Lr Lr a Biso 0.5 0.1 0.9 1 0.5
+Rf Rf a Biso 0.7 0.1 0.9 1 0.5
+Db Db a Biso 0.9 0.1 0.9 1 0.5
+Sg Sg a Biso 0.1 0.3 0.9 1 0.5
+Bh Bh a Biso 0.3 0.3 0.9 1 0.5
+Hs Hs a Biso 0.5 0.3 0.9 1 0.5
+Mt Mt a Biso 0.7 0.3 0.9 1 0.5
+Ds Ds a Biso 0.9 0.3 0.9 1 0.5
+Rg Rg a Biso 0.1 0.5 0.9 1 0.5
+Cn Cn a Biso 0.3 0.5 0.9 1 0.5
+Nh Nh a Biso 0.5 0.5 0.9 1 0.5
+Fl Fl a Biso 0.7 0.5 0.9 1 0.5
+Mc Mc a Biso 0.9 0.5 0.9 1 0.5
+Lv Lv a Biso 0.1 0.7 0.9 1 0.5
+Ts Ts a Biso 0.3 0.7 0.9 1 0.5
+Og Og a Biso 0.5 0.7 0.9 1 0.5

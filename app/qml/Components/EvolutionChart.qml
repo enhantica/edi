@@ -69,6 +69,52 @@ Item {
         return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
     }
 
+    // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
+    Component {
+        id: xTickLabel
+
+        Item {
+            id: xTick
+
+            property string text: ""
+
+            implicitWidth: xTickText.implicitWidth
+            implicitHeight: xTickText.implicitHeight
+
+            EaElements.Label {
+                id: xTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: xTick.text
+            }
+        }
+    }
+    Component {
+        id: yTickLabel
+
+        Item {
+            id: yTick
+
+            property string text: ""
+
+            implicitWidth: yTickText.implicitWidth
+            implicitHeight: yTickText.implicitHeight
+
+            EaElements.Label {
+                id: yTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: yTick.text
+            }
+        }
+    }
+
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
         if (!(span > 0))
@@ -96,7 +142,7 @@ Item {
         toolTip: qsTr("X axis")
         model: chart.evolution ? chart.evolution.xModes : []
         closedTexts: chart.evolution ? chart.evolution.xModes.map(mode => qsTr("x: %1").arg(mode)) : []
-        currentIndex: chart.evolution ? chart.evolution.xMode : 0
+        shownIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
     }
 
@@ -160,6 +206,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: xTickLabel
             gridVisible: false
             subGridVisible: false
         }
@@ -170,6 +217,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: yTickLabel
             gridVisible: false
             subGridVisible: false
         }
@@ -224,17 +272,6 @@ Item {
                 color: chart.colors.chartGridLine
             }
         }
-        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does.
-        Rectangle {
-            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
-
-            objectName: "evolution.current"
-            visible: !isNaN(at)
-            x: Math.round((at - axisX.min) / (axisX.max - axisX.min) * plot.width)
-            width: 1
-            height: plot.height
-            color: EaStyle.Colors.themeForegroundMinor
-        }
         MeasuredLayer {
             id: layer
 
@@ -246,6 +283,16 @@ Item {
             xMax: axisX.max
             yMin: axisY.min
             yMax: axisY.max
+        }
+        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
+        // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.
+        SelectedPatternLine {
+            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
+
+            objectName: "evolution.current"
+            vertical: true
+            dark: chart.colors.isDarkPalette
+            position: (at - axisX.min) / (axisX.max - axisX.min) * plot.width
         }
         Rectangle {
             anchors.fill: parent

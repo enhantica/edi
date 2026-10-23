@@ -5,6 +5,7 @@
 #include <QAbstractListModel>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 #include "edi/model.hpp"
@@ -51,7 +52,8 @@ class RangeViewModel : public QObject {
 
 // The experiment's pattern: the data axis and intensities exactly as the core holds them, the
 // calculated one after each coalesced recalculation. Roles `x`,
-// `intensityMeas`, `intensityMeasSu`, `intensityCalc`.
+// `intensityMeas`, `intensityMeasSu`, `intensityCalc`, and `componentIntensities`: each structure's calculated curve above
+// the background at the point, in the order of `componentNames` (the structures' names).
 class PatternModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT
@@ -62,11 +64,12 @@ class PatternModel : public QAbstractListModel {
     Q_PROPERTY(AxisKind axisKind READ axisKind NOTIFY axisKindChanged)
     Q_PROPERTY(QString calculationError READ calculationError NOTIFY calculationErrorChanged)
     Q_PROPERTY(bool stale READ stale NOTIFY staleChanged)
+    Q_PROPERTY(QStringList componentNames READ componentNames NOTIFY componentNamesChanged)
 
    public:
     enum AxisKind { TwoTheta, TimeOfFlight };
     Q_ENUM(AxisKind)
-    enum Role { XRole = Qt::UserRole + 1, IntensityMeasRole, IntensityMeasSuRole, IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole };
+    enum Role { XRole = Qt::UserRole + 1, IntensityMeasRole, IntensityMeasSuRole, IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole, ComponentIntensitiesRole };
 
     PatternModel(const edi::ExperimentBase& experiment, QObject* parent);
     int count() const { return count_; }
@@ -75,6 +78,7 @@ class PatternModel : public QAbstractListModel {
     AxisKind axisKind() const { return axis_kind_; }
     QString calculationError() const { return calculation_error_; }
     bool stale() const { return stale_; }
+    QStringList componentNames() const { return component_names_; }
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -93,6 +97,7 @@ class PatternModel : public QAbstractListModel {
     void axisKindChanged();
     void calculationErrorChanged();
     void staleChanged();
+    void componentNamesChanged();
 
    private:
     void readAxis();
@@ -105,6 +110,8 @@ class PatternModel : public QAbstractListModel {
     std::vector<double> published_d_, published_bkg_, published_residual_;
     std::vector<std::string> published_status_;
     std::vector<double> published_calc_;  // the intensities the views were last told about
+    std::vector<double> published_components_;  // row-major, one value per point and structure
+    QStringList component_names_;
 };
 
 }  // namespace edi_app

@@ -1,0 +1,96 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+// The two views of a sequential fit's patterns (edi ADR-0041): every dataset's measured pattern one above another,
+// and the same patterns as a 2D map, x across and the scan value up, intensity as colour. These functions reduce the
+// patterns and place the rows; the app draws them.
+
+namespace edi {
+
+/// One dataset's measured pattern over an x range, cut into `columns` equal columns: each column's lowest and highest
+/// intensity, NaN where no measured point falls. The points may come in any order along x.
+struct ScanColumns {
+    std::vector<float> low, high;
+};
+ScanColumns scan_columns(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                         std::size_t columns);
+
+/// What the Stacked view draws of one pattern over [x_min, x_max] at `columns` pixel columns, always from the measured
+/// points (never from a reduction made for another range): while the range holds no more points than columns, the
+/// points themselves, with the nearest one beyond each end so the line reaches the plot's edges; with more, each
+/// column's lowest and highest intensity at the column's centre (scan_columns). A vertex is drawn from `low` to `high`
+/// and joined to the next one; the two are equal for a point. Points are taken in the order given (x rising or
+/// falling); a point with no finite x or intensity breaks the line.
+struct ScanTrace {
+    std::vector<double> x;
+    std::vector<float> low, high;
+};
+ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                     std::size_t columns);
+
+/// What the Map colours one pattern's pixel columns by over [x_min, x_max]: with more points than columns, each
+/// column's highest intensity; with no more, the line joining the measured points read at each column's centre, so a
+/// zoomed map follows the points and not a reduction. NaN where the pattern has no value.
+std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const double> intensity, double x_min,
+                                     double x_max, std::size_t columns);
+
+/// Where each dataset's row sits on the vertical axis: at its scan value when every dataset has a finite one, else at
+/// its place in the scan, from 0.
+std::vector<double> scan_row_positions(std::span<const double> values);
+
+/// A row's extent on the vertical axis: halfway to its neighbours, rows sorted by position; a lone row, or one sharing
+/// its position, spans half a step either side (a step being 1 when there is no other distance to take).
+struct ScanRowSpan {
+    double low = 0.0, high = 0.0;
+};
+std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions);
+
+/// Rows sharing a position (a scan value held, or reached again) each keep a band of their own: their shared span is
+/// split equally among them in the order given, the first lowest, and each row moves to its share's centre. A row at a
+/// position of its own keeps it and its span. `positions` and `spans` are scan_row_positions' and scan_row_spans'.
+void separate_shared_rows(std::vector<double>& positions, std::vector<ScanRowSpan>& spans);
+
+/// The two datasets whose rows bracket `y` on the Map's vertical axis, from `rising` (their rows in rising order), and
+/// how far y is from the first towards the second: `first == second` and `share == 0` at or beyond the end rows. In
+/// stepped mode the share is 0 or 1, the nearer row's. Empty input gives {0, 0, 0}.
+struct ScanRowPair {
+    std::size_t first = 0, second = 0;
+    double share = 0.0;
+};
+ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth);
+
+/// The 2D map's colour maps (data/colormaps/PROVENANCE.md), in the order the app offers them; viridis is the default.
+enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
+/// Every map's name, the enum's four first ("viridis", "magma", "inferno", "plasma"), then the candidates the owner
+/// chooses from (data/colormaps/PROVENANCE.md).
+const std::vector<std::string>& scan_colour_map_names();
+/// A map's title as the app lists it, naming its source ("batlow (Crameri)"); matplotlib's capitalised ("Viridis").
+std::string scan_colour_map_title(std::string_view name);
+/// The enum value a saved name stands for; viridis for a name that is not one of the four.
+ScanColourMap scan_colour_map_or_default(std::string_view name);
+
+/// A colour map's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
+struct ScanMapColour {
+    std::uint8_t r = 0, g = 0, b = 0, a = 0;
+};
+ScanMapColour scan_map_colour(ScanColourMap map, double t);
+/// viridis's colour of `t`.
+ScanMapColour scan_map_colour(double t);
+
+/// The scan views' colour choices (the owner, 2026-10-22): the four colour maps by name, then for each colour scheme
+/// a ramp from the chart's background to the scheme's first measured colour, `ramp:<scheme token>` ("ramp:ediNatural").
+const std::vector<std::string>& scan_colour_choices();
+/// A choice's 256 colours from its low end to its high end: a map's table, or a ramp from `background` (`#RRGGBB`) to
+/// the scheme's first measured colour in the theme, mixed in Oklab. An unknown choice is viridis.
+std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std::string& background, bool dark);
+/// A table's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
+ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t);
+
+}  // namespace edi

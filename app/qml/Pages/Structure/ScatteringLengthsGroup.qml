@@ -28,32 +28,31 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("type")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("b (fm)")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string typeSymbol
             required property real lengthFm
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
@@ -69,7 +68,7 @@ Column {
                 accepts: "number"
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.remove.${row.index}`
                 fontIcon: "minus-circle"

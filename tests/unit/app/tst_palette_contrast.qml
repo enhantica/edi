@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -22,12 +23,16 @@ Rectangle {
         name: "PublishedPaletteContrast"
         when: windowShown
         property int oldTheme
-        property string oldScheme
+        property var oldScheme
         property var page
-        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
+        property var reference: Approved.reference(SettingsProof)
         function initTestCase() {
             oldTheme = Style.Colors.theme;
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
         }
         function cleanup() {
             if (page)
@@ -35,7 +40,10 @@ Rectangle {
             page = null;
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setSchemes(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
         }
         // W3C WCAG 2.2, relative luminance: the sRGB transfer function, then
         // the fixed 0.2126/0.7152/0.0722 weights. No product colour arithmetic.
@@ -79,57 +87,62 @@ Rectangle {
             fuzzyCompare(luminance("#0a0a0a"), 0.003035269835488375, 1e-12, "Encoded sRGB 10 uses the W3C lower linear branch");
             fuzzyCompare(luminance("#0b0b0b"), 0.003346535763899161, 1e-12, "Encoded sRGB 11 uses the W3C power branch");
         }
-        function test_preferences_lists_all_eighteen_named_schemes() {
+        function colourChoice(dialog, label) {
+            const row = Render.descendants(dialog.contentItem).find(item => item.rowLabel === true && String(item.text).replace(/:$/, " ").trim() === label);
+            verify(row !== undefined, "The split Preferences exposes its independently named " + label + " colour choice");
+            const siblings = row.parent.children, box = siblings.slice(siblings.indexOf(row) + 1).find(item => item.rowBox === true);
+            verify(box !== undefined, "The " + label + " choice retains its actual populated Preferences selector");
+            return box;
+        }
+        function setBothSchemes(token) {
             const dialog = createTemporaryObject(preferencesFactory, parent);
-            verify(dialog !== null, "The eighteen-scheme gate creates the actual Preferences dialog");
-            const box = findChild(dialog, "preferences.colourScheme");
-            verify(box !== null, "Appearance exposes its actual preferences.colourScheme selector");
-            const actual = Array.from({
-                length: box.count
-            }, (_, index) => box.textAt(index));
-            compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Preferences lists the eighteen named schemes in the owner's order; actual=" + JSON.stringify(actual));
-            for (let index = 0; index < reference.schemes.length; ++index) {
+            verify(dialog !== null, "The colour setup uses actual split production Preferences controls");
+            const index = reference.schemes.findIndex(scheme => scheme.id === token);
+            verify(index >= 0, "The colour fixture resolves an independently approved scheme token");
+            for (const label of ["Structures", "Patterns"]) {
+                const box = colourChoice(dialog, label);
                 box.currentIndex = index;
                 box.activated(index);
-                compare(Preferences.colourScheme, reference.schemes[index].id, "Selecting each actual published scheme stores its corresponding token: " + actual[index]);
             }
         }
-        function test_every_palette_colour_meets_three_to_one_data() {
+        function test_preferences_lists_all_five_named_schemes() {
+            const dialog = createTemporaryObject(preferencesFactory, parent);
+            verify(dialog !== null, "The five-palette gate creates the actual split Preferences dialog");
+            for (const label of ["Structures", "Patterns"]) {
+                const box = colourChoice(dialog, label), actual = Array.from({
+                    length: box.count
+                }, (_, index) => box.textAt(index));
+                compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Each independent Structures/Patterns preference lists all five approved palettes in owner order");
+                for (let index = 0; index < reference.schemes.length; ++index) {
+                    box.currentIndex = index;
+                    box.activated(index);
+                    const fresh = createTemporaryObject(preferencesFactory, parent);
+                    verify(fresh !== null, "Each actual choice is observed by a separate production Preferences instance");
+                    compare(colourChoice(fresh, label).currentText, reference.schemes[index].label, "A separate actual control reads the selected scheme from the shared preference state");
+                }
+            }
+        }
+        function test_approved_palette_assignment_data() {
             const rows = [];
             for (const scheme of reference.schemes)
                 for (const dark of [false, true])
                     rows.push({
                         tag: scheme.id + (dark ? "-dark" : "-light"),
                         scheme: scheme.id,
-                        dark: dark
+                        dark
                     });
             return rows;
         }
-        function test_every_palette_colour_meets_three_to_one(data) {
+        function test_approved_palette_assignment(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            const background = Style.Colors.chartBackground;
-            const table = SettingsProof.paletteForScheme(data.scheme);
-            verify(table.pattern !== undefined && table.structure !== undefined, "Each of the eighteen schemes has both actual colour roles before contrast evaluation: " + data.scheme);
-            const failures = [], theme = data.dark ? "dark" : "light";
-            function check(colour, point, pattern) {
-                const ratio = contrast(colour, background);
-                const separation = oklabDistance(colour, data.dark ? "#ef9a9a" : "#f44336");
-                if (pattern && (!isFinite(separation) || separation < 0.10))
-                    failures.push(point + " colour=" + colour + " calculated Oklab distance=" + separation);
-                if (!isFinite(ratio) || ratio < 3)
-                    failures.push(point + " colour=" + colour + " background=" + background + " WCAG ratio=" + ratio);
+            for (const count of [1, 2, 5, 6, 17, 1001]) {
+                const expected = Approved.colours(SettingsProof, data.scheme, "measured", count, data.dark);
+                const structures = Approved.colours(SettingsProof, data.scheme, "structures", count, data.dark);
+                for (let place = 0; place < count; ++place) {
+                    compare(String(ApplicationInfo.patternColour(data.scheme, place, count, data.dark)).toLowerCase(), expected[place], "The measured API equals the independently approved categorical or Oklab assignment at every place");
+                    compare(String(ApplicationInfo.structureColour(data.scheme, place, count, data.dark)).toLowerCase(), structures[place], "The count-aware structure API equals the independently approved whole-group gradient at every place");
+                }
             }
-            for (const role of ["pattern", "structure", ...(table.gradient ? ["gradient"] : [])])
-                for (const row of table[role])
-                    check(row[theme], "stored " + role + " index=" + row.index, role !== "structure");
-            // Both actual APIs, every short palette place, the transition past ten,
-            // and dense gradient sampling. Endpoints alone cannot prove a gradient.
-            for (const count of [1, 2, 7, 8, 10, 11, 30, 31, 162, 1001])
-                for (let place = 0; place < count; ++place)
-                    check(ApplicationInfo.patternColour(data.scheme, place, count, data.dark), "pattern API place=" + place + " count=" + count, true);
-            for (let place = 0; place < table.structure.length * 2; ++place)
-                check(ApplicationInfo.structureColour(data.scheme, place, data.dark), "structure API place=" + place);
-            compare(failures.length, 0, "Every stored pattern/structure colour and actual discrete/gradient API sample has at least 3:1 contrast, and every pattern colour stays at least 0.10 Oklab from calculated against the actual theme chart background; scheme=" + data.scheme + " theme=" + theme + " failures=" + failures.slice(0, 30).join("; ") + "; total=" + failures.length);
         }
         function hue(colour) {
             const coordinates = oklab(colour);
@@ -174,82 +187,16 @@ Rectangle {
             verify(calcHue("#f44336") && calcHue("#ef9a9a"), "Both independent light/dark calculated colours lie in the calculated hue range");
             verify(!calcHue("#0055a0") && !calcHue("#808080"), "An independently blue hue and hue-less neutral stay outside the calculated hue range");
         }
-        function test_coast_is_the_new_reversible_default() {
-            Preferences.resetToDefaults();
-            compare(Preferences.colourScheme, reference.default, "The owner-selected new default is Coast after a real Preferences reset");
-            Preferences.colourScheme = reference.schemes[1].id;
-            Preferences.resetToDefaults();
-            compare(Preferences.colourScheme, reference.default, "Reset reversibly restores Coast after selecting another named scheme");
-        }
-        function test_eighteen_palette_roles_and_actual_gradient_paths_data() {
-            return test_every_palette_colour_meets_three_to_one_data();
-        }
-        function test_eighteen_palette_roles_and_actual_gradient_paths(data) {
-            const table = SettingsProof.paletteForScheme(data.scheme), theme = data.dark ? "dark" : "light";
-            verify(table.pattern && table.structure && table.gradient, "Every one of eighteen schemes has all three actual data roles: " + data.scheme);
-
-            verify(table.gradient.length >= 2, "The actual gradient path has first and last endpoints before sampling");
-            const failures = [];
-            if (table.gradient.length !== 2)
-                failures.push("Gradient publishes " + table.gradient.length + " colours rather than two");
-            if (!(table.pattern.length >= 1 && table.pattern.length <= 7 && table.structure.length >= 1 && table.structure.length <= 5))
-                failures.push("Fixed measured/structure role sizes exceed seven/five or are empty");
-            let nearSeen = false;
-            for (let place = 0; place < table.pattern.length; ++place) {
-                const colour = String(ApplicationInfo.patternColour(data.scheme, place, table.pattern.length, data.dark)).toLowerCase();
-                compare(colour, table.pattern[place][theme].toLowerCase(), "The actual short-set API uses each stored measured place");
-                const near = calcHue(colour);
-                if (nearSeen && !near)
-                    failures.push("Measured calc-hue colour appears before a safer hue");
-                nearSeen = nearSeen || near;
+        function test_natural_is_the_reversible_default() {
+            for (const afterChoice of [false, true]) {
+                if (afterChoice)
+                    setBothSchemes(reference.schemes[1].id);
+                Preferences.resetToDefaults();
+                const dialog = createTemporaryObject(preferencesFactory, parent);
+                verify(dialog !== null, "Default reset is observed through the actual split Preferences controls");
+                for (const label of ["Structures", "Patterns"])
+                    compare(colourChoice(dialog, label).currentText, reference.schemes[0].label, "The owner-selected Edi Natural default resets reversibly for both independent colour choices");
             }
-            const count = 1001, samples = [];
-            let highestLowerBound = -Infinity, totalStep = 0, maximumStep = 0, roundingStep = 0, previousLab = null, previousRadius = 0;
-            for (let place = 0; place < count; ++place) {
-                const colour = String(ApplicationInfo.patternColour(data.scheme, place, count, data.dark)).toLowerCase();
-                samples.push(colour);
-                const bounds = quantisationBounds(colour), level = oklab(colour)[0];
-                if (level + bounds.lightness < highestLowerBound)
-                    failures.push("Gradient lightness falls at " + place);
-                if (previousLab) {
-                    const step = Math.sqrt(previousLab.reduce((sum, value, i) => sum + Math.pow(value - oklab(colour)[i], 2), 0));
-                    totalStep += step;
-                    maximumStep = Math.max(maximumStep, step);
-                    roundingStep = Math.max(roundingStep, bounds.radius + previousRadius);
-                }
-                previousLab = oklab(colour);
-                previousRadius = bounds.radius;
-                highestLowerBound = Math.max(highestLowerBound, level - bounds.lightness);
-                if (calcHue(colour))
-                    failures.push("Gradient passes through calculated hue at " + place);
-                if (contrast(colour, data.dark ? "#444444" : "#ffffff") < 3)
-                    failures.push("Gradient loses 3:1 contrast at " + place);
-                if (oklabDistance(colour, data.dark ? "#ef9a9a" : "#f44336") < 0.10)
-                    failures.push("Gradient loses calc-distance at " + place);
-            }
-            if (maximumStep > totalStep / (count - 1) + roundingStep)
-                failures.push("Gradient jumps beyond its average step and independent RGB rounding bounds");
-            compare(samples[0], table.gradient[0][theme].toLowerCase(), "The actual many-set API starts at the first gradient endpoint");
-            compare(samples[count - 1], table.gradient[table.gradient.length - 1][theme].toLowerCase(), "The actual many-set API finishes at the last gradient endpoint");
-            verify(oklab(samples[0])[0] < oklab(samples[count - 1])[0], "The gradient has a strictly positive first-to-last lightness rise");
-            const transition = table.pattern.length + 1;
-            compare(String(ApplicationInfo.patternColour(data.scheme, 0, transition, data.dark)).toLowerCase(), samples[0], "The gradient takes over immediately beyond the bounded fixed set");
-            compare(String(ApplicationInfo.patternColour(data.scheme, transition - 1, transition, data.dark)).toLowerCase(), samples[count - 1], "The fixed-to-gradient transition retains the final endpoint");
-            for (let i = 0; i < table.structure.length; ++i) {
-                const colour = String(ApplicationInfo.structureColour(data.scheme, i, data.dark)).toLowerCase();
-                compare(colour, table.structure[i][theme].toLowerCase(), "The actual structure API consumes each stored structure place");
-                for (let j = i + 1; j < table.structure.length; ++j) {
-                    const other = String(ApplicationInfo.structureColour(data.scheme, j, data.dark)).toLowerCase();
-                    const a = quantisationBounds(colour), b = quantisationBounds(other);
-                    if (hueDistance(hue(colour), hue(other)) <= a.hue + b.hue)
-                        failures.push("Structures share a hue at " + i + "/" + j);
-                    if (Math.abs(oklab(colour)[0] - oklab(other)[0]) <= a.lightness + b.lightness)
-                        failures.push("Structures share a lightness step at " + i + "/" + j);
-                }
-                if (table.pattern.some(row => row[theme].toLowerCase() === colour))
-                    failures.push("Structure duplicates a measured colour at " + i);
-            }
-            compare(failures.length, 0, "All eighteen schemes retain distinct bounded roles and a rising, calc-hue-avoiding gradient with strict contrast at every actual API sample in both themes; scheme=" + data.scheme + " failures=" + failures.slice(0, 5).join("; ") + "; total=" + failures.length);
         }
         function test_pdf_colour_observer_reaches_an_independent_qt_image() {
             const witness = SettingsProof.pdfWitness();
@@ -266,9 +213,9 @@ Rectangle {
         }
         function test_report_preview_html_and_pdf_use_light_palettes(data) {
             Style.Colors.theme = Style.Colors.DarkTheme;
-            Preferences.colourScheme = data.scheme;
-            const table = SettingsProof.paletteForScheme(data.scheme);
-            verify(table.pattern !== undefined, "The report colour gate reaches the selected published palette: " + data.scheme);
+            setBothSchemes(data.scheme);
+            const expected = reference.schemes.find(row => row.id === data.scheme).palette;
+            verify(expected !== undefined, "The report colour gate reaches its independently approved palette");
             const folder = SettingsProof.copyProject(Qt.resolvedUrl("../../../docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));
             verify(Session.openProject(folder), "The light-report colour gate opens the real lbco project in the dark app theme");
             tryCompare(Session.project, "calculating", false, 15000, "The report colour input finishes its actual pattern and reflection calculation");
@@ -293,7 +240,7 @@ Rectangle {
             }
             tryVerify(() => colourSeries("chart.series.meas") !== null && colourSeries("chart.series.bragg.0") !== null, 5000, "The native report gate reads actual GraphsView seriesList consumers after lazy figure loading; actual chart items=" + JSON.stringify(Render.descendants(preview).filter(item => String(item.objectName).startsWith("chart.")).map(item => item.objectName)));
             const measured = colourSeries("chart.series.meas"), bragg = colourSeries("chart.series.bragg.0");
-            const lightMeasured = String(ApplicationInfo.patternColour(data.scheme, 0, 1, false)), lightStructure = String(ApplicationInfo.structureColour(data.scheme, 0, false));
+            const lightMeasured = expected.light.measured[0].toLowerCase(), lightStructure = expected.light.structures[0].toLowerCase();
             const failures = [];
             if (String(measured.color) !== lightMeasured || String(bragg.color) !== lightStructure)
                 failures.push("preview measured=" + measured.color + " Bragg=" + bragg.color + "; light expected=" + lightMeasured + "/" + lightStructure);

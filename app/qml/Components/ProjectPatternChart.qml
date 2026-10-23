@@ -15,7 +15,7 @@ Item {
     property ExperimentViewModel experiment: null
     // Set: the chart's x axis is this project's (the Analysis page's, which the report follows).
     property ProjectViewModel axisProject: null
-    // The page whose settings keep the chart's view options: "analysis" or "experiment".
+    // "pattern" for a page's chart, which follows the app's one pattern view (edi ADR-0017 §15).
     property string settingsPage: ""
     property bool shown: true
     property PatternChart chart: null

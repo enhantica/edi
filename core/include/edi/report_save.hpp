@@ -35,11 +35,12 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
 void write_report_file(const std::string& project_path, const std::string& name, const std::string& bytes);
 
 /// The options a saved report's row records its digest with and is judged by (ADR-0036 §7): `options` with the default
-/// colour scheme and the first experiment's correlations. A report is then out of date only when the project changed,
-/// whatever scheme or experiment the surface that saved it chose.
+/// colour scheme, Jmol element colours and the first experiment's correlations. A report is then out of date only when
+/// the project changed, whatever schemes or experiment the surface that saved it chose.
 ReportOptions report_file_options(ReportOptions options);
 
-/// Whether `options` choose another colour scheme or correlations' experiment than report_file_options.
+/// Whether `options` choose another colour scheme, element colours or correlations' experiment than
+/// report_file_options.
 bool chooses_presentation(const ReportOptions& options);
 
 /// One saved report's state: "current", "out of date" (its digest differs from the digest of the report the project

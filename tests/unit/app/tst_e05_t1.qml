@@ -1,4 +1,5 @@
 import QtQuick
+import ReportAcceptance 1.0
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -77,7 +78,11 @@ TestCase {
             }
         }
     }
+    property var savedMeasuredStyle
     function init() {
+        savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = "linePoints";
         savedTheme = Style.Colors.theme;
         Style.Colors.theme = Style.Colors.Themes.LightTheme;
         Session.closeProject();
@@ -86,6 +91,8 @@ TestCase {
         animation = flightControl.createObject(appWindow.contentItem);
     }
     function cleanup() {
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = savedMeasuredStyle;
         FitOracle.disarm();
         animation.destroy();
         Session.closeProject();
@@ -445,6 +452,19 @@ TestCase {
         verify(intermediate, " scope 8 zoom shows an intermediate frame instead of an instant range jump");
         verify(ended, " scope 8 animation ends at exactly the prior instant zoom ranges");
         verify(FitOracle.pointsEqualInstant(chart, Session.project, targetLeft, targetRight), " scope 8 regression against the instant path preserves every final decimated point exactly");
+        for (const family of ["chart.series.calc", "chart.series.bragg."]) {
+            const series = Render.series(chart).find(item => String(item.objectName).startsWith(family) && item.count > 1);
+            verify(series !== undefined, "The exact-point observer control reaches real calculated and per-structure tick series");
+            const index = Array.from({
+                length: series.count
+            }, (_, i) => i).find(i => isFinite(series.at(i).x) && isFinite(series.at(i).y));
+            verify(index !== undefined, "The observer mutation addresses a finite real point");
+            const point = series.at(index);
+            series.replace(index, point.x + 0.25, point.y);
+            verify(!FitOracle.pointsEqualInstant(chart, Session.project, targetLeft, targetRight), "The exact-point observer rejects a changed calculated or Bragg coordinate");
+            series.replace(index, point.x, point.y);
+            verify(FitOracle.pointsEqualInstant(chart, Session.project, targetLeft, targetRight), "Restoring the actual point restores exact instant-path equality");
+        }
         verify(FitOracle.bankDeliveryWork("docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project", "zoom-" + data.action).length > 0, " scope 8 animated presentation work is reported for the  median ratchet");
     }
     function test_fitted_values_outside_range_are_red_data() {
@@ -501,6 +521,16 @@ TestCase {
         if (data.path.includes("cosio-d20_start-1"))
             verify(outside > 0 && expected.some(row => row.path.includes("Co1") && row.value < 0 && row.outside), " scope 11 negative CLI Co1 ADP is the nontrivial zero-to-ten range witness");
     }
+    function residualEntryColours(text, palette) {
+        const entry = text.split(/<br\s*\/?\s*>/i).find(line => Probe.plainText(line).startsWith("meas − calc:"));
+        if (!entry)
+            return false;
+        const spans = [], pattern = /<span style="color:(#[0-9a-f]{6})">([^<]*)<\/span>/ig;
+        let match;
+        while ((match = pattern.exec(entry)) !== null)
+            spans.push(match);
+        return spans.length === 3 && spans[0][2] === "meas" && spans[1][2] === "calc" && spans[2][2].startsWith(": ") && [palette.measured[0], palette.total_calculation, palette.difference].every((colour, i) => spans[i][1].toLowerCase() === colour.toLowerCase());
+    }
     function test_hover_readout_data() {
         return [
             {
@@ -533,12 +563,20 @@ TestCase {
         if (data.pane === 1) {
             verify(text.includes(r.name) && text.includes(r.hkl), " gate 6 Bragg read-out shows structure and independently loaded signed Miller tuple");
         } else {
-            ["Imeas", "Ibkg", "Icalc"].forEach(label => verify(text.includes(label), " gate 6 data and residual hover show each required series quantity"));
+            ["meas:", "bkg:", "calc:", "meas − calc:"].forEach(label => verify(Probe.plainText(text).includes(label), " gate 6 data and residual hover show each required series quantity"));
             [r.x, r.meas, r.bkg, r.calc, r.resid].forEach(value => verify(Probe.plainText(text).includes(Number(value).toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })), " gate 6 every displayed hover number equals its independent source row at read-out precision"));
-            ["#03a9f4", "#f44336", "#607d8b", "#8bc34a"].forEach(color => verify(text.toLowerCase().includes(color), " gate 6 every read-out quantity uses its ADR-0017 light series colour"));
+            const palette = JSON.parse(SettingsProof.repoText("tests/fixtures/approved_palettes/colours.json")).palettes[0].light;
+            [palette.measured[0], palette.total_calculation, palette.background].forEach(color => verify(text.toLowerCase().includes(color.toLowerCase()), "Every tooltip operand uses its approved palette colour, matching the axis title"));
+            verify(residualEntryColours(text, palette), "The residual tooltip entry independently colours meas, calc and its numerical value with their approved operand and difference colours");
+            const residual = text.split(/<br\s*\/?\s*>/i).find(line => Probe.plainText(line).startsWith("meas − calc:"));
+            for (const colour of [palette.total_calculation, palette.difference]) {
+                const corrupted = residual.replace(new RegExp(colour, "i"), palette.background);
+                verify(!residualEntryColours(text.replace(residual, corrupted), palette), "Wrong residual operand or value colour is rejected even when the other tooltip entries retain all correct colours");
+            }
+            verify(!/Imeas|Icalc|Ibkg/.test(text), "Tooltips contain no retired I-prefixed quantity names");
         }
     }
 }
