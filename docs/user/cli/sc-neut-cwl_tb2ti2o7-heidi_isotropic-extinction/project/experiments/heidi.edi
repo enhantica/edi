@@ -16,6 +16,7 @@ _extinction.type becker-coppens-mixed
 _extinction.mosaic_distribution gaussian
 _extinction.domain_radius 10()
 _extinction.mosaic_spread 101810.87303
+_extinction.crystal_radius 0.01
 
 loop_
 _linked_structure.structure_id
