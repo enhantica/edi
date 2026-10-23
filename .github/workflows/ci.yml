@@ -857,10 +857,3 @@ jobs:
       - name: Check each surface's notices
         if: ${{ !cancelled() }}
         run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py
-      - name: Upload the staged surfaces
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: licence-surfaces
-          path: build/distribution-licences
-          if-no-files-found: error

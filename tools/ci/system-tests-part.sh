@@ -28,8 +28,8 @@ if [ "${EDI_RUN_NIGHTLY_ONLY:-false}" != true ]; then
   [ -n "$nightly" ] || { echo "system-tests-part: the nightly-only group names no files" >&2; exit 2; }
   while IFS= read -r path; do set -- "$@" "--ignore=$path"; done <<< "$nightly"
 fi
-# The licence checks run on the four staged surfaces, which the workflow's licence-surfaces job builds and runs them
-# on; a system part has none of them.
+# The licence checks run on the four staged surfaces, which the workflow's app-wasm job builds and runs them on; a
+# system part has none of them.
 set -- "$@" --ignore=tests/system/py/test_distribution_licences.py
 exec python -m pytest tests/system -q "$@" \
     --splits "$parts" --group "$part" --splitting-algorithm least_duration \
