@@ -186,7 +186,7 @@ PROJECTS = {
         'cell': ('5.272901', '11.656488', '7.838297', '90', '94.010994', '90'),
         'sites': TAURINE_SITES,
         'scale': '2.711()',
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
         'tof': True,
         # FullProf fits only the reflections it does not exclude (I > 3 sigma, and one more).
         'select': 'sc-neut-tof_taurine-unknown_basic/taurine.out',
@@ -204,7 +204,7 @@ PROJECTS = {
         'cell': ('5.417799', '5.4146', '12.483399', '90', '90', '90'),
         'sites': PR2NIO4_SITES,
         'scale': '4.031()',
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
     },
     'sc-neut-cwl_tb2ti2o7-heidi_isotropic-adp': {
         'source': 'sc-neut-cwl_tbti_basic/tbti.int',
@@ -219,7 +219,7 @@ PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_ISO_SITES,
         'scale': '3.653()',
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
     },
     'sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction': {
         'source': 'sc-neut-cwl_tbti_isotropic-extinction/tbti.int',
@@ -228,12 +228,12 @@ PROJECTS = {
         'title': 'Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)',
         'instrument': 'HEiDi',
         'facility': 'MLZ (FRM II)',
-        'description': 'Single crystal · Becker-Coppens extinction · Scale and radius fit',
+        'description': 'Single crystal · Becker-Coppens extinction · Scale and domain radius fit',
         'space_group': ('F d -3 m', '2'),
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_ISO_SITES,
         'scale': '4.1744()',
-        'extinction': ('gauss', '10()', '35000'),
+        'extinction': ('becker-coppens-mixed', 'gaussian', '10()', '101810.87303'),
     },
     'sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp': {
         'source': 'sc-neut-cwl_tbti_anisotropic-adp/tbti.int',
@@ -247,7 +247,7 @@ PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_ANISO_SITES,
         'scale': '4.6()',
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
     },
 }
 
@@ -337,7 +337,7 @@ FIT_PROJECTS = {
             for sid, typ, x, y, z, w, occ, adp, _, _ in TAURINE_SITES
         ],
         'scale': '1()',
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
         'tof': True,
     },
     'sc-neut-cwl_tb2ti2o7-heidi': {
@@ -356,7 +356,7 @@ FIT_PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_FIT_SITES,
         'scale': '4()',
-        'extinction': ('gauss', '25', '0()'),
+        'extinction': ('becker-coppens-mixed', 'gaussian', '25', '0()'),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
@@ -375,7 +375,7 @@ FIT_PROJECTS = {
         'sites': PR2NIO4_FIT_SITES,
         'scale': '4()',
         # No extinction, as in FullProf's refinement of these reflections (the owner, 2026-10-23).
-        'extinction': ('gauss', '0', '0'),
+        'extinction': None,
     },
 }
 
@@ -396,9 +396,9 @@ CASES = {
         ),
         'start': (
             'The project starts from rough values: anisotropic displacements at a small '
-            'isotropic-equivalent value, the free O1 x moved off its refined value, the crystal '
-            'radius fixed at 25 μm and the mosaicity free from 0, and the scale to one '
-            'significant figure.'
+            'isotropic-equivalent value, the free O1 x moved off its refined value, mixed '
+            'Becker-Coppens extinction with the domain radius fixed at 25 μm and the mosaic '
+            'spread free from 0, and the scale to one significant figure.'
         ),
         'model': (
             "{lib}'s verification page `sc-neut-cwl_tbti_anisotropic-adp` (FullProf "
@@ -412,9 +412,10 @@ CASES = {
         ),
         'start_detail': (
             'Uani on every site from an isotropic-equivalent 0.0026 Å², tied by site symmetry; '
-            'O1 x moved off its refined value; the crystal radius fixed at 25 μm and the '
-            'mosaicity free from 0 (the owner, 2026-10-22); the scale 4. Free: the scale, O1 x, '
-            'the eight independent tensor components and the mosaicity (11 parameters).'
+            'O1 x moved off its refined value; isotropic Becker-Coppens extinction, mixed, with '
+            'the domain radius fixed at 25 μm and the mosaic spread free from 0 (the owner, '
+            '2026-10-22 and 2026-10-23); the scale 4. Free: the scale, O1 x, the eight '
+            'independent tensor components and the mosaic spread (11 parameters).'
         ),
         'differences': [
             (
@@ -423,13 +424,13 @@ CASES = {
                 'and the occupancies are fixed.'
             ),
             (
-                'The tutorial frees the crystal radius at a fixed mosaicity; here the radius is '
-                'fixed and the mosaicity free.'
+                'The tutorial frees the domain radius at a fixed mosaic spread; here the radius '
+                'is fixed and the mosaic spread free.'
             ),
         ],
         'result': (
             'From this start edi converges in 13 iterations to reduced χ² 3.26 over the 220 '
-            'reflections, with the scale 5.656(46) and the mosaicity 32006(3997).'
+            'reflections, with the scale 5.656(46) and the mosaic spread 93096(11625) rad⁻¹.'
         ),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
@@ -458,7 +459,7 @@ CASES = {
             'Bani on every site but Od, every independent component from 0 (with B12 on O1, '
             'whose site allows it), and Biso 0 on Od, all free (the owner, 2026-10-23); the '
             'free coordinates moved off their refined values (Pr z 0.362, O2 z 0.176, Od 0.075, '
-            '0.075, 0.175); the Becker-Coppens radius and mosaicity 0 and fixed; the scale 4. '
+            '0.075, 0.175); no extinction (type None); the scale 4. '
             'Free: the scale, 17 displacement components and the free coordinates (23 '
             'parameters).'
         ),
@@ -496,13 +497,14 @@ CASES = {
             '286 reflections unchanged (h, k, l, F², su, wavelength).'
         ),
         'start_detail': (
-            'Biso 1.5 Å² on every site; the scale 1; the Becker-Coppens radius and mosaicity 0. '
+            'Biso 1.5 Å² on every site; the scale 1; no extinction (type None). '
             'Free: the scale and every Biso (15 parameters).'
         ),
         'differences': [
             (
-                'The tutorial starts with Becker-Coppens extinction (radius 100 μm, mosaicity '
-                '1000) and frees the radius, then refines anisotropic displacements; here the '
+                'The tutorial starts with Becker-Coppens extinction (domain radius 100 μm, '
+                'mosaic spread 2909 rad⁻¹) and frees the radius, then refines anisotropic '
+                'displacements; here the '
                 'extinction is off and the displacements are isotropic, as on the verification '
                 'page.'
             ),
@@ -513,6 +515,19 @@ CASES = {
         ),
     },
 }
+
+
+def extinction_lines(extinction: tuple | None) -> list[str]:
+    """The experiment's _extinction items: the type, then that type's own items."""
+    if extinction is None:
+        return ['_extinction.type none']
+    kind, distribution, radius, spread = extinction
+    return [
+        f'_extinction.type {kind}',
+        f'_extinction.mosaic_distribution {distribution}',
+        f'_extinction.domain_radius {radius}',
+        f'_extinction.mosaic_spread {spread}',
+    ]
 
 
 def write_case_pages(root: Path, pid: str, spec: dict) -> None:
@@ -738,7 +753,6 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
             *aniso,
         ]
     (project / 'structures' / f'{name}.edi').write_text('\n'.join(text) + '\n', encoding='utf-8')
-    model, radius, mosaicity = spec['extinction']
     beam_mode = 'time-of-flight' if spec.get('tof') else 'constant wavelength'
     text = [
         f'data_{experiment}',
@@ -758,10 +772,7 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
             if spec.get('tof')
             else [f'_instrument.setup_wavelength {number(str(wavelength))}', '']
         ),
-        '_extinction.type becker-coppens',
-        f'_extinction.model {model}',
-        f'_extinction.radius {radius}',
-        f'_extinction.mosaicity {mosaicity}',
+        *extinction_lines(spec['extinction']),
         '',
         'loop_',
         '_linked_structure.structure_id',

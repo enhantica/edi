@@ -1870,7 +1870,7 @@ NB_MODULE(_edi, m) {
     m.def("_experiment_from_edi_text",
           [](const std::string& text) { return edi::experiment_from_edi_text(text); });
     // A single crystal for ExperimentFactory: diffraction-lib's defaults (wavelength 1.5406 at
-    // constant wavelength, Becker-Coppens extinction with radius and mosaicity 1, as the loader
+    // constant wavelength, no extinction, as the loader
     // gives a block that declares none), and its reflections read from a FullProf .int or a plain
     // h k l F2 su [wavelength] file by crysta's reader, whose refusal names the line.
     m.def(
@@ -2893,16 +2893,24 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::views::NoAbsorption, edi::views::AbsorptionNode>(m, "NoAbsorption")
         .def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
 
-    // A single crystal's extinction: its mosaic model (read here; the file and the app set it) and
-    // its crystal radius and mosaicity.
+    // A single crystal's isotropic Becker-Coppens extinction: its type, mosaic distribution, domain
+    // radius and mosaic spread; a type's setter keeps that type's items alone (edi ADR-0049).
     nb::class_<edi::views::ExtinctionNode> extinction(m, "BeckerCoppensExtinction");
-    extinction.def_prop_ro("model", [](edi::views::ExtinctionNode& self) {
-        return self.storage().model.value_or("gauss");
-    });
-    def_view_optional_parameter_field(extinction, "radius", &edi::ExtinctionBase::radius,
-                                      edi::spec::extinction_radius);
-    def_view_optional_parameter_field(extinction, "mosaicity", &edi::ExtinctionBase::mosaicity,
-                                      edi::spec::extinction_mosaicity);
+    extinction.def_prop_rw(
+        "type", [](edi::views::ExtinctionNode& self) { return self.storage().type.value_or("none"); },
+        [](edi::views::ExtinctionNode& self, const std::string& token) {
+            edi::select_extinction(*self.experiment, token);
+        });
+    extinction.def_prop_rw(
+        "mosaic_distribution",
+        [](edi::views::ExtinctionNode& self) { return self.storage().mosaic_distribution; },
+        [](edi::views::ExtinctionNode& self, const std::string& token) {
+            edi::select_mosaic_distribution(*self.experiment, token);
+        });
+    def_view_optional_parameter_field(extinction, "domain_radius", &edi::ExtinctionBase::domain_radius,
+                                      edi::spec::extinction_domain_radius);
+    def_view_optional_parameter_field(extinction, "mosaic_spread", &edi::ExtinctionBase::mosaic_spread,
+                                      edi::spec::extinction_mosaic_spread);
 
     def_parameters(peak);
     def_parameters(instrument);

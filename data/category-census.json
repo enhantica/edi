@@ -1338,24 +1338,24 @@
           ]
         },
         {
-          "member": "ExtinctionBase::model",
+          "member": "ExtinctionBase::mosaic_distribution",
           "type": "std::optional<std::string>",
           "items": [
-            "model"
+            "mosaic_distribution"
           ]
         },
         {
-          "member": "ExtinctionBase::radius",
+          "member": "ExtinctionBase::domain_radius",
           "type": "OptionalParameter",
           "items": [
-            "radius"
+            "domain_radius"
           ]
         },
         {
-          "member": "ExtinctionBase::mosaicity",
+          "member": "ExtinctionBase::mosaic_spread",
           "type": "OptionalParameter",
           "items": [
-            "mosaicity"
+            "mosaic_spread"
           ]
         }
       ],
@@ -3784,17 +3784,17 @@
       "category": "_extinction"
     },
     {
-      "member": "ExtinctionBase::model",
+      "member": "ExtinctionBase::mosaic_distribution",
       "type": "std::optional<std::string>",
       "category": "_extinction"
     },
     {
-      "member": "ExtinctionBase::radius",
+      "member": "ExtinctionBase::domain_radius",
       "type": "OptionalParameter",
       "category": "_extinction"
     },
     {
-      "member": "ExtinctionBase::mosaicity",
+      "member": "ExtinctionBase::mosaic_spread",
       "type": "OptionalParameter",
       "category": "_extinction"
     },

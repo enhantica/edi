@@ -15,7 +15,7 @@ crysta.
 | `n_free` | reference | 2 | tol_abs 0 |
 | `n_points_fitted` | reference | 220 | tol_abs 0 |
 | `param.scale.value` | reference | 3.6799768101945864 | tol_abs 0.10288873814942545 |
-| `param.radius.value` | reference | 16.550771124907907 | tol_abs 2.225559273639577 |
+| `param.domain_radius.value` | reference | 16.550771124907907 | tol_abs 2.225559273639577 |
 | `reduced_chi_square` | reference | 76.79365259985084 | tol_abs 0.06, tol_rel 0.002 |
 
 Each parameter bound is one s.u. of that fit; the reduced chi-square is the residual sum over N - p.

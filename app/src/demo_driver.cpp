@@ -415,12 +415,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
                                                 "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
-    // The mosaicity with no unit and, hovered, the mosaic spread it means.
-    steps_.push_back({"sccheck-11-mosaicity-hint", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
-                                                       + QStringList{experiment, basic, "expand:group.extinction",
-                                                                     "hover:extinction.mosaicity:0.5,0.5"}});
-    steps_.push_back({"sccheck-11b-mosaicity-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
-                                                        "choose:OK", experiment, basic, "hover:extinction.mosaicity:0.5,0.5"}});
+    // The extinction type selector: the Tb2Ti2O7 example's mixed type with its three fields, the type choices, and
+    // type II with the domain radius alone.
+    steps_.push_back({"sccheck-11-extinction-mixed", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                         + QStringList{experiment, basic, "expand:group.extinction"}});
+    steps_.push_back({"sccheck-11b-extinction-types", {"extinction.type"}});
+    steps_.push_back({"sccheck-11c-extinction-type-2", {"choose:Isotropic Becker-Coppens type II"}});
     // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
     steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
                                                             + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
