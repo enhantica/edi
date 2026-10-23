@@ -78,10 +78,12 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
+      extinction_(new ParameterListModel([this] { return category("extinction").fields; }, registry, this)),
       background_(new BackgroundListModel(experiment, editor, registry, this)),
       background_terms_(new BackgroundTermListModel(experiment, editor, registry, this)),
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
+      single_crystal_reflections_(new SingleCrystalReflectionModel(experiment, project, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
       linked_structures_(new LinkedStructureListModel(project, experiment, editor, registry, this)),
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
@@ -124,6 +126,12 @@ edi::Category ExperimentViewModel::category(const char* id) const {
     }
     if (std::string(id) == "instrument") {
         return edi::instrument_category(experiment_);
+    }
+    if (std::string(id) == "extinction") {
+        edi::Category extinction{"extinction"};
+        edi::detail::add_optional(extinction.fields, "radius", experiment_.extinction.radius);
+        edi::detail::add_optional(extinction.fields, "mosaicity", experiment_.extinction.mosaicity);
+        return extinction;
     }
     return edi::absorption_category(experiment_);
 }
@@ -408,6 +416,8 @@ void ExperimentViewModel::sync() {
         family->sync();
     }
     absorption_->sync();
+    extinction_->sync();
+    single_crystal_reflections_->sync();
     background_->sync();
     background_terms_->sync();
     excluded_regions_->sync();
@@ -428,6 +438,7 @@ std::size_t ExperimentViewModel::place() const {
 }
 
 void ExperimentViewModel::capturePattern() {
+    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

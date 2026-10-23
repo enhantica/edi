@@ -35,7 +35,15 @@ AppDialog {
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
     readonly property var factorColumns: dialog.agreement ? dialog.agreement.columns : []
-    readonly property real factorWidth: EaStyle.Sizes.fontPixelSize * 4.5
+    // Wide enough for the longest structure name under a phase factor, with its icon: a name is never cut.
+    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5)
+
+    TextMetrics {
+        id: structureMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: dialog.factorColumns.reduce((longest, column) => column.structure.length > longest.length ? column.structure : longest, "")
+    }
     readonly property bool structureHeaders: dialog.factorColumns.some(column => column.structure !== "")
 
     // The summary table is as wide as its content (the owner, 2026-10-21): each text column its widest entry.

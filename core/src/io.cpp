@@ -596,6 +596,7 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
 // reject nothing across every `.edi` in the acceptance vehicle and in edi's fixtures.
 const std::set<std::string>& covered_categories() {
     static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso", "background",
+                                                  "extinction",
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
                                                   "fit_parameter", "peak", "preferred_orientation",
@@ -607,6 +608,8 @@ const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
         // _absorption
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
+        // _extinction (a single crystal's)
+        "_extinction.type", "_extinction.model", "_extinction.radius", "_extinction.mosaicity",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -1499,9 +1502,146 @@ void read_background_estimate(const Block& block, ExperimentBase& experiment, co
     experiment.background_estimate_points = digest("_background_estimate.points_digest");
 }
 
+// A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
+// the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
+BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
+    BraggPdExperiment experiment;
+    experiment.name = block.name;
+    experiment.experiment_type.sample_form = SampleFormEnum::SINGLE_CRYSTAL;
+    const std::string* beam = block.find("_experiment_type.beam_mode");
+    if (beam == nullptr || (*beam != kBeamModeTof && *beam != kBeamModeCwl)) {
+        fail_schema(where, "unknown-beam-mode",
+                    "a single crystal declares _experiment_type.beam_mode 'constant wavelength' or "
+                    "'time-of-flight'");
+    }
+    const bool cw = *beam == kBeamModeCwl;
+    experiment.experiment_type.beam_mode =
+        cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
+        if (*probe != "neutron") {
+            fail_schema(where, "unknown-radiation-probe",
+                        "a single crystal is a neutron experiment; _experiment_type.radiation_probe is '" +
+                            *probe + "'");
+        }
+        experiment.experiment_type.radiation_probe = RadiationProbeEnum::NEUTRON;
+    }
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type")) {
+        if (*scattering != "bragg") {
+            fail_schema(where, "unknown-scattering-type",
+                        "a single crystal is a Bragg experiment; _experiment_type.scattering_type is '" +
+                            *scattering + "'");
+        }
+        experiment.experiment_type.scattering_type = ScatteringTypeEnum::BRAGG;
+    }
+    if (const std::string* source = block.find("_scattering_source.neutron_scattering_length")) {
+        experiment.neutron_scattering_length = *source;
+    }
+    if (cw) {
+        experiment.instrument.setup_wavelength =
+            require_spec_parameter(block, spec::instrument_wavelength, where);
+        if (const std::string domain =
+                detail::wavelength_domain_message(experiment.instrument.setup_wavelength->value);
+            !domain.empty()) {
+            fail_domain(where, "wavelength-domain", domain);
+        }
+    }
+    experiment.extinction.type = "becker-coppens";
+    if (const std::string* type = block.find("_extinction.type")) {
+        if (*type != "becker-coppens") {
+            fail_schema(where, "unknown-extinction-type",
+                        "_extinction.type '" + *type + "' is not a known type (expected 'becker-coppens')");
+        }
+    }
+    experiment.extinction.model = "gauss";
+    if (const std::string* model = block.find("_extinction.model")) {
+        if (*model != "gauss" && *model != "lorentz") {
+            fail_schema(where, "unknown-extinction-model",
+                        "_extinction.model '" + *model + "' is not a known model (expected 'gauss' or 'lorentz')");
+        }
+        experiment.extinction.model = *model;
+    }
+    for (const auto& [field, specification] :
+         {std::pair{&experiment.extinction.radius, &spec::extinction_radius},
+          std::pair{&experiment.extinction.mosaicity, &spec::extinction_mosaicity}}) {
+        std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
+        if (!found) {
+            found = Parameter{};
+            found->value = 1.0;
+            found->spec = specification;
+        }
+        if (!(found->value.get() >= 0.0) || !std::isfinite(found->value.get())) {
+            fail_domain(where, "extinction-domain",
+                        std::string(specification->edi_names[0]) + " must be finite and not negative");
+        }
+        *field = *found;
+    }
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row :
+         linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        links.push_back(std::move(link));
+    }
+    try {
+        experiment.linked_structures.assign(std::move(links));
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "duplicate-id", error.what());
+    }
+    // A single crystal made in the app holds no reflections until its data are loaded: until then it is a
+    // data-less experiment, as a powder one with a declared range is.
+    const Loop* refln = block.loop_with("_refln.index_h");
+    ReflnDataBase rows;
+    if (refln == nullptr) {
+        experiment.reflections = std::move(rows);
+        experiment.calculation_only = true;
+        return experiment;
+    }
+    const auto index = [&](const std::vector<std::string>& row, const char* tag) {
+        const std::string& text = loop_cell(*refln, row, tag, where);
+        const double value = to_double(text, where);
+        if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+            fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+        }
+        return static_cast<std::int32_t>(value);
+    };
+    std::vector<std::int32_t> h;
+    std::vector<std::int32_t> k;
+    std::vector<std::int32_t> l;
+    std::vector<double> meas;
+    std::vector<double> su;
+    std::vector<double> wavelength;
+    for (const std::vector<std::string>& row : refln->rows) {
+        h.push_back(index(row, "_refln.index_h"));
+        k.push_back(index(row, "_refln.index_k"));
+        l.push_back(index(row, "_refln.index_l"));
+        meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
+        su.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
+        if (!cw) {
+            wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
+        }
+    }
+    rows.index_h = std::move(h);
+    rows.index_k = std::move(k);
+    rows.index_l = std::move(l);
+    rows.intensity_meas = std::move(meas);
+    rows.intensity_meas_su = std::move(su);
+    rows.wavelength = std::move(wavelength);
+    experiment.reflections = std::move(rows);
+    return experiment;
+}
+
 BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
+    if (const std::string* form = block.find("_experiment_type.sample_form");
+        form != nullptr && *form == "single crystal") {
+        return single_crystal_from_block(block, where);
+    }
     BraggPdExperiment experiment;
     experiment.name = block.name;
     // Resolve the experiment kind from the `_peak.type` family cross-validated against
@@ -2355,6 +2495,13 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
         }
+        // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
+        if (experiment.extinction.radius) {
+            add(prefix + "radius", prefix + "extinction.radius", &*experiment.extinction.radius);
+        }
+        if (experiment.extinction.mosaicity) {
+            add(prefix + "mosaicity", prefix + "extinction.mosaicity", &*experiment.extinction.mosaicity);
+        }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
             const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
@@ -3078,6 +3225,30 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    if (type.sample_form == "single crystal") {
+        // A single crystal: its wavelength (constant wavelength), the Becker-Coppens extinction off (radius 0)
+        // and no reflections until its data are loaded.
+        if (type.radiation_probe != "neutron") {
+            throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
+        }
+        std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+        text += "_experiment_type.sample_form \"single crystal\"\n";
+        text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+        text += "_experiment_type.radiation_probe \"neutron\"\n";
+        text += "_experiment_type.scattering_type \"bragg\"\n\n";
+        if (constant_wavelength) {
+            text += "_instrument.setup_wavelength 1.\n\n";
+        }
+        text += "_extinction.type becker-coppens\n_extinction.model gauss\n_extinction.radius 0\n"
+                "_extinction.mosaicity 0\n";
+        if (!structure_ids.empty()) {
+            text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+            for (const std::string& structure_id : structure_ids) {
+                text += structure_id + " 1.\n";
+            }
+        }
+        return experiment_from_edi_text(text);
+    }
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
     text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
@@ -3167,17 +3338,13 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.sample_form") == "single crystal") {
-        throw IoError(path + ": _experiment_type.sample_form 'single crystal' is not implemented - "
-                             "edi experiments are powder + bragg");
-    }
     if (*block.find("_experiment_type.scattering_type") == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
     BraggPdExperiment experiment = experiment_from_block(block, path);
     // load_project's rule for every experiment of a project: measured data or a calculation grid.
-    if (!experiment.data.has_value()) {
+    if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
         throw IoError(path + ": experiment '" + experiment.name +
                       "' declares neither an embedded _data loop nor a _data_range grid - an "
                       "experiment must say what it computes over");
@@ -3392,7 +3559,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "

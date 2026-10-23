@@ -3482,6 +3482,43 @@ struct AbsorptionBase {
     detail::CategoryRow table_row;
 };
 
+// A single crystal's extinction (diffraction-lib `extinction`): the type (`becker-coppens`), the
+// mosaic model (`gauss` or `lorentz`), the crystal's radius and its mosaicity. Engaged exactly on a
+// single crystal.
+struct ExtinctionBase {
+    std::optional<std::string> type;
+    std::optional<std::string> model;
+    OptionalParameter radius;
+    OptionalParameter mosaicity;
+
+    std::vector<Parameter*> parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+    detail::CategoryRow table_row;
+};
+
+// A single crystal's reflections (diffraction-lib `ReflnDataBase`, the `refln` category of a single
+// crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of
+// flight (else empty), and crysta's calculated columns beside them, empty until a calculation.
+struct ReflnDataBase {
+    detail::Written<std::vector<std::int32_t>> index_h;
+    detail::Written<std::vector<std::int32_t>> index_k;
+    detail::Written<std::vector<std::int32_t>> index_l;
+    detail::Written<std::vector<double>> intensity_meas;
+    detail::Written<std::vector<double>> intensity_meas_su;
+    detail::Written<std::vector<double>> wavelength;
+    ComputedColumn<double> d_spacing;
+    ComputedColumn<double> sin_theta_over_lambda;
+    ComputedColumn<double> intensity_calc;
+
+    std::size_t size() const noexcept { return intensity_meas.size(); }
+    void clear_computed() noexcept {
+        d_spacing.clear();
+        sin_theta_over_lambda.clear();
+        intensity_calc.clear();
+    }
+};
+
 // The largest absolute Miller index a texture axis component may take — the loader's bound, held at
 // every programmatic entrance too (crysta's kPreferredOrientationAxisBound).
 inline constexpr int kPreferredOrientationAxisBound = 1000;
@@ -3753,6 +3790,10 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<CarriedLoop> carried_reflections;
     // The reflections crysta computed, beside the `data` node's computed columns.
     PowderReflnDataBase refln;
+    // A single crystal's measured reflections and their calculated F² (engaged exactly on a single
+    // crystal, which has no `data` pattern), and its extinction.
+    std::optional<ReflnDataBase> reflections;
+    ExtinctionBase extinction;
     double dataset_weight = 1.0;  // joint-fit weight from analysis.edi
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
@@ -3906,8 +3947,8 @@ struct KeyTraits<BraggPdExperiment> {
 };
 
 // An experiment is a row of the project's `experiments`; its parameter categories are the peak, the
-// instrument and the absorption (its linked-structure, background and texture rows are rows of their
-// own collections).
+// instrument, the absorption and the extinction (its linked-structure, background and texture rows are
+// rows of their own collections).
 template <>
 struct RowTraits<BraggPdExperiment> {
     static void link(BraggPdExperiment& experiment,
@@ -3915,11 +3956,13 @@ struct RowTraits<BraggPdExperiment> {
         experiment.peak.row.link(record);
         experiment.instrument.row.link(record);
         experiment.absorption.row.link(record);
+        experiment.extinction.row.link(record);
     }
     static void unlink(BraggPdExperiment& experiment) noexcept {
         experiment.peak.row.unlink();
         experiment.instrument.row.unlink();
         experiment.absorption.row.unlink();
+        experiment.extinction.row.unlink();
     }
     static const detail::RowLink* primary(const BraggPdExperiment& experiment) noexcept {
         return &experiment.peak.row;
@@ -5175,6 +5218,16 @@ struct AbsorptionCategory {
 };
 static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, AbsorptionCategory::items));
 
+// A single crystal's Becker-Coppens extinction.
+struct ExtinctionCategory {
+    using Owner = ExtinctionBase;
+    static constexpr const char* name = "_extinction";
+    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::model, &ExtinctionBase::radius, &ExtinctionBase::mosaicity};
+    static constexpr std::array items{"type", "model", "radius", "mosaicity"};
+    static constexpr std::array legacy{"_easydiffraction_extinction"};
+};
+static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
+
 // The selector and constants of the type-switched `_background` category. Its rows are the loop
 // schema of the selected type.
 struct BackgroundCategory {
@@ -5435,8 +5488,10 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position};
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight"};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
+    // A powder's computed reflections and a single crystal's measured ones with their calculated
+    // columns: one category on file, as in diffraction-lib, held by two classes.
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
@@ -5573,6 +5628,12 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     return out;
 }
+inline std::vector<Parameter*> ExtinctionBase::parameters() {
+    std::vector<Parameter*> out;
+    detail::push_optional(out, radius);
+    detail::push_optional(out, mosaicity);
+    return out;
+}
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
     std::vector<Parameter*> out;
     detail::push_optional(out, abscor1);
@@ -5591,6 +5652,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
         out.push_back(&link->scale);
     }
     for (Parameter* parameter : absorption.parameters()) {
+        out.push_back(parameter);
+    }
+    for (Parameter* parameter : extinction.parameters()) {
         out.push_back(parameter);
     }
     for (const std::shared_ptr<PrefOrient>& row : preferred_orientation) {
@@ -5687,7 +5751,8 @@ inline void canonicalize_peak_specs(PeakBase& peak) {
 // conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
 // no slot is dropped, read as another profile's, or classed by another slot's metadata.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
-    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+    // A single crystal has no peak profile.
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH || experiment.reflections) {
         return {};
     }
     const std::string declared = effective_peak_type(experiment);

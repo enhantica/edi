@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
@@ -18,6 +19,8 @@ EaElements.ParamTextField {
 
     required property ParameterItem item
     property string label: item ? item.shortName : ""
+    // What the value means, shown while hovering when nothing is wrong with it.
+    property string hint: ""
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
@@ -79,6 +82,10 @@ EaElements.ParamTextField {
     WarningToolTip {
         text: field.warningText
         visible: field.warned && (field.hovered || field.activeFocus)
+    }
+    EaElements.ToolTip {
+        text: field.hint
+        visible: field.hint !== "" && !field.warned && field.hovered && EaGlobals.Vars.showToolTips
     }
 
     onValueChanged: typedRefusal = ""

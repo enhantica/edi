@@ -607,8 +607,29 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
-    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
-    example_names = {f'ex-{project["id"]}.png' for project in registry['projects']}
+    oracle = json.loads(
+        (ROOT / 'tests/fixtures/e04_t1/oracle.js')
+        .read_text()
+        .split('var frozen = ', 1)[1]
+        .removesuffix(';\n')
+    )
+    bundled = {
+        row['id']
+        for row in oracle['projects']
+        if row['metadata']['_metadata.purpose'] != 'verification'
+    }
+    retained_verification = {
+        'pd-neut-cwl_lab6-echidna_fcj-asymmetry',
+        'pd-neut-cwl_y2o3_beta-adp',
+        'pd-neut-tof_diamond-dream_basic',
+        'pd-neut-tof_fe_pseudo-voigt',
+        'pd-xray-cwl_lif_single',
+    }
+    assert bundled | retained_verification <= {
+        row['id']
+        for row in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    }, 'Image subjects must remain registered; historical verification captures remain required'
+    example_names = {f'ex-{identity}.png' for identity in bundled | retained_verification}
     example_names.add('ex-pd-xray-cwl_lif.png')
     captures = json.loads((ROOT / 'docs/dev/design/app-review-captures.json').read_text())[
         'captures'
@@ -734,13 +755,17 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
     )
     for project in oracle['projects']:
         cases = [case for case in display['cases'] if case['path'] == project['path']]
+        corpus = [row for row in oracle['corpus'] if row['project'] == project['path']]
+        data_group = (
+            'extinction' if all(row.get('singleCrystal', False) for row in corpus) else 'data'
+        )
         assert {case['group'] for case in cases} >= {
             'space_group',
             'experiment_type',
-            'data',
+            data_group,
             'engines',
         }, 'gate 3: each frozen project covers every common read-only display family'
-        for group in ('experiment_type', 'data'):
+        for group in ('experiment_type', data_group):
             assert {case['selection'] for case in cases if case['group'] == group} == set(
                 project['experiments']
             ), 'gate 3: read-only displayed values cover every experiment, not only the first'

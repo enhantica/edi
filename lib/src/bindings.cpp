@@ -80,6 +80,12 @@ static nb::object readonly_array(const edi::ComputedColumn<T>& column) {
         nb::ndarray<nb::numpy, const T, nb::ndim<1>>(values.data(), {values.size()}, keeper));
 }
 
+// A measured column, copied once into an immutable buffer, as a read-only NumPy array.
+template <typename T>
+static nb::object copied_array(const std::vector<T>& values) {
+    return readonly_array(edi::ComputedColumn<T>(std::make_shared<const std::vector<T>>(values)));
+}
+
 // A computed text column — `calc_status`, `structure_id` — as `tuple[str, ...]` (ADR-0073 §2).
 static nb::tuple text_tuple(const edi::ComputedColumn<std::string>& column) {
     nb::list out;
@@ -1851,6 +1857,33 @@ NB_MODULE(_edi, m) {
           [](const std::string& text) { return edi::structure_from_edi_text(text); });
     m.def("_experiment_from_edi_text",
           [](const std::string& text) { return edi::experiment_from_edi_text(text); });
+    // A single crystal for ExperimentFactory: diffraction-lib's defaults (wavelength 1.5406 at
+    // constant wavelength, Becker-Coppens extinction with radius and mosaicity 1, as the loader
+    // gives a block that declares none), and its reflections read from a FullProf .int or a plain
+    // h k l F2 su [wavelength] file by crysta's reader, whose refusal names the line.
+    m.def(
+        "_single_crystal_from_scratch",
+        [](const std::string& name, const std::string& beam_mode) {
+            const bool tof = beam_mode == "time-of-flight";
+            std::string text = "data_" + (name.empty() ? std::string("experiment") : name) +
+                               "\n\n_edi.schema_version 3\n\n";
+            text += "_experiment_type.sample_form \"single crystal\"\n";
+            text += std::string("_experiment_type.beam_mode \"") +
+                    (tof ? "time-of-flight" : "constant wavelength") + "\"\n";
+            text += "_experiment_type.radiation_probe \"neutron\"\n_experiment_type.scattering_type \"bragg\"\n";
+            if (!tof) {
+                text += "\n_instrument.setup_wavelength 1.5406\n";
+            }
+            return edi::experiment_from_edi_text(text);
+        },
+        "name"_a, "beam_mode"_a);
+    m.def(
+        "_single_crystal_with_reflections",
+        [](const edi::BraggPdExperiment& experiment, const std::string& path) {
+            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, path, false);
+            return edi::BraggPdExperiment(load.experiment);
+        },
+        "experiment"_a, "path"_a);
     // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and what it dropped.
     m.def(
         "_read_plain_data",
@@ -2848,6 +2881,17 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::views::NoAbsorption, edi::views::AbsorptionNode>(m, "NoAbsorption")
         .def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
 
+    // A single crystal's extinction: its mosaic model (read here; the file and the app set it) and
+    // its crystal radius and mosaicity.
+    nb::class_<edi::views::ExtinctionNode> extinction(m, "BeckerCoppensExtinction");
+    extinction.def_prop_ro("model", [](edi::views::ExtinctionNode& self) {
+        return self.storage().model.value_or("gauss");
+    });
+    def_view_optional_parameter_field(extinction, "radius", &edi::ExtinctionBase::radius,
+                                      edi::spec::extinction_radius);
+    def_view_optional_parameter_field(extinction, "mosaicity", &edi::ExtinctionBase::mosaicity,
+                                      edi::spec::extinction_mosaicity);
+
     def_parameters(peak);
     def_parameters(instrument);
     def_parameters(linked_structure);
@@ -2936,6 +2980,15 @@ NB_MODULE(_edi, m) {
                          // Linked to this experiment and kept alive by it, so a retained object is
                          // read against the experiment as it is then.
                          edi::ExperimentBase& self = nb::cast<edi::ExperimentBase&>(self_object);
+                         // A single crystal's reflections are its measured ones with their F2calc.
+                         if (self.reflections) {
+                             nb::object view =
+                                 self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
+                                     ? nb::cast(edi::views::ScCwlReflnView(&self))
+                                     : nb::cast(edi::views::ScTofReflnView(&self));
+                             nb::detail::keep_alive(view.ptr(), self_object.ptr());
+                             return view;
+                         }
                          edi::PowderReflnDataBase rows =
                              self.computed_current() ? self.refln : edi::PowderReflnDataBase{};
                          nb::object out =
@@ -2946,6 +2999,16 @@ NB_MODULE(_edi, m) {
                          nb::detail::keep_alive(out.ptr(), self_object.ptr());
                          return out;
                      })
+        // A single crystal's extinction; None for a powder.
+        .def_prop_ro(
+            "extinction",
+            [](edi::ExperimentBase& self) -> nb::object {
+                if (!self.reflections) {
+                    return nb::none();
+                }
+                return nb::cast(edi::views::ExtinctionNode(&self));
+            },
+            nb::keep_alive<0, 1>())
         // Immutable tuple-of-pairs out — no mutable copy can exist; the replacement setter
         // stays (ExcludedRegion items are D8's own task).
         .def_prop_rw(
@@ -3364,6 +3427,30 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::PowderCwlReflnData, edi::PowderReflnDataBase>(m, "PowderCwlReflnData")
         .def_prop_ro("two_theta",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).position); });
+    // A single crystal's reflections, by column, as diffraction-lib's CwlReflnData and TofReflnData
+    // give them: the measured columns from the experiment's own loop, d, sin(theta)/lambda and
+    // F2calc from its calculation.
+    nb::class_<edi::views::ScReflnView>(m, "ReflnDataBase")
+        .def_prop_ro("index_h", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_h.get()); })
+        .def_prop_ro("index_k", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_k.get()); })
+        .def_prop_ro("index_l", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_l.get()); })
+        .def_prop_ro("intensity_meas",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas.get()); })
+        .def_prop_ro("intensity_meas_su",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas_su.get()); })
+        .def_prop_ro("d_spacing",
+                     [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().d_spacing); })
+        .def_prop_ro("sin_theta_over_lambda",
+                     [](const edi::views::ScReflnView& self) {
+                         return readonly_array(self.calculated().sin_theta_over_lambda);
+                     })
+        .def_prop_ro("intensity_calc",
+                     [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().intensity_calc); });
+    nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData");
+    nb::class_<edi::views::ScTofReflnView, edi::views::ScReflnView>(m, "TofReflnData")
+        .def_prop_ro("wavelength",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength.get()); });
+
     nb::class_<edi::PowderTofReflnData, edi::PowderReflnDataBase>(m, "PowderTofReflnData")
         .def_prop_ro("time_of_flight",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).position); });

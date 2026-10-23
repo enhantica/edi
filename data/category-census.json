@@ -1327,6 +1327,44 @@
       ]
     },
     {
+      "name": "_extinction",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExtinctionBase::type",
+          "type": "std::optional<std::string>",
+          "items": [
+            "type"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::model",
+          "type": "std::optional<std::string>",
+          "items": [
+            "model"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::radius",
+          "type": "OptionalParameter",
+          "items": [
+            "radius"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::mosaicity",
+          "type": "OptionalParameter",
+          "items": [
+            "mosaicity"
+          ]
+        }
+      ],
+      "owner": "ExtinctionBase",
+      "legacy": [
+        "_easydiffraction_extinction"
+      ]
+    },
+    {
       "name": "_background",
       "form": "one row",
       "columns": [
@@ -2345,6 +2383,69 @@
           "items": [
             "two_theta",
             "time_of_flight"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_h",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_h"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_k",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_k"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_l",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_l"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas_su",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas_su"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::wavelength",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "wavelength"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::d_spacing",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "d_spacing"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::sin_theta_over_lambda",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "sin_theta_over_lambda"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_calc",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "intensity_calc"
           ]
         }
       ]
@@ -3642,6 +3743,86 @@
       "part": "the row token of the object's non-loop categories"
     },
     {
+      "member": "ExtinctionBase::type",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::model",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::radius",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::mosaicity",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExtinctionBase::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExtinctionBase::table_row",
+      "type": "detail::CategoryRow",
+      "part": "the row token of the object's non-loop categories"
+    },
+    {
+      "member": "ReflnDataBase::index_h",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_k",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_l",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas_su",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::wavelength",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::d_spacing",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::sin_theta_over_lambda",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_calc",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
       "member": "PrefOrient::structure_id",
       "type": "ItemKey",
       "category": "_preferred_orientation"
@@ -3936,6 +4117,20 @@
       "type": "PowderReflnDataBase",
       "holds": [
         "_refln"
+      ]
+    },
+    {
+      "member": "ExperimentBase::reflections",
+      "type": "std::optional<ReflnDataBase>",
+      "holds": [
+        "_refln"
+      ]
+    },
+    {
+      "member": "ExperimentBase::extinction",
+      "type": "ExtinctionBase",
+      "holds": [
+        "_extinction"
       ]
     },
     {
@@ -4853,6 +5048,9 @@
     "_easydiffraction_experiment_type": [
       "_experiment_type"
     ],
+    "_easydiffraction_extinction": [
+      "_extinction"
+    ],
     "_easydiffraction_peak": [
       "_peak"
     ],
@@ -4873,6 +5071,9 @@
     ],
     "_expt_type": [
       "_experiment_type"
+    ],
+    "_extinction": [
+      "_extinction"
     ],
     "_fit_parameter": [
       "_fit_parameter"

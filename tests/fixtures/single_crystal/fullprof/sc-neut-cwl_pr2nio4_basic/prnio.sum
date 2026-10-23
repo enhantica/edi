@@ -1,0 +1,107 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 22/10/2026  Time: 19:05:23.999                              
+
+ => PCR file code: prnio
+ => DAT file code: prnio                -> Relative contribution: 1.0000                                                            
+ => Title: Pr2NiO4
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Refinement/Calculation of Neutron integrated intensity(Laue or monochromatic) data or Flipping Ratios                           
+ =>-------> Pattern#  1
+ => Integrated intensities or Flipping Ratios as observations for phase: 1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    7.393 g/cm3
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Pr2NiO4                                 F m m m             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   198  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Pr      0.50000(   0)  0.50000(   0)  0.35973(   0)  0.000(  0)  0.250(  0)    8
+ Ni      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.000(  0)  0.125(  0)    4
+ O1      0.25000(   0)  0.25000(   0)  0.00000(   0)  0.000(  0)  0.250(  0)    8
+ O2      0.00000(   0)  0.00000(   0)  0.17385(   0)  0.000(  0)  0.181(  0)    8
+ Oi      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.000(  0)  0.019(  0)    8
+ Od      0.07347(   0)  0.07347(   0)  0.17349(   0)  2.314(  0)  0.075(  0)   32
+
+ =>   Anisotropic Betas*1E04
+
+ Name        B11     B22     B33     B12     B13     B23  
+            sB11    sB22    sB33    sB12    sB13    sB23  
+
+ Pr         71.0    71.0     8.4     0.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+ Ni         28.0    28.0    15.1     0.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+ O1         50.0    50.0    41.3   -14.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+ O2        171.6   171.6     4.5     0.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+ Oi        103.3   117.6    10.0     0.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+ Od          0.0     0.0     0.0     0.0     0.0     0.0
+             0.0     0.0     0.0     0.0     0.0     0.0
+
+ ==> SCALE, EXTINCTION, CELL PARAMETERS FOR PATTERN#  1
+
+ ==> OVERALL PARAMETERS:
+
+
+
+ => Scale factors ( 1: 6): 
+             4.031000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Extinction parameters: 
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   10.9    
+
+     -----------------------------------------------------
+     R-Factors and Chi2 for Integrated Intensity Pattern #  1
+     -----------------------------------------------------
+ => Phase:  1
+ =>    RF2 -factor :   3.21    
+ =>    RF2w-factor :   4.79    
+ =>    RF  -factor :   2.26    
+ =>    Chi2(Intens):   10.9    
+ =>  N_eff Reflect.:    198 with I >  0.00 sigma
+
+ 
+              CPU Time:     0.094 seconds
+                            0.002 minutes
+
+ => Run finished at:     Date: 22/10/2026  Time: 19:05:24.085                              

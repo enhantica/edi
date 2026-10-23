@@ -69,3 +69,20 @@ differently and why.
 | [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan/index.md) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL | [pd-xray-cwl_latp-bm01_scan](../tutorials/pd-xray-cwl_latp-bm01_scan.ipynb) |
 
 The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.
+
+## Single crystal
+
+The single-crystal projects below reproduce diffraction-lib's verification pages against FullProf's fits; all five execute, and the three app examples are registered without reference values.
+
+| project | what it fits |
+| --- | --- |
+| [sc-neut-cwl_pr2nio4-5c2_basic](sc-neut-cwl_pr2nio4-5c2_basic/index.md) | Pr2NiO4 single crystal (constant wavelength), anisotropic displacements, scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_basic](sc-neut-cwl_tb2ti2o7-heidi_basic/index.md) | Tb2Ti2O7 on HEiDi (constant wavelength), scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp](sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md) | Tb2Ti2O7 on HEiDi, anisotropic displacements, scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction](sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and crystal radius |
+| [sc-neut-tof_taurine-unknown_basic](sc-neut-tof_taurine-unknown_basic/index.md) | taurine single crystal (time of flight), scale only |
+| [sc-neut-cwl_tb2ti2o7-heidi_fit](sc-neut-cwl_tb2ti2o7-heidi_fit/index.md) | Tb2Ti2O7 on HEiDi from a rough start (app example) |
+| [sc-neut-cwl_pr2nio4-5c2_fit](sc-neut-cwl_pr2nio4-5c2_fit/index.md) | Pr2NiO4 on 5C2 from a rough start (app example) |
+| [sc-neut-tof_taurine_fit](sc-neut-tof_taurine_fit/index.md) | taurine (time of flight) from a rough start (app example) |
+
+The registry of projects and which of them execute is [`projects.yml`](projects.yml).

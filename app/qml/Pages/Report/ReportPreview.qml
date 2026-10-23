@@ -59,14 +59,18 @@ Flickable {
                     "width": shown.width,
                     "height": shown.height
                 };
+                // A single crystal's chart draws its own data from the model (edi ADR-0048).
+                const crystal = kind === "pattern" ? record.modelData.single_crystal ?? null : null;
                 if (kind === "evolution") {
                     properties.reportSeries = record.reportSeries;
                     properties.reportStyles = preview.model.pattern_styles ?? [];
-                } else
+                } else if (crystal)
+                    properties.reportData = crystal;
+                else
                     properties.report = preview.report;
-                if (kind !== "evolution")
+                if (kind !== "evolution" && !crystal)
                     properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
-                const copy = component.createObject(printFigures, properties);
+                const copy = (crystal ? printSingleCrystal : component).createObject(printFigures, properties);
                 if (copy)
                     jobs.push({
                         "item": copy,
@@ -181,7 +185,7 @@ Flickable {
                 active: preview.charts
                 width: parent.width
                 height: active ? Math.round(width * 0.7) : 0
-                sourceComponent: record.section === "structures" ? structureFigure : patternFigure
+                sourceComponent: record.section === "structures" ? structureFigure : record.modelData.single_crystal ? singleCrystalFigure : patternFigure
             }
             Rectangle {
                 visible: record.section === "structures"
@@ -213,6 +217,16 @@ Flickable {
                 }
             }
         }
+        Component {
+            id: singleCrystalFigure
+            SingleCrystalChart {
+                objectName: "report.singleCrystal"
+                reportData: record.modelData.single_crystal
+                colors: FigureColors {
+                    light: true
+                }
+            }
+        }
         Repeater {
             model: record.modelData.categories
             delegate: CategoryBlock {
@@ -236,6 +250,14 @@ Flickable {
     Component {
         id: printEvolution
         EvolutionChart {
+            colors: FigureColors {
+                light: true
+            }
+        }
+    }
+    Component {
+        id: printSingleCrystal
+        SingleCrystalChart {
             colors: FigureColors {
                 light: true
             }

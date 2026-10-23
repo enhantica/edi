@@ -107,6 +107,26 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.absorption.abscor1, scope);
     put_optional_parameter(out, experiment.absorption.abscor2, scope);
     put_optional_parameter(out, experiment.absorption.mu_r, scope);  // The CW body
+    // A single crystal's extinction and the Miller indices (and wavelengths) it is calculated for.
+    put_optional_parameter(out, experiment.extinction.radius, scope);
+    put_optional_parameter(out, experiment.extinction.mosaicity, scope);
+    put_text(out, experiment.extinction.type.value_or(""));
+    put_text(out, experiment.extinction.model.value_or(""));
+    out += experiment.reflections ? 'R' : '-';
+    if (experiment.reflections) {
+        put_u64(out, experiment.reflections->size());
+        for (std::size_t row = 0; row < experiment.reflections->index_h.size(); ++row) {
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_h[row])));
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_k[row])));
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_l[row])));
+        }
+        for (const double wavelength : experiment.reflections->wavelength) {
+            put_double(out, wavelength);
+        }
+    }
     // The preferred-orientation rows — key, fit pair and fixed axis all move P.
     put_u64(out, experiment.preferred_orientation.size());
     for (const auto& row : experiment.preferred_orientation) {
@@ -419,6 +439,7 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
         put_u64(out, link->epoch.value());
     }
     put_u64(out, experiment.absorption.epoch.value());
+    put_u64(out, experiment.extinction.epoch.value());
     for (const auto& point : experiment.background) {
         put_u64(out, point->epoch.value());
     }
@@ -482,6 +503,7 @@ template class OneRow<ScatteringSourceCategory>;
 template class OneRow<PeakCategory>;
 template class OneRow<InstrumentCategory>;
 template class OneRow<AbsorptionCategory>;
+template class OneRow<ExtinctionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
