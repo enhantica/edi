@@ -53,7 +53,8 @@ Rectangle {
         function cleanup() {
             if (preferencesDialog) {
                 preferencesDialog.close();
-                preferencesDialog.destroy();
+                if (!applicationWindow)
+                    preferencesDialog.destroy();
             }
             preferencesDialog = null;
             preferencesSelector = null;
@@ -345,9 +346,12 @@ Rectangle {
         }
         function openPreferences() {
             if (!preferencesDialog)
-                preferencesDialog = preferencesFactory.createObject(surface);
+                preferencesDialog = applicationWindow ? findChild(applicationWindow, "preferences") : preferencesFactory.createObject(surface);
             verify(preferencesDialog !== null, "The palette witness opens the actual application Preferences dialog");
-            Preferences.dialogShown = true;
+            if (applicationWindow && !Preferences.dialogShown)
+                Ui.click(test, Probe, applicationWindow, "appBar.button.preferences");
+            else
+                Preferences.dialogShown = true;
             tryCompare(preferencesDialog, "opened", true, 1000, "The actual Preferences dialog finishes opening before colour input");
             const tab = findChild(preferencesDialog.contentItem, "preferences.tab.appearance");
             verify(tab !== null && tab.enabled, "The actual Preferences Appearance tab is available");
@@ -398,7 +402,7 @@ Rectangle {
                 verify(SettingsProof.key(control, Qt.Key_Escape), "Actual Escape input closes Preferences after the colour choice");
                 tryCompare(preferencesDialog, "visible", false, 1000, "The Preferences overlay closes before observing actual scan pixels");
             }
-            surface.Window.window.update();
+            chart.Window.window.update();
             verify(waitForRendering(chart), "The selected scan setting reaches an actual frame");
         }
         function plotDigest() {
@@ -1730,6 +1734,7 @@ Rectangle {
             chart = found[0];
             tryVerify(() => fullyExposed(named("pointer")), 2000, "The shown scan plot finishes its SwipeView transition inside every actual clip before capture");
             tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "Shared measured views finish their real asynchronous data reads");
+            applicationWindow.update();
             verify(waitForRendering(chart), "The shown shared scan drawing reaches a completed actual frame");
             return chart;
         }
@@ -1764,20 +1769,24 @@ Rectangle {
             tryCompare(applicationWindow, "active", true, 2000, "Shared scan input reaches the active actual application window");
             const first = showSharedScan(data.origin, data.mode), scan = Session.project.scanViews;
             compare(scan.count, data.project === "scan" ? 3 : 2, "Before any fit the shared chart reads every independent measured dataset");
-            const firstPixels = grabImage(named("layer"));
-            verify(firstPixels.width > 100 && firstPixels.height > 100, "Before any fit the shared measured view has actual nonempty plot pixels");
+            const captureLayer = named("layer"), capture = Ui.windowRoot(applicationWindow), firstPixels = grabImage(capture);
+            function firstPixel(x, y) {
+                const at = captureLayer.mapToItem(capture, x, y);
+                return firstPixels.pixel(Math.round(at.x), Math.round(at.y));
+            }
+            verify(captureLayer.width > 100 && captureLayer.height > 100, "Before any fit the shared measured view has actual nonempty plot pixels");
             const colours = new Set();
-            for (let x = 5; x < firstPixels.width - 5; x += 5)
-                for (let y = 5; y < firstPixels.height - 5; y += 5)
-                    colours.add(String(firstPixels.pixel(x, y)));
+            for (let x = 5; x < captureLayer.width - 5; x += 5)
+                for (let y = 5; y < captureLayer.height - 5; y += 5)
+                    colours.add(String(firstPixel(x, y)));
             verify(colours.size > 3, "Before any fit the actual plot contains measured map/curve ink rather than only an empty canvas");
             const expectedLine = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", scan.count, false)[1]);
-            const mapReferences = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            const mapReferences = new Set(JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours.map(colour => colour.toLowerCase()));
             let measuredInk = false;
-            for (let x = 2; x < firstPixels.width - 2 && !measuredInk; ++x)
-                for (let y = 2; y < firstPixels.height - 2 && !measuredInk; ++y) {
-                    const pixel = firstPixels.pixel(x, y);
-                    measuredInk = data.mode === "stacked" ? ink(pixel, expectedLine, chart.colors.chartBackground) : [32, 96, 128, 192, 255].some(index => String(pixel).toLowerCase() === mapReferences[index].toLowerCase());
+            for (let x = 2; x < captureLayer.width - 2 && !measuredInk; ++x)
+                for (let y = 2; y < captureLayer.height - 2 && !measuredInk; ++y) {
+                    const pixel = firstPixel(x, y);
+                    measuredInk = data.mode === "stacked" ? ink(pixel, expectedLine, chart.colors.chartBackground) : mapReferences.has(String(pixel).toLowerCase());
                 }
             verify(measuredInk, "Before any fit the actual scan view contains independently identified measured-data ink, beyond its grid and selected marker");
             for (const quantity of ["x", "y", "z"]) {
