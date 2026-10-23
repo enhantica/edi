@@ -134,10 +134,18 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
     Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
     Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
+    // The column the table is sorted by (empty: file order) and its direction.
+    Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortChanged)
+    Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortChanged)
 
    public:
     SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, const edi::Project& project, QObject* parent);
     void sync();
+    QString sortRole() const { return sort_role_; }
+    bool sortAscending() const { return sort_ascending_; }
+    // Sorts the rows numerically by a column, ascending first and reversed by a second call on the same column;
+    // a value that is not a number goes last either way. The chart's points keep the file order.
+    Q_INVOKABLE void sortBy(const QString& role);
     QList<double> calculated() const { return calculated_; }
     QList<double> measured() const { return measured_; }
     QList<double> measuredSu() const { return measured_su_; }
@@ -155,8 +163,14 @@ class SingleCrystalReflectionModel : public RowTableModel {
 
    signals:
     void pointsChanged();
+    void sortChanged();
 
    private:
+    void publish();
+
+    QList<Row> file_rows_;
+    QString sort_role_;
+    bool sort_ascending_ = true;
     const edi::ExperimentBase& experiment_;
     const edi::Project& project_;
     QList<double> calculated_;

@@ -10,7 +10,7 @@ import edi.app
 
 // `refln` of a single crystal, in the Extra tab: the Miller indices, d, sinθ/λ, the measured F² and its su,
 // the calculated F² and the normalised residual (F²meas - F²calc) / su, with the app's one rule for numbers; in time of
-// flight each reflection's wavelength last.
+// flight each reflection's wavelength last. A click on a column title sorts the rows by that column.
 DataTable {
     id: table
 
@@ -19,6 +19,31 @@ DataTable {
     // The height the table may take: its own and the room the sidebar leaves under it. Its rows fill it, with half
     // a row as a scroll cue; without it the table keeps the default number of rows.
     property real spareHeight: 0
+
+    // A column title that sorts the rows by its column on a click, again in reverse on a second, and marks the
+    // sorted column with its direction.
+    component SortTitle: EaComponents.TableViewLabel {
+        id: title
+
+        required property string role
+        property string label
+
+        objectName: "singleCrystal.reflections.sort." + role
+        horizontalAlignment: Text.AlignHCenter
+        // The header lays a mouse area over its row of titles, which would take the click: the row goes above it.
+        Component.onCompleted: {
+            if (parent)
+                parent.z = 1;
+        }
+        text: label + (table.sourceModel && table.sourceModel.sortRole === role ? (table.sourceModel.sortAscending ? " ˄" : " ˅") : "")
+
+        TapHandler {
+            onTapped: {
+                if (table.sourceModel)
+                    table.sourceModel.sortBy(title.role);
+            }
+        }
+    }
 
     // Each column with a fixed number of decimals, so no value is cut: d and sinθ/λ to 4, F² and its su to 3.
     function fixed(value, decimals) {
@@ -36,46 +61,46 @@ DataTable {
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: "h"
+        SortTitle {
+            role: "h"
+            label: "h"
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: "k"
+        SortTitle {
+            role: "k"
+            label: "k"
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: "l"
+        SortTitle {
+            role: "l"
+            label: "l"
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("d (Å)")
+        SortTitle {
+            role: "dSpacing"
+            label: qsTr("d (Å)")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("sinθ/λ")
+        SortTitle {
+            role: "sinThetaOverLambda"
+            label: qsTr("sinθ/λ")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("F² meas")
+        SortTitle {
+            role: "intensityMeas"
+            label: qsTr("F² meas")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("s.u.")
+        SortTitle {
+            role: "intensityMeasSu"
+            label: qsTr("s.u.")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("F² calc")
+        SortTitle {
+            role: "intensityCalc"
+            label: qsTr("F² calc")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("Δ / s.u.")
+        SortTitle {
+            role: "residual"
+            label: qsTr("Δ / s.u.")
         }
-        EaComponents.TableViewLabel {
+        SortTitle {
             visible: table.timeOfFlight
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("λ (Å)")
+            role: "wavelength"
+            label: qsTr("λ (Å)")
         }
     }
 
