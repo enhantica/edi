@@ -18,7 +18,7 @@ def test_app_load_structure_accepts_and_loads_the_published_cif():
             str(binary),
             '-input',
             str(ROOT / 'tests/unit/app/tst_cif_structure_import.qml'),
-            'test_load_published_cif',
+            'CifStructureImport::test_load_published_cif',
             '-o',
             '-,txt',
         ],
