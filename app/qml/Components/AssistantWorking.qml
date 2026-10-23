@@ -23,6 +23,7 @@ EaElements.Label {
     property double workingSince: 0
     property int elapsedSeconds: 0
     property double rotationStartedAt: 0
+    property double variantSwitchDeadline: 0
     readonly property bool animating: working && EaStyle.Times.translationChange > 0
     readonly property real iconExtent: AppSizes.assistantIconExtent
     readonly property real rotationExtent: variant === 2 ? iconExtent * Math.SQRT2 : iconExtent
@@ -57,6 +58,7 @@ EaElements.Label {
         scheduleVariantChange()
     }
     function scheduleVariantChange() {
+        variantSwitchDeadline = Date.now() + 60000
         variantCadence.interval = 30000 + Math.floor(Math.random() * 28001)
         variantCadence.start()
     }
@@ -76,10 +78,11 @@ EaElements.Label {
     Timer {
         id: variantCadence
         onTriggered: {
-            if (workStatus.animating && workStatus.variant !== 0) {
+            const now = Date.now()
+            if (workStatus.animating && workStatus.variant !== 0 && now < workStatus.variantSwitchDeadline) {
                 // OutInElastic is fastest at its cycle boundary; see ADR-0041.
-                const phase = ((Date.now() - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
-                peakSwitch.interval = Math.max(1, Math.ceil(2000 - phase))
+                const phase = ((now - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
+                peakSwitch.interval = Math.max(1, Math.ceil(Math.min(2000 - phase, workStatus.variantSwitchDeadline - now)))
                 peakSwitch.start()
             } else {
                 workStatus.changeVariant()
@@ -89,11 +92,12 @@ EaElements.Label {
     Timer {
         id: peakSwitch
         onTriggered: {
-            if (workStatus.animating && workStatus.variant !== 0) {
-                const phase = ((Date.now() - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
-                // A delayed GUI callback must wait for the next fast phase.
+            const now = Date.now()
+            if (workStatus.animating && workStatus.variant !== 0 && now < workStatus.variantSwitchDeadline) {
+                const phase = ((now - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
+                // Seek the next fast phase only until the fixed switch deadline.
                 if (phase > 32) {
-                    peakSwitch.interval = Math.max(1, Math.ceil(2000 - phase))
+                    peakSwitch.interval = Math.max(1, Math.ceil(Math.min(2000 - phase, workStatus.variantSwitchDeadline - now)))
                     peakSwitch.start()
                     return
                 }

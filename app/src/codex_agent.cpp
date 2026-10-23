@@ -65,33 +65,10 @@ bool stringSize(QAnyStringView text,quint64 cap,quint64& size) {
         }
     });
 }
-bool stringRoles(QAnyStringView text, quint64 cap, CodexJsonEncoding& roles) {
-    quint64 escaped=0;
-    if(!stringSize(text,cap,escaped))return false;
-    const auto units=text.visit([](auto view)->quint64 {
-        if constexpr(std::is_same_v<decltype(view),QUtf8StringView>) {
-            quint64 n=0;
-            for(const auto c:view) {const auto u=static_cast<unsigned char>(c);if((u&0xc0)!=0x80)n+=u>=0xf0?2:1;}
-            return n; // stringSize already proved strict UTF-8.
-        } else return static_cast<quint64>(view.size());
-    });
-    if(!addSize(static_cast<quint64>(text.size_bytes()),edi::assistant::Limits::stream_retained_bytes,roles.owned))return false;
-    // Qt6.11.2 qjsonwriter escapedString starts max(units,16) and doubles
-    // logical size when within six bytes of its end. QByteArray Grow rounds
-    // through qNextPowerOfTwo; account its backing AND the toString owner.
-    quint64 logical=std::max<quint64>(units,16);
-    while(logical<=escaped+6) {
-        if(logical>std::numeric_limits<quint64>::max()/2)return false;
-        logical*=2;
-    }
-    const auto scratch=codex_json_capacity(logical)+2*(units+1);
-    roles.writer_scratch=std::max(roles.writer_scratch,scratch);
-    return true; // Admission callers, not this measurement, own the joint limit.
-}
-bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 depth = 0, CodexJsonEncoding* roles=nullptr) {
+bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 depth = 0) {
     using L = edi::assistant::Limits;
-    if(roles && !addSize(sizeof(QJsonValue),L::stream_retained_bytes,roles->owned))return false;
-    if (value.isString()) return (!roles || stringRoles(value.toStringView(),cap,*roles)) && stringSize(value.toStringView(), cap, size);
+
+    if (value.isString()) return stringSize(value.toStringView(),cap,size);
     if (value.isBool()) return addSize(value.toBool() ? 4 : 5, cap, size);
     if (value.isNull() || value.isUndefined()) return addSize(4, cap, size);
     if (value.isDouble()) {
@@ -103,19 +80,19 @@ bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 de
     if (++depth > L::json_depth || !addSize(2, cap, size)) return false;
     bool first = true;
     if (value.isObject()) {
-        if(roles && !addSize(sizeof(QJsonObject),L::stream_retained_bytes,roles->owned))return false;
+
         const auto object = value.toObject();
         for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
             const auto key=it.keyView();
-            if(roles && (!addSize(sizeof(QJsonValue),L::stream_retained_bytes,roles->owned) || !stringRoles(key,cap,*roles)))return false;
+
             if ((!first && !addSize(1, cap, size)) || !stringSize(key, cap, size) ||
-                !addSize(1, cap, size) || !encodedSize(it.value(), cap, size, depth,roles)) return false;
+                !addSize(1, cap, size) || !encodedSize(it.value(), cap, size, depth)) return false;
             first = false;
         }
     } else {
-        if(roles && !addSize(sizeof(QJsonArray),L::stream_retained_bytes,roles->owned))return false;
+
         for (const auto& child : value.toArray()) {
-            if ((!first && !addSize(1, cap, size)) || !encodedSize(child, cap, size, depth,roles)) return false;
+            if ((!first && !addSize(1, cap, size)) || !encodedSize(child, cap, size, depth)) return false;
             first = false;
         }
     }
@@ -129,13 +106,7 @@ quint64 codex_json_capacity(quint64 bytes) {
     // Pinned qarraydata.cpp Grow rule; header/alignment/terminator remain owned.
     return qNextPowerOfTwo(bytes+header)+header;
 }
-bool codex_json_encoding(const QJsonValue& value,quint64 cap,CodexJsonEncoding& roles) {
-    roles={};
-    if(!encodedSize(value,cap,roles.encoded,0,&roles))return false;
-    // Bounded number spelling and compact writer's original recursive shells.
-    return addSize(edi::assistant::Limits::json_depth*4+sizeof(QByteArray),
-        std::numeric_limits<quint64>::max(),roles.writer_scratch);
-}
+
 // This is the original process with one after-DeferredDelete observation.
 // Qt still decides when to deliver/delete; all other behavior is inherited.
 class CodexAgent::Process final : public QProcess {
@@ -156,16 +127,11 @@ protected:
         return handled;
     }
 };
-quint64 CodexAgent::releaseObservationBytes() noexcept {
-    return sizeof(Process)-sizeof(QProcess)+sizeof(release_owner_)+sizeof(process_birth_)+sizeof(process_owner_alive_)+
-        sizeof(QPointer<CodexAgent>)+sizeof(quint64)+sizeof(std::shared_ptr<const void>)+
-        sizeof(QMetaObject::Connection)+sizeof(QPointer<CodexAgent>)+sizeof(void*);
-}
+
 CodexAgent::OutputOwnerState CodexAgent::outputOwnerState() const noexcept {
     if(!release_owner_)return OutputOwnerState::Unobserved;
     if(process_ && !failed_)return OutputOwnerState::Live;
-    if(process_ || retired_process_ || process_owner_alive_ || active_frames_ || reading_ ||
-       request_bytes_ || read_bytes_ || record_bytes_)return OutputOwnerState::Releasing;
+    if(process_ || retired_process_ || process_owner_alive_ || active_frames_ || reading_)return OutputOwnerState::Releasing;
     return OutputOwnerState::Released;
 }
 void CodexAgent::maybeOwnersReleased() noexcept {
@@ -208,36 +174,9 @@ void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     operation_start_ = now; last_activity_ = now;
     total_ms_ = totalMs; idle_ms_ = idleMs;
 }
-bool CodexAgent::remainingOutput(quint64 bytes, quint64& available) const noexcept {
-    available = 0;
-    // Revocation is not destruction. While old frames or the detached original
-    // process own buffers, do not admit replacement growth against a reset view.
-    if(retired_process_ || (active_frames_ && (!process_ || failed_)))return false;
-    if (bytes > Limits::stream_retained_bytes || record_bytes_ > Limits::stream_retained_bytes - bytes ||
-        static_cast<quint64>(incoming_.size()) > Limits::stream_retained_bytes - bytes - record_bytes_)
-        return false;
-    available = Limits::stream_retained_bytes - bytes - record_bytes_ - static_cast<quint64>(incoming_.size());
-    const auto queued=process_?static_cast<quint64>(process_->bytesToWrite()):0;
-    const auto held=static_cast<quint64>(deferred_required_.capacity());
-    if(request_bytes_>available || read_bytes_>available-request_bytes_ ||
-       queued>available-request_bytes_-read_bytes_ || held>available-request_bytes_-read_bytes_-queued)return false;
-    available-=request_bytes_+read_bytes_+queued+held;
-    return true;
-}
-bool CodexAgent::retainOutput(quint64 bytes) {
-    quint64 available = 0;
-    if (!remainingOutput(bytes, available)) {
-        fail("The official agent output exceeds retained capacity.", FailureKind::LocalCapacity); return false;
-    }
-    output_bytes_ = bytes; return true;
-}
-bool CodexAgent::releaseOutput(quint64 bytes, quint64 originalGeneration) noexcept {
-    if (failed_ || !process_ || generation_ != originalGeneration || bytes > output_bytes_) return false;
-    quint64 available = 0;
-    if (!remainingOutput(bytes, available)) return false;
-    output_bytes_ = bytes;
-    return true;
-}
+
+
+
 bool CodexAgent::operationExpired(qint64 now) const noexcept {
     return operation_start_>=0 && (now<operation_start_ || now<last_activity_ ||
         (total_ms_ && static_cast<quint64>(now-operation_start_)>=total_ms_) ||
@@ -346,7 +285,7 @@ void CodexAgent::preemptOptionalUsage() {
         if (!receiver || generation_ != scope || failed_) return;
     }
 }
-void CodexAgent::flushRequired(quint64 preownedQueue) noexcept {
+void CodexAgent::flushRequired() noexcept {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
     if(active_frames_==std::numeric_limits<quint64>::max())return;
     ++active_frames_;
@@ -357,22 +296,10 @@ void CodexAgent::flushRequired(quint64 preownedQueue) noexcept {
         if (!receiver || generation_ != scope || process_ != process || failed_ || !process_ || process_->state() != QProcess::Running) return;
         const auto queued = static_cast<quint64>(process_->bytesToWrite());
         if (queued > Limits::request_bytes || static_cast<quint64>(deferred_required_.size()) > Limits::request_bytes - queued) return;
-        const auto lineSize=static_cast<quint64>(deferred_required_.size());
-        quint64 available=0;
-        const auto queueRole=lineSize-qMin(lineSize,preownedQueue);
-        if(!remainingOutput(output_bytes_,available) || queueRole>available)return;
-        request_bytes_+=queueRole; // The caller may already protect this exact queue copy across deadline callbacks.
-        quint64 heldRole=queueRole;
-        const auto transfer=qScopeGuard([receiver,&heldRole] {
-            if(receiver)receiver->request_bytes_-=heldRole;
-        });
-        auto line = std::move(deferred_required_); deferred_required_.clear(); deferred_deadline_ = -1;
-        const auto lineCapacity=static_cast<quint64>(line.capacity());
-        request_bytes_+=lineCapacity;heldRole+=lineCapacity; // Transfer the actual old member backing to the local line.
+        auto line=std::move(deferred_required_);deferred_required_.clear();deferred_deadline_=-1;
         // Transfer this exact prepared original once. Any partial write is a
         // fatal uncertain delivery; never replay or rebuild it from current UI.
         const auto written=process->write(line);
-        if(receiver && generation_==scope && process_==process){request_bytes_-=queueRole;heldRole-=queueRole;}
         if (written != line.size() && receiver && generation_ == scope && process_ == process)
             fail("The official agent request could not be delivered.");
     } catch (...) { if (receiver && generation_ == scope && process_ == process) fail("The official agent queued control could not be delivered."); }
@@ -448,7 +375,7 @@ QString CodexAgent::executable() {
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
-    if ((release_owner_ && process_owner_alive_) || process_ || retired_process_ || active_frames_ || request_bytes_ || read_bytes_ || record_bytes_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
+    if ((release_owner_ && process_owner_alive_) || process_ || retired_process_ || active_frames_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
     const QPointer<CodexAgent> receiver(this);
     QPointer<QProcess> prepared;
@@ -462,7 +389,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
-        pending_bytes_ = 0; output_bytes_ = 0; record_bytes_ = 0; request_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
+        pending_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
         auto* process = release_owner_?static_cast<QProcess*>(new Process(this,scope,release_owner_)):new QProcess(this);
         prepared = process; process_ = process;
         // Birth/barrier publish with the original process_, before any original
@@ -503,11 +430,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
                 while (current() && !failed_ && original->bytesAvailable() > 0) {
                     const auto remaining = Limits::stream_wire_bytes - wire_bytes_;
                     if (remaining == 0) { fail("The official agent operation exceeded its wire capacity.", FailureKind::LocalCapacity); break; }
-                    quint64 available=0;
-                    if(!remainingOutput(output_bytes_,available) || !available){fail("The official agent diagnostic exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
-                    const auto count=std::min({static_cast<quint64>(Limits::http_chunk_bytes),remaining,available});
-                    read_bytes_+=count;
-                    const auto discardedRole=qScopeGuard([receiver,count]{if(receiver)receiver->read_bytes_-=count;});
+                    const auto count=std::min(static_cast<quint64>(Limits::http_chunk_bytes),remaining);
+
                     const auto discarded = original->read(count);
                     if (!current() || failed_) return;
                     if (discarded.isEmpty()) break;
@@ -572,77 +496,32 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     if (deferred && (optionalUsage || held > Limits::retained_record_bytes || lineSize > Limits::retained_record_bytes - held)) {
         if (!nonfatalPreflight) fail("The official agent queued control exceeds retained capacity.", FailureKind::LocalCapacity); return false;
     }
-    // Actual wire and LF-appended line coexist; a detached holding copy grows
-    // only on the deferred path. Charge them beside current VM/record/unread,
-    // old holding bytes and QProcess's actual queue before serialization.
-    quint64 available=0;
-    CodexJsonEncoding encoding;
-    if(!codex_json_encoding(envelope,Limits::request_bytes,encoding) || encoding.encoded!=encoded) {
-        if(!nonfatalPreflight)fail("The official agent request cannot be admitted consistently.");return false;
+    auto line=QJsonDocument(envelope).toJson(QJsonDocument::Compact);
+    if(static_cast<quint64>(line.size())!=encoded) {
+        if(!nonfatalPreflight)fail("The official agent request could not be encoded consistently.");return false;
     }
-    const auto wireCapacity=codex_json_capacity(lineSize);
-    const auto oldHeldCapacity=static_cast<quint64>(deferred_required_.capacity());
-    const auto nextHeldCapacity=deferred?codex_json_capacity(held+lineSize):0;
-    const auto writerScratch=encoding.writer_scratch;
-    // One unique wire buffer becomes the LF-appended line in place; no second
-    // full byte array coexists. QProcess's actual copy still owns lineSize.
-    const quint64 wireRole=wireCapacity+lineSize+(deferred?oldHeldCapacity+nextHeldCapacity:0);
-    if(wireRole>Limits::stream_retained_bytes || writerScratch>Limits::stream_retained_bytes-wireRole ||
-        !remainingOutput(output_bytes_,available) || wireRole+writerScratch>available) {
-        if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.", FailureKind::LocalCapacity);return false;
+    line.append('\n');
+    auto heldWire=deferred_required_;
+    if(deferred)heldWire.append(line);
+    const auto priorHeld=deferred_required_.size();
+    if(prepare && !prepare())return false;
+    if(!receiver || failed_ || process_!=process || generation_!=epoch || priorHeld!=deferred_required_.size())return false;
+    if(handoff && !handoff(preparation))return false;
+    if(!receiver || failed_ || process_!=process || generation_!=epoch || priorHeld!=deferred_required_.size())return false;
+    if(deferred) {
+        deferred_required_.swap(heldWire);
+        if(deferred_deadline_<0)deferred_deadline_=clock_.elapsed()+static_cast<qint64>(Limits::http_json_ms);
+        flushRequired();return receiver && process_==process && generation_==epoch && !failed_;
     }
-    request_bytes_+=wireRole+writerScratch;
-    quint64 retainedRequest=wireRole+writerScratch;
-    const auto requestRole=qScopeGuard([receiver,&retainedRequest] {
-        if(receiver)receiver->request_bytes_-=retainedRequest;
-    });
-    auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
-    if (static_cast<quint64>(wire.size()) != encoded || static_cast<quint64>(wire.capacity())>wireCapacity) {
-        if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
+    const auto actualQueued=static_cast<quint64>(process->bytesToWrite());
+    if(actualQueued>Limits::request_bytes || lineSize>Limits::request_bytes-actualQueued) {
+        if(!nonfatalPreflight)fail("The official agent write queue exceeds the transport capacity.",FailureKind::LocalCapacity);return false;
     }
-    request_bytes_-=writerScratch;retainedRequest-=writerScratch; // Writer conversion/escaping locals are dead.
-    wire.append('\n');
-    const auto& line=wire;
-    if(static_cast<quint64>(line.capacity())>wireCapacity) {
-        if(!nonfatalPreflight)fail("The official agent line capacity exceeds its admitted role");return false;
+    if(optionalUsage)optional_queued_bytes_=lineSize;
+    if(process->write(line)!=line.size()) {
+        if(receiver && process_==process && generation_==epoch)fail("The official agent request could not be delivered.");return false;
     }
-    auto heldWire = deferred_required_;
-    if (deferred) {
-        heldWire.append(line); // All holding-slot allocation precedes admission/publication.
-        if(static_cast<quint64>(heldWire.capacity())>nextHeldCapacity) {
-            if(!nonfatalPreflight)fail("The official agent holding capacity exceeds its admitted role");return false;
-        }
-    }
-    const auto priorHeld = deferred_required_.size();
-    if (prepare && !prepare()) return false;
-    if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
-    quint64 preparedFlush=0;
-    if (handoff) {
-        // Protect the nested flush's extra queue copy as well as the wire,
-        // line and deferred owners already admitted above. If it cannot fit,
-        // skip only local capture and keep the original response path.
-        const auto futureFlush=deferred?held+lineSize:0;
-        quint64 room=0;
-        if(!futureFlush || (remainingOutput(output_bytes_,room) && futureFlush<=room)) {
-            request_bytes_+=futureFlush;retainedRequest+=futureFlush;preparedFlush=futureFlush;
-            if(!handoff(preparation))return false; // Keep queue protection through flush/deadline callbacks and return.
-        }
-    }
-    if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
-    if (deferred) {
-        deferred_required_.swap(heldWire); // Nonallocating ownership commit; original deadline stays armed.
-        const auto transferred=static_cast<quint64>(deferred_required_.capacity());
-        request_bytes_-=transferred;retainedRequest-=transferred; // Actual new member backing transferred; old heldWire stays local.
-        if (deferred_deadline_ < 0) deferred_deadline_ = clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms);
-        flushRequired(preparedFlush); return receiver && process_ == process && generation_ == epoch && !failed_;
-    }
-    if (optionalUsage) optional_queued_bytes_ = lineSize;
-    if (process->write(line) != line.size()) {
-        if (receiver && process_ == process && generation_ == epoch) fail("The official agent request could not be delivered.");
-        return false;
-    }
-    if(receiver && process_==process && generation_==epoch){request_bytes_-=lineSize;retainedRequest-=lineSize;}
-    return receiver && process_ == process && generation_ == epoch && !failed_;
+    return receiver && process_==process && generation_==epoch && !failed_;
 }
 
 QString CodexAgent::request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare) {
@@ -726,54 +605,20 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
                 const auto capacity = recordLimit + 1 - incoming_.size();
                 if (capacity <= 0) { fail("The official agent response exceeds the transport capacity.", FailureKind::LocalCapacity); return; }
                 checkDeadline(); if (!current() || failed_) return;
-                const auto old=static_cast<quint64>(incoming_.size());
-                quint64 available=0;
-                if(!remainingOutput(output_bytes_,available) || available<=old) {
-                    fail("The official agent assembly exceeds retained capacity.", FailureKind::LocalCapacity);return;
-                }
                 const auto wireRoom=Limits::stream_wire_bytes-wire_bytes_;
-                const auto requested=std::min({static_cast<quint64>(capacity),static_cast<quint64>(Limits::http_chunk_bytes),
-                                               (available-old)/2,wireRoom});
-                if(!requested){fail("The official agent response has no admitted input capacity.", FailureKind::LocalCapacity);return;}
-                // The local read chunk and complete replacement assembly coexist
-                // with the old incoming member. Reserve both before QProcess reads.
-                quint64 prepared=requested+old+requested;
-                read_bytes_+=prepared;
-                const auto assembly=qScopeGuard([receiver,&prepared]{if(receiver)receiver->read_bytes_-=prepared;});
+                const auto requested=std::min({static_cast<quint64>(capacity),static_cast<quint64>(Limits::http_chunk_bytes),wireRoom});
+                if(!requested){fail("The official agent response exceeds wire capacity.",FailureKind::LocalCapacity);return;}
                 const auto bytes=process->read(static_cast<qint64>(requested));
                 if(!current() || failed_)return;
                 if(bytes.isEmpty())return;
-                if(static_cast<quint64>(bytes.size())>requested)throw std::logic_error("Agent read exceeded admitted bytes");
+                if(static_cast<quint64>(bytes.size())>requested)throw std::logic_error("Agent read exceeded requested bytes");
                 wire_bytes_+=static_cast<quint64>(bytes.size());
-                read_bytes_-=requested-static_cast<quint64>(bytes.size());prepared-=requested-static_cast<quint64>(bytes.size());
-                QByteArray assembled;assembled.reserve(static_cast<qsizetype>(old)+bytes.size());
-                assembled.append(incoming_);assembled.append(bytes);
-                incoming_.swap(assembled);
-                // The new member owns its growth. The old assembly and chunk stay
-                // charged until their local destructors, including across callbacks.
-                read_bytes_-=static_cast<quint64>(bytes.size());prepared-=static_cast<quint64>(bytes.size());
+                incoming_.append(bytes);
                 qsizetype newline;
-                while (current() && !failed_ && (newline = incoming_.indexOf('\n')) >= 0) {
-                    if (newline > recordLimit) { fail("The official agent response exceeds the transport capacity.", FailureKind::LocalCapacity); return; }
-                    quint64 recordOwner=0;
-                    const auto raw=qScopeGuard([receiver,&recordOwner]{if(receiver)receiver->record_bytes_-=recordOwner;});
-                    QByteArray record;
-                    {
-                        const auto originalSize=static_cast<quint64>(incoming_.size());
-                        const auto prospective=originalSize-1; // Record and remaining tail, excluding the delimiter.
-                        quint64 room=0;
-                        if(!remainingOutput(output_bytes_,room) || prospective>room){fail("The official agent record exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
-                        quint64 preparation=prospective;read_bytes_+=preparation;
-                        const auto split=qScopeGuard([receiver,&preparation]{if(receiver)receiver->read_bytes_-=preparation;});
-                        record=incoming_.left(newline);
-                        recordOwner=static_cast<quint64>(record.size());record_bytes_+=recordOwner;
-                        read_bytes_-=recordOwner;preparation-=recordOwner;
-                        auto tail=incoming_.mid(newline+1);
-                        incoming_.swap(tail);
-                        // The local tail now owns the OLD member, including LF.
-                        // Transfer its prior member charge, never admit a new byte.
-                        read_bytes_+=recordOwner+1;preparation+=recordOwner+1;
-                    }
+                while(current() && !failed_ && (newline=incoming_.indexOf('\n'))>=0) {
+                    if(newline>recordLimit){fail("The official agent response exceeds the transport capacity.",FailureKind::LocalCapacity);return;}
+                    const auto record=incoming_.left(newline);
+                    incoming_.remove(0,newline+1);
                     const bool blank=std::all_of(record.cbegin(),record.cend(),[](char c){return c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='\v' || c=='\f';});
                     if (!blank) {
                         if (event_count_ >= Limits::stream_events) { fail("The official agent operation exceeded its event capacity.", FailureKind::LocalCapacity); return; }
@@ -811,12 +656,6 @@ void CodexAgent::receive(const QByteArray& record) {
             if (++depth > Limits::json_depth) { fail("The official agent response exceeds the JSON depth capacity.", FailureKind::LocalCapacity); return; }
         } else if ((c == '}' || c == ']') && depth) --depth;
     }
-    // Preserve the original encoded-record accounting convention for the
-    // parsed representation as a distinct owner beside the raw local frame.
-    const auto parsedBytes=static_cast<quint64>(record.size());quint64 available=0;
-    if(!remainingOutput(output_bytes_,available) || parsedBytes>available){fail("The official agent parsed response exceeds joint retained capacity.", FailureKind::LocalCapacity);return;}
-    read_bytes_+=parsedBytes;
-    const auto parsedRole=qScopeGuard([receiver,parsedBytes]{if(receiver)receiver->read_bytes_-=parsedBytes;});
     QJsonParseError error;
     const auto document = QJsonDocument::fromJson(record, &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) {

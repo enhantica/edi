@@ -11485,7 +11485,7 @@ def test_human575_original_agent_wait_preserves_budget_and_lifetime(generic, hum
         'lifetime': {'original_process_captured', 'original_process_destroyed', 'same_facade_reused', 'replacement_process_captured', 'retired_wait_cannot_resume', 'replacement_start_returned', 'replacement_requests_received',
             'replacement_generation_distinct', 'replacement_wait_entered', 'settled_operation_cannot_wait',
             'new_active_operation_wait_entered', 'old_exit_cannot_resume_replacement',
-            'output_bound_query_not_suspended', 'actual_eof_requested', 'real_eof_not_suspended', 'failed_generation_cannot_wait'},
+            'replacement_output_generation_current', 'actual_eof_requested', 'real_eof_not_suspended', 'failed_generation_cannot_wait'},
     }
     expected575 = common575 | tails575[human_case]
     times575 = {'prewait_elapsed_ms', 'finished_elapsed_ms'} | ({'resume_elapsed_ms'} if human_case in {'idle', 'total'} else set())
@@ -12129,7 +12129,7 @@ def test_native681_original_agent_work_and_wait_remaining_budgets(generic, clock
             'retired_wait_cannot_resume','original_process_destroyed','same_facade_reused','replacement_start_returned',
             'replacement_requests_received','replacement_process_captured','replacement_generation_distinct',
             'replacement_both_waits_entered','old_owner_cannot_resume_replacement','replacement_both_waits_stay_live',
-            'original_output_bound_not_suspended','actual_eof_requested','actual_eof_not_suspended','eof_generation_cannot_wait'},
+            'replacement_output_generation_current','actual_eof_requested','actual_eof_not_suspended','eof_generation_cannot_wait'},
     }
     settling={'original_inactive_helper_wait_entered','duplicate_wait_flag_idempotent','native_wait_excludes_both_intervals',
         'removed_request_cannot_wait','removed_request_cannot_set_wait','settlement_live_at_return','settlement_live_interval',

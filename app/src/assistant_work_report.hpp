@@ -19,15 +19,10 @@ bool work_report_next_serial(std::uint64_t current, std::uint64_t& next) noexcep
 const QJsonObject& work_report_serial_refusal();
 const QVariantMap& work_report_serial_variant();
 const QVariantMap& work_report_capacity_variant();
-quint64 assistant_work_report_retained_bytes() noexcept;
 QJsonObject work_report_missing(const char* reason = "not_observed");
 QJsonObject work_report_observed(const QJsonValue& value, const char* source = "native", const QString& row = {});
 QJsonObject work_report_receipt_coverage(const QString& reason = QStringLiteral("none"));
 QJsonObject work_report_empty_document();
-quint64 work_report_metadata_frame_bytes() noexcept;
-quint64 work_report_stamp_bytes() noexcept;
-quint64 work_report_metadata_retained(const QJsonValue&);
-quint64 work_report_build_bound(quint64 historyOwned,quint64 registrationOwned,quint64 rows,quint64 buildUnits);
 
 struct AssistantWorkReportCoverage { bool known=false; quint64 retained=0,excluded=0; };
 
@@ -35,20 +30,17 @@ struct AssistantWorkReportSnapshot {
     QJsonObject document;
     QString scope;
     quint64 revision = 0;
-    // Original backing whose lifetime is extended by frozen aliases, not a new
-    // allowance. Count its full admitted role even if its shape was projected.
-    quint64 source_backing_bytes = 0;
 };
 
 // One local file writer. This is not a provider/controller or scientific actor.
 // The build callback is synchronous and must perform original-owner checks and
-// pre-admit every variable addition against its supplied finite role.
+// bound the actual encoded artifact before handing it to the writer.
 class AssistantWorkReports final {
 public:
     explicit AssistantWorkReports(AssistantWorkReportOptions, AssistantViewModel* owner) noexcept;
     ~AssistantWorkReports();
     void closeOwner() noexcept;
-    bool tryInitialize(quint64 available,quint64 fixedOwnerBytes=0) noexcept;
+    bool tryInitialize() noexcept;
     std::shared_ptr<const void> releaseOwner() const noexcept;
     bool available() const noexcept;
     bool automatic() const noexcept;
@@ -71,7 +63,7 @@ public:
     QVariantMap receipt() const;
     // An exhausted ID has no fabricated correlation token. No accepted worker
     // or artifact can originate from that immediate refusal.
-    QVariantMap capture(quint64 available, bool automaticTrigger, AssistantWorkReportCoverage counts,QStringView storageRoot,
+    QVariantMap capture(bool automaticTrigger, AssistantWorkReportCoverage counts,QStringView storageRoot,
         const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked);
     bool artifactCurrent(const QJsonObject&,QStringView storageRoot) const noexcept;
 private:

@@ -15,10 +15,6 @@
 
 namespace edi_app {
 bool codex_encoded_size(const QJsonValue&, quint64 cap, quint64& size);
-// Same borrowed Qt-input walk, not another encoder. Owned logical payload and
-// pinned Qt writer scratch are separate from encoded output/transport backing.
-struct CodexJsonEncoding { quint64 encoded=0, owned=0, writer_scratch=0; };
-bool codex_json_encoding(const QJsonValue&, quint64 cap, CodexJsonEncoding&);
 quint64 codex_json_capacity(quint64 bytes);
 // App-internal transport for the pinned runtime. It owns no account
 // or provider protocol; the VM owns admitted rows, approvals and scientific state.
@@ -28,7 +24,6 @@ public:
     explicit CodexAgent(QObject* parent = nullptr,std::shared_ptr<const void> releaseOwner = {});
     enum class OutputOwnerState { Unobserved, Live, Releasing, Released };
     OutputOwnerState outputOwnerState() const noexcept;
-    static quint64 releaseObservationBytes() noexcept;
     static QString executable();
     static QString policyPatch();
     ~CodexAgent() override;
@@ -42,12 +37,7 @@ public:
     bool reject(const QJsonValue& originalId);
     void resolved(const QJsonValue& originalId);
     void activity();
-    // Callback-free admission query for the same aggregate guarded by retainOutput.
-    bool remainingOutput(quint64 bytes, quint64& available) const noexcept;
-    bool retainOutput(quint64 bytes);
-    // A release can only lower the same live process's previously admitted role.
     quint64 outputGeneration() const noexcept { return generation_; }
-    bool releaseOutput(quint64 bytes, quint64 originalGeneration) noexcept;
     void retire();
     void beginOperation(quint64 totalMs, quint64 idleMs);
     void settleOperation();
@@ -83,7 +73,7 @@ private:
     static constexpr qsizetype pendingLimit = Limits::http_operations;
     QProcess* process_ = nullptr;
     QPointer<QProcess> retired_process_;
-    quint64 active_frames_=0,read_bytes_=0;
+    quint64 active_frames_=0;
     bool reading_=false, eof_pending_=false;
     QByteArray incoming_;
     // One original-byte required-write holding slot, only for an already-issued
@@ -100,7 +90,7 @@ private:
     bool failed_ = false;
     FailureKind failure_kind_ = FailureKind::Other;
     quint64 failure_generation_ = 0;
-    quint64 pending_bytes_ = 0, output_bytes_ = 0, record_bytes_ = 0, request_bytes_ = 0;
+    quint64 pending_bytes_ = 0;
     QElapsedTimer clock_;
     QTimer timer_;
     qint64 operation_start_ = -1, last_activity_ = 0;
@@ -121,7 +111,7 @@ private:
     void checkDeadline();
     void retireOptionalUsage(const QString& id);
     void preemptOptionalUsage();
-    void flushRequired(quint64 preownedQueue = 0) noexcept;
+    void flushRequired() noexcept;
     static QString idKey(const QJsonValue& value);
 };
 } // namespace edi_app

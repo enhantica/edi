@@ -1910,10 +1910,14 @@ The infinite render-thread animator remains in place; only a change between line
 and elastic curves restarts it. Switching between the two elastic assets leaves the
 same animation running. The pending switch rechecks the same start-clock phase
 when its GUI timer fires. It accepts the first 32ms after a cycle boundary; a later
-callback rearms for the next boundary instead of changing mid-cycle. An idle,
-static or linear cue may change immediately. Timers follow ordinary GUI event
-delivery, so suspension or a blocked GUI can delay the visible change beyond the
-nominal cadence.
+callback seeks the next boundary while the original switch deadline remains
+open. Each cadence also sets an absolute latest switch time 60 seconds after its
+start. A peak wait is clamped to that deadline, and the first callback at or after
+it changes the icon without another retry, even if it missed the peak window.
+This deadline fallback does not claim peak alignment. An idle, static or linear
+cue may change immediately. Timers follow ordinary GUI event delivery, so
+suspension or a blocked GUI can still delay the visible change; recurring late
+callbacks cannot perpetually rearm the peak wait.
 
 Elapsed text starts at 0s for each actual agent_active period, updates in whole
 seconds, and uses minutes and remaining seconds from 60s (for example,
@@ -2889,3 +2893,50 @@ Selected-file reads keep the original file-id/receipt/hash/whole-source UTF-8 an
 Official failure first preserves the callback-entry cause, scope/attempt/thread/turn and native-pending facts in its original admitted completion frame. A failed live output owner still refuses new growth. If that prevents mandatory interruption of pending history, the existing output-owner release notification reconciles it only after Released and exact original owner/generation checks, before final diagnostic/turn facts and report freeze. The same mandatory settlement applies when automatic export and manual collection are off; export remains optional. Detached pending-row/array construction and the original archive encoder stay admitted. Missing release observation or a refused reconciliation is explicit, never relabeled retained. No provider/native action/answer is replayed and no late manual metadata is invented.
 
 An accepted call retains its original future post-write context slot through mutation, intermediate refreshes, final response construction and its final refresh. Only after that final refresh stack unwinds under the same record/receipt/RPC/transport may the original call mark the refresh phase settled and release that future reservation. Actual refreshed context/stamp/receipt and all result/wire/archive owners remain counted. Copies held by widgets, Save or late callbacks never write phase state back; an unexpected refresh after settlement refuses before context allocation. A new call starts with its own pending reservation. Codec diagnostics record requested bytes and the original admission query's available bytes when known; no budget query runs in a catch, and no cap changes. Fine-grained stage diagnostics remain terminal-only.
+
+
+### Actual payload limits replace predictive capacity reservations
+
+The owner explicitly removed predictive memory reservations on 2026-10-23. This
+supersedes the earlier aggregate VM/report ownership-accounting and future-role
+admission requirements in this ADR. The previous native_bytes/native_room ledger,
+reserve_disclosure guards, synthetic maximum native-result templates and their
+coupling to CodexAgent retained-output capacity are removed. They could turn a
+valid native action into a transport disconnect before its actual result existed.
+No replacement quota planner, fictional available-room return or no-op reservation
+helper is introduced.
+
+Native calls retain their actual original/canonical inputs, current project and
+file identity, RPC/thread/turn correlation, once response and truthful pending or
+unconfirmed outcome. The actual constructed result and response keep their
+existing encoded payload ceilings. Actual persisted history keeps its existing
+encoded-size and row-count bounds; future maximum terminal rows are no longer
+added to that size. Lease/TerminalRetention remains lifecycle/response ownership,
+not a promise of hypothetical memory. An allocation or storage failure after an
+applied action preserves its factual fallback and does not replay or roll back the
+native operation.
+
+The transport bounds actual protocol records, input chunks, cumulative wire bytes,
+requests, pending requests and queued/deferred writes using the existing limits.
+It does not include scientific-action promises, report snapshots or a VM-wide
+physical-memory estimate. Process birth/generation, active call frames, deferred
+process deletion and Released-qualified original failure reconciliation remain.
+Their lifetime observation is independent of memory quotas.
+
+The local work-report writer has no global report-byte ledger or predicted
+construction/codec/worker reservations. Its existing Control supplies lifecycle
+ownership directly; it does not own its worker or transport, so that lifetime
+reference introduces no cycle. The existing single-writer, immutable snapshot,
+receipt/completion correlation and project-bound coalescing remain. Reports are
+selected and checked against the actual encoded artifact ceiling. Optional
+metadata or export allocation failures produce explicit incomplete/unavailable
+report evidence and cannot consume a scientific-action quota.
+
+Argument/privacy validation, approved input scope, selected-file size/range/UTF-8
+and whole-file identity checks, actual context/catalog/input limits, original
+control authorization, ordinary Undo, project/file ownership, no-follow directory
+and file checks, private report/lock permissions and atomic publication/readback
+protections are retained. Operation-local SDK source/calculation bounds remain
+ordinary bounds of those APIs; they are not subtracted from a shared future-memory
+budget. The owner override does not change numerical/scientific defaults or raise
+a declared protocol, file, history or artifact limit.

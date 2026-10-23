@@ -340,8 +340,8 @@ struct PublicTransport304 {
             facade->beginOperation(1000,1000);
             require(facade->beginHumanWait(current,next),"new_active_operation_wait_entered");
             require(!facade->endHumanWait(request,generation),"old_exit_cannot_resume_replacement");
-            quint64 available=0;
-            require(!facade->remainingOutput(edi::assistant::Limits::stream_retained_bytes+1,available),"output_bound_query_not_suspended");
+            require(facade->outputGeneration()==next && facade->outputOwnerState()==Agent::OutputOwnerState::Unobserved,
+                "replacement_output_generation_current");
             const auto beforeEof=failures();
             operation.restart();mark("eof_before");
             require(facade->notification("original/human575-eof"),"actual_eof_requested");
@@ -471,7 +471,8 @@ struct PublicTransport304 {
             require(!facade->endNativeWork(request,generation) && !facade->setNativeWorkWaiting(request,generation,false)
                 && !facade->endHumanWait(question,generation),"old_owner_cannot_resume_replacement");
             drain(600);require(failures()==1,"replacement_both_waits_stay_live");
-            quint64 available=0;require(!facade->remainingOutput(edi::assistant::Limits::stream_retained_bytes+1,available),"original_output_bound_not_suspended");
+            require(facade->outputGeneration()==next && facade->outputOwnerState()==Agent::OutputOwnerState::Unobserved,
+                "replacement_output_generation_current");
             operation.restart();mark("eof_before");require(facade->notification("original/native681-eof"),"actual_eof_requested");
             while(failures()==1 && operation.elapsed()<1000)drain(1);
             require(failures()==2,"actual_eof_not_suspended");mark("eof_terminal");
