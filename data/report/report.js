@@ -191,8 +191,11 @@ function trace(pattern, series, index) {
   const marks = (look.mark ?? 'line').split('+');
   const out = {
     type: 'scatter',
-    // The legend names each series in its colour, as the app's chart legend does.
-    name: inColour(series.label, look.light),
+    // The legend names each series in its colour, as the app's chart legend does: the residual's `meas − calc`
+    // coloured as the residual pane's title (edi::legend_label).
+    name: series.kind === 'residual' && (pattern.y_residual.segments ?? []).length > 0
+      ? `${inColour('Residual (', look.light)}${axisTitle(pattern.y_residual)}${inColour(')', look.light)}`
+      : inColour(series.label, look.light),
     x: series.x,
     y: series.y,
     xaxis: 'x',
@@ -200,7 +203,7 @@ function trace(pattern, series, index) {
     mode: marks.includes('markers') ? 'lines+markers' : 'lines',
     connectgaps: false,
     opacity: look.opacity ?? 1,
-    line: { color: look.light, width: look.width_px },
+    line: { color: look.light, width: look.width_px, dash: marks.includes('dash') ? 'dash' : 'solid' },
     hovertemplate: '%{x}, %{y}<extra>%{fullData.name}</extra>',
   };
   if (marks.includes('markers')) {
@@ -247,18 +250,25 @@ function drawPattern(figure, pattern) {
   const bottom = 'residual' in domains ? 'y3' : 'bragg' in domains ? 'y2' : 'y';
   const excluded = patternStyle('excluded');
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
+  // Each Bragg row's label at its left, the structure's name in its colour, as the app draws it.
+  const braggLabels = 'bragg' in domains
+    ? (pattern.bragg_labels ?? []).map(label => ({
+        text: inColour(label.text, patternStyle(label.style).light), xref: 'paper', yref: 'y2', x: 0, y: label.centre,
+        xanchor: 'right', xshift: -6, showarrow: false, font: { family: font } }))
+    : [];
   const layout = {
     height: figure.clientHeight,
     margin,
     font: { family: font },
-    showlegend: true,
+    // The model says whether a legend is drawn; without one the y titles name the series in their colours.
+    showlegend: pattern.legend,
     legend: { x: 1, xanchor: 'right', y: 1, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' },
     hovermode: 'closest',
     // The experiment's reliability in its last fit, above the plot's top left, as the app's selector shows it.
-    annotations: pattern.title
+    annotations: (pattern.title
       ? [{ text: pattern.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
            showarrow: false, font: { family: font } }]
-      : [],
+      : []).concat(braggLabels),
     xaxis: { ...axis, title: { text: pattern.x.title }, range: [pattern.x.min, pattern.x.max], anchor: bottom },
     yaxis: { ...axis, title: { text: axisTitle(pattern.y_main) }, domain: domains.main ?? [0, 1] },
     shapes: pattern.excluded.map(([x0, x1]) => ({
@@ -291,6 +301,70 @@ function drawPattern(figure, pattern) {
   }
   const traces = pattern.series.map((series, index) => trace(pattern, series, index));
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
+}
+
+// A single crystal's chart (edi ADR-0048), as the app draws it: each reflection's F²meas with its s.u. bar against its
+// F²calc, the y = x line a perfect model puts them on, one range on both axes; "Not calculated yet" before a
+// calculation.
+function drawSingleCrystal(figure, crystal) {
+  if (!window.Plotly) {
+    notice(figure, 'The chart needs plotly.js, which could not be loaded.');
+    return;
+  }
+  if (crystal.calc.length === 0) {
+    notice(figure, 'Not calculated yet');
+    return;
+  }
+  const font = pageStyle('--head-font');
+  const grid = pageStyle('--rowshade');
+  const frame = pageStyle('--tableborder');
+  const style = patternStyle('meas.0');
+  let low = 0;
+  let high = 0;
+  crystal.meas.forEach((meas, i) => {
+    for (const end of [meas - crystal.su[i], meas + crystal.su[i], crystal.calc[i]]) {
+      if (Number.isFinite(end)) {
+        low = Math.min(low, end);
+        high = Math.max(high, end);
+      }
+    }
+  });
+  const pad = (high - low) * 0.05 || 1;
+  const range = [Math.min(0, low - pad), high + pad];
+  const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false, range };
+  const points = {
+    type: 'scatter',
+    mode: 'markers',
+    name: 'Reflections',
+    x: crystal.calc,
+    y: crystal.meas,
+    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: style.light },
+    text: crystal.meas.map((meas, i) => `${crystal.h[i]} ${crystal.k[i]} ${crystal.l[i]}`),
+    hovertemplate: '%{text}<br>F²meas %{y}<br>F²calc %{x}<extra></extra>',
+    marker: { color: style.light, size: 5 },
+  };
+  const diagonal = {
+    type: 'scatter',
+    mode: 'lines',
+    x: range,
+    y: range,
+    hoverinfo: 'skip',
+    line: { color: frame, width: 1 },
+  };
+  const layout = {
+    height: figure.clientHeight,
+    margin: { l: 16, r: 16, t: 36, b: 16 },
+    font: { family: font },
+    showlegend: false,
+    hovermode: 'closest',
+    annotations: crystal.title
+      ? [{ text: crystal.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
+           showarrow: false, font: { family: font } }]
+      : [],
+    xaxis: { ...axis, title: { text: 'F² calc' } },
+    yaxis: { ...axis, title: { text: 'F² meas' } },
+  };
+  window.Plotly.newPlot(figure, [diagonal, points], layout, { responsive: true, displaylogo: false });
 }
 
 // One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
@@ -648,7 +722,9 @@ async function drawStructure(figure, structure) {
 
 for (const figure of document.querySelectorAll('.pattern-figure')) {
   const experiment = model.experiments?.[Number(figure.dataset.index)];
-  if (experiment) {
+  if (experiment?.single_crystal) {
+    drawSingleCrystal(figure, experiment.single_crystal);
+  } else if (experiment) {
     drawPattern(figure, experiment.pattern);
   }
 }

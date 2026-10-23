@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "crysta/model.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
@@ -148,7 +149,7 @@ int default_max_iterations() { return detail::bounded_max_iterations(0); }
 namespace {
 
 bool has_measured_data(const ExperimentBase& experiment) {
-    return experiment.data.has_value() && !experiment.calculation_only;
+    return (experiment.data.has_value() || experiment.reflections.has_value()) && !experiment.calculation_only;
 }
 
 // Experiments with measured data beside experiments without (a simulation made with Create experiment).
@@ -246,6 +247,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
         for (const auto& source : measured.experiments) {
             if (source->name.value() == target->name.value()) {
                 copy_fit_share(*target, *source);
+                record_fitted_background(*target);  // the fitted values are its background now (ADR-0040)
             }
         }
     }
@@ -257,6 +259,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
 
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // A sequential project reaching the single-bank one-call form would silently fit the
     // TEMPLATE's embedded data once and write no results.csv — a plausible-looking answer to a
     // different question. Refuse by name; the sequential mode has exactly one entry point.
@@ -280,6 +283,9 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
         throw std::invalid_argument("edi fit: experiment '" + experiment().name +
                                     "' links no structure; link one before fitting");
     }
+    if (experiment().reflections.has_value()) {  // a single crystal fits its own reflections
+        return fit({}, {}, {}, on_iteration, on_start, should_cancel);
+    }
     if (!experiment().data.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
                                     "' carries no measured data (a calculation-only or "
@@ -296,6 +302,7 @@ FitResultBase Project::fit() { return fit(IterationCallback{}); }
 FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
                                  const PreambleCallback& on_start,
                                  const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
     // results.csv — the same wrong-answer-to-a-different-question, one function along.
@@ -320,6 +327,11 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
         if (bank.linked_structures.empty()) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' links no structure; link one before fitting");
+        }
+        if (bank.reflections.has_value()) {
+            throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
+                                        "' is a single crystal, which cannot be fitted jointly yet; fit it in a "
+                                        "project where it is the only experiment");
         }
         if (!bank.data.has_value() || bank.calculation_only) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +

@@ -20,10 +20,10 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
         ),
         'number-width': ('columnWidths: [numberColumnWidth,', 'columnWidths: [0,'),
         'number-label': (
-            'header: EaComponents.ListViewHeader {\n                EaComponents.TableViewLabel {',
+            'header: EaComponents.ListViewHeader {\n                EaComponents.ListViewLabel {',
             (
                 'header: EaComponents.ListViewHeader {\n'
-                '                EaComponents.TableViewLabel {\n'
+                '                EaComponents.ListViewLabel {\n'
                 '                    text: "unexpected"'
             ),
         ),
@@ -62,7 +62,7 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         'layer': ('value: chart.shown ? layer : null', 'value: null'),
         'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
         'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
-        'axis-bounds': ('min: chart.evolution ? chart.evolution.xMin : 0', 'min: 2'),
+        'axis-bounds': ('chart.evolution ? chart.evolution.xMin : 0', 'chart.evolution ? 2 : 0'),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (

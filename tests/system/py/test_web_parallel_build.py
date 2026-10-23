@@ -12,8 +12,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 
 
-@pytest.fixture
-def build_calls(tmp_path):
+@pytest.fixture(scope='module')
+def build_calls(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp('web-build-transports')
     root = tmp_path / 'edi'
     scripts = root / 'tools/ci'
     scripts.mkdir(parents=True)

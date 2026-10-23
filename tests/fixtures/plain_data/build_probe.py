@@ -5,9 +5,50 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import signal
 import subprocess
 import tarfile
+import time
+from contextlib import suppress
 from pathlib import Path
+
+BUILD_TIMEOUT = 600
+
+
+def build_jobs():
+    value = os.environ.get('CMAKE_BUILD_PARALLEL_LEVEL', str(os.cpu_count() or 1))
+    if not value.isascii() or not value.isdecimal() or int(value) < 1:
+        raise RuntimeError('Plain-data build requires a positive numeric worker budget')
+    return str(int(value))
+
+
+def build_host(command, timeout=BUILD_TIMEOUT):
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        output, _ = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        with suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+        output, _ = process.communicate()
+        raise RuntimeError(
+            f'Plain-data native host exceeded {timeout} seconds; build process group stopped\n'
+            + output
+        ) from None
+    return subprocess.CompletedProcess(command, process.returncode, output, '')
+
+
+def run_stage(name, command, **kwargs):
+    start = time.monotonic()
+    print(f'Plain-data build: {name} started', flush=True)
+    result = subprocess.run(command, check=True, **kwargs)
+    print(f'Plain-data build: {name} completed in {time.monotonic() - start:.3f}s', flush=True)
+    return result
 
 
 def main():
@@ -18,6 +59,7 @@ def main():
     parser.add_argument('--gui-source', type=Path)
     parser.add_argument('--timing-observer', action='store_true')
     args = parser.parse_args()
+    jobs = build_jobs()
     build = args.build.resolve()
     build.mkdir(parents=True, exist_ok=True)
     archive = build / 'source.tar'
@@ -82,19 +124,21 @@ def main():
         '-DCMAKE_PREFIX_PATH=' + str(args.sdk) + ';' + os.environ['CONDA_PREFIX'],
         '-Dcrysta_DIR=' + str(args.sdk / 'lib/cmake/crysta'),
     ]
+    command.append('-DQT_QML_NO_CACHEGEN=' + ('OFF' if args.timing_observer else 'ON'))
     if args.gui_source:
         command += ['-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=' + str(args.gui_source)]
-    subprocess.run(command, check=True)
-    subprocess.run(
+    run_stage('configure', command)
+    run_stage(
+        'compile',
         [
             'cmake',
             '--build',
             str(build / 'cmake'),
             '--target',
             'scan_timing_observer' if args.timing_observer else 'plain_data_probe',
-            '-j',
+            '--parallel',
+            jobs,
         ],
-        check=True,
     )
     target = (
         'scan_timing/scan_timing_observer'

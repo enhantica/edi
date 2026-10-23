@@ -1327,6 +1327,44 @@
       ]
     },
     {
+      "name": "_extinction",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExtinctionBase::type",
+          "type": "std::optional<std::string>",
+          "items": [
+            "type"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::model",
+          "type": "std::optional<std::string>",
+          "items": [
+            "model"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::radius",
+          "type": "OptionalParameter",
+          "items": [
+            "radius"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::mosaicity",
+          "type": "OptionalParameter",
+          "items": [
+            "mosaicity"
+          ]
+        }
+      ],
+      "owner": "ExtinctionBase",
+      "legacy": [
+        "_easydiffraction_extinction"
+      ]
+    },
+    {
       "name": "_background",
       "form": "one row",
       "columns": [
@@ -1370,6 +1408,90 @@
           "type": "std::string",
           "items": [
             "file_name"
+          ]
+        }
+      ],
+      "owner": "ExperimentBase"
+    },
+    {
+      "name": "_background_estimate",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExperimentBase::background_estimate_mode",
+          "type": "std::optional<std::string>",
+          "items": [
+            "mode"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_method",
+          "type": "std::optional<std::string>",
+          "items": [
+            "method"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_width",
+          "type": "std::optional<double>",
+          "items": [
+            "width"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_smoothness",
+          "type": "std::optional<double>",
+          "items": [
+            "smoothness"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_n_points",
+          "type": "std::optional<int>",
+          "items": [
+            "n_points"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_tolerance",
+          "type": "std::optional<double>",
+          "items": [
+            "tolerance"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_in_peaks",
+          "type": "std::optional<std::string>",
+          "items": [
+            "in_peaks"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_use_model",
+          "type": "std::optional<std::string>",
+          "items": [
+            "use_model"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_max_terms",
+          "type": "std::optional<int>",
+          "items": [
+            "max_terms"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_inputs",
+          "type": "std::uint64_t",
+          "items": [
+            "inputs_digest"
+          ]
+        },
+        {
+          "member": "ExperimentBase::background_estimate_points",
+          "type": "std::uint64_t",
+          "items": [
+            "points_digest"
           ]
         }
       ],
@@ -1997,6 +2119,32 @@
       ]
     },
     {
+      "name": "_pd_calc",
+      "form": "columns",
+      "columns": [
+        {
+          "member": "PdDataBase::component_intensities_net",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "component_intensities_net"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_pd_calc_overall",
+      "form": "columns",
+      "columns": [
+        {
+          "member": "PdDataBase::component_order",
+          "type": "ComputedColumn<std::string>",
+          "items": [
+            "component_presentation_order"
+          ]
+        }
+      ]
+    },
+    {
       "name": "_fit_parameter",
       "form": "derived",
       "why": "composed at save from the parameters' fit-start cells; read back into them at load"
@@ -2261,6 +2409,69 @@
           "items": [
             "two_theta",
             "time_of_flight"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_h",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_h"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_k",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_k"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_l",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_l"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas_su",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas_su"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::wavelength",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "wavelength"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::d_spacing",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "d_spacing"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::sin_theta_over_lambda",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "sin_theta_over_lambda"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_calc",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "intensity_calc"
           ]
         }
       ]
@@ -3218,6 +3429,16 @@
       "category": "_data"
     },
     {
+      "member": "PdDataBase::component_intensities_net",
+      "type": "ComputedColumn<double>",
+      "category": "_pd_calc"
+    },
+    {
+      "member": "PdDataBase::component_order",
+      "type": "ComputedColumn<std::string>",
+      "category": "_pd_calc_overall"
+    },
+    {
       "member": "PdDataBase::residual",
       "type": "ComputedColumn<double>",
       "category": "_data"
@@ -3558,6 +3779,86 @@
       "part": "the row token of the object's non-loop categories"
     },
     {
+      "member": "ExtinctionBase::type",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::model",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::radius",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::mosaicity",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExtinctionBase::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExtinctionBase::table_row",
+      "type": "detail::CategoryRow",
+      "part": "the row token of the object's non-loop categories"
+    },
+    {
+      "member": "ReflnDataBase::index_h",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_k",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_l",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas_su",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::wavelength",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::d_spacing",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::sin_theta_over_lambda",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_calc",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
       "member": "PrefOrient::structure_id",
       "type": "ItemKey",
       "category": "_preferred_orientation"
@@ -3855,6 +4156,20 @@
       ]
     },
     {
+      "member": "ExperimentBase::reflections",
+      "type": "std::optional<ReflnDataBase>",
+      "holds": [
+        "_refln"
+      ]
+    },
+    {
+      "member": "ExperimentBase::extinction",
+      "type": "ExtinctionBase",
+      "holds": [
+        "_extinction"
+      ]
+    },
+    {
       "member": "ExperimentBase::dataset_weight",
       "type": "double",
       "category": "_joint_fit"
@@ -3863,6 +4178,61 @@
       "member": "ExperimentBase::data_file",
       "type": "std::string",
       "category": "_data_source"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_mode",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_method",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_width",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_smoothness",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_n_points",
+      "type": "std::optional<int>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_tolerance",
+      "type": "std::optional<double>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_in_peaks",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_use_model",
+      "type": "std::optional<std::string>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_max_terms",
+      "type": "std::optional<int>",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_inputs",
+      "type": "std::uint64_t",
+      "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::background_estimate_points",
+      "type": "std::uint64_t",
+      "category": "_background_estimate"
     },
     {
       "member": "ExperimentBase::fit_n_data_points",
@@ -3903,7 +4273,9 @@
       "member": "ExperimentBase::data",
       "type": "std::optional<PdDataBase>",
       "holds": [
-        "_data"
+        "_data",
+        "_pd_calc",
+        "_pd_calc_overall"
       ]
     },
     {
@@ -4675,6 +5047,9 @@
     "_background": [
       "_background"
     ],
+    "_background_estimate": [
+      "_background_estimate"
+    ],
     "_calculator": [
       "_calculator"
     ],
@@ -4711,6 +5086,9 @@
     "_easydiffraction_experiment_type": [
       "_experiment_type"
     ],
+    "_easydiffraction_extinction": [
+      "_extinction"
+    ],
     "_easydiffraction_peak": [
       "_peak"
     ],
@@ -4731,6 +5109,9 @@
     ],
     "_expt_type": [
       "_experiment_type"
+    ],
+    "_extinction": [
+      "_extinction"
     ],
     "_fit_parameter": [
       "_fit_parameter"

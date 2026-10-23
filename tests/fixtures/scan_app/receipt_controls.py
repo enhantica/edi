@@ -1,5 +1,6 @@
 """Exercise stale reuse using real host receipts and valid changed compiled inputs."""
 
+import json
 import os
 import shutil
 import subprocess
@@ -25,11 +26,14 @@ def replace_valid_source(path):
     path.write_bytes(original + b'\n// valid changed compiled input\n')
 
 
-def stale_reuse(harness, receipt, backend, seam, scratch, monkeypatch):
+def stale_reuse(harness, receipt, backend, seam, scratch, monkeypatch, *, receipt_path):
     sdk, engine = crysta_reference_prefix(), crysta_reference_source()
     validate_current_inputs(receipt, harness.ROOT, sdk, engine)
-    receipt_path = Path(receipt['executable']).parents[2] / 'receipt.json'
+    receipt_path = Path(receipt_path)
     assert receipt_path.is_file(), 'Stale-input controls require the actual compiled host receipt'
+    assert json.loads(receipt_path.read_text()) == receipt, (
+        'Stale-input controls must replay the exact original host receipt at its recorded path'
+    )
     key = 'EDI_' + ('THREAD_SELECTOR' if 'thread_selector' in harness.__name__ else 'SCAN_SCREEN')
     monkeypatch.setenv(key + '_' + backend.upper() + '_RECEIPT', str(receipt_path))
     if seam == 'entry':

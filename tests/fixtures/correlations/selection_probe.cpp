@@ -9,6 +9,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include "edi/correlation_matrix.hpp"
 
 struct QString : std::string {
     using std::string::string;

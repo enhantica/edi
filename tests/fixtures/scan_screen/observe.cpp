@@ -26,6 +26,28 @@ EM_JS_DEPS(scan_screen, "$stringToNewUTF8,$UTF8ToString");
 namespace {
 std::mutex completed_mutex;
 QStringList completed_files;
+QJsonArray follow_events;
+QElapsedTimer* observation_clock = nullptr;
+QQuickWindow* observation_window = nullptr;
+QJsonObject chart_state() {
+    auto* window = observation_window;
+    if (!window) return {{"windowPresent", false}};
+    QJsonArray charts;
+    for (auto* layer : window->findChildren<edi_app::MeasuredLayer*>("chart.measured")) {
+        auto* chart = layer->parent();
+        auto* calc = chart->findChild<QXYSeries*>("chart.series.calc");
+        charts.append(QJsonObject{{"visible", layer->isVisible()},
+                                  {"shown", chart->property("shown").toBool()},
+                                  {"width", layer->width()}, {"height", layer->height()},
+                                  {"measuredPoints", layer->points().size()},
+                                  {"calculatedPoints", calc ? calc->points().size() : 0}});
+    }
+    return {{"windowPresent", true}, {"windowVisible", window->isVisible()},
+            {"windowExposed", window->isExposed()},
+            {"windowVisibility", static_cast<int>(window->visibility())},
+            {"windowWidth", window->width()}, {"windowHeight", window->height()},
+            {"charts", charts}};
+}
 QString wanted(const char* name, const char* fallback) {
 #if defined(Q_OS_WASM)
     char* value = reinterpret_cast<char*>(EM_ASM_PTR(
@@ -78,7 +100,12 @@ QStringList choices(QObject* object) {
     return result;
 }
 void publish(const QJsonObject& result) {
-    const QByteArray bytes = QJsonDocument(result).toJson(QJsonDocument::Compact);
+    QJsonObject output = result;
+    {
+        std::lock_guard lock(completed_mutex);
+        output["followEvents"] = follow_events;
+    }
+    const QByteArray bytes = QJsonDocument(output).toJson(QJsonDocument::Compact);
 #if defined(Q_OS_WASM)
     EM_ASM(
         { globalThis.__scanScreenObservation = JSON.parse(UTF8ToString($0)); }, bytes.constData());
@@ -93,6 +120,27 @@ void publish(const QJsonObject& result) {
 void scan_screen_completed(const std::string& file) {
     std::lock_guard lock(completed_mutex);
     completed_files.append(QString::fromStdString(file));
+    follow_events.append(QJsonObject{{"event", "file-complete"},
+                                     {"file", QString::fromStdString(file)},
+                                     {"ms", static_cast<double>(observation_clock->elapsed())}});
+}
+
+void scan_screen_follow(const QJsonObject& state) {
+    QJsonObject event = state;
+    event["ms"] = static_cast<double>(observation_clock->elapsed());
+    event["chart"] = chart_state();
+    std::lock_guard lock(completed_mutex);
+    follow_events.append(event);
+}
+
+void scan_screen_worker(const char* event, const std::string& file, bool wanted, bool waiting,
+                        bool cancelled, bool has_frame, long remaining) {
+    std::lock_guard lock(completed_mutex);
+    follow_events.append(QJsonObject{{"event", event}, {"file", QString::fromStdString(file)},
+                                     {"ms", static_cast<double>(observation_clock->elapsed())},
+                                     {"frameWanted", wanted}, {"waitPatterns", waiting},
+                                     {"cancelled", cancelled}, {"hasFrame", has_frame},
+                                     {"deadlineRemainingMs", static_cast<qint64>(remaining)}});
 }
 
 void scan_screen_settings(QQmlApplicationEngine& engine) {
@@ -111,6 +159,8 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
     auto* clock = new QElapsedTimer;
     clock->start();
+    observation_clock = clock;
+    observation_window = window;
     auto* result = new QJsonObject{{"mode", wanted("SCAN_SCREEN_MODE", "adaptive")},
                                    {"frames", QJsonArray{}}};
     auto* finish = new QTimer(window);
@@ -122,11 +172,20 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     finish->start(120000);
     auto* latest = new QJsonObject;
     auto* previous = new QString;
+    auto* previous_chart = new QJsonObject;
     QObject::connect(
         window, &QQuickWindow::afterSynchronizing, window,
         [=] {
             auto* project = session->project();
             if (!project) return;
+            QJsonObject chart = chart_state();
+            chart["patternShown"] = project->patternShown();
+            if (chart != *previous_chart) {
+                std::lock_guard lock(completed_mutex);
+                follow_events.append(QJsonObject{{"event", "drawability"}, {"chart", chart},
+                                                 {"ms", static_cast<double>(clock->elapsed())}});
+                *previous_chart = chart;
+            }
             edi_app::MeasuredLayer* layer = nullptr;
             for (auto* candidate : window->findChildren<edi_app::MeasuredLayer*>("chart.measured"))
                 if (candidate->isVisible() && candidate->parent()->property("shown").toBool())

@@ -15,8 +15,8 @@ import edi.app
 // each row shows the structure's icon in that structure's colour before its name (edi ADR-0017 §8). The name
 // is picked from the project's structures; a row can be added for a structure not yet linked, removed while
 // another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
-// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited; with a single
-// structure it is always 1 and its cell stays empty.
+// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited; a single
+// enabled structure shows 1.
 Column {
     id: group
 
@@ -36,36 +36,35 @@ Column {
         columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("structure")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("scale")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("weight fraction")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string structureId
             required property int colorIndex
             // The Hill-Howard weight fraction: `value` and `uncertainty` (0 without one), empty when there is none.
@@ -73,9 +72,9 @@ Column {
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             IconCell {
@@ -85,11 +84,15 @@ Column {
                 iconColor: AppColors.structure(row.colorIndex)
                 toolTip: qsTr("Calculated pattern color")
             }
-            // The structure, picked from the project's structures as the aliases table picks a parameter.
+            // The structure, picked from the project's structures as the aliases table picks a parameter. A link to a
+            // structure the project does not hold (an experiment loaded from another project) shows that name in red
+            // until another is picked; nothing is calculated for the experiment meanwhile.
             Item {
                 property int horizontalAlignment: Text.AlignLeft
                 height: parent.height
                 SearchableComboBox {
+                    readonly property bool missing: group.rows !== null && group.rows.structureNames.indexOf(row.structureId) < 0
+
                     width: Math.min(parent.width, implicitWidth)
                     x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     inTable: true
@@ -100,7 +103,8 @@ Column {
                     model: group.rows ? group.rows.structureNames : []
                     currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
                     displayText: row.structureId
-                    ToolTip.text: row.structureId
+                    foregroundColor: missing ? EaStyle.Colors.red : _foregroundColor()
+                    ToolTip.text: missing ? qsTr("The project holds no structure '%1'; pick one of its structures").arg(row.structureId) : row.structureId
                     onActivated: index => {
                         group.rows.setStructureId(row.index, group.rows.structureNames[index]);
                         currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
@@ -114,10 +118,13 @@ Column {
                 item: row.model.scale
             }
             // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
-            // the value's menu, never edited or fitted.
-            EaComponents.TableViewParameter {
+            // the value's menu, never edited or fitted. A fraction keeps its decimal point, so a lone phase shows 1.0
+            // as the saved file writes it.
+            EaComponents.ListViewParameter {
                 id: fraction
 
+                errorTitle: qsTr("s.u.")
+                fitTitle: qsTr("free")
                 readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
                 readonly property real fractionValue: known ? row.weightFraction.value : 0
                 readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
@@ -127,7 +134,7 @@ Column {
                 enabled: row.model.enabled
                 readOnly: true
                 parameter: known ? {
-                    "value": NumberText.parameter(fractionValue, fractionError),
+                    "value": (text => /[.e]/.test(text) ? text : text + ".0")(NumberText.parameter(fractionValue, fractionError)),
                     "error": NumberText.error(fractionError, 0, fractionValue),
                     "enabled": true,
                     "fittable": false,
@@ -143,14 +150,14 @@ Column {
                 ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.enabled.${row.index}`
                 fontIcon: row.model.enabled ? "toggle-on" : "toggle-off"
                 ToolTip.text: row.model.enabled ? qsTr("Disable this linked structure") : qsTr("Enable this linked structure")
                 onClicked: group.rows.setEnabled(row.index, !row.model.enabled)
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.remove.${row.index}`
                 enabled: group.rows !== null && group.rows.canRemove

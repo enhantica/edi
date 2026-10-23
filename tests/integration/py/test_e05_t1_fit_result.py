@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import runpy
 import shlex
 import shutil
 import sys
@@ -129,7 +130,7 @@ def codec_copy(case, target):
     # complete model, while historical result counts keep their CLI provenance.
     for experiment in (target / 'experiments').glob('*.edi'):
         lines = experiment.read_text().splitlines()
-        first = next(i for i, line in enumerate(lines) if line.startswith('_data.'))
+        first = next(i for i, line in enumerate(lines) if line.startswith(('_data.', '_refln.')))
         while first < len(lines) and (not lines[first].strip() or lines[first].startswith('_')):
             first += 1
         experiment.write_text('\n'.join(lines[: first + 3]) + '\n')
@@ -318,3 +319,68 @@ def test_registered_fit_inventory_refuses_missing_or_duplicate_witnesses(escape,
         monkeypatch.setattr(Path, 'read_text', without_native_case)
     with pytest.raises(AssertionError, match=r'gate [18]'):
         test_cli_fixture_inventory()
+
+
+@pytest.mark.parametrize('stalled', [False, True], ids=['zero-gain', 'domain-stall'])
+def test_zero_gain_converges_and_domain_blocked_positive_gain_stalls(stalled, tmp_path):
+    materialize = runpy.run_path(str(ROOT / 'tests/fixtures/e05_t1/stop_projects.py'))[
+        'materialize'
+    ]
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+    project = edi.Project.load(materialize(edi, source, tmp_path / 'source', stalled=stalled))
+    outcome = project.analysis.fit()
+    expected_status = edi.FitStatus.NO_STEP if stalled else edi.FitStatus.DONE
+    assert outcome.status == expected_status, (
+        'a zero-gain column must converge; a positive-gain column whose trials all leave '
+        'the declared domain must remain a genuine stall'
+    )
+    assert outcome.converged == (not stalled), (
+        'the predicted-gain distinction must agree with the public convergence flag'
+    )
+    if stalled:
+        assert outcome.iterations == 1, (
+            'the domain witness must reject every proposal in its first iteration'
+        )
+        assert outcome.reduced_chi_square == pytest.approx(1.5, rel=0.0, abs=1e-12), (
+            'three residuals of one with one free parameter must retain chi-square over '
+            'two degrees of freedom after the rejected descent'
+        )
+        assert project.structure.atom_sites[0].adp_iso.value == pytest.approx(
+            0.0, rel=0.0, abs=0.0
+        ), 'rejected negative proposals must preserve the declared zero driver'
+    project.save_as(str(tmp_path / 'saved'))
+    persisted = scalars((tmp_path / 'saved/analysis/analysis.edi').read_text())
+    assert persisted.get('_fit_result.exit_reason') == ('no_step' if stalled else 'done'), (
+        'saving a live stop result must preserve the actual terminal reason'
+    )
+    assert persisted.get('_fit_result.success') == ('false' if stalled else 'true'), (
+        'saving a live stop result must preserve the predicted-gain success distinction'
+    )
+
+
+def test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections():
+    cases = json.loads((ROOT / 'tests/fixtures/e05_t1/stops.json').read_text())['cases']
+    case = next(row for row in cases if row['id'] == 'stop-nostep')
+    record = case['record']
+    assert record['status'] == 'no_step' and record['converged'] == 'false', (
+        'the committed app witness must remain a genuine nonconverged stop'
+    )
+    assert int(record['iterations']) == 1 and int(record['n_free']) == 1, (
+        'the app stall must retain one free driver and no accepted iteration'
+    )
+    assert int(record['terminal_unevaluable_trials']) > 0, (
+        'the app stall must reject real out-of-domain proposals rather than a zero-gain column'
+    )
+    assert record['terminal_unevaluable_trials'] == record['unevaluable_trials'], (
+        'every domain rejection must belong to the only executed iteration'
+    )
+    assert record['nonfinite_trials'] == '0', (
+        'the authored stall must arise from its declared domain with finite arithmetic'
+    )
+    assert int(record['n_points_fitted']) == 3 and float(record['reduced_chi_square']) == 1.5, (
+        'the app witness must retain the independently declared three unit residuals'
+    )
+    expected = case['closed_form']
+    assert expected['predicted_gain'] == 3.0 and expected['chi_square'] == 3.0, (
+        'the independently derived scalar gradient and normal matrix give positive gain three'
+    )

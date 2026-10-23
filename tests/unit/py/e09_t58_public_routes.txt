@@ -46,9 +46,12 @@ BeamModeEnum.TIME_OF_FLIGHT	other-public
 BraggPdExperiment	other-public
 BraggPdExperiment.absorption	other-public
 BraggPdExperiment.background	other-public
+# Saved estimator settings are model state rather than a calculation entry point.
+BraggPdExperiment.background_estimate	other-public
 BraggPdExperiment.data	other-public
 BraggPdExperiment.dataset_weight	other-public
 BraggPdExperiment.excluded_regions	other-public
+BraggPdExperiment.extinction	other-public
 BraggPdExperiment.experiment_type	other-public
 BraggPdExperiment.instrument	other-public
 BraggPdExperiment.linked_structure	other-public
@@ -225,6 +228,7 @@ PdExperimentBase	other-public
 PdExperimentBase.data	other-public
 PdExperimentBase.dataset_weight	other-public
 PdExperimentBase.excluded_regions	other-public
+PdExperimentBase.extinction	other-public
 PdExperimentBase.experiment_type	other-public
 PdExperimentBase.linked_structure	other-public
 PdExperimentBase.name	other-public
@@ -717,3 +721,14 @@ LinkedStructure.weight_fraction	other-public
 WeightFraction	other-public
 WeightFraction.uncertainty	other-public
 WeightFraction.value	other-public
+
+# Stored background row identifiers are public model data, not input providers.
+LineSegment.id	other-public
+PolynomialTerm.id	other-public
+# Calculated arrays and their stored column names are passive model results, not calculation entry points.
+PdCwlData.component_intensities_net	other-public
+PdCwlData.component_presentation_order	other-public
+PdDataBase.component_intensities_net	other-public
+PdDataBase.component_presentation_order	other-public
+PdTofData.component_intensities_net	other-public
+PdTofData.component_presentation_order	other-public

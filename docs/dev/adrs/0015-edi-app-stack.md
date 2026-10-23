@@ -40,12 +40,12 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
+   `540cda20a0c15982c5a3c5bdefab275f3e343c43` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
-   declared replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0029),
-   Fonts for edi's font inventory (§10), and ListView for the null-safe selection-model
-   initialization recorded in ADR-0029; configuration refuses another commit or local changes under `src/`. The pinned
+   declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
+   focused colour, ProjectDescriptionDialog, Fonts for edi's font inventory (§10) and Sizes for a sidebar width the app
+   window sets (ADR-0017 §12); configuration refuses another commit or local changes under `src/`. The pinned
    commit is downloaded as GitHub's archive of it, checked against a committed SHA-256, with a message and a timeout (a
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
@@ -110,7 +110,8 @@ type (diffraction-lib's category compatibility at `0ffba46f` with edi's declared
 table does (ADR-0017 §5). A field the space group fixes or ties to another is shown disabled, with the value symmetry implies, and the Analysis table does not list it (ADR-0019). Peak asymmetry
 belongs to the Peak group (without a subheading since ADR-0017 §5); the ADP columns belong to Atom sites. The named non-category parts are the block lists (Structures, Experiments), the Project
 page's actions and the Analysis parameter table. Basic or Extras is a per-category presentation choice (`app/src/category_list_model.cpp`). The Text tab shows the file a save writes for the block,
-byte for byte, or the writer's refusal; it is loaded only while shown.
+byte for byte, or the writer's refusal; it is loaded only while shown. While a scan's dataset is shown, it shows that
+dataset's block, with the values the pages show, though a save writes the scan's template (2026-10-17).
 
 ### 4. What E04's base gates mean now that gui-components is the maintained base
 
@@ -139,7 +140,19 @@ notice (`app/DISTRIBUTION-LICENSE.md`) says so, as `DEPENDENCIES.md` does. **Ame
 About dialog's licence link opens that notice, bundled in the app, and the dialog carries no separate
 "distributed under" sentence; its second link opens the bundled third-party notices. The notice's own links
 (`COPYING`, `LICENSE`, `THIRD-PARTY-NOTICES`) open those bundled texts in the same viewer, resolved against the
-notice's location, and nothing outside the bundled licence texts opens there.
+notice's location, and nothing outside the bundled licence texts opens there. **Amended 2026-10-21 (owner):** the
+About window has no tabs. It names the app's licences by their identifiers, `BSD-3-Clause` and `GPL-3.0-only`, each
+opening its bundled text (`LICENSE`, `COPYING`) as plain text, and a *Third-party licences* link opens the table of
+the components the build bundles (ADR-0017 §1). The notice stays bundled beside the app.
+
+**Each surface lists only what it carries (owner, 2026-10-21).** `DEPENDENCIES.md` is the one list of third-party
+components: a row per component and its licence, and a column for each surface (the desktop app, the web app, the
+Python package and the command-line binary) saying whether it links, bundles or compiles the component in. The app
+embeds the file and its About window lists the column of the build's own surface, desktop or web.
+`tools/licences/sync.py` writes the rest from it: each `THIRD-PARTY-NOTICES` section's licence and use lines, and the
+Python package's `licenses/`, one licence text per component of its column, with `pyproject.toml`'s `license-files`;
+`--check` compares without writing. `THIRD-PARTY-NOTICES` keeps every licence text as its component distributes it.
+A version that differs on one surface (the web build compiles Qt's own HarfBuzz) is written in that surface's cell.
 
 The pattern chart is built on Qt Graphs (ADR-0017 §15, ADR-0020, ADR-0021). The structure view is built on Qt
 Quick 3D, which the app now links (ADR-0017 §16, ADR-0022).
@@ -426,9 +439,9 @@ cocoa does on macOS (`tools/ci/app-platform.sh`):
 - The app cannot be a Wayland client of Weston itself: conda-forge's Mesa is built without the Wayland EGL
   platform (its `libEGL_mesa` reports "Wayland platform not built"; it has x11, xcb, gbm, surfaceless and
   device).
-- conda-forge's only Weston (16.0.0) needs glibc 2.34. The app environment runs on a Linux platform of its
-  own that declares it (`linux-64-app` in `pixi.toml`), which moves its sysroot from glibc 2.28 to 2.34; the
-  default environment, the core and its wheels stay on `linux-64` at 2.28.
+- conda-forge's only Weston (16.0.0) needs glibc 2.34, so `pixi.toml` declares `linux-64` with glibc 2.34
+  (amended 2026-10-20: one platform per subdir, for every environment). The core and its wheels still build
+  against the glibc 2.28 sysroot.
 - The demo asks for 8 bits per colour channel. An EGL display can offer 16-bit RGB565 first: a Wayland probe
   on the host's own Mesa captured 32 red levels where the committed set had 255.
 
@@ -453,6 +466,15 @@ llvmpipe, 8 bits per channel, the text pipeline above); the M2 column is the own
 | 17-experiment-profile-selector | 0.3714 / 0.9693 | 0.3710 / 0.9694 |
 
 So the gap was on the reference side, and the set is now captured on the Xwayland display.
+
+### 11. Supported platforms (amended 2026-10-19)
+
+The desktop app runs on Linux (x86-64) and on macOS 14 or later (Apple silicon). The web app runs in a current
+browser. The app uses one Qt release everywhere, the one the web build's kits pin (ADR-0023), and `wasm-toolchain`
+refuses a different host Qt. conda-forge's `qt6-main` 6.11.2 for macOS depends on `moltenvk` 1.4, which is built
+for macOS 14, so `pixi.toml` declares `osx-arm64` with macOS 14.0, as it declares `linux-64` with glibc 2.34
+(amended 2026-10-20: one platform per subdir, for every environment, so no named platform has to match the host).
+The core, its wheels and the CLI keep the 13.4 deployment target their own source needs.
 
 ## Consequences
 

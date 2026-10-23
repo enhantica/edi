@@ -72,6 +72,9 @@ def test_report_index_checks_the_platform_size_t_domain(path):
 
 def test_valid_signed_endpoints_indices_and_pattern_gap_keep_their_integer_identity():
     document = copy.deepcopy(SEED)
+    atom = copy.deepcopy(document['structures'][0]['scene']['atoms'][0])
+    atom['parts'] = [copy.deepcopy(atom['parts'][0]) for _ in range(8)]
+    document['structures'][0]['scene']['atoms'] = [copy.deepcopy(atom) for _ in range(8)]
     replace(document, SIGNED_PATHS[0], -(2**31))
     replace(document, SIGNED_PATHS[1], 2**31 - 1)
     for path in INDEX_PATHS:

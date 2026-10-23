@@ -9,6 +9,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.fixtures.saved_spelling.profile_bounds import (
+    assert_factor_rounding,
+    factor_errors,
+    polynomial_error,
+    polynomial_values,
+)
 from tests.integration.py.test_anisotropic_adps import loop_rows
 from tests.integration.py.test_e05_t1_fit_result import scalars
 from tests.system.py.test_latest_fit_uncertainty import ENGINE, vehicle
@@ -136,7 +142,63 @@ def scan_template_background(project, saved, inputs, *, constrained=True):
     return a + b * t + ((a - b) * t**2 if constrained else 0)
 
 
-def profile_checks(project, text, declared, free_by_bank, backgrounds=None, net_pattern=None):
+def saved_profile(saved, name):
+    rows = loop_rows((saved / f'experiments/{name}.edi').read_text(), '_data')
+    assert rows, 'Every fitted bank must save its own complete observation and calculation columns'
+    return tuple(
+        np.asarray([
+            float(row['_data.' + field]) if row['_data.' + field] not in {'.', '?'} else np.nan
+            for row in rows
+        ])
+        for field in ('intensity_meas', 'intensity_calc', 'intensity_meas_su', 'intensity_bkg')
+    )
+
+
+def assert_profile_rounding(project, saved, declared, *, constrained, used_by_bank=None):  # noqa: PLR0914
+    loaded = ENGINE.Project.load(saved)
+    loaded.analysis.calculate()
+    for experiment in loaded.experiments:
+        bank_constraint = constrained and experiment.name == 'bank'
+        inputs = declared[experiment.name]
+        used = inputs[:, 2] > 0 if used_by_bank is None else used_by_bank[experiment.name]
+        yo, yc, sigma, background = [
+            values[used] for values in saved_profile(saved, experiment.name)
+        ]
+        source = (saved / f'experiments/{experiment.name}.edi').read_text()
+        coefficients = [row['_background.coef'] for row in loop_rows(source, '_background')]
+        radius = polynomial_error(coefficients, inputs[:, 0], constrained=bank_constraint)[used]
+        actual_yc = np.asarray(experiment.data.intensity_calc)[used]
+        actual_bg = np.asarray(experiment.data.intensity_bkg)[used]
+        np.testing.assert_allclose(
+            actual_bg,
+            polynomial_values(coefficients, inputs[:, 0], constrained=bank_constraint)[used],
+            rtol=1e-12,
+            atol=1e-14,
+            err_msg='The reloaded background must equal the independent written-token polynomial',
+        )
+        np.testing.assert_allclose(
+            actual_yc - actual_bg,
+            yc - background,
+            rtol=1e-12,
+            atol=1e-14,
+            err_msg='Background rounding must retain every fixed phase intensity',
+        )
+        assert np.all(abs(actual_yc - yc) <= radius + 1e-12), (
+            'Recalculation must stay within the independently propagated background digits'
+        )
+        assert np.all(abs(actual_bg - background) <= radius + 1e-12), (
+            'A reloaded background may move only by the authored polynomial rounding envelope'
+        )
+        nfree = len(project.free_parameters)
+        expected = factors(yo, yc, sigma, background, nfree)
+        actual = factors(yo, actual_yc, sigma, actual_bg, nfree)
+        errors = factor_errors(yo, yc, sigma, background, radius, expected)
+        assert_factor_rounding(actual, expected, errors)
+
+
+def profile_checks(  # noqa: PLR0914
+    project, text, declared, free_by_bank, backgrounds=None, net_pattern=None, *, saved=None
+):
     rows = loop_rows(text, '_fit_result_bank')
     identities = [row['_fit_result_bank.experiment_id'] for row in rows]
     assert len(identities) == len(declared), (
@@ -151,7 +213,36 @@ def profile_checks(project, text, declared, free_by_bank, backgrounds=None, net_
         inputs = declared[experiment.name]
         used = inputs[:, 2] > 0
         yo, sigma = inputs[used, 1], inputs[used, 2]
-        if backgrounds is None:
+        if saved is not None and backgrounds is None:
+            saved_yo, saved_yc, saved_sigma, saved_bg = saved_profile(saved, experiment.name)
+            np.testing.assert_array_equal(
+                saved_yo,
+                inputs[:, 1],
+                err_msg='Saved observations must retain every declared measured value',
+            )
+            np.testing.assert_array_equal(
+                saved_sigma,
+                inputs[:, 2],
+                err_msg='Saved fit weights must retain every independently declared uncertainty',
+            )
+            yc, background = saved_yc[used], saved_bg[used]
+            if backgrounds is not None:
+                np.testing.assert_allclose(
+                    background,
+                    backgrounds[experiment.name][used],
+                    rtol=1e-12,
+                    atol=1e-14,
+                    err_msg='The scan background must retain its independent ledger polynomial',
+                )
+            if net_pattern is not None:
+                np.testing.assert_allclose(
+                    yc - background,
+                    net_pattern[used],
+                    rtol=1e-12,
+                    atol=1e-14,
+                    err_msg='The net pattern must retain the independent phase contributions',
+                )
+        elif backgrounds is None:
             yc = np.asarray(experiment.data.intensity_calc)[used]
             background = np.asarray(experiment.data.intensity_bkg)[used]
         else:
@@ -193,16 +284,17 @@ def test_every_fit_records_per_experiment_profile_factors_from_used_points(tmp_p
             'bank': scan_template_background(project, tmp_path / 'saved', declared['bank'])
         }
     banks, pooled = profile_checks(
-        project, text, declared, dict.fromkeys(declared, 2), backgrounds
+        project, text, declared, dict.fromkeys(declared, 2), backgrounds, saved=tmp_path / 'saved'
     )
+    if mode not in {'sequential', 'independent'}:
+        assert_profile_rounding(project, tmp_path / 'saved', declared, constrained=True)
     for experiment in project.experiments:
         inputs = declared[experiment.name]
-        background = (
-            np.asarray(experiment.data.intensity_bkg)
-            if backgrounds is None
-            else backgrounds[experiment.name]
-        )
-        yc = np.asarray(experiment.data.intensity_calc) if backgrounds is None else background
+        if backgrounds is None:
+            _yo, yc, _sigma, background = saved_profile(tmp_path / 'saved', experiment.name)
+        else:
+            background = backgrounds[experiment.name]
+            yc = background
         unweighted = factors(inputs[:, 1], yc, np.ones(len(yc)), background, 2)
         weighted = factors(inputs[:, 1], yc, inputs[:, 2], background, 2)
         # Zero phase scales give yc == background, hence cRp == cRwp == 1 for any weights.
@@ -255,13 +347,20 @@ def test_excluded_or_zero_weight_outlier_cannot_enter_any_metric_sum(tmp_path, m
     assert int(bank_rows[0]['_fit_result_bank.n_data_points']) == 8, (
         'The excluded or zero-weight outlier must contribute no degree of freedom'
     )
-    data = project.experiments[0].data
-    expected = factors(
-        rows[1:, 1],
-        np.asarray(data.intensity_calc)[1:],
-        rows[1:, 2],
-        np.asarray(data.intensity_bkg)[1:],
-        2,
+    yo, yc, sigma, background = saved_profile(tmp_path / 'saved', 'bank')
+    np.testing.assert_array_equal(
+        yo, rows[:, 1], err_msg='Excluded observations must retain their original measured values'
+    )
+    np.testing.assert_array_equal(
+        sigma, rows[:, 2], err_msg='Excluded observations must retain their original weights'
+    )
+    expected = factors(yo[1:], yc[1:], sigma[1:], background[1:], 2)
+    assert_profile_rounding(
+        project,
+        tmp_path / 'saved',
+        {'bank': rows},
+        constrained=True,
+        used_by_bank={'bank': np.arange(len(rows)) > 0},
     )
     assert_metrics(bank_rows[0], '_fit_result_bank.', expected)
     assert_metrics(
@@ -448,3 +547,11 @@ def test_the_profile_oracle_rejects_each_exercised_numeric_escape(escape):
     row = {'_fit_result_bank.' + key: str(value) for key, value in actual.items()}
     with pytest.raises(AssertionError, match='independent inclusion mask and weighted sums'):
         assert_metrics(row, '_fit_result_bank.', expected)
+    errors = factor_errors(*left, np.full_like(left[0], 0.005), factors(*left, 2))
+    expected = factors(*left, 2)
+    assert_factor_rounding(expected, expected, errors)
+    for field in expected:
+        beyond = dict(expected)
+        beyond[field] += errors[field] + 2e-12
+        with pytest.raises(AssertionError, match='independent triangle-inequality rounding bound'):
+            assert_factor_rounding(beyond, expected, errors)

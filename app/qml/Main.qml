@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 import QtCore
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -90,42 +91,70 @@ EaComponents.ApplicationWindow {
         }
     ]
 
+    // A workflow tab as wide when it is the current page's as when it is not: the base sets the current tab's name in
+    // bold, so the tab bar changed width with every page switch, which moved the Experiment button the sidebar is
+    // measured from, resized every page's main area and drew each shown chart a second time.
+    component WorkflowTab: EaElements.AppBarTabButton {
+        id: tab
+
+        // The base binds the width to the name's width in its current weight; this is the wider of the two.
+        width: implicitWidth
+        implicitWidth: Math.ceil(Math.max(plainName.advanceWidth, boldName.advanceWidth) + font.pixelSize * 1.5)
+
+        TextMetrics {
+            id: plainName
+
+            font.family: tab.font.family
+            font.pixelSize: tab.font.pixelSize * 0.95
+            text: tab.text
+        }
+        TextMetrics {
+            id: boldName
+
+            font.family: tab.font.family
+            font.pixelSize: tab.font.pixelSize * 0.95
+            font.bold: true
+            text: tab.text
+        }
+    }
+
     appBarCentralTabs.contentData: [
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.home"
             fontIcon: "home"
             text: qsTr("Home")
             ToolTip.text: qsTr("Home page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.project"
             enabled: AppState.projectPageEnabled
             fontIcon: "archive"
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.structure"
             enabled: AppState.structurePageEnabled
             fontIcon: "layer-group"
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
+            id: experimentTab
             objectName: "appBar.tab.experiment"
             enabled: AppState.experimentPageEnabled
             fontIcon: "microscope"
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.analysis"
             enabled: AppState.analysisPageEnabled
             fontIcon: "calculator"
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
-        EaElements.AppBarTabButton {
+        WorkflowTabButton {
             objectName: "appBar.tab.report"
             enabled: AppState.reportPageEnabled
             fontIcon: "clipboard-list"
@@ -219,6 +248,14 @@ EaComponents.ApplicationWindow {
             WebFiles.downloadProject(Session.project.path);
         else
             saveError.open();
+    }
+
+    // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
+    // 2026-10-22), read from where the centred tabs are, so it follows the window and any change to the buttons.
+    Binding {
+        target: EaStyle.Sizes
+        property: "sideBarWidth"
+        value: Math.round(window.width - (window.appBarCentralTabs.x + window.appBarCentralTabs.leftPadding + experimentTab.x + experimentTab.width / 2))
     }
 
     Shortcut {

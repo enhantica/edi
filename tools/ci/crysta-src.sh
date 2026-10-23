@@ -13,17 +13,24 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SHA="$(cat "$ROOT/build/crysta-prefix/.crysta-sha" 2>/dev/null)" \
   || { echo "ERROR: build/crysta-prefix/.crysta-sha is missing — run tools/ci/build-crysta.sh first" >&2; exit 1; }
 SRC="$ROOT/build/crysta-src"
-if [ "$(cat "$SRC/CRYSTA_SOURCE_SHA" 2>/dev/null)" = "$SHA" ] && [ "$(git -C "$SRC" rev-parse HEAD 2>/dev/null)" = "$SHA" ]; then
-  exit 0
-fi
 # shellcheck source=tools/ci/crysta-source.sh
 . "$ROOT/tools/ci/crysta-source.sh"
-[ -d "$SRC/.git" ] || git init -q "$SRC"
-if ! git -C "$SRC" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
-  crysta_remote "fetch" -C "$SRC" fetch -q --depth 1 "$(crysta_url)" "$SHA" \
-    || { echo "ERROR: crysta $SHA (the pinned SDK's source) could not be fetched:" >&2; _crysta_redact "$CRYSTA_REMOTE_OUT" >&2; echo >&2; exit 1; }
+if [ "$(cat "$SRC/CRYSTA_SOURCE_SHA" 2>/dev/null)" != "$SHA" ] || [ "$(git -C "$SRC" rev-parse HEAD 2>/dev/null)" != "$SHA" ]; then
+  [ -d "$SRC/.git" ] || git init -q "$SRC"
+  if ! git -C "$SRC" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
+    crysta_remote "fetch" -C "$SRC" fetch -q --depth 1 "$(crysta_url)" "$SHA" \
+      || { echo "ERROR: crysta $SHA (the pinned SDK's source) could not be fetched:" >&2; _crysta_redact "$CRYSTA_REMOTE_ERR" >&2; echo >&2; exit 1; }
+  fi
+  git -C "$SRC" checkout -qf --detach "$SHA"
+  git -C "$SRC" clean -qfdx
+  printf '%s\n' "$SHA" >"$SRC/CRYSTA_SOURCE_SHA"
+  echo "crysta-source: $SHA (fetched for the corpus and reference readers; never built)"
 fi
-git -C "$SRC" checkout -qf --detach "$SHA"
-git -C "$SRC" clean -qfdx
-printf '%s\n' "$SHA" >"$SRC/CRYSTA_SOURCE_SHA"
-echo "crysta-source: $SHA (fetched for the corpus and reference readers; never built)"
+# crysta's SIMD witness, which wasm-parallel-check runs from this source, reads the tree of the older commit its fork
+# was taken from (BASE in tests/fixtures/web_simd/fork/reference.mjs). A depth-1 fetch lacks it.
+BASE="$(sed -n "s/^export const BASE='\([0-9a-f]\{40\}\)'.*/\1/p" "$SRC/tests/fixtures/web_simd/fork/reference.mjs" 2>/dev/null)" || BASE=""
+if [ -n "$BASE" ] && ! git -C "$SRC" cat-file -e "${BASE}^{tree}" 2>/dev/null; then
+  crysta_remote "fetch" -C "$SRC" fetch -q --depth 1 "$(crysta_url)" "$BASE" \
+    || { echo "ERROR: crysta $BASE (the SIMD witness's base) could not be fetched:" >&2; _crysta_redact "$CRYSTA_REMOTE_ERR" >&2; echo >&2; exit 1; }
+  echo "crysta-source: $BASE (the SIMD witness's base)"
+fi

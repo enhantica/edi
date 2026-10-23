@@ -10,7 +10,7 @@
 # crysta source the app compiles (build/crysta-src, or EDI_WASM_CRYSTA_SRC as in wasm-build.sh), with the web
 # build's thread and SIMD options, and run them in the browser: the threaded probe must show fill chunks running at
 # the same time on different workers, and the two controls (serial dispatch, backend off) must be refused after
-# their chunks ran; the SIMD probe must consume the vectorised maths layer, and its two controls must be refused. Needs wasm-build's output and wasm-toolchain's Emscripten, Node and Chrome.
+# their chunks ran; the SIMD probe must consume the vectorised maths layer, and its two controls must be refused. Needs wasm-build's output, wasm-toolchain's Emscripten and Chrome, and the environment's Node.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -24,15 +24,15 @@ fi
 OUT="$(mkdir -p "$1" && cd "$1" && pwd)"
 
 EMSDK="$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK"
-NODE_BIN="$(echo "$EMSDK"/node/*/bin)"
 CHROME="$EDI_WASM_TOOLCHAIN/chrome-$EDI_WASM_CHROME/chrome-headless-shell/linux-$EDI_WASM_CHROME/chrome-headless-shell-linux64/chrome-headless-shell"
 ZIP="$ROOT/build/wasm/edi-webapp.zip"
-for need in "$NODE_BIN/node" "$CHROME" "$ZIP"; do
+for need in "$CHROME" "$ZIP"; do
   if [ ! -e "$need" ]; then
     echo "wasm-parallel-check: $need is missing — run pixi run -e app wasm-toolchain and wasm-build first" >&2
     exit 1
   fi
 done
+wasm_check_driver_node wasm-parallel-check
 if [ -n "${EDI_WASM_CRYSTA_SRC:-}" ]; then
   SRC="$(cd "$EDI_WASM_CRYSTA_SRC" && pwd)"
 else
@@ -48,7 +48,6 @@ SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 SITE="$SCRATCH/site"
 python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$ZIP" "$SITE"
-export PATH="$NODE_BIN:$PATH"
 # The locked Playwright driver and its WebKit, for the matrix's route check (tools/ci/wasm-webkit.sh).
 PW="$(wasm_playwright_dir)"
 export PLAYWRIGHT_BROWSERS_PATH="$PW/browsers" WEB_PARALLEL_PLAYWRIGHT="$PW/node_modules/playwright-core/index.mjs"

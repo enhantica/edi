@@ -271,6 +271,12 @@ from edi._edi import (  # noqa: E402 -
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _read_plain_data as _edi_read_plain_data,  # Crysta's plain-data reader
 )
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_from_scratch as _single_crystal_from_scratch,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_with_reflections as _single_crystal_with_reflections,
+)
 from edi._edi import (  # noqa: E402 -
     _structure_factor_evaluations as _structure_factor_evaluations,
 )
@@ -530,6 +536,8 @@ def _analysis(self: Project) -> Analysis:
 Project.analysis = property(_analysis)
 
 
+from edi import _project_output as _output  # noqa: E402 - after the extension's resolution
+
 # edi's data folder, beside the package in a source checkout: the report's vendored chart
 # libraries are there.
 _DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
@@ -546,8 +554,8 @@ class Report:
     keeping the stored setting and a given one replacing it for that call only; none of them
     changes a setting. Two more keywords are choices of the call alone, as the app makes them
     from its Preferences and its Analysis page: ``colour_scheme``, a scheme's token as the app's
-    Preferences list them (by default ``'coast'``; ``'okabeIto'``, ``'tableau'`` and the rest in
-    ``data/palettes/PROVENANCE.md``), and
+    Preferences list them (by default ``'ediNatural'``; ``'ediCoast'``, ``'ediGarden'``,
+    ``'ediStudio'`` and ``'ediContrast'``, ``data/palettes/PROVENANCE.md``), and
     ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
     shows in a fit of several (by default the first). ``check`` judges every saved report with
     those defaults, so a report is out of date only when the project changed.
@@ -694,15 +702,14 @@ class Report:
             colour_scheme=colour_scheme,
             correlation_experiment=correlation_experiment,
         )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Written beside the old file and renamed over it, so a failed write leaves the old file.
-        part = path.with_name(f'.{path.name}.part')
-        try:
-            part.write_text(text, encoding='utf-8')
-            part.replace(path)
-        except BaseException:
-            part.unlink(missing_ok=True)
-            raise
+        # Written whole and renamed over the old file as project output (edi ADR-0039), so a
+        # failed write leaves the old file and nothing behind a link is written. A path outside
+        # the project is the caller's own: only its folder is the root there.
+        folder = self._project.metadata.path
+        root = _Path(folder) if folder is not None else None
+        if root is None or not path.absolute().is_relative_to(root.absolute()):
+            root = path.parent
+        _output.write_project_file(root.absolute(), path.absolute(), text)
         return path
 
     def save(
@@ -890,6 +897,20 @@ _CW_PROFILE_KEYS = {
 }
 _BEAM_MODE_TOF = 'time-of-flight'
 _BEAM_MODE_CW = 'constant wavelength'
+_SAMPLE_FORM_SINGLE_CRYSTAL = 'single crystal'
+
+
+def _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type):
+    """A single crystal from scratch: neutron and Bragg, with diffraction-lib's defaults."""
+    if radiation_probe not in {'', 'neutron'}:
+        raise ValueError(
+            f"radiation_probe '{radiation_probe}' is not supported for a single crystal"
+        )
+    if scattering_type not in {'', 'bragg'}:
+        raise ValueError(f"scattering_type '{scattering_type}' is not supported")
+    return _single_crystal_from_scratch(name, beam_mode)
+
+
 _CW_PEAK_KEYS = frozenset({
     'type',
     'cutoff_fwhm',
@@ -1247,6 +1268,10 @@ class ExperimentFactory:
             radiation_probe=radiation_probe,
             scattering_type=scattering_type,
         )
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            # A single crystal reads reflections: a FullProf .int or a plain h k l F2 su
+            # [wavelength] file.
+            return _single_crystal_with_reflections(experiment, str(data_path))
         rows = _edi_read_plain_data(str(data_path))
         x, y, sy = rows['x'], rows['y'], rows['sigma']
         if beam_mode == _BEAM_MODE_CW:
@@ -1280,6 +1305,8 @@ class ExperimentFactory:
         ``tof-jorgensen``. A CW experiment starts with its profile's peak parameters and both CW
         instrument parameters present, fixed at 0.
         """
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            return _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type)
         peak_spec = {}
         if peak_type:
             peak_spec['type'] = peak_type

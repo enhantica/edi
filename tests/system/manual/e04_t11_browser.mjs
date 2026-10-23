@@ -175,8 +175,11 @@ try {
       x = ((rawX % 1280) + 1280) % 1280; y = (q[1]+q[3]+q[5]+q[7])/4;
     }
     console.log(`browser ${mode}: pointer ${x},${y}`);
-    for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent',
-      {type,x,y,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent', {type:'mouseMoved',x,y});
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      await send('Input.dispatchMouseEvent', {type,x,y,button:'left',clickCount:1});
+      await frame();
+    }
     await frame();
     if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
@@ -212,6 +215,20 @@ try {
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
+    // The summary table belongs to the results popup. Use its native rectangle
+    // to sample the surrounding dialog padding; agreement tables may grow below it.
+    const table = await evaluate(`(() => {
+      try { return window.ediControlGeometry('fit.results.list'); }
+      catch (error) {
+        if (String(error).includes('no visible item')) return null;
+        throw error;
+      }
+    })()`);
+    if (table === null) return false;
+    assert(table.visible && table.width > 0 && table.height > 0,
+      'results modal samples require the actually visible summary table');
+    const points = [.25,.75].flatMap(y => [table.x-12,table.x+table.width+12].map(x =>
+      [Math.round(x),Math.round(table.y+table.height*y)]));
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
     const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
     const channels = data[25] === 2 ? 3 : data[25] === 6 ? 4 : 0;
@@ -225,9 +242,11 @@ try {
     }
     const raw = inflateSync(Buffer.concat(compressed)), stride = width * channels;
     assert.equal(raw.length, (stride+1)*height, 'screenshot rows must be complete');
+    assert(points.every(([x,y]) => x >= 0 && x < width && y >= 0 && y < height),
+      'results dialog padding must lie inside the actual screenshot');
     let previous = Buffer.alloc(stride);
     const samples = [];
-    for (let y = 0; y <= Math.round(height*.74); ++y) {
+    for (let y = 0; y <= Math.max(...points.map(point => point[1])); ++y) {
       const filter = raw[y*(stride+1)], row = Buffer.alloc(stride);
       assert(filter <= 4, 'browser PNG row filters must be supported');
       for (let x = 0; x < stride; ++x) {
@@ -236,17 +255,14 @@ try {
         const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a+b)/2) : pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
-      if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
-        for (const fraction of [.28,.72]) {
-          const x = Math.round(width*fraction)*channels;
-          samples.push([...row.subarray(x,x+3)]);
-        }
+      for (const [px,py] of points) {
+        if (py === y) samples.push([...row.subarray(px*channels,px*channels+3)]);
       }
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
-    // Sample the two dialog margins: its central results table can have a selected row.
-    // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
+    // Sample outside both summary-table edges, independent of table height and column layout.
+    // A visible native summary alone is insufficient: these opaque dialog pixels must also exist.
     return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
@@ -262,6 +278,7 @@ try {
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
+    window.__e04PickerAttempts = [];
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
       if (this instanceof HTMLInputElement && this.type === 'file' && this.id === 'edi-open-folder' && type === 'change') {
@@ -275,7 +292,11 @@ try {
     };
     const nativeInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
-      if (this.type === 'file') { this.__e04Picker = ++pickerSequence; window.__e04FileInput = this; }
+      if (this.type === 'file') {
+        this.__e04Picker = ++pickerSequence; window.__e04FileInput = this;
+        window.__e04PickerAttempts.push({sequence:pickerSequence, active:navigator.userActivation.isActive,
+          time:performance.now(), multiple:this.multiple, accept:this.accept});
+      }
       return nativeInputClick.call(this);
     };
     const nativeFocus = HTMLElement.prototype.focus;
@@ -381,7 +402,7 @@ files[root + 'project.edi'] = re.sub(pattern, r'\\1<NORMALIZED-WALL-CLOCK>', pro
 scientific = {name[len(root):]: hashlib.sha256(data).hexdigest() for name, data in files.items()
               if name.startswith(root)}
 print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, archive],
-      {encoding:'utf8',timeout:10000});
+      {encoding:'utf8',timeout:10000,maxBuffer:32*1024*1024});
     assert.equal(result.status, 0, 'each browser save must produce a readable scientific project archive');
     return JSON.parse(result.stdout);
   };
@@ -519,7 +540,7 @@ from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
 actual = scientific(pathlib.Path(sys.argv[1]))
 oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
 conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
-compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning)
+compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
 pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
     join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
@@ -537,9 +558,12 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     files: [unpack.stdout.trim()] });
   // Neither a no-op upload nor Session.openProject's refusal can enable this from the proved empty state.
   await waitAX(/^Analysis$/, true, 'tab');
-  const after = inspectArchive(await saveArchive());
-  assert.deepEqual(after, before,
-    'reopened project must retain its identity and every saved scientific byte, including the complete fit state');
+  const reopenedArchive = await saveArchive();
+  const after = inspectArchive(reopenedArchive);
+  const roundtrip = spawnSync('python', ['-m', 'tests.fixtures.e04_t11_wasm.reopen', saved, reopenedArchive],
+    {encoding:'utf8',timeout:10000,maxBuffer:32*1024*1024});
+  assert.equal(roundtrip.status, 0,
+    'reopened project must retain every saved value(s.u.) and fit byte, with derived fields equal to the native written-model calculation: ' + roundtrip.stderr);
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
   await click(/^Analysis$/); await waitAX(/^Start fitting$/); await shot('reopened');
   }
@@ -578,7 +602,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const nativeObjectName = /Load structure/.test(regex.source) ? 'structures.load' :
         /Load experiment/.test(regex.source) ? 'experiments.load' :
         /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
-      const [chooser] = await Promise.all([opened, click(regex, 'button', nativeObjectName)]);
+      const role = /Load data/.test(regex.source) ? 'StaticText' : 'button';
+      const [chooser] = await Promise.all([opened, click(regex, role, nativeObjectName)]);
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
       assert(chooser.backendNodeId,'each request must expose its actual browser file input');
       const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendNodeId});
@@ -609,10 +634,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
       await shot(`create-${name}-before-input`);
-      // Qt omits popup editors from AX, as it omits the fit table. The real rendered name
-      // input at the fixed 1280x768 viewport is recorded in the screenshot; type through native input.
+      const namePointer = await controlPointer(evaluate, 'createProject.name');
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
-        {type,x:640,y:325,button:'left',clickCount:1});
+        {type,...namePointer,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
       for (const key of name) {
@@ -626,6 +650,13 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
       await settleRenderedPage();
+    };
+    const createWithStructure = async name => {
+      await createEmpty(name);
+      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      const structure=await beginPicker(/^Load structure from file$/);
+      await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
+      await waitAX(/Structures \(1\)/);
     };
     // Capture the browser's actual reads, hold promises, and release on explicit observable states.
     await evaluate(`(() => {
@@ -695,8 +726,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     // rather than toggling them closed before the real pointer action.
     // Real cancel events route through Qt. The source seam gate independently checks that no
     // stale receiver makes an unrelated refused call (a refusal can leave archive bytes unchanged).
-    await createEmpty('routing_empty_c');
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    // Experiment needs a structure (ADR-0017); seed it before testing cancellation.
+    await createWithStructure('routing_empty_c');
     await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must preserve the standalone single-file chooser contract');
@@ -707,23 +738,23 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       'Experiment must retain its batch chooser contract');
     await send('DOM.setFileInputFiles',{...experiment,files:[join(inputs,'blocks/experiment-1.edi'),join(inputs,'blocks/experiment-2.edi')]});
     await waitAX(/Experiments \(2\)/);
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    await click(/^Structure$/); await waitAX(/Structures \(1\)/);
     }
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
-    await createEmpty('routing_empty_d');
+    await createWithStructure('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await beginPicker(/^Load experiment$/);
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    await click(/^Structure$/); await waitAX(/Structures \(1\)/);
     const structure=await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must keep a single-file chooser after Experiment cancellation');
-    await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
-    await waitAX(/Structures \(1\)/);
+    await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure-2.edi')]});
+    await waitAX(/Structures \(2\)/);
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     }
     if (['all','load-data'].includes(fileRequestCase)) {
-    await createEmpty('routing_empty_data');
+    await createWithStructure('routing_empty_data');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
@@ -749,6 +780,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
       const tree = await send('Accessibility.getFullAXTree');
       await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
+      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
+      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
     } catch { /* The original failure remains the verdict if the target already closed. */ }
   }
   throw error;

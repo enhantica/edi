@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.e04_t1.project_actor import run_projects
+
 ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
 
@@ -79,28 +81,12 @@ def acceptance_reference():
 
 
 @pytest.fixture(scope='module')
-def existing_projects_run(acceptance_reference, owner_amendment_run):
-    # Prime both shared page actors in the same setup phase. The module-cost
-    # instrument then retains their complete cost at one honest setup trigger.
+def existing_projects_run(acceptance_reference, owner_amendment_run, request):
+    # The amendments have their own actor; the project receipt is shared with the project cases.
     assert 'E04T1OwnerAmendments' in owner_amendment_run.stdout, (
         'The shared page setup first executes its actual owner-amendment actor'
     )
-    return subprocess.run(
-        [str(runner()), '-input', str(APP_TESTS / 'tst_e04_t1_projects.qml'), '-o', '-,txt'],
-        env={
-            **os.environ,
-            'QT_QPA_PLATFORM': 'offscreen',
-            'QT_QUICK_BACKEND': 'software',
-            'EDI_ACCEPTANCE_REFERENCE': acceptance_reference,
-        },
-        capture_output=True,
-        text=True,
-        # Whole-registry correctness actor now also projects first/middle/last
-        # datasets for every scan. Per-selection settlement stays bounded in QML;
-        # the independent scale/time gate keeps its existing limits.
-        timeout=300,
-        check=False,
-    )
+    return run_projects(request.session, str(runner()), acceptance_reference)
 
 
 def test_existing_projects_open_and_populate_pages(existing_projects_run):

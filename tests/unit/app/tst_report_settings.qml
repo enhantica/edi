@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtCore
 import QtTest
@@ -79,7 +80,7 @@ Item {
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
             const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
-            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Colour scheme:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
             const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
             function inkTop(item) {
                 const at = item.mapToItem(dialog.contentItem, 0, 0);
@@ -208,13 +209,13 @@ Item {
         function test_scheme_and_library_defaults_persist_without_changing_an_open_project() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "A real project supplies the modified-state control");
             const modified = Session.project.modified;
-            verify(typeof Preferences.colourScheme === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes the two declared string-token defaults");
-            Preferences.colourScheme = "colourBlindSafe";
+            verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes independent Structures/Patterns choices and the declared library default");
+            Approved.setSchemes(Preferences, "ediContrast");
             Preferences.newReportLibraries = "embedded";
-            tryVerify(() => SettingsProof.value(location, "Appearance", "colourScheme") === "colourBlindSafe" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
-            const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property string scheme: Preferences.colourScheme; property string libraries: Preferences.newReportLibraries }');
+            tryVerify(() => SettingsProof.value(location, "Appearance", "structureColourScheme") === "ediContrast" && SettingsProof.value(location, "Appearance", "patternColourScheme") === "ediContrast" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
+            const restored = SettingsProof.restart(Approved.freshSchemesCode());
             verify(!restored.error, "A fresh configured QML engine reloads the actual Preferences singleton");
-            compare(restored.scheme, "colourBlindSafe", "A fresh engine restores the colour scheme from Appearance");
+            compare(restored.schemes, JSON.stringify(["ediContrast", "ediContrast"]), "A fresh engine restores the colour scheme from Appearance");
             compare(restored.libraries, "embedded", "A fresh engine restores the new-report libraries default from Projects");
             compare(Session.project.modified, modified, "Changing application defaults never modifies the open project");
         }
@@ -267,15 +268,21 @@ Item {
             verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fourth sidebar tab");
             const tab = findChild(page, "sideBar.tab.settings");
             verify(tab !== null, "The actual " + data.page + " page exposes sideBar.tab.settings beside Main, Extras and Text; actual " + tab);
+            const populated = data.page === "analysis";
+            compare(tab.enabled, populated, "ADR-0031: each empty Settings tab is disabled and each populated tab stays actionable; page=" + data.page);
+            const checked = tab.checked;
             mouseClick(tab, tab.width / 2, tab.height / 2);
-            tryCompare(tab, "checked", true, 1000, "The Settings tab accepts actual pointer input");
+            if (populated)
+                tryCompare(tab, "checked", true, 1000, "A populated Settings tab accepts actual pointer input");
+            else
+                compare(tab.checked, checked, "Pointer input cannot activate an empty Settings tab");
         }
         function choose(control, index) {
             verify(control !== undefined && control.enabled, "The real page setting is enabled before actual pointer input");
             tryVerify(() => {
                 const at = control.mapToItem(surface, 0, 0);
                 return at.x >= 0 && at.y >= 0 && at.x + control.width <= surface.width && at.y + control.height <= surface.height;
-            }, 2000, "The actual " + control.objectName + " finishes sliding inside the test window before pointer input");
+            }, 2000, "The actual " + control.objectName + " finishes sliding inside the test window before pointer input; geometry=" + JSON.stringify(control.mapToItem(surface, 0, 0)) + " size=" + control.width + "," + control.height);
             verify(waitForRendering(control), "The actual " + control.objectName + " is rendered before opening its popup");
             mouseClick(control, control.width / 2, control.height / 2);
             tryVerify(() => control.popup.opened, 1000, "Pointer input opens " + control.objectName + ".popup; initial opened " + control.popup.opened + "; control centre " + JSON.stringify(control.mapToItem(surface, control.width / 2, control.height / 2)));
@@ -293,31 +300,164 @@ Item {
             const modified = Session.project.modified;
             Preferences.scanPatternUpdates = 0;
             const page = createTemporaryObject(analysisFactory, surface, {
-                width: 1200,
+                width: surface.width,
                 height: 800,
                 current: true
             });
             verify(page !== null && waitForPolish(page), "The actual Analysis page lays out its view controls");
-            const tab = findChild(page, "sideBar.tab.settings");
-            verify(tab !== null, "The actual Analysis page exposes sideBar.tab.settings; actual " + tab);
-            mouseClick(tab, tab.width / 2, tab.height / 2);
-            tryCompare(tab, "checked", true, 1000, "The actual Analysis Settings tab opens through pointer input");
-            const chartGroup = findChild(page, "group.chartSettings");
-            verify(chartGroup !== null, "Analysis Settings exposes group.chartSettings; actual " + chartGroup);
-            if (chartGroup.collapsed)
-                mouseClick(chartGroup.titleArea, chartGroup.titleArea.width / 2, chartGroup.titleArea.height / 2);
-            const y = findChild(page, "settings.chart.yScale");
-            verify(y !== null, "Analysis Settings exposes settings.chart.yScale; actual " + y);
-            tryVerify(() => y.visible && y.mapToItem(chartGroup, 0, 0).y + y.height <= chartGroup.height, 2000, "settings.chart.yScale clears its expanded group's clip before pointer input");
+            const chart = findChild(page, "chart");
+            verify(chart !== null, "The active Pattern chart exists on Analysis before its settings are changed");
+            const y = findChild(chart, "chart.toolbar.yscale");
+            verify(y !== null, "The chart is the visible home of the Analysis y-axis display choice");
             choose(y, 2);
-            tryVerify(() => SettingsProof.value(location, "Analysis", "yScale") === "log", 2000, "settings.chart.yScale index 2 reads log at QSettings Analysis/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "yScale")));
+            const tab = findChild(page, "sideBar.tab.settings");
+            verify(tab !== null, "The actual Analysis page retains Settings for its scan redraw policy");
+            mouseClick(tab, tab.width / 2, tab.height / 2);
+            tryCompare(tab, "checked", true, 1000, "The populated Analysis Settings tab opens through pointer input");
+            verify(findChild(page, "settings.chart.yScale") === null, "Analysis Settings no longer duplicates the y-axis selector kept on the chart");
+            tryVerify(() => SettingsProof.value(location, "PatternChart", "yScale") === "log", 2000, "The chart y-axis selector index 2 reads log at QSettings PatternChart/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "PatternChart", "yScale")));
             tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
             const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
+import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "PatternChart"; property string yScale: "linear" }; property string axis: settings.yScale }');
             verify(!restored.error, "A fresh configured engine reads the saved page group");
-            compare(restored.axis, "log", "A fresh engine reads QSettings Analysis/yScale after selecting settings.chart.yScale index 2; actual token " + restored.axis);
+            compare(restored.axis, "log", "A fresh engine reads QSettings PatternChart/yScale after selecting the chart y-axis index 2; actual token " + restored.axis);
+        }
+        function patternPage(name) {
+            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real pattern project supplies both chart and Settings controls");
+            const factory = name === "analysis" ? analysisFactory : experimentFactory;
+            const page = createTemporaryObject(factory, surface, {
+                width: 1200,
+                height: 800,
+                current: true
+            });
+            verify(page !== null && waitForPolish(page), "The actual pattern page finishes its layout before chart-only setting checks");
+            return page;
+        }
+        function patternPages() {
+            return ["analysis", "experiment"].map(page => ({
+                        tag: page,
+                        page: page
+                    }));
+        }
+        function normalizedChoice(text) {
+            return String(text).toLowerCase().replace(/^[xy]\s*:\s*/, "").replace(/^(show|hide|toggle|enable|disable)\s+/, "").trim();
+        }
+        function choices(item) {
+            const result = [];
+            if (typeof item.count === "number" && typeof item.textAt === "function" && typeof item.currentIndex === "number") {
+                for (let index = 0; index < item.count; ++index)
+                    result.push(normalizedChoice(item.textAt(index)));
+            } else if (typeof item.checked === "boolean" && typeof item.clicked === "function") {
+                const title = item.toolTip || item.text || (item.ToolTip ? item.ToolTip.text : "");
+                if (title)
+                    result.push(normalizedChoice(title));
+            }
+            return result.filter(Boolean);
+        }
+        function displayControls(root) {
+            return Render.descendants(root).filter(item => item.visible && item.width > 0 && item.height > 0 && choices(item).length > 0);
+        }
+        function chartChoices(page) {
+            const chart = findChild(page, "chart");
+            verify(chart !== null, "Both workflow pages keep their actual pattern chart");
+            const controls = displayControls(chart);
+            verify(controls.length >= 2, "The chart supplies its own live display-choice inventory before checking Settings");
+            const result = [];
+            for (const item of controls)
+                for (const choice of choices(item))
+                    result.push(choice);
+            return result;
+        }
+        function openSettings(page) {
+            const tab = findChild(page, "sideBar.tab.settings");
+            verify(tab !== null, "Both pattern pages expose their Settings tab even when it is empty");
+            if (!tab.enabled)
+                return {
+                    tab: tab,
+                    root: null,
+                    controls: []
+                };
+            mouseClick(tab, tab.width / 2, tab.height / 2);
+            tryCompare(tab, "checked", true, 1000, "A populated pattern Settings tab opens through real pointer input");
+            const loader = Render.descendants(page).find(item => item.sourceComponent !== undefined && item.sourceComponent === page.settingsItem);
+            verify(loader !== undefined && loader.item !== null, "The active Settings tab exposes its actual loaded content");
+            const root = loader.item;
+            for (const group of Render.descendants(root).filter(item => typeof item.collapsed === "boolean" && item.titleArea)) {
+                if (group.collapsed)
+                    mouseClick(group.titleArea, group.titleArea.width / 2, group.titleArea.height / 2);
+            }
+            verify(waitForPolish(root), "Every remaining Settings group expands before inspecting its actual choices");
+            return {
+                tab: tab,
+                root: root,
+                controls: displayControls(root)
+            };
+        }
+        function test_settings_omit_y_axis_data() {
+            return patternPages();
+        }
+        function test_settings_omit_y_axis(data) {
+            const page = patternPage(data.page), chartY = findChild(page, "chart.toolbar.yscale");
+            verify(chartY !== null && chartY.visible, "The chart retains its visible y-axis type selector on each pattern page");
+            const setting = openSettings(page);
+            verify(!setting.controls.some(item => {
+                const offered = choices(item);
+                return offered.includes("linear") && offered.includes("square root") && offered.includes("log");
+            }), "Neither pattern Settings tab offers the y-axis display types already offered by its chart");
+        }
+        function test_chart_display_choices_have_one_home_data() {
+            return patternPages();
+        }
+        function test_chart_display_choices_have_one_home(data) {
+            const page = patternPage(data.page), offered = chartChoices(page);
+            const setting = openSettings(page), duplicates = [];
+            for (const item of setting.controls)
+                for (const choice of choices(item))
+                    if (offered.includes(choice))
+                        duplicates.push(item.objectName + ": " + choice);
+            compare(duplicates, [], "No display choice discovered from the live chart is offered again in either Settings tab");
+        }
+        function test_empty_pattern_settings_tabs_are_disabled_data() {
+            return patternPages();
+        }
+        function test_empty_pattern_settings_tabs_are_disabled(data) {
+            const page = patternPage(data.page), offered = chartChoices(page), setting = openSettings(page);
+            const remaining = setting.controls.filter(item => !choices(item).some(choice => offered.includes(choice)));
+            compare(setting.tab.enabled, remaining.length > 0, "A Settings tab left without its own content after chart choices are removed stays disabled under ADR-0031");
+            if (!setting.tab.enabled) {
+                const checked = setting.tab.checked;
+                mouseClick(setting.tab, setting.tab.width / 2, setting.tab.height / 2);
+                compare(setting.tab.checked, checked, "An empty disabled Settings tab cannot be activated with pointer input");
+            }
+            if (setting.root)
+                for (const group of Render.descendants(setting.root).filter(item => typeof item.collapsed === "boolean" && item.titleArea))
+                    verify(displayControls(group).length > 0, "Removing chart display choices leaves no empty Settings group behind");
+        }
+        function test_chart_y_choice_persists_across_restart_data() {
+            return patternPages();
+        }
+        function test_chart_y_choice_persists_across_restart(data) {
+            if (data.page === "analysis")
+                Preferences.analysisYScale = "linear";
+            else
+                Preferences.experimentYScale = "linear";
+            const page = patternPage(data.page), y = findChild(page, "chart.toolbar.yscale");
+            verify(y !== null && y.visible && y.enabled, "Each chart keeps its actionable y-axis selector after Settings duplication is removed");
+            const original = Session.project.analysis.text.text, modified = Session.project.modified;
+            const code = 'import QtQuick; import edi.app; QtObject { property PatternChart chart: PatternChart { settingsPage: "' + data.page + '"; width: 900; height: 500; function choice(root) { if (root.objectName === "chart.toolbar.yscale") return root.currentIndex; for (const child of root.children || []) { const found = choice(child); if (found !== undefined) return found; } return undefined; } } property var selected: chart.choice(chart) }';
+            for (const index of [2, 1]) {
+                choose(y, index);
+                const group = data.page === "analysis" ? "Analysis" : "Experiment";
+                const token = index === 2 ? "log" : "sqrt";
+                tryVerify(() => SettingsProof.value(location, group, "yScale") === token, 2000, "The actual chart selection reaches the persistent page store before restarting its engine");
+                const restarted = SettingsProof.restart(code);
+                verify(!restarted.error, "A new production engine reconstructs the chart from the persisted app choice");
+                compare(restarted.selected, index, "The chart's selected y-axis type survives a restart for each pattern page");
+            }
+            compare(Session.project.analysis.text.text, original, "Chart display choices stay outside the saved analysis model");
+            compare(Session.project.modified, modified, "Selecting the chart's y scale never modifies project data");
         }
         function test_report_library_preference_seeds_only_created_projects() {
             verify(typeof Preferences.newReportLibraries === "string", "The Projects preference exposes the new-report libraries token");

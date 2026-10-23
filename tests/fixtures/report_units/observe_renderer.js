@@ -7,19 +7,23 @@ const [sourcePath, modelPath] = process.argv.slice(2);
 const model = JSON.parse(fs.readFileSync(modelPath, 'utf8'));
 const records = {plots: [], quaternions: [], matrices: [], cameras: [], geometries: [], rendered: []};
 const cameras = [];
+const elements = [];
+records.axisClicks = [];
 const events = [];
 let math;
 function element(id) {
-    return {id, dataset: new Proxy({}, {get: () => '0'}), style: {}, children: [],
+    const node = {id, listeners: {}, dataset: new Proxy({}, {get: () => '0'}), style: {}, children: [],
         classList: {add() {}, remove() {}},
         clientWidth: 800, clientHeight: 600, offsetWidth: 800, offsetHeight: 600,
         textContent: id === 'edi-report-model' ? JSON.stringify(model) : '',
         getAttribute: () => '0', setAttribute() {},
         append(...items) { this.children.push(...items); },
         appendChild(child) { this.children.push(child); },
-        addEventListener() {}, querySelector: selector => element(selector),
+        addEventListener(name, action) { this.listeners[name] = action; }, querySelector: selector => element(selector),
         querySelectorAll: selector => [element(selector)],
         getBoundingClientRect: () => ({width: 800, height: 600})};
+    elements.push(node);
+    return node;
 }
 class Renderer {
     constructor() { this.domElement = element('canvas'); this.width = 800; this.height = 600; }
@@ -101,6 +105,14 @@ class Renderer {
     for (const action of events) await action();
     // Let rejected async drawing calls surface before publishing an observation.
     await new Promise(resolve => setImmediate(resolve));
+    for (const node of (process.argv.includes('--click-axes') ? elements : []).filter(item => /^View along [abc]$/.test(item.title || ''))) {
+        try {
+            node.listeners.click();
+            records.axisClicks.push({title: node.title, position: cameras[0].position.toArray(), up: cameras[0].up.toArray(), top: cameras[0].top});
+        } catch (error) {
+            records.axisClicks.push({title: node.title, error: String(error)});
+        }
+    }
     records.cameras = cameras.map(camera => ({
         frustum: [camera.left, camera.right, camera.top, camera.bottom, camera.near, camera.far],
         position: {x: camera.position.x, y: camera.position.y, z: camera.position.z},

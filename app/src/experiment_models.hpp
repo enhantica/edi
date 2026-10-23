@@ -72,8 +72,8 @@ class BackgroundListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
-// The polynomial or Chebyshev background terms: `order` (text-editable, unique within the type's range) and `coef`
-// (ParameterItem), with append (the lowest free order) and remove.
+// The polynomial or Chebyshev background terms: `id` and `order` (text-editable, each unique; the order within the
+// type's range) and `coef` (ParameterItem), with append (the lowest free order) and remove.
 class BackgroundTermListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -83,13 +83,15 @@ class BackgroundTermListModel : public RowTableModel {
     BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
                             QObject* parent);
     void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setOrder(int row, int order);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
-        return role == QLatin1String("order") && setOrder(row, value.toInt());
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("order") && setOrder(row, value.toInt());
     }
 
    private:
@@ -111,6 +113,77 @@ class ReflectionListModel : public RowTableModel {
 
    private:
     const edi::ExperimentBase& experiment_;
+};
+
+// A single crystal's reflections: `h`, `k`, `l`, the measured F² and its su, the calculated F² and the
+// normalised residual (F²meas - F²calc) / su, one row per measured reflection; NaN where nothing is
+// calculated yet. The point lists feed the F²calc-vs-F²meas chart.
+class SingleCrystalReflectionModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(QList<double> calculated READ calculated NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measured READ measured NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredSu READ measuredSu NOTIFY pointsChanged)
+    Q_PROPERTY(double low READ low NOTIFY pointsChanged)
+    Q_PROPERTY(double high READ high NOTIFY pointsChanged)
+    Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY pointsChanged)
+    // The same points as F: Fcalc, Fmeas = sqrt(F²meas) and its su F²su / (2 Fmeas), where F²meas > 0 (NaN elsewhere).
+    Q_PROPERTY(QList<double> calculatedF READ calculatedF NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredF READ measuredF NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
+    Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
+    Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
+    // The column the table is sorted by (empty: file order) and its direction.
+    Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortChanged)
+    Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortChanged)
+
+   public:
+    SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, const edi::Project& project, QObject* parent);
+    void sync();
+    QString sortRole() const { return sort_role_; }
+    bool sortAscending() const { return sort_ascending_; }
+    // Sorts the rows numerically by a column, ascending first and reversed by a second call on the same column;
+    // a value that is not a number goes last either way. The chart's points keep the file order.
+    Q_INVOKABLE void sortBy(const QString& role);
+    QList<double> calculated() const { return calculated_; }
+    QList<double> measured() const { return measured_; }
+    QList<double> measuredSu() const { return measured_su_; }
+    double low() const { return low_; }
+    double high() const { return high_; }
+    bool calculatedShown() const { return calculated_shown_; }
+    // The hover read-out of one reflection: h k l, the measured value with its su by the project's IUCr rule and the
+    // calculated value to the same decimals, in F² or F; rich text, one line each.
+    Q_INVOKABLE QString hoverText(int row, bool squared) const;
+    QList<double> calculatedF() const { return calculated_f_; }
+    QList<double> measuredF() const { return measured_f_; }
+    QList<double> measuredFSu() const { return measured_f_su_; }
+    double lowF() const { return low_f_; }
+    double highF() const { return high_f_; }
+
+   signals:
+    void pointsChanged();
+    void sortChanged();
+
+   private:
+    void publish();
+
+    QList<Row> file_rows_;
+    QString sort_role_;
+    bool sort_ascending_ = true;
+    const edi::ExperimentBase& experiment_;
+    const edi::Project& project_;
+    QList<double> calculated_;
+    QList<double> measured_;
+    QList<double> measured_su_;
+    double low_ = 0.0;
+    double high_ = 1.0;
+    bool calculated_shown_ = false;
+    QList<double> calculated_f_;
+    QList<double> measured_f_;
+    QList<double> measured_f_su_;
+    double low_f_ = 0.0;
+    double high_f_ = 1.0;
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.
@@ -143,8 +216,8 @@ class ExcludedRegionListModel : public RowTableModel {
 
 // The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled`,
 // `colorIndex` (the structure's place in the project, its colour) and `weightFraction`, the read-only
-// Hill-Howard weight fraction as a map of `value` and `uncertainty` (empty when there is none, or when fewer than
-// two structures take part). `structureNames` lists the project's
+// Hill-Howard weight fraction as a map of `value` and `uncertainty` (exactly 1 for a single enabled structure, empty
+// when there is none). `structureNames` lists the project's
 // structures, the choices of a row's name. A row is added naming a structure not yet linked, removed while
 // another remains, and disabled — kept and saved, but neither calculated nor fitted.
 class LinkedStructureListModel : public RowTableModel {

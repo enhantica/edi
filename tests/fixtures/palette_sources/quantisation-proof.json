@@ -1,0 +1,71 @@
+{
+  "claim": "Derived independently by quantisation_proof.py over every 8-bit sRGB coordinate using Ottosson and WCAG equations; no product imports",
+  "witnesses": [
+    {
+      "scheme": "Default",
+      "source": "#03A9F4",
+      "theme": "light",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#069DE4",
+        0.0016545448626914538,
+        0.001466656723855761
+      ]
+    },
+    {
+      "scheme": "Default",
+      "source": "#4CAF50",
+      "theme": "light",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#45A84A",
+        0.0016864695054140677,
+        0.0015617964110329868
+      ]
+    },
+    {
+      "scheme": "Default",
+      "source": "#FFC107",
+      "theme": "light",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#BC8D03",
+        0.001828843614164244,
+        0.0015716530356030794
+      ]
+    },
+    {
+      "scheme": "Okabe-Ito",
+      "source": "#009E73",
+      "theme": "dark",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#09A378",
+        0.0019590764878094635,
+        0.0014954567978535088
+      ]
+    },
+    {
+      "scheme": "Tol",
+      "source": "#CCBB44",
+      "theme": "light",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#A79506",
+        0.0019089123395399366,
+        0.001588847184945838
+      ]
+    },
+    {
+      "scheme": "Vivid",
+      "source": "#4DAF4A",
+      "theme": "light",
+      "half_step_passing": [],
+      "nearest_passing_within_full_step": [
+        "#46A844",
+        0.0019883965612079724,
+        0.0015603619616361669
+      ]
+    }
+  ]
+}

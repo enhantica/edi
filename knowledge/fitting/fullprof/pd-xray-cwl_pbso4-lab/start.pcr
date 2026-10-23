@@ -1,0 +1,53 @@
+COMM pd-xray-cwl_pbso4-lab
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+0 5 1 -5 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+2 2 1 0 2 0 4 0 0 2 10 1 1 0 0 1 1
+! Lambda1 Lambda2 Ratio Bkpos Wdt Cthm muR AsyLim Rpolarz 2nd-muR for Pattern# 1
+1.54056 1.5444 0.5 87.5 96 0.8 0 180 0 0
+!NCY Eps R_at R_an R_pr R_gl
+1 0.1 0.2 0.2 0.2 0.2 15 0.025 160 0 0
+! Excluded regions (LowT HighT) for Pattern# 1
+0 !Number of refined parameters
+! Zero Code SyCos Code SySin Code Lambda Code MORE -> Patt# 1
+0 0 0 0 0 0 0 0 0
+! Background coefficients/codes for Pattern# 1
+140 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+! Data for PHASE number: 1
+pbso4
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More
+5 0 0 0 0 1 0 0 0 0 0 0 0 5 0
+P n m a <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+Pb PB 0.19 0.25 0.17 0.5 0.5 0 0 0 0
+0 0 0 0 0
+S S 0.07 0.25 0.68 0.5 0.5 0 0 0 0
+0 0 0 0 0
+O1 O 0.91 0.25 0.6 0.5 0.5 0 0 0 0
+0 0 0 0 0
+O2 O 0.19 0.25 0.54 0.5 0.5 0 0 0 0
+0 0 0 0 0
+O3 O 0.08 0.03 0.81 0.5 1 0 0 0 0
+0 0 0 0 0
+! Profile Parameters for Pattern # 1 Phase pbso4
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+0.0005 0.5 0 0 0 0 0
+0 0 0 0 0 0
+! U V W X Y GauSiz LorSiz Size-Model
+0.02 -0.02 0.008 0 0 0 0 0
+0 0 0 0 0 0 0
+! a b c alpha beta gamma
+8.47 5.39 6.95 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 Asy1 Asy2 Asy3 Asy4 S_L D_L
+0 0 0 -0 0 -0
+0 0 0 0 0 0
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+15.025 159.975 1

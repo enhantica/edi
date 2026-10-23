@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
 
+#include <cmath>
+
 #include <QVariantMap>
 #include <QtNumeric>
 #include <algorithm>
@@ -9,6 +11,7 @@
 
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
+#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
@@ -71,12 +74,14 @@ void BackgroundListModel::sync() {
 
 bool BackgroundListModel::setId(int row, const QString& id) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
+    return point != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
 }
 
 bool BackgroundListModel::setPosition(int row, double position) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_position(*point, position), false).isEmpty();
+    return point != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_position(*point, position), false).isEmpty();
 }
 
 void BackgroundListModel::append() {
@@ -87,7 +92,7 @@ void BackgroundListModel::append() {
         point.position = last.position;
         point.intensity.value = last.intensity.value;
     }
-    editor_.apply(edi::Edit::append(experiment.background, std::move(point)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::append(experiment.background, std::move(point)), true);
 }
 
 void BackgroundListModel::remove(int row) {
@@ -95,32 +100,40 @@ void BackgroundListModel::remove(int row) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
 }
 
 BackgroundTermListModel::BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                                  ParameterRegistry& registry, QObject* parent)
-    : RowTableModel({"order", "coef"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
+    : RowTableModel({"id", "order", "coef"}, parent), experiment_(experiment), editor_(editor), registry_(registry) {
     sync();
 }
 
 void BackgroundTermListModel::sync() {
     QList<Row> rows;
     for (const auto& term : experiment_.background_terms) {
-        rows.append({term.get(), {term->order.get(), parameter_role(registry_, &term->coef)}});
+        rows.append({term.get(), {QString::fromStdString(term->id.value()), term->order.get(), parameter_role(registry_, &term->coef)}});
     }
     setTableRows(rows);
+}
+
+bool BackgroundTermListModel::setId(int row, const QString& id) {
+    auto* term = const_cast<edi::PolynomialTerm*>(static_cast<const edi::PolynomialTerm*>(keyAt(row)));
+    return term != nullptr &&
+           editor_.apply_background_edit(experiment_, edi::Edit::background_id(*term, id.toStdString()), true).isEmpty();
 }
 
 bool BackgroundTermListModel::setOrder(int row, int order) {
     auto* term = const_cast<edi::PolynomialTerm*>(static_cast<const edi::PolynomialTerm*>(keyAt(row)));
     edi::ExperimentBase& experiment = experiment_;
-    return term != nullptr && editor_.apply(edi::Edit::background_term_order(experiment, *term, order), false).isEmpty();
+    return term != nullptr &&
+           editor_.apply_background_edit(experiment, edi::Edit::background_term_order(experiment, *term, order), false)
+               .isEmpty();
 }
 
 void BackgroundTermListModel::append() {
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::append_background_term(experiment), true);
+    editor_.apply_background_edit(experiment, edi::Edit::append_background_term(experiment), true);
 }
 
 void BackgroundTermListModel::remove(int row) {
@@ -128,7 +141,8 @@ void BackgroundTermListModel::remove(int row) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background_terms, static_cast<std::size_t>(row)), true);
+    editor_.apply_background_edit(experiment, edi::Edit::erase(experiment.background_terms, static_cast<std::size_t>(row)),
+                                  true);
 }
 
 // ---- ExcludedRegionListModel --------------------------------------------------------------------
@@ -170,6 +184,153 @@ void ReflectionListModel::sync() {
         }
     }
     setTableRows(rows);
+}
+
+namespace {
+// The reflection table's columns, in the order the delegates read them.
+const QStringList kSingleCrystalReflectionRoles{"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas",
+                                                "intensityMeasSu", "intensityCalc", "residual", "wavelength"};
+}  // namespace
+
+SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
+                                                           const edi::Project& project, QObject* parent)
+    : RowTableModel(kSingleCrystalReflectionRoles, parent),
+      experiment_(experiment),
+      project_(project) {
+    sync();
+}
+
+void SingleCrystalReflectionModel::sortBy(const QString& role) {
+    if (!kSingleCrystalReflectionRoles.contains(role)) {
+        return;
+    }
+    sort_ascending_ = role == sort_role_ ? !sort_ascending_ : true;
+    sort_role_ = role;
+    emit sortChanged();
+    publish();
+}
+
+void SingleCrystalReflectionModel::publish() {
+    QList<Row> rows = file_rows_;
+    const qsizetype column = kSingleCrystalReflectionRoles.indexOf(sort_role_);
+    if (column >= 0) {
+        const bool ascending = sort_ascending_;
+        std::stable_sort(rows.begin(), rows.end(), [column, ascending](const Row& a, const Row& b) {
+            const double x = a.values.at(column).toDouble();
+            const double y = b.values.at(column).toDouble();
+            if (std::isnan(x) || std::isnan(y)) {
+                return !std::isnan(x) && std::isnan(y);
+            }
+            return ascending ? x < y : y < x;
+        });
+    }
+    setTableRows(rows);
+}
+
+void SingleCrystalReflectionModel::sync() {
+    QList<Row> rows;
+    QList<double> calculated;
+    QList<double> measured;
+    QList<double> su;
+    double low = qInf();
+    double high = -qInf();
+    bool shown = false;
+    if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
+        const std::vector<double>& calc = reflections->intensity_calc.values();
+        const bool current = calc.size() == reflections->size() && experiment_.computed_current();
+        for (std::size_t i = 0; i < reflections->size(); ++i) {
+            const double meas = reflections->intensity_meas[i];
+            const double sigma = reflections->intensity_meas_su[i];
+            const double value = current ? calc[i] : qQNaN();
+            const double residual = current && sigma > 0.0 ? (meas - value) / sigma : qQNaN();
+            const auto column = [current, i](const edi::ComputedColumn<double>& values) {
+                return current && i < values.size() ? values[i] : qQNaN();
+            };
+            rows.append({reinterpret_cast<const void*>(i + 1),
+                         {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i],
+                          column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
+                          value, residual,
+                          i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN()}});
+            calculated.append(value);
+            measured.append(meas);
+            su.append(sigma);
+            for (const double end : {meas - sigma, meas + sigma, value}) {
+                if (std::isfinite(end)) {
+                    low = std::min(low, end);
+                    high = std::max(high, end);
+                }
+            }
+        }
+        shown = current;
+    }
+    file_rows_ = rows;
+    publish();
+    if (!(high > low)) {
+        low = 0.0;
+        high = 1.0;
+    }
+    // The F view: F from F², the su carried by dF = dF² / (2 F); a non-positive F² has no F.
+    QList<double> calculated_f;
+    QList<double> measured_f;
+    QList<double> measured_f_su;
+    double high_f = 0.0;
+    for (qsizetype i = 0; i < measured.size(); ++i) {
+        const double calc_f = calculated[i] >= 0.0 ? std::sqrt(calculated[i]) : qQNaN();
+        const double meas_f = measured[i] > 0.0 ? std::sqrt(measured[i]) : qQNaN();
+        const double su_f = measured[i] > 0.0 ? su[i] / (2.0 * meas_f) : qQNaN();
+        calculated_f.append(calc_f);
+        measured_f.append(meas_f);
+        measured_f_su.append(su_f);
+        for (const double end : {meas_f + su_f, calc_f}) {
+            if (std::isfinite(end)) {
+                high_f = std::max(high_f, end);
+            }
+        }
+    }
+    calculated_f_ = calculated_f;
+    measured_f_ = measured_f;
+    measured_f_su_ = measured_f_su;
+    low_f_ = 0.0;
+    high_f_ = high_f > 0.0 ? high_f * 1.05 : 1.0;
+    const double pad = (high - low) * 0.05;
+    calculated_ = calculated;
+    measured_ = measured;
+    measured_su_ = su;
+    low_ = std::min(0.0, low - pad);
+    high_ = high + pad;
+    calculated_shown_ = shown;
+    emit pointsChanged();
+}
+
+QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
+    const auto& reflections = experiment_.reflections;
+    if (!reflections.has_value() || row < 0 || static_cast<std::size_t>(row) >= reflections->size()) {
+        return {};
+    }
+    const auto at = static_cast<qsizetype>(row);
+    const double meas = squared ? measured_.value(at, qQNaN()) : measured_f_.value(at, qQNaN());
+    const double su = squared ? measured_su_.value(at, qQNaN()) : measured_f_su_.value(at, qQNaN());
+    const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
+    const QString quantity = squared ? QStringLiteral("F²") : QStringLiteral("F");
+    QStringList lines{QStringLiteral("%1 %2 %3")
+                          .arg(reflections->index_h[at])
+                          .arg(reflections->index_k[at])
+                          .arg(reflections->index_l[at])};
+    // The measured value and its su as the tables write them; the calculated value to the same last digit.
+    int decimals = 6;
+    if (std::isfinite(meas) && std::isfinite(su) && su > 0.0) {
+        const edi::SuText text = edi::su_text(meas, su, project_.su_rule);
+        const auto dot = text.value.find('.');
+        decimals = dot == std::string::npos ? 0 : static_cast<int>(text.value.size() - dot - 1);
+        lines.append(QStringLiteral("%1 meas: %2 ± %3")
+                         .arg(quantity, QString::fromStdString(text.value), QString::fromStdString(text.su)));
+    } else if (std::isfinite(meas)) {
+        lines.append(QStringLiteral("%1 meas: %2").arg(quantity, QString::number(meas, 'f', decimals)));
+    }
+    if (std::isfinite(calc)) {
+        lines.append(QStringLiteral("%1 calc: %2").arg(quantity, QString::number(calc, 'f', decimals)));
+    }
+    return lines.join(QStringLiteral("<br>"));
 }
 
 void ExcludedRegionListModel::sync() {
@@ -254,17 +415,26 @@ void LinkedStructureListModel::sync() {
         structure_names_ = names;
         emit structureNamesChanged();
     }
-    // A single structure's fraction is always 1 and says nothing: its cell stays empty, as the saved file writes
-    // the column only when two or more structures take part.
+    // A single enabled structure's fraction is exactly 1, as the saved file writes it; it is shown without asking the
+    // engine, which would convert the whole project for a known answer.
     const auto enabled_links = std::count_if(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
                                              [](const auto& link) { return link->enabled.get(); });
+    const auto fraction = [enabled_links](const edi::LinkedStructure& link) {
+        if (enabled_links > 1) {
+            return weight_fraction_cell(link);
+        }
+        if (link.enabled.get()) {
+            return QVariantMap{{QStringLiteral("value"), 1.0}, {QStringLiteral("uncertainty"), 0.0}};
+        }
+        return QVariantMap();
+    };
     QList<Row> rows;
     for (const auto& link : experiment_.linked_structures) {
         const QString id = QString::fromStdString(link->structure_id.value());
         rows.append({link.get(),
                      {id, parameter_role(registry_, &link->scale), link->enabled.get(),
                       static_cast<int>(names.indexOf(id)),
-                      enabled_links > 1 ? weight_fraction_cell(*link) : QVariantMap()}});
+                      fraction(*link)}});
     }
     setTableRows(rows);
     const auto linked = [this](const QString& name) {

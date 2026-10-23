@@ -91,7 +91,14 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
                 height = re.search(rb'/Height\s+(\d+)', image)
                 if not width or not height:
                     raise ValueError('Every drawn PDF image must declare its pixel dimensions')
-                images[name.decode()] = (int(width[1]), int(height[1]))
+                mask = re.search(rb'/SMask\s+(\d+)\s+0\s+R', image)
+                pixels = stream(int(reference))
+                if mask:
+                    pixels += stream(int(mask[1]))
+                images[name.decode()] = {
+                    'pixels': (int(width[1]), int(height[1])),
+                    'sha256': hashlib.sha256(pixels).hexdigest(),
+                }
         contents = re.search(rb'/Contents\s+(\d+)\s+0\s+R', obj)
         if not contents:
             raise ValueError('Every PDF page must expose an actual content stream')
@@ -190,7 +197,8 @@ def inspect(path):  # noqa: PLR0912, PLR0914, PLR0915 - explicit PDF grammar bou
                     ]
                     image_draws.append({
                         'name': name,
-                        'pixels': list(images[name]),
+                        'pixels': list(images[name]['pixels']),
+                        'sha256': images[name]['sha256'],
                         'bounds': [
                             bounds[0],
                             page_box[3] - bounds[3],

@@ -76,10 +76,13 @@ def test_cpp_coverage_port_is_isolated_explicit_total_and_report_only() -> None:
         'bash',
         'tools/ci/cpp-coverage-unit.sh',
     ]
+    # The macOS compiler update leaves Linux coverage and the core sysroot unchanged.
     assert manifest['target']['linux-64']['dependencies'] == {
+        'cxx-compiler': '*',
         'clangxx': '22.*',
         'llvm-tools': '22.*',
-    }
+        'sysroot_linux-64': '2.28.*',
+    }, 'Linux retains its compiler driver, LLVM 22 coverage tools and glibc 2.28 core sysroot'
 
     source = (ROOT / 'tools/ci/cpp-coverage-unit.sh').read_text(encoding='utf-8')
     for required in (

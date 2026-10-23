@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
@@ -18,17 +19,28 @@ EaElements.ParamTextField {
 
     required property ParameterItem item
     property string label: item ? item.shortName : ""
+    // What the value means, shown while hovering when nothing is wrong with it.
+    property string hint: ""
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
     readonly property bool refinable: item === null || item.refinable
     // A fixed setting is edited but never fitted: no fit toggle.
     readonly property bool canFit: refinable && (item === null || item.fittable)
+    // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
+    readonly property bool measured: Session.project === null || Session.project.fit.measured
+    Binding {
+        target: field.fitCheckBox
+        when: field.fitCheckBox !== null
+        property: "enabled"
+        value: field.measured
+    }
     // A value outside its range (a fit writes its values unchecked) is red with the range, as in a table cell.
     readonly property bool outsideRange: item !== null && item.outsideRange
     readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : ""
 
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.chartForegroundsExtra[1] : EaStyle.Colors.themeForeground
+    // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
+    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
@@ -70,6 +82,10 @@ EaElements.ParamTextField {
     WarningToolTip {
         text: field.warningText
         visible: field.warned && (field.hovered || field.activeFocus)
+    }
+    EaElements.ToolTip {
+        text: field.hint
+        visible: field.hint !== "" && !field.warned && field.hovered && EaGlobals.Vars.showToolTips
     }
 
     onValueChanged: typedRefusal = ""

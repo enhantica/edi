@@ -292,15 +292,16 @@ TestCase {
         const appearance = findChild(dialog, "preferences.tab.appearance");
         mouseClick(appearance, appearance.width / 2, appearance.height / 2);
         tryCompare(appearance, "checked", true, 1000, "Appearance opens before taking the actual combo control width");
-        tryVerify(() => findChild(dialog, "preferences.colourScheme") !== null && findChild(dialog, "preferences.colourScheme").width > 0, 2000, "The real Appearance combo is laid out before its width is read");
-        const column = findChild(dialog, "preferences.colourScheme").width;
+        const names = ["structureColours", "patternColours", "stackedColours", "mapColours"];
+        tryVerify(() => names.every(name => findChild(dialog, "preferences." + name) !== null && findChild(dialog, "preferences." + name).width > 0), 2000, "All four actual Appearance colour controls are laid out before measuring their shared column");
+        const columns = names.map(name => findChild(dialog, "preferences." + name).width);
         const tab = findChild(dialog, "preferences.tab.develop");
         mouseClick(tab, tab.width / 2, tab.height / 2);
         tryCompare(tab, "checked", true, 1000, "The actual Develop tab opens before Diagnostics geometry is read");
         const button = findChild(dialog, "preferences.diagnostics");
         verify(button !== null && button.text === "Show", "The visible Develop tab exposes its actual Diagnostics Show button");
         tryVerify(() => button.visible && button.width > 0, 2000, "The actual Diagnostics control finishes its Preferences slide before measuring");
-        fuzzyCompare(button.width, column, 1, "Diagnostics Show shares the actual Appearance combo control column, independent of a private layout property; actual button=" + button.width + "; actual colour-scheme combo width=" + column);
+        columns.forEach(column => fuzzyCompare(button.width, column, 1, "Diagnostics Show shares the actual Appearance combo control column, independent of a private layout property; actual button=" + button.width + "; actual colour control width=" + column));
         dialog.reject();
     }
 
@@ -350,9 +351,21 @@ TestCase {
         compare(chart.count, 0, "A level above every finite pair must select no parameters");
     }
 
+    SignalSpy {
+        id: typeClosed
+        signalName: "closed"
+    }
+    SignalSpy {
+        id: appendClicked
+        signalName: "clicked"
+    }
     function test_background_coefficients_have_editing_parity() {
         open("tests/fixtures/correlations/polynomial-3");
-        click("appBar.tab.experiment");
+        appWindow.appBarCentralTabs.currentIndex = AppState.Page.Experiment;
+        tryVerify(() => {
+            const tab = control("appBar.tab.experiment");
+            return tab !== null && tab.checked;
+        }, 500, "Coefficient fixture setup must select the actual production Experiment page");
         Ui.expandGroup(test, Probe, appWindow, "group.background");
         const experiment = Session.project.currentExperiment;
         const terms = experiment.backgroundTerms;
@@ -372,6 +385,26 @@ TestCase {
         compare(Probe.rows(terms)[0].coef.value, 6.25, "Actual keyboard input plus Return commits the independently entered background coefficient; actual first term=" + JSON.stringify(Probe.rows(terms)[0]));
         click("background.removeTerm." + count);
         compare(terms.count, count, "Remove must erase exactly the selected coefficient");
+        console.log("BACKGROUND_POLYNOMIAL_PARITY editing=typed append=clicked remove=clicked");
+    }
+
+    function test_background_type_popup_append_has_editing_parity() {
+        open("tests/fixtures/correlations/polynomial-3");
+        appWindow.appBarCentralTabs.currentIndex = AppState.Page.Experiment;
+        tryVerify(() => {
+            const tab = control("appBar.tab.experiment");
+            return tab !== null && tab.checked;
+        }, 500, "Type-transition fixture setup must select the actual production Experiment page");
+        Ui.expandGroup(test, Probe, appWindow, "group.background");
+        const experiment = Session.project.currentExperiment;
+        const terms = experiment.backgroundTerms;
+        const count = terms.count;
+        const coefficient = control("background.coef.0");
+        verify(coefficient !== null, "The type-cancel control must expose its actual coefficient editor");
+        coefficient.forceActiveFocus();
+        verify(SettingsProof.type(coefficient, "6.25"), "Type-cancel must begin with real changed keyboard input");
+        verify(SettingsProof.key(coefficient, Qt.Key_Return), "Return must commit the changed value before type confirmation");
+        compare(Probe.rows(terms)[0].coef.value, 6.25, "Type-cancel must witness a real prior numeric edit");
         const selector = control("background.type");
         verify(selector !== null, "Coefficient backgrounds must retain the type selector");
         selector.selected("chebyshev");
@@ -379,23 +412,35 @@ TestCase {
         const question = findChild(background, "background.typeQuestion") || findChild(appWindow.contentItem, "background.typeQuestion");
         verify(question !== null, "The actual background group retains its type confirmation popup; actual group=" + (background ? background.objectName : "absent"));
         tryCompare(question, "visible", true, 2000, "Changing an existing background opens the actual confirmation popup owned by its group, including its real overlay transition; actual type=" + experiment.backgroundType);
+        typeClosed.target = question;
+        verify(typeClosed.valid, "The actual type popup must expose its closed signal before Cancel");
+        typeClosed.clear();
         question.reject();
+        tryVerify(() => typeClosed.count === 1 && !question.visible && !question.opened, 1000, "Cancel must close the actual type popup and its overlay before another type selection");
         compare(experiment.backgroundType, "polynomial", "Cancel must retain the existing background type");
         compare(terms.count, count, "Cancel must preserve every coefficient row");
         compare(Probe.rows(terms)[0].coef.value, 6.25, "Cancel must preserve edited coefficient values");
         selector.selected("chebyshev");
+        tryVerify(() => question.visible && question.opened, 1000, "The second actual type popup must finish opening before Accept");
+        typeClosed.clear();
         question.accept();
+        tryVerify(() => typeClosed.count === 1 && !question.visible && !question.opened, 1000, "Accept must close the actual type popup and its overlay before the underlying append click");
         tryCompare(experiment, "backgroundType", "chebyshev", 2000, "Accept must apply the chosen type");
         compare(terms.count, 0, "A new background type must start with no retained terms");
         compare(experiment.background.count, 0, "A coefficient background must not retain hidden points");
         compare(experiment.backgroundXMin, 40, "Chebyshev must initialize its domain from measured minimum");
         compare(experiment.backgroundXMax, 72, "Chebyshev must initialize its domain from measured maximum");
         verify(control("background.terms") !== null, "Chebyshev must show its term table");
+        appendClicked.target = control("background.appendTerm");
+        verify(appendClicked.target !== null && appendClicked.valid, "Chebyshev append must expose its actual enabled button and clicked signal");
+        appendClicked.clear();
         click("background.appendTerm");
+        tryCompare(appendClicked, "count", 1, 1000, "The real Chebyshev append button must receive exactly one clicked action after popup closure");
         compare(terms.count, 1, "Chebyshev must offer the same append operation");
         verify(terms.setOrder(0, 23), "Chebyshev must permit its highest supported order");
         verify(!terms.setOrder(0, 24), "Chebyshev must refuse orders beyond its supported range");
         click("background.removeTerm.0");
         compare(terms.count, 0, "Chebyshev must offer the same remove operation");
+        console.log("BACKGROUND_COEFFICIENT_PARITY popup=closed append=clicked order=23 remove=clicked");
     }
 }

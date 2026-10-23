@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtTest
 import edi.app
@@ -38,6 +39,7 @@ Item {
         when: windowShown
         property int savedPage
         property int savedTheme
+        property var paletteReference: Approved.reference(SettingsProof)
         function initTestCase() {
             savedTheme = Style.Colors.theme;
             savedPage = Globals.Vars.appBarCurrentIndex;
@@ -69,7 +71,7 @@ Item {
         function test_palette_functions_follow_data_for_few_and_many_patterns_data() {
             const rows = [];
             for (const dark of [false, true])
-                for (const scheme of ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"])
+                for (const scheme of paletteReference.schemes.map(row => row.id))
                     for (const count of [3, 100])
                         rows.push({
                             tag: scheme + "-" + count + (dark ? "-dark" : "-light"),
@@ -83,31 +85,22 @@ Item {
             verify(Session.createProject("palette_witness", "Independent empty experiments"), "The palette gate creates a real project without calculated data");
             for (let i = 0; i < data.count; ++i)
                 verify(Session.project.createExperiment(), "The palette gate gives each requested place a real experiment identity");
+            for (let i = 0; i < 5; ++i)
+                verify(Session.project.createStructure(), "The icon witness creates each actual structure identity before checking its colour");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(typeof Preferences.colourScheme === "string", "The scheme preference is available to every actual colour consumer");
-            Preferences.colourScheme = data.scheme;
-            const rows = SettingsProof.paletteForScheme(data.scheme);
-            verify(rows.pattern && rows.pattern.length >= 3 && rows.structure && rows.structure.length > 0, "The independent colour inputs are the shipped palette data rows");
-            const gradient = rows.gradient || rows.pattern.slice(-2);
-            const theme = data.dark ? "dark" : "light";
+            verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string", "Both split scheme preferences are available to every actual colour consumer");
+            Approved.setSchemes(Preferences, data.scheme);
+            const expected = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark);
             const colors = Array.from({
                 length: data.count
             }, (_, i) => String(AppColors.experiment(i)).toLowerCase());
-            const roles = ["#f44336", "#607d8b", "#8bc34a", "#8c8c8c"];
-            verify(colors.every(color => !roles.includes(color)), "Few and many patterns cannot collide with calculated, background, residual or excluded colours");
-            if (data.count === 3) {
-                compare(JSON.stringify(colors), JSON.stringify(rows.pattern.slice(0, 3).map(row => row[theme].toLowerCase())), "Few patterns use their distinct palette rows in order");
-                compare(new Set(colors).size, 3, "Three patterns retain distinct colours in each scheme and theme");
-            } else {
-                compare(colors[0], gradient[0][theme].toLowerCase(), "The 100-pattern gradient starts at its first declared endpoint");
-                compare(colors[99], gradient[gradient.length - 1][theme].toLowerCase(), "The 100-pattern gradient finishes at its last declared endpoint");
-                verify(colors[50] !== colors[0] && colors[50] !== colors[99], "An interior pattern receives an interior gradient colour rather than an endpoint or repeated short palette");
-            }
-            for (let i = 0; i < rows.structure.length; ++i)
-                compare(String(AppColors.structure(i)).toLowerCase(), rows.structure[i][theme].toLowerCase(), "Structure icons read their own palette rows through the shared core function");
-            if (data.scheme === "default" && data.count === 3)
-                compare(colors[0], String(ApplicationInfo.patternColour("default", 0, data.count, data.dark)).toLowerCase(), "Default first colour follows its published contrast-safe palette shade in each theme");
+            compare(JSON.stringify(colors), JSON.stringify(expected), "Every app pattern place equals the approved categorical or independently computed whole-group Oklab gradient");
+            const structures = Approved.colours(SettingsProof, data.scheme, "structures", Session.project.structures.count, data.dark);
+            compare(structures.length, 5, "All five real structure icons reach their independent categorical reference");
+            for (let i = 0; i < structures.length; ++i)
+                compare(String(AppColors.structure(i)).toLowerCase(), structures[i], "Structure icons consume their own independent count-aware group");
         }
+
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");
             Globals.Vars.appBarCurrentIndex = 4;

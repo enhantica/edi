@@ -1,0 +1,919 @@
+[
+  {
+    "name": "model membership access: link 1",
+    "source": "core/src/adapter.cpp",
+    "context": "get ( ) = = live - > link ( ) . get ( ) & &",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership access: link 2",
+    "source": "core/src/adapter.cpp",
+    "context": "{ source . owner = project - > link ( ) ; source . aliases = project",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership access: link 3",
+    "source": "core/src/adapter.cpp",
+    "context": "- > epoch . value ( ) , link ( ) , aliases . record ( )",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership access: link 4",
+    "source": "core/src/adapter.cpp",
+    "context": "edits , stamps . edits_at , live . link ( ) , stamps . aliases , stamps",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership access: link 5",
+    "source": "core/src/adapter.cpp",
+    "context": "structures [ index ] ) , live . link ( ) , stamps . aliases , stamps",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 1",
+    "source": "core/src/fit_job.cpp",
+    "context": "; Hooks hooks ; Seams seams ; bool open = true ; work :: Ticket ticket =",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 2",
+    "source": "core/src/fit_job.cpp",
+    "context": ") { if ( ! self - > open ) { return ; } self - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 3",
+    "source": "core/src/fit_job.cpp",
+    "context": "~ FitJob ( ) { state_ - > open = false ; if ( state_ - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 4",
+    "source": "core/src/fit_job.cpp",
+    "context": "preamble ] { if ( self - > open & & self - > hooks . started",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 5",
+    "source": "core/src/fit_job.cpp",
+    "context": "record ] { if ( self - > open & & self - > hooks . iterated",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 6",
+    "source": "core/src/fit_job.cpp",
+    "context": ") ] { if ( self - > open & & self - > hooks . frame",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 7",
+    "source": "core/src/fit_job.cpp",
+    "context": "preamble ] { if ( self - > open & & self - > hooks . scan_started",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 8",
+    "source": "core/src/fit_job.cpp",
+    "context": "record ] { if ( self - > open & & self - > hooks . file_completed",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "job lifetime marker: open 9",
+    "source": "core/src/fit_job.cpp",
+    "context": ") ] { if ( self - > open & & self - > hooks . file_frame",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: rename 1",
+    "source": "core/src/io.cpp",
+    "context": ":: string & { const bool renamed = rename ! = nullptr & & ! rename -",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: rename 2",
+    "source": "core/src/io.cpp",
+    "context": "datablock_key ( name , \"structure\" ) = = rename - > structure ; return renamed ? rename",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: create_directory 3",
+    "source": "core/src/io.cpp",
+    "context": ") ) ) ; if ( fs :: create_directory ( candidate ) ) { root_ = candidate",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: create_directories 4",
+    "source": "core/src/io.cpp",
+    "context": "source = root_ / \"source\" ; fs :: create_directories ( source ) ; if ( ! project",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: copy_file 5",
+    "source": "core/src/io.cpp",
+    "context": "{ std :: error_code absent ; fs :: copy_file ( fs :: path ( project . path",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "scratch save and model rename: remove_all 6",
+    "source": "core/src/io.cpp",
+    "context": "{ std :: error_code ignored ; fs :: remove_all ( root_ , ignored ) ; } ScratchSave",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "JSON memory serializer: write 1",
+    "source": "core/src/json.cpp",
+    "context": "} return missing ; } std :: string write ( const Value & value ) { std",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "JSON serializer interface: write 1",
+    "source": "core/src/json.hpp",
+    "context": ") const ; } ; std :: string write ( const Value & value ) ; Value",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "preview lifetime marker: open 1",
+    "source": "core/src/live_preview.cpp",
+    "context": "; Hooks hooks ; Seams seams ; bool open = true ; std :: uint64_t newest =",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "preview lifetime marker: open 2",
+    "source": "core/src/live_preview.cpp",
+    "context": "generation ] { if ( self - > open ) { ( start ? self - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "preview lifetime marker: open 3",
+    "source": "core/src/live_preview.cpp",
+    "context": ") { if ( ! self - > open ) { return ; } self - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "preview lifetime marker: open 4",
+    "source": "core/src/live_preview.cpp",
+    "context": "; } } if ( self - > open & & self - > owed & &",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "preview lifetime marker: open 5",
+    "source": "core/src/live_preview.cpp",
+    "context": "~ LivePreview ( ) { state_ - > open = false ; if ( state_ - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "report memory serializer: write 1",
+    "source": "core/src/report_json.cpp",
+    "context": "structure_styles ) } } ; return json :: write ( document ) ; } ReportModel report_from_json (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "worker lifetime marker: open 1",
+    "source": "core/src/worker.cpp",
+    "context": "< std :: atomic < bool > > open = std :: make_shared < std :: atomic",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "worker lifetime marker: open 2",
+    "source": "core/src/worker.cpp",
+    "context": "( [ self = this , keep = open , ticket , channel , delivery = std",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "worker lifetime marker: open 3",
+    "source": "core/src/worker.cpp",
+    "context": "~ Worker ( ) { state_ - > open - > store ( false , std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "worker lifetime marker: open 4",
+    "source": "core/src/worker.cpp",
+    "context": "= state_ , keep = state_ - > open ] { if ( keep - > load",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 1",
+    "source": "app/src/analysis_view_model.cpp",
+    "context": ") ) ) ; } void AliasListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 2",
+    "source": "app/src/analysis_view_model.cpp",
+    "context": ") ) ) ; } void ConstraintListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model removal interface: remove 1",
+    "source": "app/src/analysis_view_model.hpp",
+    "context": "duplicate ( int row ) ; Q_INVOKABLE void remove ( int row ) ; signals : void",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model removal interface: remove 2",
+    "source": "app/src/analysis_view_model.hpp",
+    "context": "duplicate ( int row ) ; Q_INVOKABLE void remove ( int row ) ; protected : bool",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "licence text formatting: remove 1",
+    "source": "app/src/app_info.cpp",
+    "context": "= 1 ? QString ( cell ) . remove ( QLatin1String ( \"licence: \" ) ) : cell",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: open 1",
+    "source": "app/src/demo_driver.cpp",
+    "context": "= qEnvironmentVariable ( \"EDI_DEMO_REPORT_PROJECT\" ) ; const QStringList open = fitted . isEmpty ( ) ? start",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: open 2",
+    "source": "app/src/demo_driver.cpp",
+    "context": "{ \"report-scan-1-evolution\" , QStringList { \"resize:1280x960\" } + open + QStringList { \"appBar.tab.report\" , \"reveal:report.evolution\" } }",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: copy 3",
+    "source": "app/src/demo_driver.cpp",
+    "context": "path ( ) ) & & QFile :: copy ( file , copy ) ; } loaded_cli_project_",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: WriteOnly 4",
+    "source": "app/src/demo_driver.cpp",
+    "context": "( ! copy . open ( QIODevice :: WriteOnly | QIODevice :: Truncate ) | | copy",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: write 5",
+    "source": "app/src/demo_driver.cpp",
+    "context": "QIODevice :: Truncate ) | | copy . write ( content . toUtf8 ( ) ) <",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: Append 6",
+    "source": "app/src/demo_driver.cpp",
+    "context": "if ( file . open ( QIODevice :: Append | QIODevice :: Text ) ) { file",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "demo scratch inputs and log: write 7",
+    "source": "app/src/demo_driver.cpp",
+    "context": "QIODevice :: Text ) ) { file . write ( QStringLiteral ( \"%1\\t%2\\t%3\\n\" ) . arg (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "user configuration record: WriteOnly 1",
+    "source": "app/src/engine_setup.cpp",
+    "context": "if ( file . open ( QIODevice :: WriteOnly ) ) { file . write ( stored",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "user configuration record: write 2",
+    "source": "app/src/engine_setup.cpp",
+    "context": "QIODevice :: WriteOnly ) ) { file . write ( stored ) ; } std :: free",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 1",
+    "source": "app/src/experiment_models.cpp",
+    "context": ", true ) ; } void BackgroundListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 2",
+    "source": "app/src/experiment_models.cpp",
+    "context": ", true ) ; } void BackgroundTermListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 3",
+    "source": "app/src/experiment_models.cpp",
+    "context": ", false ) ; } void ExcludedRegionListModel :: remove ( int row ) { edi :: ExperimentBase",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 4",
+    "source": "app/src/experiment_models.cpp",
+    "context": "return ; } } } void LinkedStructureListModel :: remove ( int row ) { if ( !",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model row removal: remove 5",
+    "source": "app/src/experiment_models.cpp",
+    "context": "return ; } } } void PrefOrientListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model removal interface: remove 1",
+    "source": "app/src/experiment_models.hpp",
+    "context": "Q_INVOKABLE void append ( ) ; Q_INVOKABLE void remove ( int row ) ; protected : bool",
+    "offset": 8,
+    "limit": 5
+  },
+  {
+    "name": "chart registry removal: remove 1",
+    "source": "app/src/experiment_view_model.cpp",
+    "context": "chart ) ; } else { d_charts_ . remove ( chart ) ; } if ( d_charts_",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "chart registry removal: remove 2",
+    "source": "app/src/experiment_view_model.cpp",
+    "context": "chart ) ; } else { shown_charts_ . remove ( chart ) ; } if ( patternShown",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "PDF memory buffer: WriteOnly 1",
+    "source": "app/src/report_pdf.cpp",
+    "context": "( ! buffer . open ( QIODevice :: WriteOnly ) ) { return { } ; }",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "PDF memory buffer: QPdfWriter 2",
+    "source": "app/src/report_pdf.cpp",
+    "context": ") ) { return { } ; } QPdfWriter writer ( & buffer ) ; writer .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "guarded report publisher callback: write 1",
+    "source": "app/src/report_view_model.cpp",
+    "context": "* embedded : kOnline ; failed = ! write ( \"html\" , QByteArray :: fromStdString ( edi",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "guarded report publisher callback: write 2",
+    "source": "app/src/report_view_model.cpp",
+    "context": "( \"pdf\" ) ) { failed = ! write ( \"pdf\" , reportPdf ( report_ , images",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "explicit file import: copy 1",
+    "source": "app/src/session.cpp",
+    "context": "; } } if ( ! QFile :: copy ( file , destination ) ) { return",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "explicit file import: copy 2",
+    "source": "app/src/session.cpp",
+    "context": ") ) ; if ( ! QFile :: copy ( file , destination ) ) { setLastError",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "string and model row removal: remove 1",
+    "source": "app/src/structure_view_model.cpp",
+    "context": ". mid ( last ) ; out . remove ( QLatin1Char ( '*' ) ) ; out",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "string and model row removal: remove 2",
+    "source": "app/src/structure_view_model.cpp",
+    "context": ", true ) ; } void AtomSiteListModel :: remove ( int row ) { if ( keyAt",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "string and model row removal: remove 3",
+    "source": "app/src/structure_view_model.cpp",
+    "context": ", false ) ; } void ScatteringLengthListModel :: remove ( int row ) { const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model removal interface: remove 1",
+    "source": "app/src/structure_view_model.hpp",
+    "context": "std :: uint64_t seed ) ; Q_INVOKABLE void remove ( int row ) ; signals : void",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model removal interface: remove 2",
+    "source": "app/src/structure_view_model.hpp",
+    "context": "Q_INVOKABLE void append ( ) ; Q_INVOKABLE void remove ( int row ) ; protected : bool",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "observer receipt and buffer: WriteOnly 1",
+    "source": "app/src/test_observer.cpp",
+    "context": "if ( file . open ( QIODevice :: WriteOnly ) ) file . write ( QJsonDocument (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "observer receipt and buffer: write 2",
+    "source": "app/src/test_observer.cpp",
+    "context": "( QIODevice :: WriteOnly ) ) file . write ( QJsonDocument ( result ) . toJson (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "observer receipt and buffer: remove 3",
+    "source": "app/src/test_observer.cpp",
+    "context": ") . trimmed ( ) ; pending . remove ( 0 , end + 1 ) ;",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: remove 1",
+    "source": "app/src/web_files.cpp",
+    "context": "document . getElementById ( \"edi-open-folder\" ) ? . remove ( ) ; const input = document .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: remove 2",
+    "source": "app/src/web_files.cpp",
+    "context": ", ( ) = > { input . remove ( ) ; Module . _edi_web_folder_cancelled ( request",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: remove 3",
+    "source": "app/src/web_files.cpp",
+    "context": "( input . files ) ; input . remove ( ) ; let copied = 0 ;",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: WriteOnly 4",
+    "source": "app/src/web_files.cpp",
+    "context": ") ; buffer . open ( QIODevice :: WriteOnly ) ; QZipWriter writer ( & buffer )",
+    "offset": 8,
+    "limit": 2
+  },
+  {
+    "name": "browser DOM and import export scratch: WriteOnly 5",
+    "source": "app/src/web_files.cpp",
+    "context": "( ! file . open ( QIODevice :: WriteOnly ) | | file . write ( reader",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: write 6",
+    "source": "app/src/web_files.cpp",
+    "context": "QIODevice :: WriteOnly ) | | file . write ( reader . fileData ( entry . filePath",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: WriteOnly 7",
+    "source": "app/src/web_files.cpp",
+    "context": "kept = out . open ( QIODevice :: WriteOnly ) & & out . write ( file",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "browser DOM and import export scratch: write 8",
+    "source": "app/src/web_files.cpp",
+    "context": "QIODevice :: WriteOnly ) & & out . write ( file . data ) = = file",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 1",
+    "source": "core/include/edi/model.hpp",
+    "context": "record_ . get ( ) ; } void link ( const std :: shared_ptr < Membership >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 2",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ; held_ = true ; } void unlink ( ) noexcept { record_ . reset (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: write 3",
+    "source": "core/include/edi/model.hpp",
+    "context": "tables ; template < typename V > void write ( std :: size_t column , std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: write 4",
+    "source": "core/include/edi/model.hpp",
+    "context": "> values [ column ] ) - > write ( held . row , value ) ;",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 5",
+    "source": "core/include/edi/model.hpp",
+    "context": "~ DataSource ( ) = default ; void link ( ExperimentBase & experiment , std :: uint64_t",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 6",
+    "source": "core/include/edi/model.hpp",
+    "context": "= live_ - > removed ; link . link ( std :: make_shared < detail :: Membership",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 7",
+    "source": "core/include/edi/model.hpp",
+    "context": "Membership > ( ) ) ; link . unlink ( ) ; live_ - > parameter .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 8",
+    "source": "core/include/edi/model.hpp",
+    "context": "const std :: shared_ptr < ProjectLink > & link ( ) const noexcept { return link_ ;",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 9",
+    "source": "core/include/edi/model.hpp",
+    "context": "( this ! = & other ) { rename ( other . v ( ) ) ;",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 10",
+    "source": "core/include/edi/model.hpp",
+    "context": "= ( std :: string next ) { rename ( std :: move ( next ) )",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 11",
+    "source": "core/include/edi/model.hpp",
+    "context": "= ( const char * next ) { rename ( std :: string ( next ) )",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 12",
+    "source": "core/include/edi/model.hpp",
+    "context": "- > owner : nullptr ; } void rename ( std :: string next ) { if",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 13",
+    "source": "core/include/edi/model.hpp",
+    "context": "typename T > struct RowTraits { static void link ( T & , const std :: shared_ptr",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 14",
+    "source": "core/include/edi/model.hpp",
+    "context": "> & ) noexcept { } static void unlink ( T & ) noexcept { } static",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 15",
+    "source": "core/include/edi/model.hpp",
+    "context": "written ( ) ) ; key - > rename ( std :: move ( id ) )",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: rename 16",
+    "source": "core/include/edi/model.hpp",
+    "context": "] : changed_ ) { key - > rename ( { } ) ; key - >",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 17",
+    "source": "core/include/edi/model.hpp",
+    "context": "membership_ ; } RowTraits < T > :: link ( * item , membership_ ) ; }",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 18",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ) { RowTraits < T > :: unlink ( * item ) ; if constexpr (",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 19",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < AtomSite > { static void link ( AtomSite & site , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 20",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ) noexcept { site . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 21",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( AtomSite & site ) noexcept { site",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 22",
+    "source": "core/include/edi/model.hpp",
+    "context": "site ) noexcept { site . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 23",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < AtomSiteAniso > { static void link ( AtomSiteAniso & row , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 24",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ) noexcept { row . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 3
+  },
+  {
+    "name": "model membership and cell update: unlink 25",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( AtomSiteAniso & row ) noexcept { row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 26",
+    "source": "core/include/edi/model.hpp",
+    "context": "row ) noexcept { row . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 3
+  },
+  {
+    "name": "model membership and cell update: link 27",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < Structure > { static void link ( Structure & structure , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 28",
+    "source": "core/include/edi/model.hpp",
+    "context": "noexcept { structure . cell . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 29",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( Structure & structure ) noexcept { structure",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 30",
+    "source": "core/include/edi/model.hpp",
+    "context": "noexcept { structure . cell . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 31",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < ExcludedRegion > { static void link ( ExcludedRegion & region , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 32",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ) noexcept { region . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 33",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( ExcludedRegion & region ) noexcept { region",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 34",
+    "source": "core/include/edi/model.hpp",
+    "context": "region ) noexcept { region . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 35",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < LineSegment > { static void link ( LineSegment & point , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 36",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ) noexcept { point . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 37",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( LineSegment & point ) noexcept { point",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 38",
+    "source": "core/include/edi/model.hpp",
+    "context": "point ) noexcept { point . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 39",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < PolynomialTerm > { static void link ( PolynomialTerm & term , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 40",
+    "source": "core/include/edi/model.hpp",
+    "context": "record ) noexcept { term . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 41",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( PolynomialTerm & term ) noexcept { term",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 42",
+    "source": "core/include/edi/model.hpp",
+    "context": "term ) noexcept { term . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 43",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < LinkedStructure > { static void link ( LinkedStructure & row , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 44",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( LinkedStructure & row ) noexcept { row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 45",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < PrefOrient > { static void link ( PrefOrient & row , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 46",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( PrefOrient & row ) noexcept { row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 47",
+    "source": "core/include/edi/model.hpp",
+    "context": "struct RowTraits < BraggPdExperiment > { static void link ( BraggPdExperiment & experiment , const std ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 48",
+    "source": "core/include/edi/model.hpp",
+    "context": "noexcept { experiment . peak . row . link ( record ) ; experiment . instrument .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 49",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . instrument . row . link ( record ) ; experiment . absorption .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 50",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . absorption . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 51",
+    "source": "core/include/edi/model.hpp",
+    "context": "link ( record ) ; } static void unlink ( BraggPdExperiment & experiment ) noexcept { experiment",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 52",
+    "source": "core/include/edi/model.hpp",
+    "context": "noexcept { experiment . peak . row . unlink ( ) ; experiment . instrument . row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 53",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . instrument . row . unlink ( ) ; experiment . absorption . row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: unlink 54",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . absorption . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "model membership and cell update: link 55",
+    "source": "core/include/edi/model.hpp",
+    "context": "< const detail :: ProjectLink > own = link ( ) ; for ( detail :: KeyedBase",
+    "offset": 8,
+    "limit": 1
+  }
+]

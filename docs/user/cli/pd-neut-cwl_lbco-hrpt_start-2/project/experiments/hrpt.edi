@@ -7,6 +7,9 @@ _experiment_type.beam_mode "constant wavelength"
 _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
 
+_background_estimate.mode manual
+_background_estimate.method arpls
+
 _peak.broad_gauss_u 0.1()
 _peak.broad_gauss_v -0.1()
 _peak.broad_gauss_w 0.1()

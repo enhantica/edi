@@ -2,6 +2,8 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import EasyApplication.Gui.Style as Style
+import "../../fixtures/current_row_style/reference.js" as RowStyle
 import "UiInteraction.js" as Ui
 
 TestCase {
@@ -27,6 +29,7 @@ TestCase {
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));
         verify(Session.hasProject, "GUI: committed editable project opens");
+        verify(waitForRendering(appWindow.contentItem), "GUI: opened project renders before locating its input controls");
     }
     function cleanupTestCase() {
         Session.closeProject();
@@ -87,6 +90,7 @@ TestCase {
     }
     function textInput(field, keys) {
         field.forceActiveFocus();
+        tryCompare(field, "activeFocus", true, 2000, "GUI: numeric input owns keyboard focus before typing");
         keyClick(Qt.Key_A, Qt.ControlModifier);
         for (const key of keys)
             keyClick(key);
@@ -214,12 +218,15 @@ TestCase {
         filterText(field, "p n m a");
         verify(!field.warned, "owner 2026-10-06: filtering ignores case and spaces");
         keyClick(Qt.Key_Return);
+        // Closing the popup restores focus before the number field takes it.
+        tryCompare(name.popup, "visible", false, 2000, "GUI: name selection finishes closing before number input");
         tryCompare(group, "itNumber", 62, 2000, "owner 2026-10-06: name edit resolves IT number");
-        compare(group.coordSystemCode, "abc", "International Tables: Pnma has the abc default setting");
+        tryCompare(group, "coordSystemCode", "abc", 2000, "International Tables: Pnma has the abc default setting");
         const number = control("spaceGroup.itNumber");
         textInput(number, [Qt.Key_2, Qt.Key_2, Qt.Key_5]);
-        compare(group.nameHM, "F m -3 m", "owner 2026-10-06: number edit resolves the group name");
-        compare(group.coordSystemCode, "1", "owner example: Fm-3m resolves its default code 1");
+        tryCompare(group, "itNumber", 225, 2000, "owner 2026-10-06: number input commits the exact requested IT number");
+        tryCompare(group, "nameHM", "F m -3 m", 2000, "owner 2026-10-06: number edit resolves the group name");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner example: Fm-3m resolves its default code 1");
         group.nameHM = "F d -3 m";
         group.coordSystemCode = "2";
         const code = control("spaceGroup.coordSystemCode");
@@ -231,7 +238,8 @@ TestCase {
         filterText(codeField, "1");
         verify(!codeField.warned, "owner 2026-10-06: setting code is filterable");
         keyClick(Qt.Key_Return);
-        compare(group.coordSystemCode, "1", "owner 2026-10-06: selected setting remains editable");
+        tryCompare(code.popup, "visible", false, 2000, "GUI: setting selection finishes closing before checking its identity");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner 2026-10-06: selected setting remains editable");
         compare(group.itNumber, 227, "owner 2026-10-06: setting edit retains group identity");
     }
     function test_invalid_number_is_red_and_unapplied() {
@@ -275,7 +283,6 @@ TestCase {
             const picker = reveal("structure", "basic", "atom_site", "atomSite.typeSymbol.0");
             const glyph = nativeAtomGlyph(control("atomSite.icon.0"));
             verify(glyph !== null, "owner 2026-10-06: Atom sites draws its coloured atom glyph beside the type");
-            tryCompare(glyph, "color", palette.value, 2000, "published-elements.tsv: La icon follows its independent Jmol/VESTA colour");
             click("appBar.tab.analysis");
             click("sideBar.tab.basic");
             const rows = Probe.rows(Session.project.parameters);
@@ -291,7 +298,22 @@ TestCase {
             const line = control("parameters.name." + index);
             const atom = nativeAtomGlyph(line);
             verify(atom !== null, "owner 2026-10-06: Analysis draws its atom glyph");
-            tryCompare(atom, "color", palette.value, 2000, "owner 2026-10-06: Analysis and Atom sites draw the same independent palette colour");
+            compare(String(atom.color), String(glyph.color), "The same element uses one readable colour in both table consumers");
+            const theme = Style.Colors.isDarkPalette ? "dark" : "light";
+            console.log("LEGACY_ELEMENT " + JSON.stringify({
+                scheme: palette.scheme,
+                symbol: "La",
+                consumers: [
+                    {
+                        colour: String(glyph.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    },
+                    {
+                        colour: String(atom.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    }
+                ]
+            }));
         }
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {

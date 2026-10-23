@@ -12,6 +12,8 @@ from typing import Any
 import edi
 import pytest
 
+from tests.fixtures.report_units.iucr_reference import rounded_pair, rounded_record
+
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE_PATH = Path(__file__).parent / 'fixtures/c09_t14_refinable_su/reference.json'
 REFERENCE_SHA256 = '3b2c35131b086a1bec91a414a4d6f81f01ec9f47f0bcaa5d28c77f12bca66d3f'
@@ -226,13 +228,17 @@ def test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly(
 
     destination = tmp_path / 'decimal-save-destination'
     source.save_as(destination)
-    restored = edi.Project.load(destination).experiment.peak.broad_gauss_sigma_0
-    _assert_parameter(
-        restored,
-        value_hex=case['value_hex'],
-        esd_hex=case['esd_hex'],
-        free=True,
+    # Read legacy decimals exactly, then save and adopt IUCr values.
+    value, su = rounded_pair(float.fromhex(case['value_hex']), float.fromhex(case['esd_hex']))
+    expected_token = rounded_record(f'_peak.broad_gauss_sigma_0 {token}'.encode()).split()[-1]
+    assert expected_token in _experiment_path(destination).read_bytes().split(), (
+        'A legacy decimal bracket must save with the independent IUCr spelling'
     )
+    for parameter in (
+        source.experiment.peak.broad_gauss_sigma_0,
+        edi.Project.load(destination).experiment.peak.broad_gauss_sigma_0,
+    ):
+        _assert_parameter(parameter, value_hex=value.hex(), esd_hex=su.hex(), free=True)
 
 
 @pytest.mark.parametrize(
@@ -287,13 +293,13 @@ def test_c09_t14_extreme_su_round_trips_through_decimal_fallback(
     saved_match = re.search(r'^_peak\.broad_gauss_sigma_0\s+(\S+)$', saved_text, re.MULTILINE)
     assert saved_match is not None
     bracket_match = re.fullmatch(
-        r'[+-]?(?:\d+\.?\d*|\.\d+)\((\d+\.\d+)\)',
+        r'[+-]?(?:\d+\.?\d*|\.\d+)\((\d+)\)',
         saved_match.group(1),
     )
     assert bracket_match is not None
-    saved_su = bracket_match.group(1)
-    assert float(saved_su) != 0.0
-    assert float(saved_su) == expected_esd
+    assert saved_match.group(1) == '100.' + '0' * 41 + '(10)', (
+        'The writer uses fixed-point integer digits for the 1e-40 s.u., never decimal fallback'
+    )
 
     restored = edi.Project.load(destination).experiment.peak.broad_gauss_sigma_0
     assert restored.uncertainty == expected_esd, (
@@ -330,25 +336,40 @@ def test_c09_t14_writer_tokens_always_reparse_bit_exactly(
     source_token = f'{value_token}({"" if su_token is None else su_token})'
     source = edi.Project.load(_project_variant(tmp_path, 'writer-matrix-source', source_token))
     source_parameter = source.experiment.peak.broad_gauss_sigma_0
-    expected = (
+    before = (
         float(source_parameter.value).hex(),
         None
         if source_parameter.uncertainty is None
         else float(source_parameter.uncertainty).hex(),
         bool(source_parameter.free),
     )
-    assert expected == (
+    assert before == (
         float(value_token).hex(),
         None if su_token is None else float(su_token).hex(),
         True,
-    )
+    ), 'Legacy decimal input must retain the exact value, uncertainty and free state before saving'
 
+    value, su = rounded_pair(float(value_token), None if su_token is None else float(su_token))
+    expected = (value.hex(), None if su is None else su.hex(), True)
     destination = tmp_path / 'writer-matrix-destination'
     source.save_as(destination)
     saved_text = _experiment_path(destination).read_text(encoding='utf-8')
     saved_match = re.search(r'^_peak\.broad_gauss_sigma_0\s+(\S+)$', saved_text, re.MULTILINE)
     assert saved_match is not None
     saved_token = saved_match.group(1)
+    expected_token = (
+        rounded_record(f'_peak.broad_gauss_sigma_0 {source_token}'.encode()).split()[-1].decode()
+    )
+    assert saved_token == expected_token, (
+        'Saved tokens must follow the independent IUCr rule and retain all nonrounded grammar'
+    )
+    assert (
+        float(source_parameter.value).hex(),
+        None
+        if source_parameter.uncertainty is None
+        else float(source_parameter.uncertainty).hex(),
+        bool(source_parameter.free),
+    ) == expected, 'A successful save adopts exactly the independent IUCr value and uncertainty'
     assert 'e' not in saved_token.lower()
     assert re.fullmatch(
         r'[+-]?(?:\d+\.?\d*|\.\d+)\((?:\d+|\d*\.\d+|\d+\.)?\)',
@@ -360,7 +381,9 @@ def test_c09_t14_writer_tokens_always_reparse_bit_exactly(
         float(restored.value).hex(),
         None if restored.uncertainty is None else float(restored.uncertainty).hex(),
         bool(restored.free),
-    ) == expected, 'every serialized token must reparse to its exact public state'
+    ) == expected, (
+        'Every saved IUCr token must reparse to the independently rounded, adopted public state'
+    )
 
 
 def test_c09_t14_exponent_non_finite_and_malformed_forms_stay_rejected(

@@ -410,6 +410,7 @@ def test_shard_time_gate_refuses_unprovable_evidence(tmp_path, mutation):
 
 
 def test_timing_gate_is_wired_after_system_shards_on_pull_requests(tmp_path):
+    """Retained inventory name: the authorized timing cohort is now main push."""
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     timing_route(workflow, tmp_path)
 

@@ -2,6 +2,9 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -17,13 +20,25 @@ EaComponents.ListViewTextInput {
     id: cell
 
     property var value: ""
-    // A number by the app's one rule for numbers in cells (NumberText).
-    readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? NumberText.plain(value, 8) : String(value)
+    // A number by the app's one rule for numbers in cells (NumberText), in scientific notation when that would not
+    // fit the cell (NumberText.fitted; the owner, 2026-10-22), with the number in full on hover.
+    readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
+    readonly property string written: numeric ? NumberText.plain(value, 8) : String(value)
+    readonly property string shown: numeric ? NumberText.fitted(written, width - leftPadding - rightPadding, metrics) : written
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.
     property string refusal: ""
+    // Read-only but shown as usual, not greyed (an auto-estimated background; the owner, 2026-10-20): nothing can be
+    // typed or committed.
+    property bool locked: false
     signal committed(string text)
+
+    readOnly: locked
+    activeFocusOnPress: !locked
+    activeFocusOnTab: !locked
+    // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
+    color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
     text: shown
     warned: refusal !== ""
@@ -32,14 +47,24 @@ EaComponents.ListViewTextInput {
         text: cell.refusal
         visible: text !== "" && (cell.hovered || cell.activeFocus)
     }
+    FontMetrics {
+        id: metrics
+        font: cell.font
+    }
+    EaElements.ToolTip {
+        text: NumberText.plainFull(cell.value)
+        visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+    }
     onValueChanged: refusal = ""
     onAccepted: commit()
     onEditingFinished: commit()
 
     // Return and leaving the cell both commit; the second of the two finds nothing new.
     function commit() {
-        if (text === shown)
+        if (locked || text === shown) {
+            text = Qt.binding(() => cell.shown);
             return;
+        }
         refusal = TypedInput.refusal(text, accepts);
         if (refusal === "") {
             committed(text);

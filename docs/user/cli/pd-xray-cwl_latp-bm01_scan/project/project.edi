@@ -1,0 +1,13 @@
+_edi.schema_version 3
+
+_metadata.name             pd-xray-cwl_latp-bm01_scan
+_metadata.title "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL"
+_metadata.description "3 phases · 73 synchrotron patterns · Linked displacement parameters"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 09:50:09"
+_metadata.last_modified    "22 Oct 2026 14:01:42"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "BM01"
+_metadata.facility "SNBL"
+_su_format.rule iucr_19

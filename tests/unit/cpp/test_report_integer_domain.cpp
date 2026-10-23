@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "edi/report_model.hpp"
+#include "edi/report_html.hpp"
 #include "../../../core/src/json.hpp"
 
 namespace {
@@ -82,10 +83,27 @@ TEST_CASE("Report index JSON integers reject every invalid scene and pattern rou
 
 TEST_CASE("Report integer JSON controls retain signed endpoints nonzero indices and missing rows") {
     auto document = seed();
+    auto atom = document.at("structures").array("structures").front().at("scene").at("atoms").array("atoms").front();
+    const auto part = atom.at("parts").array("parts").front();
+    replace(atom, "parts", edi::json::Array(8, part));
+    replace(document, "structures.0.scene.atoms", edi::json::Array(8, atom));
     replace(document, "structures.0.scene.atoms.0.cluster_id", -2147483648.0);
     replace(document, "correlations.available", 2147483647.0);
     for (const auto& path : index_paths) replace(document, path, path.starts_with("experiments.") ? -1.0 : 7.0);
     const auto text = edi::json::write(document);
     CHECK_MESSAGE(edi::json::write(edi::json::parse(edi::report_to_json(edi::report_from_json(text)))) == text,
                   "Valid destination endpoints and the explicit pattern-gap sentinel survive unchanged");
+    auto model = edi::report_from_json(text);
+    model.analysis = {{"authored", "Authored ragged table", {},
+        {{"first", "second"}, {{}, {"authored-cell"}, {"one", "two", "extra"}}}}};
+    for (const auto count : {0, 1, 5}) {
+        model.correlations->values.assign(count, 0.5);
+        model.experiments.front().pattern.hover.assign(count, {"authored hover"});
+        const auto imported = edi::report_from_json(edi::report_to_json(model));
+        CHECK_MESSAGE(edi::report_html(imported).find("authored-cell") != std::string::npos,
+            "HTML safely renders ragged tables and correlation dimensions with local bounds");
+        CHECK_MESSAGE(edi::report_static_html(imported, 400).find("authored-cell") != std::string::npos,
+            "Static PDF text safely renders ragged tables and correlation dimensions with local bounds");
+    }
+
 }

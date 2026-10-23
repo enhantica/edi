@@ -406,6 +406,9 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         connect(project_, &ProjectViewModel::message, this, [this](const QString& text) {
             warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("warning"));
         });
+        connect(project_, &ProjectViewModel::information, this, [this](const QString& text) {
+            warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("information"));
+        });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
     setLastError({});

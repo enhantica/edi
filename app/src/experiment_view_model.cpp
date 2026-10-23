@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
 
+#include <QStringList>
+
 #include <algorithm>
+#include <exception>
 #include <filesystem>
 #include <iterator>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
 #include "edi/selectors.hpp"
@@ -64,16 +69,21 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
+      background_estimate_methods_(new OptionListModel(this)),
+      background_estimate_modes_(new OptionListModel(this)),
+      background_estimate_models_(new OptionListModel(this)),
       categories_(new CategoryListModel(this)),
       instrument_(new ParameterListModel([this] { return instrument_display_order(category("instrument").fields); },
                                           registry, this)),
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
+      extinction_(new ParameterListModel([this] { return category("extinction").fields; }, registry, this)),
       background_(new BackgroundListModel(experiment, editor, registry, this)),
       background_terms_(new BackgroundTermListModel(experiment, editor, registry, this)),
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
+      single_crystal_reflections_(new SingleCrystalReflectionModel(experiment, project, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
       linked_structures_(new LinkedStructureListModel(project, experiment, editor, registry, this)),
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
@@ -91,6 +101,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
     background_type_options_->setOptions(edi::supported_background_types());
+    background_estimate_methods_->setOptions(edi::background_estimator_methods());
+    background_estimate_modes_->setOptions({"manual", "auto"});
+    background_estimate_models_->setOptions({"auto", "subtract", "ignore"});
     for (int family = 0; family < 4; ++family) {
         peak_families_[family] = new ParameterListModel(
             [this, family] {
@@ -113,6 +126,12 @@ edi::Category ExperimentViewModel::category(const char* id) const {
     }
     if (std::string(id) == "instrument") {
         return edi::instrument_category(experiment_);
+    }
+    if (std::string(id) == "extinction") {
+        edi::Category extinction{"extinction"};
+        edi::detail::add_optional(extinction.fields, "radius", experiment_.extinction.radius);
+        edi::detail::add_optional(extinction.fields, "mosaicity", experiment_.extinction.mosaicity);
+        return extinction;
     }
     return edi::absorption_category(experiment_);
 }
@@ -143,6 +162,92 @@ QString ExperimentViewModel::scatteringTypeToken() const {
     return QString::fromUtf8(edi::token(experiment_.experiment_type.effective_scattering_type()));
 }
 // The declared model, now that edi computes more than one.
+ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings() const {
+    EstimateSettings out;
+    out.mode = QString::fromStdString(edi::background_estimate_mode(experiment_));
+    out.method = QString::fromStdString(experiment_.background_estimate_method.value_or("auto"));
+    out.width = experiment_.background_estimate_width.value_or(qQNaN());
+    out.smoothness = experiment_.background_estimate_smoothness.value_or(qQNaN());
+    out.points = experiment_.background_estimate_n_points.value_or(0);
+    out.tolerance = experiment_.background_estimate_tolerance.value_or(qQNaN());
+    out.use_model = QString::fromStdString(experiment_.background_estimate_use_model.value_or("auto"));
+    out.max_terms = experiment_.background_estimate_max_terms.value_or(0);
+    try {
+        const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment_);
+        const edi::BackgroundEstimate defaults = edi::background_estimate_defaults(experiment_, options);
+        out.derived_method = QString::fromStdString(defaults.method);
+        out.derived_width = defaults.width;
+        out.derived_smoothness = defaults.smoothness.value_or(qQNaN());
+        out.model_choice = QString::fromStdString(defaults.model_choice);
+        out.model_reason = QString::fromStdString(defaults.model_reason);
+        // A blank most points or most terms has no value to derive, so the field shows how many Estimate places.
+        if (experiment_.background_type == "line-segment") {
+            if (!options.n_points) {
+                out.derived_points = static_cast<int>(edi::estimate_background(experiment_, options).points.size());
+            }
+        } else if (!options.max_terms) {
+            out.derived_terms = static_cast<int>(edi::estimate_background(experiment_, options).terms.size());
+        }
+        QStringList warnings;
+        for (const std::string& warning : defaults.warnings) {
+            warnings.append(QString::fromStdString(warning));
+        }
+        out.note = warnings.join(QLatin1Char('\n'));
+    } catch (const std::exception& error) {
+        out.note = QString::fromUtf8(error.what());
+    }
+    return out;
+}
+
+void ExperimentViewModel::setBackgroundEstimateMode(const QString& mode) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_mode(experiment, mode.toStdString()), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateMethod(const QString& method) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_method(experiment, method.toStdString()), false));
+}
+
+// A NaN width or smoothness, or fewer than one point, is blank: derived from the data.
+void ExperimentViewModel::setBackgroundEstimateWidth(double width) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_width(experiment, qIsNaN(width) ? std::nullopt : std::optional(width)), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateSmoothness(double smoothness) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_smoothness(
+                                   experiment, qIsNaN(smoothness) ? std::nullopt : std::optional(smoothness)),
+                               false));
+}
+
+void ExperimentViewModel::setBackgroundEstimatePoints(int points) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_n_points(experiment, points < 1 ? std::nullopt : std::optional(points)), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateMaxTerms(int maxTerms) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_max_terms(experiment, maxTerms < 1 ? std::nullopt : std::optional(maxTerms)),
+        false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateTolerance(double tolerance) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_tolerance(
+                                   experiment, qIsNaN(tolerance) ? std::nullopt : std::optional(tolerance)),
+                               false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateUseModel(const QString& useModel) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_use_model(experiment, useModel.toStdString()), false));
+}
+
 void ExperimentViewModel::setBackgroundType(const QString& token) {
     if (token == background_type_) {
         return;
@@ -229,6 +334,33 @@ void ExperimentViewModel::setLastError(const QString& error) {
     }
 }
 
+void ExperimentViewModel::syncEstimate() {
+    // Every value is stored before any signal, so a handler reads the new settings throughout.
+    const EstimateSettings before = std::exchange(estimate_, read_estimate_settings());
+    const auto notify = [this](bool changed, void (ExperimentViewModel::*signal)()) {
+        if (changed) {
+            emit(this->*signal)();
+        }
+    };
+    const auto moved = [](double a, double b) { return !(qIsNaN(a) && qIsNaN(b)) && a != b; };
+    notify(estimate_.mode != before.mode, &ExperimentViewModel::backgroundEstimateModeChanged);
+    notify(estimate_.method != before.method, &ExperimentViewModel::backgroundEstimateMethodChanged);
+    notify(moved(estimate_.width, before.width), &ExperimentViewModel::backgroundEstimateWidthChanged);
+    notify(moved(estimate_.smoothness, before.smoothness), &ExperimentViewModel::backgroundEstimateSmoothnessChanged);
+    notify(estimate_.points != before.points, &ExperimentViewModel::backgroundEstimatePointsChanged);
+    notify(moved(estimate_.tolerance, before.tolerance), &ExperimentViewModel::backgroundEstimateToleranceChanged);
+    notify(estimate_.model_choice != before.model_choice, &ExperimentViewModel::estimateModelChoiceChanged);
+    notify(estimate_.model_reason != before.model_reason, &ExperimentViewModel::estimateModelReasonChanged);
+    notify(estimate_.use_model != before.use_model, &ExperimentViewModel::backgroundEstimateUseModelChanged);
+    notify(estimate_.derived_method != before.derived_method, &ExperimentViewModel::estimateMethodChanged);
+    notify(moved(estimate_.derived_width, before.derived_width), &ExperimentViewModel::estimateWidthChanged);
+    notify(moved(estimate_.derived_smoothness, before.derived_smoothness), &ExperimentViewModel::estimateSmoothnessChanged);
+    notify(estimate_.derived_points != before.derived_points, &ExperimentViewModel::estimatePointsChanged);
+    notify(estimate_.max_terms != before.max_terms, &ExperimentViewModel::backgroundEstimateMaxTermsChanged);
+    notify(estimate_.derived_terms != before.derived_terms, &ExperimentViewModel::estimateTermsChanged);
+    notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
+}
+
 void ExperimentViewModel::sync() {
     const auto update = [this](auto& member, const auto& value, void (ExperimentViewModel::*signal)()) {
         if (member != value) {
@@ -256,6 +388,7 @@ void ExperimentViewModel::sync() {
     update_constant(background_x_min_, experiment_.background_x_min, &ExperimentViewModel::backgroundXMinChanged);
     update_constant(background_x_max_, experiment_.background_x_max, &ExperimentViewModel::backgroundXMaxChanged);
     update(cutoff_fwhm_, experiment_.peak.cutoff_fwhm, &ExperimentViewModel::cutoffFwhmChanged);
+    syncEstimate();
     // The one link's id and scale; empty for a bank of several phases, whose rows the Linked structures
     // table shows.
     const bool one_link = experiment_.linked_structures.size() == 1;
@@ -283,6 +416,8 @@ void ExperimentViewModel::sync() {
         family->sync();
     }
     absorption_->sync();
+    extinction_->sync();
+    single_crystal_reflections_->sync();
     background_->sync();
     background_terms_->sync();
     excluded_regions_->sync();
@@ -303,6 +438,7 @@ std::size_t ExperimentViewModel::place() const {
 }
 
 void ExperimentViewModel::capturePattern() {
+    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

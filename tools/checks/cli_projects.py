@@ -11,7 +11,7 @@ does not go into CI) stays executing but runs only when asked for explicitly —
 ``--offline`` runs every offline project, ``--project <id>`` any executing one. ``--project``
 otherwise narrows the run for diagnosis.
 
-Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a disposable copy
+Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a disposable copy
 (the project tree is never written) with ``--report machine --verbosity full``:
 
 - a top-level ``quantities`` block — the default invocation;
@@ -19,12 +19,14 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a
   names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
   copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); an unknown
   descent fails;
-- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay).
+- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
+- a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``. Every non-null ``tol_abs``/``tol_rel`` bound must hold; the record must say
-``status=done``. Every deviation is reported, never only the first, and any deviation is red.
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
+non-null ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
+deviation is reported, never only the first, and any deviation is red.
 
 ``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
 check reads a project's settings through edi's own loader this way, never by scanning text.
@@ -53,8 +55,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CLI_DIR = Path('docs') / 'user' / 'cli'
 REGISTRY = CLI_DIR / 'projects.yml'
-# <technique>_<sample>[-<instrument>]_<variant>, three kebab-case parts (owner, 2026-09-24).
-PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}')
+# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only
+# when it tells the user something, such as simulation or scan.
+PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}')
 RESULTS_KEY = re.compile(r'results\[(?P<key>[^\]]+)\]\.(?P<column>.+)')
 FIT_TIMEOUT_S = 900
 
@@ -71,7 +74,8 @@ _NUMBER = re.compile(r'(?P<value>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<e
 def registry(root: Path) -> list[dict]:
     """The registered projects, fail-closed: ``[{'id': str, 'executing': bool}]``.
 
-    An optional boolean ``offline`` is only meaningful on an executing project.
+    An optional boolean ``offline`` is only meaningful on an executing project; an optional boolean
+    ``user-facing`` puts the project in the app's example list.
     """
     path = root / REGISTRY
     data = yaml.safe_load(path.read_text(encoding='utf-8'))
@@ -82,15 +86,19 @@ def registry(root: Path) -> list[dict]:
         raise ValueError(f'{path}: projects must be a non-empty list')
     seen: set[str] = set()
     for row in projects:
-        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline'}:
-            raise ValueError(f'{path}: each project is {{id, executing[, offline]}}, got {row!r}')
+        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline', 'user-facing'}:
+            raise ValueError(
+                f'{path}: each project is {{id, executing[, offline][, user-facing]}}, got {row!r}'
+            )
         pid = row.get('id')
         if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
-            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>_<variant>')
+            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>[_<variant>]')
         if not isinstance(row.get('executing'), bool):
             raise TypeError(f'{path}: {pid}: executing must be true or false')
         if 'offline' in row and not isinstance(row['offline'], bool):
             raise TypeError(f'{path}: {pid}: offline must be true or false')
+        if 'user-facing' in row and not isinstance(row['user-facing'], bool):
+            raise TypeError(f'{path}: {pid}: user-facing must be true or false')
         if row.get('offline') and not row['executing']:
             raise ValueError(f'{path}: {pid}: offline applies only to an executing project')
         if pid in seen:
@@ -231,6 +239,9 @@ def _units(expected: dict) -> list[tuple[str, dict[str, str], dict]]:
         units.append((name, {'descent': descent}, block['quantities']))
     if 'edi' in expected:
         units.append(('edi', {}, expected['edi']['quantities']))
+    # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
+    if 'calc' in expected:
+        units.append(('calc', {}, expected['calc']['quantities']))
     if not units or not all(quantities for _, _, quantities in units):
         raise ValueError('expected.json declares no quantities to compare')
     return units
@@ -257,7 +268,13 @@ def _results_row(project: Path, key: str) -> dict[str, str]:
     path = project / 'analysis' / 'results.csv'
     with path.open(encoding='utf-8', newline='') as handle:
         rows = list(csv.DictReader(handle))
-    target = float(key)
+    target = _float_or_none(key)
+    if target is None:
+        # A scan whose files carry no diffrn.* value names its row by the data file.
+        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        if len(matches) != 1:
+            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+        return matches[0]
     matches = [
         row
         for row in rows
@@ -311,7 +328,8 @@ def run_project(root: Path, pid: str) -> list[str]:
             project = Path(scratch) / 'project'
             shutil.copytree(source / 'project', project, symlinks=True)
             declare_conditions(project, conditions)
-            argv = [sys.executable, '-m', 'edi', 'fit', str(project), '--report', 'machine']
+            command = 'calc' if label == 'calc' else 'fit'
+            argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
             argv += ['--verbosity', 'full']
             result = subprocess.run(
                 argv, capture_output=True, text=True, timeout=FIT_TIMEOUT_S, check=False
@@ -320,7 +338,7 @@ def run_project(root: Path, pid: str) -> list[str]:
                 deviations.append(f'{label}: rc={result.returncode}: {result.stderr[-400:]}')
                 continue
             record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
-            if record.get('status') != 'done':
+            if command == 'fit' and record.get('status') != 'done':
                 deviations.append(f'{label}: status={record.get("status")!r}, expected done')
             for name, spec in quantities.items():
                 try:

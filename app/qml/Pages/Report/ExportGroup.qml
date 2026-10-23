@@ -20,9 +20,14 @@ EaElements.GroupBox {
     property ReportViewModel report: null
     // The preview, whose figures the PDF shows.
     property ReportPreview preview: null
+    // Whether the group is on screen; the saved reports' states build the report, so a hidden group reads none.
+    property bool shown: true
 
     // A save asked for while the project calculates, made when the calculation ends.
     property bool savePending: false
+    // A save under way, from its start until its files are written or refused. The page keeps the report built and
+    // the preview's figures drawn meanwhile, even when another page is shown: a PDF takes those figures.
+    property bool saving: false
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
     // calculates, the report is not yet its outcome, so the save waits for it.
@@ -32,15 +37,25 @@ EaElements.GroupBox {
             group.savePending = true;
             return;
         }
+        // First, so the report is rebuilt from the calculation's outcome and the preview drawn before its figures
+        // are grabbed; a save that waited may run after its page was left.
+        group.saving = true;
         group.savePending = false;
+        const write = () => {
+            try {
+                report.saveReport(EaStyle.Fonts.fontFamily);
+            } finally {
+                group.saving = false;
+            }
+        };
         if (report.writesPdf)
             group.preview.grabFigures(figures => {
                 for (const name in figures)
                     report.setFigure(name, figures[name]);
-                report.saveReport(EaStyle.Fonts.fontFamily);
+                write();
             });
         else
-            report.saveReport(EaStyle.Fonts.fontFamily);
+            write();
     }
 
     // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.
@@ -53,7 +68,7 @@ EaElements.GroupBox {
     // file has not been saved (before the first save, or after the project is renamed). Rows of other names keep
     // their files.
     function savedRow(format) {
-        if (!group.report)
+        if (!group.report || !group.shown)
             return null;
         const name = group.report.fileStem + "." + format;
         for (const row of group.report.savedReports) {
@@ -175,7 +190,7 @@ EaElements.GroupBox {
         EaElements.SideBarButton {
             objectName: "report.save"
             wide: true
-            enabled: group.report !== null && !group.savePending && (group.report.writesHtml || group.report.writesPdf)
+            enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf)
             fontIcon: "download"
             text: qsTr("Save report")
             ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")

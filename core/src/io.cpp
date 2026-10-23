@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "edi/validation.hpp"
@@ -19,6 +20,7 @@
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
+#include "number_token.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -254,10 +256,56 @@ struct Token {
     bool quoted = false;
 };
 
+// A CIF2 list value, `[a b [c d]]`, read from its opening `[` at `index` to its matching `]` as one token: brackets
+// nest, quoted strings inside are skipped whole, and line ends and comments are white space between its values (the
+// CIF2 grammar). Only a CIF 2.0 file, whose first line is `#\#CIF_2.0`, may hold one: in CIF 1.1 `[` cannot open a
+// value. The token keeps the list's text; edi reads the categories that carry lists (crysta's per-structure
+// curves) as unmodelled.
+Token list_token(const std::string& text, std::size_t& index, bool cif2, const std::string& where) {
+    if (!cif2) {
+        fail_syntax(where, "list-without-cif2-heading",
+                    "a value opening with [ is a CIF2 list, which needs the CIF 2.0 heading #\\#CIF_2.0 on the "
+                    "file's first line");
+    }
+    const std::size_t begin = index;
+    const std::size_t size = text.size();
+    int depth = 0;
+    while (index < size) {
+        const char character = text[index];
+        if (character == '\'' || character == '"') {
+            const std::size_t close = text.find(character, index + 1);
+            if (close == std::string::npos) {
+                break;
+            }
+            index = close + 1;
+            continue;
+        }
+        if (character == '#' && (text[index - 1] == '[' || is_space(text[index - 1]))) {
+            while (index < size && text[index] != '\n') {
+                ++index;
+            }
+            continue;
+        }
+        if (character == '[') {
+            ++depth;
+        } else if (character == ']' && --depth == 0) {
+            ++index;
+            if (index < size && !is_space(text[index])) {
+                fail_syntax(where, "list-runs-into-value",
+                            "a list value runs into '" + text.substr(index, 20) + "' after its closing ]");
+            }
+            return {text.substr(begin, index - begin), false};
+        }
+        ++index;
+    }
+    fail_syntax(where, "unterminated-list", "a list value opened with [ does not close");
+}
+
 std::vector<Token> tokenize(const std::string& text, const std::string& where) {
     std::vector<Token> tokens;
     std::size_t index = 0;
     const std::size_t size = text.size();
+    const bool cif2 = text.starts_with("#\\#CIF_2.0") && (size == 10 || is_space(text[10]));
     while (index < size) {
         const char character = text[index];
         // A `;` in the first column of a line opens a CIF multi-line text field; its value runs to
@@ -309,6 +357,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
                 fail_syntax(where, "unterminated-string", "unterminated quoted string");
             }
             tokens.push_back({token, true});
+            continue;
+        }
+        if (character == '[') {
+            tokens.push_back(list_token(text, index, cif2, where));
             continue;
         }
         std::string token;  // bare token
@@ -418,30 +470,19 @@ int fractional_digits(const std::string& mantissa) {
     return digits;
 }
 
-// Parse a complete numeric token into a double, locale-independently AND portably.
-//
-// An istringstream imbued with the classic ("C") locale always reads a '.' decimal separator
-// whatever the process locale is, so the same project bytes parse identically under, say, a
-// comma-decimal de_DE — the bug the previous std::stod implementation carried, since strtod follows
-// LC_NUMERIC and would have rejected `449.2719` there. Requiring eof() means the WHOLE token was
-// consumed, so trailing characters (including a `(su)` suffix, which is a model-parameter grammar and
-// never valid in a data column) fail rather than silently truncating.
-//
-// Deliberately NOT std::from_chars: libc++ (Apple/macOS AppleClang) `= delete`s the floating-point
-// overload, so that call does not compile there — it broke crysta's own macOS CI (PR #21), and edi
-// ships osx-arm64/osx-64. This mirrors crysta's `parse_double` (src/core/edi.cpp) device-for-device,
-// which also means the accepted grammar (leading '+', exponents, `.5`, `1.`) is identical by
-// construction rather than by argument.
+// Parse a complete numeric token into a double, the same value on every platform and in every locale
+// (number_token.hpp, the engine loader's rule): the whole token is read, so trailing characters
+// (including a `(su)` suffix, which is a model-parameter grammar and never valid in a data column) fail
+// rather than silently truncating. A subnormal value reads as itself; a nonzero value below the
+// smallest double is refused, as is one beyond the largest.
 double to_double(const std::string& text, const std::string& where) {
     double value = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    if (stream.fail() || !stream.eof()) {
-        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
+    const detail::NumberToken read = detail::read_number(text, value);
+    if (read == detail::NumberToken::underflow) {
+        fail_domain(where, "number-underflow", "the value of '" + text + "' is below the smallest double");
     }
-    if (!std::isfinite(value)) {
-        fail_domain(where, "non-finite-number", "non-finite number '" + text + "'");
+    if (read != detail::NumberToken::ok) {
+        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
     }
     return value;
 }
@@ -605,6 +646,7 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
 // reject nothing across every `.edi` in the acceptance vehicle and in edi's fixtures.
 const std::set<std::string>& covered_categories() {
     static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso", "background",
+                                                  "extinction",
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
                                                   "fit_parameter", "peak", "preferred_orientation",
@@ -616,6 +658,8 @@ const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
         // _absorption
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
+        // _extinction (a single crystal's)
+        "_extinction.type", "_extinction.model", "_extinction.radius", "_extinction.mosaicity",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -649,6 +693,12 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.setup_wavelength_2_to_1_ratio",
         // _data_source (the plain-data file the measured data was read from)
         "_data_source.file_name",
+        // _background_estimate (the automatic background estimate's settings, ADR-0040)
+        "_background_estimate.in_peaks", "_background_estimate.inputs_digest", "_background_estimate.max_terms",
+        "_background_estimate.method", "_background_estimate.mode", "_background_estimate.n_points",
+        "_background_estimate.points_digest",
+        "_background_estimate.smoothness", "_background_estimate.tolerance", "_background_estimate.use_model",
+        "_background_estimate.width",
         // _linked_structure
         "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
         // The derived Hill-Howard weight fraction crysta's writer adds: never read back.
@@ -1249,9 +1299,13 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
                                    : "chebyshev background cannot declare the polynomial "
                                      "_background.origin");
         }
+        // An automatic estimate derives an absent origin or domain end from the data on its first
+        // calculation (ADR-0040), so only a manual background must declare them.
+        const std::string* estimate_mode = block.find("_background_estimate.mode");
+        const bool derived = estimate_mode != nullptr && *estimate_mode == "auto";
         const char* const required[] = {"_background.origin", "_background.x_min", "_background.x_max"};
         for (const char* tag : polynomial ? std::span(required, 1) : std::span(required + 1, 2)) {
-            if (block.find(tag) == nullptr) {
+            if (!derived && block.find(tag) == nullptr) {
                 fail_schema(where, "missing-background-constant",
                             *background_type + " background requires " + tag);
             }
@@ -1351,7 +1405,32 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     axis_values.reserve(loop->rows.size());
     intensity_meas.reserve(loop->rows.size());
     intensity_meas_su.reserve(loop->rows.size());
+    // An excluded row has no calculated or background value and writes `.` there, with its real
+    // d-spacing (ADR-0044); an older file's `0.` would read as a real zero.
+    const int status_column = loop->column("_data.calc_status");
+    std::size_t row_number = 0;
     for (const std::vector<std::string>& row : loop->rows) {
+        ++row_number;
+        if (status_column >= 0 && row[static_cast<std::size_t>(status_column)] == "excl") {
+            for (const char* tag : {"_data.intensity_calc", "_data.intensity_bkg"}) {
+                const int column = loop->column(tag);
+                if (column >= 0 && row[static_cast<std::size_t>(column)] != ".") {
+                    fail_schema(where, "excluded-row-value",
+                                "_data row " + std::to_string(row_number) + " is excluded but has " + tag +
+                                    " '" + row[static_cast<std::size_t>(column)] +
+                                    "'; an excluded row writes '.' there");
+                }
+            }
+            const int d_column = loop->column("_data.d_spacing");
+            if (d_column >= 0) {
+                const std::string& d = row[static_cast<std::size_t>(d_column)];
+                if (d != "." && !(to_double(d, where) > 0.0)) {
+                    fail_schema(where, "excluded-row-value",
+                                "_data row " + std::to_string(row_number) + " is excluded but has _data.d_spacing '" +
+                                    d + "'; an excluded row writes its d-spacing there");
+                }
+            }
+        }
         const double sigma = to_double(loop_cell(*loop, row, kDataSigma, where), where);
         // A non-positive sigma is an infinite (or negative) weight: it would poison the fit silently
         // rather than fail, so it is rejected at the boundary like any other unusable measurement.
@@ -1373,9 +1452,246 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
+// ADR-0040: the `_background_estimate` settings. A blank (absent, `.` or `?`) item is the default; any other
+// value is checked as the Python setters check it.
+void read_background_estimate(const Block& block, ExperimentBase& experiment, const std::string& where) {
+    const auto item = [&block](const char* tag) -> std::optional<std::string> {
+        const std::string* value = block.find(tag);
+        if (value == nullptr || *value == "." || *value == "?") {
+            return std::nullopt;
+        }
+        return *value;
+    };
+    const auto refuse = [&where](const char* tag, const std::string& value, const char* need) {
+        throw IoError(std::string(tag) + " is '" + value + "' (need " + need + "): " + where);
+    };
+    const auto positive = [&](const char* tag) -> std::optional<double> {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return std::nullopt;
+        }
+        char* end = nullptr;
+        const double number = std::strtod(value->c_str(), &end);
+        if (end == value->c_str() || *end != '\0' || !(number > 0.0) || !std::isfinite(number)) {
+            refuse(tag, *value, "a positive number");
+        }
+        return number;
+    };
+    if (const std::optional<std::string> mode = item("_background_estimate.mode")) {
+        if (*mode != "manual" && *mode != "auto") {
+            refuse("_background_estimate.mode", *mode, "manual or auto");
+        }
+        experiment.background_estimate_mode = *mode;
+    }
+    if (const std::optional<std::string> method = item("_background_estimate.method")) {
+        const std::vector<std::string> methods = background_estimator_methods();
+        if (std::find(methods.begin(), methods.end(), *method) == methods.end()) {
+            refuse("_background_estimate.method", *method, "auto, snip, arpls or fabc");
+        }
+        experiment.background_estimate_method = *method;
+    }
+    // Then the setters' checks: finite, and a width every window computed from it can hold.
+    const auto setting = [&](const char* tag, const auto& set) {
+        try {
+            set();
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(tag) + ": " + error.what() + ": " + where);
+        }
+    };
+    const std::optional<double> width = positive("_background_estimate.width");
+    setting("_background_estimate.width", [&] { set_background_estimate_width(experiment, width); });
+    const std::optional<double> smoothness = positive("_background_estimate.smoothness");
+    setting("_background_estimate.smoothness",
+            [&] { set_background_estimate_smoothness(experiment, smoothness); });
+    const std::optional<double> tolerance = positive("_background_estimate.tolerance");
+    setting("_background_estimate.tolerance", [&] { set_background_estimate_tolerance(experiment, tolerance); });
+    if (const std::optional<std::string> in_peaks = item("_background_estimate.in_peaks")) {
+        if (*in_peaks != "move" && *in_peaks != "drop") {
+            refuse("_background_estimate.in_peaks", *in_peaks, "move or drop");
+        }
+        experiment.background_estimate_in_peaks = *in_peaks;
+    }
+    if (const std::optional<std::string> n_points = item("_background_estimate.n_points")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(n_points->c_str(), &end, 10);
+        if (end == n_points->c_str() || *end != '\0' || count < 2 || count > std::numeric_limits<int>::max()) {
+            refuse("_background_estimate.n_points", *n_points, "an integer of at least 2");
+        }
+        experiment.background_estimate_n_points = static_cast<int>(count);
+    }
+    if (const std::optional<std::string> max_terms = item("_background_estimate.max_terms")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(max_terms->c_str(), &end, 10);
+        if (end == max_terms->c_str() || *end != '\0' || count < 1 || count > 30) {
+            refuse("_background_estimate.max_terms", *max_terms, "an integer from 1 to 30");
+        }
+        experiment.background_estimate_max_terms = static_cast<int>(count);
+    }
+    // auto, subtract or ignore; a file saved when the item was a boolean reads true as subtract and false as ignore.
+    if (const std::optional<std::string> use_model = item("_background_estimate.use_model")) {
+        const std::string choice = *use_model == "true" ? "subtract" : *use_model == "false" ? "ignore" : *use_model;
+        if (choice != "auto" && choice != "subtract" && choice != "ignore") {
+            refuse("_background_estimate.use_model", *use_model, "auto, subtract or ignore");
+        }
+        experiment.background_estimate_use_model = choice;
+    }
+    // What the points came from and were; settle_loaded_background_estimate reads them once the points are loaded.
+    const auto digest = [&](const char* tag) -> std::uint64_t {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return 0;
+        }
+        try {
+            return parse_background_digest(*value);
+        } catch (const std::invalid_argument&) {
+            refuse(tag, *value, "16 lowercase hex digits");
+        }
+        return 0;
+    };
+    experiment.background_estimate_inputs = digest("_background_estimate.inputs_digest");
+    experiment.background_estimate_points = digest("_background_estimate.points_digest");
+}
+
+// A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
+// the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
+BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
+    BraggPdExperiment experiment;
+    experiment.name = block.name;
+    experiment.experiment_type.sample_form = SampleFormEnum::SINGLE_CRYSTAL;
+    const std::string* beam = block.find("_experiment_type.beam_mode");
+    if (beam == nullptr || (*beam != kBeamModeTof && *beam != kBeamModeCwl)) {
+        fail_schema(where, "unknown-beam-mode",
+                    "a single crystal declares _experiment_type.beam_mode 'constant wavelength' or "
+                    "'time-of-flight'");
+    }
+    const bool cw = *beam == kBeamModeCwl;
+    experiment.experiment_type.beam_mode =
+        cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
+        if (*probe != "neutron") {
+            fail_schema(where, "unknown-radiation-probe",
+                        "a single crystal is a neutron experiment; _experiment_type.radiation_probe is '" +
+                            *probe + "'");
+        }
+        experiment.experiment_type.radiation_probe = RadiationProbeEnum::NEUTRON;
+    }
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type")) {
+        if (*scattering != "bragg") {
+            fail_schema(where, "unknown-scattering-type",
+                        "a single crystal is a Bragg experiment; _experiment_type.scattering_type is '" +
+                            *scattering + "'");
+        }
+        experiment.experiment_type.scattering_type = ScatteringTypeEnum::BRAGG;
+    }
+    if (const std::string* source = block.find("_scattering_source.neutron_scattering_length")) {
+        experiment.neutron_scattering_length = *source;
+    }
+    if (cw) {
+        experiment.instrument.setup_wavelength =
+            require_spec_parameter(block, spec::instrument_wavelength, where);
+        if (const std::string domain =
+                detail::wavelength_domain_message(experiment.instrument.setup_wavelength->value);
+            !domain.empty()) {
+            fail_domain(where, "wavelength-domain", domain);
+        }
+    }
+    experiment.extinction.type = "becker-coppens";
+    if (const std::string* type = block.find("_extinction.type")) {
+        if (*type != "becker-coppens") {
+            fail_schema(where, "unknown-extinction-type",
+                        "_extinction.type '" + *type + "' is not a known type (expected 'becker-coppens')");
+        }
+    }
+    experiment.extinction.model = "gauss";
+    if (const std::string* model = block.find("_extinction.model")) {
+        if (*model != "gauss" && *model != "lorentz") {
+            fail_schema(where, "unknown-extinction-model",
+                        "_extinction.model '" + *model + "' is not a known model (expected 'gauss' or 'lorentz')");
+        }
+        experiment.extinction.model = *model;
+    }
+    for (const auto& [field, specification] :
+         {std::pair{&experiment.extinction.radius, &spec::extinction_radius},
+          std::pair{&experiment.extinction.mosaicity, &spec::extinction_mosaicity}}) {
+        std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
+        if (!found) {
+            found = Parameter{};
+            found->value = 1.0;
+            found->spec = specification;
+        }
+        if (!(found->value.get() >= 0.0) || !std::isfinite(found->value.get())) {
+            fail_domain(where, "extinction-domain",
+                        std::string(specification->edi_names[0]) + " must be finite and not negative");
+        }
+        *field = *found;
+    }
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row :
+         linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        links.push_back(std::move(link));
+    }
+    try {
+        experiment.linked_structures.assign(std::move(links));
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "duplicate-id", error.what());
+    }
+    // A single crystal made in the app holds no reflections until its data are loaded: until then it is a
+    // data-less experiment, as a powder one with a declared range is.
+    const Loop* refln = block.loop_with("_refln.index_h");
+    ReflnDataBase rows;
+    if (refln == nullptr) {
+        experiment.reflections = std::move(rows);
+        experiment.calculation_only = true;
+        return experiment;
+    }
+    const auto index = [&](const std::vector<std::string>& row, const char* tag) {
+        const std::string& text = loop_cell(*refln, row, tag, where);
+        const double value = to_double(text, where);
+        if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+            fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+        }
+        return static_cast<std::int32_t>(value);
+    };
+    std::vector<std::int32_t> h;
+    std::vector<std::int32_t> k;
+    std::vector<std::int32_t> l;
+    std::vector<double> meas;
+    std::vector<double> su;
+    std::vector<double> wavelength;
+    for (const std::vector<std::string>& row : refln->rows) {
+        h.push_back(index(row, "_refln.index_h"));
+        k.push_back(index(row, "_refln.index_k"));
+        l.push_back(index(row, "_refln.index_l"));
+        meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
+        su.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
+        if (!cw) {
+            wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
+        }
+    }
+    rows.index_h = std::move(h);
+    rows.index_k = std::move(k);
+    rows.index_l = std::move(l);
+    rows.intensity_meas = std::move(meas);
+    rows.intensity_meas_su = std::move(su);
+    rows.wavelength = std::move(wavelength);
+    experiment.reflections = std::move(rows);
+    return experiment;
+}
+
 BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
+    if (const std::string* form = block.find("_experiment_type.sample_form");
+        form != nullptr && *form == "single crystal") {
+        return single_crystal_from_block(block, where);
+    }
     BraggPdExperiment experiment;
     experiment.name = block.name;
     // Resolve the experiment kind from the `_peak.type` family cross-validated against
@@ -1450,6 +1766,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
     if (const std::string* file = block.find("_data_source.file_name")) {
         experiment.data_file = *file;
     }
+    read_background_estimate(block, experiment, where);
     validate_experiment_selectors(block, resolved.peak_type, resolved.mode, where);
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);
 
@@ -1880,6 +2197,11 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                     "_background.x_min must be below _background.x_max");
     }
     if (const Loop* terms = block.loop_with("_background.coef"); terms != nullptr) {
+        // Every term row carries its id, as every loop row does; the id names the coefficient.
+        if (terms->column("_background.id") < 0) {
+            fail_domain(where, "background-term-id-missing",
+                        "the background term loop declares no _background.id: an id is required on every term row");
+        }
         std::set<int> orders;
         for (const auto& row : terms->rows) {
             PolynomialTerm term;
@@ -1902,9 +2224,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             read_into(term.coef,
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
-            // The term's id names its coefficient; a file without ids gives each its ordinal, as crysta's reader does.
-            term.id = terms->column("_background.id") >= 0 ? loop_cell(*terms, row, "_background.id", where)
-                                                            : std::to_string(experiment.background_terms.size() + 1);
+            term.id = loop_cell(*terms, row, "_background.id", where);
             experiment.background_terms.push_back(std::move(term));
         }
     }
@@ -1978,6 +2298,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             experiment.calculation_only = true;
         }
     }
+    settle_loaded_background_estimate(experiment);  // ADR-0040: once the points and data are loaded
     return experiment;
 }
 
@@ -2012,13 +2333,11 @@ std::string format_fixed(double value, int ndec) {
     return std::string(buffer);
 }
 
-// Parse a fixed-point string back to a double, locale-independently (the round-trip probe below).
+// Parse a fixed-point string back to a double as the loader reads it (the round-trip probe below), so a
+// subnormal value round-trips at the same decimals on every platform.
 double parse_fixed(const std::string& text) {
     double out = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> out;
-    return (stream.fail() || !stream.eof()) ? std::numeric_limits<double>::quiet_NaN() : out;
+    return detail::read_number(text, out) == detail::NumberToken::ok ? out : std::numeric_limits<double>::quiet_NaN();
 }
 
 // Minimal number of decimals for which `format_fixed(value, ndec)` round-trips `value` exactly —
@@ -2225,6 +2544,13 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
+        }
+        // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
+        if (experiment.extinction.radius) {
+            add(prefix + "radius", prefix + "extinction.radius", &*experiment.extinction.radius);
+        }
+        if (experiment.extinction.mosaicity) {
+            add(prefix + "mosaicity", prefix + "extinction.mosaicity", &*experiment.extinction.mosaicity);
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
@@ -2949,6 +3275,30 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    if (type.sample_form == "single crystal") {
+        // A single crystal: its wavelength (constant wavelength), the Becker-Coppens extinction off (radius 0)
+        // and no reflections until its data are loaded.
+        if (type.radiation_probe != "neutron") {
+            throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
+        }
+        std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+        text += "_experiment_type.sample_form \"single crystal\"\n";
+        text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+        text += "_experiment_type.radiation_probe \"neutron\"\n";
+        text += "_experiment_type.scattering_type \"bragg\"\n\n";
+        if (constant_wavelength) {
+            text += "_instrument.setup_wavelength 1.\n\n";
+        }
+        text += "_extinction.type becker-coppens\n_extinction.model gauss\n_extinction.radius 0\n"
+                "_extinction.mosaicity 0\n";
+        if (!structure_ids.empty()) {
+            text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+            for (const std::string& structure_id : structure_ids) {
+                text += structure_id + " 1.\n";
+            }
+        }
+        return experiment_from_edi_text(text);
+    }
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
     text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
@@ -3038,17 +3388,13 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.sample_form") == "single crystal") {
-        throw IoError(path + ": _experiment_type.sample_form 'single crystal' is not implemented - "
-                             "edi experiments are powder + bragg");
-    }
     if (*block.find("_experiment_type.scattering_type") == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
     BraggPdExperiment experiment = experiment_from_block(block, path);
     // load_project's rule for every experiment of a project: measured data or a calculation grid.
-    if (!experiment.data.has_value()) {
+    if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
         throw IoError(path + ": experiment '" + experiment.name +
                       "' declares neither an embedded _data loop nor a _data_range grid - an "
                       "experiment must say what it computes over");
@@ -3263,7 +3609,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
@@ -4143,6 +4489,9 @@ UndoFitOutcome undo_fit(Project& project) {
         // Measured before the fix (LBCO/HRPT, 8 parameters restored): the stored pattern
         // disagreed with a fresh calculate by 2.679e+03 counts. Inside the was_no_op guard and
         // last, exactly as the fit tail: an undo that restores NOTHING still changes nothing.
+        for (const auto& experiment : project.experiments) {
+            record_fitted_background(*experiment);  // the restored points are the background again
+        }
         project.refresh_calculated_pattern();
     }
     return outcome;
@@ -4189,6 +4538,7 @@ void copy_fit_result(Project& to, const Project& from) {
     to.fit_result = from.fit_result;
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
+        record_fitted_background(*to.experiments[index]);  // the fitted points, written before (ADR-0040)
     }
 }
 
@@ -4227,10 +4577,9 @@ void clear_fit_share(ExperimentBase& experiment) {
 
 double correlation_value(const FitParameterCorrelation& row) {
     double value = 0.0;
-    std::istringstream stream(row.correlation.value());
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
+    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
+               ? value
+               : std::numeric_limits<double>::quiet_NaN();
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
@@ -4358,6 +4707,19 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
             changed = true;
         }
     }
+    // An auto background's record of its points follows the rounded values the file holds, so the saved points are
+    // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            if (held->name.value() == experiment->name.value() &&
+                (experiment->background_estimate_inputs != held->background_estimate_inputs ||
+                 experiment->background_estimate_points != held->background_estimate_points)) {
+                experiment->background_estimate_inputs = held->background_estimate_inputs;
+                experiment->background_estimate_points = held->background_estimate_points;
+                changed = true;
+            }
+        }
+    }
     // The correlation rows a save wrote, by their two parameters and file, take the saved coefficients. A scan's
     // template then reads its pairs from those rows, as a reopened project does, not from its fit's table.
     using RowKey = std::tuple<std::string, std::string, std::string>;
@@ -4368,15 +4730,23 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     for (const auto& row : saved.fit_result.correlations) {
         written.emplace(key_of(*row), row->correlation.value());
     }
-    auto& rows = project.fit_result.correlations;
-    for (std::size_t i = 0; i < rows.size(); ++i) {
-        const auto found = written.find(key_of(*rows[i]));
-        if (found != written.end() && rows[i]->correlation.value() != found->second) {
-            auto row = std::make_shared<FitParameterCorrelation>(*rows[i]);
-            row->correlation = found->second;
-            rows.replace_at(i, std::move(row));
-            changed = true;
+    // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
+    // correlations of a few hundred free parameters.
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows(project.fit_result.correlations.begin(),
+                                                            project.fit_result.correlations.end());
+    bool rows_changed = false;
+    for (auto& row : rows) {
+        const auto found = written.find(key_of(*row));
+        if (found != written.end() && row->correlation.value() != found->second) {
+            auto adopted = std::make_shared<FitParameterCorrelation>(*row);
+            adopted->correlation = found->second;
+            row = std::move(adopted);
+            rows_changed = true;
         }
+    }
+    if (rows_changed) {
+        project.fit_result.correlations.assign(std::move(rows));
+        changed = true;
     }
     for (const auto& [key, text] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));

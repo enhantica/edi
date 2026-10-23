@@ -14,6 +14,7 @@ import edi
 
 from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -247,10 +248,18 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
         actual['analysis/analysis.edi'] = historical_analysis(
             source, actual['analysis/analysis.edi']
         )
-        actual = {name: without_calculator(name, data) for name, data in actual.items()}
-        assert actual == _tree_bytes(golden), (
+        actual = {
+            name: historical_single_fraction(name, without_calculator(name, data))
+            for name, data in actual.items()
+        }
+        from tests.fixtures.report_units.iucr_reference import rounded_record  # noqa: PLC0415
+
+        assert actual == {
+            name: rounded_record(data) for name, data in _tree_bytes(golden).items()
+        }, (
             'adding project identity must leave every pre-existing canonical TOF golden path '
-            'and byte unchanged apart from the checked  calculator block'
+            'and byte unchanged apart from the checked calculator block '
+            'and independent IUCr tokens and the checked unity fraction column'
         )
         normalized = tree_bytes_with_normalized_project_metadata(
             destination, 'created', 'last_modified'
@@ -262,7 +271,8 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             r'_metadata\.description +\?\n'
             r'_metadata\.created +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.last_modified +<NORMALIZED-WALL-CLOCK>\n'
-            r'_metadata\.timestamp +\?\n',
+            r'_metadata\.timestamp +\?\n'
+            r'_su_format\.rule iucr_19\n',
             normalized,
         ), (
             'the new TOF golden artifact must be exactly the schema-3 default identity record; '

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <atomic>
 #include <memory>
@@ -327,6 +328,11 @@ struct wraps_written : std::false_type {};
 template <template <typename...> class Wrapper, typename... A>
 struct wraps_written<Wrapper<A...>>
     : std::bool_constant<(is_written<std::remove_cvref_t<A>>::value || ...)> {};
+// A class iterator never compares with a field's value. Ruling it out first keeps the comparisons
+// with other types from being considered for iterators over the field's own type, where checking
+// their constraint would need that same constraint (libc++ 23's optional and destroy).
+template <typename U>
+concept class_iterator = std::is_class_v<U> && requires { typename U::iterator_category; };
 
 // A model field that records its own writes. Every assignment — an equal value, a
 // self-assignment and a whole-object assignment included — gives the field a new write identity
@@ -655,9 +661,11 @@ class Written {
     }
 
     // Comparison with whatever the value compares with. A type that compares through a template
-    // (an optional, a container) would not find the conversion alone.
+    // (an optional, a container) would not find the conversion alone. Iterators are left out first:
+    // an iterator over values that mention a cell finds these operators too, and libc++ 23 then
+    // checks the requirement below in terms of itself.
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t == u; }
     friend bool operator==(const Written& a, const U& b) {
         return a.state_.v() == b;
@@ -695,7 +703,7 @@ class Written {
         return a.state_.v() <=> b.state_.v();
     }
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t <=> u; }
     friend auto operator<=>(const Written& a, const U& b) {
         return a.state_.v() <=> b;
@@ -3299,6 +3307,11 @@ struct PdDataBase {
     ComputedColumn<double> intensity_calc;
     ComputedColumn<double> intensity_bkg;
     ComputedColumn<std::string> calc_status;
+    // crysta's structure curves (its ADR-0096): each linked structure's calculated curve above the background,
+    // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
+    // calculation ran, and when no structure is linked.
+    ComputedColumn<double> component_intensities_net;
+    ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
     // above; never saved, and not a Python member.
@@ -3335,6 +3348,8 @@ struct PdDataBase {
         intensity_calc.clear();
         intensity_bkg.clear();
         calc_status.clear();
+        component_intensities_net.clear();
+        component_order.clear();
         residual.clear();
     }
 
@@ -3475,6 +3490,43 @@ struct AbsorptionBase {
     detail::Epoch epoch;
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
+};
+
+// A single crystal's extinction (diffraction-lib `extinction`): the type (`becker-coppens`), the
+// mosaic model (`gauss` or `lorentz`), the crystal's radius and its mosaicity. Engaged exactly on a
+// single crystal.
+struct ExtinctionBase {
+    std::optional<std::string> type;
+    std::optional<std::string> model;
+    OptionalParameter radius;
+    OptionalParameter mosaicity;
+
+    std::vector<Parameter*> parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+    detail::CategoryRow table_row;
+};
+
+// A single crystal's reflections (diffraction-lib `ReflnDataBase`, the `refln` category of a single
+// crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of
+// flight (else empty), and crysta's calculated columns beside them, empty until a calculation.
+struct ReflnDataBase {
+    detail::Written<std::vector<std::int32_t>> index_h;
+    detail::Written<std::vector<std::int32_t>> index_k;
+    detail::Written<std::vector<std::int32_t>> index_l;
+    detail::Written<std::vector<double>> intensity_meas;
+    detail::Written<std::vector<double>> intensity_meas_su;
+    detail::Written<std::vector<double>> wavelength;
+    ComputedColumn<double> d_spacing;
+    ComputedColumn<double> sin_theta_over_lambda;
+    ComputedColumn<double> intensity_calc;
+
+    std::size_t size() const noexcept { return intensity_meas.size(); }
+    void clear_computed() noexcept {
+        d_spacing.clear();
+        sin_theta_over_lambda.clear();
+        intensity_calc.clear();
+    }
 };
 
 // The largest absolute Miller index a texture axis component may take — the loader's bound, held at
@@ -3748,10 +3800,33 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<CarriedLoop> carried_reflections;
     // The reflections crysta computed, beside the `data` node's computed columns.
     PowderReflnDataBase refln;
+    // A single crystal's measured reflections and their calculated F² (engaged exactly on a single
+    // crystal, which has no `data` pattern), and its extinction.
+    std::optional<ReflnDataBase> reflections;
+    ExtinctionBase extinction;
     double dataset_weight = 1.0;  // joint-fit weight from analysis.edi
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
+    // The automatic background estimate's settings (`_background_estimate`, ADR-0040), each empty until
+    // declared: the mode (`manual` or `auto`; empty is manual), the method (`auto`, `arpls`, `snip` or
+    // `fabc`; empty is auto), the width, smoothness and point count (empty is derived from the data), the
+    // tolerance in noise units (empty is 2), the rule for points on peaks (`move` or `drop`; empty is move) and
+    // what to do with the calculated peaks (`auto`, `subtract` or `ignore`; empty is auto).
+    std::optional<std::string> background_estimate_mode;
+    std::optional<std::string> background_estimate_method;
+    std::optional<double> background_estimate_width;
+    std::optional<double> background_estimate_smoothness;
+    std::optional<int> background_estimate_n_points;
+    std::optional<double> background_estimate_tolerance;
+    std::optional<std::string> background_estimate_in_peaks;
+    std::optional<std::string> background_estimate_use_model;
+    std::optional<int> background_estimate_max_terms;
+    // In auto mode, a digest of what the points came from (the included measured pattern and the settings; 1 when
+    // the next calculation estimates) and one of the points as auto was chosen, loaded or last estimated; 0 in
+    // manual mode. Saved as `_background_estimate.inputs_digest` and `.points_digest` (ADR-0040).
+    std::uint64_t background_estimate_inputs = 0;
+    std::uint64_t background_estimate_points = 0;
     // This bank's share of the project's last fit (`_fit_result_bank`, beside the project's `_fit_result`;
     // crysta's ExperimentBase carries the same): the points it fitted, its profile, weighted-profile and
     // expected R factors, the two with the background taken out (fractions) and its raw chi-square. Absent
@@ -3882,8 +3957,8 @@ struct KeyTraits<BraggPdExperiment> {
 };
 
 // An experiment is a row of the project's `experiments`; its parameter categories are the peak, the
-// instrument and the absorption (its linked-structure, background and texture rows are rows of their
-// own collections).
+// instrument, the absorption and the extinction (its linked-structure, background and texture rows are
+// rows of their own collections).
 template <>
 struct RowTraits<BraggPdExperiment> {
     static void link(BraggPdExperiment& experiment,
@@ -3891,11 +3966,13 @@ struct RowTraits<BraggPdExperiment> {
         experiment.peak.row.link(record);
         experiment.instrument.row.link(record);
         experiment.absorption.row.link(record);
+        experiment.extinction.row.link(record);
     }
     static void unlink(BraggPdExperiment& experiment) noexcept {
         experiment.peak.row.unlink();
         experiment.instrument.row.unlink();
         experiment.absorption.row.unlink();
+        experiment.extinction.row.unlink();
     }
     static const detail::RowLink* primary(const BraggPdExperiment& experiment) noexcept {
         return &experiment.peak.row;
@@ -4226,8 +4303,9 @@ struct WeightFraction {
     std::optional<double> uncertainty;
 };
 /// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
-/// project's structures, scales and last fit's stored correlations. Absent when the link belongs to
-/// no project, takes no part, or a structure's cell mass is unknown.
+/// project's structures, scales and last fit's stored correlations; exactly 1 with no uncertainty for
+/// the only enabled structure. Otherwise absent when the link belongs to no project, takes no part,
+/// or a structure's cell mass is unknown.
 std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
@@ -5150,6 +5228,16 @@ struct AbsorptionCategory {
 };
 static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, AbsorptionCategory::items));
 
+// A single crystal's Becker-Coppens extinction.
+struct ExtinctionCategory {
+    using Owner = ExtinctionBase;
+    static constexpr const char* name = "_extinction";
+    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::model, &ExtinctionBase::radius, &ExtinctionBase::mosaicity};
+    static constexpr std::array items{"type", "model", "radius", "mosaicity"};
+    static constexpr std::array legacy{"_easydiffraction_extinction"};
+};
+static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
+
 // The selector and constants of the type-switched `_background` category. Its rows are the loop
 // schema of the selected type.
 struct BackgroundCategory {
@@ -5167,6 +5255,24 @@ struct DataSourceCategory {
     static constexpr std::array items{"file_name"};
 };
 static_assert(detail::one_entry_per_column(DataSourceCategory::columns, DataSourceCategory::items));
+
+// ADR-0040: the automatic background estimate's settings, and the two digests of what the experiment's points
+// came from and were, saved in auto mode so a reload need not estimate again.
+struct BackgroundEstimateCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_background_estimate";
+    static constexpr auto columns = std::tuple{
+        &ExperimentBase::background_estimate_mode,       &ExperimentBase::background_estimate_method,
+        &ExperimentBase::background_estimate_width,      &ExperimentBase::background_estimate_smoothness,
+        &ExperimentBase::background_estimate_n_points,   &ExperimentBase::background_estimate_tolerance,
+        &ExperimentBase::background_estimate_in_peaks,   &ExperimentBase::background_estimate_use_model,
+        &ExperimentBase::background_estimate_max_terms,  &ExperimentBase::background_estimate_inputs,
+        &ExperimentBase::background_estimate_points};
+    static constexpr std::array items{"mode",      "method",    "width",     "smoothness",    "n_points",
+                                      "tolerance", "in_peaks",  "use_model", "max_terms",     "inputs_digest",
+                                      "points_digest"};
+};
+static_assert(detail::one_entry_per_column(BackgroundEstimateCategory::columns, BackgroundEstimateCategory::items));
 
 struct JointFitCategory {
     using Owner = ExperimentBase;
@@ -5336,6 +5442,21 @@ struct DataCategory {
 };
 static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::items));
 
+// Each structure's curve: the per-point lists in the `_data` loop and the block's list of the structures they follow,
+// crysta's computed buffers, shared like the other computed columns.
+struct PdCalcCategory {
+    static constexpr const char* name = "_pd_calc";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
+    static constexpr std::array items{"component_intensities_net"};
+};
+static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
+struct PdCalcOverallCategory {
+    static constexpr const char* name = "_pd_calc_overall";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_order};
+    static constexpr std::array items{"component_presentation_order"};
+};
+static_assert(detail::one_entry_per_column(PdCalcOverallCategory::columns, PdCalcOverallCategory::items));
+
 // Categories on file that the model does not store.
 struct FitParameterCategory {
     static constexpr const char* name = "_fit_parameter";
@@ -5392,8 +5513,10 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position};
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight"};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
+    // A powder's computed reflections and a single crystal's measured ones with their calculated
+    // columns: one category on file, as in diffraction-lib, held by two classes.
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
@@ -5530,6 +5653,12 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     return out;
 }
+inline std::vector<Parameter*> ExtinctionBase::parameters() {
+    std::vector<Parameter*> out;
+    detail::push_optional(out, radius);
+    detail::push_optional(out, mosaicity);
+    return out;
+}
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
     std::vector<Parameter*> out;
     detail::push_optional(out, abscor1);
@@ -5548,6 +5677,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
         out.push_back(&link->scale);
     }
     for (Parameter* parameter : absorption.parameters()) {
+        out.push_back(parameter);
+    }
+    for (Parameter* parameter : extinction.parameters()) {
         out.push_back(parameter);
     }
     for (const std::shared_ptr<PrefOrient>& row : preferred_orientation) {
@@ -5644,7 +5776,8 @@ inline void canonicalize_peak_specs(PeakBase& peak) {
 // conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
 // no slot is dropped, read as another profile's, or classed by another slot's metadata.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
-    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+    // A single crystal has no peak profile.
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH || experiment.reflections) {
         return {};
     }
     const std::string declared = effective_peak_type(experiment);

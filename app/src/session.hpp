@@ -17,8 +17,9 @@
 namespace edi_app {
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
-// views used to show in red — a calculation refusal, one row per distinct refusal. Roles `message` and
-// `severity` ("warning" or "error"). The one source of the status bar's warnings item and its popup.
+// views used to show in red — a calculation refusal, one row per distinct refusal — and information entries (why an
+// estimate subtracted or ignored the calculated peaks). Roles `message` and `severity` ("warning", "error" or
+// "information"). The one source of the status bar's warnings item and its popup.
 class WarningListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT

@@ -11,6 +11,7 @@
 #include <QVariantAnimation>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
+#include <array>
 #include <optional>
 #include <vector>
 
@@ -58,6 +59,10 @@ class PatternChartController : public QObject {
     // The colour scheme, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures'
     // colours.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    // The structures' own colour scheme (the Bragg ticks and the structure curves), when the app's Structures colours
+    // differ from its Patterns colours (the owner, 2026-10-22); empty: colourScheme's.
+    Q_PROPERTY(QString structureColourScheme READ structureColourScheme WRITE setStructureColourScheme NOTIFY
+                   structureColourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)
     Q_PROPERTY(qreal plotHeight READ plotHeight WRITE setPlotHeight NOTIFY plotHeightChanged)
@@ -70,6 +75,11 @@ class PatternChartController : public QObject {
     // The x axis: d-spacing, or the experiment's own (2θ or time-of-flight). On d the pattern is the d-spacing capture
     // (edi::capture_pattern), which needs a calculated pattern; until then the chart stays on the experiment's axis.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
+    // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
+    Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
+    // Only the included range (edi ADR-0044): the x range runs from the first to the last included point, and the
+    // excluded regions show no measured points or ticks. A change starts the x range over.
+    Q_PROPERTY(bool includedOnly READ includedOnly WRITE setIncludedOnly NOTIFY includedOnlyChanged)
     // How long a box zoom, a wheel zoom and a reset move the axis ranges (easydiffractionbeta's
     // ChartView.SeriesAnimations, EaStyle.Times.chartAnimation), in milliseconds; 0: at once.
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration NOTIFY animationDurationChanged)
@@ -79,9 +89,6 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QXYSeries* calculatedSeries MEMBER calculated_series_ NOTIFY calculatedSeriesChanged)
     Q_PROPERTY(QXYSeries* backgroundSeries MEMBER background_series_ NOTIFY backgroundSeriesChanged)
     Q_PROPERTY(QXYSeries* residualSeries MEMBER residual_series_ NOTIFY residualSeriesChanged)
-    Q_PROPERTY(QXYSeries* braggSeries0 MEMBER bragg_series_0_ NOTIFY braggSeries0Changed)
-    Q_PROPERTY(QXYSeries* braggSeries1 MEMBER bragg_series_1_ NOTIFY braggSeries1Changed)
-    Q_PROPERTY(QXYSeries* braggSeries2 MEMBER bragg_series_2_ NOTIFY braggSeries2Changed)
     // What the three panes show.
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
@@ -117,10 +124,26 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QColor backgroundColor READ backgroundColor NOTIFY backgroundColorChanged)
     Q_PROPERTY(QColor residualColor READ residualColor NOTIFY residualColorChanged)
     Q_PROPERTY(QColor excludedColor READ excludedColor NOTIFY excludedColorChanged)
-    // The three tick colours, by the structure's place in the project (the palette of ADR-0017 §8).
-    Q_PROPERTY(QColor braggColor0 READ braggColor0 NOTIFY braggColor0Changed)
-    Q_PROPERTY(QColor braggColor1 READ braggColor1 NOTIFY braggColor1Changed)
-    Q_PROPERTY(QColor braggColor2 READ braggColor2 NOTIFY braggColor2Changed)
+    // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
+    // structure's place in the project taken round the scheme's colours, as the structure lists take them.
+    // Each structure's tick colour, by its place: one per `bragg.<place>` row of the style table.
+    Q_PROPERTY(QList<QColor> braggColors READ braggColors NOTIFY braggColorsChanged)
+    // Each structure's curve over the background (edi ADR-0017 §15): whether it is drawn, and, for each one drawn,
+    // in presentation order, its outline colour and its fill colour, index for index.
+    Q_PROPERTY(bool structureCurves READ structureCurves WRITE setStructureCurves NOTIFY structureCurvesChanged)
+    Q_PROPERTY(QList<QColor> structureCurveColors READ structureCurveColors NOTIFY structureCurveColorsChanged)
+    Q_PROPERTY(QList<QColor> structureCurveFills READ structureCurveFills NOTIFY structureCurveFillsChanged)
+    // How the measured pattern is drawn (the owner, 2026-10-22): "band", measured ± s.u. as two lines with a fill
+    // between them, the residual drawn the same way; "line"; "points", markers with error bars; "linePoints", all
+    // three. Anything else is "band".
+    Q_PROPERTY(QString measuredStyle READ measuredStyle WRITE setMeasuredStyle NOTIFY measuredStyleChanged)
+    // Whether the chart presents a calculated pattern, which the structure curves need.
+    Q_PROPERTY(bool hasCalculated READ hasCalculated NOTIFY hasCalculatedChanged)
+    // The view the chart is showing or going to: [x min, x max, y min, y max], each a number or NaN for the data's own
+    // range, and the title of the x axis they are on. Several charts that follow one view share it (edi ADR-0017
+    // §15); setting it draws without an animation.
+    Q_PROPERTY(QList<double> viewRanges READ viewRanges WRITE setViewRanges NOTIFY viewRangesChanged)
+    Q_PROPERTY(QString viewRangesAxis READ viewRangesAxis WRITE setViewRangesAxis NOTIFY viewRangesAxisChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -142,6 +165,8 @@ class PatternChartController : public QObject {
     bool dark() const { return dark_; }
     void setDark(bool dark);
     QString colourScheme() const { return colour_scheme_; }
+    QString structureColourScheme() const { return structure_colour_scheme_; }
+    void setStructureColourScheme(const QString& scheme);
     void setColourScheme(const QString& scheme);
     qreal plotWidth() const { return plot_width_; }
     void setPlotWidth(qreal width);
@@ -154,7 +179,10 @@ class PatternChartController : public QObject {
     YScale yScale() const { return y_scale_; }
     void setYScale(YScale scale);
     bool dSpacing() const { return d_spacing_; }
+    bool dAvailable() const { return d_available_; }
     void setDSpacing(bool on);
+    bool includedOnly() const { return included_only_; }
+    void setIncludedOnly(bool on);
     int animationDuration() const { return animation_duration_; }
     void setAnimationDuration(int milliseconds);
 
@@ -185,9 +213,27 @@ class PatternChartController : public QObject {
     QColor backgroundColor() const { return color(QStringLiteral("bkg")); }
     QColor residualColor() const { return color(QStringLiteral("resid")); }
     QColor excludedColor() const { return color(QStringLiteral("excluded")); }
-    QColor braggColor0() const { return color(QStringLiteral("bragg.0")); }
-    QColor braggColor1() const { return color(QStringLiteral("bragg.1")); }
-    QColor braggColor2() const { return color(QStringLiteral("bragg.2")); }
+    QList<QColor> braggColors() const;
+    bool structureCurves() const { return structure_curves_; }
+    void setStructureCurves(bool on);
+    QList<QColor> structureCurveColors() const { return structure_curve_colors_; }
+    QList<QColor> structureCurveFills() const { return structure_curve_fills_; }
+    bool hasCalculated() const { return has_calculated_; }
+    QList<double> viewRanges() const;
+    void setViewRanges(const QList<double>& ranges);
+    QString viewRangesAxis() const;
+    void setViewRangesAxis(const QString& axis);
+    // The area (filled between its upper and lower series) and the outline of the structure curve at `index`, in
+    // presentation order: the chart makes them as `structureCurveColors` grows and hands each over here.
+    Q_INVOKABLE void setStructureSeries(int index, QXYSeries* upper, QXYSeries* lower, QXYSeries* outline);
+    // A band's area (between its upper and lower series) and its two edges: pane 0 the measured band, 1 the
+    // residual's.
+    Q_INVOKABLE void setBandSeries(int pane, QXYSeries* upper, QXYSeries* lower, QXYSeries* top, QXYSeries* bottom);
+    QString measuredStyle() const { return measured_drawing_; }
+    void setMeasuredStyle(const QString& style);
+    // The structures' tick series, one per `bragg.<place>` row of the style table, in place order: the chart makes
+    // them as `braggColors` grows and hands each over here.
+    Q_INVOKABLE void setBraggSeries(int place, QXYSeries* series);
     int revision() const { return revision_; }
 
     // A style key's colour in the current theme, with the table's opacity.
@@ -222,21 +268,21 @@ class PatternChartController : public QObject {
     void activeChanged();
     void darkChanged();
     void colourSchemeChanged();
+    void structureColourSchemeChanged();
     void plotWidthChanged();
     void plotHeightChanged();
     void residualPlotHeightChanged();
     void devicePixelRatioChanged();
     void yScaleChanged();
     void dSpacingChanged();
+    void dAvailableChanged();
+    void includedOnlyChanged();
     void animationDurationChanged();
     void measuredSeriesChanged();
     void measuredLayerChanged();
     void calculatedSeriesChanged();
     void backgroundSeriesChanged();
     void residualSeriesChanged();
-    void braggSeries0Changed();
-    void braggSeries1Changed();
-    void braggSeries2Changed();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -263,12 +309,18 @@ class PatternChartController : public QObject {
     void backgroundColorChanged();
     void residualColorChanged();
     void excludedColorChanged();
-    void braggColor0Changed();
-    void braggColor1Changed();
-    void braggColor2Changed();
+    void braggColorsChanged();
+    void structureCurvesChanged();
+    void measuredStyleChanged();
+    void structureCurveColorsChanged();
+    void structureCurveFillsChanged();
+    void hasCalculatedChanged();
+    void viewRangesChanged();
+    void viewRangesAxisChanged();
 
    private:
     void invalidate();
+    void invalidateLater();
     // One property's value and its own signal: only what changed notifies (the app's per-property rule).
     template <typename T>
     void publish(T& member, const T& value, void (PatternChartController::*changed)()) {
@@ -288,6 +340,8 @@ class PatternChartController : public QObject {
                    std::optional<double> y_max);
     // A running animation ends at once at its target: what changes the view another way starts from there.
     void finishAnimation();
+    // The same without drawing, for a caller that draws next.
+    void stopAnimation();
     void animationFrame(double progress);
     // The presented point nearest the pointer in `pane` and no farther than `within` pixels, or none.
     struct Nearest {
@@ -304,13 +358,17 @@ class PatternChartController : public QObject {
     QPointer<ReportViewModel> report_;
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
-    QString colour_scheme_ = QStringLiteral("coast");
+    QString colour_scheme_ = QStringLiteral("ediNatural");
+    QString structure_colour_scheme_;
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;
+    // The colour scheme the chart is drawn in.
+    edi::ColourScheme scheme() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
-    bool d_spacing_ = false;
+    bool d_spacing_ = false, d_available_ = false;
+    bool included_only_ = false;
     edi::PatternAxis axis() const { return d_spacing_ ? edi::PatternAxis::DSpacing : edi::PatternAxis::Native; }
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;
@@ -320,8 +378,21 @@ class PatternChartController : public QObject {
     bool animating_ = false;
     double from_[4] = {}, to_[4] = {};
     std::optional<double> target_[4];
-    QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_,
-        bragg_series_0_, bragg_series_1_, bragg_series_2_;
+    QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_;
+    QList<QPointer<QXYSeries>> bragg_series_;
+    struct StructureSeries {
+        QPointer<QXYSeries> upper, lower, outline;
+    };
+    QList<StructureSeries> structure_series_;
+    struct BandSeries {
+        QPointer<QXYSeries> upper, lower, top, bottom;
+    };
+    std::array<BandSeries, 2> band_series_;
+    QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
+    bool structure_curves_ = false, has_calculated_ = false;
+    QList<QColor> structure_curve_colors_, structure_curve_fills_;
+    std::string presented_x_;  // the x axis last presented, its quantity and unit
+    std::string ranges_axis_;  // the x axis the ranges were given on, empty when they were not given
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;
@@ -331,6 +402,7 @@ class PatternChartController : public QObject {
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
     std::size_t colour_count_ = 0;
+    qsizetype bragg_colour_count_ = 0;
     QList<BraggLabel> bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;

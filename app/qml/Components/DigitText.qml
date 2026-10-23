@@ -29,6 +29,9 @@ Row {
     readonly property var runs: text.match(/[0-9]|→|[^0-9→]+/g) ?? []
 
     height: metrics.height
+    // The runs are plain Text items, which accessibility does not expose, so the value is read as one text.
+    Accessible.role: Accessible.StaticText
+    Accessible.name: value.text
 
     FontMetrics {
         id: metrics

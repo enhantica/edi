@@ -1,0 +1,64 @@
+{
+  "revision": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
+  "pages": {
+    "sc-neut-cwl_pr2nio4_basic": {
+      "path": "docs/docs/verification/sc-neut-cwl_Pr2NiO4_basic.py",
+      "sha256": "492e2ad3ec9d9a8e029614c800b9192fe6d427fbc8184660a1c2f15d21e9d2b3",
+      "free_assignments": [
+        {
+          "line": 180,
+          "assignment": "experiment.linked_structure.scale.free = True"
+        }
+      ],
+      "observations": "Synthetic FullProf F2 via verify.set_reference_reflections"
+    },
+    "sc-neut-cwl_tbti_basic": {
+      "path": "docs/docs/verification/sc-neut-cwl_Tb2Ti2O7_basic.py",
+      "sha256": "64e1b43d03536f4435c8dd90d72d2d8b8d08148aa3ffa91cf9d986c591b996d3",
+      "free_assignments": [
+        {
+          "line": 128,
+          "assignment": "experiment.linked_structure.scale.free = True"
+        }
+      ],
+      "observations": "Synthetic FullProf F2 via verify.set_reference_reflections"
+    },
+    "sc-neut-cwl_tbti_anisotropic-adp": {
+      "path": "docs/docs/verification/sc-neut-cwl_Tb2Ti2O7_anisotropic-adp.py",
+      "sha256": "f0671da20402aa24367f868a1315bd7fee15784546ff40aa532760a69fa98656",
+      "free_assignments": [
+        {
+          "line": 145,
+          "assignment": "experiment.linked_structure.scale.free = True"
+        }
+      ],
+      "observations": "Synthetic FullProf F2 via verify.set_reference_reflections"
+    },
+    "sc-neut-cwl_tbti_isotropic-extinction": {
+      "path": "docs/docs/verification/sc-neut-cwl_Tb2Ti2O7_isotropic-extinction.py",
+      "sha256": "e436c7b70407f7cf6764a6552a2787c06e8b0df4dcc139a9bbcb15eaf5c495e8",
+      "free_assignments": [
+        {
+          "line": 134,
+          "assignment": "experiment.linked_structure.scale.free = True"
+        },
+        {
+          "line": 135,
+          "assignment": "experiment.extinction.radius.free = True"
+        }
+      ],
+      "observations": "Synthetic FullProf F2 via verify.set_reference_reflections"
+    },
+    "sc-neut-tof_taurine_basic": {
+      "path": "docs/docs/verification/sc-neut-tof_taurine_basic.py",
+      "sha256": "b6d573612bb13c9ec0f3a35a0875929e295cfa1f57383950c1ec76c98ce8ce05",
+      "free_assignments": [
+        {
+          "line": 124,
+          "assignment": "experiment.linked_structure.scale.free = True"
+        }
+      ],
+      "observations": "Synthetic FullProf F2 via verify.set_reference_reflections"
+    }
+  }
+}

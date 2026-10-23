@@ -9,7 +9,7 @@
 
 // Save report for the command line and Python (edi ADR-0036 §7): the report's formats written into the project's
 // `reports/` folder with their `_report_file` rows, and the state of each report saved so far. The app writes its
-// own, the PDF included.
+// own, the PDF included, through write_report_file.
 
 namespace edi {
 
@@ -29,12 +29,18 @@ struct ReportSaveResult {
 /// when a file cannot be written.
 ReportSaveResult save_report(Project& project, const ReportOverrides& overrides, const ReportLibraries& libraries);
 
+/// Writes `bytes` as `<project_path>/reports/<name>`, as save_report writes its HTML: as project output
+/// (ADR-0039), so nothing behind a link is written and a failed write leaves the file that was there.
+/// The app's HTML and PDF go through it. Throws std::runtime_error when the file cannot be written.
+void write_report_file(const std::string& project_path, const std::string& name, const std::string& bytes);
+
 /// The options a saved report's row records its digest with and is judged by (ADR-0036 §7): `options` with the default
-/// colour scheme and the first experiment's correlations. A report is then out of date only when the project changed,
-/// whatever scheme or experiment the surface that saved it chose.
+/// colour scheme, Jmol element colours and the first experiment's correlations. A report is then out of date only when
+/// the project changed, whatever schemes or experiment the surface that saved it chose.
 ReportOptions report_file_options(ReportOptions options);
 
-/// Whether `options` choose another colour scheme or correlations' experiment than report_file_options.
+/// Whether `options` choose another colour scheme, element colours or correlations' experiment than
+/// report_file_options.
 bool chooses_presentation(const ReportOptions& options);
 
 /// One saved report's state: "current", "out of date" (its digest differs from the digest of the report the project

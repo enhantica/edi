@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import crysta_reference_prefix
+from tests.fixtures.plain_data.build_probe import build_host
 from tests.integration.py.test_plain_data_picker import require_picker
 from tests.integration.py.test_scan_app_contract import require_availability, source
 
@@ -47,7 +48,7 @@ def native_probe(tmp_path_factory):
     gui = os.environ.get('EDI_SCAN_APP_GUI_SOURCE')
     if gui:
         command += ['--gui-source', gui]
-    completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=600)
+    completed = build_host(command)
     assert completed.returncode == 0, (
         'Plain-data native host: compile the actual app module against the installed SDK\n'
         + completed.stdout
@@ -863,7 +864,19 @@ def observe_correlations(native_probe, tmp_path, action, mode, history):
     return record
 
 
-def require_dataset_matrix(matrix, case):
+def rounded_correlation(value):
+    # Round the reference independently using IUCr recommendation 12.
+    value = Decimal(str(value))
+    digits = 3 if abs(value) >= Decimal('0.95') else 2
+    place = Decimal(1).scaleb(value.adjusted() - digits + 1)
+    return str(value.quantize(place, rounding='ROUND_HALF_UP'))
+
+
+def rounded_pairs(pairs):
+    return [dict(pair, coefficient=rounded_correlation(pair['coefficient'])) for pair in pairs]
+
+
+def require_dataset_matrix(matrix, case, *, saved=False):
     names = matrix['labels']
     assert matrix['available'] == 3, (
         "A Single fit inside a scan must expose that dataset's three actual free parameters"
@@ -876,16 +889,24 @@ def require_dataset_matrix(matrix, case):
             expected = case['matrix'][case['names'].index(names[row])][
                 case['names'].index(names[column])
             ]
-            assert matrix['values'][row * 3 + column] == pytest.approx(expected, abs=2e-4), (
-                'A selected dataset must show its own normalized covariance, including signs'
-            )
+            if saved:
+                assert matrix['values'][row * 3 + column] == float(
+                    rounded_correlation(expected)
+                ), 'Saved dataset covariance must equal the IUCr-rounded reference with its sign'
+            else:
+                assert matrix['values'][row * 3 + column] == pytest.approx(expected, abs=2e-4), (
+                    'A selected dataset must show its own normalized covariance, including signs'
+                )
 
 
-def require_core_file_pairs(pairs, case):
+def require_core_file_pairs(pairs, case, *, saved=False):
     actual = [pair for pair in pairs if Path(pair['file']).name == case['file']]
     assert len(actual) == 3, 'A completed file must retain every core pair after scan cancellation'
     observed = {
-        tuple(sorted((pair['i'], pair['j']))): float(pair['coefficient']) for pair in actual
+        tuple(sorted((pair['i'], pair['j']))): pair['coefficient']
+        if saved
+        else float(pair['coefficient'])
+        for pair in actual
     }
     expected = {
         tuple(sorted((pair['parameter_unique_name_i'], pair['parameter_unique_name_j']))): pair[
@@ -893,9 +914,15 @@ def require_core_file_pairs(pairs, case):
         ]
         for pair in case['rows']
     }
-    assert observed == pytest.approx(expected, abs=2e-4), (
-        'Completed-file covariance must match the external normal-equations reference'
-    )
+    if saved:
+        assert observed == {key: rounded_correlation(value) for key, value in expected.items()}, (
+            'Saved covariance text must equal the IUCr-rounded independent reference, '
+            'including signs'
+        )
+    else:
+        assert observed == pytest.approx(expected, abs=2e-4), (
+            'Completed-file covariance must match the external normal-equations reference'
+        )
 
 
 def require_compact_file_pairs(state, case):
@@ -934,9 +961,10 @@ def test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix(
 ):
     record = observe_correlations(native_probe, tmp_path, 'correlation-single', mode, history)
     case = SCAN_REFERENCE['cases'][1]
-    for step in ('fitted', 'selectedAgain', 'reopened'):
+    for step in ('fitted', 'selectedAgain'):
         require_dataset_matrix(record[step], case)
-    require_core_file_pairs(record['reopened']['pairs'], case)
+    require_dataset_matrix(record['reopened'], case, saved=True)
+    require_core_file_pairs(record['reopened']['pairs'], case, saved=True)
     assert {key: record['otherAfter'][key] for key in ('labels', 'values', 'available')} == {
         key: record['otherBefore'][key] for key in ('labels', 'values', 'available')
     }, "A Single fit must leave the other scan dataset's matrix and associations unchanged"
@@ -975,8 +1003,10 @@ def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
     assert len(record['cancelledCompact']['files']) == 1, (
         'Cancellation must publish only the completed dataset in the live map'
     )
-    assert record['reopened'] == record['cancelled'], (
-        "Save and reload must retain the cancelled scan's template rows exactly"
+    saved = rounded_pairs(record['cancelled'])
+    require_core_file_pairs(record['reopened'], SCAN_REFERENCE['cases'][0], saved=True)
+    assert record['reopened'] == saved, (
+        "Save and reload must retain the cancelled scan's exact IUCr-rounded template rows"
     )
     assert record['reopenedCompact']['files'] == {}, (
         'A reload must not invent live bundles for the persisted template rows'
@@ -1009,8 +1039,8 @@ def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
     assert record['memoryAfterSave'] == record['resumed'], (
         'Saving a scan must preserve the persisted template rows in memory'
     )
-    require_core_file_pairs(record['completedReopened'], SCAN_REFERENCE['cases'][0])
-    assert record['completedReopened'] == record['cancelled'], (
+    require_core_file_pairs(record['completedReopened'], SCAN_REFERENCE['cases'][0], saved=True)
+    assert record['completedReopened'] == saved, (
         'A scan saves only its explicitly declared template dataset correlations'
     )
     assert record['completedReopenedCompact']['files'] == {}, (
@@ -1019,7 +1049,7 @@ def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
     assert record['reloadedResumeFiles'] == ['02.xy'], (
         'Resume after reload must still skip the already completed template dataset'
     )
-    assert record['reloadedResumed'] == record['cancelled'], (
+    assert record['reloadedResumed'] == saved, (
         'Resume after reload must preserve the completed template rows byte for byte'
     )
     require_compact_file_pairs(record['reloadedResumedCompact'], SCAN_REFERENCE['cases'][1])
@@ -1163,11 +1193,11 @@ def test_scan_keeps_all_live_matrices_but_persists_only_template_with_reload_exp
     native_probe, tmp_path, mode
 ):
     record = observe_correlations(native_probe, tmp_path, 'correlation-template', mode, False)
-    for step in ('templateLive', 'templateReopened'):
-        require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][0])
+    require_dataset_matrix(record['templateLive'], SCAN_REFERENCE['cases'][0])
+    require_dataset_matrix(record['templateReopened'], SCAN_REFERENCE['cases'][0], saved=True)
     for step in ('otherLive', 'otherAfterSave'):
         require_dataset_matrix(record[step], SCAN_REFERENCE['cases'][1])
-    require_core_file_pairs(record['savedPairs'], SCAN_REFERENCE['cases'][0])
+    require_core_file_pairs(record['savedPairs'], SCAN_REFERENCE['cases'][0], saved=True)
     assert len(record['savedPairs']) == 3, 'A scan persists exactly its template dataset matrix'
     assert record['otherReopened']['available'] == 0, (
         'A reloaded non-template dataset must not display a persisted matrix'

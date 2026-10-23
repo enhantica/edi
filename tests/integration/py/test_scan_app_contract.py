@@ -101,6 +101,16 @@ def require(text, pattern, message):
     )
 
 
+def continued_expression(text, start):
+    end = text.index('\n', start)
+    line = text[start:end].strip()
+    for continuation in text[end + 1 :].splitlines():
+        if not continuation.lstrip().startswith(('?', ':')):
+            break
+        line += ' ' + continuation.strip()
+    return line
+
+
 def property_value(text, name):
     opening = text.find('{')
     nested = [(a, b) for a, b in spans(text) if a > opening]
@@ -130,7 +140,7 @@ def property_value(text, name):
                     depth -= 1
                     if depth == 0:
                         return text[start : end + 1]
-        line = text[start : text.index('\n', start)].strip()
+        line = continued_expression(text, start)
         if line.endswith('{'):
             opening = text.index('{', start)
             return text[start:opening] + block(text[opening:], '{')
@@ -765,9 +775,15 @@ def test_type_selectors_live_in_explorer_and_follow_selected_row():
 def test_data_free_experiment_type_has_a_write_boundary(axis):
     text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     control = item(text, 'experimentType.' + axis)
-    expected_guard = 'false' if axis in {'sampleForm', 'scatteringType'} else 'row.editable'
+    expected_guard = {
+        'sampleForm': 'row.editable',
+        'scatteringType': 'false',
+        'beamMode': 'row.editable',
+        'radiationProbe': 'row.editable && !row.singleCrystal',
+    }[axis]
     assert property_value(control, 'enabled') == expected_guard, (
-        'Type wiring: unsupported sample/scattering choices stay disabled; '
+        'Type wiring: data-free sample form and both supported beam modes are editable; '
+        'SC probe and scattering stay fixed; '
         'supported axes follow the data-free guard'
     )
     require(

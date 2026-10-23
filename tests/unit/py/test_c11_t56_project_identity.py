@@ -10,6 +10,7 @@ import shlex
 import shutil
 import subprocess
 import tarfile
+import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -18,6 +19,7 @@ import pytest
 
 from conftest import calculator_load_warning, corpus_case_dir
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -834,8 +836,11 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
 
     project.save_as(saved)
 
-    for relative_path, expected_sha256 in PRE_FIX_DATABLOCK_SHA256.items():
-        data = without_calculator(relative_path, (saved / relative_path).read_bytes())
+    for relative_path, prior_sha256 in PRE_FIX_DATABLOCK_SHA256.items():
+        expected_sha256 = prior_sha256
+        data = historical_single_fraction(
+            relative_path, without_calculator(relative_path, (saved / relative_path).read_bytes())
+        )
         if relative_path == 'analysis/analysis.edi':
             #  adds precisely the previously dropped minimizer declaration.
             original = [
@@ -874,9 +879,20 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
         if relative_path == 'analysis/analysis.edi':
             # Retain the pre-change hash across removal of inactive non-Joint weights only.
             data = historical_analysis(source, data)
+        # The archived saved bytes retain the old pin; only the IUCr token projection changes.
+        if relative_path in {'experiments/sepd.edi', 'structures/si.edi'}:
+            from tests.fixtures.report_units.iucr_reference import rounded_record  # noqa: PLC0415
+
+            with zipfile.ZipFile(ROOT / 'tests/fixtures/c13_t12_ids/baseline.zip') as archive:
+                original = archive.read('13/saved/' + relative_path)
+            assert hashlib.sha256(original).hexdigest() == expected_sha256, (
+                'The IUCr adaptation must start with the complete immutable pre-fix byte pin'
+            )
+            expected_sha256 = hashlib.sha256(rounded_record(original)).hexdigest()
         actual_sha256 = hashlib.sha256(data).hexdigest()
         assert actual_sha256 == expected_sha256, (
             f"{relative_path} must remain byte-identical to the packet's labelled pre-fix "
             'regression pin apart from the separately checked  minimizer, '
-            ' geom and  calculator declarations'
+            'geom and calculator declarations, independent IUCr spelling '
+            'and the checked unity fraction column'
         )
