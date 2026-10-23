@@ -5,6 +5,7 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "DisplayedText.js" as Displayed
+import "../../fixtures/dictionary_display/display_expectations.js" as Dictionary
 import "../../fixtures/e04_t1/display_oracle.js" as Oracle
 
 TestCase {
@@ -84,7 +85,11 @@ TestCase {
             Session.project[data.page === "structure" ? "currentStructureIndex" : "currentExperimentIndex"] = index;
         }
         click("appBar.tab." + data.page);
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
+                  2000, "The workflow page reaches the viewport before its sidebar is selected");
         click("sideBar.tab." + data.tier);
+        tryVerify(() => !Ui.moving(Ui.page(appWindow)), 2000,
+                  "The sidebar transition settles before the frozen field is inspected");
         let root = Ui.page(appWindow);
         if (data.group !== "engines") {
             Ui.expandGroup(test, Probe, appWindow, "group." + data.group);
@@ -114,13 +119,14 @@ TestCase {
             const items = kind === "label" ? renderers(control)
                         : isCombo ? renderers(control.contentItem) : [control];
             verify(items.length > 0, "gate 3: each field has an actual native glyph renderer");
-            //  note 14: gui-components Utils.toDefaultPrecision uses
-            // three significant digits. Only display expectations are rounded;
-            // frozen input doubles and  measuredRange model checks stay whole.
-            // Point counts remain exact integers, never precision-rounded.
-            const displayedExpected = kind === "number" && name !== "range.points"
-                ? Number(expected.toPrecision(3)) : expected;
-            const errors = items.map(item => Displayed.problem(item, displayedExpected, kind === "number"));
+            // Before: raw selector tokens and three significant digits.
+            // Input values stay frozen; names and display precision follow the dictionary.
+            const key = data.tag + "::" + name;
+            const dictionaryExpected = Object.prototype.hasOwnProperty.call(Dictionary.expected, key);
+            const displayedExpected = dictionaryExpected ? Dictionary.expected[key] : expected;
+            // Before: numeric equality after a global precision. Now: the exact dictionary text.
+            const errors = items.map(item => Displayed.problem(item, displayedExpected,
+                                                               kind === "number" && !dictionaryExpected));
             if (!errors.includes("")) failures.push(name + ": " + errors.join("; "));
         });
         // Collect every field in a group so a blank first axis cannot hide the

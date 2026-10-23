@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T10:29:59Z
+# measured_utc = 2026-10-23T10:50:12Z
 #
-# Recorded from: measured test run (33 node(s) measured once, 14430 banked, 0 stale row(s) dropped)
-# Collected tests: 15935; with a reported duration: 9483
+# Recorded from: focused Python receipts plus native expected-red cases; canonical writer API
+# Collected tests: 16009; with a reported duration: 9488
 # Module-scoped fixture costs recorded: 60
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 15935
-# inventory_cpp = 389
-# inventory_measured = 14430
-# inventory_unmeasured = 1894
+# inventory_python = 16009
+# inventory_cpp = 391
+# inventory_measured = 14442
+# inventory_unmeasured = 1958
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4498,6 +4498,60 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[Bani-B]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[Uani-U]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[beta-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Biso-_atom_site.B_iso_or_equiv-0.52]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Uiso-_atom_site.U_iso_or_equiv-0.0066]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_symmetry_fixed_special_positions_are_decimal_without_su_and_flagged
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_distinct_edi_aliases_of_one_item_are_refused_together
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_edi_alias_loads_and_only_current_name_is_written
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_edi_atom_label_alias_writes_only_the_current_site_id_name
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_report_cif_is_parsed_independently_with_official_names
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_two_edi_spellings_of_one_item_are_refused_with_both_names[False]
+0.000	tests/integration/py/test_dictionary_cif_contract.py::test_two_edi_spellings_of_one_item_are_refused_with_both_names[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_constrained_value_without_su_saves_without_binary_noise
+0.090	tests/integration/py/test_dictionary_display_consumers.py::test_display_operations_never_change_saved_scientific_bytes
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[absorption.mu_r-0.036123456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[atom_site.fract_x-0.33333-fixed-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[atom_site.occupancy-0.5823456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[background.intensity-1.2345678e-05-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[cell.length_a-3.890915-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[instrument.setup_wavelength-1.49412345-fixed-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[linked_structure.scale-1234567.8-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[peak.broad_gauss_u-0.123456789-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[preferred_orientation.march_r-0.923456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[angle_beta-91.234567-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_a-3.890915-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_b-4.12345678-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_19-1.54249-0.01532-1.542(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_19-2.16352-0.00481-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_99-2.16352-0.00481-2.1635(49)]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.value]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength_value]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength_wavelength]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_easydiffraction_peak.broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_easydiffraction_peak_broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_edi_peak.broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_edi_peak_broad_gauss_u]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_instr.wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_instr_wavelength]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-absorption.mu_r-0.0361]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-background.intensity-4.12345]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-instrument.setup_wavelength-1.54]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-linked_structure.scale-0.71345]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-peak.broad_gauss_u-0.0834]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-preferred_orientation.march_r-0.92345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-absorption.mu_r-0.0361]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-background.intensity-4.12345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-instrument.setup_wavelength-1.54]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-linked_structure.scale-0.71345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-peak.broad_gauss_u-0.0834]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-preferred_orientation.march_r-0.92345]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -6504,7 +6558,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.010	tests/integration/py/test_report_storage.py::test_save_as_copies_every_report_row_and_file_without_touching_the_source
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[incomplete-row]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[unknown-format]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
+0.030	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-experiment]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-html]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-settings]
@@ -10656,6 +10710,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[absorption]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[background]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[cell]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[fractional]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[instrument]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[linked_structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[occupancy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[peak]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[preferred_orientation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[analysis]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[report]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[cpp-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[display-label]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[python-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[qml-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[raw-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[raw-token]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_surfaces_call_the_dictionary_bridge_instead_of_their_own_tables
 0.080	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-disabled-bridge]
 0.110	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-each-component]
 0.070	tests/system/py/test_doublet_fit_anchors.py::test_doublet_fit_admission_follows_each_active_anchor[analysis-fixed-second-foreign-component]
@@ -14618,6 +14692,8 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.006	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Site and tensor key edits follow every coordinate and ADP reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
+UNMEASURED:red-first native baseline ae20ff66 fails; green execution cost is not measured	tests/unit/cpp/test_dictionary_metadata.cpp::The core metadata bridge retains every dictionary label unit and file tooltip
+UNMEASURED:red-first native baseline ae20ff66 fails; green execution cost is not measured	tests/unit/cpp/test_dictionary_parameter_table.cpp::CLI parameter tables use the dictionary format for each numeric category
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I13 I14 both projections and pointer transformations
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions
 0.001	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I9 published home orientation fits the whole drawing
