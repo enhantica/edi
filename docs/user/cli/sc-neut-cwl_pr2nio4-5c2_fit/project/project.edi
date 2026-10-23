@@ -2,7 +2,7 @@ _edi.schema_version 3
 
 _metadata.name             sc_neut_cwl_pr2nio4_5c2_fit
 _metadata.title "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB"
-_metadata.description "Single crystal · Isotropic displacements, coordinates and extinction from a rough start"
+_metadata.description "Single crystal · Anisotropic displacements and coordinates from a rough start"
 _metadata.created          "22 Oct 2026 18:00:00"
 _metadata.last_modified    "22 Oct 2026 18:00:00"
 _metadata.timestamp        ?

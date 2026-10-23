@@ -59,7 +59,7 @@ Flickable {
                     "width": shown.width,
                     "height": shown.height
                 };
-                // A single crystal's chart draws its own data from the model (edi ADR-0048).
+                // A single crystal's chart draws its own data from the model (edi ADR-0049).
                 const crystal = kind === "pattern" ? record.modelData.single_crystal ?? null : null;
                 if (kind === "evolution") {
                     properties.reportSeries = record.reportSeries;
