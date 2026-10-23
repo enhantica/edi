@@ -55,34 +55,22 @@ Grid {
             })
         onActivated: index => row.choose(sampleForm, "sampleForm", index)
     }
-    // A single crystal is computed for neutrons at constant wavelength only for now: those two boxes are fixed
-    // for it, with a tool tip saying so (the owner, 2026-10-22).
-    Item {
+    EaElements.ParamComboBox {
+        id: beamMode
+        objectName: "experimentType.beamMode"
         width: row.cellWidth
-        height: beamMode.height
-
-        EaElements.ParamComboBox {
-            id: beamMode
-            objectName: "experimentType.beamMode"
-            width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(beamMode)
-            enabled: row.editable && !row.singleCrystal
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.beamModeToken : "",
-                    "shortPrettyName": qsTr("beam mode"),
-                    "permittedValues": ["constant wavelength", "time-of-flight"]
-                })
-            onActivated: index => row.choose(beamMode, "beamMode", index)
-        }
-        HoverHandler {
-            id: beamModeHover
-        }
-        EaElements.ToolTip {
-            text: qsTr("Single crystals are constant wavelength only for now")
-            visible: row.singleCrystal && row.editable && beamModeHover.hovered && EaGlobals.Vars.showToolTips
-        }
+        Component.onCompleted: FieldTitles.align(beamMode)
+        enabled: row.editable
+        currentIndex: permittedValues.indexOf(value)
+        parameter: ({
+                "value": row.experiment ? row.experiment.beamModeToken : "",
+                "shortPrettyName": qsTr("beam mode"),
+                "permittedValues": ["constant wavelength", "time-of-flight"]
+            })
+        onActivated: index => row.choose(beamMode, "beamMode", index)
     }
+    // A single crystal is computed for neutrons only for now: its probe box is fixed, with a tool tip saying so
+    // (the owner, 2026-10-22).
     Item {
         width: row.cellWidth
         height: radiationProbe.height
