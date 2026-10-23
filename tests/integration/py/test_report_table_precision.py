@@ -1,4 +1,4 @@
-"""Owner's fixed-decimal computed columns; closed-form P1 cancellation supplies zero."""
+"""Dictionary-formatted computed columns; closed-form P1 cancellation supplies zero."""
 
 import json
 import re
@@ -6,6 +6,8 @@ import shutil
 from pathlib import Path
 
 import edi
+
+from tests.fixtures.dictionary_display.reference import display
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -45,13 +47,21 @@ def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_ht
         if not all(re.fullmatch(r'[-+]?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?', value) for value in cells):
             continue
         checked += 1
-        assert all('e' not in value.lower() for value in cells), (
-            'A computed reflection column never uses exponent notation'
-        )
-        precision = {len(value.partition('.')[2]) for value in cells if float(value) != 0}
-        assert len(precision) <= 1, (
-            'Every nonzero number in a computed column has the same fixed decimal precision'
-        )
+        # Before: all computed columns were fixed decimals. Intensities now use
+        # significant digits; d-spacing and angles retain their dictionary fixed formats.
+        heading = str(table['columns'][index]).lower()
+        if 'intens' in heading or '|f|' in heading or 'f²' in heading:
+            assert all(value == display(float(value), 'significant', 5) for value in cells), (
+                'Computed intensities use the dictionary significant-digit format'
+            )
+        else:
+            assert all('e' not in value.lower() for value in cells), (
+                'Dictionary fixed-format reflection quantities retain decimal notation'
+            )
+            precision = {len(value.partition('.')[2]) for value in cells if float(value) != 0}
+            assert len(precision) <= 1, (
+                'Fixed-format reflection columns retain consistent decimal precision'
+            )
         zero_seen |= any(value == '0' for value in cells)
         assert all(value in html for value in cells), (
             'The HTML writer retains the exact computed-column text used by the preview model'
