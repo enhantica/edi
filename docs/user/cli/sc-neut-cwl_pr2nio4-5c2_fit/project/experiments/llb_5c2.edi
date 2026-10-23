@@ -14,8 +14,8 @@ _instrument.setup_wavelength 0.8302
 
 _extinction.type becker-coppens
 _extinction.model gauss
-_extinction.radius 1
-_extinction.mosaicity 0()
+_extinction.radius 1()
+_extinction.mosaicity 0
 
 loop_
 _linked_structure.structure_id

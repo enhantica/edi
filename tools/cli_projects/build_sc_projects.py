@@ -355,10 +355,10 @@ FIT_PROJECTS = {
         'cell': ('5.417799', '5.4146', '12.483399', '90', '90', '90'),
         'sites': PR2NIO4_FIT_SITES,
         'scale': '4()',
-        # FullProf's own refinement has no extinction: the radius is diffraction-lib's default
-        # 1 micrometre, too small for primary extinction, and the mosaicity starts at 0, free,
-        # as in the Tb2Ti2O7 example.
-        'extinction': ('gauss', '1', '0()'),
+        # The radius is free from diffraction-lib's default 1 micrometre beside a fixed mosaicity
+        # of 0, so only primary extinction acts. FullProf's refinement of these reflections has
+        # no extinction, and the fit takes the radius to 0.
+        'extinction': ('gauss', '1()', '0'),
     },
 }
 
