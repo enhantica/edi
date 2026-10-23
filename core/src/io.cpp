@@ -55,6 +55,16 @@ namespace fs = std::filesystem;
 namespace edi {
 namespace {
 
+// "'a', 'b' or 'c'", for a refusal naming the tokens a field admits.
+std::string spelled_tokens(const std::vector<std::string>& tokens) {
+    std::string spelled;
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        spelled += i == 0 ? "" : (i + 1 == tokens.size() ? " or " : ", ");
+        spelled += "'" + tokens[i] + "'";
+    }
+    return spelled;
+}
+
 // ---- STAR/CIF parsing -----------------------------------------------------------------------------
 
 // ADR-0016: the constructor is the one way a loop exists — parsed, translated from CIF or
@@ -609,7 +619,8 @@ const std::set<std::string>& known_covered_tags() {
         // _absorption
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
         // _extinction (a single crystal's)
-        "_extinction.type", "_extinction.model", "_extinction.radius", "_extinction.mosaicity",
+        "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
+        "_extinction.mosaic_spread",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -1545,29 +1556,40 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
             fail_domain(where, "wavelength-domain", domain);
         }
     }
-    experiment.extinction.type = "becker-coppens";
-    if (const std::string* type = block.find("_extinction.type")) {
-        if (*type != "becker-coppens") {
-            fail_schema(where, "unknown-extinction-type",
-                        "_extinction.type '" + *type + "' is not a known type (expected 'becker-coppens')");
-        }
+    // The type, none without one, then the items of that type alone (edi ADR-0049).
+    const std::string* type = block.find("_extinction.type");
+    const std::string extinction_type = type != nullptr ? *type : "none";
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), extinction_type) == types.end()) {
+        fail_schema(where, "unknown-extinction-type",
+                    "_extinction.type '" + extinction_type + "' is not a known type (expected " +
+                        spelled_tokens(types) + ")");
     }
-    experiment.extinction.model = "gauss";
-    if (const std::string* model = block.find("_extinction.model")) {
-        if (*model != "gauss" && *model != "lorentz") {
-            fail_schema(where, "unknown-extinction-model",
-                        "_extinction.model '" + *model + "' is not a known model (expected 'gauss' or 'lorentz')");
+    apply_extinction_type(experiment.extinction, extinction_type);
+    if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
+        const std::vector<std::string> distributions = mosaic_distribution_tokens();
+        if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
+            fail_schema(where, "unknown-mosaic-distribution",
+                        "_extinction.mosaic_distribution '" + *distribution + "' is not known (expected " +
+                            spelled_tokens(distributions) + ")");
         }
-        experiment.extinction.model = *model;
+        if (!experiment.extinction.mosaic_distribution) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        "_extinction.mosaic_distribution is not an item of _extinction.type '" + extinction_type + "'");
+        }
+        experiment.extinction.mosaic_distribution = *distribution;
     }
     for (const auto& [field, specification] :
-         {std::pair{&experiment.extinction.radius, &spec::extinction_radius},
-          std::pair{&experiment.extinction.mosaicity, &spec::extinction_mosaicity}}) {
+         {std::pair{&experiment.extinction.domain_radius, &spec::extinction_domain_radius},
+          std::pair{&experiment.extinction.mosaic_spread, &spec::extinction_mosaic_spread}}) {
         std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
         if (!found) {
-            found = Parameter{};
-            found->value = 1.0;
-            found->spec = specification;
+            continue;
+        }
+        if (!field->has_value()) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        std::string(specification->edi_names[0]) + " is not an item of _extinction.type '" +
+                            extinction_type + "'");
         }
         if (!(found->value.get() >= 0.0) || !std::isfinite(found->value.get())) {
             fail_domain(where, "extinction-domain",
@@ -2496,11 +2518,11 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
             absorption("mu_r", &*experiment.absorption.mu_r);
         }
         // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
-        if (experiment.extinction.radius) {
-            add(prefix + "radius", prefix + "extinction.radius", &*experiment.extinction.radius);
+        if (experiment.extinction.domain_radius) {
+            add(prefix + "domain_radius", prefix + "extinction.domain_radius", &*experiment.extinction.domain_radius);
         }
-        if (experiment.extinction.mosaicity) {
-            add(prefix + "mosaicity", prefix + "extinction.mosaicity", &*experiment.extinction.mosaicity);
+        if (experiment.extinction.mosaic_spread) {
+            add(prefix + "mosaic_spread", prefix + "extinction.mosaic_spread", &*experiment.extinction.mosaic_spread);
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
@@ -3226,8 +3248,8 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
     if (type.sample_form == "single crystal") {
-        // A single crystal: its wavelength (constant wavelength), the Becker-Coppens extinction off (radius 0)
-        // and no reflections until its data are loaded.
+        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
+        // are loaded.
         if (type.radiation_probe != "neutron") {
             throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
         }
@@ -3239,8 +3261,7 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         if (constant_wavelength) {
             text += "_instrument.setup_wavelength 1.\n\n";
         }
-        text += "_extinction.type becker-coppens\n_extinction.model gauss\n_extinction.radius 0\n"
-                "_extinction.mosaicity 0\n";
+        text += "_extinction.type none\n";
         if (!structure_ids.empty()) {
             text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
             for (const std::string& structure_id : structure_ids) {
@@ -4348,6 +4369,32 @@ double parse_edi_double(const std::string& text, const std::string& where) {
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
     // never re-open the numeric seam the products already resolved.
     return to_double(text, where);
+}
+
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token) {
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), token) == types.end()) {
+        throw std::invalid_argument("extinction type '" + token + "' is not supported (expected " +
+                                    spelled_tokens(types) + ")");
+    }
+    extinction.type = token;
+    const bool spread = token == "becker-coppens-type-1" || token == "becker-coppens-mixed";
+    const auto keep = [](OptionalParameter& field, bool wanted, const ParameterSpec& spec) {
+        if (!wanted) {
+            field.reset();
+        } else if (!field.has_value()) {
+            Parameter started = parse_parameter("0", "<extinction-type-default>");
+            started.spec = &spec;
+            field = started;
+        }
+    };
+    keep(extinction.domain_radius, token != "none", spec::extinction_domain_radius);
+    keep(extinction.mosaic_spread, spread, spec::extinction_mosaic_spread);
+    if (!spread) {
+        extinction.mosaic_distribution.reset();
+    } else if (!extinction.mosaic_distribution) {
+        extinction.mosaic_distribution = "gaussian";
+    }
 }
 
 void apply_absorption_family(AbsorptionBase& absorption, const std::string& token) {

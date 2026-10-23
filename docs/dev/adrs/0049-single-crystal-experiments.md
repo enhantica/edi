@@ -17,7 +17,7 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 
 1. **Model.** An experiment whose `_experiment_type.sample_form` is `single crystal` holds `reflections` (h, k, l, the
    measured F² and its su, a wavelength per reflection for time of flight, and the calculated F² with d and
-   sinθ/λ beside them) and `extinction` (type, model, radius, mosaicity). It has no `data` pattern, profile,
+   sinθ/λ beside them) and `extinction` (type, mosaic distribution, domain radius, mosaic spread). It has no `data` pattern, profile,
    background, excluded regions, absorption or preferred orientation.
 2. **File.** The reader takes the `_refln` loop's measured columns and the `_extinction` category; the save goes
    through crysta's writer as every save does.
@@ -26,10 +26,12 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 4. **Views.** For a single crystal the Experiment and Analysis pages show, where the pattern chart was, a chart of
    F²calc against F²meas (each reflection a point with its su bar, and the y = x line) over a table of h, k, l,
    F²meas, su, F²calc and (F²meas − F²calc)/su. The sidebar shows Extinction and leaves out the pattern-only groups.
-   The mosaicity is Becker–Coppens' g, an inverse width of the mosaic spread (larger is narrower), not an angle: its
-   value stays the one diffraction-lib and CrysPy give, which they call arc minutes, and edi shows it with no unit. Its
-   hint gives the spread it means: g per radian is the value times π/10800 times 10⁴ (CrysPy reads it beside the
-   radius in μm and λ in Å), a Gaussian spread's FWHM is √(2 ln 2/π)/g and a Lorentzian's 1/(πg).
+   The Extinction group has a type selector like Absorption's: None, Isotropic Becker–Coppens type I, type II and
+   mixed. It shows only the selected type's fields: nothing for None, the mosaic distribution (Gaussian or Lorentzian)
+   and the mosaic spread for type I, the domain radius for type II, all three for mixed. A new single crystal starts
+   at None, and a file without `_extinction.type` reads as None. The mosaic spread is Becker–Coppens' g in rad⁻¹, the
+   inverse width of the mosaic distribution (larger is narrower), shown as a plain number like any other parameter;
+   the domain radius is in μm. edi reads no other spelling of either (no CrysPy arc-minute value).
 5. **Report.** The report model carries a single crystal's reflections for its chart instead of a pattern, so the
    Report page, the HTML and the PDF draw the same chart, with R(F²) and wR(F²) in its title and in the fit result.
    The experiment's section lists the reflection file and count, the extinction, and every reflection with its

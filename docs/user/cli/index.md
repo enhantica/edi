@@ -57,7 +57,7 @@ The single-crystal projects below reproduce diffraction-lib's verification pages
 | [sc-neut-cwl_pr2nio4-5c2_basic](sc-neut-cwl_pr2nio4-5c2_basic/index.md) | Pr2NiO4 single crystal (constant wavelength), anisotropic displacements, scale only |
 | [sc-neut-cwl_tb2ti2o7-heidi_basic](sc-neut-cwl_tb2ti2o7-heidi_basic/index.md) | Tb2Ti2O7 on HEiDi (constant wavelength), scale only |
 | [sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp](sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md) | Tb2Ti2O7 on HEiDi, anisotropic displacements, scale only |
-| [sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction](sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and crystal radius |
+| [sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction](sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and domain radius |
 | [sc-neut-tof_taurine-unknown_basic](sc-neut-tof_taurine-unknown_basic/index.md) | taurine single crystal (time of flight), scale only |
 | [sc-neut-cwl_tb2ti2o7-heidi_fit](sc-neut-cwl_tb2ti2o7-heidi_fit/index.md) | Tb2Ti2O7 on HEiDi from a rough start (app example) |
 | [sc-neut-cwl_pr2nio4-5c2_fit](sc-neut-cwl_pr2nio4-5c2_fit/index.md) | Pr2NiO4 on 5C2 from a rough start (app example) |
