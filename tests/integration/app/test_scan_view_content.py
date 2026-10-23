@@ -172,4 +172,6 @@ def test_scan_view_content(scan_receipt, case):
         ), (
             'Every requested map part and production scan contract executes without skipping: '
             + '\n'.join(lines)
+            + '\nNative failure receipt:\n'
+            + output
         )

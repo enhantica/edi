@@ -231,4 +231,4 @@ def test_scan_owner_addition(scan_receipt, case):
         re.match(r'FAIL|SKIP', line) for line in lines
     ), 'The requested production scan contract executes and passes without skipping: ' + '\n'.join(
         lines
-    )
+    ) + '\nNative failure receipt:\n' + output
