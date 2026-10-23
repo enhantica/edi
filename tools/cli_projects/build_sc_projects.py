@@ -358,8 +358,8 @@ FIT_PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_FIT_SITES,
         'scale': '4()',
-        # The crystal radius 0.025 mm, fixed; the domain radius from 25 um (the owner, 2026-10-23).
-        'extinction': ('becker-coppens-mixed', 'gaussian', '25()', '0()', '0.025'),
+        # The crystal radius 3 mm; the domain radius from 25 um (the owner, 2026-10-23).
+        'extinction': ('becker-coppens-mixed', 'gaussian', '25()', '0()', '3'),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
@@ -400,9 +400,8 @@ CASES = {
         'start': (
             'The project starts from rough values: anisotropic displacements at a small '
             'isotropic-equivalent value, the free O1 x moved off its refined value, mixed '
-            'Becker-Coppens extinction with the crystal radius fixed at 0.025 mm and the domain '
-            'radius (from 25 μm) and mosaic spread (from 0) free, and the scale to one '
-            'significant figure.'
+            'Becker-Coppens extinction with a crystal radius of 3 mm and the domain radius (from '
+            '25 μm) and mosaic spread (from 0) free, and the scale to one significant figure.'
         ),
         'model': (
             "{lib}'s verification page `sc-neut-cwl_tbti_anisotropic-adp` (FullProf "
@@ -417,8 +416,8 @@ CASES = {
         'start_detail': (
             'Uani on every site from an isotropic-equivalent 0.0026 Å², tied by site symmetry; '
             'O1 x moved off its refined value; isotropic Becker-Coppens extinction, mixed, with '
-            'the crystal radius fixed at 0.025 mm, the domain radius free from 25 μm and the '
-            'mosaic spread free from 0 (the owner, 2026-10-23); the scale 4. Free: the scale, '
+            'the crystal radius 3 mm, the domain radius free from 25 μm and the mosaic spread '
+            'free from 0 (the owner, 2026-10-23); the scale 4. Free: the scale, '
             'O1 x, the eight independent tensor components, the domain radius and the mosaic '
             'spread (12 parameters).'
         ),
@@ -430,14 +429,14 @@ CASES = {
             ),
             (
                 'The tutorial frees its one radius, crystal and domain at once, at a fixed '
-                'mosaic spread; here the crystal radius is fixed and the domain radius and '
-                'mosaic spread are free.'
+                'mosaic spread; here the crystal radius describes the crystal (3 mm) and the '
+                'domain radius and mosaic spread are free.'
             ),
         ],
         'result': (
-            'From this start edi converges in 19 iterations to reduced χ² 3.27 over the 220 '
-            'reflections, with the scale 5.638(48), the domain radius 24.3(49) μm and the '
-            'mosaic spread 99890(92723) rad⁻¹.'
+            'From this start edi converges in 12 iterations to reduced χ² 1.33 over the 220 '
+            'reflections (R(F²) 2.42 %), with the scale 5.899(35), the domain radius 3.0(18) μm '
+            'and the mosaic spread 2732(93) rad⁻¹.'
         ),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
