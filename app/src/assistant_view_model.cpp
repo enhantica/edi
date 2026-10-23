@@ -7773,8 +7773,6 @@ struct AssistantViewModel::State {
         creation->completing_existing = project != nullptr;
         const auto cifOrigin=mapped?std::shared_ptr<LocalInputSource>{}:original_input(*native_receipt,cifId),dataOrigin=original_input(*native_receipt,dataId);
         if((cifOrigin && !cifOrigin->content_current()) || !dataOrigin->content_current())throw ActionRefusal("input_unavailable","file_id");
-        quint64 source_text=0;
-        for(const auto& source:creation->selected)if(!cifId.isEmpty() && source.id==cifId.toStdString())source_text=source.bytes.size();
 
         auto inputs = creation_input(creation, cifId, dataId);
         auto job = creation_job(creation, std::move(inputs.first), std::move(inputs.second), std::move(recipe), args.value("mapped_structure").toObject());
