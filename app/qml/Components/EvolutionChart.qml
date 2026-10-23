@@ -272,16 +272,6 @@ Item {
                 color: chart.colors.chartGridLine
             }
         }
-        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
-        // Stacked and Map charts mark it with the same line.
-        SelectedPatternLine {
-            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
-
-            objectName: "evolution.current"
-            vertical: true
-            dark: chart.colors.isDarkPalette
-            position: (at - axisX.min) / (axisX.max - axisX.min) * plot.width
-        }
         MeasuredLayer {
             id: layer
 
@@ -293,6 +283,16 @@ Item {
             xMax: axisX.max
             yMin: axisY.min
             yMax: axisY.max
+        }
+        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
+        // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.
+        SelectedPatternLine {
+            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
+
+            objectName: "evolution.current"
+            vertical: true
+            dark: chart.colors.isDarkPalette
+            position: (at - axisX.min) / (axisX.max - axisX.min) * plot.width
         }
         Rectangle {
             anchors.fill: parent
