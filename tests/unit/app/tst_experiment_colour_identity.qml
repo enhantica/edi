@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
@@ -34,18 +35,25 @@ Item {
         name: "ExperimentColourIdentity"
         when: windowShown
         property int oldTheme
-        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
-        property string oldScheme
+        property var reference: Approved.reference(SettingsProof)
+        property var oldScheme
         function initTestCase() {
             oldTheme = Style.Colors.theme;
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
             surface.Window.window.width = surface.width;
             surface.Window.window.height = surface.height;
         }
         function cleanup() {
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setSchemes(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
         }
         function icon(root) {
             return Render.descendants(root).find(item => item.isIcon === true && item.modelData.icon === ParameterNames.blockIcon("experiment"));
@@ -86,7 +94,7 @@ Item {
             verify(Session.openExample(data.example), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
-            Preferences.colourScheme = data.scheme;
+            Approved.setSchemes(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = createTemporaryObject(projectFactory, surface, {
                 width: surface.width,
@@ -104,15 +112,9 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const table = SettingsProof.paletteForScheme(data.scheme);
-            const palette = table.pattern, gradient = table.gradient || palette.slice(-2);
-            const theme = data.dark ? "dark" : "light";
-            compare(expected[0], (data.count > palette.length ? gradient[0] : palette[0])[theme].toLowerCase(), "Before endpoints in the short set; after the reordered short set or trimmed gradient role; actual first=" + expected[0] + "; declared first=" + (data.count > palette.length ? gradient[0] : palette[0])[theme]);
-            if (data.count > palette.length)
-                compare(expected[data.count - 1], gradient[gradient.length - 1][theme].toLowerCase(), "Any set beyond the fixed colours reaches the independent last gradient endpoint");
-            else
-                for (const position of positions)
-                    compare(expected[position], palette[position][theme].toLowerCase(), "The few-experiment Project list uses its independent palette place " + position);
+            const approved = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark);
+            for (const position of positions)
+                compare(expected[position], approved[position], "The Project icon equals its independently frozen approved place for the full experiment count");
             project.visible = false;
             const failures = [];
             for (const consumer of ["Experiment", "Analysis", "Evolution"]) {

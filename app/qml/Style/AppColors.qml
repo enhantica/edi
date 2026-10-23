@@ -16,19 +16,20 @@ QtObject {
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
 
-    // A structure's colour by its place in the project, from the colour scheme's palette (data/palettes; the
-    // default's orange, teal and pink, as easydiffractionbeta colours its models), round again after its last.
+    // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
+    // the first ones in order, or past five a gradient along the order.
     function structure(index) {
-        return index >= 0 ? ApplicationInfo.structureColour(Preferences.colourScheme, index, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
+        const count = Session.project ? Math.max(Session.project.structures.count, 1) : 1;
+        return index >= 0 ? ApplicationInfo.structureColour(Preferences.structureColours, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
     }
 
-    // An experiment's colour by its place among the project's, from the colour scheme's palette: the default's
-    // light blue first; past the palette's own colours, a gradient along the order. None is a structure's colour.
+    // An experiment's colour by its place among the project's, from the colour scheme's measured colours: the first
+    // ones in order, or past five a gradient along the order. None is a structure's colour.
     // `dark` picks the dark theme's colour; without it, the app's theme decides (a PDF's figure asks for the light one).
     function experiment(index, dark) {
         const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
         const darkColour = dark === undefined ? EaStyle.Colors.isDarkPalette : dark;
-        return index >= 0 ? ApplicationInfo.patternColour(Preferences.colourScheme, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
+        return index >= 0 ? ApplicationInfo.patternColour(Preferences.patternColours, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.
@@ -41,8 +42,17 @@ QtObject {
 
     // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), the colour of the
     // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H) in the structure view's scheme; the minor
-    // foreground colour for an element the table does not have.
-    function element(typeSymbol) {
-        return ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
+    // foreground colour for an element the table does not have. Drawn flat, so made readable on `backgrounds`, by
+    // default every underlay of a table cell: both alternating rows, the hover tint and the page behind the table
+    // (edi ADR-0047).
+    function element(typeSymbol, backgrounds) {
+        const colour = ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
+        return colors.readable(colour, backgrounds === undefined ? colors.tableUnderlays : backgrounds);
+    }
+    readonly property list<color> tableUnderlays: [EaStyle.Colors.themeBackgroundHovered1, EaStyle.Colors.themeBackgroundHovered2, EaStyle.Colors.themeRowHovered, EaStyle.Colors.mainContentBackground]
+
+    // A colour drawn flat on any of `backgrounds`, moved to 3:1 contrast on each by its lightness (edi ADR-0047).
+    function readable(colour, backgrounds) {
+        return ApplicationInfo.readableColour(colour, backgrounds);
     }
 }

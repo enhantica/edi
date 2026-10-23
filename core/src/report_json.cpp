@@ -181,11 +181,12 @@ Enum enum_of(const Value& value, const std::array<std::pair<Enum, const char*>, 
     throw std::invalid_argument(std::string("report JSON: unknown ") + what + " '" + text + "'");
 }
 
-constexpr std::array<std::pair<SeriesKind, const char*>, 5> kKinds{{{SeriesKind::Measured, "measured"},
+constexpr std::array<std::pair<SeriesKind, const char*>, 6> kKinds{{{SeriesKind::Measured, "measured"},
                                                                     {SeriesKind::Calculated, "calculated"},
                                                                     {SeriesKind::Background, "background"},
                                                                     {SeriesKind::Residual, "residual"},
-                                                                    {SeriesKind::BraggTicks, "bragg"}}};
+                                                                    {SeriesKind::BraggTicks, "bragg"},
+                                                                    {SeriesKind::StructureCurve, "structure"}}};
 constexpr std::array<std::pair<Pane, const char*>, 3> kPanes{
     {{Pane::Main, "main"}, {Pane::Bragg, "bragg"}, {Pane::Residual, "residual"}}};
 constexpr std::array<std::pair<YScale, const char*>, 3> kScales{

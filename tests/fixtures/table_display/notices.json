@@ -1,12 +1,14 @@
 {
   "source": "THIRD-PARTY-NOTICES",
-  "sha256": "23441fbbc47008ecec495b090cca56c0324c90254b4b9529464b8765ab029758",
+  "sha256": "685403ccc0d899865ca83601786a96edbb69c608855af2b2cafed7ef287a3095",
+  "catalogue": "DEPENDENCIES.md",
+  "catalogue_sha256": "6ce01493cb661aec90902890fe9c98bda6da887842dbbf6627bd88e142004859",
   "rows": [
     {
       "component": "crysta",
       "version": "",
       "licence": "BSD-3-Clause",
-      "use": "the diffraction engine, statically linked into the application and the Python extension"
+      "use": "the diffraction engine, statically linked"
     },
     {
       "component": "SLEEF",
@@ -31,18 +33,6 @@
       "version": "23.1.2",
       "licence": "Apache-2.0 WITH LLVM-exception",
       "use": "the LLVM OpenMP runtime (macOS)"
-    },
-    {
-      "component": "nanobind",
-      "version": "2.13.0",
-      "licence": "BSD-3-Clause",
-      "use": "the Python bindings, compiled into the Python extension"
-    },
-    {
-      "component": "robin-map",
-      "version": "",
-      "licence": "MIT",
-      "use": "the hash map inside nanobind, compiled into the Python extension"
     },
     {
       "component": "Qt",
@@ -75,34 +65,52 @@
       "use": "the base QML components and styles of the application"
     },
     {
-      "component": "easydiffractionbeta",
-      "version": "",
-      "licence": "BSD-3-Clause",
-      "use": "the application design and QML the application is ported from, and the Jmol element colours and radii in the element table"
-    },
-    {
-      "component": "diffraction-lib",
-      "version": "",
-      "licence": "BSD-3-Clause",
-      "use": "the Python API design edi follows, example data, and the element colour and radius table"
-    },
-    {
       "component": "pymatgen",
       "version": "",
       "licence": "MIT",
       "use": "VESTA element colours and Shannon ionic radii in the element table, compiled into edi"
     },
     {
+      "component": "Scientific colour maps",
+      "version": "",
+      "licence": "MIT",
+      "use": "Fabio Crameri's batlow, oslo, lajolla, acton, devon and lapaz, candidates for the scan map's colours"
+    },
+    {
+      "component": "cmocean",
+      "version": "",
+      "licence": "MIT",
+      "use": "thermal, haline, deep, dense, ice and tempo, candidates for the scan map's colours"
+    },
+    {
+      "component": "Turbo",
+      "version": "",
+      "licence": "Apache-2.0",
+      "use": "Google's Turbo colour map, a candidate for the scan map's colours"
+    },
+    {
+      "component": "ColorBrewer",
+      "version": "",
+      "licence": "Apache-2.0",
+      "use": "the YlGnBu, PuBu, GnBu, Blues, Purples and YlOrRd schemes spread to 256 colours, candidates for the scan map's colours"
+    },
+    {
+      "component": "CET colour maps",
+      "version": "",
+      "licence": "CC-BY-4.0",
+      "use": "Peter Kovesi's perceptually uniform maps L20, L08, L06, L17 and L18, candidates for the scan map's colours"
+    },
+    {
       "component": "plotly.js",
       "version": "3.7.0",
       "licence": "MIT",
-      "use": "the report's pattern charts, its cartesian bundle"
+      "use": "the report's pattern charts: `plotly-cartesian.min.js` of `plotly.js-cartesian-dist-min`"
     },
     {
       "component": "three.js",
       "version": "0.160.0",
       "licence": "MIT",
-      "use": "the report's structure views, with its OrbitControls"
+      "use": "the report's structure views: `build/three.module.min.js` and `examples/jsm/controls/OrbitControls.js` of `three`"
     },
     {
       "component": "ICU",
@@ -276,7 +284,7 @@
       "component": "Font Awesome Free",
       "version": "",
       "licence": "OFL-1.1 AND CC-BY-4.0",
-      "use": "icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+      "use": "icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); seven designs also draw the HTML report's structure view buttons"
     }
   ],
   "licenceTexts": {

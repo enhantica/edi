@@ -1,0 +1,63 @@
+{
+  "source": "https://raw.githubusercontent.com/matplotlib/matplotlib/v3.10.0/lib/matplotlib/_cm_listed.py",
+  "table": "_viridis_data",
+  "quantization": "floor(channel * 255 + 0.5)",
+  "samples": [
+    {
+      "index": 0,
+      "rgb": [
+        0.267004,
+        0.004874,
+        0.329415
+      ]
+    },
+    {
+      "index": 32,
+      "rgb": [
+        0.278826,
+        0.17549,
+        0.483397
+      ]
+    },
+    {
+      "index": 64,
+      "rgb": [
+        0.229739,
+        0.322361,
+        0.545706
+      ]
+    },
+    {
+      "index": 96,
+      "rgb": [
+        0.172719,
+        0.448791,
+        0.557885
+      ]
+    },
+    {
+      "index": 128,
+      "rgb": [
+        0.127568,
+        0.566949,
+        0.550556
+      ]
+    },
+    {
+      "index": 192,
+      "rgb": [
+        0.369214,
+        0.788888,
+        0.382914
+      ]
+    },
+    {
+      "index": 255,
+      "rgb": [
+        0.993248,
+        0.906157,
+        0.143936
+      ]
+    }
+  ]
+}

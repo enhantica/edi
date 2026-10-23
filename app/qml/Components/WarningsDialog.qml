@@ -67,26 +67,29 @@ AppDialog {
             defaultInfoText: ""
             sourceModel: dialog.messages
 
-            columnWidths: [AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            // The row number first, as in every table: the current row is marked by it (the owner, 2026-10-22).
+            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property string message
                 required property string severity
                 readonly property bool isError: severity === "error"
@@ -94,6 +97,11 @@ AppDialog {
 
                 height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
 
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
+                    text: row.index + 1
+                }
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.kind.${row.index}`
@@ -101,18 +109,18 @@ AppDialog {
                     iconColor: String(row.isError ? EaStyle.Colors.red : row.isInformation ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.orange)
                     toolTip: row.isError ? qsTr("Error") : row.isInformation ? qsTr("Information") : qsTr("Warning")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     id: messageCell
                     objectName: `warnings.message.${row.index}`
                     // Wrapping determines the row height, so its initial width must not depend on that height.
-                    width: table.resolvedColumnWidths[1] ?? 0
+                    width: table.resolvedColumnWidths[2] ?? 0
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideNone
                     wrapMode: Text.Wrap
                     color: row.isError ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
                     text: row.message
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `warnings.dismiss.${row.index}`
                     anchors.verticalCenter: parent.verticalCenter

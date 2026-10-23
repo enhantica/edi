@@ -62,52 +62,51 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignLeft
                 text: qsTr("id")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("type")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 // B iso or U iso, editable, or a tensor's read-only equivalent B eq or U eq (owner, 2026-10-12).
                 text: qsTr("iso/eq")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "11"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "22"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "33"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "12"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "13"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: "23"
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string label
             required property string adpType
             required property ParameterItem adpIso
@@ -119,9 +118,9 @@ Column {
             required property var ani23
             readonly property bool anisotropic: adpType === "Bani" || adpType === "Uani" || adpType === "beta"
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
