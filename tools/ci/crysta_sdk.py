@@ -239,6 +239,35 @@ TESTED = ('lib/libcrysta_core.a', 'bin/crysta')  # the qualified bytes the manif
 RUNTIME = 'lib/crysta-runtime'  # The env libraries the SDK's CLI carries
 
 
+def untested_allowed() -> bool:
+    """Whether this local build may use an SDK packed without its tests; never in CI."""
+    allowed = os.environ.get('EDI_ALLOW_UNTESTED_SDK', '')
+    if allowed not in {'', '1'}:
+        refuse(f'EDI_ALLOW_UNTESTED_SDK is {allowed!r}: it is 1 or unset')
+    if allowed and (os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS')):
+        refuse('EDI_ALLOW_UNTESTED_SDK=1 is for a local trial: CI never builds on an untested SDK')
+    return allowed == '1'
+
+
+def qualified(sdk_dir: Path, tested: dict) -> None:
+    """Refuse a tier that missed a case, and an untested one without the local switch."""
+    allow_untested = untested_allowed()
+    for tier in ('cpp_tier', 'corpus'):
+        t = tested.get(tier) or {}
+        # An SDK packed for a local trial without its tests says so; only that trial may use it.
+        if t == {'untested': True}:
+            if not allow_untested:
+                refuse(
+                    f'{sdk_dir}: the {tier} qualification never ran (an untested SDK); '
+                    'EDI_ALLOW_UNTESTED_SDK=1 lets a local build use it'
+                )
+            continue
+        if not (
+            isinstance(t.get('total'), int) and t['total'] > 0 and t.get('passed') == t['total']
+        ):
+            refuse(f'{sdk_dir}: the {tier} qualification is not complete ({t})')
+
+
 def shape(sdk_dir: Path, manifest: dict, platform: str) -> None:
     """F15: schema, clean identity, edi's required fingerprint set, the qualified binaries."""
     sha, tree = manifest.get('source_sha', ''), manifest.get('source_tree', '')
@@ -251,12 +280,7 @@ def shape(sdk_dir: Path, manifest: dict, platform: str) -> None:
     if names != sorted(REQUIRED[platform]):
         refuse(f'{sdk_dir}: fingerprint {names} is not the required {sorted(REQUIRED[platform])}')
     tested = manifest.get('tested') or {}
-    for tier in ('cpp_tier', 'corpus'):
-        t = tested.get(tier) or {}
-        if not (
-            isinstance(t.get('total'), int) and t['total'] > 0 and t.get('passed') == t['total']
-        ):
-            refuse(f'{sdk_dir}: the {tier} qualification is not complete ({t})')
+    qualified(sdk_dir, tested)
     # Absent bytes and an absent record never qualify each other
     for rel in TESTED:
         want = (tested.get('sha256') or {}).get(rel)
