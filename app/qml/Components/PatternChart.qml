@@ -478,6 +478,18 @@ Item {
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
         }
+        // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
+        // remembered settings again whenever another chart changes them.
+        Binding {
+            target: toolbar
+            property: "hoverShown"
+            value: Preferences.chartHoverShown
+        }
+        Binding {
+            target: toolbar
+            property: "pointerMode"
+            value: Preferences.chartPointerMode
+        }
     }
 
     GraphsView {
