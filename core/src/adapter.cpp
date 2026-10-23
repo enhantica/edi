@@ -2427,6 +2427,16 @@ std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
 }
 
+// The CIF import is crysta's; against an SDK without it a text is read as `.edi`.
+std::optional<std::string> structure_edi_from_cif(const std::string& text) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::structure_edi_from_cif(text);
+#else
+    static_cast<void>(text);
+    return std::nullopt;
+#endif
+}
+
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
 void read_report_item(std::string_view item, const std::string& value, Project& project) {
     const crysta::ReportItemValue read = crysta::read_report_item(item, value);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -22,6 +23,10 @@ void require_representable_id(const std::string& value, const std::string& categ
 std::string cell_domain_message(double a, double b, double c, double alpha_deg, double beta_deg,
                                 double gamma_deg);
 std::string wavelength_domain_message(double wavelength);
+
+// A structure CIF as the `.edi` document crysta's save would write for it, or nullopt when the text
+// is already `.edi`. Throws std::invalid_argument naming a missing item.
+std::optional<std::string> structure_edi_from_cif(const std::string& text);
 
 }  // namespace edi::detail
 
