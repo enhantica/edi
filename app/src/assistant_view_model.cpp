@@ -993,12 +993,14 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
                 && host->usage_epoch == account
 #endif
+                ;
         }
         bool publication_current() const noexcept {
             return retirement_current()
 #ifndef __EMSCRIPTEN__
                 && host->native_serial == input
 #endif
+                ;
         }
         bool input_current() const noexcept {
             return publication_current() && host->file_epoch == files && host->file_connection_epoch == connection;
@@ -7638,7 +7640,7 @@ struct AssistantViewModel::State {
 
         request.current=std::move(current);request.prepareCommit=std::move(prepare);
         request.finishCommit=std::move(finish);request.completed=std::move(completed);
-        task->cue_bytes=callbacks;task->visible_pending=true;
+        task->visible_pending=true;
 
         if(!receiver || receiver->state_.get()!=this || !native_save_current(task))return;
         if(!widget_input || !target || action_window!=window){native_pending_save_cancelled(task);return;}
@@ -7775,8 +7777,7 @@ struct AssistantViewModel::State {
         for(const auto& source:creation->selected)if(!cifId.isEmpty() && source.id==cifId.toStdString())source_text=source.bytes.size();
 
         auto inputs = creation_input(creation, cifId, dataId);
-        // Counts cannot exceed the bounded selected measurement byte count. Prepare
-        // every complete result wrapper before submitting any native work.
+        auto job = creation_job(creation, std::move(inputs.first), std::move(inputs.second), std::move(recipe), args.value("mapped_structure").toObject());
         native_prepare(rpc, id, "create_cwl_project", purpose, original);
         if (!receiver || !native_call || native_call->rpc != rpc || native_call->record->call != id)
             throw std::runtime_error("The original create request changed during preparation");
@@ -7906,6 +7907,22 @@ struct AssistantViewModel::State {
     // Bound only the affected structure's metadata, using existing native lengths;
     // no copied scientific project or all-project result is needed.
 
+    void validate_structure_metadata(const std::shared_ptr<NativeCreateWidget>& run) const {
+        const auto* structure=run->operation_structure;
+        if(!structure)return;
+        if(structure->atom_sites.size()>Limits::stream_items ||
+            (run->arguments.value("operation")=="append" && structure->atom_sites.size()>=Limits::stream_items))
+            throw std::length_error("Structure rows exceed original capacity");
+        const auto text=[](const std::string& value) {
+            if(value.size()>Limits::id_bytes || value.find('\0')!=std::string::npos)throw ActionRefusal("unsupported_input","structure");
+        };
+        text(structure->name.value());text(structure->space_group.name_h_m.value());text(structure->space_group.coord_system_code.value());
+        for(const auto& site:structure->atom_sites) {
+            text(site->id.value());text(site->type_symbol.value());text(site->wyckoff_letter.value());text(site->adp_type.value());
+        }
+        if(structure->atom_site_aniso.size()>Limits::stream_items)throw std::length_error("Structure tensor rows exceed original capacity");
+        for(const auto& site:structure->atom_site_aniso)text(site->id.value());
+    }
     Object structure_metadata(const std::shared_ptr<NativeCreateWidget>& run) const {
         const auto* structure=run->result_structure?run->result_structure:run->operation_structure;
         if(!structure)return {};
@@ -8642,7 +8659,11 @@ struct AssistantViewModel::State {
         }
         bool no_change=false;
         if(name=="edit_experiment") {experiment_admit_target(run);no_change=experiment_action_equal(run);}
-        if(structure_app_action(name)) {structure_admit_target(run);no_change=structure_action_equal(run);}
+        if(structure_app_action(name)) {
+            structure_admit_target(run);
+            if(!selection_action(run))validate_structure_metadata(run);
+            no_change=structure_action_equal(run);
+        }
         if(name=="set_experiment_type") {
             const auto axis=args.value("axis").toString(),token=args.value("token").toString();
             if((axis!="beamMode" && axis!="radiationProbe") ||
@@ -10036,7 +10057,6 @@ struct AssistantViewModel::State {
             generic_blocked = false; generic_held_row.reset();
             native_discard_pending = true; native_complete_discard();
             if (!receiver || generation != binding || usage_epoch != account || native_serial != input) return;
-            if (clear_scope)  // Clear still commits without an optional approval proof.
             auto approved = std::move(clear_scope);
             // bind clears live memory/sources. Restore only the preowned actual
             // remaining scope, after its exact original attachment completed.
