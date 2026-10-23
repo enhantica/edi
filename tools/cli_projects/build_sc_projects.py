@@ -347,14 +347,18 @@ FIT_PROJECTS = {
         'instrument': '5C2',
         'facility': 'LLB',
         'description': (
-            'Single crystal · Isotropic displacements and coordinates from a rough start'
+            'Single crystal · Isotropic displacements, coordinates and extinction '
+            'from a rough start'
         ),
         'purpose': 'refinement',
         'space_group': ('F m m m', None),
         'cell': ('5.417799', '5.4146', '12.483399', '90', '90', '90'),
         'sites': PR2NIO4_FIT_SITES,
         'scale': '4()',
-        'extinction': ('gauss', '0', '0'),
+        # FullProf's own refinement has no extinction: the radius is diffraction-lib's default
+        # 1 micrometre, too small for primary extinction, and the mosaicity starts at 0, free,
+        # as in the Tb2Ti2O7 example.
+        'extinction': ('gauss', '1', '0()'),
     },
 }
 
