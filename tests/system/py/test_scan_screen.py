@@ -118,8 +118,25 @@ def test_adaptive_draws_changed_pattern_while_scan_running(screens, backend):
 
 @pytest.mark.parametrize('backend', ['desktop', 'browser'])
 @pytest.mark.parametrize('mode', MODES)
-def test_scan_pattern_mode_draws_its_promised_files(screens, backend, mode):
+def test_scan_pattern_mode_draws_its_promised_files(screens, backend, mode, request):
     item = screens[backend]['results'][mode]
+    request.node.add_report_section(
+        'call',
+        'scan chart diagnostics',
+        json.dumps(
+            {
+                'backend': backend,
+                'mode': mode,
+                'error': item.get('error'),
+                'followEvents': item.get('followEvents', 'unavailable in this capture'),
+                'frames': [
+                    {key: value for key, value in frame.items() if key != 'drawnPoints'}
+                    for frame in item['frames']
+                ],
+            },
+            indent=2,
+        ),
+    )
     assert not item.get('error'), (
         'Scan chart: each selected mode must complete through the actual app worker'
     )

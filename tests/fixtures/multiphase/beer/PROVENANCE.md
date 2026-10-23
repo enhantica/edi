@@ -23,3 +23,7 @@ convergence, finite scales, improved residuals and exact persistence.
 Measured source: easyscience/diffraction commit
 `35af7e9bf469a1ee4ecc889aff2279440b020c8a`, archive SHA256
 `68bdc067bda10fa07bfa9546375fa1ac85dd575add401c6b813cbd066cdb7d5e`.
+
+**Excluded rows rewritten ([ADR-0044](../../../../docs/dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
+file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
+instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.

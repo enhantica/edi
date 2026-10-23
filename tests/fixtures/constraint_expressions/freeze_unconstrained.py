@@ -10,14 +10,17 @@ import tempfile
 from pathlib import Path
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
 
-def snapshot(root):
+def snapshot(root, *, historical_fractions=False):
     result = {}
     for path in sorted(Path(root).rglob('*')):
         if not path.is_file():
             continue
         content = original_tokens(path.read_bytes())
+        if historical_fractions:
+            content = historical_single_fraction(path.relative_to(root).as_posix(), content)
         if path.name == 'project.edi':
             content = re.sub(
                 rb'(?m)^(_metadata\.(?:created|last_modified)\s+).+$', rb'\1<CLOCK>', content

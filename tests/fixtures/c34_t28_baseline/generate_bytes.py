@@ -22,7 +22,9 @@ from pathlib import Path
 from tests.conftest import crysta_reference_source
 from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
 from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
+from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.report_units.iucr_reference import without_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = 'f3ea7afea400639f2a66d6acb8d922163f1ef128'
@@ -42,8 +44,9 @@ def inputs(root=ROOT):
     sources = {}
     for path in sorted((root / 'docs/user').rglob('project.edi')):
         sources['repo:' + path.parent.relative_to(root).as_posix()] = path.parent
-    for path in sorted(corpus_root(root).glob('*/project/project.edi')):
-        sources['corpus:' + path.parent.relative_to(corpus_root(root)).as_posix()] = path.parent
+    for path in sorted(corpus_root(root).glob('*/project')):
+        if path.is_dir() and (path / 'structures').is_dir() and (path / 'experiments').is_dir():
+            sources['corpus:' + path.relative_to(corpus_root(root)).as_posix()] = path
     if PACKAGE == 'crysta':
         prior = root / 'tests/fixtures/c34_t26_diffraction_lib'
         for group in ('inputs', 'calculated'):
@@ -52,10 +55,14 @@ def inputs(root=ROOT):
     return sources
 
 
-def hashes(directory):
+def hashes(directory, *, excluded=False):
     return {
         p.relative_to(directory).as_posix(): hashlib.sha256(
-            original_tokens(p.read_bytes())
+            original_tokens(
+                historical_excluded_bytes(p.relative_to(directory).as_posix(), p.read_bytes())
+                if excluded
+                else p.read_bytes()
+            )
         ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()
@@ -104,8 +111,8 @@ CALCULATOR_INPUTS = {
 }
 
 
-def legacy_input_hashes(directory, case):
-    result = hashes(directory)
+def legacy_input_hashes(directory, case, *, excluded=False):
+    result = hashes(directory, excluded=excluded)
     for name in CALCULATOR_INPUTS.get(case, ()):
         contents = (directory / name).read_bytes()
         declaration = b'_calculator.type crysta\n'
@@ -115,16 +122,20 @@ def legacy_input_hashes(directory, case):
         assert len(re.findall(rb'(?m)^_calculator\.', contents)) == 1, (
             ' I22 no additional seed calculator field may escape the input oracle'
         )
-        old = original_tokens(contents).replace(declaration, b'_calculator.type cryspy\n', 1)
+        old = original_tokens(
+            historical_excluded_bytes(name, contents) if excluded else contents
+        ).replace(declaration, b'_calculator.type cryspy\n', 1)
         result[name] = hashlib.sha256(old).hexdigest()
     return result
 
 
-def without_saved_calculator(name, contents):
+def without_saved_calculator(name, contents, *, excluded=False):
+    if excluded:
+        contents = historical_excluded_bytes(name, contents)
     # Exact canonical block from 's independent CIF contract and retained
     # main-tree byte witness; this is not a new engine-output regression pin.
     if not (name.startswith('experiments/') and name.endswith('.edi')):
-        return contents
+        return without_default_rule(name, contents)
     declaration = b'_calculator.type crysta\n\n'
     assert contents.count(declaration) == 1, (
         ' I22 each saved experiment has exactly one canonical calculator block'
@@ -135,10 +146,12 @@ def without_saved_calculator(name, contents):
     return original_tokens(contents.replace(declaration, b'', 1))
 
 
-def saved_hashes(directory):
+def saved_hashes(directory, *, excluded=False):
     return {
         p.relative_to(directory).as_posix(): hashlib.sha256(
-            without_saved_calculator(p.relative_to(directory).as_posix(), p.read_bytes())
+            without_saved_calculator(
+                p.relative_to(directory).as_posix(), p.read_bytes(), excluded=excluded
+            )
         ).hexdigest()
         for p in sorted(directory.rglob('*'))
         if p.is_file()
@@ -153,7 +166,11 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
         controlled = Path(temporary) / 'input'
         shutil.copytree(source, controlled)
         project_file = controlled / 'project.edi'
-        text = project_file.read_text()
+        text = (
+            project_file.read_text()
+            if project_file.is_file()
+            else '_edi.schema_version 3\n_metadata.name untitled_project\n'
+        )
         for name, value in (
             ('created', '01 Jan 2099 00:00:00'),
             ('last_modified', '01 Jan 2099 00:00:01'),
@@ -188,18 +205,29 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--record', action='store_true')
-    parser.add_argument('--add-fixed-point', metavar='PROJECT_ID')
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument('--add-fixed-point', metavar='PROJECT_ID')
+    selection.add_argument('--add-corpus-fixed-point', metavar='CASE_ID')
     parser.add_argument('--source-root', type=Path, default=ROOT)
     args = parser.parse_args()
-    if args.add_fixed_point:
+    if args.add_fixed_point or args.add_corpus_fixed_point:
         if args.record:
             parser.error('a new-project invariant cannot regenerate historical save pins')
-        source = ROOT / 'docs/user/cli' / args.add_fixed_point / 'project'
-        if not re.fullmatch(r'[a-z0-9_-]+', args.add_fixed_point) or not source.is_dir():
+        identity = args.add_fixed_point or args.add_corpus_fixed_point
+        source = (
+            (ROOT / 'docs/user/cli' if args.add_fixed_point else corpus_root())
+            / identity
+            / 'project'
+        )
+        if not re.fullmatch(r'[a-z0-9_-]+', identity) or not source.is_dir():
             parser.error('fixed-point addition requires an existing CLI project')
         destination = Path(__file__).with_name('saved-bytes.json')
         retained = json.loads(destination.read_text())
-        case = 'repo:' + source.relative_to(ROOT).as_posix()
+        case = (
+            ('repo:' + source.relative_to(ROOT).as_posix())
+            if args.add_fixed_point
+            else 'corpus:' + source.relative_to(corpus_root()).as_posix()
+        )
         additions = retained.setdefault('post_feature_fixed_points', {})
         if case in retained['cases'] or case in additions:
             parser.error('a new-project invariant cannot replace any existing byte witness')

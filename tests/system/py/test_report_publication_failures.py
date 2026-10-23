@@ -90,9 +90,7 @@ def test_write_failure_after_opening_preserves_the_previous_report_bytes(
     environment = fault_environment(fault_library, output.parent, 'html', receipt)
     result = run_fault(path, surface, environment, output)
     assert receipt.exists() and 'write-after-open' in receipt.read_text(), (
-        'The witness writes a real report prefix before ENOSPC; '
-        + result.stdout
-        + result.stderr
+        'The witness writes a real report prefix before ENOSPC; ' + result.stdout + result.stderr
     )
     if surface.startswith('cli'):
         assert result.returncode != 0, 'The CLI reports an actual post-open write failure'

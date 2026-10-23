@@ -26,3 +26,7 @@ is which and why.
 in the same change, because edi supports only crysta and warns on any other value. The tolerance line above remains the only other difference from the source, whose new
 content ids are `tests/fitting/ncaf-wish-2bank-s3` (tree) `14ac76932ab6034726611a6afe54a6b29e28bb18` and `tests/fitting/ncaf-wish-2bank-s3/project` (tree)
 `82cad6508c2ec6761a3150768b46ace4ecc51634`; `expected.json` did not change.
+
+**Excluded rows rewritten ([ADR-0044](../../../dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
+file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
+instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.

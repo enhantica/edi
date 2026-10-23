@@ -29,48 +29,49 @@ DataTable {
     columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("parameter")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("start value")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("start error")
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index
         // The roles by the model: `id` cannot be a property name.
         required property var model
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideMiddle
             text: row.model.id
             ToolTip.text: row.model.id
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startValue)
+            number: table.shown(row.model.startValue)
+            full: NumberText.plainFull(row.model.startValue)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startUncertainty)
+            number: table.shown(row.model.startUncertainty)
+            full: NumberText.plainFull(row.model.startUncertainty)
         }
     }
 }

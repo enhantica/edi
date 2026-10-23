@@ -111,6 +111,23 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
   untouched.
 - A conda-channel transport would need a later ADR.
 
+## macOS SDK 27 (2026-10-21)
+
+Xcode 27 ships the macOS 27 SDK, and two things in it break the Clang 19 toolchain the Mac builds used:
+
+- With Clang 19's libc++, `<complex>` no longer sees `INFINITY` and `NAN` through the SDK's `math.h`, so the
+  compile fails. Clang and libc++ 23 compile it.
+- The SDK's text stubs (`libSystem.tbd` and the rest) list an `arm64e.x1` slice. ld64 reads stubs through tapi,
+  and tapi 1600.0.11.8 before build 4 refuses the unknown slice, so every link fails. Build 4 skips it
+  (conda-forge tapi-feedstock #21).
+
+So on macOS the default and app environments name the Clang 23 drivers, libc++ 23, compiler-rt 23 and llvm-openmp
+23 directly, with tapi build 4; the `cxx-compiler` metapackage, which holds an older Clang, stays on Linux only, and
+Linux keeps its compilers. crysta's Mac environments take the same family, and the app's exact Mac ABI pins above
+follow crysta's lock, so the app links an SDK built with the same toolchain. An SDK built with the older toolchain
+does not match these pins; the pin moves to a crysta build made with the new one. No SDK header is patched and no
+macro is defined by hand.
+
 ## Alternatives considered
 
 | Alternative | Verdict (why rejected / deferred) |

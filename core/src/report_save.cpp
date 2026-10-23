@@ -3,7 +3,7 @@
 
 #include <ctime>
 #include <filesystem>
-#include <fstream>
+#include <functional>
 #include <iomanip>
 #include <locale>
 #include <memory>
@@ -11,7 +11,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <system_error>
+#include <vector>
 
+#include "crysta/project_output.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 
@@ -40,38 +42,20 @@ const ReportLibraries& html_libraries(const ReportOptions& options, const Report
     return options.embed_libraries ? libraries : kOnline;
 }
 
-// Writes `text` to `path` through a file beside it, renamed over it once whole, so a failed write leaves the file
-// that was there as it was.
-void replace_file(const fs::path& path, const std::string& text) {
-    const fs::path part = path.parent_path() / ("." + path.filename().string() + ".part");
-    {
-        std::ofstream out(part, std::ios::binary | std::ios::trunc);
-        out << text;
-        out.close();
-        if (!out) {
-            std::error_code ignored;
-            fs::remove(part, ignored);
-            throw std::runtime_error("cannot write " + path.string());
-        }
-    }
-    std::error_code error;
-    fs::rename(part, path, error);
-    if (error) {
-        fs::remove(part, error);
-        throw std::runtime_error("cannot write " + path.string());
-    }
-}
-
 }  // namespace
 
 ReportOptions report_file_options(ReportOptions options) {
     options.colour_scheme = kDefaultColourScheme;
+    options.structure_colour_scheme.reset();
     options.correlation_experiment = 0;
+    options.element_colours = ColorScheme::Jmol;
     return options;
 }
 
 bool chooses_presentation(const ReportOptions& options) {
-    return options.colour_scheme != kDefaultColourScheme || options.correlation_experiment != 0;
+    return options.colour_scheme != kDefaultColourScheme ||
+           options.structure_colour_scheme.value_or(options.colour_scheme) != options.colour_scheme ||
+           options.correlation_experiment != 0 || options.element_colours != ColorScheme::Jmol;
 }
 
 std::string iso_utc_from_star(const std::string& stamp) {
@@ -80,6 +64,15 @@ std::string iso_utc_from_star(const std::string& stamp) {
     in.imbue(std::locale::classic());
     in >> std::get_time(&parsed, "%d %b %Y %H:%M:%S");
     return in.fail() ? stamp : iso_utc(timegm(&parsed));
+}
+
+void write_report_file(const std::string& project_path, const std::string& name, const std::string& bytes) {
+    // Project output (ADR-0039), written by the engine's writer; a report it refuses is a runtime_error here.
+    try {
+        crysta::output::replace_file(project_path, (fs::path(project_path) / "reports" / name).string(), bytes);
+    } catch (const std::invalid_argument& refusal) {
+        throw std::runtime_error(refusal.what());
+    }
 }
 
 ReportSaveResult save_report(Project& project, const ReportOverrides& overrides, const ReportLibraries& libraries) {
@@ -95,7 +88,6 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         judged = build_report(project, report_file_options(options));
     }
     const fs::path reports = fs::path(project.path) / "reports";
-    fs::create_directories(reports);
     if (project.report_pdf.value_or(false)) {
         result.pdf_left = true;
     }
@@ -104,9 +96,8 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
     if (project.report_html.value_or(true)) {
         const ReportLibraries& used = html_libraries(options, libraries);
         const std::string name = (model.name.empty() ? std::string("report") : model.name) + ".html";
-        const fs::path path = reports / name;
-        replace_file(path, report_html(model, used));
-        result.written.push_back(path.string());
+        write_report_file(project.path, name, report_html(model, used));
+        result.written.push_back((reports / name).string());
         ReportFile row;
         row.name = name;
         row.format = std::string("html");

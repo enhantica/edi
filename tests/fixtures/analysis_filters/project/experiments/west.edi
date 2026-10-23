@@ -1,0 +1,38 @@
+data_west
+_edi.schema_version 3
+_calculator.type crysta
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w 0.15()
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0
+_peak.cutoff_fwhm 5
+_instrument.setup_wavelength 1.54
+_instrument.calib_twotheta_offset 0()
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+amber 0.7()
+violet 0.3
+_background.type polynomial
+_background.origin 40
+loop_
+_background.id
+_background.order
+_background.coef
+c0 0 4.0()
+c1 1 2.0
+c2 2 1.3333333333333333()
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+40 6 1
+50 7 1
+60 8 1
+70 9 1

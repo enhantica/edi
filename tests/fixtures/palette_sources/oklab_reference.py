@@ -10,6 +10,8 @@ import itertools
 import math
 from functools import cache
 
+import numpy as np
+
 RGB_TO_LMS = (
     (0.4122214708, 0.5363325363, 0.0514459929),
     (0.2119034982, 0.6806995451, 0.1073969566),
@@ -183,3 +185,83 @@ def lightness_quantisation_tolerance(actual):
     level = oklab(actual)[0]
     bounds = [(max(0, v - 0.5 / 255), min(1, v + 0.5 / 255)) for v in rgb(actual)]
     return max(abs(oklab(point)[0] - level) for point in itertools.product(*bounds)) + 1e-7
+
+
+@cache
+def nearest_passing_lightness_error(source, background, calculated=None):  # noqa: PLR0914 - independent lattice coordinates and bounds
+    """Nearest passing lattice point, bounded by one full RGB quantisation step.
+
+    Quantisation is one-sided after projection onto a strict contrast/distance
+    boundary. Search the neighbouring lattice, preserving the original half-LSB
+    hue/chroma bounds. The six disputed minima have an exhaustive independent
+    256-cubed witness in quantisation-proof.json, not a product-derived tolerance.
+    """
+    ideal = smallest_adaptation(source, background, calculated)
+    origin = oklab(source)[0]
+    direction = 1 if ideal[0] > origin else -1
+    if ideal == oklab(source):
+        return 0.0
+
+    def encode(value):
+        value = max(0, min(1, value))
+        return 12.92 * value if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+
+    centre = [round(encode(value) * 255) for value in linear_rgb(ideal)]
+    offsets = np.array(list(itertools.product(range(-16, 17), repeat=3)))
+    coordinates = offsets + centre
+    coordinates = coordinates[np.all((coordinates >= 0) & (coordinates <= 255), axis=1)]
+    encoded = coordinates / 255
+
+    def array_lab(values):
+        values = np.where(values <= 0.04045, values / 12.92, ((values + 0.055) / 1.055) ** 2.4)
+        cones = np.cbrt(np.einsum('ij,kj->ik', values, np.array(RGB_TO_LMS)))
+        return np.einsum('ij,kj->ik', cones, np.array(LMS_TO_LAB))
+
+    values = array_lab(encoded)
+    delta = (values[:, 0] - ideal[0]) * direction
+    hue = np.degrees(np.arctan2(values[:, 2], values[:, 1]))
+    hue_tolerance = np.zeros(len(values))
+    full_tolerance = np.zeros(len(values))
+    for vertex in itertools.product((-0.5, 0.5), repeat=3):
+        mapped = array_lab(np.clip(encoded + np.array(vertex) / 255, 0, 1))
+        hue_tolerance = np.maximum(
+            hue_tolerance,
+            np.abs((np.degrees(np.arctan2(mapped[:, 2], mapped[:, 1])) - hue + 180) % 360 - 180),
+        )
+        full = array_lab(np.clip(encoded + 2 * np.array(vertex) / 255, 0, 1))
+        full_tolerance = np.maximum(full_tolerance, np.abs(full[:, 0] - values[:, 0]))
+    source_hue = polar(source)[2]
+    indices = np.nonzero(
+        (delta >= -1e-10)
+        & (delta <= full_tolerance + 1e-7)
+        & (np.abs((hue - source_hue + 180) % 360 - 180) <= hue_tolerance + 1e-5)
+    )[0]
+    for index in indices[np.argsort(delta[indices])]:
+        colour = '#' + ''.join(f'{value:02X}' for value in coordinates[index])
+        if contrast(colour, background) < 3 or (
+            calculated and distance(colour, calculated) < 0.10
+        ):
+            continue
+        if gamut_hue_chroma_preserved(source, colour):
+            return max(0, float(delta[index]))
+    return math.inf
+
+
+def full_step_lightness_tolerance(actual):
+    level = oklab(actual)[0]
+    bounds = [(max(0, value - 1 / 255), min(1, value + 1 / 255)) for value in rgb(actual)]
+    return max(abs(oklab(point)[0] - level) for point in itertools.product(*bounds)) + 1e-7
+
+
+def nearest_passing_lightness(source, actual, background, calculated=None):
+    ideal = smallest_adaptation(source, background, calculated)[0]
+    origin = oklab(source)[0]
+    error = oklab(actual)[0] - ideal
+    if abs(ideal - origin) <= 1e-10:
+        return abs(error) <= lightness_quantisation_tolerance(actual)
+    direction = 1 if ideal > origin else -1
+    return (
+        error * direction >= -1e-10
+        and abs(error) <= full_step_lightness_tolerance(actual)
+        and abs(error) <= nearest_passing_lightness_error(source, background, calculated) + 1e-7
+    )

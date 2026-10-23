@@ -31,10 +31,6 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     display_name_ = spec != nullptr ? QString::fromUtf8(spec->display_name) : name_;
     display_units_ = spec != nullptr ? QString::fromUtf8(spec->display_units) : QString();
     short_name_ = spec != nullptr ? QString::fromStdString(edi::parameter_symbol(spec)) : name_;
-    if (spec == &edi::spec::instrument_wavelength_2_to_1_ratio) {
-        // The doublet's ratio by what it scales (owner, 2026-10-13); its spec keeps diffraction-lib's name.
-        short_name_ = QStringLiteral("Intensity ratio 2/1");
-    }
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
     category_icon_ = QString::fromUtf8(category_presentation(category_).icon);
@@ -79,6 +75,13 @@ void ParameterItem::setRefinable(bool refinable) {
     }
 }
 
+void ParameterItem::setEstimated(bool estimated) {
+    if (estimated_ != estimated) {
+        estimated_ = estimated;
+        emit estimatedChanged();
+    }
+}
+
 namespace {
 // The refusal of a write to a parameter symmetry holds (edi ADR-0019). The pages disable such a field, so
 // this answers only a caller that writes anyway.
@@ -88,6 +91,11 @@ QString symmetry_refusal() { return QObject::tr("the space group fixes this para
 void ParameterItem::setValue(double value) {
     if (!refinable_) {
         setLastError(symmetry_refusal());
+        return;
+    }
+    // Asked of the project as it is now, not of `estimated`, which follows the mode only at the next publish.
+    if (const QString refusal = editor_.value_refusal(*parameter_); !refusal.isEmpty()) {
+        setLastError(refusal);
         return;
     }
     edi::Parameter* parameter = parameter_;
@@ -101,6 +109,10 @@ void ParameterItem::setFree(bool free) {
     }
     if (!fittable_) {
         setLastError(tr("this is a fixed setting, never fitted"));
+        return;
+    }
+    if (const QString refusal = editor_.free_refusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
         return;
     }
     edi::Parameter* parameter = parameter_;

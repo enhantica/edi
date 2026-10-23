@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_table_model.hpp"
 
+#include <algorithm>
+
 #include "category_list_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
@@ -91,31 +93,75 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
     source_connections_.clear();
     QSortFilterProxyModel::setSourceModel(source);
     if (source != nullptr) {
-        source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refreshCategories));
+        source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refresh));
     }
-    refreshCategories();
+    refresh();
 }
 
-void ParameterFilterModel::refreshCategories() {
-    struct Row { QString kind, category, name; };
+namespace {
+
+// A datablock entry's key: its kind and name.
+QString datablock_key(const QString& kind, const QString& name) { return kind + QLatin1Char(':') + name; }
+
+bool matches_datablock(const QString& key, const QString& kind, const QString& name) {
+    return key.isEmpty() || key == datablock_key(kind, name);
+}
+
+}  // namespace
+
+void ParameterFilterModel::refresh() {
+    struct Row { QString kind, block, category, name; bool free = false; };
     QList<Row> rows;
     if (sourceModel() != nullptr) {
         const auto roles = sourceModel()->roleNames();
         const auto value = [&](int row, const char* role) {
-            return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role)).toString();
+            return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role));
         };
         for (int row = 0; row < sourceModel()->rowCount(); ++row) {
-            rows.append({value(row, "blockKind"), value(row, "category"), value(row, "name")});
+            rows.append({value(row, "blockKind").toString(), value(row, "blockName").toString(),
+                         value(row, "category").toString(), value(row, "name").toString(), value(row, "free").toBool()});
         }
     }
+
+    // The datablocks: all, then every structure, then every experiment, in page order.
+    QStringList datablocks;
+    QList<CategoryGroup> datablock_groups;
+    datablocks.append(QString());
+    datablock_groups.append(CategoryGroup{{}, tr("All datablocks (%1)").arg(rows.size()), {}, false, static_cast<int>(rows.size()), {}, {}});
+    for (const QString& kind : {QStringLiteral("structure"), QStringLiteral("experiment")}) {
+        for (const Row& row : rows) {
+            const QString key = datablock_key(kind, row.block);
+            if (row.kind != kind || datablocks.contains(key)) continue;
+            const auto count = std::count_if(rows.begin(), rows.end(), [&](const Row& other) {
+                return other.kind == kind && other.block == row.block;
+            });
+            datablocks.append(key);
+            datablock_groups.append(CategoryGroup{key, QStringLiteral("%1 (%2)").arg(row.block).arg(count),
+                                                  kind == QLatin1String("structure") ? QStringLiteral("layer-group")
+                                                                                     : QStringLiteral("microscope"),
+                                                  false, static_cast<int>(count), kind, row.block});
+        }
+    }
+    if (!datablocks.contains(datablock_filter_)) {
+        beginFilterChange();
+        datablock_filter_.clear();
+        endFilterChange(Direction::Rows);
+        emit datablockFilterChanged();
+    }
+    QList<Row> scoped;
+    for (const Row& row : rows) {
+        if (matches_datablock(datablock_filter_, row.kind, row.block)) scoped.append(row);
+    }
+
+    // The categories of the selected datablocks.
     QStringList categories;
     QList<CategoryGroup> groups;
     const auto countGroup = [&](const QString& key) {
         int count = 0;
-        for (const Row& row : rows) {
+        for (const Row& row : scoped) {
             count += matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
         }
         return count;
@@ -124,7 +170,7 @@ void ParameterFilterModel::refreshCategories() {
         const int count = countGroup(key);
         if (count == 0 && !key.isEmpty()) return;
         categories.append(key);
-        groups.append(CategoryGroup{key, title + QStringLiteral(" (%1)").arg(count), icon, datablock, count});
+        groups.append(CategoryGroup{key, title + QStringLiteral(" (%1)").arg(count), icon, datablock, count, {}, {}});
     };
     // A subset must narrow its category; otherwise its second menu entry adds no choice.
     const auto addSubset = [&](const QString& parent, const QString& key, const QString& title, const QString& icon) {
@@ -135,7 +181,7 @@ void ParameterFilterModel::refreshCategories() {
         add(QLatin1Char('@') + kind, kind == QLatin1String("structure") ? tr("Structure") : tr("Experiment"),
             kind == QLatin1String("structure") ? QStringLiteral("layer-group") : QStringLiteral("microscope"), true);
         QStringList seen;
-        for (const Row& row : rows) {
+        for (const Row& row : scoped) {
             if (row.kind != kind || seen.contains(row.category)) continue;
             seen.append(row.category);
             if (row.category == QLatin1String("atom_site") || row.category == QLatin1String("atom_site_aniso")) {
@@ -160,21 +206,52 @@ void ParameterFilterModel::refreshCategories() {
         }
     }
     // Any additional block kind remains selectable when the parameter walk grows.
-    for (const Row& row : rows) {
+    for (const Row& row : scoped) {
         if (row.kind == QLatin1String("structure") || row.kind == QLatin1String("experiment") || categories.contains(row.category)) continue;
         const auto presentation = category_presentation(row.category);
         QString title = QString::fromUtf8(presentation.title);
         if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
         add(row.category, title, QString::fromUtf8(presentation.icon));
     }
+    if (!categories.contains(category_filter_)) {
+        beginFilterChange();
+        category_filter_.clear();
+        endFilterChange(Direction::Rows);
+        emit categoryFilterChanged();
+    }
+
+    // The parameters the datablock and category leave: all, free, fixed.
+    QList<int> counts{0, 0, 0};
+    for (const Row& row : scoped) {
+        if (!matches_group(category_filter_, row.kind, row.category, row.name)) continue;
+        ++counts[0];
+        ++counts[row.free ? 1 : 2];
+    }
+
+    const bool datablocks_changed = datablocks != datablocks_;
+    const bool datablock_groups_changed = datablock_groups != datablock_groups_;
     const bool keys_changed = categories != categories_;
     const bool groups_changed = groups != category_groups_;
+    const bool counts_changed = counts != variability_counts_;
+    datablocks_ = std::move(datablocks);
+    datablock_groups_ = std::move(datablock_groups);
     categories_ = std::move(categories);
     category_groups_ = std::move(groups);
+    variability_counts_ = std::move(counts);
+    if (datablocks_changed) emit datablocksChanged();
+    if (datablock_groups_changed) emit datablockGroupsChanged();
     if (keys_changed) emit categoriesChanged();
     if (groups_changed) emit categoryGroupsChanged();
-    if (!categories_.contains(category_filter_)) {
-        setCategoryFilter({});
+    if (counts_changed) emit variabilityCountsChanged();
+}
+
+void ParameterFilterModel::setDatablockFilter(const QString& datablock) {
+    if (datablock != datablock_filter_) {
+        beginFilterChange();
+        datablock_filter_ = datablock;
+        endFilterChange(Direction::Rows);
+        emit datablockFilterChanged();
+        refresh();
     }
 }
 
@@ -184,7 +261,15 @@ void ParameterFilterModel::setCategoryFilter(const QString& category) {
         category_filter_ = category;
         endFilterChange(Direction::Rows);
         emit categoryFilterChanged();
+        refresh();
     }
+}
+
+void ParameterFilterModel::clearFilters() {
+    setNameFilter({});
+    setVariability(All);
+    setCategoryFilter({});
+    setDatablockFilter({});
 }
 
 QString ParameterFilterModel::text(int row, const QString& role) const {
@@ -240,7 +325,8 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
     const QHash<int, QByteArray> roles = sourceModel()->roleNames();
     const auto value = [&](const char* name) { return sourceModel()->data(index, roles.key(name)); };
-    if (!matches_group(category_filter_, value("blockKind").toString(), value("category").toString(), value("name").toString())) {
+    if (!matches_datablock(datablock_filter_, value("blockKind").toString(), value("blockName").toString()) ||
+        !matches_group(category_filter_, value("blockKind").toString(), value("category").toString(), value("name").toString())) {
         return false;
     }
     const bool free = value("free").toBool();

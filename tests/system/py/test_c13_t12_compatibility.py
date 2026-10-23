@@ -19,7 +19,9 @@ from tests.fixtures.loop_parameter_ids.historical_bytes import (
     old_fit_state_bytes,
     without_nonjoint_weights,
 )
+from tests.fixtures.saved_spelling.reference import historical_spelling
 from tests.fixtures.table_display.stored_id_bytes import ordinal_copy
+from tests.fixtures.weight_fractions.single_phase_bytes import COLUMN, historical_single_fraction
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/integration/py'))
@@ -185,16 +187,50 @@ def prepare_recorded_current_format(row, tmp_path, record_property):
 
 
 def comparison_records(name, previous, emitted, source):
-    a = normalized_record(name, previous)
+    a = historical_spelling(name, normalized_record(name, previous))
     if name == 'analysis/analysis.edi':
         a = without_nonjoint_weights(a)
     b = normalized_record(
         name,
-        without_new_geom(name, source / name, without_calculator(name, emitted)),
+        without_new_geom(
+            name,
+            source / name,
+            without_calculator(name, historical_single_fraction(name, emitted)),
+        ),
     )
     if name == 'analysis/analysis.edi':
         b = old_fit_state_bytes(a, b, source)
     return a, b
+
+
+def record_fraction_adaptation(record_property):
+    record_property(
+        'weight_fraction_before', 'linked experiments omitted the derived fraction column'
+    )
+    record_property(
+        'weight_fraction_after', 'one checked trailing column; single enabled row 1.0 without s.u.'
+    )
+    record_property('saved_spelling_before', 'exact value(s.u.) bytes and no uncertainty setting')
+    record_property('saved_spelling_after', 'independent IUCr spelling and exact iucr_19 default')
+
+
+def assert_fraction_comparison_guards(name, previous, emitted, source):
+    projected = historical_single_fraction(name, emitted)
+    if projected == emitted:
+        return
+    damaged = [projected, emitted.replace(COLUMN, COLUMN * 2)]
+    damaged.extend(
+        emitted.replace(b' 1.0\n', b' ' + token + b'\n') for token in (b'0.5', b'1.0(0)', b'1')
+    )
+    for data in damaged:
+        assert data != emitted, 'The byte-comparison escape must change its actual fraction column'
+        with pytest.raises(AssertionError):
+            comparison_records(name, previous, data, source)
+    a, b = comparison_records(name, previous, emitted + b'# unrelated change\n', source)
+    assert a != b, 'The fraction adaptation must retain every unrelated output byte'
+    assert not delimiter_only(a.decode(), b.decode()), (
+        'An unrelated output comment must remain a forbidden non-identity difference'
+    )
 
 
 @pytest.mark.parametrize('row', BASELINE['accepted'], ids=operator.itemgetter('path'))
@@ -252,9 +288,11 @@ def test_frozen_project_bytes_or_named_identity_only_difference(tmp_path, row, r
         ordinal_copy(tmp_path / 'input', tmp_path / 'saved', tmp_path / 'ordinal-pin')
     )
     retain_follower_witness(row['path'], after)
+    record_fraction_adaptation(record_property)
     changed = []
     for name, previous in before.items():
         a, b = comparison_records(name, previous, after[name], tmp_path / 'input')
+        assert_fraction_comparison_guards(name, previous, after[name], tmp_path / 'input')
         if a != b:
             changed.append(name)
             try:

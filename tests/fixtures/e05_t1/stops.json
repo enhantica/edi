@@ -401,12 +401,12 @@
         "status": "no_step",
         "mode": "single",
         "converged": "false",
-        "n_points_loaded": "3098",
-        "n_points_fitted": "3098",
+        "n_points_loaded": "3",
+        "n_points_fitted": "3",
         "n_free": "1",
         "iterations": "1",
-        "reduced_chi_square": "49.51064176",
-        "rwp": "0.4476869418",
+        "reduced_chi_square": "1.5",
+        "rwp": "1",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -419,25 +419,26 @@
         "multistart_probes_pruned": "0",
         "multistart_probe_iterations": "0",
         "multistart_survivor": "none",
-        "unevaluable_trials": "0",
-        "terminal_unevaluable_trials": "0",
+        "unevaluable_trials": "12",
+        "terminal_unevaluable_trials": "12",
         "nonfinite_trials": "0",
         "terminal_nonfinite_trials": "0",
         "bound_active_columns": "none",
         "zero_jacobian_columns": "none",
-        "elapsed_ms": "3.232",
-        "iter.1.rwp": "0.4476869418",
-        "iter.1.reduced_chi_square": "49.51064176",
-        "iter.1.unevaluable_trials": "0",
-        "iter.1.elapsed_ms": "2.279",
-        "param.La.adp_iso.value": "0.5",
-        "param.La.adp_iso.uncertainty": "0"
+        "elapsed_ms": "0.682",
+        "iter.1.rwp": "1",
+        "iter.1.reduced_chi_square": "1.5",
+        "iter.1.unevaluable_trials": "12",
+        "iter.1.elapsed_ms": "0.525",
+        "param.La.adp_iso.value": "0",
+        "param.La.adp_iso.uncertainty": "0.7071067812",
+        "x-edi.correlations": "0"
       },
       "inputs_sha256": {
-        "analysis/analysis.edi": "9b1aff7a505d8667abd69794009f4db9530df5631697cd5bc10827275e7b86d4",
-        "experiments/hrpt.edi": "ce13b8c507ae21529ba599f0c879c4c2e28e6c2e4f14077de6d6ec37986ef526",
-        "project.edi": "588d32c6162bf3807f002cf164bea9082b0da7ec74a5f48dc004013bdd3b12d0",
-        "structures/lbco.edi": "607b3e32b77356200f1421290c6c78e90910ed44bc29c026d7d24f87ef6c8418"
+        "analysis/analysis.edi": "28655b5849e2c28a2710e1726cb32ac636f3efaac0ba47defca85f14854d1eeb",
+        "experiments/hrpt.edi": "4c81d7e575625f9555015cd0f98a0722c2e95ed4558c1c9ad374d254e1bfa206",
+        "project.edi": "1468e609d5e98f9bc458fb5d52fd737f90994d7be06a72162738ce8d6dcb3bc9",
+        "structures/lbco.edi": "078922d4a3b7368c97bd6412ed0897e94b2e643fc01a84b1cc72ff3e24e4f4cd"
       },
       "minimizer": "crysta (ladder)",
       "parameters": [
@@ -492,8 +493,8 @@
           "free": false
         },
         {
-          "value": 0.5,
-          "uncertainty": 0.0,
+          "value": 0.0,
+          "uncertainty": 0.7071067811865476,
           "free": true
         },
         {
@@ -718,35 +719,46 @@
         },
         {
           "value": 0.0,
-          "uncertainty": 0.0,
+          "uncertainty": 0.7071067811865476,
           "free": false
         },
         {
-          "value": 169.0,
-          "uncertainty": 0.0,
+          "value": 0.0,
+          "uncertainty": 0.7071067811865476,
           "free": false
         },
         {
-          "value": 164.1,
-          "uncertainty": 0.0,
-          "free": false
-        },
-        {
-          "value": 166.91,
-          "uncertainty": 0.0,
-          "free": false
-        },
-        {
-          "value": 175.27,
-          "uncertainty": 0.0,
-          "free": false
-        },
-        {
-          "value": 174.56,
-          "uncertainty": 0.0,
+          "value": 0.0,
+          "uncertainty": 0.7071067811865476,
           "free": false
         }
-      ]
+      ],
+      "producer": {
+        "edi_sha": "b8f9ab6f9c6c2e53c5ac877b359f6e23c291b623",
+        "crysta_sdk": "43188ae82e39fd6af75289fa72649e8e3c5883e2"
+      },
+      "closed_form": {
+        "driver_start": 0.0,
+        "observed": [
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "calculated": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "jacobian": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "chi_square": 3.0,
+        "predicted_gain": 3.0,
+        "chi_square_tolerance": 1e-06,
+        "blocked_by": "march_random_fract = driver, domain [0, 1]"
+      }
     }
   ]
 }

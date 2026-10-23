@@ -43,7 +43,9 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
-    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' and structures' colours
+    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' colours, and the structures' unless...
+    std::optional<ColourScheme> structure_colour_scheme;  ///< ...the structures' are given apart (the app's choice)
+    ColorScheme element_colours = ColorScheme::Jmol;  ///< the structure figures' element colours, the app's view's
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
@@ -58,6 +60,7 @@ struct ReportOverrides {
     std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
     std::optional<std::vector<std::string>> excluded;
     std::optional<std::string> colour_scheme;  ///< a token of colour_scheme_from_name; absent, the default scheme
+    std::optional<std::string> structure_colour_scheme;  ///< the structures' own; absent, colour_scheme's
     /// In a fit of several experiments, the name of the one whose parameters the correlation chart shows; absent, the
     /// first.
     std::optional<std::string> correlation_experiment;
@@ -177,10 +180,21 @@ struct ReportPattern {
     bool legend = false;
 };
 
+/// A single crystal's chart (edi ADR-0048), as the app draws it: per reflection its Miller indices, its measured F²
+/// and s.u., and its calculated F², which is empty before a calculation; F²meas against F²calc with the y = x line.
+struct ReportSingleCrystal {
+    std::vector<int> h, k, l;
+    std::vector<double> meas, su, calc;
+    /// The experiment's reliability text (reliability_text); empty with no fit.
+    std::string title;
+};
+
 struct ReportExperiment {
     std::string id;
     std::vector<ReportCategory> categories;
+    /// A powder experiment's chart; empty for a single crystal, whose chart is `single_crystal`.
     ReportPattern pattern;
+    std::optional<ReportSingleCrystal> single_crystal;
 };
 
 /// A project's report (ADR-0036).
@@ -210,6 +224,7 @@ struct ReportModel {
 /// The reliability of the experiment at `experiment` in the project's last fit, as every pattern plot shows it:
 /// "Rwp 16.35 % · χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both with two decimals,
 /// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+/// A single crystal's fit is over F²: "R(F²) 5.12 % · wR(F²) 4.25 % · χ² 9.78".
 std::string reliability_text(const Project& project, std::size_t experiment);
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0036 §2).

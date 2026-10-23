@@ -23,7 +23,10 @@ def resolve(value, matrix):
     return value
 
 
-def reachable(node, jobs, matrix):
+FULL_EVENTS = ('push', 'schedule', 'workflow_dispatch')
+
+
+def reachable(node, jobs, matrix, event='push'):
     node = copy.deepcopy(node)
     if 'if' in node:
         condition = str(node['if']) if not isinstance(node['if'], bool) else node['if']
@@ -31,15 +34,13 @@ def reachable(node, jobs, matrix):
             for key, item in matrix.items():
                 condition = condition.replace('matrix.' + key, repr(item))
         node['if'] = condition
-    assert active(node, 'pull_request', states=dict.fromkeys(jobs, 'success')), (
-        'The required artifact or time-gate path must execute on an ordinary same-repo PR'
+    assert active(node, event, states=dict.fromkeys(jobs, 'success')), (
+        f'The required workflow artifact or time-gate path must execute on {event}'
     )
     continuation = node.get('continue-on-error', False)
     if isinstance(continuation, str):
-        continuation = active(
-            {'if': continuation}, 'pull_request', states=dict.fromkeys(jobs, 'success')
-        )
-    assert not continuation, 'A required artifact or time-gate failure must fail its PR job'
+        continuation = active({'if': continuation}, event, states=dict.fromkeys(jobs, 'success'))
+    assert not continuation, 'A required artifact or time-gate failure must fail its workflow job'
 
 
 def needs(job):
@@ -57,9 +58,9 @@ def dependencies(jobs, name, visited=frozenset()):
     }
 
 
-def require_pr_event(workflow):
+def require_events(workflow, events_required):
     events = workflow.get('on', workflow.get(True, {}))
-    assert 'pull_request' in events, 'Artifact and timing enforcement must be triggered by PRs'
+    assert set(events_required) <= set(events), 'Required workflow events retain their triggers'
 
 
 def run_boundary(command, root, kind, code, shell='bash'):
@@ -114,7 +115,12 @@ def workflow_shell(workflow, job, step):
 
 
 def artifact_routes(workflow, root):
-    require_pr_event(workflow)
+    require_events(workflow, ('pull_request', *FULL_EVENTS))
+    for event in FULL_EVENTS:
+        _artifact_routes(workflow, root / event, event)
+
+
+def _artifact_routes(workflow, root, event):
     jobs = workflow['jobs']
     producers = {
         name: job
@@ -125,10 +131,10 @@ def artifact_routes(workflow, root):
     uploads = {}
     for name, job in producers.items():
         for matrix in matrix_cases(job):
-            reachable(job, jobs, matrix)
+            reachable(job, jobs, matrix, event)
             build_steps = [s for s in job['steps'] if 'app-build' in s.get('run', '')]
             build_step = build_steps[0]
-            reachable(build_step, jobs, matrix)
+            reachable(build_step, jobs, matrix, event)
             for code in (0, 1):
                 run_boundary(
                     resolve(build_step['run'], matrix),
@@ -145,7 +151,7 @@ def artifact_routes(workflow, root):
             ]
             assert artifacts, 'The normal app must be uploaded beyond screenshot outputs'
             for step in artifacts:
-                reachable(step, jobs, matrix)
+                reachable(step, jobs, matrix, event)
                 options = step['with']
                 cached = 'cache/save' in step.get('uses', '')
                 if cached:
@@ -165,7 +171,7 @@ def artifact_routes(workflow, root):
     assert consumers, 'The artifact gate must observe every actual system consumer'
     for name, job in consumers.items():
         for matrix in matrix_cases(job):
-            reachable(job, jobs, matrix)
+            reachable(job, jobs, matrix, event)
             downloads = [
                 s
                 for s in job['steps']
@@ -198,7 +204,7 @@ def artifact_routes(workflow, root):
                     if producer_cached == cached and fnmatch.fnmatch(artifact, pattern)
                 ]
                 if compatible:
-                    reachable(step, jobs, matrix)
+                    reachable(step, jobs, matrix, event)
                     assert set(compatible) & dependencies(jobs, name), (
                         'Each system consumer must wait for its actual artifact producer'
                     )
@@ -206,14 +212,14 @@ def artifact_routes(workflow, root):
             assert matched, 'Every system matrix case must restore the producer app artifact'
             for step in job['steps']:
                 if 'system-tests' in step.get('run', ''):
-                    reachable(step, jobs, matrix)
+                    reachable(step, jobs, matrix, event)
                 assert 'app-build' not in step.get('run', ''), (
                     'System consumers must not compile a second app'
                 )
 
 
 def timing_route(workflow, root):
-    require_pr_event(workflow)
+    require_events(workflow, ('pull_request', 'push'))
     jobs = workflow['jobs']
     systems = {
         name
@@ -228,7 +234,7 @@ def timing_route(workflow, root):
         if not steps:
             continue
         assert systems and systems <= dependencies(jobs, name), (
-            'The PR comparator must depend on every completed system job'
+            'The push comparator must depend on every completed system job'
         )
         reachable(job, jobs, {})
         for step in steps:
@@ -238,7 +244,7 @@ def timing_route(workflow, root):
                     step['run'], root / name, 'timing', code, workflow_shell(workflow, job, step)
                 )
         found = True
-    assert found, 'PR CI must invoke and enforce the same tested shard comparator'
+    assert found, 'Push CI must invoke and enforce the same tested shard comparator'
     for slow in (False, True):
         timing_evidence(workflow, root / ('slow' if slow else 'green'), slow=slow)
 
@@ -264,6 +270,10 @@ def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: 
     for current in (True, False):
         document = run_record('feature' if current else 'main', [2400], current=current)
         document['expected_system_shards'] = inventory
+        if current:
+            document['event'] = 'push'
+            document['head_branch'] = 'main'
+            document['head_sha'] = 'd' * 40
         template = document['jobs'][0]
         document['jobs'] = []
         for platform, count in inventory.items():
@@ -344,7 +354,11 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
     completed = []
     for step in steps:
         reachable(step, workflow['jobs'], {})
-        command = step['run'].replace('${{ github.event.pull_request.head.sha }}', 'c' * 40)
+        command = (
+            step['run']
+            .replace('${{ github.event.pull_request.head.sha }}', 'c' * 40)
+            .replace('${{ github.sha }}', 'd' * 40)
+        )
         shell = workflow_shell(workflow, job, step)
         shell = (
             'bash --noprofile --norc -e -o pipefail {0}'
@@ -367,7 +381,7 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
             break
     if api_mutation:
         assert completed[-1].returncode != 0, (
-            'Stale run id or PR head evidence must refuse before a green timing verdict'
+            'Stale run id or push head evidence must refuse before a green timing verdict'
         )
         return
     compared = root / 'compared.json'
@@ -376,13 +390,11 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
     )
     current, main = json.loads(compared.read_text())
     assert (
-        current['id'] == 111
-        and current['head_sha'] == 'c' * 40
-        and current['event'] == 'pull_request'
-    ), 'The comparator must consume this PR run id and PR head, not main or stale evidence'
+        current['id'] == 111 and current['head_sha'] == 'd' * 40 and current['event'] == 'push'
+    ), 'The comparator must consume this push run id and pushed head, not main or stale evidence'
     assert main['id'] == 222 and main['head_sha'] == 'b' * 40 and main['event'] == 'push', (
         'The baseline must be the selected main run id and head'
     )
     assert (completed[-1].returncode == 0) == (not slow), (
-        'The real comparator must enforce this PR versus main after collection'
+        'The real comparator must enforce this push versus main after collection'
     )

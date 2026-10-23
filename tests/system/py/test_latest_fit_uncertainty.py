@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from conftest import corpus_case_dir
+from tests.fixtures.saved_spelling.reference import saved_pair
 from tests.integration.py.test_anisotropic_adps import loop_rows
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -78,9 +79,11 @@ def assert_loaded_dependents(project, loaded):
     after = bank_experiment(loaded)
     actual = after.background_terms[2].coef
     assert not actual.free, 'A saved dependent bracket must not become a free flag'
-    assert actual.uncertainty == pytest.approx(
-        before.background_terms[2].coef.uncertainty, rel=5e-6
-    ), 'The authored propagated dependent uncertainty must survive save and reload numerically'
+    original = before.background_terms[2].coef
+    _, written_su = saved_pair(original.value, original.uncertainty)
+    assert actual.uncertainty == pytest.approx(written_su, rel=5e-6), (
+        'Dependent uncertainty reloads at independently derived written precision'
+    )
 
 
 def assert_no_su(project, *, reloaded=False):
@@ -131,6 +134,9 @@ def test_unchecking_free_then_fitting_clears_su_and_undo_restores_it(tmp_path, m
     assert before is not None, 'The first fit must supply an uncertainty'
     assert before > 0, 'The first fit must supply a nonzero uncertainty'
     if mode in {'sequential', 'independent'}:
+        _, before = saved_pair(parameter.value, before)
+        dependent = bank_experiment(project).background_terms[2].coef
+        _, dependent_before = saved_pair(dependent.value, dependent_before)
         next_scan = tmp_path / 'next-scan'
         project.save_as(next_scan)
         for ledger in (next_scan / 'analysis').glob('*.csv'):
@@ -138,7 +144,7 @@ def test_unchecking_free_then_fitting_clears_su_and_undo_restores_it(tmp_path, m
         project = ENGINE.Project.load(next_scan)
         parameter = bank_experiment(project).background_terms[0].coef
         assert parameter.uncertainty == pytest.approx(before, rel=5e-6), (
-            'A fresh scan input must retain the prior uncertainty before changing its free set'
+            'A fresh scan input retains the prior uncertainty at independently spelled precision'
         )
     parameter.free = False
     project.analysis.fit()

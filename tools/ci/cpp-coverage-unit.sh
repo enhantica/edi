@@ -63,7 +63,7 @@ if [ "${case_files:-0}" -lt 1 ]; then
     echo "(tests/unit/cpp/test_*.cpp). Coverage of an empty tier is not a number worth printing." >&2
     exit 1
 fi
-cmake --build "$TREE" --target edi_tests -j
+cmake --build "$TREE" --target edi_tests -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
 
 # Run-unique EMPTY profile directory: mktemp -d guarantees a fresh dir per run, and old run
 # dirs are cleared first so the tree does not accumulate them.

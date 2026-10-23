@@ -119,3 +119,21 @@ are 27 and 52. The full all-profile `Project.parameters` walk is not this select
 These values come from the committed count generator and its frozen external
 source, never a native parameter walk. All twenty unrelated CLI/count rows and
 full records remain intact.
+
+The stop-classification inputs in `stop_projects.py` separate a zero-gain
+column from a blocked improving step. The former retains
+the old zero-occupancy, free-ADP recipe and now expects convergence. The latter
+has three observations of -1 with unit uncertainty. All occupancies are zero;
+both line-segment endpoints equal the sole free ADP driver x, initially zero.
+Thus r = (x+1, x+1, x+1), g = 3, H = 3, and the predicted gain is 3 at x = 0,
+well above the chi-square tolerance times chi-square, 3e-6. The same driver sets
+the March random fraction, whose domain is [0, 1]. Every damped improving step
+is negative and is rejected by that domain, leaving chi-square 3 and reduced
+chi-square 3/2. No engine output defines these closed-form expectations.
+The historical codec-only `nostep` string remains a separate retention control.
+
+Run `python tests/fixtures/e05_t1/generate_stops.py --only nostep` to regenerate
+the app's real CLI record and input hashes while retaining its MaxIter witness.
+CLI-produced values and uncertainties are regression pins; the generator
+records the imported artifact's actual pinned SDK separately from the earlier
+MaxIter capture's provenance.

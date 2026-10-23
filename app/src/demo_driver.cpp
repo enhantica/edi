@@ -21,6 +21,7 @@
 
 #include "analysis_view_model.hpp"
 #include "edi/categories.hpp"
+#include "edi/palette.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
@@ -48,7 +49,24 @@ QStringList open_example(const QString& id) {
             QStringLiteral("examples.open.") + id};
 }
 
+// Open a test project the app does not bundle, from the Project page, when a step needs that project's own content.
+QStringList open_cli_project(const QString& id) {
+    return {QStringLiteral("appBar.tab.project"), QStringLiteral("open-cli-project:") + id};
+}
+
 }  // namespace
+
+QString copy_cli_project(const QString& id, const QDir& into) {
+    const QDir source(QStringLiteral(EDI_CLI_PROJECTS_DIR "/") + id + QStringLiteral("/project"));
+    const QDir target(into.filePath(id + QStringLiteral("/project")));
+    bool copied = source.exists();
+    for (QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories); copied && files.hasNext();) {
+        const QString file = files.next();
+        const QString copy = target.filePath(source.relativeFilePath(file));
+        copied = QDir().mkpath(QFileInfo(copy).path()) && QFile::copy(file, copy);
+    }
+    return copied ? target.path() : QString();
+}
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
     : QObject(parent), window_(window), output_dir_(output_dir) {
@@ -69,7 +87,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // shows; Get started is open already.
         {"02-project-no-project", {"home.start"}},
         {"03-project-examples", {"group.examples"}},
-        {"04-project-loaded", {"examples.open.pd-neut-cwl_cosio-d20_start-1"}},
+        {"04-project-loaded", {"examples.open.pd-neut-cwl_cosio-d20"}},
         {"05-model-models", {"appBar.tab.structure", "expand:group.structures"}},
         {"06-model-space-group", {"group.space_group"}},
         {"07-model-cell", {"group.cell"}},
@@ -85,11 +103,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     };
     // ... then the capabilities edi has and the original had not (§1.7, §5b, §15.4) ...
     steps_.push_back({"17-experiment-profile-selector", QStringList{"choose:OK"}  // close the Preferences dialog
-                                                            + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                            + open_example("pd-neut-cwl_lbco-hrpt")
                                                             + QStringList{experiment, basic, "group.peak", "peak.type"}});
     steps_.push_back({"18-experiment-tch", {"choose:Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"}});
     steps_.push_back({"19-experiment-extras", {extras}});
-    steps_.push_back({"20-experiment-tof", open_example("pd-neut-tof_si-sepd_start-2")
+    steps_.push_back({"20-experiment-tof", open_example("pd-neut-tof_si-sepd")
                                                + QStringList{experiment, basic, "group.peak"}});
     steps_.push_back({"21-structure-extras", {"appBar.tab.structure", extras, "group.scattering_length"}});
     steps_.push_back({"22-analysis-fitting-mode", {"appBar.tab.analysis", extras, "group.fitting_mode"}});
@@ -99,14 +117,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // from the clock, so it cannot be a pin: the Report page of the TOF project instead.
     steps_.push_back({"25-report-tof", {"appBar.tab.report"}});
     steps_.push_back({"26-experiment-loaded",
-                      open_example("pd-neut-cwl_cosio-d20_start-1")
+                      open_example("pd-neut-cwl_cosio-d20")
                           + QStringList{experiment, basic,
-                                        "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+                                        "load-experiments:pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
                                         // The offscreen software renderer draws the new experiment's
                                         // background rows unclipped until the page is drawn anew;
                                         // leaving and returning redraws it.
                                         "appBar.tab.analysis", experiment}});
-    steps_.push_back({"27-experiment-xray", open_example("pd-xray-cwl_lif") + QStringList{experiment, extras,
+    steps_.push_back({"27-experiment-xray", open_example("pd-xray-cwl_pbso4-lab") + QStringList{experiment, extras,
                                                                                           "group.scattering_source"}});
     // ... then the owner's review notes, each on the page it changed (the note-to-image map is
     // docs/dev/design/app-review-captures.json): the constant-wavelength instrument, the linked structure table,
@@ -114,14 +132,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // pinned time; then the dark theme and "system" through the platform seam, the status bar included; then
     // the Project Text tab and the new loop tables; and back to light for the rest.
     const QString analysis = QStringLiteral("appBar.tab.analysis");
-    steps_.push_back({"t2-01-instrument-cw", open_example("pd-neut-cwl_cosio-d20_start-1")
+    // The review notes are captured on the Co2SiO4 test project's own state, its saved reflections included.
+    steps_.push_back({"t2-01-instrument-cw", open_cli_project("pd-neut-cwl_cosio-d20_start-1")
                                                  + QStringList{experiment, basic, "group.instrument"}});
     steps_.push_back({"t2-02-linked-structure", {"group.linked_structure"}});
     steps_.push_back({"t2-03-experiment-extras-peak", {extras, "group.peak"}});
     steps_.push_back({"t2-04-analysis-slider", {analysis, basic, "parameters.row.0"}});
+    // The Report page's Text tab holds the report's own settings, not the project's CIF, so nothing is scrolled to.
     steps_.push_back({"t2-05-report-text",
-                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text,
-                       "scroll-to:text.view:_atom_site.multiplicity"}});
+                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text}});
     steps_.push_back({"t2-06-dark-experiment", {"theme:dark", experiment, basic}});
     steps_.push_back({"t2-07-dark-analysis", {analysis, basic}});
     steps_.push_back({"t2-08-dark-structure-text", {"appBar.tab.structure", text}});
@@ -134,27 +153,34 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Measured data, open, fills the tab: it is folded again (a click on its title) to reach Reflections.
     steps_.push_back({"t2-13-reflections", {extras, "group.data", "group.refln"}});
     steps_.push_back({"t2-14-joint-fit", {analysis, extras, "group.joint_fit"}});
-    steps_.push_back({"t2-15-scan-extraction", open_example("pd-neut-cwl_cosio-d20_scan-324f")
+    steps_.push_back({"t2-15-scan-extraction", open_cli_project("pd-neut-cwl_cosio-d20_scan-324f")
                                                    + QStringList{analysis, extras, "group.sequential_fit_extract"}});
     steps_.push_back({"t2-16-fit-start", {"group.fit_parameter"}});
     // The four constant-wavelength fields, which no bundled project declares: the D20 experiment
     // loaded again with both shifts declared, as a user edits it.
     steps_.push_back({"t2-17-instrument-cw-four",
-                      open_example("pd-neut-cwl_cosio-d20_start-1") + QStringList{experiment, basic, "load-experiments:pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi"
+                      open_example("pd-neut-cwl_cosio-d20") + QStringList{experiment, basic, "load-experiments:pd-neut-cwl_cosio-d20/project/experiments/d20.edi"
                        "|data_d20=data_d20_shifted"
-                       "|_instrument.calib_twotheta_offset 0.()=_instrument.calib_twotheta_offset 0.()\\n"
+                       "|_instrument.calib_twotheta_offset 0()=_instrument.calib_twotheta_offset 0()\\n"
                        "_instrument.calib_sample_displacement 0.05\\n_instrument.calib_sample_transparency -0.02",
                        "group.instrument"}});
-    // ... and every Example's Experiment page with its peak group open, where the types differ most.
-    // The first returns to the light theme the rest are captured in.
+    // ... and every Example's Experiment page with its peak group open, where the types differ most; a single
+    // crystal has no peak, so its extinction group instead, opened from Home so `--demo-only ex-sc-` runs them
+    // alone. The first returns to the light theme the rest are captured in.
     for (const QString& id : ExampleListModel::bundledIds()) {
         const QStringList theme = steps_.back().image.startsWith(QLatin1String("t2-")) ? QStringList{"theme:light"}
                                                                                         : QStringList{};
-        steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        if (id.startsWith(QLatin1String("sc-"))) {
+            const QStringList home{"theme:light", "appBar.tab.home", "home.start", "expand:group.examples"};
+            steps_.push_back({QStringLiteral("ex-") + id,
+                              home + open_example(id) + QStringList{experiment, basic, "group.extinction"}});
+        } else {
+            steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        }
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
-    steps_.push_back({"c13-01-atomic-displacement", open_example("pd-neut-cwl_cosio-d20_start-1")
+    steps_.push_back({"c13-01-atomic-displacement", open_example("pd-neut-cwl_cosio-d20")
                                                         + QStringList{"appBar.tab.structure", basic,
                                                                       "group.atom_site_aniso"}});
     steps_.push_back({"c13-02-adp-uani", {"atomSiteAdp.type.1", "choose:Uani"}});
@@ -162,7 +188,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"c13-04-space-group-name", {basic, "group.space_group", "spaceGroup.nameHM"}});
     // A name typed into the search field: red while it matches nothing, then a whole space group, whose
     // structure the view redraws.
-    steps_.push_back({"c13-05-space-group-no-match", QStringList{"key:Escape"} + open_example("pd-neut-tof_ceo2-pearl_polynomial")
+    steps_.push_back({"c13-05-space-group-no-match", QStringList{"key:Escape"} + open_example("pd-neut-tof_ceo2-pearl")
                                                          + QStringList{"appBar.tab.structure", basic, "group.space_group",
                                                                        "spaceGroup.nameHM", "type:Pnmc"}});
     steps_.push_back({"c13-06-space-group-changed", {"key:Escape", "spaceGroup.nameHM", "type:Im-3m", "key:Return"}});
@@ -178,7 +204,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"c13-11-diagnostics-closed", {"choose:OK", "choose:OK"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
     // wide (§2), and Measured data's one increment where the steps are equal (§6; t2-12 shows the range) ...
-    steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t4-01-experiment-type", open_example("pd-neut-cwl_lbco-hrpt")
                                                    + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t4-02-measured-data-uniform", {extras, "group.data"}});
     // ... and the messages (ideas 24-26; §14): the example that always has three, counted in the status bar
@@ -192,9 +218,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t4-04-messages-list", {"statusBar.warnings"}});
     steps_.push_back({"t4-05-messages-viewed", {"choose:OK"}});
     steps_.push_back({"t4-06-messages-error",
-                      open_example("pd-neut-cwl_cosio-d20_start-1")
+                      open_example("pd-neut-cwl_cosio-d20")
                           + QStringList{experiment, basic,
-                                        "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+                                        "load-experiments:pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
                                         "statusBar.warnings"}});
     // ... and the About dialog, last: it stays open.
     steps_.push_back({"28-home-about", {"choose:OK",  // close the Messages dialog
@@ -204,20 +230,20 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // opens its example from Home, so `--demo-only t16-` runs them alone.
     const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start"),
                                QStringLiteral("expand:group.examples")};
-    steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20_start-1") + QStringList{analysis, basic}});
+    steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20") + QStringList{analysis, basic}});
     steps_.push_back({"t16-02-fit-running", {"fitting.start", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
     steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
     steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-06-structure", {"appBar.tab.structure", basic}});
     steps_.push_back({"t16-07-narrow", {"resize:900x768", experiment}});
-    steps_.push_back({"t16-08-lif", QStringList{"resize:1280x768"} + start + open_example("pd-xray-cwl_lif")
+    steps_.push_back({"t16-08-lif", QStringList{"resize:1280x768"} + start + open_cli_project("pd-xray-cwl_lif_single")
                                          + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-08-create-experiment", {"experiments.create"}});
     steps_.push_back({"t16-09-create-tof", {"experimentType.beamMode", "choose:time-of-flight"}});
     steps_.push_back({"t16-09-create-text", {text}});
     steps_.push_back({"t16-10-create-undone", {basic, "appBar.button.undo"}});
-    steps_.push_back({"t16-11-alias-search", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+    steps_.push_back({"t16-11-alias-search", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                                                  + QStringList{analysis, extras, "expand:group.alias", "aliases.append",
                                                                "alias.parameter.0"}});
     steps_.push_back({"t16-12-alias-search-filtered", {"type:scale"}});
@@ -226,7 +252,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     const QString structure = QStringLiteral("appBar.tab.structure");
     const QString blocks = QStringLiteral("mainArea.blocks.box");
     const QString close = QStringLiteral("key:Escape");
-    steps_.push_back({"t16-20-beer-structure", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+    steps_.push_back({"t16-20-beer-structure", start + open_example("pd-neut-tof_ferrite-austenite-beer")
                                                    + QStringList{structure, basic}});
     steps_.push_back({"t16-21-beer-structure-list", {blocks}});
     steps_.push_back({"t16-22-beer-experiment", {close, experiment, basic}});
@@ -234,24 +260,24 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-24-beer-analysis-fitted", {close, analysis, basic, "fitting.start", "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-25-beer-analysis-list", {blocks}});
     steps_.push_back({"t16-26-beer-experiment-fitted", {close, experiment, basic}});
-    steps_.push_back({"t16-27-cosio-structure", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+    steps_.push_back({"t16-27-cosio-structure", start + open_example("pd-neut-cwl_cosio-d20")
                                                     + QStringList{structure, basic}});
     steps_.push_back({"t16-28-cosio-experiment", {experiment, basic}});
     steps_.push_back({"t16-29-cosio-experiment-list", {blocks}});
     steps_.push_back({"t16-30-cosio-analysis", {close, analysis, basic}});
-    steps_.push_back({"t16-31-lbco-structure", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t16-31-lbco-structure", start + open_example("pd-neut-cwl_lbco-hrpt")
                                                    + QStringList{structure, basic}});
     steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
     steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
     // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
-    steps_.push_back({"t16-50-scan-experiment", start + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+    steps_.push_back({"t16-50-scan-experiment", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-51-scan-list", {blocks}});
     steps_.push_back({"t16-52-scan-dataset-5", {"key:Escape", "show:experiments.list:4", "experiments.row.4"}});
     // A scan run from the app on the 162-file example: running (the S3 bar, Follow on), stopped part way,
     // continued to the end, and the Evolution tab after it.
     steps_.push_back({"t16-60-scan-ready", QStringList{"resize:1280x960"} + start
-                                               + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                               + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                + QStringList{analysis, basic, "reveal:fitting.start"}});
     steps_.push_back({"t16-61-scan-running", {"fitting.start", "wait-files:40", "capture-now"}});
     steps_.push_back({"t16-62-scan-stopped", {"fitting.start", "wait-fit"}});
@@ -272,7 +298,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // enabled; Reset clears them (Start again); a stop leaves Continue. The Evolution chart zooms to a dragged box
     // and resets with a right click; the Project page shortens a long dataset list.
     steps_.push_back({"t16-70-scan-all-fitted", QStringList{"resize:1280x960"} + start
-                                                    + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                    + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                     + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
                                                                   "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-71-scan-reset", {"fitting.reset"}});
@@ -287,11 +313,121 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // the first parameter chosen, the marker on the dataset being fitted.
     steps_.push_back({"t16-76-home", {QStringLiteral("appBar.tab.home")}});
     steps_.push_back({"t16-77-evolution-mid-scan", start
-                                                       + open_example("pd-neut-cwl_cosio-d20_scan-324f")
+                                                       + open_cli_project("pd-neut-cwl_cosio-d20_scan-324f")
                                                        + QStringList{analysis, basic, "reveal:fitting.start",
                                                                      "mainArea.analysis.tab.evolution", "fitting.start",
                                                                      "wait-files:200", "capture-now"}});
     steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    // A single crystal (Tb2Ti2O7 on HEiDi): the reflections chart and table on Experiment and Analysis, in both themes,
+    // before and after a fit of its scale.
+    steps_.push_back({"sc-01-tb2ti2o7-experiment-light",
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + QStringList{experiment, basic}});
+    steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
+    steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-03b-tb2ti2o7-analysis-fitted-light", {"choose:OK"}});
+    steps_.push_back({"sc-04-tb2ti2o7-analysis-dark", {"theme:dark"}});
+    steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
+    steps_.push_back({"sc-05b-tb2ti2o7-reflections-dark", {extras, "expand:group.refln"}});
+    steps_.push_back({"sc-05c-tb2ti2o7-f-dark", {basic, "singleCrystal.toolbar.quantity", "choose:F"}});
+    steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", {"singleCrystal.toolbar.quantity", "choose:F²", "resize:960x768"}});
+    steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
+    steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
+                                                                  + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction"}
+                                                                  + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
+    steps_.push_back({"sc-06-pr2nio4-experiment-light",
+                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                          + QStringList{experiment, basic}});
+    steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
+    steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-07a2-pr2nio4-fitted-dark", {"choose:OK"}});
+    steps_.push_back({"sc-07a3-pr2nio4-correlations-dark", {"mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"sc-07b-pr2nio4-zoomed",
+                      {"mainArea.analysis.tab.fitting", "drag:singleCrystal.pointer:0.05,0.6,0.4,0.95"}});
+    steps_.push_back({"sc-07c-pr2nio4-panned", {"chart.toolbar.pan", "drag:singleCrystal.pointer:0.5,0.5,0.3,0.3",
+                                                "chart.toolbar.zoom"}});
+    // The report of the fit: its chart and reflections on the Report page, then saved as HTML and PDF where
+    // EDI_DEMO_REPORT_DIR names, else in the run's own folder.
+    steps_.push_back({"sc-07r1-pr2nio4-report-chart", {QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"}});
+    const QString sc_report = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
+    steps_.push_back({"sc-07r2-pr2nio4-report-saved",
+                      {"save-as:" + (sc_report.isEmpty() ? QStringLiteral("report-sc") : sc_report), "report.writesPdf",
+                       "report.save"}});
+    steps_.push_back({"sc-07d-pr2nio4-created", {experiment, basic, "expand:group.experiments", "experiments.create"}});
+    steps_.push_back({"sc-07e-pr2nio4-created-single-crystal", {"experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sc-07f-pr2nio4-created-loaded", {"load-reflections"}});
+    steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
+    steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
+    // Both single-crystal fitting examples' report charts after loading and after a fit; then the extinction's s.u.
+    // after it is fixed and fitted again, and the reflection table filling the Extras sidebar. Run only when asked
+    // (`--demo-only sccheck-`).
+    const QStringList fit_sc{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"};
+    const QStringList sc_report_steps{QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"};
+    steps_.push_back({"sccheck-01-tb2ti2o7-report-loaded",
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + sc_report_steps});
+    steps_.push_back({"sccheck-02-tb2ti2o7-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2_fit") + sc_report_steps});
+    steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
+                      QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.0", "parameters.free.1",
+                                  "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"sccheck-06-pr2nio4-extinction-fixed-refitted",
+                      {"parameters.free.0", "parameters.free.1", "reveal:fitting.start", "fitting.start", "wait-fit",
+                       "choose:OK"}});
+    steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
+    steps_.push_back({"sccheck-09-created-single-crystal",
+                      QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments", "experiments.create",
+                                        "experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sccheck-09b-created-back-to-powder", {"experimentType.sampleForm", "choose:powder"}});
+    // A single crystal saved in another project, loaded where its structure is missing: the message, the link in
+    // red, the structure's own text, then the link pointed at the project's structure.
+    steps_.push_back({"sccheck-09c-loaded-missing-link",
+                      start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments",
+                                        "load-experiments:sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi"}});
+    steps_.push_back({"sccheck-09d-missing-link-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-09e-missing-link-red", {"choose:OK", "expand:group.linked_structure"}});
+    steps_.push_back({"sccheck-09f-structure-text", {"appBar.tab.structure", text}});
+    steps_.push_back({"sccheck-09g-relinked", {experiment, basic, "linkedStructure.structureId.0", "choose:tb2ti2o7"}});
+    // A single crystal's reflections through the row's Load data: FullProf's .int (its wavelength taken), a plain
+    // h k l F² su file, then a malformed one; each into a created experiment linked to the project's structure.
+    // The files are named by EDI_DEMO_SC_FILES, a folder holding prnio.int, tbti.dat and malformed.dat.
+    const QString sc_files = qEnvironmentVariable("EDI_DEMO_SC_FILES");
+    const QStringList create_sc{experiment, basic, "expand:group.experiments", "experiments.create",
+                                "experimentType.sampleForm", "choose:single crystal"};
+    steps_.push_back({"sccheck-10a-int-loaded", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/prnio.int"}});
+    steps_.push_back({"sccheck-10b-int-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
+    steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-10e-int-joint-refused", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10e2-int-fitted-alone", {"choose:OK", experiment, basic, "expand:group.experiments", "experiments.remove.0",
+                                                        analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
+    steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
+                                                "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
+    // The mosaicity with no unit and, hovered, the mosaic spread it means.
+    steps_.push_back({"sccheck-11-mosaicity-hint", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                       + QStringList{experiment, basic, "expand:group.extinction",
+                                                                     "hover:extinction.mosaicity:0.5,0.5"}});
+    steps_.push_back({"sccheck-11b-mosaicity-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                        "choose:OK", experiment, basic, "hover:extinction.mosaicity:0.5,0.5"}});
+    // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
+    steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
+                                                            + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
+    steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
+    steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
+                                                              + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
+                                                              + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                                            "choose:OK", "parameters.nameFilter", "type:scale"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
@@ -302,13 +438,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // count typed into the toolbar, and a joint fit's two experiments.
     const QString correlations = QStringLiteral("mainArea.analysis.tab.correlations");
     steps_.push_back({"t17-01-correlations-empty",
-                      QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
+                      QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20")
                           + QStringList{analysis, basic, correlations}});
     steps_.push_back({"t17-02-correlations-fitted", {"fitting.start", "wait-fit", "choose:OK"}});
     steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:10", "key:Return"}});
     steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level.number", "key:Ctrl+A", "type:0.5", "key:Return"}});
     steps_.push_back({"t17-07-correlations-all", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:43", "key:Return"}});
-    steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+    steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer")
                                                       + QStringList{analysis, basic, "fitting.start", "wait-fit",
                                                                     "choose:OK", correlations}});
     steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
@@ -318,7 +454,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The owner's app findings (2026-10-08): 9, Diagnostics' Show a button the Logging level box's size; 7, the sample
     // form and scattering type disabled while one choice is supported.
     steps_.push_back({"t17-20-diagnostics-show", {"appBar.button.preferences", "preferences.tab.develop"}});
-    steps_.push_back({"t17-21-experiment-type", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_cosio-d20_start-1")
+    steps_.push_back({"t17-21-experiment-type", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_cosio-d20")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
     // 5 and 6: without an experiment Analysis and Summary are disabled; without a structure Experiment too.
     steps_.push_back({"t17-22-no-experiment", {"experiments.remove.0"}});
@@ -328,7 +464,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", basic, "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
     // 3 and 4: the Wyckoff position column and its list; a new atom on position a, and the structure's Text with no
     // error.
-    steps_.push_back({"t17-27-wyckoff-column", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t17-27-wyckoff-column", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
                                                    + QStringList{"appBar.tab.structure", basic, "expand:group.atom_site"}});
     steps_.push_back({"t17-28-wyckoff-list", {"atomSite.wyckoffLetter.0"}});
     steps_.push_back({"t17-29-new-atom", {"key:Escape", "atomSites.append"}});
@@ -336,7 +472,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // A sequential scan keeps each dataset's correlations from its own fit, and the Correlations tab follows the
     // shown dataset (owner, 2026-10-11).
     steps_.push_back({"t17-40-scan-correlations", QStringList{"key:Escape"} + start
-                                                      + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                      + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                                                       + QStringList{analysis, basic, "fitting.start", "wait-fit",
                                                                     "choose:OK", "mainArea.analysis.tab.correlations"}});
     steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
@@ -348,28 +484,28 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Large intensities on the y axes in NumberText's scientific form, clear of the titles (owner, 2026-10-11): the
     // example's experiment loaded again with its scale raised, so the calculated pattern reaches about 1e9.
     steps_.push_back({"t17-50-axis-scientific",
-                      QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                      QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
                           + QStringList{experiment, basic,
-                                        "load-experiments:pd-neut-cwl_lbco-hrpt_start-2/project/experiments/"
-                                        "hrpt.edi|data_hrpt=data_large|lbco 10.0()=lbco 30000000()",
+                                        "load-experiments:pd-neut-cwl_lbco-hrpt/project/experiments/"
+                                        "hrpt.edi|data_hrpt=data_large|lbco 9()=lbco 30000000()",
                                         analysis, "mainArea.analysis.tab.fitting"}});
     // The fitting modes that apply, by their names (owner, 2026-10-11): one experiment, single only; several, joint
     // with its weights; a scan, its two modes and single.
-    steps_.push_back({"t17-72-mode-single", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t17-72-mode-single", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
                                                 + QStringList{analysis, extras, "expand:group.fitting_mode"}});
-    steps_.push_back({"t17-73-mode-joint", start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+    steps_.push_back({"t17-73-mode-joint", start + open_example("pd-neut-tof_ferrite-austenite-beer")
                                                + QStringList{analysis, extras, "expand:group.fitting_mode",
                                                              "expand:group.joint_fit"}});
-    steps_.push_back({"t17-74-mode-scan", start + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+    steps_.push_back({"t17-74-mode-scan", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                                               + QStringList{analysis, extras, "expand:group.fitting_mode", "fittingMode.type"}});
     // A click on the parameter table's "free" title: the shown rows' state, then all of them fixed at once.
-    steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt")
                                                 + QStringList{analysis, basic, "parameters.freeHeader"}});
     steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
     // Reset to the initial state lands on the Project page (owner, 2026-10-11).
     steps_.push_back({"t17-77-reset", {"appBar.button.reset"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
-    steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+    steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20")
                                               + QStringList{experiment, basic, "expand:group.experiments", "experiments.create"}});
     steps_.push_back({"t17-24b-load-data-dark", {"theme:dark"}});
     // Duplicate experiment and Duplicate structure, and the disabled Load from COD (the owner, 2026-10-11).
@@ -379,26 +515,26 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The polynomial and Chebyshev backgrounds' terms, and a type switch that asks before it removes the points.
     const QString background = QStringLiteral("expand:group.background");
     steps_.push_back({"t17-10-polynomial-terms",
-                      QStringList{"theme:light"} + start + open_example("pd-neut-cwl_lab6-11b-echidna_tch-fcj")
+                      QStringList{"theme:light"} + start + open_example("pd-neut-tof_ceo2-pearl")
                           + QStringList{experiment, basic, background}});
     steps_.push_back({"t17-11-polynomial-term-removed", {"background.removeTerm.2"}});
     steps_.push_back({"t17-12-polynomial-term-appended", {"background.appendTerm"}});
-    steps_.push_back({"t17-13-chebyshev-terms", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+    steps_.push_back({"t17-13-chebyshev-terms", start + open_example("pd-neut-tof_cecoal-polaris")
                                                     + QStringList{experiment, basic, background}});
-    steps_.push_back({"t17-14-type-question", start + open_example("pd-neut-cwl_cosio-d20_start-1")
+    steps_.push_back({"t17-14-type-question", start + open_example("pd-neut-cwl_cosio-d20")
                                                   + QStringList{experiment, basic, background, "background.type",
                                                                 "choose:chebyshev"}});
     steps_.push_back({"t17-15-type-chebyshev", {"choose:OK"}});
     steps_.push_back({"t17-16-chebyshev-term-appended", {"background.appendTerm", "background.appendTerm"}});
     // Name points by position (owner, 2026-10-11): the line-segment points' ids from their positions, and the
     // parameter table naming them so.
-    steps_.push_back({"t17-80-name-points", start + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+    steps_.push_back({"t17-80-name-points", start + open_example("pd-neut-cwl_lbco-hrpt")
                                                 + QStringList{experiment, basic, "expand:group.background",
                                                               "background.namePoints"}});
     steps_.push_back({"t17-81-named-points-in-table",
                       {analysis, basic, "parameters.nameFilter", "type:background"}});
     // Every loop row is named by its id in the parameter table (owner, 2026-10-11): the Chebyshev terms here.
-    steps_.push_back({"t17-17-term-ids-in-table", start + open_example("pd-neut-tof_cecoal-polaris_chebyshev")
+    steps_.push_back({"t17-17-term-ids-in-table", start + open_example("pd-neut-tof_cecoal-polaris")
                                                       + QStringList{analysis, basic, "parameters.nameFilter",
                                                                     "type:background"}});
     // Timing: the 162-file scan fitted and reset, each interval on a monotonic clock with its work checked. Run only
@@ -421,7 +557,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("report-sidebar-"))) {
         const QString report = QStringLiteral("appBar.tab.report");
         steps_.push_back({"report-sidebar-1-light", QStringList{"resize:1280x960", "theme:light"} + start +
-                                                        open_example("pd-neut-cwl_lbco-hrpt_start-2") +
+                                                        open_example("pd-neut-cwl_lbco-hrpt") +
                                                         QStringList{report, basic}});
         steps_.push_back({"report-sidebar-2-light-text", {text}});
         steps_.push_back({"report-sidebar-3-dark-text", {"theme:dark"}});
@@ -432,7 +568,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // EDI_DEMO_REPORT_PROJECT names a fitted scan to open instead of fitting the bundled one.
         const QString fitted = qEnvironmentVariable("EDI_DEMO_REPORT_PROJECT");
         const QStringList open =
-            fitted.isEmpty() ? start + open_example("pd-neut-cwl_cosio-d20_scan-3f") +
+            fitted.isEmpty() ? start + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f") +
                                    QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
                                                "choose:OK"}
                              : QStringList{"open-project:" + fitted};
@@ -447,7 +583,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only evolution-`).
     if (only.startsWith(QLatin1String("evolution-"))) {
         const QStringList scan = QStringList{"resize:1280x960", "theme:light"} + start
-                                 + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                 + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                  + QStringList{analysis, basic, "mainArea.analysis.tab.evolution"};
         steps_.push_back({"evolution-1-unfitted", scan});
         steps_.push_back({"evolution-2-unfitted-parameters", {"evolution.parameters"}});
@@ -458,23 +594,24 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every colour scheme in both themes, on the Analysis page's chart of a two-structure example. Run only when asked
     // (`--demo-only schemes-`).
     if (only.startsWith(QLatin1String("schemes-"))) {
-        const QStringList schemes{"Coast",          "Garden",         "Peaceful",   "Fog forest",
-                                  "Sage",           "Okabe-Ito",      "Paul Tol bright", "Paul Tol muted",
-                                  "Tableau 10",     "Observable 10",  "IBM Carbon", "ColorBrewer Dark2",
-                                  "Petroff",        "Vivid",          "Nord",       "Solarized",
-                                  "Catppuccin",     "Apple"};
+        QStringList schemes;
+        for (const std::string_view name : edi::colour_scheme_names()) {
+            const std::string_view title = edi::colour_scheme_title(edi::colour_scheme_or_default(name));
+            schemes.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+        }
+        // The structures and the patterns each take the scheme, as the one choice did before they were split.
         const auto pick = [](const QString& scheme) {
-            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colourScheme",
-                               "choose:" + scheme, "choose:OK"};
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.structureColours",
+                               "choose:" + scheme, "preferences.patternColours", "choose:" + scheme, "choose:OK"};
         };
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
-                                                              "preferences.colourScheme"}});
+                                                              "preferences.patternColours"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             for (int i = 0; i < schemes.size(); ++i) {
                 QStringList actions = i == 0 && theme == QLatin1String("light")
                                           ? QStringList{"key:Escape", "key:Escape"} + start
-                                                + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                                                + open_example("pd-neut-tof_ferrite-austenite-beer")
                                                 + QStringList{analysis, basic}
                                           : QStringList{};
                 actions += QStringList{"theme:" + theme} + pick(schemes[i]);
@@ -484,6 +621,298 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                     {QStringLiteral("schemes-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(name),
                      actions});
             }
+        }
+    }
+    // The Structure page's tables, the current structure's row marked, in both themes. Run only when asked
+    // (`--demo-only tables-`).
+    if (only.startsWith(QLatin1String("tables-"))) {
+        steps_.push_back({"tables-1-structure-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{"appBar.tab.structure", basic, "group.atom_site_aniso"}});
+        steps_.push_back({"tables-2-structure-dark", {"theme:dark"}});
+        steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
+        steps_.push_back({"tables-4-report-light", {"theme:light"}});
+        steps_.push_back({"tables-5-report-again", {"theme:light"}});
+    }
+    // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
+    // data table with a column per structure. Run only when asked (`--demo-only curves-`).
+    if (only.startsWith(QLatin1String("curves-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"curves-1-analysis-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
+        steps_.push_back({"curves-2-analysis-zoomed", {"drag:chart.pointer:0.74,0.05,0.80,0.95"}});
+        steps_.push_back({"curves-3-analysis-dark", {"theme:dark"}});
+        steps_.push_back({"curves-4-data-table", {"theme:light", experiment, extras, "group.data"}});
+        steps_.push_back({"curves-5-analysis-off", {analysis, "chart.toolbar.structureCurves"}});
+    }
+    // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
+    // Run only when asked (`--demo-only onechart-`).
+    if (only.startsWith(QLatin1String("onechart-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"onechart-1-analysis-zoomed",
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                              + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"onechart-2-experiment", {experiment}});
+        steps_.push_back({"onechart-3-structure-pattern", {"appBar.tab.structure", "mainArea.structure.tab.pattern"}});
+        steps_.push_back({"onechart-4-structure-view", {"mainArea.structure.tab.view"}});
+        steps_.push_back({"onechart-5-analysis-again", {analysis, "chart.toolbar.structureCurves"}});
+    }
+    // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
+    // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
+    if (only.startsWith(QLatin1String("latp-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic}});
+        steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
+        steps_.push_back({"latp-3-curves-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
+    }
+    // The owner's stray structure fill: ncaf's five banks, one structure, on log and square-root y with each
+    // structure's curve off, then on and off again. Run only when asked (`--demo-only ncaf-`).
+    if (only.startsWith(QLatin1String("ncaf-"))) {
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        steps_.push_back({"ncaf-1-log-off", {"resize:1280x960", "theme:dark", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5",
+                                             analysis, basic, yscale, "choose:log"}});
+        steps_.push_back({"ncaf-2-sqrt-off", {yscale, "choose:square root"}});
+        steps_.push_back({"ncaf-3-sqrt-on", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-4-log-on", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-5-linear-on", {yscale, "choose:linear"}});
+        steps_.push_back({"ncaf-6-linear-off", {"chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-7-log-off", {yscale, "choose:log"}});
+        steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:square root", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-9-bank2-sqrt-off", {"chart.toolbar.structureCurves"}});
+    }
+    // The owner's retest: each structure's curve on (the default), off and on again through the toolbar on latp_scan, on
+    // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
+    // Run only when asked (`--demo-only retest-`).
+    if (only.startsWith(QLatin1String("retest-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        const QString yscale = QStringLiteral("chart.toolbar.yscale");
+        const QString curves = QStringLiteral("chart.toolbar.structureCurves");
+        steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                                experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95"}});
+        steps_.push_back({"retest-02-latp-off", {curves}});
+        steps_.push_back({"retest-03-latp-on", {curves}});
+        steps_.push_back({"retest-04-latp-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-05-latp-sqrt", {yscale, "choose:square root"}});
+        steps_.push_back({"retest-06-cosio", {"open-cli-project:pd-neut-cwl_cosio-d20_start-4", analysis, basic}});
+        steps_.push_back({"retest-07-cosio-linear", {yscale, "choose:linear"}});
+        steps_.push_back({"retest-08-ncaf", {"open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic}});
+        steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-10-ncaf-off", {curves}});
+    }
+    // The owner's sequential fit: cosio's 162 patterns fitted with each structure's curve on (the default) and zoomed,
+    // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
+    if (only.startsWith(QLatin1String("seqfit-"))) {
+        steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                                "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
+                                                                "wait-files:30", "capture-now"}});
+        steps_.push_back({"seqfit-2-running", {"wait-files:60", "capture-now"}});
+        steps_.push_back({"seqfit-3-done", {"wait-fit", "choose:OK"}});
+    }
+    // The chart legend of latp_scan's three structures, each listed once as its Bragg peaks, in both themes. Run only
+    // when asked (`--demo-only legend-`).
+    if (only.startsWith(QLatin1String("legend-"))) {
+        steps_.push_back({"legend-1-light", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
+                                             QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
+        steps_.push_back({"legend-2-dark", {"theme:dark"}});
+    }
+    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
+    // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
+    // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
+    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
+    // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
+    // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    if (only.startsWith(QLatin1String("scanviews-"))) {
+        steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                            + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                            + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"scanviews-04-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale",
+                                                              "choose:log", "scanView.map.toolbar.colourMap", "choose:magma"}});
+        steps_.push_back({"scanviews-05-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
+                                                            "capture-now"}});
+        steps_.push_back({"scanviews-06-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
+                                                                "capture-now"}});
+        steps_.push_back({"scanviews-07-evolution-light-running", {"mainArea.analysis.tab.evolution", "wait-files:70",
+                                                                  "capture-now"}});
+        steps_.push_back({"scanviews-08-stacked-dark-running", {"theme:dark", "mainArea.analysis.tab.stacked",
+                                                               "wait-files:80", "capture-now"}});
+        steps_.push_back({"scanviews-09-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
+        steps_.push_back({"scanviews-10-evolution-dark", {"wait-fit", "choose:OK", "mainArea.analysis.tab.evolution"}});
+        steps_.push_back({"scanviews-11-map-dark-shades", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
+                                                          "choose:Edi Natural shades"}});
+        steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
+                                                          "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
+        steps_.push_back({"scanviews-13-stacked-dark-narrow-zoom", {"mainArea.analysis.tab.stacked",
+                                                                   "scanView.stacked.toolbar.xaxis", "choose:2θ",
+                                                                   "drag:scanView.stacked.pointer:0.40,0.02,0.46,0.6"}});
+        steps_.push_back({"scanviews-14-stacked-dark-secondary-reset", {"right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"scanviews-15-stacked-dark-included-only", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"scanviews-16-stacked-light-included-only", {"theme:light"}});
+        steps_.push_back({"scanviews-17-map-light-included-only", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-17b-map-light-full-range", {"scanView.map.toolbar.includedRange"}});
+        steps_.push_back({"scanviews-18-map-light-narrow-two-lines", {"resize:1000x960"}});
+        steps_.push_back({"scanviews-19-joint-stacked-light-d",
+                          {"resize:1280x960", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+                           "mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
+        steps_.push_back({"scanviews-20-joint-map-light-d", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"scanviews-21-joint-map-dark-d", {"theme:dark"}});
+        steps_.push_back({"scanviews-22-joint-stacked-dark-d", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"scanviews-23-joint-stacked-dark-tof", {"scanView.stacked.toolbar.xaxis", "choose:TOF"}});
+    }
+    // The pattern chart's four measured styles (the owner, 2026-10-22), in both themes, with the background dashed:
+    // the band of measured ± s.u. (the default) with the residual's band, the line, the points with their bars, and
+    // line and points; then the band zoomed in. Run only when asked (`--demo-only mstyle-`).
+    if (only.startsWith(QLatin1String("mstyle-"))) {
+        steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                     + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:band"}});
+        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle", "choose:line + points", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-5-linepoints-dark", {"theme:dark"}});
+        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle", "choose:points"}});
+        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle", "choose:line"}});
+        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle", "choose:band", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
+        steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
+    }
+    // The Experiment page's Stacked and Map tabs on cosio's scan before any fit, and the Preferences' four colour
+    // choices (the owner, 2026-10-22), the structures and the patterns then in different schemes, in both themes.
+    // Run only when asked (`--demo-only colours-`).
+    if (only.startsWith(QLatin1String("colours-"))) {
+        steps_.push_back({"colours-1-experiment-stacked-light",
+                          QStringList{"resize:1280x960", "theme:light"} + start
+                              + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                              + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
+                                            "mainArea.experiment.tab.stacked"}});
+        steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
+        steps_.push_back({"colours-3-preferences", {"appBar.button.preferences", "preferences.tab.appearance"}});
+        steps_.push_back({"colours-4-structures-coast-patterns-contrast",
+                          {"preferences.structureColours", "choose:Edi Coast", "preferences.patternColours",
+                           "choose:Edi Contrast", "choose:OK", "mainArea.experiment.tab.chart"}});
+        steps_.push_back({"colours-5-dark", {"theme:dark"}});
+        steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
+    }
+    // A three-dataset scan's Stacked view, its scan-value axis labelled only over the rows (the owner, 2026-10-22), in
+    // both themes. Run only when asked (`--demo-only stackrange-`).
+    if (only.startsWith(QLatin1String("stackrange-"))) {
+        steps_.push_back({"stackrange-1-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                    + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                    + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"stackrange-2-dark", {"theme:dark"}});
+        steps_.push_back({"stackrange-3-map-dark", {"mainArea.analysis.tab.map"}});
+    }
+    // The scan views' rows labelled by scan value, by file and, thinned, on cosio's 162 patterns; the Map's scale with a
+    // tick per dataset by scan value, its bands labelled by file; a zoom bringing labels back; the three-dataset scan
+    // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
+    if (only.startsWith(QLatin1String("rowlabels-"))) {
+        steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
+                                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
+        steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
+        steps_.push_back({"rowlabels-02-map-value-ticks-light", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-02b-map-bottom-zoom-light", {"drag:scanView.map.pointer:0.1,0.82,0.9,0.995"}});
+        steps_.push_back({"rowlabels-02c-map-reset-light", {"right-click:scanView.map.pointer"}});
+        steps_.push_back({"rowlabels-02d-map-dense-selected-light", {"drag:scanView.map.pointer:0.5,0.93,0.5,0.93"}});
+        steps_.push_back({"rowlabels-02e-stacked-dense-selected-light", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-03-map-file-light", {"mainArea.analysis.tab.map", "scanView.map.toolbar.rows", "choose:file"}});
+        steps_.push_back({"rowlabels-04-stacked-file-light", {"mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-05-stacked-file-zoom-light", {"drag:scanView.stacked.pointer:0.1,0.55,0.9,0.85"}});
+        steps_.push_back({"rowlabels-06-stacked-file-dark", {"theme:dark", "right-click:scanView.stacked.pointer"}});
+        steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:temperature (K)"}});
+        steps_.push_back({"rowlabels-08-map-value-dark", {"mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-09-three-stacked-light",
+                          QStringList{"theme:light"} + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                              + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-10-three-map-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+        steps_.push_back({"rowlabels-11-joint-stacked-datablock-light",
+                          {"theme:light", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+                           "mainArea.analysis.tab.stacked"}});
+        steps_.push_back({"rowlabels-11b-joint-stacked-tof-reversed-light", {"scanView.stacked.toolbar.reverse"}});
+        steps_.push_back({"rowlabels-12-joint-map-datablock-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
+        // A datablock Map, each band its own bank: smooth, blended only across each band's edge; stepped, hard edges.
+        // On d each bank's coverage ends at its own band's edges either way.
+        steps_.push_back({"rowlabels-13-joint-map-d-smooth-dark", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
+                                                                   "drag:scanView.map.pointer:0.5,0.5,0.5,0.5"}});
+        steps_.push_back({"rowlabels-14-joint-map-d-smooth-light", {"theme:light"}});
+        steps_.push_back({"rowlabels-15-joint-map-d-stepped-light", {"scanView.map.toolbar.smooth"}});
+        steps_.push_back({"rowlabels-16-joint-map-d-stepped-dark", {"theme:dark", "scanView.map.toolbar.smooth"}});
+    }
+    // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
+    // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
+    if (only.startsWith(QLatin1String("mapcands-"))) {
+        const QStringList titles = {"viridis", "magma", "inferno", "plasma", "batlow (Crameri)", "oslo (Crameri)",
+                                    "lajolla (Crameri)", "acton (Crameri)", "devon (Crameri)", "lapaz (Crameri)",
+                                    "thermal (cmocean)", "haline (cmocean)", "deep (cmocean)", "dense (cmocean)",
+                                    "ice (cmocean)", "tempo (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)",
+                                    "PuBu (ColorBrewer)", "GnBu (ColorBrewer)", "Blues (ColorBrewer)",
+                                    "Purples (ColorBrewer)", "YlOrRd (ColorBrewer)", "gouldian (CET-L20)", "CET-L08",
+                                    "CET-L06", "CET-L17", "CET-L18"};
+        steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + QStringList{analysis, basic, "mainArea.analysis.tab.map",
+                                                                "scanView.map.toolbar.yscale", "choose:log"}});
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            // The list is taller than the window, so a far entry cannot be clicked: the first map is chosen from the
+            // list, and each next one by a key on the closed box (open it to give it the keyboard, close it, step),
+            // down the list in the light theme and back up it in the dark.
+            for (qsizetype k = 0; k < titles.size(); ++k) {
+                const qsizetype i = theme == QLatin1String("light") ? k : titles.size() - 1 - k;
+                const bool first = theme == QLatin1String("light") && k == 0;
+                QStringList actions = first ? QStringList{"scanView.map.toolbar.colourMap", "choose:" + titles[i]}
+                                      : k == 0 ? QStringList{}
+                                               : QStringList{"scanView.map.toolbar.colourMap", "key:Escape",
+                                                             theme == QLatin1String("light") ? "key:Down" : "key:Up"};
+                if (k == 0) {
+                    actions.prepend("theme:" + theme);
+                }
+                if (theme == QLatin1String("dark") && i == 0) {
+                    actions << "scanView.map.toolbar.reverse";  // the last one reversed, to show the switch
+                }
+                const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
+                steps_.push_back({QStringLiteral("mapcands-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(slug),
+                                  actions});
+            }
+        }
+    }
+    // Element colours drawn flat, in both themes (edi ADR-0047): PbSO4's pale S and dark Pb in the Atom sites table, the
+    // structure view's legend and the parameter table. Run only when asked (`--demo-only elements-`).
+    if (only.startsWith(QLatin1String("elements-"))) {
+        steps_.push_back({"elements-1-structure-light", {"resize:1280x960", "theme:light",
+                                                         "open-cli-project:pd-xray-cwl_pbso4-lab_round-robin",
+                                                         "appBar.tab.structure", basic}});
+        steps_.push_back({"elements-2-analysis-light", {analysis, basic}});
+        steps_.push_back({"elements-3-structure-dark", {"theme:dark", "appBar.tab.structure", basic}});
+        steps_.push_back({"elements-4-analysis-dark", {analysis, basic}});
+    }
+    // A click on any cell makes its row current, an editable cell's too, and every table marks the current row the
+    // same way (the owner, 2026-10-22): Atom sites and the parameter table. Run only when asked (`--demo-only rows-`).
+    if (only.startsWith(QLatin1String("rows-"))) {
+        steps_.push_back({"rows-1-atom-sites", {"resize:1280x960", "theme:light",
+                                                "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", "appBar.tab.structure",
+                                                basic, "expand:group.atom_site"}});
+        steps_.push_back({"rows-2-atom-sites-edit-row-4", {"reveal:atomSite.fractX.3", "atomSite.fractX.3"}});
+        steps_.push_back({"rows-3-parameters-edit-row-5", {"key:Escape", analysis, basic, "reveal:parameters.value.4",
+                                                           "parameters.value.4"}});
+        steps_.push_back({"rows-4-parameters-name-row-2", {"key:Escape", "reveal:parameters.name.1", "parameters.name.1"}});
+        steps_.push_back({"rows-5-parameters-down-row-3", {"key:Down"}});
+        steps_.push_back({"rows-6-parameters-free-row-4", {"reveal:parameters.free.3", "parameters.free.3"}});
+    }
+    // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
+    if (only.startsWith(QLatin1String("about-"))) {
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString first = theme == QLatin1String("light") ? QStringLiteral("resize:1280x960") : QStringLiteral("key:Escape");
+            steps_.push_back({"about-" + theme + "-1-window", {first, "theme:" + theme, "appBar.tab.home", "home.about"}});
+            steps_.push_back({"about-" + theme + "-2-bsd", {"about.licence.BSD-3-Clause"}});
+            steps_.push_back({"about-" + theme + "-3-third-party", {"key:Escape", "about.thirdParty"}});
         }
     }
     if (only.startsWith(QLatin1String("perf-"))) {
@@ -715,16 +1144,9 @@ bool DemoDriver::perform(const QString& action) {
         QQmlEngine* engine = qmlEngine(window_.contentItem());
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         const QString id = action.section(QLatin1Char(':'), 1);
-        const QDir source(QStringLiteral(EDI_CLI_PROJECTS_DIR "/") + id + QStringLiteral("/project"));
-        const QDir target(loaded_files_.filePath(id + QStringLiteral("/project")));
-        bool copied = loaded_files_.isValid() && source.exists();
-        for (QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories); copied && files.hasNext();) {
-            const QString file = files.next();
-            const QString copy = target.filePath(source.relativeFilePath(file));
-            copied = QDir().mkpath(QFileInfo(copy).path()) && QFile::copy(file, copy);
-        }
-        loaded_cli_project_ = target.path();
-        if (!copied || session == nullptr || !session->openProject(QUrl::fromLocalFile(target.path()))) {
+        loaded_cli_project_ = loaded_files_.isValid() ? copy_cli_project(id, QDir(loaded_files_.path())) : QString();
+        if (loaded_cli_project_.isEmpty() || session == nullptr ||
+            !session->openProject(QUrl::fromLocalFile(loaded_cli_project_))) {
             fail(QStringLiteral("step %1: %2 failed: %3")
                      .arg(steps_[current_].image, action, session ? session->lastError() : QStringLiteral("no session")));
             return false;
@@ -780,6 +1202,23 @@ bool DemoDriver::perform(const QString& action) {
         QCoreApplication::sendEvent(&window_, &release);
         return true;
     }
+    if (action.startsWith(QLatin1String("hover:"))) {
+        // hover:<name>:<x>,<y> moves the pointer over the item, at fractions of its size, with no button down.
+        const QStringList parts = action.mid(6).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, QStringLiteral("0.5,0.5")).split(QLatin1Char(','));
+        if (item == nullptr || at.size() != 2) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const QPointF to = item->mapToScene(QPointF(at[0].toDouble() * item->width(), at[1].toDouble() * item->height()));
+        for (const QPointF& point : {to + QPointF(1.0, 1.0), to}) {
+            QMouseEvent move(QEvent::MouseMove, point, window_.mapToGlobal(point), Qt::NoButton, Qt::NoButton,
+                             Qt::NoModifier);
+            QCoreApplication::sendEvent(&window_, &move);
+        }
+        return true;
+    }
     if (action.startsWith(QLatin1String("expand:"))) {
         QQuickItem* group = find(action.mid(7), false);
         if (group == nullptr || !group->setProperty("collapsed", false)) {
@@ -810,6 +1249,18 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         session->project()->pinTimestamps(action.mid(9));
+        return true;
+    }
+    if (action == QLatin1String("load-reflections") || action.startsWith(QLatin1String("load-reflections:"))) {
+        // Load data into the current experiment from the file the action names, else the one EDI_DEMO_REFLECTIONS
+        // names, through the call the row's file dialog makes on accept; without either the step only captures.
+        const QString path = action.contains(QLatin1Char(':')) ? action.section(QLatin1Char(':'), 1)
+                                                                : qEnvironmentVariable("EDI_DEMO_REFLECTIONS");
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
+            session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path));
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("load-experiments:"))) {

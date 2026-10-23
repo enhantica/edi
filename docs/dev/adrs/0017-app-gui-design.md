@@ -42,8 +42,12 @@ The decisions it rests on, unchanged here:
   font units). The wordmark carries no caption: the version never hangs under the name.
 - **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
   easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
-- **About** stacks, each centred: the wordmark and version, then the licence links, the description, and the
-  copyright footer. **Home** stacks the wordmark and version, then Start, then the two link columns.
+- **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
+  copyright footer (the owner, 2026-10-21). The first link names edi's own licences by their identifiers
+  (`BSD-3-Clause`, `GPL-3.0-only`) after the licence icon, each opening its text (`LICENSE`, `COPYING`) as plain
+  text in a popup; the second, *Third-party licences* after the same icon, opens a popup with the third-party
+  table: component, version and licence, its rows with the header's margins, looking enabled and selecting nothing.
+  The space above and below the links is the space the description and the copyright had between them. **Home** stacks the wordmark and version, then Start, then the two link columns.
 - **The description** reads *"EasyDiffraction is a software for calculating diffraction patterns based on
   structural models and refining their parameters against experimental data."* (`ApplicationInfo.description`,
   idea 1). It wraps, centred, at a width of 1.15 × one third of its one-line width, so it takes three lines of
@@ -125,8 +129,10 @@ The decisions it rests on, unchanged here:
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
   unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
 - **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
-  Its buttons stay below it: Add point, Ids from positions and Autodetect for points (Add term for a polynomial
-  or Chebyshev background), each with its longer wording as a tooltip (the owner, 2026-10-11).
+  Its buttons stay below it: Add point, Id from position and Estimate for points, and Add term, Id from order and
+  Estimate for a polynomial or Chebyshev background's terms, each with its longer wording as a tooltip (the owner,
+  2026-10-11; the singular names and Id from order, 2026-10-20, so each names the id column it fills). The terms
+  table shows each term's id before its order, as the points table does.
 - **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
   (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
@@ -142,7 +148,9 @@ disabled** rather than left out, so the layout is final:
   easydiffractionbeta's (idea 13). Experiments has **Load experiment** and **Create experiment** in the same
   places (§18).
 - **Autodetect** (tooltip: reset to the autodetected background) beside **Add point** in Background, the
-  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`).
+  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`). Now implemented as **Estimate**,
+  in the same place with the same icon: it opens the estimate dialog of
+  [ADR-0040](0040-automatic-background-estimation.md).
 - **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
   27). Get started's four buttons sit two by two: *Create a new project*, *Open an existing project*; *Save
   project as…* (§13), *Open project from URL…*.
@@ -267,15 +275,17 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Coast, the default, or one of
-seventeen more), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
-`pattern_colour` and `structure_colour`, which the charts' style table and the report read too. Each colour has at
-least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); a report always takes the light ones:
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Edi Natural, the default, Edi
+Coast, Edi Garden, Edi Studio or Edi Contrast; ADR-0038), read from the palettes in `data/palettes` (PROVENANCE.md
+there) through the core's `pattern_colour` and `structure_colour`, which the charts' style table and the report read
+too. Datasets and structures are assigned separately, each by its place among its own kind: up to five take the first
+colours of their group in order, more a gradient from the group's first colour to its second. A report always takes
+the light colours:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme), Coast scheme |
+| Block | Icon | Colour by its place in the project's list (light / dark theme), Edi Natural |
 |---|---|---|
-| structure | `layer-group` | wheat `#94846A` / `#AD9C82`, plum `#916678` / `#D0A2B5`, stone `#5C4F4D` / `#E3D4D0`, sage `#38482A` / `#DEF3CE`, then round again |
-| experiment | `microscope` | sea blue `#2C90D7` / `#71BFFF`, then teal `#079E92` / `#44D0C1`, green `#3CA059` / `#87D999`, violet `#8978D7` / `#B6AAFF` and cyan `#01869D` / `#57DBF8`; past the set's five, a gradient from indigo `#39336F` / `#8A88CC` to green `#03A97A` / `#8EFFD0` along the order |
+| structure | `layer-group` | orange `#D26E3C` / `#F59B6F`, gold `#958508` / `#BAAD52`, brown `#936844` / `#BD9372`, amber `#C28B0A` / `#EBB352`, olive `#71964E` / `#98BB79`; past five, a gradient from orange to gold along the order |
+| experiment | `microscope` | slate `#829DB9` / `#B2C8E0`, blue `#039EDC` / `#71CBFE`, green `#6EA163` / `#A1CD97`, teal `#479F93` / `#81CAC2`, violet `#8989F7` / `#C0B6E8`; past five, a gradient from slate to blue along the order |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -367,8 +377,10 @@ tint: the Experiments and Structures tables' current block and the parameter tab
 its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
 logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
 the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
-limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
-(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. Every table marks its
+current row the same way (the owner, 2026-10-21): the bar, which the base ListView draws for its `currentRow` or its
+one selected row, and the row's number in the first column, bold in the accent colour. Every table's rows are
+`Components/TableRow.qml` (ADR-0029); `tableHighlight` is no longer used.
 
 ### 12. Preferences, and the sidebar's side
 
@@ -377,9 +389,9 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Colour scheme — Coast (the default), Garden, Peaceful, Fog forest, Sage, Okabe-Ito, Paul Tol
-  bright, Paul Tol muted, Tableau 10, Observable 10, IBM Carbon, ColorBrewer Dark2, Petroff, Vivid, Nord, Solarized,
-  Catppuccin or Apple** (the experiments' and structures' colours, §8, in every chart, icon and report the app draws);
+- **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
+  Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
+  draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
   **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
   2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
@@ -404,6 +416,19 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   base `ContentPage`'s two containers (reached as the parents of the main content and the sidebar) and moves the
   sidebar's border to its edge towards the main area. Nothing is mirrored: text, icons and the order of numbers
   and columns stay as they are. The base is unmodified.
+- **The sidebar's width** (the owner, 2026-10-22): the sidebar reaches from the window's edge to the centre of the
+  Experiment button in the top bar, so its edge sits under that button on every page that has one. The width is read
+  from the top bar's layout (the centred tabs' position and the button's), not a fixed number, so it follows the window
+  and any change to the buttons: 610 px at the 1280 px minimum window width, 930 px at 1920 px (the base's own was
+  584 px), the same on every page. Each workflow tab is as wide as it is when selected
+  (`Components/WorkflowTabButton.qml`): the base widens only the selected tab, for its bold name, so the tabs, and
+  with them the sidebar's edge, shifted by a pixel or two whenever the page changed. The sidebar on the left keeps the
+  same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
+  with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
+- **One green** (the owner, 2026-10-22): a free parameter's bold value, the status bar's Success and its ✓ count, a
+  succeeded fit's outcome, an included dataset's mark and an available recent project's mark all draw the base's
+  `Colors.green`, in both themes. The report figures' light palette keeps its own copy of the light value, and the
+  residual curve its own lighter green (ADR-0038).
 
 ### 13. Saving
 
@@ -503,6 +528,23 @@ Saving is active:
 
 ### 15. The pattern chart
 
+**One pattern view on every page** (the owner, 2026-10-21). The Experiment page, the Analysis page and the Structure
+page's second main-area tab, *Pattern*, beside *Structure* and disabled until an experiment exists, show the same chart
+in full sync: the experiment and dataset selector (on the Structure page's Pattern tab the block selector lists the
+experiments), the axis selectors, zoom and pan, and every toolbar toggle. Its view settings are one set: the y scale,
+the legend, hover-coordinate and structure-curve switches and the pan or box-zoom choice are app settings (ADR-0031
+§7), and the x axis is the project's own, which the report follows. The first build moved one app-owned chart into the shown page by reparenting; the owner's Mac then showed a
+stale copy of the pattern after a zoom and kept the structure fills after the switch went off, neither of which an
+OpenGL capture on Linux shows. So the fallback is taken: each page has its own chart, and every one follows one shared
+view (`AppState.patternViewRanges`, the ranges with the title of the x axis they were set on, and the toolbar's
+choices; only the shown chart writes them). A hidden chart draws nothing and is drawn once when shown; a range is reset
+when the x axis changes, once, on the chart where it changes, so a chart shown again after the change keeps the ranges
+given for its new axis. The structure curves switch in place: a curve not drawn holds no points (Qt Graphs kept an
+area's last drawing when the area was hidden or removed). The Report page's charts stay separate.
+
+**Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
+widest tick-row label (the structure's icon and name), so a name never runs into the plot.
+
 The Experiment and Analysis pages draw the pattern on Qt Graphs, from the core's one description (ADR-0021). The
 chart computes nothing: it draws the series, bands and axes `edi::present_pattern` returns. Its proportions,
 borders, tick counts, legend, toolbar, colours and fonts are easydiffractionbeta's, read from its chart
@@ -547,12 +589,14 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
 - **Toolbar.** One line centred under the block selector row (the owner, 2026-10-11): the axis boxes, then, a
   toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
-  legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
+  legend, hover coordinates, each structure's curve (shown only when the chart has a calculated pattern), a spacer,
+  pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
   y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
   (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
   (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
   one; each chart keeps its own choice, and switching starts the view over. Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
-  *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
+  *x: d-spacing*, the list naming each choice as the closed box does after its axis (`ToolbarComboBox.closedTexts`;
+  the owner, 2026-10-22). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
 - **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
   left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and
@@ -561,10 +605,20 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
   chart's own button list.
 - **Legend.** Inside the main plot's top right corner: one line per series in the series' colour — *Measured
-  (Imeas)*, *Total calculated (Icalc)*, *Background (Ibkg)*, *Residual (Imeas − Icalc)*, and per structure *Bragg
-  peaks*, the structure icon and the structure's name. The legend's rows and the excluded bands reach QML as typed
+  (meas)*, *Total calculated (calc)*, *Background (bkg)*, *Residual (meas − calc)*, and per structure *Bragg
+  peaks*, the structure icon and the structure's name. The names are the y titles' (the owner, 2026-10-21), and
+  *meas − calc* is coloured as the residual pane's title colours it: `meas` in the measured colour, `calc` in the
+  calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
   list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
   of dictionaries.
+- **Each structure's curve** (the owner, 2026-10-14 and 2026-10-21): a toolbar switch with the structure icon, tooltip
+  *Show each structure's curve*, draws every linked structure's calculated curve (crysta's
+  `component_intensities_net`, its ADR-0096) as a soft fill from the background up to the curve, 0.25 opaque, with a
+  1.5 px outline, both in the structure's colour (ADR-0038); the fills are not stacked, and they are drawn under the
+  measured data and the other curves. Off by default; the switch is an app setting (`Preferences.structureCurves`),
+  remembered between sessions, and a report figure never draws the curves. The legend names each curve by its
+  structure. The experiment's data table shows the same curves, one column per structure headed by its name, after
+  `bkg`.
 - **Pointer.** Box zoom sets the x range and the main y range to the dragged box, drawn as the base's chart draws it: a border in the theme's
   app-border colour filled with the same colour half transparent (the owner, 2026-10-02). Pan moves the x range by the dragged distance. One wheel
   notch multiplies the x span by 0.8 (towards the user: by 1.25), keeping the x under the pointer fixed. A right click resets, as the reset button
@@ -573,8 +627,8 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   ranges, so no point of a frame's range is missing; a pan or a scale change first ends a running one at its end, a wheel notch continues from it,
   and a chart that is hidden draws no frame: its animation ends at its target, drawn when the chart is shown again (the owner, 2026-10-02). With
   hover coordinates on, the pointer shows diffraction-lib's read-out of a point within plotly's default hover distance, 20 px (a Bragg tick by its
-  x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `Imeas`, `Ibkg`, `Icalc` and
-  `Imeas - Icalc` at that row, each value in its series' colour; over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
+  x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `meas`, `bkg`, `calc` and
+  `meas − calc` at that row, each value in its series' colour, `meas − calc` named and coloured as the residual pane's title (the owner, 2026-10-21); over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
   indices alone in the tick's colour (the owner, 2026-10-03). Numbers have two decimals and a comma between thousands (`edi::hover_readout`).
 - **Y scales.** Square root and log are display mappings (ADR-0021 §5), and the y-scale button cycles linear,
   square root, log. On each the main y axis labels original values. A square-root axis has its ticks at round
@@ -598,15 +652,23 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   every marker and bar into one image, which every Qt Quick renderer draws, the offscreen platform's software one
   included. The benchmark that chose it over Qt Graphs' scatter series is `pixi run -e app app-chart-bench`; its
   table is under *The measured layer's benchmark* below.
+- **The measured style** (the owner, 2026-10-22): one box between the axis boxes and the legend button, its four
+  entries named as the axis boxes name theirs (`meas: band`, `meas: line`, `meas: points`, `meas: line + points`;
+  first four buttons, made one box the same day), chooses how the measured pattern is drawn, one app setting for every pattern chart (ADR-0031 §7,
+  `PatternChart`): **band**, the default, two 1 px lines at measured + s.u. and measured − s.u. with a fill of 0.3
+  opacity between them, the residual then drawn the same way, (meas − calc) ± s.u., in its pane; **line**, the 2 px
+  line; **points**, the markers with their bars; **line and points**, all three, as the chart drew before. A point
+  without an s.u. has a band of no width; a lower end the log scale cannot show reaches the pane's bottom, as a bar
+  does. A report's figures keep the line and points.
 - **Colours and widths** (light / dark); the one table is `edi::pattern_style_table()`:
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Coast scheme) | `#2C90D7` / `#71BFFF`, then `#079E92` / `#44D0C1`, then `#3CA059` / `#87D999` | 2 px line, 5 px markers, 1 px bars |
-| Calculated | `#F44336` / `#EF9A9A` | 2 px line |
-| Background | `#607D8B` / `#B0BEC5` | 1 px line |
-| Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place (Coast scheme) | `#94846A` / `#AD9C82`, then `#916678` / `#D0A2B5`, then `#5C4F4D` / `#E3D4D0` | 1 px ticks (the owner, 2026-10-02) |
+| Measured, by the experiment's place (Edi Natural) | `#829DB9` / `#B2C8E0`, then `#039EDC` / `#71CBFE`, then `#6EA163` / `#A1CD97` (§8) | by the measured style: a band of 1 px edges and a 0.3 fill, a 2 px line, 5 px markers with 1 px bars, or line and points; drawn under the calculated curves |
+| Total calculation (Edi Natural) | the scheme's role colour, `#CA5C6E` / `#EE8795` | 2 px line, no fill |
+| Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px dashed line, 4 px on and 3 off, its legend sample dashed too (the owner, 2026-10-22) |
+| Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02); in the band style a band as the measured one's |
+| Bragg ticks, by the structure's place (Edi Natural) | `#D26E3C` / `#F59B6F`, then `#958508` / `#BAAD52`, then `#936844` / `#BD9372` (§8) | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
@@ -825,7 +887,8 @@ refuses to write its bank rows into it.
   table is disabled and every edit is refused.
 - **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
   on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
-  the three share the row in thirds.
+  the three share the row in thirds. Reset fits and Follow show only in the sequential and independent modes;
+  otherwise Start fitting is alone at the full width (ADR-0046).
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
@@ -920,7 +983,9 @@ refuses to write its bank rows into it.
   datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
-  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the
+  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as a 2 px line edged by
+  1 px of half-transparent colour on each side (owner, 2026-10-22; the Stacked and Map tabs draw the same look as an
+  open rectangle, ADR-0041 §8). The pointer zooms as on the
   pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
   resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
@@ -968,6 +1033,17 @@ the Text tab and the files agree. A value the cells write in scientific notation
 the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard
 uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
 projects (the owner, 2026-10-13).
+
+A number that does not fit its table cell is never cut short (the owner, 2026-10-22). When the text the rule writes is
+wider than the cell, the cell shows the same number in scientific notation with the same significant digits
+(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows every digit the number holds, written plainly. An s.u. that does not fit takes
+its own shortest scientific form, with the one or two significant digits the rule gives, never its value's exponent:
+beside 3.700e-6 the column's `0.008e-6` becomes `8e-9`. A number that fits keeps its
+form, and the check runs again whenever the column's width changes. It applies to every numeric table cell: the
+parameter values on every page, the Analysis table's s.u., min and max, the editable number cells (excluded regions,
+atom sites, scattering lengths, constraints), the measured data and reflections tables, the fit's start values, a
+scan's extracted values and the fit results dialog's agreement factors. It changes only what the screen shows: the
+saved files, the Report and the CLI write the numbers as before.
 
 ## Consequences
 

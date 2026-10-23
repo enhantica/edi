@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import bz2
 import gzip
+import hashlib
 import io
 import json
 import lzma
@@ -41,6 +42,8 @@ PRIVATE = re.compile(
     r'|c[r]ysta/(?:tests|docs|knowledge|core)/'
     r'|(?:~|/h[o]me/[^/\s]+)/ru[n]s/|/h[o]me/[^/\s]+/|/U[s]ers/[^/\s]+/'
 )
+# Exact npm release files and upstream members pinned in the dependency notice.
+VENDOR = json.loads((ROOT / 'tests/fixtures/report_transport/vendor.json').read_text())
 SCRIPTS = ROOT / 'tools/public-release'
 SECRET = re.compile(
     r'\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b'
@@ -231,6 +234,9 @@ def test_tree_has_no_personal_paths_or_private_citations():
 def process_findings(entries):
     findings = []
     for name, text in entries:
+        release = VENDOR.get(name)
+        if release and hashlib.sha256(text.encode()).hexdigest() == release['sha256']:
+            continue
         if not any(prefix in text.casefold() for prefix in ('-t', 'i-', 'org-', 're' + 'lay')):
             continue
         if not PROCESS.search(text):
@@ -298,6 +304,20 @@ def test_dependency_notice_covers_review_component(component):
     notice = ROOT / 'THIRD-PARTY-NOTICES'
     assert notice.is_file(), 'the release must bundle the complete dependency notices locally'
     text = notice.read_text()
+    if component in {'diffraction-lib', 'easydiffractionbeta'}:
+        acknowledgements = re.search(r'(?ms)^Acknowledgements\n-+\n(.*?)(?=^## |\Z)', text)
+        if component == 'diffraction-lib':
+            assert acknowledgements and component in acknowledgements[1], (
+                'The element-data source retains its acknowledgement without claiming bundling'
+            )
+        assert not re.search(r'(?m)^## ' + re.escape(component) + r'$', text), (
+            'A reference-only project has no redistributed component notice section'
+        )
+        matrix = (ROOT / 'DEPENDENCIES.md').read_text()
+        assert not re.search(r'(?m)^\|\s*' + re.escape(component) + r'\s*\|', matrix), (
+            'A reference-only project is absent from the bundled dependency matrix'
+        )
+        return
     # Check a component's own section, not a licence token elsewhere in the document.
     match = re.search(r'(?im)^.*(?:#+|\[|<h\d).*' + re.escape(component) + r'.*$', text)
     assert match, 'every reviewed shipped component must have a named notice section: ' + component
@@ -324,38 +344,37 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert 'THIRD-PARTY-NOTICES' in cmake and 'qt_add_resources' in cmake, (
         'the app resource bundle must include the actual dependency notice file'
     )
-    # Before: only the renamed Licence label was checked. After: the labelled app
-    # link must open the local notice, whose GPL/BSD split replaces the sentence.
     assert all(
         name in about
         for name in (
-            'about.licence.summary',
-            'ApplicationInfo.copyingUrl',
-            'ApplicationInfo.licenseUrl',
+            'about.licences',
+            'ApplicationInfo.appLicenceIds',
+            'ApplicationInfo.appLicenceUrls',
+            'about.thirdParty',
         )
-    ), 'The user licence view must retain its short summary and access to both complete licences'
-    assert 'about.licence"' not in about and 'This app is distributed under' not in about, (
-        'the About window must omit the superseded distribution sentence'
+    ), 'The identifier links expose both complete own licences and bundled component terms'
+    assert all(token in info for token in ('BSD-3-Clause', 'GPL-3.0-only')) and re.search(
+        r'QStringList appLicenceUrls\(\) const\s*\{\s*return \{licenseUrl\(\), copyingUrl\(\)\};',
+        info,
+    ), 'The two displayed licence identifiers resolve in order to complete BSD and GPL resources'
+    assert 'about.licence.summary' not in about and 'This app is distributed under' not in about, (
+        'The identifier links replace the superseded distribution summary'
     )
     assert re.search(
         r'QString appLicenseUrl\(\) const\s*\{\s*return QStringLiteral\('
         r'"qrc:/app/DISTRIBUTION-LICENSE\.md"\);\s*\}',
         info,
-    ), 'the About app link must target its distribution notice rather than the source licence'
+    ), 'The application distribution notice remains a bundled resource'
     assert '${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md' in cmake, (
-        'the app resources must include the application distribution notice file'
+        'The app resources must include the application distribution notice file'
     )
     assert '"app/DISTRIBUTION-LICENSE.md"' in info, (
-        'the licence resource reader must admit the application notice linked from About'
+        'The licence resource reader must admit the application distribution notice'
     )
-    # About uses tabs and inline complete texts instead of stacked dialogs.
-    # Bundled-resource and distribution-term assertions above/below remain unchanged.
-    assert 'LicenceTextDialog {' not in about, (
-        'About licence navigation must remain in one window instead of opening a stacked dialog'
-    )
-    assert 'ApplicationInfo.licenceText(' in about and all(
-        name in about for name in ('about.tab.licence', 'about.tab.thirdParty')
-    ), 'About retains access to the selected bundled licence through its single-window views'
+    assert all(name in about for name in ('about.licencePopup', 'about.thirdPartyPopup')) and (
+        'ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index])' in about
+        and 'onActivated: thirdPartyPopup.open()' in about
+    ), 'The identifier and third-party links open their actual local licence and component popups'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (
         'both the built application GPL status and source BSD status must be reachable from About'
@@ -532,6 +551,38 @@ def test_private_token_guards_still_refuse_forks_after_public_switch(defect):
     assert public_token_findings(damaged), (
         'core-only skips and Pages publication must never mask a fork token or environment escape'
     )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+def test_private_token_guard_is_required_in_every_job_even_off_pr(event):
+    import copy  # noqa: PLC0415
+
+    documents = workflows()
+    assert not public_token_findings(documents), (
+        'Every actual credential site starts with its reviewed environment and fork guard'
+    )
+    sites = [
+        (filename, name, index)
+        for filename, doc in documents
+        for name, job in doc['jobs'].items()
+        for index, step in enumerate(job.get('steps', []))
+        if 'create-github-app-token' in str(step.get('uses', ''))
+    ]
+    assert sites, 'The credential control must reach the actual token-minting steps'
+    for filename, name, index in sites:
+        damaged = copy.deepcopy(documents)
+        doc = next(doc for path, doc in damaged if path == filename)
+        job = doc['jobs'][name]
+        doc['on'] = {event: {}}
+        job['steps'][index].pop('if', None)
+        for condition in ('!cancelled()', "!cancelled() && github.event_name != 'pull_request'"):
+            job['if'] = condition
+            assert f'{filename}:{name}:unguarded private token' in public_token_findings(
+                damaged
+            ), (
+                f'Every event rejects a token site stripped of its trusted guard: '
+                f'{filename}/{name}/{event}/{condition}'
+            )
 
 
 def test_public_artifacts_exclude_engine_object_code_and_runner_names():
@@ -1226,4 +1277,35 @@ def test_secret_prefix_filter_keeps_every_credential_shape(shape):
     text = '1.2345 6.789\n' * 1000 + candidate + '\n' + '0.1234 5.678\n' * 1000
     assert secret_findings([('numeric-member', text)]) == ['numeric-member'], (
         'the fast prefix filter must retain every credential shape inside numeric member data'
+    )
+
+
+@pytest.mark.parametrize('name', sorted(VENDOR))
+def test_vendor_process_allowance_requires_exact_declared_release_bytes(name):
+    text = (ROOT / name).read_text()
+    assert hashlib.sha256(text.encode()).hexdigest() == VENDOR[name]['sha256'], (
+        'A vendor allowance binds the declared version and upstream member to exact release bytes'
+    )
+    assert not process_findings([(name, text)]), (
+        'The declared unmodified third-party release carries no project process citation'
+    )
+    marker = '\n' + 're' + 'lay' + ' process reference\n'
+    assert process_findings([(name, text + marker)]), (
+        'Appending a process citation to a declared vendor file must invalidate its allowance'
+    )
+
+
+@pytest.mark.parametrize(
+    'name',
+    [
+        'data/report/vendor/neighbor.js',
+        'data/report/vendor/plotly-cartesian-3.7.1.min.js',
+        'archive.zip!data/report/vendor/plotly-cartesian-3.7.0.min.js',
+    ],
+    ids=['neighbor', 'another-version', 'archive-member'],
+)
+def test_vendor_allowance_does_not_cover_other_paths_or_versions(name):
+    text = (ROOT / 'data/report/vendor/plotly-cartesian-3.7.0.min.js').read_text()
+    assert process_findings([(name, text)]), (
+        'The same process-shaped vendor token remains visible outside its exact declared path'
     )

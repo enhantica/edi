@@ -10,7 +10,6 @@
 #include <QHash>
 #include <QImage>
 #include <QJsonDocument>
-#include <QSaveFile>
 #include <algorithm>
 #include <exception>
 #include <memory>
@@ -21,6 +20,7 @@
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_save.hpp"
+#include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
 #include "web_files.hpp"
@@ -29,13 +29,28 @@ namespace edi_app {
 
 ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
-    // end rebuilds from the outcome.
+    // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
+    // The structure figures take the structure view's element colours.
+    if (StructureViewOptions* view = project_.structureViewOptions()) {
+        connect(view, &StructureViewOptions::colorSchemeChanged, this, &ReportViewModel::refresh);
+    }
     refresh();
 }
 
 bool ReportViewModel::calculating() const {
-    return project_.calculating();
+    // A fit counts until it ends: between its own calculations the project is idle, but the report is not yet the
+    // fit's outcome.
+    const FitViewModel* fit = project_.fit();
+    return project_.calculating() || (fit != nullptr && fit->running());
+}
+
+void ReportViewModel::setStructureColourScheme(const QString& scheme) {
+    if (scheme != structure_colour_scheme_) {
+        structure_colour_scheme_ = scheme;
+        emit structureColourSchemeChanged();
+        refresh();
+    }
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
@@ -82,7 +97,7 @@ void ReportViewModel::refresh() {
         return;
     }
     if (build()) {
-        emit modelChanged();
+        publishModel();
     }
     emit savedReportsChanged();
 }
@@ -90,7 +105,16 @@ void ReportViewModel::refresh() {
 void ReportViewModel::ensureBuilt() const {
     if (dirty_ && build()) {
         auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        QMetaObject::invokeMethod(self, [self] { emit self->modelChanged(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(self, [self] { self->publishModel(); }, Qt::QueuedConnection);
+    }
+}
+
+void ReportViewModel::publishModel() {
+    emit modelChanged();
+    const QString stem = fileStem();
+    if (stem != published_file_stem_) {
+        published_file_stem_ = stem;
+        emit fileStemChanged();
     }
 }
 
@@ -103,6 +127,9 @@ bool ReportViewModel::build() const {
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
+    if (edi::colour_scheme_from_name(structure_colour_scheme_.toStdString())) {
+        choices.structure_colour_scheme = structure_colour_scheme_.toStdString();
+    }
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
@@ -111,6 +138,9 @@ bool ReportViewModel::build() const {
     edi::ReportModel next;
     try {
         options_ = edi::effective_report_options(project, choices);
+        const StructureViewOptions* view = project_.structureViewOptions();
+        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
         next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
         options_ = {};
@@ -320,7 +350,8 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     const edi::Project& project = project_.project();
     const QString base = fileStem();
     const QDir reports(reportsDirectory());
-    if (project.path.empty() || !QDir().mkpath(reports.path())) {
+    // The reports folder is made as project output when the first file is written (ADR-0039).
+    if (project.path.empty()) {
         emit saveFailed(tr("The report folder %1 could not be made").arg(reports.path()));
         return;
     }
@@ -331,8 +362,16 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     std::vector<edi::ReportFile> rows;
     const auto write = [&](const char* format, const QByteArray& bytes, const std::string& digest) {
         const QString name = base + QLatin1Char('.') + QLatin1String(format);
-        QSaveFile out(reports.filePath(name));
-        if (bytes.isEmpty() || !out.open(QIODevice::WriteOnly) || out.write(bytes) != bytes.size() || !out.commit()) {
+        // Through the core's writer, as the command line writes: nothing behind a link in reports/ is written.
+        bool stored = !bytes.isEmpty();
+        if (stored) {
+            try {
+                edi::write_report_file(project.path, name.toStdString(), bytes.toStdString());
+            } catch (const std::exception&) {
+                stored = false;
+            }
+        }
+        if (!stored) {
             emit saveFailed(tr("The report could not be written to %1").arg(reports.filePath(name)));
             return false;
         }

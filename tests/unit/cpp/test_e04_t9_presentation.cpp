@@ -162,11 +162,18 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
                     tick_rows.insert(s.rows[i]);
                 }
             std::set<std::size_t> visible_ticks;
-            for (std::size_t r=0;r<computed.refln().size();++r)
-                if (computed.refln().position[r]>=data.grid[0] && computed.refln().position[r]<=data.grid[data.grid.size()-1])
+            const auto exclusions = crysta::excluded_region_ranges(experiment.excluded_regions);
+            for (std::size_t r=0;r<computed.refln().size();++r) {
+                const double position = computed.refln().position[r];
+                const bool excluded = std::any_of(exclusions.begin(), exclusions.end(), [=](const auto& bounds) {
+                    return position >= std::min(bounds.first, bounds.second) &&
+                           position <= std::max(bounds.first, bounds.second);
+                });
+                if (position>=data.grid[0] && position<=data.grid[data.grid.size()-1] && !excluded)
                     visible_ticks.insert(r);
+            }
             CHECK_MESSAGE((tick_rows == visible_ticks),
-                          " gate 1 full-resolution Bragg ticks cover every reflection within the full data viewport");
+                          " gate 1 full-resolution Bragg ticks cover exactly the viewport reflections outside excluded regions (ADR-0044)");
         }
     }
 }
@@ -213,7 +220,7 @@ TEST_CASE("E04-T9 gaps uncertainty panes freshness and phase placement") {
     s.x = col({10,20,30,40,50}); s.meas = col({100,4,2,3,5}); s.su = col({10,9,1,1,1});
     s.calc = col({80,nan,nan,2,4}); s.bkg = col({1,nan,nan,1,1}); s.resid = col({20,nan,nan,1,1});
     s.current = true; s.excluded = {{20,30}};
-    s.phases = {{"a","Alpha",0,col({20}),{}},{"b","Beta",1,col({40}),{}}};
+    s.phases = {{"a","Alpha",0,col({20,30,35}),{}},{"b","Beta",1,col({25,40}),{}}};
     edi::PatternView view; view.y_scale = edi::YScale::Sqrt;
     const auto p = edi::present_pattern(s, view);
     const auto& m = series(p, edi::SeriesKind::Measured);
@@ -232,12 +239,28 @@ TEST_CASE("E04-T9 gaps uncertainty panes freshness and phase placement") {
                   " seam 15 two phases reserve two 18px rows");
     CHECK_MESSAGE((p.layout[2].pane == edi::Pane::Residual && p.layout[2].stretch == .3),
                   " I24 residual is the bottom pane");
-    for (const auto& tick : p.series) if (tick.kind == edi::SeriesKind::BraggTicks) {
-        REQUIRE_MESSAGE((tick.points.size() >= 2), " I24 tick has two endpoints");
-        const double low = tick.id == "bragg/a" ? 1.15 : .15;
-        CHECK_MESSAGE((tick.points[0].y == doctest::Approx(low) && tick.points[1].y == doctest::Approx(low + .7)),
-                      " seam 15 first structure is above the second, ticks cover central seventy percent");
+    for (const bool included_only : {false, true}) {
+        view.included_only = included_only;
+        const auto ticks = edi::present_pattern(s, view);
+        for (const auto& [id, position, row, low] :
+             std::vector<std::tuple<std::string,double,std::size_t,double>>{
+                 {"bragg/a",35,2,1.15},{"bragg/b",40,1,.15}}) {
+            const auto it = std::find_if(ticks.series.begin(), ticks.series.end(),
+                                         [&](const auto& candidate) { return candidate.id == id; });
+            REQUIRE_MESSAGE((it != ticks.series.end()), " I24 both phase rows remain present in both toggle states");
+            const auto& tick = *it;
+            REQUIRE_MESSAGE((tick.points.size() == 3),
+                            " ADR-0044 only the included tick's two endpoints and gap survive in either toggle state");
+            CHECK_MESSAGE((tick.points[0].x == position && tick.points[1].x == position &&
+                           std::isnan(tick.points[2].x) && std::isnan(tick.points[2].y)),
+                          " ADR-0044 excluded boundaries and interior ticks are hidden while every included tick remains");
+            REQUIRE_MESSAGE((tick.rows.size() == tick.points.size()), " I16 tick endpoints retain aligned row provenance");
+            CHECK_MESSAGE((tick.rows[0] == row), " I16 included ticks keep their original reflection row after masking");
+            CHECK_MESSAGE((tick.points[0].y == doctest::Approx(low) && tick.points[1].y == doctest::Approx(low + .7)),
+                          " seam 15 first structure is above the second, ticks cover central seventy percent");
+        }
     }
+    view.included_only = false;
     view.y_scale = edi::YScale::Log10;
     const auto log = edi::present_pattern(s, view);
     CHECK_MESSAGE((std::isnan(series(log, edi::SeriesKind::Measured).bar_low[1])), " I21 nonpositive lower log error end stays NaN");
@@ -267,15 +290,14 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
-    // Before: fixed upstream measured/structure shades. After: parity with the
-    // published palette API, whose independent source and contrast gates own correctness.
+    // Exact Edi Natural coordinates: tests/fixtures/approved_palettes/colours.json.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,edi::pattern_colour(edi::ColourScheme::Default,0,1,false),edi::pattern_colour(edi::ColourScheme::Default,0,1,true),2},
-        {edi::SeriesKind::Calculated,"#F44336","#EF9A9A",2},
-        {edi::SeriesKind::Background,"#607D8B","#B0BEC5",1},
-        {edi::SeriesKind::Residual,"#8BC34A","#C5E1A5",1},
-        {edi::SeriesKind::BraggTicks,edi::structure_colour(edi::ColourScheme::Default,0,false),edi::structure_colour(edi::ColourScheme::Default,0,true),1}}) {
+        {edi::SeriesKind::Measured,"#829DB9","#B2C8E0",2},
+        {edi::SeriesKind::Calculated,"#CA5C6E","#EE8795",2},
+        {edi::SeriesKind::Background,"#8A8A8A","#969696",1},
+        {edi::SeriesKind::Residual,"#737373","#B0B0B0",1},
+        {edi::SeriesKind::BraggTicks,"#D26E3C","#F59B6F",1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");

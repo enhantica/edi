@@ -433,8 +433,22 @@ def test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values
     target = scale_project(harness, root / f'column-{count}', count)
     projection_csv(target, count)
     observed = harness.invoke('evolution', target)
-    assert len(observed['columns']) == 1, 'Evolution rebuild: expose the synthetic fitted column'
-    points = next(axis['points'] for axis in observed['columns'][0]['axes'] if axis['mode'] == 1)
+    columns = {column['name']: column for column in observed['columns']}
+    assert len(observed['columns']) == len(columns) == 2 and set(columns) == {
+        'cosio.cell.length_a',
+        'd20.background.1.intensity',
+    }, 'Evolution rebuild: list all free model parameters once and exclude CSV metadata'
+    assert all(
+        not axis['points'] and axis['count'] == 0
+        for axis in columns['d20.background.1.intensity']['axes']
+    ), 'Evolution rebuild: an unrecorded free parameter must have no fabricated points'
+    assert [column['name'] for column in observed['columns']] == [
+        'd20.background.1.intensity',
+        'cosio.cell.length_a',
+    ], 'Evolution rebuild: free model names precede additional CSV parameter columns'
+    points = next(
+        axis['points'] for axis in columns['cosio.cell.length_a']['axes'] if axis['mode'] == 1
+    )
     indexed = {round(point[0]) - 1: point for point in points}
     assert 0 < len(points) <= 5000, 'Evolution rebuild: retain a bounded nonempty drawn column'
     assert len(indexed) == len(points), 'Evolution rebuild: each drawn dataset occurs once'

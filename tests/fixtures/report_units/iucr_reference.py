@@ -25,7 +25,12 @@ def rounded_pair(value, uncertainty, rule='iucr_19'):
         if rule == 'iucr_19' and digits > 19:
             quantum = Decimal(1).scaleb(su.adjusted())
             digits = (su / quantum).to_integral_value(rounding=ROUND_CEILING)
-        return float(number.quantize(quantum, rounding=ROUND_HALF_UP)), float(digits * quantum)
+        shown = number.quantize(quantum, rounding=ROUND_HALF_UP)
+        if number and not shown:
+            figures = len(str(int(digits)))
+            own_quantum = Decimal(1).scaleb(number.copy_abs().adjusted() - figures + 1)
+            shown = number.quantize(own_quantum, rounding=ROUND_HALF_UP)
+        return float(shown), float(digits * quantum)
 
 
 def rounded_token(match):
@@ -48,6 +53,14 @@ def rounded_token(match):
             if digits == digits.to_integral_value() and 2 <= digits <= 19:
                 break
             exponent -= 1
+        if number and not number.quantize(quantum, rounding=ROUND_HALF_UP):
+            figures = len(str(int(digits)))
+            own_quantum = Decimal(1).scaleb(number.copy_abs().adjusted() - figures + 1)
+            shown = Decimal(str(rounded_value)).quantize(own_quantum)
+            bracket_text = format(su.quantize(quantum), 'f')
+            if '.' not in bracket_text:
+                bracket_text += '.'
+            return (format(shown, 'f') + '(' + bracket_text + ')').encode()
         shown = Decimal(str(rounded_value)).quantize(quantum)
         if not shown:
             shown = abs(shown)
@@ -59,7 +72,7 @@ def rounded_record(contents):
     """Forward parameter s.u. and coefficient tokens; keep every other byte pinned."""
 
     numeric = re.compile(
-        rb'(?<!\S)([-+]?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?)\((\d+(?:\.\d*)?(?:[eE][-+]?\d+)?)\)(?!\S)'
+        rb'(?<!\S)([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\((\d+(?:\.\d*)?(?:[eE][-+]?\d+)?)\)(?!\S)'
     )
     token = re.compile(rb"'[^']*'|\"[^\"]*\"|[^\s]+")
     categories = {
@@ -142,3 +155,17 @@ def rounded_correlation(value):
             quantum = Decimal(1).scaleb(quantum.adjusted() + 1)
             rounded = rounded.quantize(quantum)
         return format(rounded, 'f')
+
+
+def without_default_rule(name, contents):
+    """Check the new default declaration before comparing historical project bytes."""
+    if name != 'project.edi':
+        return contents
+    declaration = b'_su_format.rule iucr_19\n'
+    assert contents.count(declaration) == 1, (
+        'Saved projects require exactly one canonical default IUCr declaration'
+    )
+    assert len(re.findall(rb'(?m)^_su_format\.', contents)) == 1, (
+        'The historical-byte comparison cannot hide an extra or unsupported s.u. setting'
+    )
+    return contents.replace(declaration, b'', 1)

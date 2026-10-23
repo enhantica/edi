@@ -16,12 +16,14 @@
 #include <algorithm>
 #include <memory>
 #include <cctype>
+#include <cmath>
 #include <map>
 #include <fstream>
 #include <filesystem>
 
 #include "background.hpp"
 #include "engine_setup.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
@@ -153,9 +155,25 @@ QVariant ExperimentListModel::data(const QModelIndex& index, int role) const {
 
 // ---- ProjectViewModel ---------------------------------------------------------------------------
 
+namespace {
+
+// ADR-0040: a project opened in auto background mode estimates its points first, as its first calculation would
+// anywhere else, so the app shows the points the CLI and Python give. An estimate the engine refuses leaves the
+// points as saved; the calculation then reports it.
+std::unique_ptr<edi::Project> opened(edi::Project project) {
+    auto out = std::make_unique<edi::Project>(std::move(project));
+    try {
+        edi::refresh_background_estimates(*out);
+    } catch (const std::exception&) {
+    }
+    return out;
+}
+
+}  // namespace
+
 ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     : QObject(parent),
-      project_(std::make_unique<edi::Project>(std::move(project))),
+      project_(opened(std::move(project))),
       registry_(new ParameterRegistry(*this, this)),
       structure_list_(new StructureListModel(this)),
       experiment_list_(new ExperimentListModel(this)),
@@ -306,6 +324,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     });
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
+    // A running fit is a calculation of the report too (ReportViewModel::calculating). A fit says it ended before it
+    // publishes its outcome (FitViewModel::ended), so the report hears of it afterwards, from the event loop.
+    connect(fit_, &FitViewModel::runningChanged, report_, &ReportViewModel::calculatingChanged, Qt::QueuedConnection);
     note_fit();
     if (scan_session_ != nullptr) {
         showScanResults();
@@ -443,6 +464,12 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
         project.report_files = before;
         throw;
     }
+    // A scan's save writes its template, so the rows go there too; the texts a save writes show them.
+    if (scan_template_) {
+        scan_template_->report_files = project.report_files;
+    }
+    saved_files_.reset();
+    invalidateTexts();
 }
 
 void ProjectViewModel::setReportHtmlOffline(bool embedded) {
@@ -690,6 +717,11 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     const std::string value = token.toStdString();
     if (axis == QLatin1String("sampleForm")) {
         type.sample_form = value;
+        // A single crystal is computed for neutrons only, and starts at constant wavelength.
+        if (value == "single crystal") {
+            type.beam_mode = "constant wavelength";
+            type.radiation_probe = "neutron";
+        }
     } else if (axis == QLatin1String("beamMode")) {
         type.beam_mode = value;
     } else if (axis == QLatin1String("radiationProbe")) {
@@ -707,7 +739,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     try {
         edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structures);
         // Within one beam mode the grid stays as it was set.
-        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
+        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value() &&
+            !replacement.reflections.has_value()) {
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
@@ -832,7 +865,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     if (load.derived != 0) {
         notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
     }
-    QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
+    // A single crystal's rows are reflections.
+    QString text = record.experiment->reflections.has_value()
+                       ? tr("%1 loaded into '%2': %n reflection(s)", nullptr, static_cast<int>(load.points))
+                       : tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points));
+    text = text.arg(file_name, loaded_name);
     if (!notes.isEmpty()) {
         text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
     }
@@ -890,6 +927,29 @@ bool ProjectViewModel::createStructure() {
     return true;
 }
 
+bool ProjectViewModel::nameTermsByOrder() {
+    if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
+        return false;
+    }
+    edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
+    PointIds record{&experiment, {}, true};
+    for (const auto& term : experiment.background_terms) {
+        record.before.push_back(term->id.value());
+    }
+    std::vector<std::string> ids = edi::order_term_ids(experiment);
+    if (ids == record.before) {
+        return true;
+    }
+    const QString error = apply_background_edit(experiment, edi::Edit::background_term_ids(experiment, std::move(ids)), true);
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(record));
+    syncUndo();
+    return true;
+}
+
 bool ProjectViewModel::namePointsByPosition() {
     if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
         return false;
@@ -903,7 +963,8 @@ bool ProjectViewModel::namePointsByPosition() {
     if (ids == record.before) {
         return true;
     }
-    const QString error = apply(edi::Edit::background_point_ids(experiment, std::move(ids)), true);
+    const QString error =
+        apply_background_edit(experiment, edi::Edit::background_point_ids(experiment, std::move(ids)), true);
     if (!error.isEmpty()) {
         emit refused(error);
         return false;
@@ -913,7 +974,54 @@ bool ProjectViewModel::namePointsByPosition() {
     return true;
 }
 
+bool ProjectViewModel::estimateBackground() {
+    if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
+        return false;
+    }
+    edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
+    const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment);
+    edi::BackgroundEstimate estimate;
+    try {
+        estimate = edi::estimate_background(experiment, options);
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    for (const std::string& warning : estimate.warnings) {
+        emit message(QString::fromStdString(warning));
+    }
+    if (estimate.points.empty() && estimate.terms.empty()) {
+        return false;  // nothing measured to estimate from: the background stays
+    }
+    BackgroundPoints record{&experiment, edi::capture_background(experiment)};
+    const std::string summary = estimate.summary;
+    const std::string reason = options.use_model == "auto" ? estimate.model_reason : std::string();
+    const QString error = apply(edi::Edit::background_estimate(experiment, std::move(estimate), options), true);
+    if (!error.isEmpty()) {
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(record));
+    syncUndo();
+    emit message(QString::fromStdString(summary));
+    postAutoModelReason(experiment.name, reason);
+    return true;
+}
+
+void ProjectViewModel::postAutoModelReason(const std::string& experiment, const std::string& reason) {
+    if (reason.empty()) {
+        return;
+    }
+    emit information(tr("%1: calculated peaks %2 (auto subtracts them when at most %3% of the points do).")
+                         .arg(QString::fromStdString(experiment), QString::fromStdString(reason),
+                              QString::number(100.0 * edi::kAutoModelBelowShare)));
+}
+
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
+    if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
+        emit refused(refusal);
+        return false;
+    }
     std::map<const edi::Parameter*, std::string> names;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
         names.emplace(slot.parameter, slot.unique_name);
@@ -970,6 +1078,7 @@ bool ProjectViewModel::duplicateStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    scan_views_ = new ScanViewModel(this);
     connect(evolution_, &EvolutionViewModel::refused, this, [this](const QString& message) {
         setLastError(message);
         emit refused(message);
@@ -1542,6 +1651,7 @@ void ProjectViewModel::reloadScanResults() {
 void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
+    scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
     if (!scan_session_->index().error.empty()) {
         // A refused read has no rows to summarise: no summary is built from it, the refusal is shown instead.
@@ -1903,6 +2013,48 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
         setLastError(message);
         return message;
     }
+    // ADR-0040: an experiment in auto background mode re-estimates its points once an edit changed its data or
+    // settings, so the calculation the edit starts reads them; a hand edit of a point makes it manual. The edit
+    // stands whatever the estimate does; a refusal is reported.
+    if (edi::background_estimates_due(*project_)) {
+        pending_structural_ = true;
+        // An experiment whose background a fit refined (a free point or term) loses those values to the new
+        // estimate; it is said in the messages (the owner, 2026-10-21).
+        std::vector<std::string> refined;
+        for (const auto& experiment : project_->experiments) {
+            if (!edi::background_estimate_due(*experiment)) {
+                continue;
+            }
+            bool free = false;
+            for (const auto& point : experiment->background) {
+                free = free || point->intensity.free.get();
+            }
+            for (const auto& term : experiment->background_terms) {
+                free = free || term->coef.free.get();
+            }
+            if (free) {
+                refined.push_back(experiment->name);
+            }
+        }
+        std::vector<std::pair<std::string, std::string>> reasons;
+        bool refreshed = false;
+        try {
+            preview_->apply(edi::Edit::refresh_background_estimates(*project_, &reasons));
+            refreshed = true;
+        } catch (const std::exception& refusal) {
+            emit message(QString::fromUtf8(refusal.what()));
+        }
+        for (const auto& [name, reason] : reasons) {
+            postAutoModelReason(name, reason);
+        }
+        for (const std::string& name : refined) {
+            if (refreshed) {
+                emit information(tr("%1: the measured data or the estimate settings changed, so the background was "
+                                    "estimated again and its fitted values were replaced.")
+                                     .arg(QString::fromStdString(name)));
+            }
+        }
+    }
     // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the
     // template too; an edit of the experiment or the structures makes the shown values the template's, over the
     // template's own data file. A refused edit never gets here. A stopped scan is then started afresh.
@@ -1941,6 +2093,30 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
     const QString refusal = apply(change, false);
     applying_setting_ = false;
     return refusal;
+}
+
+QString ProjectViewModel::value_refusal(const edi::Parameter& parameter) const {
+    for (const auto& experiment : project_->experiments) {
+        const std::vector<const edi::Parameter*> owned = edi::estimated_background_values(*experiment);
+        if (std::find(owned.begin(), owned.end(), &parameter) != owned.end()) {
+            return estimated_background_refusal(*experiment);
+        }
+    }
+    return {};
+}
+
+QString ProjectViewModel::free_refusal() const {
+    return has_measured_data(*project_) ? QString()
+                                        : tr("a fit needs measured data, and no experiment in this project has any");
+}
+
+QString ProjectViewModel::apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
+                                                bool structural) {
+    if (const QString refusal = estimated_background_refusal(experiment); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
+    }
+    return apply(change, structural);
 }
 
 QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
@@ -2080,13 +2256,24 @@ void ProjectViewModel::undo() {
             }
             syncCorrelations();
         }
+    } else if (const auto* points = std::get_if<BackgroundPoints>(&undo_history_.back())) {
+        const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
+                                        [points](const auto& held) { return held.get() == points->experiment; });
+        if (found == project_->experiments.end()) {
+            setLastError(tr("undo: the experiment is no longer in the project"));
+        } else {
+            undone = apply(edi::Edit::restore_background(**found, points->before), true).isEmpty();
+        }
     } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
                                         [ids](const auto& held) { return held.get() == ids->experiment; });
         if (found == project_->experiments.end()) {
             setLastError(tr("undo: the experiment is no longer in the project"));
         } else {
-            undone = apply(edi::Edit::background_point_ids(**found, ids->before), true).isEmpty();
+            undone = apply(ids->terms ? edi::Edit::background_term_ids(**found, ids->before)
+                                      : edi::Edit::background_point_ids(**found, ids->before),
+                           true)
+                         .isEmpty();
         }
     } else {
         // A single fit on a scan dataset made it the template and the last fit. Its Undo is refused, with nothing
@@ -2138,6 +2325,14 @@ void ProjectViewModel::undo() {
                 rows.push_back(std::make_shared<edi::FitParameterCorrelation>(row));
             }
             project_->fit_result.correlations.assign(std::move(rows));
+            // What was saved since the fit is not the fit's to undo: the project's folder, metadata and data root, and
+            // the saved reports' rows, stay the open project's.
+            if (std::optional<edi::Project>& stash = fit_template_undo_->stash) {
+                stash->path = project_->path;
+                stash->metadata = project_->metadata;
+                stash->scan_data_root = project_->scan_data_root;
+                stash->report_files = project_->report_files;
+            }
             scan_template_ = std::move(fit_template_undo_->stash);
             syncCorrelations();
             fit_template_undo_.reset();
@@ -2357,6 +2552,16 @@ void ProjectViewModel::publishFit() {
             error = tr("The fitted model cannot be calculated");
         }
     }
+    if (!error.isEmpty()) {
+        // The engine's own reason, from a calculation of a copy (every refusal names its reason; the owner,
+        // 2026-10-21).
+        try {
+            edi::Project probe = *project_;
+            probe.calculate();
+        } catch (const std::exception& refusal) {
+            error = tr("The fitted model cannot be calculated: %1").arg(QString::fromUtf8(refusal.what()));
+        }
+    }
     published(edi::PreviewResult{preview_->newest_request(), error.toStdString()});
     setModified(true);
 }
@@ -2390,6 +2595,11 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project_));
     parameters_->setExperimentScope(scan && selected != nullptr ? selected->name() : QString());
     parameters_->sync();
+    // The Stacked and Map tabs show a joint fit's experiments too (edi ADR-0041; the owner, 2026-10-22), taken again
+    // after every edit, which may have switched the mode or changed the data; a scan's datasets are set by the scan.
+    if (scan_views_ != nullptr && !scan_) {
+        scan_views_->setJoint(project_.get());
+    }
     // The report keeps its composed text and counts this table's rows: a selection that changes the rows
     // changes the report in the same step. The status bar and the Analysis table bind the model itself.
     if (refresh_report && report_ != nullptr) {
@@ -2491,12 +2701,14 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->pattern()->calculated(error);
         experiment->capturePattern();
+        experiment->syncEstimate();
     }
     // ADR-0022: the transaction published every structure's geometry; each structure view re-presents from
     // its captured source, here on the owner thread.
     for (StructureViewModel* structure : structure_models_) {
         structure->captureScene();
     }
+    scan_views_->setConversion(project_.get());  // a scan's d axis follows the calculation, as the pattern chart's
     saved_files_.reset();  // a save writes the calculated pattern too
     invalidateTexts();
     report_->refresh();
@@ -2514,12 +2726,33 @@ void ProjectViewModel::publishCalculating() {
 }
 
 const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedFiles() const {
-    // One save of the whole project serves every Text tab until the next change (D7).
+    // One save of the whole project serves every Text tab until the next change (D7). It is of the model the pages
+    // show: while a scan dataset is shown, that dataset's values, though a save writes the template (edi ADR-0015).
     if (!saved_files_.has_value()) {
         try {
-            saved_files_ = SavedFiles{edi::project_edi_files(scanTemplateOrModel()), {}};
+            saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
             saved_files_ = SavedFiles{{}, refusal.what()};
+            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
+            // its text, from a save without those experiments, and only theirs shows the refusal.
+            try {
+                edi::Project resolved = *project_;
+                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+                    const auto& links = resolved.experiments[index]->linked_structures;
+                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                        const std::string& id = link->structure_id.value();
+                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                           [&id](const auto& structure) { return structure->name.value() == id; });
+                    });
+                    if (missing) {
+                        resolved.experiments.erase_at(index);
+                    }
+                }
+                if (resolved.experiments.size() < project_->experiments.size()) {
+                    saved_files_->files = edi::project_edi_files(resolved);
+                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+            }
         }
     }
     if (!saved_files_->refusal.empty()) {
@@ -2533,10 +2766,20 @@ SavedFile ProjectViewModel::savedFileFunction() const {
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
-    for (const auto& [path, body] : savedFiles()) {
+    // A block the save could not write shows why; the others show their text (savedFiles).
+    std::string refusal;
+    try {
+        savedFiles();
+    } catch (const std::exception& error) {
+        refusal = error.what();
+    }
+    for (const auto& [path, body] : saved_files_->files) {
         if (path == relative) {
             return body;
         }
+    }
+    if (!refusal.empty()) {
+        throw std::runtime_error(refusal);
     }
     return {};
 }

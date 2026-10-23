@@ -56,6 +56,24 @@ if (request.consumer === "scan") {
             color: vm.runInContext(binding("numberText", "color"), context)};
     });
     console.log(JSON.stringify(result));
+} else if (request.consumer === "fraction") {
+    const cell = fs.readFileSync(path.resolve(path.dirname(request.source), "../Pages/Experiment/LinkedStructureGroup.qml"), "utf8");
+    const start = cell.indexOf("id: fraction");
+    if (start < 0) throw new Error("The real fraction cell must exist");
+    const body = cell.slice(start);
+    const parameter = /parameter:\s*([\s\S]*?)\n\s*color:/.exec(body);
+    if (!parameter) throw new Error("The real fraction parameter binding must exist");
+    const result = request.calls.map(call => {
+        context.row = {weightFraction: call.args[0] === null ? {} : {value: call.args[0], uncertainty: call.args[1]}};
+        for (const name of ["known", "fractionValue", "fractionError"]) {
+            const expression = new RegExp("readonly property (?:bool|real) " + name + ":([^\\n]+)").exec(body);
+            if (!expression) throw new Error("The real fraction property must exist: " + name);
+            context[name] = vm.runInContext(expression[1], context);
+        }
+        const value = vm.runInContext("(" + parameter[1] + ")", context);
+        return {value: value.value, error: value.error};
+    });
+    console.log(JSON.stringify(result));
 } else {
     console.log(JSON.stringify(request.calls.map(call => context[call.name](...call.args))));
 }

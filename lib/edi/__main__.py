@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Self
 
 import edi
+from edi import _project_output as _output
 
 # One verbosity for both channels, so --verbosity means the same thing whichever --report is
 # chosen.
@@ -221,29 +222,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.add_argument(
         '--colour-scheme',
-        choices=(
-            'coast',
-            'garden',
-            'peaceful',
-            'fogForest',
-            'sage',
-            'okabeIto',
-            'paulTolBright',
-            'paulTolMuted',
-            'tableau',
-            'observable',
-            'carbon',
-            'dark2',
-            'petroff',
-            'vivid',
-            'nord',
-            'solarized',
-            'catppuccin',
-            'apple',
-        ),
+        choices=('ediNatural', 'ediCoast', 'ediGarden', 'ediStudio', 'ediContrast'),
         default=None,
         metavar='NAME',
-        help="the colour scheme whose light colours the report's charts take (default: coast)",
+        help="the colour scheme whose light colours the report's charts take "
+        '(default: ediNatural)',
     )
     report.add_argument(
         '--correlation-experiment',
@@ -644,7 +627,9 @@ def _write_back_calculated(path: Path, grid, calculated) -> None:
     lines.extend(
         f'{index + 1} {grid[index]:g} {value:g}' for index, value in enumerate(calculated)
     )
-    path.write_text(''.join(f'{line}\n' for line in lines), encoding='utf-8')
+    # Replaced whole as project output (edi ADR-0039), as the engine's calc does: the document
+    # lives in <project>/experiments/.
+    _output.write_project_file(path.parent.parent, path, ''.join(f'{line}\n' for line in lines))
 
 
 def run_calc(args: argparse.Namespace) -> int:
@@ -662,7 +647,13 @@ def run_calc(args: argparse.Namespace) -> int:
         if args.dry
         else [_calc_target(args.project, experiment) for experiment in project.experiments]
     )
+    # ADR-0040: an experiment in auto background mode estimates its points or terms first when
+    # its data or settings changed; the estimate, with what it came from, is saved with the
+    # project unless --dry, as crysta's calc saves it.
+    estimating = project._background_estimates_due()
     project.analysis.calculate()
+    if not args.dry and estimating:
+        project.save()
     total_points = 0
     checksum = 0.0
     for index, experiment in enumerate(project.experiments):

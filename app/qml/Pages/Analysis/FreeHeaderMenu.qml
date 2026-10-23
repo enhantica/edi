@@ -17,16 +17,15 @@ EaElements.Menu {
     property ProjectViewModel project: null
     property ParameterFilterModel filter: null
 
-    // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live.
-    readonly property var shown: {
+    // Counts every change of the rows the filters show (a filter, rows that come or go, a scan experiment switch), as
+    // the table's selection follows them (ParametersGroup): reading a row of the filter model does not follow them.
+    property int membership: 0
+
+    // The shown rows that can be fitted, as the filter model has them now.
+    function fittableRows() {
         const rows = [];
         if (menu.filter === null || menu.project === null)
             return rows;
-        // The filters and the project's counts change when rows come and go.
-        void menu.filter.nameFilter;
-        void menu.filter.categoryFilter;
-        void menu.filter.variability;
-        void menu.project.parameters.freeCount;
         for (let i = 0; i < menu.filter.rowCount(); ++i) {
             const parameter = menu.filter.parameterAt(i);
             if (parameter !== null && parameter.fittable && parameter.refinable)
@@ -34,13 +33,41 @@ EaElements.Menu {
         }
         return rows;
     }
+
+    // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live. The
+    // count is used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with it
+    // the dependency.
+    readonly property var shown: menu.membership >= 0 ? menu.fittableRows() : []
     readonly property int freeCount: shown.filter(parameter => parameter.free).length
     readonly property int fixedCount: shown.length - freeCount
 
+    // Free or Fixed acts on the rows shown when it is chosen.
     function apply(free) {
         if (menu.project !== null)
-            menu.project.setParametersFree(menu.shown, free);
+            menu.project.setParametersFree(menu.fittableRows(), free);
         menu.close();
+    }
+
+    Connections {
+        target: menu.filter
+        function onRowsInserted() {
+            ++menu.membership;
+        }
+        function onRowsRemoved() {
+            ++menu.membership;
+        }
+        function onModelReset() {
+            ++menu.membership;
+        }
+        function onLayoutChanged() {
+            ++menu.membership;
+        }
+    }
+    Connections {
+        target: menu.project
+        function onCurrentExperimentIndexChanged() {
+            ++menu.membership;
+        }
     }
 
     width: layout.implicitWidth

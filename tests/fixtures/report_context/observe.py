@@ -27,12 +27,19 @@ def model(text):
 
 folder = Path(sys.argv[1])
 project = edi.Project.load(folder)
-result = {'binding': str(edi._edi.__file__)}
-document = json.loads(project.report.model().to_json())
+choices = {'colour_scheme': sys.argv[2], 'correlation_experiment': sys.argv[3]}
+cli_choices = ['--colour-scheme', sys.argv[2], '--correlation-experiment', sys.argv[3]]
+result = {
+    'binding': str(edi._edi.__file__),
+    'inputs': choices,
+    'canonical_model': json.loads(project.report.model().to_json()),
+}
+result['python_model_json'] = project.report.model(**choices).to_json()
+document = json.loads(result['python_model_json'])
 document['generated'] = ''
 result['python_model'] = document
 for name, text in [
-    ('python_html', project.report.as_html()),
+    ('python_html', project.report.as_html(**choices)),
     (
         'python_display',
         html.unescape(re.search(r'srcdoc="(.*?)"', project.report._repr_html_(), re.DOTALL)[1]),
@@ -40,10 +47,10 @@ for name, text in [
 ]:
     result[name] = model(text)[0]
 path = folder / 'context-output.html'
-project.report.save_html(path)
+project.report.save_html(path, **choices)
 result['python_save_html'] = model(path.read_text())[0]
 completed = subprocess.run(
-    [sys.executable, '-m', 'edi', 'report', str(folder), '--output', str(path)],
+    [sys.executable, '-m', 'edi', 'report', str(folder), '--output', str(path), *cli_choices],
     capture_output=True,
     text=True,
     check=False,
@@ -62,11 +69,11 @@ completed = subprocess.run(
 )
 result['cli_check'] = {'code': completed.returncode, 'text': completed.stdout + completed.stderr}
 with contextlib.redirect_stdout(sys.stderr):
-    project.report.save()
+    project.report.save(**choices)
 written = folder / 'reports' / (project.name + '.html')
 result['python_save'] = model(written.read_text())[0]
 completed = subprocess.run(
-    [sys.executable, '-m', 'edi', 'report', str(folder)],
+    [sys.executable, '-m', 'edi', 'report', str(folder), *cli_choices],
     capture_output=True,
     text=True,
     check=False,

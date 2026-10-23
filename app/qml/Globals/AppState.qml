@@ -34,6 +34,26 @@ QtObject {
         value: AppState.platformColorScheme
     }
 
+    // The pattern charts' one view (edi ADR-0017 §15): the Structure, Experiment and Analysis pages each show a chart,
+    // and every one follows these ranges (PatternChartController.viewRanges) and the toolbar's choices, which are app
+    // settings (Preferences.patternLegendShown, patternHoverShown, patternPointerMode, structureCurves).
+    // [x min, x max, y min, y max], NaN for the data's own range, and the x axis they are on.
+    property list<real> patternViewRanges: [NaN, NaN, NaN, NaN]
+    property string patternViewAxis: ""
+    // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
+    // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
+    property var scanZoom: ({})
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
+    // choices stay.
+    property Connections patternViewReset: Connections {
+        target: Session
+        function onProjectChanged() {
+            AppState.patternViewRanges = [NaN, NaN, NaN, NaN];
+            AppState.patternViewAxis = "";
+            AppState.scanZoom = {};
+        }
+    }
+
     // The furthest page the user has opened with Start or Continue; an open project opens every page
     // (easydiffractionbeta: loading a project enables the workflow pages together).
     property int reached: AppState.Page.Home

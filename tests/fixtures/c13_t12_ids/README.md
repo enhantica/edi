@@ -62,3 +62,7 @@ The separate platform probe asks Windows for an actual short path and checks
 filesystem equivalence; on other hosts it probes a case variant. No obtained alias
 is reported explicitly. Linux execution does not prove Windows path semantics or
 8.3 generation. The domain-refusal branch still executes on Linux.
+
+**Excluded rows rewritten ([ADR-0044](../../../docs/dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
+file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
+instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.

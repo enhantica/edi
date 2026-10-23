@@ -1,0 +1,42 @@
+{
+  "d3-tableau.js": {
+    "url": "https://raw.githubusercontent.com/d3/d3-scale-chromatic/v3.1.0/src/categorical/Tableau10.js",
+    "sha256": "28421b3596d670e2e7d835f176d81f23851d98c46e561fa94e35b7d473cfde1b"
+  },
+  "d3-observable.js": {
+    "url": "https://raw.githubusercontent.com/d3/d3-scale-chromatic/v3.1.0/src/categorical/observable10.js",
+    "sha256": "23b9df14074dc03e37596aa1e92b09524418393a2c68ffcf3fe03fd9eed10388"
+  },
+  "carbon.js": {
+    "url": "https://raw.githubusercontent.com/carbon-design-system/carbon-website/main/src/data/data-visualization/palettes.js",
+    "sha256": "d9bf12153efee863527c618e69a6e3a4d8c6c567626d853c7286c1d8d40749eb"
+  },
+  "petroff.mplstyle": {
+    "url": "https://raw.githubusercontent.com/matplotlib/matplotlib/v3.10.8/lib/matplotlib/mpl-data/stylelib/petroff10.mplstyle",
+    "sha256": "423ee93db1e1dcbdb991db0fb75ca9c2f291ddd3f3b8eac5cf34133f731f8a58"
+  },
+  "nord.scss": {
+    "url": "https://raw.githubusercontent.com/nordtheme/nord/develop/src/nord.scss",
+    "sha256": "03d9dd98ff983308d10a9a4820c870e9eed7183a2d8aa689e3041e6d7cf1511b"
+  },
+  "solarized.md": {
+    "url": "https://raw.githubusercontent.com/altercation/solarized/master/README.md",
+    "sha256": "f10571c994648365faab9c4f83bdd7699aa2cd056f111af5e29099c2673c5bc1"
+  },
+  "catppuccin.json": {
+    "url": "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json",
+    "sha256": "4bc114bb6b3c9a9c9e156564aa84625aef32c5da514d9dd431cf1fcad433a05f"
+  },
+  "brewer.json": {
+    "url": "https://colorbrewer2.org/export/colorbrewer.json",
+    "sha256": "729cb527c1edcf3267c4521df29ede5092f3e6171c5a259e2ebdd252335840b9"
+  },
+  "tol.html": {
+    "url": "https://sronpersonalpages.nl/~pault/",
+    "sha256": "2e5ffd3899469ef86ba41c0dddbbb5b13fbe7aa1b0be0756c7c8a75133f027e0"
+  },
+  "apple.json": {
+    "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/color.json",
+    "sha256": "262ce33cb88d41ac0238bf1e3f59b7957e8ddb030379c41b35a6cbdb9ab11a39"
+  }
+}

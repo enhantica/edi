@@ -6,55 +6,79 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
-// The colour schemes (data/palettes, PROVENANCE.md beside them): the experiments' and structures' colours, the only
-// source of them in edi. The app's charts and icons, the pattern presentation and the report read these functions.
+// The colour schemes (data/palettes, PROVENANCE.md beside them; ADR-0038): the datasets', structures' and chart roles'
+// colours, the only source of them in edi. The app's charts and icons, the pattern presentation and the report read
+// these functions.
 
 namespace edi {
 
-/// The schemes (PROVENANCE.md): edi's own, published palettes designed for data and app themes' accents. Each has light
-/// and dark colours for measured data, a two-colour gradient for more datasets than its set holds, and structure colours.
+/// The five Edi palettes, in the order Preferences lists them. Each has light and dark colours: five measured-data
+/// colours, five structure colours and three role colours.
 enum class ColourScheme {
-    Coast,
-    Garden,
-    Peaceful,
-    FogForest,
-    Sage,
-    OkabeIto,
-    PaulTolBright,
-    PaulTolMuted,
-    Tableau,
-    Observable,
-    Carbon,
-    Dark2,
-    Petroff,
-    Vivid,
-    Nord,
-    Solarized,
-    Catppuccin,
-    Apple,
+    EdiNatural,
+    EdiCoast,
+    EdiGarden,
+    EdiStudio,
+    EdiContrast,
 };
 
-/// The scheme of a new user, and of a preference naming none.
-inline constexpr ColourScheme kDefaultColourScheme = ColourScheme::Coast;
+/// The scheme of a new user, and of a preference naming none or one no longer offered.
+inline constexpr ColourScheme kDefaultColourScheme = ColourScheme::EdiNatural;
 
-/// The schemes' preference tokens, in ColourScheme's order: "coast", "garden", "peaceful", "fogForest", "sage",
-/// "okabeIto", "paulTolBright", "paulTolMuted", "tableau", "observable", "carbon", "dark2", "petroff", "vivid", "nord",
-/// "solarized", "catppuccin", "apple".
+/// How many colours each scheme lists for measured data and for structures; more items than this take a gradient.
+inline constexpr std::size_t kGroupColourCount = 5;
+
+/// The colours of a chart that belong to no dataset or structure.
+enum class ChartRole {
+    TotalCalculation,
+    Background,
+    Difference,
+};
+
+/// The schemes' preference tokens, in ColourScheme's order: "ediNatural", "ediCoast", "ediGarden", "ediStudio",
+/// "ediContrast".
 std::span<const std::string_view> colour_scheme_names();
 
-/// The scheme a token names; nullopt for any other name.
+/// The scheme a token names; nullopt for any other name, the eighteen schemes before the Edi palettes included.
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name);
 
-/// The colour, `#RRGGBB`, of the experiment at `place` among `count`: up to the scheme's number of pattern colours,
-/// the place's own; beyond it, the scheme's gradient sampled at place / (count - 1), mixed in Oklab between the two
-/// stops around it. `dark` gives the dark theme's colours.
+/// The scheme a stored preference names, or the default scheme for an unknown or removed name.
+ColourScheme colour_scheme_or_default(std::string_view name);
+
+/// The scheme's name as Preferences show it: "Edi Natural", "Edi Coast", "Edi Garden", "Edi Studio", "Edi Contrast".
+std::string_view colour_scheme_title(ColourScheme scheme);
+
+/// The colour, `#RRGGBB`, of the dataset at `place` among `count`. Up to five datasets take the first `count` measured
+/// colours in order; more take a gradient from the first measured colour to the second, the dataset at `place` at
+/// t = place / (count - 1), mixed in Oklab. A place past the end takes the last one's colour. `dark` gives the dark
+/// theme's colours.
 std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark);
 
-/// The colour of the structure at `place`, its scheme's short palette taken round again past its end.
-std::string structure_colour(ColourScheme scheme, std::size_t place, bool dark);
+/// The colour of the structure at `place` among `count`, assigned as pattern_colour assigns datasets but from the
+/// structure colours.
+std::string structure_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark);
 
-/// The number of pattern colours a scheme lists, before the gradient takes over.
-std::size_t pattern_colour_count(ColourScheme scheme);
+/// The colour of a chart role in the scheme and theme.
+std::string role_colour(ColourScheme scheme, ChartRole role, bool dark);
+/// The colour `t` of the way from `from` to `to` (both `#RRGGBB`), mixed in Oklab as the gradients are; `t` is clamped
+/// to [0, 1] and the ends are the colours themselves.
+std::string mix_colours(const std::string& from, const std::string& to, double t);
+
+/// The WCAG 2 contrast ratio of two `#RRGGBB` colours, from 1 to 21.
+double contrast_ratio(const std::string& a, const std::string& b);
+
+/// `colour` as it is drawn on `background` (both `#RRGGBB`) in 2D: with at least `ratio` contrast against it (edi
+/// ADR-0047). A colour with enough contrast is returned byte for byte. Otherwise its Oklab lightness moves towards black
+/// or white, whichever the background contrasts with more, by as little as reaches the ratio, keeping its hue, and its
+/// chroma where sRGB can show it at that lightness; where it cannot, the most chroma it can. If even black or white falls
+/// short, that end is returned.
+std::string readable_colour(const std::string& colour, const std::string& background, double ratio = 3.0);
+
+/// The same for a colour drawn on any of several backgrounds of one theme (a table's alternating rows and its hover
+/// tint): it reads on each of them. Lightness moves the same way for all, so the result is the one that moved furthest;
+/// a colour that already reads on all is returned byte for byte.
+std::string readable_colour(const std::string& colour, const std::vector<std::string>& backgrounds, double ratio = 3.0);
 
 }  // namespace edi

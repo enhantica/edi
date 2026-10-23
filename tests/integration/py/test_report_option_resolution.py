@@ -159,7 +159,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
         'An explicit zero override selects every correlated parameter rather '
         'than using stored or automatic filtering'
     )
-    assert override['experiments'][0]['pattern']['x']['title'] == '2θ (°)', (
+    assert override['experiments'][0]['pattern']['x']['title'] == '2θ (deg)', (
         'An explicit native override replaces a stored d-spacing axis for this run'
     )
     assert implicit['experiments'][0]['pattern']['x']['title'] == 'd (Å)', (

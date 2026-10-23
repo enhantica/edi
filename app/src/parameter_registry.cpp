@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_registry.hpp"
 
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/parameter_walk.hpp"
 #include "parameter_item.hpp"
@@ -52,6 +53,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         by_parameter_.emplace(item->parameter(), item);
     }
     refreshElements(project);
+    refreshEstimated(project);
     if (changed) {
         emit itemsChanged();
     }
@@ -151,9 +153,24 @@ void ParameterRegistry::refreshRefinable(edi::Project& project) {
     }
 }
 
+void ParameterRegistry::refreshEstimated(const edi::Project& project) {
+    // An auto-mode background's values (ADR-0040) follow its mode, which an edit changes without changing the set of
+    // parameters.
+    std::unordered_set<const edi::Parameter*> estimated;
+    for (const auto& experiment : project.experiments) {
+        for (const edi::Parameter* parameter : edi::estimated_background_values(*experiment)) {
+            estimated.insert(parameter);
+        }
+    }
+    for (ParameterItem* item : items_) {
+        item->setEstimated(estimated.contains(item->parameter()));
+    }
+}
+
 void ParameterRegistry::publish(edi::Project& project) {
     refreshElements(project);
     refreshRefinable(project);
+    refreshEstimated(project);
     for (ParameterItem* item : items_) {
         item->publish();
     }

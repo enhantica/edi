@@ -70,16 +70,20 @@ def public_build_boundary(data, name, platform=None):
                 core_only=core_only,
                 states={'changes': 'success', 'native': 'success', 'core': 'success'},
             ), 'every public SDK job must refuse forks with either core-only input'
-    for event in ('pull_request', 'push', 'workflow_dispatch'):
-        assert active(
-            job, event, states={'changes': 'success', 'native': 'success', 'core': 'success'}
-        ), 'every full trusted event must reach its public SDK job'
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        expected = not (name in {'system', 'app-wasm'} and event == 'pull_request')
+        assert (
+            active(
+                job, event, states={'changes': 'success', 'native': 'success', 'core': 'success'}
+            )
+            == expected
+        ), 'trusted PRs retain fast SDK jobs; full events also require system and WebAssembly'
         assert active(
             job,
             event,
             core_only=True,
             states={'changes': 'success', 'native': 'success', 'core': 'success'},
-        ) == (name in {'native', 'core', 'system'}), (
+        ) == (expected and name in {'native', 'core', 'system'}), (
             'core-only repairs retain native/core and skip every downstream public SDK job'
         )
     assert job.get('environment') == 'crysta-sdk', (

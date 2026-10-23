@@ -131,6 +131,7 @@ def observation(backend, scratch):
     result = capture_once(receipt, qualified_capture)
     validate_dependencies(receipt, 'screen', ROOT)
     validate_bundle(receipt)
+    result['receipt_path'] = str(receipt_path)
     return result
 
 

@@ -30,53 +30,55 @@ DataTable {
     columnWidths: [numberColumnWidth, -1, -1, -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("h k l")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("d (Å)")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("F² calc")
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index
         required property var model
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.dSpacing)
+            number: table.shown(row.model.dSpacing)
+            full: NumberText.plainFull(row.model.dSpacing)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.position)
+            number: table.shown(row.model.position)
+            full: NumberText.plainFull(row.model.position)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.fSquaredCalc)
+            number: table.shown(row.model.fSquaredCalc)
+            full: NumberText.plainFull(row.model.fSquaredCalc)
         }
     }
 }

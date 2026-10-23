@@ -27,6 +27,25 @@ from tests.fixtures.scan_app.harness import (
 )
 
 MODES = ('sequential', 'independent')
+# Free flags and names in scan_template/project and the full cooling-scan input.
+SCAN_FREE_PARAMETER_NAMES = {
+    *(f'cosio.cell.length_{axis}' for axis in 'abc'),
+    'cosio.atom_site.Co1.adp_iso',
+    *(f'cosio.atom_site.Co2.fract_{axis}' for axis in 'xz'),
+    *(
+        f'cosio.atom_site.{site}.{field}'
+        for site in ('Si', 'O1', 'O2')
+        for field in ('fract_x', 'fract_z', 'adp_iso')
+    ),
+    *(f'cosio.atom_site.O3.{field}' for field in ('fract_x', 'fract_y', 'fract_z', 'adp_iso')),
+    *(
+        f'd20.peak.{field}'
+        for field in ('broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_y')
+    ),
+    'd20.instrument.calib_twotheta_offset',
+    'd20.linked_structure.cosio.scale',
+    *(f'd20.background.{index}.intensity' for index in range(1, 15)),
+}
 DATASETS = range(162)  # Packet: run 01 of the frozen 324-file source, exactly 162 files.
 
 
@@ -309,15 +328,22 @@ def test_initial_dataset_and_labels_follow_template_and_independent_extract(exec
 def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(projection_execution):
     execution = projection_execution
     rows = execution['projectionRows']
-    expected_names = {
+    # The fixture declares this offset free under its model name (ADR-0036).
+    csv_names = {
         name.removesuffix('.uncertainty') for name in rows[0] if name.endswith('.uncertainty')
     }
+    model_to_csv = {
+        name.replace('.instrument.twotheta_offset', '.instrument.calib_twotheta_offset'): name
+        for name in csv_names
+    }
+    expected_names = SCAN_FREE_PARAMETER_NAMES | set(model_to_csv)
     columns = execution['evolution'].get('columns', [])
-    assert {column['name'] for column in columns} == expected_names, (
-        'Evolution tab: every fitted CSV parameter must be selectable, without metadata columns'
-    )
+    assert (
+        len(columns) == len(expected_names)
+        and {column['name'] for column in columns} == expected_names
+    ), 'Evolution tab: every fitted CSV parameter must be selectable, without metadata columns'
     for column in columns:
-        name = column['name']
+        name = model_to_csv[column['name']]
         for axis in column['axes']:
             assert axis['count'] == 162 and len(axis['points']) == 162, (
                 'Evolution tab: the small full run preserves every fitted point'
@@ -338,12 +364,30 @@ def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(projectio
                 )
 
 
+def synthetic_evolution_column(columns, expected_names=None):
+    by_name = {column['name']: column for column in columns}
+    if expected_names is None:
+        expected_names = {'cosio.cell.length_a', 'd20.background.1.intensity'}
+        assert [column['name'] for column in columns] == [
+            'd20.background.1.intensity',
+            'cosio.cell.length_a',
+        ], 'Evolution tab: free model names precede additional CSV parameter columns'
+    assert (
+        len(columns) == len(by_name) == len(expected_names) and set(by_name) == expected_names
+    ), 'Evolution tab: list all free model parameters once and exclude CSV metadata'
+    assert all(
+        not axis['points'] and axis['count'] == 0
+        for name, column in by_name.items()
+        if name != 'cosio.cell.length_a'
+        for axis in column['axes']
+    ), 'Evolution tab: an unrecorded free parameter must have no fabricated points'
+    return by_name['cosio.cell.length_a']
+
+
 def test_evolution_without_extract_uses_one_based_file_index(execution):
     columns = execution['indexEvolution'].get('columns', [])
-    assert len(columns) == 1, (
-        'Evolution tab: a CSV without extracted metadata must expose its fitted parameter'
-    )
-    axis = columns[0]['axes'][0]
+    column = synthetic_evolution_column(columns, SCAN_FREE_PARAMETER_NAMES)
+    axis = column['axes'][0]
     assert [point[0] for point in axis['points']] == [1, 2, 3], (
         'Evolution tab: without an extracted x value, points use the one-based file index'
     )
@@ -650,10 +694,8 @@ def test_lazy_gate_rejects_real_eager_native_payload_reads(execution):
 
 def test_large_evolution_thins_points_and_regression_bucket_partition_preserves_extrema(execution):
     columns = execution['largeEvolution'].get('columns', [])
-    assert len(columns) == 1, (
-        'Evolution tab: the synthetic CSV must expose its single fitted parameter'
-    )
-    for axis in columns[0]['axes']:
+    column = synthetic_evolution_column(columns)
+    for axis in column['axes']:
         points = axis['points']
         assert 0 < len(points) <= 5000, (
             'Evolution tab: large scans draw at most the packet thinning threshold'

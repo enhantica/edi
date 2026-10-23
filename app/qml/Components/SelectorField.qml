@@ -20,6 +20,8 @@ EaElements.ParamComboBox {
     property bool writable: true
     // Why the last choice was refused; empty once a choice takes or the token changes.
     property string refusal: ""
+    // What `auto` resolves to, shown after it in grey ("auto · arpls"); empty shows the choice alone.
+    property string resolved: ""
     signal selected(string token)
 
     // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
@@ -31,6 +33,7 @@ EaElements.ParamComboBox {
         })
     model: options
     textRole: "label"
+    displayText: resolved !== "" && token === "auto" ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${resolved}</font>` : currentText
     valueRole: "token"
     enabled: writable && options !== null && options.count > 0
     currentIndex: options ? options.indexOf(token) : -1

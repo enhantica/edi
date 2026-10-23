@@ -15,10 +15,12 @@ Item {
     property ExperimentViewModel experiment: null
     // Set: the chart's x axis is this project's (the Analysis page's, which the report follows).
     property ProjectViewModel axisProject: null
-    // The page whose settings keep the chart's view options: "analysis" or "experiment".
+    // "pattern" for a page's chart, which follows the app's one pattern view (edi ADR-0017 §15).
     property string settingsPage: ""
     property bool shown: true
     property PatternChart chart: null
+    // A single crystal has reflections, not a pattern: its F²calc-vs-F²meas chart shows instead.
+    readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
 
     function renew() {
@@ -37,6 +39,7 @@ Item {
 
         PatternChart {
             anchors.fill: parent
+            visible: !holder.singleCrystal
             experiment: holder.experiment
             axisProject: holder.axisProject
             settingsPage: holder.settingsPage
@@ -48,6 +51,18 @@ Item {
         target: Session
         function onProjectChanged() {
             holder.renew();
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+        visible: holder.singleCrystal
+        z: 1
+
+        SingleCrystalChart {
+            anchors.fill: parent
+            experiment: holder.singleCrystal ? holder.experiment : null
+            shown: holder.shown && holder.singleCrystal
         }
     }
 }

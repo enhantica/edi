@@ -169,6 +169,8 @@ AppDialog {
         clip: true
         // A gap between the pages, so no tab's controls reach into the shown one.
         spacing: EaStyle.Sizes.fontPixelSize * 2
+        // A tab shows at once, without the swipe's slide, so its columns are where every other tab has them.
+        Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
         // Prompts, as the base's
         RowGrid {
@@ -237,19 +239,59 @@ AppDialog {
                 }
             }
 
+            // The colours, one choice for each thing coloured (the owner, 2026-10-22): the structures' and the
+            // patterns' schemes, the Stacked view's lines and the Map's colour map. The schemes' tokens and names
+            // (edi::colour_scheme_names) in the order the core lists them; the scan views' choices as their charts
+            // offer them.
             RowLabel {
-                text: qsTr("Colour scheme") + ":"
+                text: qsTr("Structures") + ":"
             }
             RowBox {
-                // The schemes' tokens (data/palettes), in the order the box lists them: edi's own, then published
-                // palettes for data, then app themes.
-                readonly property var schemes: ["coast", "garden", "peaceful", "fogForest", "sage", "okabeIto", "paulTolBright", "paulTolMuted", "tableau", "observable", "carbon", "dark2", "petroff", "vivid", "nord", "solarized", "catppuccin", "apple"]
+                readonly property var schemes: ApplicationInfo.colourSchemes
 
-                objectName: "preferences.colourScheme"
-                model: [qsTr("Coast"), qsTr("Garden"), qsTr("Peaceful"), qsTr("Fog forest"), qsTr("Sage"), qsTr("Okabe-Ito"), qsTr("Paul Tol bright"), qsTr("Paul Tol muted"), qsTr("Tableau 10"), qsTr("Observable 10"), qsTr("IBM Carbon"), qsTr("ColorBrewer Dark2"), qsTr("Petroff"), qsTr("Vivid"), qsTr("Nord"), qsTr("Solarized"), qsTr("Catppuccin"), qsTr("Apple")]
-                currentIndex: Math.max(0, schemes.indexOf(Preferences.colourScheme))
-                onActivated: index => Preferences.colourScheme = schemes[index]
-                ToolTip.text: qsTr("The experiments' and structures' colours in every chart and icon")
+                objectName: "preferences.structureColours"
+                model: ApplicationInfo.colourSchemeTitles
+                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.structureColours)))
+                onActivated: index => Preferences.structureColourScheme = schemes[index]
+                ToolTip.text: qsTr("The structures' colours: their icons, Bragg ticks and curves")
+            }
+            RowLabel {
+                text: qsTr("Patterns") + ":"
+            }
+            RowBox {
+                readonly property var schemes: ApplicationInfo.colourSchemes
+
+                objectName: "preferences.patternColours"
+                model: ApplicationInfo.colourSchemeTitles
+                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.patternColours)))
+                onActivated: index => Preferences.patternColourScheme = schemes[index]
+                ToolTip.text: qsTr("The patterns' colours: the experiments' icons and measured data, and the calculated, background and residual lines")
+            }
+            RowLabel {
+                text: qsTr("Stacked") + ":"
+            }
+            RowBox {
+                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+                // Empty follows the patterns' scheme.
+                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours
+
+                objectName: "preferences.stackedColours"
+                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                currentIndex: Math.max(0, choices.indexOf(current))
+                onActivated: index => Preferences.scanStackedPalette = choices[index]
+                ToolTip.text: qsTr("The Stacked view's patterns")
+            }
+            RowLabel {
+                text: qsTr("Map") + ":"
+            }
+            RowBox {
+                readonly property var choices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
+
+                objectName: "preferences.mapColours"
+                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
+                onActivated: index => Preferences.scanMapColours = choices[index]
+                ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
             }
 
             RowLabel {

@@ -347,6 +347,7 @@ def test_fitting_case_matches_expected_through_edi(  # noqa: PLR0915 - one corpu
             f'experiment.instrument.{label}',
             f'experiment.linked_structure.{label}',
             f'experiment.absorption.{label}',
+            f'experiment.extinction.{label}',
             f'structure.{label}',
             f'structure.cell.{label}',
         ]
@@ -359,6 +360,7 @@ def test_fitting_case_matches_expected_through_edi(  # noqa: PLR0915 - one corpu
                     f'experiments[{head}].peak.{field}',
                     f'experiments[{head}].instrument.{field}',
                     f'experiments[{head}].absorption.{field}',
+                    f'experiments[{head}].extinction.{field}',
                 ]
                 candidates += (
                     [f'experiments[{head}].{field}.intensity']

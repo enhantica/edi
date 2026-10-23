@@ -29,3 +29,9 @@ byte-identical to it: `tests/fitting/lbco-hrpt-s2` (tree) `9f91f204eaeb797d38ddc
 `tests/fitting/lbco-hrpt-s2/expected.json` (blob) `b6c38be0073674fe0e142a59293d3c28fac277f1`. The
 re-minted regression pins and why r is weakly determined on this cubic case are in the source case's
 own `PROVENANCE.md`.
+
+**Extended by (background estimate settings).** The experiment declares the `_background_estimate`
+category in manual mode, with the `arpls` method, so the project carries the settings an estimate would
+use while its saved points, fit and pins stay as they were. The crysta source case was extended in the same
+change: `project/experiments/hrpt.edi` is byte-identical to the source case's (blob
+`a0c89b17ab39d54caf873dcc3ec416bf83497abd`), and `expected.json` did not change.

@@ -49,3 +49,7 @@ refined alone. The pins moved: 52.345 K 4.784745 → 4.824059, 299.394 K 4.38217
 `project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
 title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
 `.facility` and `.polarisation` were added. Every other file is unchanged.
+
+**Excluded rows rewritten ([ADR-0044](../../../dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
+file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
+instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.

@@ -24,7 +24,7 @@ Column {
     property ExperimentViewModel experiment: null
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
-    readonly property string units: timeOfFlight ? "µs" : "°"
+    readonly property string units: timeOfFlight ? "µs" : "deg"
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
     // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
@@ -92,85 +92,103 @@ Column {
         defaultInfoText: qsTr("No measured points")
         sourceModel: visible ? group.experiment.pattern : null
 
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
+        // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
+        // itself, so the Repeater, declared last, takes the last width, kept narrow.
+        readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
+        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("meas")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("s.u.")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("calc")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("d (Å)")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("bkg")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("resid")
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("status")
             }
+            Repeater {
+                model: table.componentNames
+                delegate: EaComponents.ListViewLabel {
+                    required property string modelData
+                    objectName: "data.header.component." + modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: modelData
+                }
+            }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             // The roles by the model (its `x` role would shadow the delegate's own x).
             required property var model
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.x)
+                number: group.shown(row.model.x)
+                full: NumberText.plainFull(row.model.x)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeas)
+                number: group.intensity(row.model.intensityMeas)
+                full: NumberText.plainFull(row.model.intensityMeas)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeasSu)
+                number: group.intensity(row.model.intensityMeasSu)
+                full: NumberText.plainFull(row.model.intensityMeasSu)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityCalc)
+                number: group.intensity(row.model.intensityCalc)
+                full: NumberText.plainFull(row.model.intensityCalc)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.dSpacing)
+                number: group.shown(row.model.dSpacing)
+                full: NumberText.plainFull(row.model.dSpacing)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityBkg)
+                number: group.intensity(row.model.intensityBkg)
+                full: NumberText.plainFull(row.model.intensityBkg)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.residual)
+                number: group.intensity(row.model.residual)
+                full: NumberText.plainFull(row.model.residual)
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {
@@ -182,6 +200,14 @@ Column {
                 iconColor: String(status === "incl" ? EaStyle.Colors.green : status === "failed" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
                 ring: status === "pending"
                 toolTip: status === "incl" ? qsTr("Included") : status === "excl" ? qsTr("Excluded") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
+            }
+            Repeater {
+                model: row.model.componentIntensities
+                delegate: EaComponents.ListViewLabel {
+                    required property var modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: group.intensity(modelData)
+                }
             }
         }
     }

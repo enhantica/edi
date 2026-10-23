@@ -11,6 +11,9 @@ import statistics
 from pathlib import Path
 
 BOUND = 1.05
+# Frozen merge-base and that commit's SDK pin; derivation is retained in BASELINE.md.
+BASELINE_EDI = 'a341b98154b53ea2499213a6c60b87e1371e9ce8'
+BASELINE_CRYSTA = 'c2b02623e0b8354cec2dcfaeb2939645486c0dca'
 RESUME_FILES = ('results.csv', 'results-provenance.csv', 'scan-notes.csv')
 
 
@@ -267,10 +270,12 @@ def validate_retained_sdk(retained, edi_source, cli_sha256, manifest_sha256):
 
 def validate_builds(builds):
     baseline = builds['baseline']
-    if not baseline['edi_source'].startswith('2e04556') or not baseline[
-        'crysta_source'
-    ].startswith('fb153aeb'):
-        raise ValueError('the baseline must name the authorized command and engine source')
+    if (
+        baseline['edi_source'] != BASELINE_EDI
+        or baseline['crysta_source'] != BASELINE_CRYSTA
+        or baseline.get('compiled_crysta_source') != BASELINE_CRYSTA
+    ):
+        raise ValueError('the baseline must use the frozen fork point and its pinned engine build')
     for build in builds.values():
         if build['configuration']['CMAKE_BUILD_TYPE'] != 'Release':
             raise ValueError('every compared build must use Release configuration')

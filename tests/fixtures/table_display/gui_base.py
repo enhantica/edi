@@ -1,10 +1,6 @@
-"""Independent identities of the upstream GUI archive selected by ADR-0015.
+"""Independent upstream archive identities; regenerate with generate_gui_reference.py."""
 
-The archive SHA-256 was measured from GitHub's cached commit archive. The source
-digest sums sorted relative src/ paths and their SHA-256 values from that archive,
-independently of the product's CMake declarations.
-"""
-
-PIN = '3897d339b60f5707bfe952fed59a20f73340e236'
-ARCHIVE_SHA256 = '3aebde35ff5f714f83b5f76c03e4a54d40a84c196d766f020d6ce4eb683200e1'
-SOURCE_SHA256 = '5e6ee5d998c030c0517a0b8adb19f13d22f63e1ea8c199bb5ec2076081db5888'
+PIN = '540cda20a0c15982c5a3c5bdefab275f3e343c43'
+ARCHIVE_SHA256 = '9b026cd593e59b93b1f9eb36f445298d6210475fda89b7f6db3e3682a6698fc0'
+SOURCE_SHA256 = 'f9784d6fd2035a8742ae8fb3c6c5d2f96c60c7e198320a46bf396adc50a245ca'
+PARAMETER_SHA256 = 'cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821'

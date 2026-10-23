@@ -340,17 +340,16 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
     }
     return result;
 }
-QJsonObject matrix(edi_app::ProjectViewModel& view) {
-    view.correlations()->setLevel(0);
-    view.correlations()->setMaxParameters(3);
+QJsonObject matrix(const edi_app::ProjectViewModel& view) {
+    const auto& correlations = *view.correlations();
     QJsonArray labels, values;
-    for (const auto& label : view.correlations()->labels()) labels.append(label);
-    for (const auto value : view.correlations()->values()) values.append(value);
+    for (const auto& label : correlations.labels()) labels.append(label);
+    for (const auto value : correlations.values()) values.append(value);
     return {
         {"labels", labels},
         {"values", values},
-        {"available", view.correlations()->available()},
-        {"emptyText", view.correlations()->emptyText()},
+        {"available", correlations.available()},
+        {"emptyText", correlations.emptyText()},
         {"pairs", correlation_pairs(view.scanTemplate() ? *view.scanTemplate() : view.project())}};
 }
 void settle_projection(edi_app::ProjectViewModel& view) {

@@ -11,6 +11,11 @@ import numpy as np
 import pytest
 
 from conftest import crysta_reference_source
+from tests.fixtures.saved_spelling.fit_state import (
+    assert_written_parameters,
+    parameter_state,
+    predicted_patterns,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 LIB = importlib.import_module('edi')
@@ -90,7 +95,7 @@ def _assert_refused_fit_preserves_pattern() -> None:
         _ = project.experiment.data.intensity_calc
 
 
-def test_declared_iteration_budget_is_authoritative(tmp_path: Path) -> None:
+def test_declared_iteration_budget_is_authoritative(tmp_path: Path) -> None:  # noqa: PLR0914
     project_root, declared_budget = _bounded_project(tmp_path)
     project = LIB.Project.load(project_root)
     result = project.analysis.fit()
@@ -112,9 +117,16 @@ def test_declared_iteration_budget_is_authoritative(tmp_path: Path) -> None:
         for experiment in fitted.experiments
     ]
 
+    state = parameter_state(fitted)
+    expected_written = predicted_patterns(
+        LIB.Project.load(_case_project('ncaf-wish-3bank-s5')),
+        state,
+        dict(zip(names, stored, strict=True)),
+    )
     saved = tmp_path / 'fitted-reference'
     fitted.save_as(saved)
     reference = LIB.Project.load(saved)
+    assert_written_parameters(reference, state)
     fresh = _calculate(reference)
     unchanged = [
         name
@@ -123,14 +135,14 @@ def test_declared_iteration_budget_is_authoritative(tmp_path: Path) -> None:
     ]
     mismatched = [
         name
-        for name, current, expected in zip(names, stored, fresh, strict=True)
-        if not np.array_equal(current, expected, equal_nan=True)
+        for name, expected in zip(names, fresh, strict=True)
+        if not np.array_equal(expected_written[name], expected, equal_nan=True)
     ]
     failures = []
     if unchanged:
         failures.append(f'did not change from pre-fit: {unchanged!r}')
     if mismatched:
-        failures.append(f'did not equal fresh fitted-state calculation: {mismatched!r}')
+        failures.append(f'did not equal the independent written-state calculation: {mismatched!r}')
     assert not failures, (
         ' requires both refresh halves for every fitted experiment intensity_calc; '
         + '; '.join(failures)

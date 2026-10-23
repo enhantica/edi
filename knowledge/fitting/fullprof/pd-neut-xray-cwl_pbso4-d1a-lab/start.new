@@ -1,0 +1,121 @@
+COMM pd-neut-xray-cwl_pbso4-d1a-lab
+! Current global Chi2 (Bragg contrib.) =      449.1    
+NPATT      2       1 1 <- Flags for patterns (1:refined, 0: excluded)
+W_PAT   0.500 0.500
+!Nph Dum Ias Nre Cry Opt Aut
+   1   0   0   0   0   1   1
+!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int
+   1   5   8   0   0   0   0   0   0   0   0   0   0   0  !-> Patt#: 1
+   0   5  -5   0   0   0   0   0   0   0   0   0   0   0  !-> Patt#: 2
+!
+!File names of data(patterns) files
+start_1.dat
+start_2.dat
+!
+!Mat Pcr NLI Rpa Sym Sho
+   0   2   0   1   1   1
+!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana
+   2   2   1   0   4   0   2  10   0   0   1  !-> Patt#: 1
+   2   2   1   0   4   0   2  10   0   0   1  !-> Patt#: 2
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1
+ 1.910000 1.910000  0.00000   82.725  60.000  0.0000  0.0000  180.00    0.0000  0.0000
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 2
+ 1.540560 1.544400  0.50000   87.500  96.000  0.8000  0.0000  180.00    0.0000  0.0000
+!
+!NCY  Eps  R_at  R_an  R_pr  R_gl
+  1  0.10  0.20  0.20  0.20  0.20
+!     Thmin       Step       Thmax    PSD    Sent0  -> Patt#: 1
+    10.0000   0.050020   155.4500   0.000   0.000
+!     Thmin       Step       Thmax    PSD    Sent0  -> Patt#: 2
+    15.0250   0.025003   159.9750   0.000   0.000
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+        11.0000       200.0000          0.00
+        15.0000       200.0000          0.00
+        20.0000       200.0000          0.00
+        30.0000       200.0000          0.00
+        50.0000       200.0000          0.00
+        70.0000       200.0000          0.00
+       120.0000       200.0000          0.00
+       153.0000       200.0000          0.00
+! 
+!
+       0    !Number of refined parameters
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1
+  0.00000    0.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 2
+  0.00000    0.0  0.00000    0.0  0.00000    0.0 0.000000    0.00   0
+!
+!   Background coefficients/codes  for Pattern#  2  (Chebychev polynomials, up to 24 coefficients)
+     140.000       0.000       0.000       0.000       0.000       0.000
+        0.00        0.00        0.00        0.00        0.00        0.00
+       0.000       0.000       0.000       0.000       0.000       0.000
+        0.00        0.00        0.00        0.00        0.00        0.00
+       0.000       0.000       0.000       0.000       0.000       0.000
+        0.00        0.00        0.00        0.00        0.00        0.00
+       0.000       0.000       0.000       0.000       0.000       0.000
+        0.00        0.00        0.00        0.00        0.00        0.00
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  2:   0.0000
+!-------------------------------------------------------------------------------
+pbso4
+!
+!Nat Dis Ang Jbt Isy Str Furth        ATZ     Nvk More
+   5   0   0   0   0   0   0       1213.0304   0   0
+!Contributions (0/1) of this phase to the  2 patterns
+ 1 1
+!Irf Npr Jtyp  Nsp_Ref Ph_Shift for Pattern#  1
+   0   5    1      0      0
+! Pr1    Pr2    Pr3   Brind.   Rmua   Rmub   Rmuc     for Pattern#  1
+  0.000  0.000  1.000  1.000  0.000  0.000  0.000
+!Irf Npr Jtyp  Nsp_Ref Ph_Shift for Pattern#  2
+   0   5    0      0      0
+! Pr1    Pr2    Pr3   Brind.   Rmua   Rmub   Rmuc     for Pattern#  2
+  0.000  0.000  1.000  1.000  0.000  0.000  0.000
+!
+!
+P n m a                  <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+Pb     PB      0.19000  0.25000  0.17000  0.50000   0.50000   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+S      S       0.07000  0.25000  0.68000  0.50000   0.50000   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+O1     O       0.91000  0.25000  0.60000  0.50000   0.50000   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+O2     O       0.19000  0.25000  0.54000  0.50000   0.50000   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+O3     O       0.08000  0.03000  0.81000  0.50000   1.00000   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model
+  1.500000       0.50000   0.00000   0.00000   0.00000   0.00000       0
+       0.00000     0.000     0.000     0.000     0.000     0.000
+!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model
+     0.200000    -0.500000     0.400000     0.000000     0.000000     0.000000     0.000000       0
+         0.00         0.00         0.00         0.00         0.00         0.00         0.00
+!     a          b         c        alpha      beta       gamma      # Cell Info
+   8.469999   5.389999   6.950000  90.000000  90.000000  90.000000   
+    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4  
+  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+     0.00     0.00     0.00     0.00     0.00     0.00
+!-------> Profile Parameters for Pattern #   2  ----> Phase #   1
+!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model
+ 0.5000000E-03   0.50000   0.00000   0.00000   0.00000   0.00000       0
+       0.00000     0.000     0.000     0.000     0.000     0.000
+!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model
+     0.020000    -0.020000     0.008000     0.000000     0.000000     0.000000     0.000000       0
+         0.00         0.00         0.00         0.00         0.00         0.00         0.00
+!     a          b         c        alpha      beta       gamma      # Cell Info
+   8.469999   5.389999   6.950000  90.000000  90.000000  90.000000   
+    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4  
+  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+     0.00     0.00     0.00     0.00     0.00     0.00
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+      10.000     155.450       1

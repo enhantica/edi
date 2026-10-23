@@ -287,8 +287,9 @@ Item {
             }
             const d20 = sourceIds.indexOf("pd-neut-cwl_cosio-d20_start-1");
             compare(Session.examples.text(d20, "origin"), "D20 @ ILL");
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "facilities"), ["SNBL"]);
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "instruments"), ["__unknown__"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "facilities"), ["ESRF"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "instruments"), ["BM01"]);
+            compare(Session.examples.text(sourceIds.indexOf("pd-xray-cwl_latp_scan-4f"), "origin"), "BM01 @ ESRF", "The LATP origin follows the committed owner instrument and facility");
             Session.examples.filterProperty = "polarisation";
             verify(option("__not_applicable__").title.startsWith("Not applicable"));
             Session.examples.filterValue = "none";

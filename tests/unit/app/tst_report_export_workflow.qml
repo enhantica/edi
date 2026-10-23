@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtTest
 import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
@@ -204,9 +205,21 @@ Rectangle {
                     });
             return cases;
         }
+        function modelDifferences(left, right, path = "") {
+            if (path === ".generated")
+                return [];
+            if (left !== null && right !== null && typeof left === "object" && typeof right === "object") {
+                const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)]));
+                let differences = [];
+                for (const key of keys)
+                    differences = differences.concat(modelDifferences(left[key], right[key], path + "." + key));
+                return differences;
+            }
+            return left === right ? [] : [path + ": " + JSON.stringify(left) + " -> " + JSON.stringify(right)];
+        }
         function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
-            const scheme = Preferences.colourScheme;
-            Preferences.colourScheme = "default";
+            const scheme = Approved.getSchemes(Preferences);
+            Approved.setSchemes(Preferences, "ediNatural");
             prepare("_edi.schema_version 3\n_report.html true\n_report.pdf true\n_report.html_offline false\n");
             const report = Session.project.report;
             if (data.browser)
@@ -222,6 +235,8 @@ Rectangle {
             tryVerify(() => BoundaryProof.fullModel(report).title === Session.project.title, 2000, "The unsaved change reaches the actual report before the failure is armed");
             verify(Session.save(), "The changed report input is persisted before comparing live and reopened tracking states");
             tryCompare(Session.project, "calculating", false, 15000, "Save adoption settles before the late publication failure");
+            const beforeDifferences = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
+            compare(beforeDifferences.length, 0, "The failure witness has identical live and freshly loaded report inputs after project Save; actual " + beforeDifferences.slice(0, 5).join("; "));
             const settings = SettingsProof.text(location, "reports/report.edi");
             publicationFailed.target = report;
             publicationFailed.clear();
@@ -233,7 +248,10 @@ Rectangle {
             verify(receipt.includes(data.kind === "settings" ? "settings-rename" : "write-after-open"), "The app failure reaches its actual post-open write or staged settings rename: " + receipt);
             const afterHtml = SettingsProof.fileFacts(location, reportName("html")), afterPdf = SettingsProof.fileFacts(location, reportName("pdf"));
             const disk = BoundaryProof.reopenedStates(location);
+            const changedInputs = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
             const failures = [];
+            if (changedInputs.length)
+                failures.push("After publication, live -> reopened input differences: " + changedInputs.slice(0, 5).join("; "));
             if (data.kind === "html" && (afterHtml.sha256 !== html.sha256 || afterPdf.sha256 !== pdf.sha256))
                 failures.push("A failed first-format replacement changed prior report bytes");
             if (data.kind === "pdf") {
@@ -252,7 +270,7 @@ Rectangle {
                 failures.push("Live and reopened row states differ: " + JSON.stringify(live) + " versus " + JSON.stringify(disk));
             if (live.length !== original.length)
                 failures.push("A failure duplicated or dropped named tracking rows");
-            Preferences.colourScheme = scheme;
+            Approved.setSchemes(Preferences, scheme);
             publicationFailed.target = null;
             compare(failures.length, 0, "Desktop and browser export preserve failed-format bytes, retain each successful format's row or roll back, and keep live/persisted state coherent on tracking failure; actual " + failures.join("; "));
         }
@@ -449,15 +467,11 @@ Rectangle {
                 const at = chart.mapToItem(preview.contentItem, 0, 0);
                 if (i > 0) {
                     const previous = charts[i - 1].mapToItem(preview.contentItem, 0, 0);
-                    if (data.narrow && !(at.y >= previous.y + charts[i - 1].height - 1))
-                        failures.push("narrow chart " + i + " is not on the next whole row");
-                    if (!data.narrow && i % 2 === 1 && (Math.abs(at.y - previous.y) > 1 || at.x < previous.x + charts[i - 1].width - 1 || Math.abs(chart.width - charts[i - 1].width) > 1))
-                        failures.push("wide chart pair " + i + " does not share a row with equal half-column widths");
-                    if (!data.narrow && i % 2 === 0 && at.y <= previous.y)
-                        failures.push("wide chart " + i + " does not start the next row");
+                    if (at.y < previous.y + charts[i - 1].height - 1 || Math.abs(at.x - previous.x) > 1 || Math.abs(chart.width - charts[i - 1].width) > 1)
+                        failures.push("chart " + i + " does not occupy the next aligned whole row");
                 }
             }
-            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses two charts per wide row or one per narrow row, and leaves Evolution out only when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses one chart per row at every width, and leaves Evolution out only when excluded; actual " + failures.join("; "));
         }
         function test_browser_observer_reaches_independent_plot_geometry_data() {
             return [
@@ -536,16 +550,12 @@ Rectangle {
                         failures.push(view + " chart " + i + " leaves the actual text viewport " + JSON.stringify(box));
                     if (i > 0) {
                         const previous = plots[i - 1].box;
-                        if (view === "narrow" && box[1] < previous[1] + previous[3] - 1)
-                            failures.push("narrow chart " + i + " does not occupy its own row");
-                        if (view === "wide" && i % 2 === 1 && (Math.abs(box[1] - previous[1]) > 1 || box[0] < previous[0] + previous[2] - 1 || Math.abs(box[2] - previous[2]) > 1))
-                            failures.push("wide chart pair " + i + " does not occupy equal half columns");
-                        if (view === "wide" && i % 2 === 0 && box[1] <= previous[1])
-                            failures.push("wide chart " + i + " does not start the next row");
+                        if (box[1] < previous[1] + previous[3] - 1 || Math.abs(box[0] - previous[0]) > 1 || Math.abs(box[2] - previous[2]) > 1)
+                            failures.push(view + " chart " + i + " does not occupy the next aligned whole row");
                     }
                 }
             }
-            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, two equal wide columns or one narrow column, and no excluded charts; actual " + failures.join("; "));
+            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, one chart per row at every width, and no excluded charts; actual " + failures.join("; "));
         }
         function test_pdf_keeps_all_evolution_charts_whole_data() {
             return [
@@ -581,18 +591,18 @@ Rectangle {
                 const draw = draws[i], image = draw.image, b = image.bounds, clip = image.clip;
                 if (b[0] < 25 * mm - 1 || b[2] > 185 * mm + 1 || b[1] < 25 * mm - 1 || b[3] > draw.box[3] - 25 * mm + 1 || b[0] < clip[0] - 0.1 || b[1] < clip[1] - 0.1 || b[2] > clip[2] + 0.1 || b[3] > clip[3] + 0.1)
                     failures.push("chart " + i + " is cut across a page/body clip: " + JSON.stringify(draw));
-                if (image.edge_width > 80 * mm + 1)
-                    failures.push("chart " + i + " exceeds its half of the 160 mm column");
+                if (image.edge_width > 160 * mm + 1)
+                    failures.push("chart " + i + " exceeds the 160 mm text column");
                 const pixel = Math.max(image.edge_width / image.pixels[0], image.edge_height / image.pixels[1]);
                 if (Math.abs(image.edge_width - image.edge_height * image.pixels[0] / image.pixels[1]) > 2 * pixel)
                     failures.push("chart " + i + " lost its actual raster aspect");
-                if (i % 2 === 1) {
+                if (i > 0) {
                     const previous = draws[i - 1];
-                    if (draw.page !== previous.page || Math.abs(b[1] - previous.image.bounds[1]) > 1 || b[0] < previous.image.bounds[2] - 1)
-                        failures.push("chart pair " + i + " is not kept whole together in two half-width columns");
+                    if (draw.page < previous.page || (draw.page === previous.page && (b[1] < previous.image.bounds[3] - 1 || Math.abs(b[0] - previous.image.bounds[0]) > 1)))
+                        failures.push("chart " + i + " does not occupy the next whole row or page");
                 }
             }
-            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, two per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, one per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
         }
         function test_export_rows_default_formats_and_disabled_actions() {
             prepare();

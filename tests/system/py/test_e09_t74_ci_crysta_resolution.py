@@ -182,6 +182,14 @@ if op == 'ls-remote' and ref == 'refs/heads/paired-topic':
     with (root / 'lookups').open('a') as f:
         f.write(json.dumps(args) + '\n')
     answer = state['lookup']
+    if state.get('redirect'):
+        print('warning: redirecting to ' + values[0] + '/', file=sys.stderr)
+    if answer == 'token-error':
+        print('lookup failed for ' + values[0], file=sys.stderr)
+        sys.exit(17)
+    if answer == 'token-line':
+        print('unexpected ' + values[0])
+        sys.exit(0)
     if answer == 'none':
         sys.exit(0)
     if answer == 'error':
@@ -336,6 +344,31 @@ def test_ci_pairing_retains_the_pin_and_refuses_lookup_errors(tmp_path, lookup):
         assert 'unpaired' in outcome.stdout + outcome.stderr, (
             ' an empty successful branch lookup proves absence before main is selected'
         )
+
+
+@pytest.mark.parametrize(
+    'lookup', ['present', 'none', 'ambiguous', 'bad-sha', 'error', 'token-error', 'token-line']
+)
+def test_branch_redirect_messages_preserve_answer_validation_and_hide_credentials(
+    tmp_path, lookup
+):
+    build = harness(tmp_path, lookup=lookup)
+    state_path = tmp_path / 'ci-state.json'
+    state = json.loads(state_path.read_text())
+    state['redirect'] = True
+    state_path.write_text(json.dumps(state))
+    outcome = build.run('crysta-source.sh', '--currency')
+    assert (outcome.returncode == 0) == (lookup in {'present', 'none'}), (
+        'Git stderr warnings preserve valid or absent refs; extra refs, malformed stdout '
+        'and failed commands still refuse'
+    )
+    assert 'fixture-token-not-a-secret' not in outcome.stdout + outcome.stderr, (
+        'No successful warning, failed command or malformed stdout may publish the credential'
+    )
+    assert lookup not in {'present', 'none'} or (
+        'warning: redirecting' not in outcome.stdout + outcome.stderr
+    ), 'A successful git warning stays outside the branch answer and public messages'
+    assert_source_lookups(tmp_path)
 
 
 @pytest.mark.parametrize('probe', ['denied', 'wrong-repo', 'malformed'])

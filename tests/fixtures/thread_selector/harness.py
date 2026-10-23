@@ -91,10 +91,15 @@ def observation(backend, scratch, escape=None):
             raise RuntimeError(
                 'Prepared worker observations must bind their actual binary receipt'
             )
-        return {**data['controls'][escape or 'normal'], 'receipt': receipt}
+        return {
+            **data['controls'][escape or 'normal'],
+            'receipt': receipt,
+            'receipt_path': str(receipt_path),
+        }
     result = capture(receipt, scratch, env, escape)
     validate_dependencies(receipt, 'selector', ROOT)
     validate_bundle(receipt)
+    result['receipt_path'] = str(receipt_path)
     return result
 
 

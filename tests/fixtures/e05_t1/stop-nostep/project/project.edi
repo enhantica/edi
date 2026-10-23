@@ -1,8 +1,13 @@
 _edi.schema_version 3
 
 _metadata.name             lbco_hrpt_s2
-_metadata.title            "CLI stop witness"
-_metadata.description      ?
-_metadata.created          "02 Oct 2026 21:46:40"
-_metadata.last_modified    "02 Oct 2026 21:46:41"
+_metadata.title "CLI stop witness"
+_metadata.description      "Cubic perovskite · Preferred orientation · Starting model 2"
+_metadata.purpose "fit"
+_metadata.dimensionality "1D"
+_metadata.instrument "HRPT"
+_metadata.facility "PSI"
+_metadata.polarisation "none"
+_metadata.created          "18 Oct 2026 08:36:48"
+_metadata.last_modified    "18 Oct 2026 08:36:49"
 _metadata.timestamp        ?

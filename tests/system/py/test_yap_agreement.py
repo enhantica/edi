@@ -7,6 +7,7 @@ import pytest
 
 from tests.fixtures.multiphase import fullprof
 from tests.fixtures.multiphase.support import stage_delivered_corpus_project
+from tests.fixtures.saved_spelling.reference import saved_pair
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / 'docs/user/cli/pd-neut-cwl_yap-spodi_3k/project'
@@ -40,11 +41,16 @@ def test_yap_fit_agrees_with_every_other_fullprof_parameter_and_rwp(tmp_path):
         'The full YAP model Rwp must agree within five percent relative to FullProf 4.08 percent'
     )
     full_actual = fullprof.actual_values(p)
+    original_pairs = fullprof.actual_values(p, with_uncertainties=True)
+    expected_saved = {key: saved_pair(value, su)[0] for key, (value, su) in original_pairs.items()}
+    assert set(expected_saved) == set(full_actual), (
+        'Written precision covers every original fitted phase parameter'
+    )
     saved = tmp_path / 'saved'
     p.save_as(saved)
     reopened = edi.Project.load(saved)
-    assert fullprof.actual_values(reopened) == full_actual, (
-        'Both fitted phase models must roundtrip without changing their values'
+    assert fullprof.actual_values(reopened) == pytest.approx(expected_saved, rel=0, abs=0), (
+        'Both fitted phase models roundtrip at the independently derived IUCr written precision'
     )
     p = edi.Project.load(target)
     for name in ('asym_beba_a0', 'asym_beba_b0', 'asym_beba_a1', 'asym_beba_b1'):

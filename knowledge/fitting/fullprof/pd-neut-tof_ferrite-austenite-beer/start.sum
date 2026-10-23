@@ -1,0 +1,730 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 22/10/2026  Time: 21:09:47.957                              
+
+ => PCR file code: start
+ => DAT file code: start_1.dat          -> Relative contribution: 0.5000                                                            
+ => DAT file code: start_2.dat          -> Relative contribution: 0.5000                                                            
+ => Title: pd-neut-tof_ferrite-austenite-beer
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    7th default profile function was selected
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  2
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   48.00
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  2
+ => Analysis of refinement at the end
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   48.00
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  129986.187500
+    No. of points:   2821
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  129986.187500
+    No. of points:   2821
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    7.649 g/cm3
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 2
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement for phase: 2
+ => The density (volumic mass) of phase 2 is:    7.716 g/cm3
+ => Scor: 5.8964
+ => Scor: 5.7180
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 austenite                               F m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    15  
+
+ =>  No. of reflections for pattern#:   2:    15  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    100.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    100.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+------------------------------------------------------------------------------
+ => Phase No.  2 ferrite                                 I m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    13  
+
+ =>  No. of reflections for pattern#:   2:    13  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    2
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    400.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    400.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.0000    0.0000
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2821
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  30.8     Rwp:  38.9     Rexp:    1.94 Chi2:  403.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  31.9     Rwp:  40.2     Rexp:    2.00 Chi2:  403.    
+ => Deviance:  0.208E+04     Dev*  :  0.4315    
+ => DW-Stat.:    0.1110     DW-exp:     1.8830
+ => N-sigma of the GoF:    15113.027
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2736
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  30.8     Rwp:  38.9     Rexp:    1.91 Chi2:  416.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  31.8     Rwp:  40.2     Rexp:    1.97 Chi2:  416.    
+ => Deviance:  0.208E+04     Dev*  :  0.4450    
+ => DW-Stat.:    0.1110     DW-exp:     1.8812
+ => N-sigma of the GoF:    15340.422
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  2
+
+
+ => Zero-point:     0.0000    0.0000
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  2
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2821
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  33.0     Rwp:  42.6     Rexp:    1.93 Chi2:  486.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.99 Chi2:  486.    
+ => Deviance:  0.236E+04     Dev*  :  0.4795    
+ => DW-Stat.:    0.1128     DW-exp:     1.8830
+ => N-sigma of the GoF:    18222.965
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  2
+
+ => N-P+C:  2736
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  33.0     Rwp:  42.6     Rexp:    1.90 Chi2:  501.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.96 Chi2:  501.    
+ => Deviance:  0.235E+04     Dev*  :  0.4944    
+ => DW-Stat.:    0.1128     DW-exp:     1.8812
+ => N-sigma of the GoF:    18497.934
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   458.    
+ => Scor: 5.8964
+ => Scor: 5.7180
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 austenite                               F m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    15  
+
+ =>  No. of reflections for pattern#:   2:    15  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    100.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    100.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+------------------------------------------------------------------------------
+ => Phase No.  2 ferrite                                 I m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    13  
+
+ =>  No. of reflections for pattern#:   2:    13  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    2
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    400.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    400.000000000     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       300.000000    0.000000
+      1000.000000    0.000000
+       900.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.0000    0.0000
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2821
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  30.8     Rwp:  38.9     Rexp:    1.94 Chi2:  403.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  31.9     Rwp:  40.2     Rexp:    2.00 Chi2:  403.    
+ => Deviance:  0.208E+04     Dev*  :  0.4315    
+ => DW-Stat.:    0.1110     DW-exp:     1.8830
+ => N-sigma of the GoF:    15113.027
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2736
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  30.8     Rwp:  38.9     Rexp:    1.91 Chi2:  416.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  31.8     Rwp:  40.2     Rexp:    1.97 Chi2:  416.    
+ => Deviance:  0.208E+04     Dev*  :  0.4450    
+ => DW-Stat.:    0.1110     DW-exp:     1.8812
+ => N-sigma of the GoF:    15340.422
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  2
+
+
+ => Zero-point:     0.0000    0.0000
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  2
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  2821
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  33.0     Rwp:  42.6     Rexp:    1.93 Chi2:  486.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.99 Chi2:  486.    
+ => Deviance:  0.236E+04     Dev*  :  0.4795    
+ => DW-Stat.:    0.1128     DW-exp:     1.8830
+ => N-sigma of the GoF:    18222.965
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  2
+
+ => N-P+C:  2736
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  33.0     Rwp:  42.6     Rexp:    1.90 Chi2:  501.      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.96 Chi2:  501.    
+ => Deviance:  0.235E+04     Dev*  :  0.4944    
+ => DW-Stat.:    0.1128     DW-exp:     1.8812
+ => N-sigma of the GoF:    18497.934
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   459.    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     austenite
+ => Bragg R-factor:   27.5       Vol:   48.499( 0.000)  Fract(%):   50.22( 0.00)
+ => Rf-factor=  28.7             ATZ:         223.388   Brindley:  1.0000
+
+ => Phase:  2     ferrite
+ => Bragg R-factor:   20.8       Vol:   24.037( 0.000)  Fract(%):   49.78( 0.00)
+ => Rf-factor=  26.0             ATZ:         111.694   Brindley:  1.0000
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  2
+     -----------------------------------------------------
+
+ => Phase:  1     austenite
+ => Bragg R-factor:   26.5       Vol:   48.499( 0.000)  Fract(%):   50.22( 0.00)
+ => Rf-factor=  27.1             ATZ:         223.388   Brindley:  1.0000
+
+ => Phase:  2     ferrite
+ => Bragg R-factor:   21.5       Vol:   24.037( 0.000)  Fract(%):   49.78( 0.00)
+ => Rf-factor=  27.3             ATZ:         111.694   Brindley:  1.0000
+
+ 
+              CPU Time:     0.188 seconds
+                            0.003 minutes
+
+ => Run finished at:     Date: 22/10/2026  Time: 21:09:48.148                              

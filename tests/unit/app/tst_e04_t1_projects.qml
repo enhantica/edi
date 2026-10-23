@@ -21,7 +21,7 @@ TestCase {
     }
     function appProjects() {
         // Frozen file purposes and the owner's catalogue rule select the expected set.
-        return Oracle.frozen.projects.filter(p => p.metadata["_metadata.purpose"] !== "verification");
+        return Oracle.frozen.projects.filter(p => Oracle.frozen.catalogue_ids.includes(p.id));
     }
     function init() {
         // A partial run can encounter Qt Graphs' first probe in any case.
@@ -51,8 +51,8 @@ TestCase {
         tryVerify(() => visibleControl("examples.list") !== null, 2000,
                   "The unfiltered catalogue is exposed after group expansion");
         const list = visibleControl("examples.list");
-        compare(list.count, appProjects().length + 1,
-                "Every app example and the independent LiF example reach the catalogue");
+        compare(list.count, appProjects().length,
+                "Every selected app example reaches the catalogue");
         const index = Probe.rows(Session.examples).map(row => row.exampleId).indexOf(id);
         verify(index >= 0, "The requested example retains its own catalogue identity: " + id);
         list.positionViewAtIndex(index, ListView.Contain);
@@ -192,7 +192,7 @@ TestCase {
         const numbers = (text.match(/[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) || []).map(Number);
         expected.structures.forEach(s => {
             verify(text.includes(s.name) && text.includes(s.spaceGroup), "The preview's crystal identity comes from committed structure files: " + s.name);
-            s.cell.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview cell lengths and angles agree with committed input: " + s.name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
+            (s.displayCell || s.cell).forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview cell lengths and angles agree with independently rounded committed input: " + s.name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
         });
         expected.experiments.forEach(name => {
             verify(text.includes(name), "The preview names every loaded experiment: " + name);
@@ -203,8 +203,8 @@ TestCase {
         verify(text.includes("crysta"), "The rendered Analysis software subsection names the effective engine");
     }
     function test_examples_registry_is_complete() {
-        same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id).concat(["pd-xray-cwl_lif"]),
-             "The catalogue contains exactly the app examples and independent LiF, excluding verification projects");
+        same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id),
+             "The catalogue contains exactly the independently selected cases");
     }
     function test_every_example_opens_through_its_page_row_data() {
         return appProjects().map(p => ({tag: p.id, expected: p}));
@@ -265,11 +265,12 @@ TestCase {
         dialog.close();
     }
     function test_bundled_xray_example_opens_by_real_input() {
-        openExample("pd-xray-cwl_lif");
-        verify(Session.hasProject, "owner X-ray record: selecting the bundled LiF example opens it");
+        const expected = Oracle.frozen.projects.find(p => p.id === "pd-xray-cwl_nacl_simulation");
+        openExample(expected.id);
+        verify(Session.hasProject, "owner X-ray record: selecting the bundled NaCl example opens it");
         const s = Session.project.currentStructure, e = Session.project.currentExperiment;
-        compare(s.spaceGroup.nameHM, "F m -3 m", "owner X-ray record: bundled structure is the committed LiF reference");
-        fuzzyCompare(s.cell.lengthA.value, 4.0267, 1e-8, "owner X-ray record: LiF cell comes from ");
+        compare(s.spaceGroup.nameHM, "F m -3 m", "owner X-ray record: bundled structure is the committed NaCl reference");
+        fuzzyCompare(s.cell.lengthA.value, expected.structures[0].cellA, 1e-8, "The bundled NaCl cell comes from the committed project text");
         compare(e.radiationProbeToken, "xray", "owner X-ray record: bundled example reaches the X-ray page path");
         click("appBar.tab.experiment");
         click("sideBar.tab.extras");

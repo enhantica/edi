@@ -40,7 +40,52 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def api_violations(source):
+def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
+    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
+    # "the report model crosses into the Report page untyped for now".
+    # The planned schema successor removes this sole temporary exception.
+    # Its exact task identity and the owner citation live in the hub acceptance receipt.
+    if relative_path != 'app/src/report_view_model.hpp':
+        return set()
+    classes = []
+    for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        classes.append((match[1], match.end(), end))
+    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+        return set()
+    namespaces = []
+    for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        namespaces.append((match[1], match.end(), end))
+    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
+    named = [
+        m
+        for m in properties
+        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
+    ]
+    if len(named) != 1:
+        return set()
+    prop = named[0]
+    enclosing = [name for name, start, end in namespaces if start <= prop.start() < end]
+    if enclosing != ['edi_app']:
+        return set()
+    owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+        return set()
+    return {prop.span()}
+
+
+def api_violations(source, relative_path=None):
     source = without_comments(source)
     forbidden = set(FORBIDDEN)
     aliases = re.findall(r'using\s+(\w+)\s*=\s*([^;]+);|typedef\s+([^;]+)\s+(\w+)\s*;', source)
@@ -48,8 +93,13 @@ def api_violations(source):
         for name, value, old_value, old_name in aliases:
             if set(re.findall(r'\w+', value or old_value)) & forbidden:
                 forbidden.add(name or old_name)
-    surfaces = re.findall(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
-    fragments = [' '.join(parts) for parts in surfaces]
+    allowed = report_model_exception_spans(source, relative_path)
+    surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
+    fragments = [
+        ' '.join(part or '' for part in match.groups())
+        for match in surfaces
+        if match.span() not in allowed
+    ]
     fragments += re.findall(
         r'(?:Q_SIGNALS|signals|(?:public|protected|private)\s+(?:Q_SLOTS|slots))\s*:(.*?)(?=\n\s*(?:public|private|protected|signals|Q_SIGNALS)\s*:|\Z)',
         source,
@@ -85,7 +135,7 @@ def test_shipped_view_model_api_is_typed():
     files = list((ROOT / 'app/src').rglob('*.hpp')) + list((ROOT / 'app/src').rglob('*.h'))
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
-        assert not api_violations(file.read_text()), (
+        assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
             f'I2: no JSON/dictionary state crosses the API in {file.relative_to(ROOT)}'
         )
     for file in (ROOT / 'app/qml').rglob('*.qml'):
@@ -93,6 +143,93 @@ def test_shipped_view_model_api_is_typed():
             r'JSON\s*\.\s*(?:parse|stringify)\s*\(|\bJsonListModel\b',
             without_comments(file.read_text()),
         ), f'I2: no dictionary round trips or JsonListModel in {file.relative_to(ROOT)}'
+
+
+REPORT_EXCEPTION = (
+    'namespace edi_app { class ReportViewModel : public QObject { '
+    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
+)
+REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_report_model_owner_exception_is_exactly_one_named_property():
+    assert not api_violations(REPORT_EXCEPTION, REPORT_HEADER), (
+        'I2 owner decision 3f2ce1cf6 admits only ReportViewModel.model QVariantMap; '
+        'the planned schema successor removes the exception'
+    )
+
+
+@pytest.mark.parametrize(
+    'escape',
+    [
+        'anonymous-namespace',
+        'foreign-namespace',
+        'nested-namespace',
+        'second',
+        'renamed',
+        'other-class',
+        'other-file',
+        'duplicate',
+        'list',
+        'hash',
+        'json',
+        'alias',
+        'nested',
+        'method',
+        'signal',
+        'savedReports',
+        'figures',
+        'suText',
+        'setPoints',
+    ],
+)
+def test_report_model_owner_exception_cannot_widen(escape):
+    source, path = REPORT_EXCEPTION, REPORT_HEADER
+    if escape == 'anonymous-namespace':
+        source = source.replace('namespace edi_app {', 'namespace edi_app { namespace {') + '}'
+    elif escape == 'foreign-namespace':
+        source = source.replace('namespace edi_app', 'namespace other')
+    elif escape == 'nested-namespace':
+        source = (
+            source.replace('namespace edi_app {', 'namespace edi_app { namespace other {') + '}'
+        )
+    elif escape == 'second':
+        source = source.replace('};', 'Q_PROPERTY(QVariantMap second READ second) };')
+    elif escape == 'renamed':
+        source = source.replace('QVariantMap model', 'QVariantMap payload')
+    elif escape == 'other-class':
+        source = source.replace('ReportViewModel', 'OtherViewModel')
+    elif escape == 'other-file':
+        path = 'app/src/other.hpp'
+    elif escape == 'duplicate':
+        source += REPORT_EXCEPTION
+    elif escape in {'list', 'hash', 'json'}:
+        source = source.replace(
+            'QVariantMap',
+            {'list': 'QVariantList', 'hash': 'QVariantHash', 'json': 'QJsonObject'}[escape],
+        )
+    elif escape == 'alias':
+        source = 'using Payload = QVariantMap;' + source.replace(
+            'QVariantMap model', 'Payload model'
+        )
+    elif escape == 'nested':
+        source = source.replace('Q_PROPERTY', 'class OtherViewModel { Q_PROPERTY').replace(
+            ' };', ' }; };'
+        )
+    else:
+        added = {
+            'method': 'Q_INVOKABLE QVariantMap payload();',
+            'signal': 'signals:\n void changed(QVariantList values);',
+            'savedReports': 'Q_PROPERTY(QVariantList savedReports READ savedReports)',
+            'figures': 'Q_INVOKABLE void saveReport(QVariantMap figures);',
+            'suText': 'Q_PROPERTY(QVariantMap suText READ suText)',
+            'setPoints': 'Q_INVOKABLE void setPoints(QVariantList points);',
+        }[escape]
+        source = source.replace('};', added + ' };')
+    assert api_violations(source, path), (
+        'I2: the single temporary model exception refuses second/renamed/foreign '
+        f'properties and every other dictionary, list or JSON crossing; escape={escape}'
+    )
 
 
 def assert_gui_pin(source):
@@ -248,6 +385,12 @@ def assert_nightly_app_steps(job):
         'owner decision: keep the group-app command present once before Qt Quick Test; '
         f'actual group steps={groups}'
     )
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        assert active(groups[0], event) == (event != 'pull_request'), (
+            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
+        )
     titles = [step.get('name') for step in job['steps']]
     assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
         'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
@@ -259,7 +402,11 @@ def assert_nightly_app_step_escape_controls():
     # Independent positive policy fixture: these values come from the workflow contract.
     job = {
         'steps': [
-            {'name': APP_GROUP_TITLE, 'run': 'pixi run --skip-deps group-app'},
+            {
+                'name': APP_GROUP_TITLE,
+                'if': "github.event_name != 'pull_request'",
+                'run': 'pixi run --skip-deps group-app',
+            },
             *[
                 {
                     'name': title,
@@ -306,6 +453,21 @@ def assert_nightly_app_step_escape_controls():
                 broken['steps'].remove(step)
             with pytest.raises(AssertionError, match='owner decision'):
                 assert_nightly_app_steps(broken)
+    for condition in (
+        None,
+        False,
+        True,
+        "github.event_name != 'push'",
+        "github.event_name != 'schedule'",
+        "github.event_name != 'workflow_dispatch'",
+    ):
+        broken = copy.deepcopy(job)
+        if condition is None:
+            broken['steps'][0].pop('if')
+        else:
+            broken['steps'][0]['if'] = condition
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
     broken = copy.deepcopy(job)
     broken['steps'][0], broken['steps'][1] = broken['steps'][1], broken['steps'][0]
     with pytest.raises(AssertionError, match='before Qt Quick Test'):
@@ -445,8 +607,29 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
-    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
-    example_names = {f'ex-{project["id"]}.png' for project in registry['projects']}
+    oracle = json.loads(
+        (ROOT / 'tests/fixtures/e04_t1/oracle.js')
+        .read_text()
+        .split('var frozen = ', 1)[1]
+        .removesuffix(';\n')
+    )
+    bundled = {
+        row['id']
+        for row in oracle['projects']
+        if row['metadata']['_metadata.purpose'] != 'verification'
+    }
+    retained_verification = {
+        'pd-neut-cwl_lab6-echidna_fcj-asymmetry',
+        'pd-neut-cwl_y2o3_beta-adp',
+        'pd-neut-tof_diamond-dream_basic',
+        'pd-neut-tof_fe_pseudo-voigt',
+        'pd-xray-cwl_lif_single',
+    }
+    assert bundled | retained_verification <= {
+        row['id']
+        for row in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    }, 'Image subjects must remain registered; historical verification captures remain required'
+    example_names = {f'ex-{identity}.png' for identity in bundled | retained_verification}
     example_names.add('ex-pd-xray-cwl_lif.png')
     captures = json.loads((ROOT / 'docs/dev/design/app-review-captures.json').read_text())[
         'captures'
@@ -509,6 +692,8 @@ def test_adr_records_the_decision_and_comparison_plan():
 
 
 def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
+    # Before: pre-category LBCO input. After: exact manual/arpls addition, with
+    # the original numerical/display expectations retained by adapt_oracles.py.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     assert oracle['corpus'], 'I7: the independent frozen category corpus cannot be empty'
@@ -538,10 +723,24 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
 
 
 def test_existing_projects_oracle_covers_the_registry_without_filters():
+    # The manual estimate extension changes only the LBCO experiment source hash;
+    # all project-block values, other files and the complete registry stay pinned.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
     ids = [p['id'] for p in registry['projects']]
+    selection = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    expected_app_ids = [row['id'] for row in selection]
+    assert oracle['catalogue_ids'] == expected_app_ids, (
+        'The app oracle must follow the independent owner selection'
+    )
+    assert [
+        row['id'] for row in registry['projects'] if row.get('user-facing')
+    ] == expected_app_ids, (
+        'App membership must agree with the independent catalogue; fixtures remain registered'
+    )
     assert [p['id'] for p in oracle['projects']] == ids, (
         'I19: fixture follows registry order without executing/offline filters'
     )
@@ -556,13 +755,17 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
     )
     for project in oracle['projects']:
         cases = [case for case in display['cases'] if case['path'] == project['path']]
+        corpus = [row for row in oracle['corpus'] if row['project'] == project['path']]
+        data_group = (
+            'extinction' if all(row.get('singleCrystal', False) for row in corpus) else 'data'
+        )
         assert {case['group'] for case in cases} >= {
             'space_group',
             'experiment_type',
-            'data',
+            data_group,
             'engines',
         }, 'gate 3: each frozen project covers every common read-only display family'
-        for group in ('experiment_type', 'data'):
+        for group in ('experiment_type', data_group):
             assert {case['selection'] for case in cases if case['group'] == group} == set(
                 project['experiments']
             ), 'gate 3: read-only displayed values cover every experiment, not only the first'

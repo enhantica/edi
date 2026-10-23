@@ -7,6 +7,12 @@ import edi as engine
 import numpy as np
 
 from tests.fixtures.multiphase import beer, support
+from tests.fixtures.saved_spelling.fit_state import (
+    assert_written_parameters,
+    parameter_state,
+    predicted_patterns,
+)
+from tests.fixtures.saved_spelling.reference import saved_pair
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -109,29 +115,36 @@ def test_beer_joint_fit_preserves_both_phases_and_independent_bank_scales(tmp_pa
         assert len(project.free_parameters) == expected_count, (
             'Fixing only BEER background points must preserve every other free parameter'
         )
-    scales = {
-        (experiment.name, phase): support.links(experiment)[phase].scale.value
-        for experiment in project.experiments
-        for phase in ('ferrite', 'austenite')
-    }
     before = {
         experiment.name: np.asarray(experiment.data.intensity_calc).copy()
         for experiment in project.experiments
     }
+    state = parameter_state(project)
+    scale_pairs = {
+        (experiment.name, phase): saved_pair(
+            support.links(experiment)[phase].scale.value,
+            support.links(experiment)[phase].scale.uncertainty,
+        )
+        for experiment in project.experiments
+        for phase in ('ferrite', 'austenite')
+    }
+    predicted = predicted_patterns(engine.Project.load(tmp_path / 'fit'), state, before)
     saved = tmp_path / 'fitted-saved'
     project.save_as(saved)
     reopened = engine.Project.load(saved)
     assert len(reopened.free_parameters) == expected_count, (
         'Saving a fitted BEER project must retain its complete free-parameter set'
     )
+    assert_written_parameters(reopened, state)
     reopened.analysis.calculate()
     for experiment in reopened.experiments:
         for phase in ('ferrite', 'austenite'):
             assert (
-                support.links(experiment)[phase].scale.value == scales[experiment.name, phase]
+                support.links(experiment)[phase].scale.value
+                == scale_pairs[experiment.name, phase][0]
             ), 'Every independently fitted BEER bank phase scale must survive save and reopen'
         np.testing.assert_array_equal(
             np.asarray(experiment.data.intensity_calc),
-            before[experiment.name],
-            err_msg='A fitted BEER project must preserve each complete calculated bank on reopen',
+            predicted[experiment.name],
+            err_msg='Every BEER bank must match its independently predicted written state',
         )

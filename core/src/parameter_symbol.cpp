@@ -18,6 +18,10 @@ std::string parameter_symbol(const ParameterSpec* parameter_spec) {
     if (parameter_spec == &spec::peak_asym_fcj_2) {
         return "D/L";
     }
+    // The doublet's ratio by what it scales (owner, 2026-10-13); its spec keeps diffraction-lib's name.
+    if (parameter_spec == &spec::instrument_wavelength_2_to_1_ratio) {
+        return "Intensity ratio 2/1";
+    }
     const std::string fallback = parameter_spec->display_name != nullptr ? parameter_spec->display_name : "";
     if (parameter_spec->latex_name == nullptr) {
         return fallback;

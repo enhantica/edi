@@ -4,6 +4,12 @@ The fit controls follow the current fit state. Reset, status progress, Evolution
 and experiment lists use the behavior described below. Explicit Reset replaces automatic
 restart of completed fits.
 
+The native per-file observer previously selected a mangled `fit_project` substring. It now
+matches the exact demangled name `crysta::fit_scan_file`, the scan driver's per-file entry in
+the installed SDK, and forwards its three arguments unchanged. Missing or multiple matches,
+or a callback signature different from the compiled wrapper, still refuse. Work receipts,
+compiled scan instructions and the outer scan dispatch remain unchanged.
+
 | Assertion / observation                       | Before                                                                                   | After                                                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Completed worker scenario                     | Start discarded a completed run and captured its CSV for Undo.                           | All fitted datasets disable Start. Reset fits removes CSV, provenance and run summary; one Undo restores every byte and the completed state.                                                                                                                                                                                                                              |

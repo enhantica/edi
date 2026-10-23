@@ -46,8 +46,9 @@ def compiled_hosts(tmp_path_factory):
                 'Compiled app receipts retain their actual built host executable'
             )
         else:
-            receipt = harness.observation(backend, scratch / kind / backend)['receipt']
-        return receipt
+            observation = harness.observation(backend, scratch / kind / backend)
+            receipt, path = observation['receipt'], observation['receipt_path']
+        return receipt, Path(path)
 
     return Observations(observe)
 
@@ -58,4 +59,5 @@ def compiled_hosts(tmp_path_factory):
 def test_real_host_receipt_refuses_stale_compiled_inputs(
     compiled_hosts, kind, backend, seam, tmp_path, monkeypatch
 ):
-    stale_reuse(HOSTS[kind], compiled_hosts[kind, backend], backend, seam, tmp_path, monkeypatch)
+    receipt, path = compiled_hosts[kind, backend]
+    stale_reuse(HOSTS[kind], receipt, backend, seam, tmp_path, monkeypatch, receipt_path=path)

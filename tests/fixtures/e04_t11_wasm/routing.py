@@ -31,9 +31,9 @@ def materialize(target):
     files.mkdir()
     structure = (source / 'structures/lbco.edi').read_text()
     (files / 'structure.edi').write_text(structure)
+    (files / 'structure-2.edi').write_text(structure.replace('data_lbco', 'data_other', 1))
     experiment = (source / 'experiments/hrpt.edi').read_text()
-    # The standalone format requires its linked-structure loop even when the
-    # receiving live project has no structure yet. Retain the committed valid block.
+    # Keep the linked-structure loop pointing at the structure loaded by the browser.
     for number in (1, 2):
         (files / f'experiment-{number}.edi').write_text(
             experiment.replace('data_hrpt', f'data_imported_{number}', 1)

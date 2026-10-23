@@ -127,23 +127,20 @@ table.correlations td {
   text-align: center;
   vertical-align: middle;
 }
-/* A figure is framed and spaced as a table is (the owner, 2026-10-13). */
-.figure { margin: 1.55pt 0 9.5pt; border: var(--bw) solid var(--tableborder); }
+/* A figure is spaced as a table is; a structure view is also framed as one, a chart has no border round it (the
+   owner, 2026-10-13 and 2026-10-14). */
+.figure { margin: 1.55pt 0 9.5pt; }
 .pattern-figure { width: 100%; height: 440px; }
-/* A scan's evolution: one chart per parameter, two to a row at half the column, one when the column is narrower
-   than 300 px. */
-.evolution-grid {
-  container-type: inline-size;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+/* A scan's evolution: one chart per parameter, one to a row, its height to its width the app's Evolution tab's (the
+   owner, 2026-10-14). */
+.evolution-figure { aspect-ratio: 100 / 105; min-width: 0; box-sizing: border-box; overflow: hidden; }
+.structure-figure {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: var(--bw) solid var(--tableborder);
 }
-@container (width < 300px) { .evolution-figure { grid-column: 1 / -1; } }
-.evolution-figure { aspect-ratio: 4 / 3; min-width: 0; box-sizing: border-box; overflow: hidden; }
-.structure-figure { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
-/* A long table, such as an experiment's data points, scrolls in a window of rows. */
-.table-scroll.long { max-height: calc(21 * var(--lead)); overflow-y: auto; }
-.table-scroll.long thead th { position: sticky; top: 0; background: var(--rowshade); }
 .figure-note {
   display: flex;
   align-items: center;
@@ -287,8 +284,7 @@ std::size_t characters(std::string_view text) {
 std::string whole(std::size_t number) { return std::to_string(number); }
 
 // A number's text split at its decimal point, as the Report page's tables split it: the sign and whole digits; then the
-// decimals with an s.u. bracket, an exponent and units after them (a degree sign right after the digits, other units
-// after a space). Absent for a text that is not a number.
+// decimals with an s.u. bracket, an exponent and units after a space. Absent for a text that is not a number.
 struct NumberParts {
     std::string left, right;
     bool dot = false;
@@ -336,13 +332,20 @@ std::optional<NumberParts> number_parts(std::string_view text) {
         any = true;
     }
     const std::string_view rest = text.substr(at);
-    const bool units = rest.empty() || rest == "\xC2\xB0" || rest == "\xC2\xB0\xC2\xB2" ||
-                       (rest.size() >= 2 && rest[0] == ' ' && rest[1] != ' ' && (rest[1] < '0' || rest[1] > '9'));
+    const bool units =
+        rest.empty() || (rest.size() >= 2 && rest[0] == ' ' && rest[1] != ' ' && (rest[1] < '0' || rest[1] > '9'));
     if (!units || !any) {
         return std::nullopt;
     }
     parts.right = std::string(text.substr(right));
     return parts;
+}
+
+// A number's part after its point, escaped. Units right after the whole digits (90 deg) keep the space before them,
+// which a cell or a grid item would drop at its start.
+std::string right_html(const NumberParts& parts) {
+    return parts.right.starts_with(' ') ? "&#160;" + escaped(std::string_view(parts.right).substr(1))
+                                        : escaped(parts.right);
 }
 
 // A column of numbers when every cell of it that has text is a number and one is: its widest parts, in characters.
@@ -372,12 +375,12 @@ std::vector<ColumnLayout> layout_of(const std::vector<std::vector<std::string>>&
     return out;
 }
 
-// A value with its units: a degree sign right after the number (90°, 0.24°²), other units after a space (3.88 Å).
+// A value with its units after a space: 90 deg, 3.88 Å.
 std::string with_units(const ReportRow& row) {
     if (row.units.empty()) {
         return row.text;
     }
-    return row.units.starts_with("\xC2\xB0") ? row.text + row.units : row.text + " " + row.units;
+    return row.text + " " + row.units;
 }
 
 // A correlation cell's colour: from white at 0 to diffraction-lib's red at -1 or blue at 1, as the Correlations tab
@@ -422,7 +425,10 @@ table { margin-top: 2.1px; margin-bottom: 12.7px; }
 
 constexpr const char* kRowShade = "#ebf0f8";
 constexpr const char* kPaper = "#ffffff";
-constexpr const char* kTableBorder = "#bec7d0";
+// The static tables' borders: finer and lighter than the HTML report's, which print bolder (the owner, 2026-10-14).
+// Written as a side's shorthand, as Qt rounds a side's width alone to whole pixels.
+constexpr const char* kTableBorder = "#d3d9df";
+constexpr const char* kDocumentBorderWidth = "0.5px";
 
 // A cell of a static table: its HTML, its alignment, the columns it spans and its padding at each side, in px.
 struct DocumentCell {
@@ -560,11 +566,11 @@ private:
         }
         heading(3, number() + whole(index + 1) + ".", id);
         if (charts() && document()) {
-            // The figure's image, by its kind and index, framed as a table is.
+            // The figure's image, by its kind and index: a structure view framed as a table is, a chart with no border.
             DocumentCell cell{"<img src=\"" + std::string(figure) + "-" + whole(index) + "\" width=\"" +
                                   fixed2(*figure_width_) + "\">",
                               "left", 1, 0.0, 0.0};
-            document_table(nullptr, {{cell}}, false);
+            document_table(nullptr, {{cell}}, false, std::string_view(figure) == "structure");
         } else if (charts()) {
             out_ += "<div class=\"figure " + std::string(figure) + "-figure\" data-index=\"" + whole(index) +
                     "\"></div>\n";
@@ -577,8 +583,8 @@ private:
         }
     }
 
-    // A scan's evolution charts: in the HTML report a grid of figures, in the static report their images two to a row,
-    // each framed as a figure, each row a table of its own so a page break never splits a chart.
+    // A scan's evolution charts, one to a row with no border round them: in the HTML report a column of figures, in
+    // the static report their images, each a table of its own so a page break never splits a chart.
     void evolution_figures() {
         const std::size_t count = model_.evolution->size();
         if (!document()) {
@@ -589,24 +595,11 @@ private:
             out_ += "</div>\n";
             return;
         }
-        constexpr double kGap = 12.0;  // px between the two charts of a row
-        constexpr double kFrame = 3.0;  // px of a figure's frame, as the single figure leaves for it
-        const double width = (*figure_width_ - kGap - kFrame) / 2.0;
-        std::string frame;
-        for (const char* side : {"top", "bottom", "left", "right"}) {
-            frame += std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" + side +
-                     "-color: " + kTableBorder + "; ";
-        }
-        for (std::size_t index = 0; index < count; index += 2) {
-            out_ += "<table cellspacing=\"0\" cellpadding=\"0\">\n<tr>";
-            for (std::size_t k = index; k < index + 2 && k < count; ++k) {
-                if (k > index) {
-                    out_ += "<td width=\"" + fixed2(kGap) + "\"></td>";
-                }
-                out_ += "<td style=\"padding-top: 3px; padding-bottom: 3px; " + frame + "\"><img src=\"evolution-" +
-                        whole(k) + "\" width=\"" + fixed2(width) + "\"></td>";
-            }
-            out_ += "</tr>\n</table>\n";
+        for (std::size_t index = 0; index < count; ++index) {
+            const DocumentCell cell{
+                "<img src=\"evolution-" + whole(index) + "\" width=\"" + fixed2(*figure_width_) + "\">", "left", 1, 0.0,
+                0.0};
+            document_table(nullptr, {{cell}}, false, false);
         }
     }
 
@@ -620,19 +613,20 @@ private:
             return {{escaped(text), "right", 2, pad, pad}};
         }
         return {{escaped(parts->left), "right", 1, pad, 0.0},
-                {(parts->dot ? "." : "") + escaped(parts->right), "left", 1, 0.0, pad}};
+                {(parts->dot ? "." : "") + right_html(*parts), "left", 1, 0.0, pad}};
     }
 
-    // A static table: the frame on its outer cells' edges, the header shaded with a line under it, the body's even rows
-    // shaded, as the HTML report's tables are; `header` may be null. Cells never wrap.
+    // A static table: the frame on its outer cells' edges (unless `framed` is false), the header shaded with a line
+    // under it, the body's even rows shaded, as the HTML report's tables are; `header` may be null. Cells never wrap.
     void document_table(const std::vector<DocumentCell>* header, const std::vector<std::vector<DocumentCell>>& rows,
-                        bool shaded = true) {
+                        bool shaded = true, bool framed = true) {
         out_ += "<table cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse: collapse\">\n";
         const std::size_t total = rows.size() + (header != nullptr ? 1 : 0);
         std::size_t at = 0;
-        const auto edge = [](const char* side) {
-            return std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" + side +
-                   "-color: " + kTableBorder + "; ";
+        const auto edge = [framed](const char* side) {
+            return framed ? std::string("border-") + side + ": " + kDocumentBorderWidth + " solid " + kTableBorder +
+                                "; "
+                          : std::string();
         };
         const auto row_html = [&](const std::vector<DocumentCell>& row, bool head, std::size_t body_index) {
             const char* shade = !shaded ? kPaper : head || body_index % 2 == 1 ? kRowShade : kPaper;
@@ -708,7 +702,7 @@ private:
         } else {
             out_ += "<span class=\"number-right number-joined\">";
         }
-        out_ += escaped(parts->right) + "</span></span></td>";
+        out_ += right_html(*parts) + "</span></span></td>";
     }
 
     void key_values(const std::vector<std::pair<std::string, std::string>>& rows) {
@@ -774,8 +768,8 @@ private:
             document_table(&header, cells);
             return;
         }
-        // A table longer than the preview shows at once scrolls in a window of rows, as the preview's does.
-        out_ += data.rows.size() > 100 ? "<div class=\"table-scroll long\">" : "<div class=\"table-scroll\">";
+        // Every row, however long the table, as the PDF prints them (the owner, 2026-10-14).
+        out_ += "<div class=\"table-scroll\">";
         out_ += "<table class=\"wide-table\">\n<thead>\n<tr>";
         for (std::size_t i = 0; i < data.columns.size(); ++i) {
             out_ += columns[i].numeric ? "<th class=\"numeric-header\">" : "<th>";
@@ -833,8 +827,8 @@ private:
         const std::size_t count = matrix.labels.size();
         std::string border;
         for (const char* side : {"top", "right", "bottom", "left"}) {
-            border += std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" +
-                      side + "-color: " + kTableBorder + "; ";
+            border +=
+                std::string("border-") + side + ": " + kDocumentBorderWidth + " solid " + kTableBorder + "; ";
         }
         out_ += "<table cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse: collapse\">\n<thead>\n<tr><th></th>";
         for (std::size_t column = 0; column < count; ++column) {
@@ -849,7 +843,8 @@ private:
                 const double value = matrix.values[row * count + column];
                 const std::string size = "width=\"43\" style=\"padding-top: 13px; padding-bottom: 13px; ";
                 if (!std::isfinite(value)) {
-                    out_ += "<td " + size + "\"></td>";
+                    // An empty cell keeps its border, as in the HTML report and the preview (the owner, 2026-10-13).
+                    out_ += "<td " + size + border + "\"></td>";
                     continue;
                 }
                 const std::string text = std::fabs(value) >= 0.5 ? "<span style=\"color: #f5f5f5\">" + fixed2(value) +

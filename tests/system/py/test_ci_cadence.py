@@ -1,0 +1,1119 @@
+"""The reshaped cadence retains the independently shipped platform execution policy."""
+
+from __future__ import annotations
+
+import ast
+import copy
+import hashlib
+import json
+import re
+import tomllib
+from collections import Counter
+from operator import itemgetter
+from pathlib import Path
+
+import pytest
+import yaml
+
+from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS
+from tests.fixtures.ci_cadence.inventory import identity
+from tests.system.py.ci_execution_contract import (
+    contexts,
+    prerequisites_ready,
+    render,
+    run_settings,
+    value,
+)
+from tests.system.py.ci_script_execution import observe, retains_work
+from tests.system.py.ci_shipped_cadence import (
+    cadence_errors,
+    linux_closure_errors,
+    linux_gate_errors,
+    suite_steps,
+)
+
+ROOT = Path(__file__).resolve().parents[3]
+BASE = json.loads((ROOT / 'tests/fixtures/ci_cadence/baseline.json').read_text())
+POLICY = ROOT / 'tests/test-groups.json'
+EXPECTED = json.loads((ROOT / 'tests/fixtures/ci_cadence/policy.json').read_text())
+
+
+def document(path):
+    return yaml.safe_load(path.read_text())
+
+
+def nodes():
+    return [
+        identity(line.split('\t', 1)[1])
+        for line in (ROOT / 'tests/per-pr-runtimes.tsv').read_text().splitlines()
+        if line and not line.startswith('#')
+    ]
+
+
+def expand(group, inventory):
+    selected = []
+    for tier in group.get('tiers', []):
+        selected.extend(
+            node
+            for node in inventory
+            if node.split('::')[0].startswith('tests/' + tier.rstrip('/') + '/')
+        )
+    selected.extend(group.get('nodes', []))
+    return selected
+
+
+def selection_errors(group, inventory, required):
+    selected = expand(group, inventory)
+    errors = []
+    if not selected:
+        errors.append('empty')
+    if len(selected) != len(set(selected)):
+        errors.append('duplicate')
+    if set(selected) - set(inventory):
+        errors.append('unknown')
+    if set(required) - set(selected):
+        errors.append('omitted')
+    return errors
+
+
+def context(event, row=None):
+    # Independently planted context for consumer controls; production reads use contexts(workflow).
+    row = row or {}
+    workflow = {
+        'on': {event: [{'cron': '0 3 * * *'}] if event == 'schedule' else None},
+        'jobs': {
+            'control': {
+                'runs-on': row.get('runner', 'ubuntu-latest'),
+                'strategy': {'matrix': {'include': [row]}},
+            }
+        },
+    }
+    return next(contexts(workflow, event, 'slot-a' if event == 'pull_request' else 'main'))[2]
+
+
+def expression(condition, ctx):
+    return bool(value(condition, ctx))
+
+
+def rendered(source, ctx):
+    return render(source, ctx)
+
+
+def gate_workflow(workflow):
+    ignored = ('performance', 'wheels', 'publish', 'cli-native')
+    return {
+        **workflow,
+        'jobs': {
+            key: job
+            for key, job in workflow['jobs'].items()
+            if not job.get('name', key).startswith(ignored)
+        },
+    }
+
+
+def jobs(workflow, event, platform):
+    return {
+        name: (job, ctx)
+        for name, job, ctx, _actual_platform in contexts(gate_workflow(workflow), event)
+        if ctx.get('matrix.platform') in {None, platform} and expression(job.get('if'), ctx)
+    }
+
+
+def command_text(script):
+    return '\n'.join(
+        line.strip()
+        for line in script.splitlines()
+        if line.strip() and not line.lstrip().startswith('#')
+    )
+
+
+@pytest.mark.parametrize('damage', ['omitted', 'duplicate', 'empty', 'unknown'])
+def test_selection_auditor_reaches_each_inventory_escape(damage):
+    inventory = [
+        'tests/unit/py/test_pin.py::test_arm64',
+        'tests/system/py/test_scan.py::test_full_scan',
+    ]
+    good = {'nodes': list(inventory)}
+    assert not selection_errors(good, inventory, inventory), (
+        'CI policy: a complete independently planted identity list is admitted'
+    )
+    bad = copy.deepcopy(good)
+    if damage == 'omitted':
+        bad['nodes'].pop()
+    elif damage == 'duplicate':
+        bad['nodes'].append(inventory[0])
+    elif damage == 'empty':
+        bad['nodes'].clear()
+    else:
+        bad['nodes'][0] = 'tests/unit/py/test_pin.py::invented'
+    assert damage in selection_errors(bad, inventory, inventory), (
+        'CI policy: each inventory escape reaches and fails its matching property'
+    )
+
+
+def nonexecution_identity(dump):
+    tree = ast.parse(dump, mode='eval')
+    outer = tree.body
+    if (
+        isinstance(outer, ast.Call)
+        and isinstance(outer.func, ast.Name)
+        and outer.func.id == 'Call'
+    ):
+        fields = {item.arg: item.value for item in outer.keywords}
+        reference = ast.parse(
+            "Attribute(value=Name(id='pytest', ctx=Load()), attr='skip', ctx=Load())", mode='eval'
+        ).body
+        if 'func' in fields and ast.dump(fields['func']) == ast.dump(reference):
+            args = fields.get('args')
+            if isinstance(args, ast.List) and args.elts:
+                # Only the first reason argument changes; extra args and all keywords stay intact.
+                args.elts[0] = ast.parse("Constant(value='<diagnostic reason>')", mode='eval').body
+    return ast.unparse(tree)
+
+
+@pytest.mark.parametrize('damage', ['reason', 'extra-skip', 'skipif-condition', 'xfail-condition'])
+def test_nonexecution_check_ignores_only_skip_reason_text(damage):
+    source = "pytest.skip('missing corpus')"
+    actual = (
+        "pytest.skip('corpus not installed')"
+        if damage == 'reason'
+        else (
+            source + "\npytest.skip('added skip')"
+            if damage == 'extra-skip'
+            else 'pytest.mark.skipif(True, reason="missing corpus")'
+            if damage == 'skipif-condition'
+            else 'pytest.mark.xfail(True, reason="missing corpus")'
+        )
+    )
+
+    def identities(text):
+        return Counter(
+            nonexecution_identity(ast.dump(node, include_attributes=False, show_empty=True))
+            for node in ast.walk(ast.parse(text))
+            if isinstance(node, ast.Call)
+        )
+
+    assert bool(identities(actual) - identities(source)) is (damage != 'reason'), (
+        'CI policy: skip reason text may change; added paths and skip/xfail conditions refuse'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage', ['positional-flag', 'keyword-flag', 'argument-count', 'missing-reason']
+)
+def test_skip_reason_normalization_preserves_argument_shape_and_module_flags(damage):
+    source = (
+        "pytest.skip('old reason', False)"
+        if damage == 'positional-flag'
+        else (
+            "pytest.skip('old reason', allow_module_level=False)"
+            if damage == 'keyword-flag'
+            else "pytest.skip('old reason')"
+        )
+    )
+    changed_reason = source.replace('old reason', 'new reason')
+
+    def identity(code):
+        return nonexecution_identity(ast.dump(ast.parse(code).body[0].value, show_empty=True))
+
+    assert identity(source) == identity(changed_reason), (
+        'CI policy: changing only a direct skip reason preserves its invocation identity'
+    )
+    damaged = (
+        changed_reason.replace('False', 'True')
+        if damage in {'positional-flag', 'keyword-flag'}
+        else (
+            "pytest.skip('new reason', False)" if damage == 'argument-count' else 'pytest.skip()'
+        )
+    )
+    assert identity(source) != identity(damaged), (
+        'CI policy: diagnostic reason normalization preserves module-skip flags and argument shape'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+def test_cadence_eligibility_and_rendering_use_the_actions_model(event):
+    ctx = context(event, {'platform': 'macOS'})
+    assert expression('github.event.pull_request.head.repo.fork == false', ctx), (
+        'CI policy: cadence selection admits the existing fork guard on PR and non-PR events'
+    )
+    assert rendered("${{ 'true' }}", ctx) == 'true', (
+        'CI policy: cadence rendering preserves an Actions string literal'
+    )
+    assert expression("github.event_name == '" + event.upper() + "'", ctx), (
+        'CI policy: cadence eligibility uses Actions case-insensitive comparison semantics'
+    )
+
+
+FROZEN_SOURCES = sorted({node.split('::')[0] for node in BASE['nodes'] if '.py::' in node})
+SOURCE_BATCHES = [
+    FROZEN_SOURCES[start : start + 20] for start in range(0, len(FROZEN_SOURCES), 20)
+]
+
+
+@pytest.mark.parametrize(
+    'paths', SOURCE_BATCHES, ids=[f'batch-{i}' for i in range(len(SOURCE_BATCHES))]
+)
+def test_moved_tests_gain_no_skip_or_xfail(paths):
+    for path in paths:
+        file = ROOT / path
+        assert file.is_file(), (
+            'CI policy: a moved Python test source remains available to the nightly collector'
+        )
+        tree = ast.parse(file.read_text())
+        calls = Counter(
+            nonexecution_identity(ast.dump(node, include_attributes=False, show_empty=True))
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and any(token in ast.unparse(node.func) for token in ('skip', 'xfail'))
+        )
+        assert not calls - Counter(
+            nonexecution_identity(item) for item in BASE['nonexecution'].get(path, [])
+        ), 'CI policy: moving tests does not add skips or expected failures to the frozen sources'
+
+
+def test_regular_macos_keeps_native_build_and_sdk_qualification():
+    frozen = yaml.safe_load(BASE['files']['.github/workflows/ci.yml'])
+    current = document(ROOT / '.github/workflows/ci.yml')
+    witnesses = (
+        'Build C++ extension',
+        'Pack and qualify',
+        'SDK consumer smoke',
+        'Build the native code',
+        'The crysta consumer proof',
+    )
+    for event in ('pull_request', 'push'):
+        old = jobs(frozen, event, 'macOS')
+        live = jobs(current, event, 'macOS')
+        for name, (job, _ctx) in old.items():
+            if 'macOS' not in name:
+                continue
+            for step in job.get('steps', []):
+                if not str(step.get('name', '')).startswith(witnesses):
+                    continue
+                assert name in live, (
+                    'CI policy: macOS build and qualification retain their platform job'
+                )
+                actual, current_ctx = live[name]
+                observed = [
+                    p for n, _, _, p in contexts(gate_workflow(current), event) if n == name
+                ]
+                assert observed == ['osx-arm64'], (
+                    'CI policy: retained macOS build and qualification jobs use arm64 runners'
+                )
+                assert not actual.get('continue-on-error'), (
+                    'CI policy: macOS build and qualification jobs remain required'
+                )
+                matches = [s for s in actual['steps'] if s.get('name') == step['name']]
+                assert len(matches) == 1, (
+                    'CI policy: each macOS qualification witness remains present once'
+                )
+                assert expression(matches[0].get('if'), current_ctx), (
+                    'CI policy: a macOS qualification step must execute on the current event'
+                )
+                assert not matches[0].get('continue-on-error'), (
+                    'CI policy: macOS qualification failures must gate the SDK consumer'
+                )
+                assert command_text(matches[0]['run']) == command_text(step['run']), (
+                    'CI policy: macOS SDK packing and consumer qualification retain '
+                    'their baseline commands'
+                )
+
+
+def execution_source_matches(path, baseline, actual):
+    if actual == baseline:
+        return True
+    accepted = json.loads(
+        (ROOT / 'tests/fixtures/ci_cadence/accepted-main-sdk-source.json').read_text()
+    )
+    if path != accepted['path']:
+        return False
+    # Only the reviewed main-line token function may differ; all qualification code stays frozen.
+
+    def without_token(source):
+        nodes = [
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef) and node.name == 'token'
+        ]
+        if len(nodes) != 1:
+            return None
+        node = nodes[0]
+        lines = source.splitlines(keepends=True)
+        return ''.join(
+            lines[: node.lineno - 1] + ['<accepted token function>\n'] + lines[node.end_lineno :]
+        )
+
+    return actual == accepted['source'] and without_token(actual) == without_token(baseline)
+
+
+@pytest.mark.parametrize(
+    'damage',
+    ['unchanged', 'accepted-token', 'changed-pin', 'changed-sdk-output', 'no-qualification'],
+)
+def test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure(damage):
+    path = 'tools/ci/crysta_sdk.py'
+    baseline = BASE['execution_sources'][path]
+    accepted = json.loads(
+        (ROOT / 'tests/fixtures/ci_cadence/accepted-main-sdk-source.json').read_text()
+    )
+    source = baseline if damage == 'unchanged' else accepted['source']
+    if damage == 'changed-pin':
+        source = source.replace('return tag, digest', "return tag, 'unchecked'")
+    elif damage == 'changed-sdk-output':
+        source = source.replace('print(home)', "print('unqualified SDK')")
+    elif damage == 'no-qualification':
+        source = source.replace('def pin(', 'def unqualified_pin(')
+    assert execution_source_matches(path, baseline, source) is (
+        damage in {'unchanged', 'accepted-token'}
+    ), 'CI policy: only the reviewed main token fallback can extend the frozen SDK closure'
+
+
+def scale_semantics(source):
+    body = ast.parse(source).body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    return [ast.dump(node, include_attributes=False) for node in body]
+
+
+def test_deferred_scale_assertions_and_regular_small_scan_are_preserved():
+    source = BASE['scale_source']
+    assert hashlib.sha256(source.encode()).hexdigest() == BASE['scale_sha256'], (
+        'CI policy: scale assertion and fixture reference remains the independently frozen source'
+    )
+    target = ROOT / 'tests/deferred/py/scan_scale.py'
+    assert target.is_file(), (
+        'reshaped scope retains deferred scale outside its remaining deliverables'
+    )
+    assert scale_semantics(target.read_text()) == scale_semantics(source), (
+        'deferred scale cases preserve every original assertion, fixture and limit'
+    )
+    small = {
+        node
+        for node in BASE['nodes']
+        if node.startswith('tests/system/py/test_scan_app_execution.py::')
+    }
+    assert small, (
+        'CI policy: frozen regular small-scan identities form a nonempty independent cohort'
+    )
+    groups = json.loads(POLICY.read_text())['groups']
+    for group in ('quick', 'full'):
+        assert small <= set(expand(groups[group], nodes())), (
+            'CI policy: both regular Linux entry points retain every frozen small-scan identity'
+        )
+
+
+@pytest.mark.parametrize(
+    'damage', ['no-op', 'assertion', 'limit', 'fixture', 'skip', 'missing-case']
+)
+def test_scale_semantics_gate_rejects_weakened_bodies_and_limits(damage):
+    source = BASE['scale_source']
+    assert scale_semantics(source) == scale_semantics(
+        '"""changed prose only"""\n' + ast.unparse(ast.parse(source).body[1:])
+    ), 'CI policy: scale preservation compares executable source independently of prose'
+    tree = ast.parse(source)
+    cases = [
+        n
+        for n in tree.body
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith('test_')
+    ]
+    case = cases[0]
+    if damage == 'no-op':
+        case.body = [ast.Pass()]
+    elif damage == 'assertion':
+        assertion = next(n for n in ast.walk(case) if isinstance(n, ast.Assert))
+        assertion.test = ast.Constant(True)
+    elif damage == 'limit':
+        number = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Constant)
+            and isinstance(n.value, (int, float))
+            and not isinstance(n.value, bool)
+        )
+        number.value *= 2
+    elif damage == 'fixture':
+        fixture = next(
+            n
+            for n in tree.body
+            if isinstance(n, ast.FunctionDef) and not n.name.startswith('test_')
+        )
+        fixture.body = [ast.Return(ast.Constant(None))]
+    elif damage == 'skip':
+        case.decorator_list.append(
+            ast.Attribute(
+                ast.Attribute(ast.Name('pytest', ast.Load()), 'mark', ast.Load()),
+                'skip',
+                ast.Load(),
+            )
+        )
+    else:
+        tree.body.remove(case)
+    altered = ast.unparse(ast.fix_missing_locations(tree))
+    assert scale_semantics(altered) != scale_semantics(source), (
+        'CI policy: body, assertion, limit, fixture and skip mutations refuse'
+    )
+
+
+SHIPPED = json.loads((ROOT / 'tests/fixtures/ci_cadence/shipped-policy.json').read_text())
+
+
+def migrated_inventory(inventory):
+    return [successor for node in inventory for successor in MIGRATIONS.get(node, [node])]
+
+
+def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
+    assert set(MIGRATIONS) <= set(SHIPPED['nodes']), (
+        'Inventory migrations name only identities in the independently shipped snapshot'
+    )
+    successors = [node for replacement in MIGRATIONS.values() for node in replacement]
+    assert all(MIGRATIONS.values()) and len(successors) == len(set(successors)), (
+        'Each migrated witness retains a nonempty, distinct set of replacement identities'
+    )
+    assert not set(successors) & set(MIGRATIONS) and set(successors) <= set(nodes()), (
+        'Migration targets are current witnesses, never retired aliases or absent tests'
+    )
+    unchanged = [node for node in SHIPPED['nodes'] if node not in MIGRATIONS]
+    assert unchanged and migrated_inventory(unchanged) == unchanged, (
+        'Every unmapped frozen identity remains required verbatim'
+    )
+
+
+@pytest.mark.parametrize(
+    'retired',
+    list(MIGRATIONS),
+    ids=[
+        'desktop-linux',
+        'desktop-macos',
+        'scan-sequential',
+        'scan-independent',
+        'diagnostics',
+        *[
+            f'nightly-{platform}-{event}'
+            for platform in ('linux', 'macos')
+            for event in ('pull_request', 'push', 'schedule')
+        ],
+        'axis-nonfirst',
+        'axis-absent-zero',
+        'axis-zero-absent',
+    ],
+)
+def test_inventory_migration_refuses_every_dropped_successor(retired):
+    inventory = nodes()
+    groups = json.loads(POLICY.read_text())['groups']
+    required = migrated_inventory([retired])
+    for group in ('quick', 'full'):
+        selected = expand(groups[group], inventory) + expand(groups['app'], inventory)
+        assert not selection_errors({'nodes': selected}, inventory, required), (
+            'Ordinary execution includes every replacement of each frozen witness'
+        )
+        for successor in required:
+            damaged = [node for node in inventory if node != successor]
+            selected = expand(groups[group], damaged) + expand(groups['app'], damaged)
+            assert 'omitted' in selection_errors({'nodes': selected}, damaged, required), (
+                'A named migration cannot conceal the loss of any replacement witness; '
+                f'group={group}, previous={retired}, missing={successor}'
+            )
+
+
+@pytest.mark.parametrize('group', ['quick', 'full'])
+def test_shipped_groups_retain_the_frozen_inventory(group):
+    groups = json.loads(POLICY.read_text())['groups']
+    selected = expand(groups[group], nodes())
+    if BASE['repo'] == 'edi':
+        selected += expand(groups['app'], nodes())
+    old = json.loads(SHIPPED['files']['tests/test-groups.json'])['groups']
+    required = expand(old[group], SHIPPED['nodes'])
+    if BASE['repo'] == 'edi':
+        required += expand(old['app'], SHIPPED['nodes'])
+    assert set(migrated_inventory(SHIPPED['nodes'])) <= set(nodes()), (
+        'every accepted inventory identity remains available, including policy helper tests'
+    )
+    errors = selection_errors({'nodes': selected}, nodes(), migrated_inventory(required))
+    assert not errors, (
+        'shipped cadence keeps the frozen identities available to ordinary full execution'
+    )
+
+
+def test_shipped_nightly_cohort_is_explicit_nonempty_and_retained():
+    groups = json.loads(POLICY.read_text())['groups']
+    group = 'nightly' if BASE['repo'] == 'crysta' else 'nightly-only'
+    old = json.loads(SHIPPED['files']['tests/test-groups.json'])['groups'][group]['paths']
+    paths = groups[group]['paths']
+    assert paths, 'the shipped nightly cohort stays nonempty'
+    assert set(paths) == set(old), (
+        'accepted-main regression cohort retains the approved nightly deferrals'
+    )
+    assert len(paths) == len(set(paths)), 'nightly paths are unique'
+    collected = {n.split('::')[0] for n in nodes()}
+    assert set(paths) <= collected, (
+        'moving a cohort to nightly keeps every file collected in the runtime inventory'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+@pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
+def test_shipped_suite_paths_execute_their_cohort_and_propagate_failures(
+    tmp_path, event, platform
+):
+    workflow = document(ROOT / '.github/workflows/ci.yml')
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    if BASE['repo'] == 'edi':
+        system_steps = [
+            (job, step, ctx)
+            for key, job, step, ctx in suite_steps(workflow, event, platform, 'edi')
+            if key[2] == 'Tests (declared group, system part)'
+        ]
+        assert bool(system_steps) == (event != 'pull_request'), (
+            'CI policy: system parts run on push, schedule and manual, and leave PRs fast'
+        )
+        for job, step, ctx in system_steps:
+            for core_only in (False, True):
+                env = run_settings(workflow, job, step, ctx | {'inputs.core_only': core_only})[1]
+                expected = event == 'schedule' or (event == 'workflow_dispatch' and not core_only)
+                assert env.get('EDI_RUN_NIGHTLY_ONLY') == ('true' if expected else 'false'), (
+                    'CI policy: nightly runs on the schedule and full manual runs, '
+                    'never on PR, push or a core-only manual run'
+                )
+        if event == 'workflow_dispatch':
+            # Full manual runs qualify the nightly cohort before merge.
+            for key, _, step, _ in suite_steps(baseline, event, platform, 'edi'):
+                if key[2] == 'Tests (declared group, system part)':
+                    step['env']['EDI_RUN_NIGHTLY_ONLY'] = 'true'
+    assert not cadence_errors(
+        tmp_path,
+        baseline,
+        workflow,
+        event,
+        platform,
+        BASE['repo'],
+    ), (
+        'the shipped platform/event suite paths retain their actual task calls, '
+        'nightly selection environment and nonzero process outcomes'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'drop-step',
+        'skip-step',
+        'advisory-step',
+        'skip-job',
+        'advisory-job',
+        'unmet-prerequisite',
+        'mask-exit',
+        'wrong-platform',
+        'omit-cohort',
+    ],
+)
+def test_shipped_cadence_gate_reaches_each_execution_escape(tmp_path, damage):
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    assert not cadence_errors(
+        tmp_path, baseline, baseline, 'schedule', 'linux-64', BASE['repo']
+    ), 'cadence mutation controls begin at independently accepted executable main policy'
+    bad = copy.deepcopy(baseline)
+    _, job, step, _ = next(suite_steps(bad, 'schedule', 'linux-64', BASE['repo']))
+    if damage == 'drop-step':
+        job['steps'].remove(step)
+    elif damage == 'skip-step':
+        step['if'] = '${{ false }}'
+    elif damage == 'advisory-step':
+        step['continue-on-error'] = True
+    elif damage == 'skip-job':
+        job['if'] = '${{ false }}'
+    elif damage == 'advisory-job':
+        job['continue-on-error'] = True
+    elif damage == 'unmet-prerequisite':
+        job['needs'] = ['absent-required-predecessor']
+    elif damage == 'mask-exit':
+        step['run'] = '{\n' + step['run'] + '\n} || true'
+    elif damage == 'wrong-platform':
+        job['runs-on'] = 'macos-15'
+    else:
+        step['run'] = 'true'
+    assert cadence_errors(tmp_path, baseline, bad, 'schedule', 'linux-64', BASE['repo']), (
+        'missing, skipped, advisory, swallowed, misplaced or empty execution refuses'
+    )
+
+
+def test_shipped_nightly_has_clock_and_manual_triggers_separate_from_pr_requests():
+    workflow = document(ROOT / '.github/workflows/ci.yml')
+    trigger = workflow.get('on', workflow.get(True, {}))
+    assert trigger.get('schedule'), 'shipped nightly execution retains its clock trigger'
+    assert 'workflow_dispatch' in trigger, 'shipped full execution retains manual recovery'
+    assert trigger['pull_request']['types'] == ['ready_for_review'], (
+        'only the coalescing requester opens a new PR execution, not each pushed head'
+    )
+    groups = {}
+    for event in ('pull_request', 'push', 'schedule'):
+        ctx = next(contexts(workflow, event))[2]
+        groups[event] = rendered(workflow['concurrency']['group'], ctx)
+    assert len(set(groups.values())) == len(groups), (
+        'the accepted fast path separates PR, push and scheduled concurrency identities'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+def test_linux_keeps_frozen_groups_and_gate_commands(event):
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    assert not linux_gate_errors(
+        baseline, document(ROOT / '.github/workflows/ci.yml'), event, BASE['repo']
+    ), (
+        'every accepted Linux job and required non-suite command remains '
+        'executable in its declared event cohort'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
+    assert not linux_closure_errors(
+        SHIPPED, (ROOT / 'pixi.toml').read_text(), lambda path: (ROOT / path).read_text(), event
+    ), (
+        'accepted Linux task dependencies and previously protected source '
+        'closures remain executable on every declared event'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'no-op',
+        'file-conditioned',
+        'missing',
+        'duplicate',
+        'skipped',
+        'advisory',
+        'wrong-runner',
+        'job-skipped',
+        'job-advisory',
+    ],
+)
+def test_linux_non_suite_guard_refuses_each_same_named_execution_escape(event, damage):
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
+    assert not linux_gate_errors(baseline, baseline, event, BASE['repo']), (
+        'non-suite controls begin at independently accepted required execution'
+    )
+    damaged = copy.deepcopy(baseline)
+    title = (
+        'cppcheck'
+        if BASE['repo'] == 'crysta'
+        else 'Static policy checks (weakref, tutorial exclusions, generated regions)'
+    )
+    job = next(
+        job
+        for job in damaged['jobs'].values()
+        if any(s.get('name') == title for s in job.get('steps', []))
+    )
+    step = next(s for s in job['steps'] if s.get('name') == title)
+    if damage == 'no-op':
+        step['run'] = 'true'
+    elif damage == 'file-conditioned':
+        step['if'] = "hashFiles('absent-ci-permission-marker') != ''"
+    elif damage == 'missing':
+        job['steps'].remove(step)
+    elif damage == 'duplicate':
+        job['steps'].append(copy.deepcopy(step))
+    elif damage == 'skipped':
+        step['if'] = '${{ false }}'
+    elif damage == 'advisory':
+        step['continue-on-error'] = True
+    elif damage == 'wrong-runner':
+        job['runs-on'] = 'macos-15'
+    elif damage == 'job-skipped':
+        job['if'] = '${{ false }}'
+    else:
+        job['continue-on-error'] = True
+    assert linux_gate_errors(baseline, damaged, event, BASE['repo']), (
+        'same-named non-suite gates cannot lose their command, required '
+        'status, execution condition or Linux runner'
+    )
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize('damage', ['task-no-op', 'task-dependency', 'source-no-op'])
+def test_linux_source_guard_reaches_task_and_script_replacement(event, damage):
+    manifest = SHIPPED['files']['pixi.toml']
+    sources = dict(SHIPPED['execution_sources'])
+    assert not linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+        'task/source controls begin at the accepted executable closure'
+    )
+    task = 'cpp-cppcheck' if BASE['repo'] == 'crysta' else 'weakref-policy'
+    if damage == 'task-no-op':
+        manifest, count = re.subn(
+            r'^' + task + r' = .*$', task + ' = "true"', manifest, count=1, flags=re.MULTILINE
+        )
+        assert count == 1, 'the control replaces the actual selected task declaration'
+    elif damage == 'task-dependency':
+        pattern = r'^(per-pr-audit = .*depends-on = )\[[^\n]*?\]'
+        manifest, count = re.subn(pattern, r'\g<1>[]', manifest, count=1, flags=re.MULTILINE)
+        assert count == 1, 'the control drops a selected task dependency edge'
+    else:
+        sources['tools/ci/cpp-test.sh'] = '#!/bin/bash\ntrue\n'
+        for path, fragments in {
+            'tools/ci/crysta-source.sh': (
+                'CRYSTA_REMOTE_OUT="$(git ',
+                'CRYSTA_REMOTE_ERR="$(cat ',
+                'rm -f "$err"',
+                'case "$CRYSTA_REMOTE_ERR" in',
+                '[ "$attempt" -lt 3 ]',
+                'lines="$CRYSTA_REMOTE_OUT"',
+                '[ "${BASH_REMATCH[2]}" = "$want"',
+                '[ "$count" -gt 1 ]',
+                'text="${text//${GITHUB_TOKEN}/***}"',
+            ),
+            'tools/ci/core-build.sh': (
+                'bash tools/ci/build-crysta.sh',
+                'bash tools/ci/crysta-src.sh',
+                'cmake -S',
+                'cmake --build "$EDI_BUILD_DIR" -j',
+                '[ -z "${EDI_CORE_TARGETS:-}" ] || cmake',
+                'cp "$CRYSTA_PREFIX/.crysta-sha"',
+                "trap 'rm -f",
+                'python tools/ci/edi_native.py restore;',
+            ),
+            'tools/ci/crysta-src.sh': (
+                '. "$ROOT/tools/ci/producer-lock.sh";',
+                'crysta_remote "fetch"',
+                '[ -d "$SRC/.git" ] || git init',
+                'git -C "$SRC" checkout',
+                'git -C "$SRC" clean',
+                'printf \'%s\\n\' "$SHA"',
+            ),
+        }.items():
+            baseline = SHIPPED['execution_sources'][path]
+            assert retains_work(
+                path,
+                baseline,
+                baseline
+                if path.endswith('crysta-source.sh')
+                else '# changed comment\n' + baseline,
+            ), (
+                'Linux closure retains the frozen helper and admits comment-only edits '
+                'to observed scripts'
+            )
+            assert not retains_work(path, baseline, '#!/bin/bash\nexit 0\n'), (
+                'Linux closure rejects a successful script that performs no required work'
+            )
+            candidate = (ROOT / path).read_text()
+            assert retains_work(path, baseline, candidate), (
+                'Linux closure admits the current script only while its frozen work is retained'
+            )
+            for fragment in fragments:
+                assert fragment in candidate, (
+                    'Linux closure mutation controls reach the independently frozen operation'
+                )
+                damaged = '\n'.join(
+                    'true # removed operation' if fragment in line else line
+                    for line in candidate.splitlines()
+                )
+                assert not retains_work(path, baseline, damaged), (
+                    'Linux closure rejects removal of acquisition, configure, build, '
+                    'target, checkout, cleanup or provenance work'
+                )
+            damaged = candidate.replace('set -euo pipefail', 'set -uo pipefail')
+            assert not retains_work(path, baseline, damaged), (
+                'Linux closure rejects swallowed failures even when successful work is retained'
+            )
+
+        for path, changes in {
+            'tools/ci/build-crysta.sh': (
+                ('PLATFORM=linux-64 ;;', 'PLATFORM=osx-arm64 ;;'),
+                (
+                    'osx-arm64 | macOS-ARM64 | Darwin-arm64) PLATFORM=osx-arm64',
+                    'osx-arm64 | macOS-ARM64 | Darwin-arm64) PLATFORM=linux-64',
+                ),
+                ('fetch --platform', 'check --platform'),
+                ('printf \'%s\\n\' "$SHA"', 'printf \'%s\\n\' "unchecked"'),
+                ('edi_producer_lock "$ROOT"', 'true'),
+            ),
+            'tools/ci/edi_native.py': (
+                ("'linux-64': 'linux-64'", "'linux-64': 'osx-arm64'"),
+                ("'osx-arm64': 'osx-arm64'", "'osx-arm64': 'linux-64'"),
+                ('    prove_import()', '    pass'),
+                ("'source_tree': git('rev-parse', 'HEAD^{tree}')", "'source_tree': 'unchecked'"),
+                ('return table.get(host) or refuse', "return 'linux-64' or refuse"),
+                ('def restore(', 'def unused_restore('),
+            ),
+        }.items():
+            baseline = SHIPPED['execution_sources'][path]
+            candidate = (ROOT / path).read_text()
+            if path.endswith('.sh'):
+                extension = baseline.replace(
+                    'osx-arm64 | macOS-ARM64', 'osx-arm64 | osx-arm64-app | macOS-ARM64'
+                )
+            else:
+                extension = baseline.replace(
+                    "'osx-arm64': 'osx-arm64'}",
+                    "'osx-arm64': 'osx-arm64', 'osx-arm64-app': 'osx-arm64'}",
+                )
+            assert extension != baseline and retains_work(path, baseline, extension), (
+                'An added macOS alias is admitted in the original mapping layout too'
+            )
+            retired = without_retired_app_aliases(path, candidate)
+            assert not any(alias in retired for alias in ('linux-64-app', 'osx-arm64-app')), (
+                'The retirement control must remove both historical custom-platform aliases'
+            )
+            assert retains_work(path, baseline, retired), (
+                'Removing only retired aliases must preserve canonical platform '
+                'and qualification operations'
+            )
+            assert retains_work(path, baseline, candidate), (
+                'Canonical platforms preserve the frozen Linux mapping and qualification source'
+            )
+            assert not retains_work(path, baseline, 'true\n'), (
+                'A macOS alias exemption cannot admit replacement of a qualification script'
+            )
+            for old, new in changes:
+                assert old in candidate, (
+                    'Platform extension controls reach the current protected operation'
+                )
+                sources[path] = candidate.replace(old, new)
+                assert linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+                    'A macOS alias cannot hide reduced Linux mapping, acquisition, ownership, '
+                    'provenance, import qualification or artifact restore work'
+                )
+                assert not retains_work(path, baseline, sources[path]), (
+                    'The platform source comparison itself rejects each reduced operation'
+                )
+            sources[path] = candidate
+
+    assert linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+        'preserving a workflow task name cannot conceal a replaced '
+        'dependency command or protected script'
+    )
+
+
+@pytest.mark.parametrize('child', ['build-crysta.sh', 'crysta-src.sh'])
+@pytest.mark.parametrize('failure', [False, True])
+@pytest.mark.parametrize(
+    'scenario',
+    [
+        'fresh',
+        'standalone-token',
+        'inherited-valid',
+        'inherited-missing-token',
+        'inherited-wrong-token',
+        'inherited-missing-owner',
+        'inherited-wrong-owner',
+        'foreign-lock',
+    ],
+)
+def test_acquisition_children_preserve_proven_ownership_and_release(child, failure, scenario):
+    path = 'tools/ci/' + child
+    source = (ROOT / path).read_text()
+    fault = 'python tools/ci/crysta_sdk.py fetch' if child == 'build-crysta.sh' else ' fetch '
+    rc, trace, outputs = observe(path, source, scenario, fault if failure else '')
+    inherited = scenario == 'inherited-valid'
+    standalone = scenario in {'fresh', 'standalone-token'}
+    assert bool(rc) == (failure or not (inherited or standalone)), (
+        'Acquisition children accept only a proven parent token or their own exclusive lock'
+    )
+    ownership = [call for call in trace if call.startswith('ownership ')]
+    expected = (
+        'ownership <1> <1> <1> <1>'
+        if inherited
+        else 'ownership <1> <1> <0> <0>'
+        if scenario == 'standalone-token'
+        else 'ownership <1> <0> <0> <0>'
+    )
+    assert ownership == ([expected] * len(ownership) if inherited or standalone else []), (
+        'Each acquisition operation observes the owner file and exported token while running'
+    )
+    assert bool(ownership) == (inherited or standalone), (
+        'An invalid inherited lock refuses before any acquisition operation executes'
+    )
+    assert dict(outputs)['producer-lock-retained'] == (not standalone), (
+        'Each child releases its own lock on success and failure and retains the parent lock'
+    )
+    assert dict(outputs)['producer-owner-retained'] == (
+        not standalone and scenario != 'inherited-missing-owner'
+    ), 'Each child retains a foreign owner file on success or refusal'
+
+
+@pytest.mark.parametrize(
+    'damage', ['handoff-removed', 'export-removed', 'owner-removed', 'wrong-token', 'wrong-owner']
+)
+def test_linux_source_guard_refuses_current_producer_handoff_damage(damage):
+    path = 'tools/ci/core-build.sh'
+    candidate = (ROOT / path).read_text()
+    line = next(
+        line
+        for line in candidate.splitlines()
+        if line.startswith('export EDI_PRODUCER_LOCK_HELD=')
+    )
+    if damage == 'handoff-removed':
+        replacement = 'true'
+    elif damage == 'export-removed':
+        replacement = line.replace('export ', '', 1)
+    elif damage == 'owner-removed':
+        replacement = line.split(';', 1)[0]
+    elif damage == 'wrong-token':
+        replacement = line + '; export EDI_PRODUCER_LOCK_HELD=wrong-token'
+    else:
+        replacement = line + '; printf wrong-owner >"$BUILD_LOCK/owner"'
+    damaged = candidate.replace(line, replacement, 1)
+    assert damaged != candidate, 'Ownership controls mutate the current producer handoff'
+    assert not retains_work(path, SHIPPED['execution_sources'][path], damaged), (
+        'The Linux execution guard rejects missing, unexported or mismatched ownership handoffs'
+    )
+
+
+MOVED_GATES = [
+    ('system', 'linux-64', None),
+    ('system', 'osx-arm64', None),
+    ('app-wasm', 'linux-64', None),
+    ('core', 'linux-64', 'The two-thread witness (ThreadSanitizer)'),
+    ('app', 'linux-64', "The app group's Python tests (tests/integration/app)"),
+    ('app', 'osx-arm64', "The app group's Python tests (tests/integration/app)"),
+]
+
+
+def moved_gate_required(workflow, event, target):
+    key, platform, title = target
+    cases = [
+        (job, ctx)
+        for name, job, ctx, actual in contexts(workflow, event, names=False)
+        if name == key and actual == platform
+    ]
+    if not cases:
+        return False
+    for job, ctx in cases:
+        if (
+            not expression(job.get('if'), ctx)
+            or not prerequisites_ready(workflow, job, ctx)
+            or expression(job.get('continue-on-error', False), ctx)
+        ):
+            return False
+        if title:
+            steps = [step for step in job.get('steps', []) if step.get('name') == title]
+            if len(steps) != 1:
+                return False
+            step = steps[0]
+            task = 'tsan-worker' if key == 'core' else 'group-app'
+            if (
+                not expression(step.get('if'), ctx)
+                or expression(step.get('continue-on-error', False), ctx)
+                or step.get('run', '').strip() != 'pixi run --skip-deps ' + task
+            ):
+                return False
+    return True
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+@pytest.mark.parametrize(
+    'target',
+    MOVED_GATES,
+    ids=['system-linux', 'system-macos', 'wasm', 'tsan', 'app-python-linux', 'app-python-macos'],
+)
+def test_moved_gates_keep_every_required_full_run_and_reject_each_escape(event, target):
+    workflow = document(ROOT / '.github/workflows/ci.yml')
+    expected = event != 'pull_request'
+    assert moved_gate_required(workflow, event, target) == expected, (
+        'Owner event policy: heavy gates leave PRs and stay required '
+        'on push, nightly and full manual'
+    )
+    if not expected:
+        return
+    for damage in ('missing', 'skipped', 'advisory', 'wrong-command'):
+        broken = copy.deepcopy(workflow)
+        job = broken['jobs'][target[0]]
+        title = target[2]
+        node = next(step for step in job['steps'] if step.get('name') == title) if title else job
+        if damage == 'missing':
+            if title:
+                job['steps'].remove(node)
+            else:
+                del broken['jobs'][target[0]]
+        elif damage == 'skipped':
+            node['if'] = 'false'
+        elif damage == 'advisory':
+            node['continue-on-error'] = True
+        elif title:
+            node['run'] = 'true'
+        else:
+            job['needs'] = ['absent-required-predecessor']
+        assert not moved_gate_required(broken, event, target), (
+            'Owner event policy: missing, skipped, advisory and empty full-run gates must refuse'
+        )
+
+
+def without_retired_app_aliases(path, source):
+    """An exact byte-only retirement control, independent of source normalization."""
+    if path.endswith('.sh'):
+        source = '\n'.join(
+            line.replace('linux-64-app', 'linux-64').replace('osx-arm64-app', 'osx-arm64')
+            if line.lstrip().startswith('#')
+            else line
+            for line in source.split('\n')
+        )
+        return (
+            source
+            .replace('linux-64 | linux-64-app | ', 'linux-64 | ')
+            .replace('osx-arm64 | osx-arm64-app | ', 'osx-arm64 | ')
+            .replace(
+                "  osx-arm64-app) PLATFORM=osx-arm64 ;;  # the app environment's "
+                'macOS platform (macOS 14)\n',
+                '',
+            )
+        )
+    return source.replace("'linux-64-app': 'linux-64', ", '').replace(
+        "    table |= {'osx-arm64-app': 'osx-arm64'}\n", ''
+    )
+
+
+def test_workspace_platforms_use_unnamed_subdir_version_floors():
+    manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
+    platforms = manifest['workspace']['platforms']
+    assert len(platforms) == 2, (
+        'The workspace must declare exactly one Linux and one macOS subdir, without named variants'
+    )
+    assert sorted(platforms, key=itemgetter('platform')) == [
+        {'platform': 'linux-64', 'glibc': '2.34'},
+        {'platform': 'osx-arm64', 'macos': '14.0'},
+    ], 'Every environment must inherit the owner-declared unnamed subdir floors'
+    assert 'platforms' not in manifest['feature']['app'], (
+        'The app must inherit workspace platforms rather than select custom app platforms'
+    )
+    assert 'core-platforms' not in manifest['feature'], (
+        'The retired core-platform selector must not override the common workspace subdirs'
+    )
+
+
+@pytest.mark.parametrize('path', ['tools/ci/build-crysta.sh', 'tools/ci/edi_native.py'])
+@pytest.mark.parametrize('damage', ['linux-map', 'mac-map', 'qualification', 'refusal'])
+def test_retired_aliases_do_not_exempt_canonical_sdk_or_qualification_work(path, damage):
+    baseline = SHIPPED['execution_sources'][path]
+    current = (ROOT / path).read_text()
+    retired = without_retired_app_aliases(path, current)
+    assert retains_work(path, baseline, retired), (
+        'The owner-authorized alias retirement must retain the original executable closure'
+    )
+    if path.endswith('.sh'):
+        operations = {
+            'linux-map': ('PLATFORM=linux-64 ;;', 'PLATFORM=osx-arm64 ;;'),
+            'mac-map': ('PLATFORM=osx-arm64 ;;', 'PLATFORM=linux-64 ;;'),
+            'qualification': ('fetch --platform', 'check --platform'),
+            'refusal': ('>&2; exit 1 ;;', '>&2; exit 0 ;;'),
+        }
+    else:
+        operations = {
+            'linux-map': ("'linux-64': 'linux-64'", "'linux-64': 'osx-arm64'"),
+            'mac-map': ("'osx-arm64': 'osx-arm64'", "'osx-arm64': 'linux-64'"),
+            'qualification': ('    prove_import()', '    pass'),
+            'refusal': ('return table.get(host) or refuse', "return 'linux-64' or refuse"),
+        }
+    old, new = operations[damage]
+    assert old in retired, (
+        'The alias-retirement control must reach its canonical protected operation'
+    )
+    assert not retains_work(path, baseline, retired.replace(old, new)), (
+        'Retiring app aliases must not admit changed canonical maps, '
+        'missing qualification or lost refusal'
+    )

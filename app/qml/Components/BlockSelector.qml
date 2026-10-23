@@ -80,7 +80,8 @@ Row {
             const label = {
                 "text": name,
                 "color": nameColor,
-                "elides": true
+                "elides": true,
+                "factors": true
             };
             const lead = row.outcomeRole !== "" ? [number, icon, slot] : [number, icon];
             const tag = {

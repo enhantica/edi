@@ -5,6 +5,7 @@ FT_Get_First_Char/FT_Get_Next_Char enumerate only nonzero glyph mappings.
 Run after app configuration fetched the hash-verified gui-components archive.
 """
 
+import argparse
 import ctypes as ct
 import ctypes.util
 import hashlib
@@ -64,6 +65,9 @@ def read_face(ft, library, path, origin, filename):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base-fonts', type=Path, default=BASE)
+    args = parser.parse_args()
     ft = ct.CDLL(ctypes.util.find_library('freetype'))
     ft.FT_Init_FreeType.argtypes = [ct.POINTER(ct.c_void_p)]
     ft.FT_New_Face.argtypes = [ct.c_void_p, ct.c_char_p, ct.c_long, ct.POINTER(ct.c_void_p)]
@@ -82,7 +86,9 @@ def main():
         for family, faces in FACES.items():
             rows[family] = []
             for origin, filename in faces:
-                path = (BASE if origin == 'base' else ROOT / 'app/resources/fonts') / filename
+                path = (
+                    args.base_fonts if origin == 'base' else ROOT / 'app/resources/fonts'
+                ) / filename
                 rows[family].append(read_face(ft, library, path, origin, filename))
     finally:
         ft.FT_Done_FreeType(library)

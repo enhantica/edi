@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 
 def _repo_root() -> Path:
@@ -25,6 +29,7 @@ def _repo_root() -> Path:
 
 ROOT = _repo_root()
 TESTS = ROOT / 'tests'
+LICENCE_MODULE = 'tests/system/py/test_distribution_licences.py'
 CONDITION_FIELDS = {
     'status',
     'window_utc',
@@ -340,9 +345,138 @@ def _partition_transport(groups, omitted):
     return result
 
 
+def _assert_nightly_inclusion(switch, active):
+    # Include literals from the switch so a newly named event cannot escape the check.
+    events = {'pull_request', 'push', 'schedule', 'workflow_dispatch', 'other-event'}
+    events.update(re.findall(r"['\"]([^'\"]+)['\"]", str(switch)))
+    for platform in ('Linux', 'macOS'):
+        expression = str(switch).replace('matrix.platform', repr(platform))
+        for event in sorted(events):
+            for core_only in (False, True):
+                included = active({'if': expression}, event, core_only=core_only)
+                expected = event == 'schedule' or (event == 'workflow_dispatch' and not core_only)
+                assert included is expected, (
+                    'Nightly app builders run only on schedules and full manual runs; '
+                    'PR, push, core-only manual and every other event exclude them'
+                )
+
+
+LICENCE_ROUTES = {
+    'app': ('desktop,python,cli', 'desktop or python or cli', 'pixi run -e app app-build'),
+    'app-wasm': ('web', 'web', 'pixi run -e app --skip-deps wasm-build'),
+}
+
+
+def _licence_commands(job, surfaces, selector):
+    stage = 'pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py'
+    check = 'pixi run --skip-deps python -m pytest ' + LICENCE_MODULE
+    commands = [shlex.split(step.get('run', '')) for step in job['steps']]
+    return commands, [
+        shlex.split(stage) + ['--surfaces', surfaces],
+        shlex.split(check) + ['-k', selector],
+    ]
+
+
+def _assert_licence_delivery(jobs, active):
+    for name, (surfaces, selector, build) in LICENCE_ROUTES.items():
+        job = jobs.get(name)
+        assert job and not job.get('continue-on-error'), (
+            'Delegated licence checks require both mandatory staged-artifact jobs'
+        )
+        commands, delivery = _licence_commands(job, surfaces, selector)
+        required = [['pixi', 'run', 'core-build'], build.split(), *delivery]
+        positions = []
+        for tokens in required:
+            assert commands.count(tokens) == 1, (
+                'Delegated licence checks retain every actual build, staging and consumer command'
+            )
+            positions.append(commands.index(tokens))
+        assert positions == sorted(positions), (
+            'Delegated licence checks build and stage the real artifacts before consuming them'
+        )
+        for event in ('push', 'schedule', 'workflow_dispatch'):
+            for core_state in ('success', 'failure'):
+                context = {'states': {'changes': 'success', 'core': core_state}}
+                assert active(job, event, **context), (
+                    'Delegated licence checks remain reachable on main, nightly '
+                    'and full manual runs'
+                )
+                _assert_licence_steps(job, positions, name, event, context, active)
+
+
+def _assert_licence_steps(job, positions, name, event, context, active):
+    for index in positions:
+        step = job['steps'][index]
+        assert not step.get('continue-on-error'), (
+            'Delegated licence checks cannot forgive a failed producer or consumer'
+        )
+        if index in positions[-2:]:
+            condition = str(step.get('if', True))
+            for platform in ('Linux', 'macOS'):
+                platform_step = {
+                    **step,
+                    'if': condition.replace('matrix.platform', repr(platform)),
+                }
+                expected = name == 'app-wasm' or platform == 'Linux'
+                assert active(platform_step, event, **context) is expected, (
+                    'Delegated licence staging and checks execute after preceding '
+                    'failures on their declared build platform'
+                )
+
+
+def _assert_licence_delivery_controls(jobs, active):
+    for name in LICENCE_ROUTES:
+        for mutation in (
+            'missing-job',
+            'missing-build',
+            'missing-stage',
+            'missing-check',
+            'order',
+            'job-off',
+            'stage-off',
+            'check-off',
+            'job-optional',
+            'stage-optional',
+            'check-optional',
+            'surfaces',
+            'selector',
+            'platform',
+        ):
+            changed = copy.deepcopy(jobs)
+            job = changed[name]
+            stage, check = [
+                next(step for step in job['steps'] if fragment in step.get('run', ''))
+                for fragment in ('distribution_licences/stage.py', 'pytest ' + LICENCE_MODULE)
+            ]
+            if mutation == 'missing-job':
+                del changed[name]
+            elif mutation == 'missing-build':
+                job['steps'].remove(
+                    next(
+                        step for step in job['steps'] if step.get('run') == LICENCE_ROUTES[name][2]
+                    )
+                )
+            elif mutation in {'missing-stage', 'missing-check'}:
+                job['steps'].remove(stage if mutation == 'missing-stage' else check)
+            elif mutation == 'order':
+                job['steps'].remove(stage)
+                job['steps'].append(stage)
+            elif mutation == 'surfaces':
+                stage['run'] = stage['run'].replace('--surfaces ', '--surfaces invalid,')
+            elif mutation == 'selector':
+                check['run'] += ' -k desktop'
+            elif mutation == 'platform':
+                stage['if'] = "${{ !cancelled() && matrix.platform == 'macOS' }}"
+            else:
+                target = {'job': job, 'stage': stage, 'check': check}[mutation.split('-')[0]]
+                target[
+                    'if' if mutation.endswith('-off') else 'continue-on-error'
+                ] = not mutation.endswith('-off')
+            with pytest.raises(AssertionError, match='Delegated licence'):
+                _assert_licence_delivery(changed, active)
+
+
 def _assert_platform_nightly_partition(groups, tasks, jobs, active):
-    # The app builders run exclusively on the nightly schedule, on both platforms.
-    # Every other event keeps the full tier with precisely the declared omissions.
     nightly_paths = [
         'tests/system/py/test_scan_app_execution.py',
         'tests/system/py/test_scan_accident_paths.py',
@@ -359,35 +493,30 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
     ]
     assert len(parts) == 1, 'every system part invokes one required production partition runner'
     switch = parts[0]['env']['EDI_RUN_NIGHTLY_ONLY']
-    for platform in ('Linux', 'macOS'):
-        for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-            expression = str(switch).replace('matrix.platform', repr(platform))
-            included = active({'if': expression}, event)
-            omitted = not included
-            assert included is (event == 'schedule'), (
-                'Only the nightly schedule includes private app-builder files on either platform'
-            )
-            result = _partition_transport(groups, omitted)
-            ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
-            assert json.loads(result.stdout) == [
-                '-m',
-                'pytest',
-                'tests/system',
-                '-q',
-                *ignores,
-                '--splits',
-                '3',
-                '--group',
-                '1',
-                '--splitting-algorithm',
-                'least_duration',
-                '--durations-path',
-                'build/test-durations-1.json',
-                '--store-durations',
-            ], (
-                'Production partitions retain the complete tier '
-                'with exactly the declared off-schedule omissions'
-            )
+    _assert_nightly_inclusion(switch, active)
+    for omitted in (False, True):
+        result = _partition_transport(groups, omitted)
+        ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
+        ignores.append('--ignore=' + LICENCE_MODULE)
+        assert json.loads(result.stdout) == [
+            '-m',
+            'pytest',
+            'tests/system',
+            '-q',
+            *ignores,
+            '--splits',
+            '3',
+            '--group',
+            '1',
+            '--splitting-algorithm',
+            'least_duration',
+            '--durations-path',
+            'build/test-durations-1.json',
+            '--store-durations',
+        ], (
+            'Production partitions retain the complete tier '
+            'with exactly the nightly omissions and the staged-artifact licence delegation'
+        )
 
     assert tasks['nightly-only-tests']['cmd'] == [
         'python',
@@ -495,14 +624,16 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
                 'system partitioning retains the complete duration-based split'
             )
         _assert_platform_nightly_partition(groups, tasks, jobs, active)
+        _assert_licence_delivery(jobs, active)
+        _assert_licence_delivery_controls(jobs, active)
         for name in ('core', 'system'):
             assert_core_failure_reporting(jobs[name])
             for platform in ('linux-64', 'osx-arm64'):
                 public_build_boundary(jobs, name, platform)
             for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-                assert active(jobs[name], event, states={'changes': 'success'}), (
-                    'both CI cadences must execute every declared core and system part'
-                )
+                assert active(jobs[name], event, states={'changes': 'success'}) == (
+                    name == 'core' or event != 'pull_request'
+                ), 'PRs execute core; full events also execute every system part'
         durations = jobs['system-durations']
         assert (
             durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'

@@ -3,6 +3,8 @@
 # the crysta corpus authority; tools/testing/fit_policy.py validates both before admitting a fit.
 schema: 1
 sites:
+  - file: tests/system/py/test_catalogue_descent.py
+    case: lam7o3-p021
   - file: tests/system/py/test_c11_t43_sequential_surfaces.py
     case: cosio-d20-scan-3f
   - file: tests/system/py/test_c11_t43_rejection_classes.py
@@ -67,6 +69,10 @@ sites:
   # : the same private LiF physical-domain vehicle, extended to
   # positive wavelength, numerical cell admission and all factory readers.
   - file: tests/integration/py/test_e05_t1_metric_admission.py
+    case: lif-xray-s1
+
+  # The documented LiF model extends the same corpus family with doublet absorption.
+  - file: tests/system/py/test_lif_fast_descent_rounding.py
     case: lif-xray-s1
 
   - file: tests/system/py/test_multiphase.py
@@ -156,6 +162,9 @@ sites:
     case: cosio-d20-scan-3f
     why: Core producer fits only the disposable physical copies verified by its owning generated-output gate.
 
+  - file: tests/system/py/test_scan_output_aliases.py
+    case: multiphase-scales
+
   - file: tests/system/py/test_doublet_fit_anchors.py
     case: multiphase-scales
     why: Active-graph variants assert Bragg dilation admission only, with immediate cancellation and no numerical fitted-value oracle.
@@ -163,3 +172,46 @@ sites:
   - file: tests/system/py/test_positional_trial_domains.py
     case: multiphase-scales
     why: Authored coordinate-dependent domains and drive-only pattern inputs exercise real single and joint fit rejection; no fitted number supplies a correctness oracle.
+  - file: tests/integration/py/test_e05_t1_fit_result.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_background_estimate_settings_cli.py
+    case: lbco-hrpt-s2
+
+  - file: tests/system/py/test_background_estimate_lifecycle_cli.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_lifecycle_scan.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_relation_order.py
+    case: lbco-hrpt-s2
+    why: Disposable related-model projects compare stale targets with explicit relation application; one iteration only, with no fitted-value oracle.
+    assertion_feed: Automatic point equality after declared and symmetry relations, with a nonzero model, across every calculate and fit entry.
+    audit: 2026-10-20; the Python fit and CLI fit helpers reach actual public fitting entries.
+
+  - file: tests/integration/py/test_background_estimate_fitted_baseline.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/system/py/test_background_estimate_fitted_baseline_cli.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/integration/py/test_background_estimate_review3.py
+    case: cosio-d20-s4
+
+  - file: tests/system/py/test_background_estimate_review3_cli.py
+    case: cosio-d20-s4
+
+  - file: tests/integration/py/test_single_crystal_reader_fit.py
+    case: single-crystal-cwl-pr2nio4-basic

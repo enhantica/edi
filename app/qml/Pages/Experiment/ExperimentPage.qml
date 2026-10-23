@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -16,6 +17,8 @@ WorkflowPage {
 
     readonly property ProjectViewModel project: Session.project
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
+    readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -27,13 +30,17 @@ WorkflowPage {
             "linked_structure": linkedStructureContent,
             "excluded_region": excludedRegionsContent,
             "absorption": absorptionContent,
+            "extinction": extinctionContent,
             "preferred_orientation": preferredOrientationContent,
             "scattering_source": scatteringSourceContent,
-            "refln": reflectionsContent
+            "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? singleCrystalReflectionsContent : reflectionsContent
         })
+    // The Extras column, so a single crystal's reflection table can take the room left under the groups above it.
+    property Flickable extrasColumn: null
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
-        "peak": peakExtrasContent
+        "peak": peakExtrasContent,
+        "background": backgroundExtrasContent
     })
 
     pageName: "experiment"
@@ -43,13 +50,36 @@ WorkflowPage {
             objectName: "mainArea.experiment.tab.chart"
             // The view's name, text only (edi ADR-0017 §2).
             text: qsTr("Pattern")
+        },
+        // A scan's or a joint fit's patterns, stacked and as a map, as on the Analysis page and with its settings, so
+        // the data can be looked at before any fit (edi ADR-0041; the owner, 2026-10-22).
+        IconTabButton {
+            objectName: "mainArea.experiment.tab.stacked"
+            text: qsTr("Stacked")
+            enabled: page.patternViews
+        },
+        IconTabButton {
+            objectName: "mainArea.experiment.tab.map"
+            text: qsTr("Map")
+            enabled: page.patternViews
         }
     ]
     mainItems: [
         ProjectPatternChart {
             id: chartView
-            experiment: page.experiment
-            settingsPage: "experiment"
+            experiment: page.project ? page.project.currentExperiment : null
+            axisProject: page.project
+            settingsPage: "pattern"
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        ScanViewChart {
+            project: page.project
+            mode: "stacked"
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        ScanViewChart {
+            project: page.project
+            mode: "map"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
@@ -71,20 +101,18 @@ WorkflowPage {
     }
     extrasItem: Component {
         EaComponents.SideBarColumn {
+            id: extrasColumn
+            Binding {
+                target: page
+                property: "extrasColumn"
+                value: extrasColumn
+            }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
                     shownTier: "Extras"
                     contents: page.extrasContents
                 }
-            }
-        }
-    }
-    // The page's view options (edi ADR-0031 §2): its chart's y scale and x axis.
-    settingsItem: Component {
-        EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "experiment"
             }
         }
     }
@@ -127,6 +155,35 @@ WorkflowPage {
         }
     }
     Component {
+        id: singleCrystalReflectionsContent
+        SingleCrystalTable {
+            id: reflectionTable
+
+            // From the column's height and where the table starts in it, never from the table's own height, so a
+            // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
+            // Set after the column has laid out: the table's place is read, not bound.
+            function place() {
+                const column = page.extrasColumn;
+                if (!column || !column.contentItem)
+                    return;
+                const top = mapToItem(column.contentItem, 0, 0).y;
+                spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
+            }
+
+            experiment: page.experiment
+            Component.onCompleted: Qt.callLater(place)
+            Connections {
+                target: page.extrasColumn
+                function onHeightChanged() {
+                    Qt.callLater(reflectionTable.place);
+                }
+                function onContentHeightChanged() {
+                    Qt.callLater(reflectionTable.place);
+                }
+            }
+        }
+    }
+    Component {
         id: reflectionsContent
         ReflectionsGroup {
             experiment: page.experiment
@@ -135,6 +192,12 @@ WorkflowPage {
     Component {
         id: peakExtrasContent
         PeakExtrasGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: backgroundExtrasContent
+        BackgroundExtrasGroup {
             experiment: page.experiment
         }
     }
@@ -160,6 +223,12 @@ WorkflowPage {
     Component {
         id: absorptionContent
         AbsorptionGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: extinctionContent
+        ExtinctionGroup {
             experiment: page.experiment
         }
     }

@@ -141,6 +141,14 @@ def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: P
     first = tmp_path / 'first'
     second_save = tmp_path / 'second'
     project.save_as(first)
+    assert _triplet(project.experiments[0].linked_structures['demo_two'].scale) == (
+        0.38,
+        0.03,
+        True,
+    ), 'Save adopts the IUCr rounding of 0.375 +/- 0.025 without changing the free flag'
+    assert 'demo_two 0.38(3)' in (first / 'experiments/bank_a.edi').read_text(), (
+        'The phase scale writes IUCr half-away value rounding and upward uncertainty rounding'
+    )
     restored = edi.Project.load(first)
     assert set(restored.structures.keys()) == {'demo', 'demo_two'}, (
         'Saving several structures must retain every separately keyed structure'
@@ -164,8 +172,8 @@ def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: P
             'Each bank must retain both linked structures through project loading'
         )
         assert _triplet(links['demo_two'].scale) == (
-            0.375 + index,
-            0.025 if index == 0 else 0.0,
+            0.38 if index == 0 else 1.375,
+            0.03 if index == 0 else 0.0,
             index == 0,
         ), 'Each bank phase scale must retain its own value, uncertainty and free flag'
         assert links['demo_two'].enabled == (index == 0), (

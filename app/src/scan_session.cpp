@@ -19,6 +19,7 @@
 #include <string_view>
 
 #include "background.hpp"
+#include "crysta/project_output.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -27,6 +28,13 @@ namespace {
 namespace fs = std::filesystem;
 
 fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
+
+// The scan's files are written into the project's own analysis/ folder: a link standing at it, or at its set-aside
+// folder, is first replaced by a folder of the project's own, so nothing behind the link is written.
+void own_analysis_dir(const edi::Project& project) {
+    crysta::output::own_folder(analysis_dir(project), fs::path(project.path));
+    crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", fs::path(project.path));
+}
 
 const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
 constexpr int kResultFileCount = 4;
@@ -61,31 +69,15 @@ std::optional<std::string> read_file(const fs::path& path) {
     return bytes;
 }
 
-// Writes `text` to `path` whole, through a sibling that is renamed over it; or removes `path` for nullopt.
+// Writes `text` to `path` whole, through a temporary renamed over it; or removes `path` for nullopt. Scan files are
+// project output (ADR-0039) and live in <project>/analysis/.
 void put_file(const fs::path& path, const std::optional<std::string>& text) {
-    std::error_code error;
+    const std::string root = path.parent_path().parent_path().string();
     if (!text) {
-        fs::remove(path, error);
-        if (error) {
-            throw std::runtime_error("cannot remove " + path.string() + ": " + error.message());
-        }
+        crysta::output::remove_file(root, path.string());
         return;
     }
-    const fs::path staged = path.string() + ".edi-staged";
-    {
-        std::ofstream output(staged, std::ios::binary | std::ios::trunc);
-        output << *text;
-        output.close();
-        if (!output) {
-            fs::remove(staged, error);
-            throw std::runtime_error("cannot write " + staged.string());
-        }
-    }
-    fs::rename(staged, path, error);
-    if (error) {
-        fs::remove(staged, error);
-        throw std::runtime_error("cannot replace " + path.string());
-    }
+    crysta::output::replace_file(root, path.string(), *text);
 }
 
 std::vector<std::string> split(const std::string& line) {
@@ -323,7 +315,7 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
         object.insert(QStringLiteral("seconds"), run.seconds);
     }
     try {
-        fs::create_directories(analysis_dir(project));
+        own_analysis_dir(project);
         put_file(analysis_dir(project) / "scan-run.json", QJsonDocument(object).toJson().toStdString());
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
@@ -412,7 +404,7 @@ void move_file(const fs::path& from, const fs::path& to) {
     if (!fs::exists(from, error)) {
         throw std::runtime_error("cannot move " + from.string() + ": it is not there");
     }
-    fs::rename(from, to, error);
+    crysta::output::rename(from, to, error);
     if (error) {
         throw std::runtime_error("cannot move " + from.string() + " to " + to.string() + ": " + error.message());
     }
@@ -423,7 +415,7 @@ void move_file(const fs::path& from, const fs::path& to) {
 void set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside,
                std::vector<int>& moved) {
     const fs::path directory = analysis_dir(project);
-    fs::create_directories(aside);
+    crysta::output::own_folder(aside, fs::path(project.path));
     for (int which = 0; which < kResultFileCount; ++which) {
         if (*slot(present, which)) {
             move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
@@ -445,9 +437,18 @@ bool move_back(const edi::Project& project, const fs::path& aside, const std::ve
     return all;
 }
 
+// A set-aside folder that cannot be removed stays where it is: its name is never taken again (fresh_name), so nothing
+// is written into it later.
 void drop_set_aside(const fs::path& aside) {
-    std::error_code ignored;
-    fs::remove_all(aside, ignored);
+    std::error_code error;
+    (void)crysta::output::remove_all(aside, error);
+}
+
+// A staged file that cannot be removed stays: the next write at its name removes it first, or refuses
+// (write_temporary_file), so it is never written through.
+void drop_staged(const fs::path& directory, int which) {
+    std::error_code error;
+    (void)crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), error);
 }
 
 QString kept_aside(const fs::path& aside, const std::exception& refusal) {
@@ -471,6 +472,7 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path aside = set_aside_dir(project, fresh_name("taken"));
     std::vector<int> moved;
     try {
+        own_analysis_dir(project);
         set_aside(project, taken, aside, moved);
     } catch (const std::exception& refusal) {
         if (!move_back(project, aside, moved)) {
@@ -488,7 +490,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     const fs::path directory = analysis_dir(project);
     Files current;
     try {
-        fs::create_directories(directory);
+        own_analysis_dir(project);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }
@@ -502,10 +504,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
                 const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
-                std::ofstream output(path, std::ios::binary | std::ios::trunc);
-                output << *text;
-                output.close();
-                if (!output) {
+                if (!crysta::output::write_temporary_file(path, *text)) {
                     throw std::runtime_error("cannot write " + path.string());
                 }
                 staged.push_back(which);
@@ -513,8 +512,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         }
     } catch (const std::exception& refusal) {
         for (const int which : staged) {
-            std::error_code ignored;
-            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            drop_staged(directory, which);
         }
         return QString::fromUtf8(refusal.what());
     }
@@ -543,8 +541,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
             return kept_aside(aside, refusal);
         }
         for (const int which : staged) {
-            std::error_code ignored;
-            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            drop_staged(directory, which);
         }
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
@@ -570,6 +567,7 @@ bool ScanSession::runFile(const edi::Project& project, std::optional<std::string
 
 QString ScanSession::putRunFile(const edi::Project& project, const std::optional<std::string>& bytes) {
     try {
+        own_analysis_dir(project);
         put_file(analysis_dir(project) / kResultFiles[2], bytes);
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
@@ -585,7 +583,8 @@ QString ScanSession::swapRunFile(const edi::Project& project, const std::optiona
     std::error_code error;
     const bool present = fs::exists(record, error);
     try {
-        fs::create_directories(aside);
+        own_analysis_dir(project);
+        crysta::output::own_folder(aside, fs::path(project.path));
         if (present) {
             move_file(record, aside / kResultFiles[2]);
         }
@@ -620,6 +619,7 @@ QString ScanSession::restoreRunFile(const edi::Project& project, const std::stri
     const fs::path record = analysis_dir(project) / kResultFiles[2];
     const fs::path aside(kept);
     try {
+        own_analysis_dir(project);
         std::error_code error;
         if (fs::exists(aside / kResultFiles[2], error)) {
             move_file(aside / kResultFiles[2], record);  // replaces the earlier record in one step

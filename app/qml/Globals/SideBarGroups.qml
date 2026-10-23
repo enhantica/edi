@@ -28,8 +28,35 @@ QtObject {
         openStates[key] = open;
     }
 
+    // The column's children in the order it lays them out. A Repeater's delegates are added at the end of the
+    // children and only then moved behind the Repeater, with no change signal, so a group after a Repeater would
+    // stay "not last". The delegates are taken from their Repeater, in its place.
+    function orderedChildren(parent) {
+        const children = [];
+        for (let i = 0; parent && i < parent.children.length; ++i)
+            children.push(parent.children[i]);
+        const repeaters = children.filter(child => typeof child.itemAt === "function" && typeof child.count === "number");
+        const repeated = [];
+        for (const repeater of repeaters) {
+            for (let i = 0; i < repeater.count; ++i)
+                repeated.push(repeater.itemAt(i));
+        }
+        const ordered = [];
+        for (const child of children) {
+            if (repeaters.includes(child)) {
+                for (let i = 0; i < child.count; ++i) {
+                    if (child.itemAt(i) !== null)
+                        ordered.push(child.itemAt(i));
+                }
+            } else if (!repeated.includes(child)) {
+                ordered.push(child);
+            }
+        }
+        return ordered;
+    }
+
     function shownGroups(group) {
-        const siblings = group && group.parent ? group.parent.children : [];
+        const siblings = orderedChildren(group ? group.parent : null);
         const shown = [];
         for (let i = 0; i < siblings.length; ++i) {
             const sibling = siblings[i];

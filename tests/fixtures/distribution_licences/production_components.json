@@ -1,0 +1,91 @@
+{
+  "basis": "Reviewed production inclusions, independent of the dependency overview. A new component needs an inclusion witness here as well as the delivered-file gate. Development tools and design or porting references are not inclusions.",
+  "groups": [
+    {
+      "witness": "core/CMakeLists.txt links the engine; its installed SDK includes the mathematical libraries and platform OpenMP runtime. lib/CMakeLists.txt builds the nanobind extension, including robin-map.",
+      "components": [
+        "crysta",
+        "SLEEF",
+        "Eigen",
+        "libgomp",
+        "llvm-openmp",
+        "nanobind",
+        "robin-map"
+      ]
+    },
+    {
+      "witness": "app/CMakeLists.txt and cmake/EdiGuiBase.cmake link or embed the Qt modules and the shared QML components. The web kit embeds its C/C++ runtime; tools/ci/wasm-build.sh supplies its service worker.",
+      "components": [
+        "Qt",
+        "Qt Graphs",
+        "Qt Quick 3D",
+        "Qt Shader Tools",
+        "EasyScience gui-components",
+        "Emscripten runtime",
+        "coi-serviceworker"
+      ]
+    },
+    {
+      "witness": "data/elements/PROVENANCE.md identifies the original pymatgen element data in the compiled table. A porting project's name is not an original-data notice. Any further data-origin notice needs its own inclusion and licence witness.",
+      "components": [
+        "pymatgen"
+      ]
+    },
+    {
+      "witness": "data/report/vendor contains the actual report JavaScript files. Desktop resources and the delivered web site include these libraries.",
+      "components": [
+        "plotly.js",
+        "three.js"
+      ]
+    },
+    {
+      "witness": "data/colormaps/PROVENANCE.md records the original Crameri cmcrameri 78f02a08, Thyng cmocean 59c35002, Mikhailov Turbo dccf2856, Brewer colorbrewer_schemes 7d135fc4 and Kovesi CET 076eb84b sources. Their RGB tables are compiled from data/colormaps/*.tsv through cmake/edi_core_sources.cmake and core/src/colour_map_data.cpp.in; these original data inclusions require their notices independently of DEPENDENCIES.md.",
+      "components": [
+        "Scientific colour maps",
+        "cmocean",
+        "Turbo",
+        "ColorBrewer",
+        "CET colour maps"
+      ]
+    },
+    {
+      "witness": "The locked native Qt distribution supplies these linked libraries or platform plugins. The actual delivered-file gate remains necessary: this reviewed list is an inclusion ceiling, not proof that a particular package contains a library.",
+      "components": [
+        "ICU",
+        "HarfBuzz",
+        "FreeType",
+        "libpng",
+        "zlib",
+        "PCRE2",
+        "zstd",
+        "Brotli",
+        "OpenSSL",
+        "Expat",
+        "Graphite2",
+        "double-conversion",
+        "libjpeg-turbo",
+        "LibTIFF",
+        "libwebp",
+        "GLib",
+        "D-Bus",
+        "Fontconfig",
+        "libxcb",
+        "libxkbcommon",
+        "Wayland",
+        "libdrm",
+        "libglvnd",
+        "MIT Kerberos"
+      ]
+    },
+    {
+      "witness": "cmake/EdiGuiBase.cmake embeds the interface font resources; the report icon data also contains Font Awesome designs.",
+      "components": [
+        "PT Sans, PT Mono",
+        "Encode Sans",
+        "Noto Sans, Noto Sans Mono",
+        "Baloo 2",
+        "Font Awesome Free"
+      ]
+    }
+  ]
+}

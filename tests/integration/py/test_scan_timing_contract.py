@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.scan_timing.contract import (
+    BASELINE_CRYSTA,
     RESUME_FILES,
     compare,
     parse_app_timings,
@@ -162,11 +163,15 @@ def authored_receipt():
     for index, control in enumerate(controls, 1):
         control.update(sequence=index, real_timing_path=True, command_sha256='b' * 64)
     builds = {}
-    for name, source in [('baseline', '2e04556' + '0' * 33), ('fixed', 'c' * 40)]:
+    for name, source in [
+        ('baseline', 'a341b98154b53ea2499213a6c60b87e1371e9ce8'),
+        ('fixed', 'c' * 40),
+    ]:
         builds[name] = {
             'edi_source': source,
             'compiled_edi_source': source,
-            'crysta_source': 'fb153aeb' + '0' * 32,
+            'crysta_source': BASELINE_CRYSTA,
+            'compiled_crysta_source': BASELINE_CRYSTA,
             'command_sha256': 'b' * 64,
             'configuration': {'CMAKE_BUILD_TYPE': 'Release', 'compiler': 'authored'},
             'native_configuration': {'CMAKE_BUILD_TYPE': 'Release', 'compiler': 'authored'},
@@ -276,6 +281,25 @@ def test_physical_results_inventory_rejects_each_population_escape(escape):
         compare(receipt, spec)
 
 
+def reject_baseline_escapes(receipt, spec):
+    baseline = receipt['builds']['baseline']
+    for field, value in [
+        ('edi_source', '2e04556fa042bf15028f20d8452356c90fa29c99'),
+        ('edi_source', 'a341b981'),
+        ('edi_source', baseline['edi_source'] + '0'),
+        ('crysta_source', 'fb153aebaab1' + '0' * 28),
+        ('crysta_source', 'c2b02623'),
+        ('compiled_crysta_source', 'fb153aeb' + '0' * 32),
+        ('compiled_crysta_source', None),
+    ]:
+        changed = copy.deepcopy(receipt)
+        changed['builds']['baseline'][field] = value
+        if field == 'edi_source':
+            changed['builds']['baseline']['compiled_edi_source'] = value
+        with pytest.raises(ValueError, match='fork point'):
+            compare(changed, spec)
+
+
 @pytest.mark.parametrize(
     'escape',
     [
@@ -304,7 +328,8 @@ def test_provenance_ordering_and_negative_controls_fail_closed(escape):
     if escape == 'debug':
         receipt['builds']['fixed']['configuration']['CMAKE_BUILD_TYPE'] = 'Debug'
     if escape == 'wrong-baseline':
-        receipt['builds']['baseline']['edi_source'] = 'wrong'
+        reject_baseline_escapes(receipt, spec)
+        return
     if escape == 'wrong-compiled-source':
         receipt['builds']['fixed']['compiled_edi_source'] = 'stale'
     if escape == 'missing-control':

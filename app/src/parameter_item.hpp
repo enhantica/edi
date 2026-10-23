@@ -29,6 +29,9 @@ class ParameterItem : public QObject {
     // False for a fixed setting (the Berar-Baldinozzi limit angle): its value is edited, it is never fitted,
     // so a page shows no fit toggle and the Analysis table does not list it.
     Q_PROPERTY(bool fittable READ isFittable CONSTANT)
+    // True for an auto-mode background's point intensity or term coefficient (ADR-0040): the estimate owns the value,
+    // so a page shows it locked and a value write refuses; it can still be freed or fixed.
+    Q_PROPERTY(bool estimated READ isEstimated NOTIFY estimatedChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QString path READ path CONSTANT)
     Q_PROPERTY(QString uid READ uid CONSTANT)
@@ -72,6 +75,9 @@ class ParameterItem : public QObject {
     // Set by the registry at each rebuild and publish: a space-group edit changes it while the parameter
     // stays shown.
     void setRefinable(bool refinable);
+    bool isEstimated() const { return estimated_; }
+    // Set by the registry at each publish, as the mode changes while the parameter stays shown.
+    void setEstimated(bool estimated);
     QString lastError() const { return last_error_; }
     QString path() const { return path_; }
     QString uid() const { return uid_; }
@@ -115,6 +121,7 @@ class ParameterItem : public QObject {
     void hasUncertaintyChanged();
     void freeChanged();
     void refinableChanged();
+    void estimatedChanged();
     void lastErrorChanged();
     void blockIndexChanged();
     void elementSymbolChanged();
@@ -132,6 +139,7 @@ class ParameterItem : public QObject {
     bool free_;
     bool refinable_;
     bool fittable_;
+    bool estimated_ = false;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
         short_name_, category_icon_, element_symbol_;

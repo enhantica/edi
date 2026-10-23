@@ -8,6 +8,7 @@ import json
 import math
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -38,8 +39,20 @@ def selection_probe(tmp_path_factory):
         .replace('// PRODUCTION_REBUILD', source[start:end])
     )
     executable = directory / 'probe'
+    artifact = Path(sys.modules['edi._edi'].__file__).resolve().parents[2]
+    library = artifact / 'core/libedi_core.a'
+    assert library.is_file(), 'The app selection witness requires the matching built core archive'
     built = subprocess.run(
-        [compiler, '-std=c++20', '-O0', str(cpp), '-o', str(executable)],
+        [
+            compiler,
+            '-std=c++20',
+            '-O0',
+            '-I' + str(ROOT / 'core/include'),
+            str(cpp),
+            str(library),
+            '-o',
+            str(executable),
+        ],
         capture_output=True,
         text=True,
         timeout=30,

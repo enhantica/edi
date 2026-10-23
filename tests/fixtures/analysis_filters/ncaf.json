@@ -1,0 +1,2154 @@
+[
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "length_a",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "Ca1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "Ca1",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "Ca1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "Al1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "Al1",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "Al1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "Na1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "Na1",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "Na1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "F1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "F1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "F1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "F1",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "F1",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "F2",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "F2",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "F2",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "F2",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "F2",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_x",
+    "label": "F3",
+    "free": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "occupancy",
+    "label": "F3",
+    "free": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "adp_iso",
+    "label": "F3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "rise_alpha_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "rise_alpha_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "decay_beta_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "decay_beta_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_gauss_sigma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_gauss_sigma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_gauss_sigma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_gauss_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_gauss_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_lorentz_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "broad_lorentz_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "instrument",
+    "name": "setup_twotheta_bank",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "instrument",
+    "name": "calib_d_to_tof_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "instrument",
+    "name": "calib_d_to_tof_linear",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "instrument",
+    "name": "calib_d_to_tof_quadratic",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "instrument",
+    "name": "calib_d_to_tof_reciprocal",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "absorption",
+    "name": "abscor1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "absorption",
+    "name": "abscor2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "ncaf",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "1",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "2",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "4",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "5",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "6",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "7",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "8",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "9",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "10",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "11",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "12",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "13",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "14",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "15",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "16",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "17",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "18",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "19",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "20",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "21",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "22",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "23",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "24",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "25",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "26",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "27",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "28",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "29",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "30",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "31",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "32",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "33",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "34",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "35",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "intensity",
+    "label": "36",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "rise_alpha_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "rise_alpha_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "decay_beta_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "decay_beta_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_gauss_sigma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_gauss_sigma_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_gauss_sigma_2",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_gauss_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_gauss_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_lorentz_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "broad_lorentz_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "instrument",
+    "name": "setup_twotheta_bank",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "instrument",
+    "name": "calib_d_to_tof_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "instrument",
+    "name": "calib_d_to_tof_linear",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "instrument",
+    "name": "calib_d_to_tof_quadratic",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "instrument",
+    "name": "calib_d_to_tof_reciprocal",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "absorption",
+    "name": "abscor1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "absorption",
+    "name": "abscor2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "ncaf",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "1",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "2",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "4",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "5",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "6",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "7",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "8",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "9",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "10",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "11",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "12",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "13",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "14",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "15",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "16",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "17",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "18",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "19",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "20",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "21",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "intensity",
+    "label": "22",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "rise_alpha_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "rise_alpha_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "decay_beta_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "decay_beta_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_gauss_sigma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_gauss_sigma_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_gauss_sigma_2",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_gauss_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_gauss_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_lorentz_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "broad_lorentz_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "instrument",
+    "name": "setup_twotheta_bank",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "instrument",
+    "name": "calib_d_to_tof_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "instrument",
+    "name": "calib_d_to_tof_linear",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "instrument",
+    "name": "calib_d_to_tof_quadratic",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "instrument",
+    "name": "calib_d_to_tof_reciprocal",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "absorption",
+    "name": "abscor1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "absorption",
+    "name": "abscor2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "ncaf",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "1",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "2",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "4",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "5",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "6",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "7",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "8",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "9",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "10",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "11",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "12",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "13",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "14",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "15",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "16",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "17",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "18",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "19",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "20",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "21",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "intensity",
+    "label": "22",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "rise_alpha_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "rise_alpha_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "decay_beta_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "decay_beta_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_gauss_sigma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_gauss_sigma_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_gauss_sigma_2",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_gauss_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_gauss_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_lorentz_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "broad_lorentz_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "instrument",
+    "name": "setup_twotheta_bank",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "instrument",
+    "name": "calib_d_to_tof_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "instrument",
+    "name": "calib_d_to_tof_linear",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "instrument",
+    "name": "calib_d_to_tof_quadratic",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "instrument",
+    "name": "calib_d_to_tof_reciprocal",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "absorption",
+    "name": "abscor1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "absorption",
+    "name": "abscor2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "ncaf",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "1",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "2",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "4",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "5",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "6",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "7",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "8",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "9",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "10",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "11",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "12",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "13",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "14",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "15",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "16",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "17",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "18",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "19",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "20",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "21",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "22",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "23",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "24",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "25",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "26",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "27",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "intensity",
+    "label": "28",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "rise_alpha_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "rise_alpha_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "decay_beta_0",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "decay_beta_1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_gauss_sigma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_gauss_sigma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_gauss_sigma_2",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_gauss_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_gauss_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_0",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_1",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_lorentz_gamma_2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_lorentz_size",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "broad_lorentz_strain",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "instrument",
+    "name": "setup_twotheta_bank",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "instrument",
+    "name": "calib_d_to_tof_offset",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "instrument",
+    "name": "calib_d_to_tof_linear",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "instrument",
+    "name": "calib_d_to_tof_quadratic",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "instrument",
+    "name": "calib_d_to_tof_reciprocal",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "absorption",
+    "name": "abscor1",
+    "label": "",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "absorption",
+    "name": "abscor2",
+    "label": "",
+    "free": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "linked_structure",
+    "name": "scale",
+    "label": "ncaf",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "1",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "2",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "3",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "4",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "5",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "6",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "7",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "8",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "9",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "10",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "11",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "12",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "13",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "14",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "15",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "16",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "17",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "18",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "19",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "20",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "21",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "22",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "23",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "24",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "25",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "26",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "27",
+    "free": true
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "intensity",
+    "label": "28",
+    "free": true
+  }
+]

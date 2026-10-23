@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
-"""Every non-ASCII character the app can display, and the bundled font that draws it.
+r"""Every non-ASCII character the app can display, and the bundled font that draws it.
 
 Every character the app shows comes from a bundled font, at the face it is drawn with; none comes
 from the platform (edi ADR-0033). The app draws text in PT Sans and PT Mono, with the bundled Noto
@@ -10,8 +10,9 @@ of the chain has sends Qt to the system's fonts; on macOS that search goes throu
 logs "Failed to create FreeType font engine". Legend marks are drawn shapes, not characters.
 
 The census reads the string literals of the app's QML and C++ and of the core (whose messages
-and units the app shows), with their escapes decoded. For each character it records where it is
-used, the font chain that draws it and the font of that chain that has it. --write regenerates
+and units the app shows), with their escapes decoded: \u and \U, UTF-8 bytes written as \x,
+and HTML numeric references. For each character it records where it is used, the font chain that
+draws it and the font of that chain that has it. --write regenerates
 data/display-glyphs.json from the sources and the fonts, failing on a character no font of its
 chain has. --check scans the sources again and fails when a character or a site is not in the
 census, or when a character is in no font of its chain. Each character's row also records the
@@ -70,12 +71,17 @@ SITE_FONTS = {
     # The fit's change arrow, split out of the status text and drawn by its own Text.
     ('app/qml/Components/StatusBar.qml', '\u2192'): ('Encode Sans',),
     ('app/src/fit_view_model.cpp', '\u2192'): ('Encode Sans',),
+    # The arrow between two values, drawn in Encode Sans while the digits keep the value's font.
+    ('app/qml/Components/DigitText.qml', '\u2192'): ('Encode Sans',),
 }
-# The sources whose strings never reach the app's pages: the terminal report and progress line.
-NOT_SHOWN = {'core/src/report.cpp'}
+# The sources whose strings never reach the app's pages: the terminal report and progress line,
+# and the JSON writer, whose line separators are escapes, never shown.
+NOT_SHOWN = {'core/src/report.cpp', 'core/src/json.cpp'}
 
 LITERAL = re.compile(r'"(?:[^"\\\n]|\\.)*"' + r"|'(?:[^'\\\n]|\\.)*'" + r'|`(?:[^`\\]|\\.)*`')
 ESCAPE = re.compile(r'\\u([0-9a-fA-F]{4})|\\U([0-9a-fA-F]{8})')
+BYTES = re.compile(r'(?:\\x[0-9a-fA-F]{2})+')
+ENTITY = re.compile(r'&#(?:x([0-9a-fA-F]+)|([0-9]+));')
 QCHAR = re.compile(r'QChar\(\s*0x([0-9a-fA-F]+)\s*\)')
 METRICS = re.compile(r'\b(?:TextMetrics|FontMetrics)\s*\{')
 COPIED_FONT = re.compile(r'^\s*font:\s*([\w.]+\.font)\s*$', re.MULTILINE)
@@ -109,9 +115,19 @@ def strip_comments(text: str) -> str:
     return ''.join(out)
 
 
+def utf8(run: str) -> str:
+    r"""A run of \x escapes as the UTF-8 bytes the compiler stores; as written if not UTF-8."""
+    try:
+        return bytes(int(run[i + 2 : i + 4], 16) for i in range(0, len(run), 4)).decode('utf-8')
+    except UnicodeDecodeError:
+        return run
+
+
 def decoded(literal: str) -> str:
-    r"""A literal's characters with its \u and \U escapes decoded."""
-    return ESCAPE.sub(lambda m: chr(int(m.group(1) or m.group(2), 16)), literal)
+    r"""A literal's characters, its \u, \U and \x escapes and HTML numeric references decoded."""
+    text = ESCAPE.sub(lambda m: chr(int(m.group(1) or m.group(2), 16)), literal)
+    text = BYTES.sub(lambda m: utf8(m.group(0)), text)
+    return ENTITY.sub(lambda m: chr(int(m.group(1), 16) if m.group(1) else int(m.group(2))), text)
 
 
 def fonts_of(relative: str, ch: str) -> tuple[str, ...]:

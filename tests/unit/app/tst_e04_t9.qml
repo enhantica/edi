@@ -1,4 +1,5 @@
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -17,6 +18,9 @@ TestCase {
     property var appWindow
     property var chart
     property int savedTheme
+    property string savedAnalysisYScale
+    property string savedPointerMode
+    property string savedExperimentYScale
     Component {
         id: application
         Main {}
@@ -36,7 +40,17 @@ TestCase {
         }
     }
     property var animation
+    property var savedMeasuredStyle
     function init() {
+        savedMeasuredStyle = typeof Preferences.patternMeasuredStyle === "string" ? Preferences.patternMeasuredStyle : null;
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = "linePoints";
+        savedPointerMode = Preferences.patternPointerMode;
+        Preferences.patternPointerMode = "zoom";
+        savedAnalysisYScale = Preferences.analysisYScale;
+        savedExperimentYScale = Preferences.experimentYScale;
+        Preferences.analysisYScale = "linear";
+        Preferences.experimentYScale = "linear";
         savedTheme = Style.Colors.theme;
         Style.Colors.theme = Style.Colors.Themes.LightTheme;
         Session.closeProject();
@@ -45,11 +59,16 @@ TestCase {
         animation = flightControl.createObject(appWindow.contentItem);
     }
     function cleanup() {
+        if (savedMeasuredStyle !== null)
+            Preferences.patternMeasuredStyle = savedMeasuredStyle;
         ChartOracle.disarm();
         animation.destroy();
         Session.closeProject();
         appWindow.destroy();
         Style.Colors.theme = savedTheme;
+        Preferences.patternPointerMode = savedPointerMode;
+        Preferences.analysisYScale = savedAnalysisYScale;
+        Preferences.experimentYScale = savedExperimentYScale;
     }
     function open(path, page) {
         Session.openProject(Probe.repoUrl(path));
@@ -83,6 +102,13 @@ TestCase {
     function maximum(points) {
         return Math.max(...points.filter(p => isFinite(p.y)).map(p => p.y));
     }
+    function approvedPalette() {
+        const catalogue = JSON.parse(Probe.readFile("tests/fixtures/approved_palettes/colours.json")).palettes;
+        const normalize = name => name.toLowerCase().replace(/[^a-z]/g, "").replace(/^edi/, "");
+        const palette = catalogue.find(row => normalize(row.name) === normalize(Approved.getSchemes(Preferences).patterns));
+        verify(palette !== undefined, "The chart expectation comes from the independently approved palette coordinates");
+        return palette;
+    }
     function corpusPages() {
         const result = [];
         ChartOracle.datasets().forEach(row => ["experiment", "analysis"].forEach(page => result.push({
@@ -115,7 +141,18 @@ TestCase {
         });
         const reset = object("chart.toolbar.reset");
         compare(reset.fontIcon, "home", " owner chart item 2 uses the Home reset icon");
-        compare(object("chart.title.residual").text, "Residual", " owner chart item 4 names the drawn residual axis Residual");
+        const residualTitle = object("chart.title.residual").text;
+        compare(residualTitle.replace(/<[^>]*>/g, ""), "meas − calc", "The residual axis names the measured-minus-calculated values");
+        const colouredOperands = [];
+        const operandPattern = /<font color="([^"]+)">([^<]+)<\/font>/g;
+        let operand;
+        while ((operand = operandPattern.exec(residualTitle)) !== null)
+            colouredOperands.push(operand);
+        compare(colouredOperands.length, 2, "Both residual-title operands carry their series colours");
+        compare(colouredOperands[0][2], "meas", "The residual title starts with the measured operand");
+        compare(colouredOperands[1][2], "calc", "The residual title ends with the calculated operand");
+        compare(colouredOperands[0][1].toLowerCase(), String(object("chart.series.meas").color).toLowerCase(), "The measured residual-title operand uses the measured series colour");
+        compare(colouredOperands[1][1].toLowerCase(), String(object("chart.series.calc").color).toLowerCase(), "The calculated residual-title operand uses the calculated series colour");
         verify(chart.topMargin > 0, " owner chart margins keep a positive gap around the toolbar and x title");
         compare(chart.bottomMargin, chart.topMargin, " owner chart margins reserve the same gap below the x-title band as above the toolbar");
         compare(chart.toolbarGap, chart.topMargin, " owner chart margins reserve the same gap below and above the toolbar");
@@ -123,7 +160,9 @@ TestCase {
         const main = object("chart.view.main");
         const mainAt = main.mapToItem(chart, 0, 0);
         verify(Math.abs(resetAt.y - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
-        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - chart.toolbarGap) < 1, " owner chart margin is realised between the toolbar button and actual top plot border");
+        const rightInset = chart.width - mainAt.x - main.plotArea.x - main.plotArea.width;
+        verify(rightInset > 0, "The plot's right margin and the matching toolbar gap remain positive");
+        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
         const title = object("chart.title.x");
         // The label is centred in its reserved title band; its normal leading
         // is distinct from the owner's equal margin outside that band.
@@ -137,24 +176,20 @@ TestCase {
         ["legend", "hover", "pan", "zoom", "reset"].forEach(key => {
             const button = object("chart.toolbar." + key);
             const point = button.mapToItem(chart, 0, 0);
-            verify(scaleAt.x > point.x + button.width, " owner y-scale drop-down follows every button at the toolbar's far right");
+            verify(scaleAt.x + scale.width < point.x, "The y-scale drop-down precedes every toolbar button at the far left");
         });
-        verify(object("chart.toolbar.zoom").checked, " I27 box zoom starts active");
+        verify(object("chart.toolbar.zoom").checked, " I27 the explicitly selected shared box-zoom choice is active");
         verify(!object("chart.toolbar.pan").checked, " I27 pan and box zoom exclude each other");
         compare(maximum(ChartOracle.points(object("chart.series.calc"))), expected.maximum, " I18 calculated maximum survives chart decimation");
         verify(object("chart.measured") !== null, " I26 selected measured layer draws uncertainty bars and markers");
         [false, true].forEach(dark => {
             Style.Colors.theme = dark ? Style.Colors.Themes.DarkTheme : Style.Colors.Themes.LightTheme;
-            const colors = dark ? {
-                calc: "#ef9a9a",
-                bkg: "#b0bec5",
-                resid: "#c5e1a5",
-                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), true)).toLowerCase()
-            } : {
-                calc: "#f44336",
-                bkg: "#607d8b",
-                resid: "#8bc34a",
-                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), false)).toLowerCase()
+            const reference = approvedPalette()[dark ? "dark" : "light"];
+            const colors = {
+                calc: reference.total_calculation.toLowerCase(),
+                bkg: reference.background.toLowerCase(),
+                resid: reference.difference.toLowerCase(),
+                meas: reference.measured[0].toLowerCase()
             };
             ["calc", "bkg", "resid", "meas"].forEach(key => tryVerify(() => String(object("chart.series." + key).color).toLowerCase() === colors[key], 2000, " I23 Qt series colors equal independently committed light and dark palettes"));
         });
@@ -206,6 +241,7 @@ TestCase {
         verify(selected !== null && selected.name === "length_a", " O2 requested-state reference is the selected first cell parameter");
         // Keep the pointer down so slider limits stay fixed throughout each burst.
         const baselineLength = selected.value;
+        const calculatedColour = approvedPalette().light.total_calculation;
         ["S1", "S2"].forEach(scenario => {
             const samples = [], calculationBaselines = [];
             for (let sample = 0; sample < 55; ++sample) {
@@ -217,12 +253,16 @@ TestCase {
                 const handle = slider.handle ? slider.handle.width : 0;
                 const x = Math.round(slider.leftPadding + handle / 2 + fraction * (slider.availableWidth - handle));
                 const requested = slider.from + ((x - slider.leftPadding - handle / 2) / (slider.availableWidth - handle)) * (slider.to - slider.from);
+                verify(fraction > 0 && fraction < 1, " O1 both alternating physical targets stay inside the current slider bounds");
+                verify(Math.abs(selected.value - requested) > .05, " O1 each precomputed pointer target differs from the currently selected value");
+                const startX = Math.round(slider.leftPadding + handle / 2 + slider.visualPosition * (slider.availableWidth - handle));
                 const expected = ChartOracle.reference(data.path, requested);
                 verify(ChartOracle.arm(appWindow, chart, expected.maximum), " O2 independent frame observer attaches to actual Qt series and shared axis");
                 verify(ChartOracle.publicationThreadIsGui(Session.project), " I5 observer connects directly to actual publication signal");
                 ChartOracle.start();
 
-                mousePress(slider, x, slider.height / 2);
+                mousePress(slider, startX, slider.height / 2);
+                verify(slider.pressed, " O1 real pointer input grabs the current slider handle before moving it");
                 if (scenario === "S2") {
                     mouseMove(slider, slider.leftPadding + handle / 2 + .3 * (slider.availableWidth - handle), slider.height / 2);
                     mouseMove(slider, slider.leftPadding + handle / 2 + .7 * (slider.availableWidth - handle), slider.height / 2);
@@ -243,7 +283,7 @@ TestCase {
                     calculationBaselines.push(ChartOracle.calculationBaselineMs(data.path, requested));
                 }
                 const row = expected.calc.indexOf(expected.maximum);
-                verify(ChartOracle.chartPixel(appWindow, chart, expected.x[row], expected.maximum, "#F44336"), " O3 grabbed final frame shows the independently requested maximum in calculated-series color");
+                verify(ChartOracle.chartPixel(appWindow, chart, expected.x[row], expected.maximum, calculatedColour), " O3 grabbed final frame shows the independently requested maximum in calculated-series color");
             }
             samples.sort((a, b) => a - b);
             calculationBaselines.sort((a, b) => a - b);
@@ -272,8 +312,7 @@ TestCase {
         const yAxis = object("chart.axis.y"), homeBottom = yAxis.min, homeTop = yAxis.max;
         for (let sample = 0; sample < 55; ++sample) {
             mouseClick(object("chart.toolbar.reset"));
-            tryVerify(() => axis.min === homeLeft && axis.max === homeRight && yAxis.min === homeBottom && yAxis.max === homeTop, 5000,
-                      " O2 S3 reset reaches its endpoint before the next wheel target and timing start");
+            tryVerify(() => axis.min === homeLeft && axis.max === homeRight && yAxis.min === homeBottom && yAxis.max === homeTop, 5000, " O2 S3 reset reaches its endpoint before the next wheel target and timing start");
             const left = axis.min, span = axis.max - left;
             verify(ChartOracle.arm(appWindow, chart, 0, true, left + .05 * span, left + .85 * span), " O2 S3 observer expects independently derived pointer axis ranges");
             ChartOracle.start();
