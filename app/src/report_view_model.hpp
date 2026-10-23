@@ -159,6 +159,9 @@ class ReportViewModel : public QObject {
     // default scheme and the first experiment's correlations, else one built with those, on its first use after a
     // change.
     const edi::ReportModel& judged() const;
+    // The digest of the CIF report the project makes now, on its first use after a change; empty when crysta cannot
+    // make one.
+    const std::string& cifDigest() const;
 
     ProjectViewModel& project_;
     // What the hidden, embedLibraries, writes and fileStem properties last announced.
@@ -177,6 +180,7 @@ class ReportViewModel : public QObject {
     // The options report_ was built with, and judged()'s model when its choices are not the default ones.
     mutable edi::ReportOptions options_;
     mutable std::optional<edi::ReportModel> judged_;
+    mutable std::optional<std::string> cif_digest_;
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 
