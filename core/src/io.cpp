@@ -340,10 +340,22 @@ bool is_tag(const Token& token) {
 
 // Parse a file's single `data_` block. A second `data_` header ends the parse (these files are one
 // block each). Any dangling tag/row (truncation) fails closed. `require_data` is relaxed for the
-// analysis section, which is a headerless STAR body (no `data_` line).
+// analysis section, which is a headerless STAR body (no `data_` line). An older spelling of a name
+// is read as the current one, and a block giving one name in both spellings is refused.
 Block parse_block(const std::string& text, const std::string& where, bool require_data = true) {
     const std::vector<Token> tokens = tokenize(text, where);
     Block block;
+    std::set<std::string> renamed;
+    const auto current = [&renamed](const std::string& tag) {
+        std::string name = detail::current_edi_name(tag);
+        if (name != tag) {
+            renamed.insert(name);
+        }
+        return name;
+    };
+    const auto refuse_both = [&where](const std::string& tag) {
+        fail_syntax(where, "both-spellings", tag + " is given twice, in its current and an older spelling");
+    };
     bool have_data = false;
     std::size_t index = 0;
     const std::size_t size = tokens.size();
@@ -365,7 +377,11 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             std::vector<std::string> tags;
             std::vector<std::vector<std::string>> rows;
             while (index < size && is_tag(tokens[index])) {
-                tags.push_back(tokens[index].text);
+                std::string tag = current(tokens[index].text);
+                if (renamed.contains(tag) && std::ranges::count(tags, tag) > 0) {
+                    refuse_both(tag);
+                }
+                tags.push_back(std::move(tag));
                 ++index;
             }
             if (tags.empty()) {
@@ -385,7 +401,10 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
         } else if (is_tag(token)) {
-            const std::string tag = token.text;
+            const std::string tag = current(token.text);
+            if (renamed.contains(tag) && block.find(tag) != nullptr) {
+                refuse_both(tag);
+            }
             ++index;
             if (index >= size || is_control(tokens[index])) {
                 fail_syntax(where, "tag-without-value", "tag " + tag + " has no value (truncated)");
