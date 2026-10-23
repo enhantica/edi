@@ -1416,15 +1416,39 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
         const crysta::ReflectionFile file = crysta::read_reflection_file(
             path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
-        ReflnDataBase rows;
-        rows.index_h = file.index_h;
-        rows.index_k = file.index_k;
-        rows.index_l = file.index_l;
-        rows.intensity_meas = file.intensity;
-        rows.intensity_meas_su = file.sigma;
-        rows.wavelength = file.wavelength;
-        load.points = rows.size();
-        load.experiment.reflections = std::move(rows);
+        load.unweighted = file.skipped_unweighted;
+        // One experiment per dataset of the file, in the order of their codes.
+        std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
+        std::sort(codes.begin(), codes.end());
+        codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+        const auto rows_of = [&file](std::optional<std::int32_t> code) {
+            std::vector<std::int32_t> h, k, l;
+            std::vector<double> f2, su, wavelength;
+            for (std::size_t i = 0; i < file.index_h.size(); ++i) {
+                if (code && file.dataset[i] != *code) {
+                    continue;
+                }
+                h.push_back(file.index_h[i]);
+                k.push_back(file.index_k[i]);
+                l.push_back(file.index_l[i]);
+                f2.push_back(file.intensity[i]);
+                su.push_back(file.sigma[i]);
+                if (!file.wavelength.empty()) {
+                    wavelength.push_back(file.wavelength[i]);
+                }
+            }
+            ReflnDataBase rows;
+            rows.index_h = std::move(h);
+            rows.index_k = std::move(k);
+            rows.index_l = std::move(l);
+            rows.intensity_meas = std::move(f2);
+            rows.intensity_meas_su = std::move(su);
+            rows.wavelength = std::move(wavelength);
+            return rows;
+        };
+        const bool split = codes.size() > 1;
+        load.points = file.index_h.size();
+        load.experiment.reflections = rows_of(split ? std::optional<std::int32_t>(codes.front()) : std::nullopt);
         load.experiment.calculation_only = false;
         if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
             load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
@@ -1439,6 +1463,16 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
             }
             if (persistable_name(stem)) {
                 load.experiment.name = stem;
+            }
+        }
+        if (split) {
+            const std::string base = load.experiment.name.value();
+            load.experiment.name = base + "_" + std::to_string(codes.front());
+            for (std::size_t c = 1; c < codes.size(); ++c) {
+                BraggPdExperiment next(load.experiment);
+                next.name = base + "_" + std::to_string(codes[c]);
+                next.reflections = rows_of(codes[c]);
+                load.more.push_back(std::move(next));
             }
         }
         return load;

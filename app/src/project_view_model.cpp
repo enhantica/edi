@@ -859,6 +859,21 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     record.experiment = project.experiments[static_cast<std::size_t>(index)].get();
     undo_history_.emplace_back(std::move(record));
     syncUndo();
+    // A FullProf file of several datasets: the first went into this experiment, each other one becomes its own.
+    const std::size_t datasets = load.more.size() + 1;
+    if (!load.more.empty()) {
+        QString error;
+        try {
+            error = apply(edi::Edit::add_experiments(project, std::move(load.more)), true);
+        } catch (const std::exception& refusal) {
+            error = QString::fromUtf8(refusal.what());
+        }
+        if (!error.isEmpty()) {
+            return refuse(error);
+        }
+        syncLoadState();
+        noteAddedExperiments(project.experiments.size() - (datasets - 1));
+    }
     // One message: the points, then what the reader skipped or changed.
     QStringList notes;
     if (load.skipped != 0) {
@@ -875,6 +890,12 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     }
     if (load.derived != 0) {
         notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
+    }
+    if (load.unweighted != 0) {
+        notes.append(tr("%n reflection(s) with su 0 skipped", nullptr, static_cast<int>(load.unweighted)));
+    }
+    if (datasets > 1) {
+        notes.append(tr("%n datasets, one experiment each", nullptr, static_cast<int>(datasets)));
     }
     // A single crystal's rows are reflections.
     QString text = record.experiment->reflections.has_value()
