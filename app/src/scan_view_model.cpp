@@ -355,6 +355,8 @@ void ScanViewModel::placeRows() {
     rows_ = by_value ? edi::scan_row_positions(values_)
                      : edi::scan_row_positions(std::vector<double>(patterns_.size(), kNaN));
     spans_ = edi::scan_row_spans(rows_);
+    // Datasets at one scan value (a temperature held, or reached again) each keep a band and a row of their own.
+    edi::separate_shared_rows(rows_, spans_);
     publish(rows_by_value_, by_value, &ScanViewModel::rowsByValueChanged);
     const QString title = by_value ? extracted_title_ : orderName();
     // Every dataset read and still placed by file although the scan extracts a value: say why.

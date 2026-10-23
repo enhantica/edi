@@ -52,6 +52,11 @@ struct ScanRowSpan {
 };
 std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions);
 
+/// Rows sharing a position (a scan value held, or reached again) each keep a band of their own: their shared span is
+/// split equally among them in the order given, the first lowest, and each row moves to its share's centre. A row at a
+/// position of its own keeps it and its span. `positions` and `spans` are scan_row_positions' and scan_row_spans'.
+void separate_shared_rows(std::vector<double>& positions, std::vector<ScanRowSpan>& spans);
+
 /// The two datasets whose rows bracket `y` on the Map's vertical axis, from `rising` (their rows in rising order), and
 /// how far y is from the first towards the second: `first == second` and `share == 0` at or beyond the end rows. In
 /// stepped mode the share is 0 or 1, the nearer row's. Empty input gives {0, 0, 0}.

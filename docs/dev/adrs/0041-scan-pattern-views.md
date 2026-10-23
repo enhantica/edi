@@ -24,7 +24,8 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    parameter, titled as the extract rule's column) once every dataset has one; until then, in a scan without an
    extract rule, and when the order is chosen (§7), the datasets in order: by file for a scan, whose datasets share a
    datablock, by datablock for a joint fit's experiments. Each row spans halfway to its neighbours, so in order each
-   is one band of equal height. The rows are labelled as the pattern chart labels a Bragg row, left of the plot, at
+   is one band of equal height. Datasets at the same scan value (a temperature held, or reached again) split that
+   value's band equally in file order, each with its own band, row and baseline, so none hides another. The rows are labelled as the pattern chart labels a Bragg row, left of the plot, at
    each row's height: the experiment's icon and the row's scan value with its unit, its file's name or its datablock's,
    in the dataset's colour (the owner, 2026-10-22); on Stacked a label stands on its curve's baseline, its bottom at
    the row, and on the Map it is centred on its band. The Stacked view always labels its rows so, with no numeric scale;

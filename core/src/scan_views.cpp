@@ -244,6 +244,33 @@ std::vector<ScanRowSpan> scan_row_spans(std::span<const double> positions) {
     return out;
 }
 
+void separate_shared_rows(std::vector<double>& positions, std::vector<ScanRowSpan>& spans) {
+    const std::size_t count = std::min(positions.size(), spans.size());
+    // The rows in rising position, those at one position in the order given.
+    std::vector<std::size_t> order(count);
+    std::iota(order.begin(), order.end(), std::size_t{0});
+    std::stable_sort(order.begin(), order.end(),
+                     [&positions](std::size_t a, std::size_t b) { return positions[a] < positions[b]; });
+    for (std::size_t first = 0; first < count;) {
+        std::size_t end = first + 1;
+        while (end < count && positions[order[end]] == positions[order[first]]) {
+            ++end;
+        }
+        const std::size_t shared_by = end - first;
+        if (shared_by > 1) {
+            const ScanRowSpan shared = spans[order[first]];
+            const double share = (shared.high - shared.low) / static_cast<double>(shared_by);
+            for (std::size_t k = 0; k < shared_by; ++k) {
+                const double low = shared.low + share * static_cast<double>(k);
+                const double high = k + 1 == shared_by ? shared.high : low + share;
+                spans[order[first + k]] = {low, high};
+                positions[order[first + k]] = (low + high) / 2.0;
+            }
+        }
+        first = end;
+    }
+}
+
 const std::vector<std::string>& scan_colour_map_names() {
     static const std::vector<std::string> names(detail::kColourMapNames, detail::kColourMapNames + detail::kColourMapCount);
     return names;
