@@ -5751,7 +5751,8 @@ inline void canonicalize_peak_specs(PeakBase& peak) {
 // conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
 // no slot is dropped, read as another profile's, or classed by another slot's metadata.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
-    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+    // A single crystal has no peak profile.
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH || experiment.reflections) {
         return {};
     }
     const std::string declared = effective_peak_type(experiment);
