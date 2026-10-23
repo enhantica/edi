@@ -42,7 +42,7 @@ Item {
             Session.closeProject();
             resetFilters();
             sourceIds = ids();
-            verify(sourceIds.length > 0);
+            compare(sourceIds.length, 20, "The independently selected catalogue contains twenty examples");
         }
         function cleanup() {
             resetFilters();
@@ -137,7 +137,7 @@ Item {
                 verify(property.title.length > 0);
                 verify(!/\(\d+\)/.test(property.title), "Property picker does not display counts");
             }
-            const known = [["pd-neut-cwl_cosio-d20_start-1", "single"], ["pd-neut-tof_ncaf-wish-2bank_start-3", "joint"], ["pd-neut-cwl_cosio-d20_scan-3f", "sequential"], ["pd-xray-cwl_lif", "single"]];
+            const known = [["pd-neut-cwl_cosio-d20", "single"], ["pd-neut-tof_ncaf-wish", "joint"], ["pd-neut-cwl_cosio-d20_scan", "sequential"], ["pd-xray-cwl_nacl_simulation", "single"]];
             for (const [id, mode] of known) {
                 verify(sourceIds.includes(id));
                 sameIds(Session.examples.propertyValues(id, "fittingMode"), [mode]);
@@ -193,9 +193,9 @@ Item {
         function test_normalized_words_and_property_are_conjunctive() {
             Session.examples.searchText = "co2sio4 ILL";
             const matching = ids();
-            verify(matching.includes("pd-neut-cwl_cosio-d20_start-1"));
-            verify(matching.includes("pd-neut-cwl_cosio-d20_scan-3f"));
-            verify(!matching.includes("pd-neut-cwl_lbco-hrpt_start-2"));
+            verify(matching.includes("pd-neut-cwl_cosio-d20"));
+            verify(matching.includes("pd-neut-cwl_cosio-d20_scan"));
+            verify(!matching.includes("pd-neut-cwl_lbco-hrpt"));
             Session.examples.filterProperty = "fittingMode";
             Session.examples.filterValue = "sequential";
             const expected = matching.filter(id => Session.examples.propertyValues(id, "fittingMode").includes("sequential"));
@@ -207,20 +207,20 @@ Item {
             compare(Session.examples.count, 0);
         }
         function test_purpose_is_separate_from_fitting_mode() {
-            const simulation = Session.examples.propertyValues("pd-xray-cwl_lif", "purpose");
-            const fitting = Session.examples.propertyValues("pd-neut-tof_ncaf-wish-2bank_start-3", "purpose");
+            const simulation = Session.examples.propertyValues("pd-xray-cwl_nacl_simulation", "purpose");
+            const fitting = Session.examples.propertyValues("pd-neut-tof_ncaf-wish", "purpose");
             sameIds(simulation, ["simulation"]);
             sameIds(fitting, ["refinement"]);
             verify(simulation[0] !== fitting[0]);
             verify(simulation[0] !== "__unknown__" && fitting[0] !== "__unknown__");
             Session.examples.filterValue = simulation[0];
-            verify(ids().includes("pd-xray-cwl_lif"));
-            verify(!ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
+            verify(ids().includes("pd-xray-cwl_nacl_simulation"));
+            verify(!ids().includes("pd-neut-tof_ncaf-wish"));
             Session.examples.filterProperty = "fittingMode";
             compare(Session.examples.filterValue, "");
             Session.examples.filterValue = "joint";
-            verify(ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
-            verify(!ids().includes("pd-xray-cwl_lif"));
+            verify(ids().includes("pd-neut-tof_ncaf-wish"));
+            verify(!ids().includes("pd-xray-cwl_nacl_simulation"));
         }
         function test_facet_counts_match_unique_source_membership() {
             for (const property of properties()) {
@@ -245,19 +245,19 @@ Item {
         function test_counts_follow_search_and_zero_results_retain_choice() {
             Session.examples.filterProperty = "fittingMode";
             Session.examples.filterValue = "joint";
-            Session.examples.searchText = "pd-xray-cwl_lif Calculated example";
+            Session.examples.searchText = "pd-xray-cwl_nacl_simulation without measured data";
             compare(Session.examples.filterValue, "joint");
             compare(Session.examples.count, 0);
             compare(option("").count, 1);
             compare(option("single").count, 1);
             Session.examples.filterValue = "";
-            sameIds(ids(), ["pd-xray-cwl_lif"]);
+            sameIds(ids(), ["pd-xray-cwl_nacl_simulation"]);
             Session.examples.searchText = "";
             sameIds(ids(), sourceIds);
         }
         function test_unknown_metadata_is_not_an_assumed_instrument() {
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_lif", "facilities"), ["__unknown__"]);
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_lif", "instruments"), ["__unknown__"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_nacl_simulation", "facilities"), ["__unknown__"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_nacl_simulation", "instruments"), ["__unknown__"]);
             for (const property of ["facilities", "instruments", "dimensionality", "polarisation"]) {
                 Session.examples.filterProperty = property;
                 const expected = sourceIds.filter(id => Session.examples.propertyValues(id, property).includes("__unknown__"));
@@ -271,13 +271,13 @@ Item {
             }
         }
         function test_multiphase_identity_includes_every_sample() {
-            const yap = sample("pd-neut-cwl_yap-spodi_3k");
+            const yap = sample("pd-neut-cwl_yalo3-al2o3-spodi");
             verify(yap.includes("yalo3") && yap.includes("al2o3"), "Both YAlO3 and Al2O3 phases appear in the identity");
-            const latp = sample("pd-xray-cwl_latp_scan-4f");
+            const latp = sample("pd-xray-cwl_latp-bm01_scan");
             verify(latp.includes("latp") || latp.includes("li1.3"));
             compare((latp.match(/alpo4/g) || []).length, 2, "Both AlPO4 polymorphs remain visible beside LATP");
             Session.examples.searchText = "YAlO3 Al2O3";
-            verify(ids().includes("pd-neut-cwl_yap-spodi_3k"));
+            verify(ids().includes("pd-neut-cwl_yalo3-al2o3-spodi"));
         }
         function test_source_metadata_has_space_groups_and_probe_specific_polarisation() {
             for (const id of sourceIds) {
@@ -287,13 +287,14 @@ Item {
                     verify(/\[[^\[\]\s]+\]$/.test(phase), "Every phase has its compact source space group: " + id);
                 sameIds(Session.examples.propertyValues(id, "dimensionality"), ["1D"]);
                 const probe = Session.examples.propertyValues(id, "probe");
-                const expected = probe.includes("neutron") ? "none" : "__not_applicable__";
+                const expected = probe.length === 1 && probe[0] === "neutron" ? "none" : "__not_applicable__";
                 sameIds(Session.examples.propertyValues(id, "polarisation"), [expected]);
             }
-            const d20 = sourceIds.indexOf("pd-neut-cwl_cosio-d20_start-1");
+            const d20 = sourceIds.indexOf("pd-neut-cwl_cosio-d20");
             compare(Session.examples.text(d20, "origin"), "D20 @ ILL");
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "facilities"), ["SNBL"]);
-            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp_scan-4f", "instruments"), ["__unknown__"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp-bm01_scan", "facilities"), ["SNBL"]);
+            sameIds(Session.examples.propertyValues("pd-xray-cwl_latp-bm01_scan", "instruments"), ["BM01"]);
+            compare(Session.examples.text(sourceIds.indexOf("pd-xray-cwl_latp-bm01_scan"), "origin"), "BM01 @ SNBL", "The LATP origin follows the committed owner instrument and facility");
             Session.examples.filterProperty = "polarisation";
             verify(option("__not_applicable__").title.startsWith("Not applicable"));
             Session.examples.filterValue = "none";
@@ -314,8 +315,8 @@ Item {
             compare(Session.examples.filterProperty, "fittingMode");
             choose(value, "joint");
             compare(Session.examples.filterValue, "joint");
-            verify(ids().includes("pd-neut-tof_ncaf-wish-2bank_start-3"));
-            verify(!ids().includes("pd-xray-cwl_lif"));
+            verify(ids().includes("pd-neut-tof_ncaf-wish"));
+            verify(!ids().includes("pd-xray-cwl_nacl_simulation"));
             mouseClick(search, search.width / 2, search.height / 2);
             for (const key of [Qt.Key_W, Qt.Key_I, Qt.Key_S, Qt.Key_H])
                 keyClick(key);
@@ -332,11 +333,11 @@ Item {
             verify(ids().every(id => id.includes("ncaf-wish")));
         }
         function test_filtered_delegate_opens_its_identity() {
-            const expected = "pd-xray-cwl_lif";
+            const expected = "pd-xray-cwl_nacl_simulation";
             verify(sourceIds.indexOf(expected) > 0, "The fixture starts after the first source row");
             const group = createTemporaryObject(examplesComponent, parent);
             verify(group !== null);
-            Session.examples.searchText = expected + " Calculated example";
+            Session.examples.searchText = expected + " without measured data";
             sameIds(ids(), [expected]);
             verify(waitForPolish(group));
             let row = null;
@@ -347,7 +348,7 @@ Item {
             const identity = labelWithText(row, row.sample + " · " + row.origin);
             verify(identity !== null);
             compare(identity.font.family, "Noto Sans", "The whole formula uses one bundled face, including subscripts");
-            compare(identity.font.bold, true);
+            compare(identity.font.bold, false, "Example identities use the bundled regular face consistently across platforms");
             verify(row.tagLabels.includes("Bragg") && !row.tagLabels.includes("bragg"));
             for (const code of ["pd", "xray", "cwl"])
                 verify(row.tagLabels.includes(code), "Technique code stays lowercase: " + code);
