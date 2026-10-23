@@ -233,7 +233,9 @@ PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_ISO_SITES,
         'scale': '4.1744()',
-        'extinction': ('becker-coppens-mixed', 'gaussian', '10()', '101810.87303'),
+        # cryspy's single radius, for parity: the crystal radius follows the domain radius.
+        'extinction': ('becker-coppens-mixed', 'gaussian', '10()', '101810.87303', '0.01'),
+        'single_radius': True,
     },
     'sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp': {
         'source': 'sc-neut-cwl_tbti_anisotropic-adp/tbti.int',
@@ -356,7 +358,8 @@ FIT_PROJECTS = {
         'cell': ('10.13', '10.13', '10.13', '90', '90', '90'),
         'sites': TBTI_FIT_SITES,
         'scale': '4()',
-        'extinction': ('becker-coppens-mixed', 'gaussian', '25', '0()'),
+        # The crystal radius 0.025 mm, fixed; the domain radius from 25 um (the owner, 2026-10-23).
+        'extinction': ('becker-coppens-mixed', 'gaussian', '25()', '0()', '0.025'),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
         'source': 'sc-neut-cwl_pr2nio4_basic/prnio.int',
@@ -397,8 +400,9 @@ CASES = {
         'start': (
             'The project starts from rough values: anisotropic displacements at a small '
             'isotropic-equivalent value, the free O1 x moved off its refined value, mixed '
-            'Becker-Coppens extinction with the domain radius fixed at 25 μm and the mosaic '
-            'spread free from 0, and the scale to one significant figure.'
+            'Becker-Coppens extinction with the crystal radius fixed at 0.025 mm and the domain '
+            'radius (from 25 μm) and mosaic spread (from 0) free, and the scale to one '
+            'significant figure.'
         ),
         'model': (
             "{lib}'s verification page `sc-neut-cwl_tbti_anisotropic-adp` (FullProf "
@@ -413,9 +417,10 @@ CASES = {
         'start_detail': (
             'Uani on every site from an isotropic-equivalent 0.0026 Å², tied by site symmetry; '
             'O1 x moved off its refined value; isotropic Becker-Coppens extinction, mixed, with '
-            'the domain radius fixed at 25 μm and the mosaic spread free from 0 (the owner, '
-            '2026-10-22 and 2026-10-23); the scale 4. Free: the scale, O1 x, the eight '
-            'independent tensor components and the mosaic spread (11 parameters).'
+            'the crystal radius fixed at 0.025 mm, the domain radius free from 25 μm and the '
+            'mosaic spread free from 0 (the owner, 2026-10-23); the scale 4. Free: the scale, '
+            'O1 x, the eight independent tensor components, the domain radius and the mosaic '
+            'spread (12 parameters).'
         ),
         'differences': [
             (
@@ -424,13 +429,15 @@ CASES = {
                 'and the occupancies are fixed.'
             ),
             (
-                'The tutorial frees the domain radius at a fixed mosaic spread; here the radius '
-                'is fixed and the mosaic spread free.'
+                'The tutorial frees its one radius, crystal and domain at once, at a fixed '
+                'mosaic spread; here the crystal radius is fixed and the domain radius and '
+                'mosaic spread are free.'
             ),
         ],
         'result': (
-            'From this start edi converges in 13 iterations to reduced χ² 3.26 over the 220 '
-            'reflections, with the scale 5.656(46) and the mosaic spread 93096(11625) rad⁻¹.'
+            'From this start edi converges in 19 iterations to reduced χ² 3.27 over the 220 '
+            'reflections, with the scale 5.638(48), the domain radius 24.3(49) μm and the '
+            'mosaic spread 99890(92723) rad⁻¹.'
         ),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
@@ -521,13 +528,24 @@ def extinction_lines(extinction: tuple | None) -> list[str]:
     """The experiment's _extinction items: the type, then that type's own items."""
     if extinction is None:
         return ['_extinction.type none']
-    kind, distribution, radius, spread = extinction
+    kind, distribution, radius, spread, crystal = extinction
     return [
         f'_extinction.type {kind}',
         f'_extinction.mosaic_distribution {distribution}',
         f'_extinction.domain_radius {radius}',
         f'_extinction.mosaic_spread {spread}',
+        f'_extinction.crystal_radius {crystal}',
     ]
+
+
+# A crystal radius that follows the domain radius, cryspy's single radius (mm = um / 1000).
+SINGLE_RADIUS = (
+    '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+    'crystal_radius {experiment}.extinction.crystal_radius\n'
+    'domain_radius {experiment}.extinction.domain_radius\n'
+    '\nloop_\n_constraint.id\n_constraint.expression\n'
+    'crystal_radius "crystal_radius = domain_radius / 1000"\n'
+)
 
 
 def write_case_pages(root: Path, pid: str, spec: dict) -> None:
@@ -700,7 +718,8 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     )
     (project / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n\n_fitting_mode.type single\n\n'
-        f'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n{experiment} 1\n',
+        f'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n{experiment} 1\n'
+        + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else ''),
         encoding='utf-8',
     )
     group, code = spec['space_group']
