@@ -1,0 +1,74 @@
+<checkout>/knowledge/verification/fullprof/pd-neut-tof_ferrite-austenite-beer: fixed.pcr through <applications>/fullprof/fp2k
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 21:09:50.794
+ => Reading control file *.PCR ... fixed
+ => Reading intensity file of pattern  1  fixed_1.dat
+ => Reading intensity file of pattern  2  fixed_2.dat
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       2
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       2
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: fixed
+ => Pattern:   1  fixed_1
+ => Pattern:   2  fixed_2
+ => Ordering reflections contributing to each point for pattern:       1
+ => Ordering reflections contributing to each point for pattern:       2
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Calculation for pattern:       2
+ => Writing results for cycle       1
+ => R-Factors:   4.89      7.06     Chi2:  13.3     DW-Stat.:  0.3516   Patt#:  1
+ => Expected :            1.94                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  5.23     Rwp:  7.41     Rexp:    2.03                        Chi2:  13.3
+ => R-Factors:   5.08      7.19     Chi2:  13.9     DW-Stat.:  0.3304   Patt#:  2
+ => Expected :            1.93                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  5.43     Rwp:  7.55     Rexp:    2.03                        Chi2:  13.9
+    => Global user-weigthed Chi2 (Bragg contrib.):   13.64
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   4.89      7.06     Chi2:  13.3     DW-Stat.:  0.3516   Patt#:  1
+ => Expected :            1.94                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  5.23     Rwp:  7.41     Rexp:    2.03                        Chi2:  13.3
+ => R-Factors:   5.08      7.19     Chi2:  13.9     DW-Stat.:  0.3304   Patt#:  2
+ => Expected :            1.93                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  5.43     Rwp:  7.55     Rexp:    2.03                        Chi2:  13.9
+    => Global user-weigthed Chi2 (Bragg contrib.):   13.66
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+  
+  
+ =>               CPU Time:     0.203 seconds
+ =>                             0.003 minutes
+  
+ => END   Date:22/10/2026  Time => 21:09:50.996
+  
+ => Data Files :
+ =>             - fixed_1.dat
+ =>             - fixed_2.dat
+ => PCR  File  : fixed
+ => Do you want to continue (<cr>=N)? 
+         (s:same, a:another problem):  => END

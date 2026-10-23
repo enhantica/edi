@@ -1,0 +1,310 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/pd-neut-cwl_cosio-d20/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace",
+    "experiments/d20.edi": "c8d4fdecf1deb36ac5b190425365067c4e71714c071340c7c4cc5e22a2d8f786",
+    "project.edi": "f5122560b7ac87cd06b76f4d19a3573ef1f54a2d281b01c5d7388aa01d7b05be",
+    "structures/cosio.edi": "ed3e7f5594f4cab7b193440098431f483428082499f191b4d8640dd12a2d6c84"
+  },
+  "banks": [
+    "d20"
+  ],
+  "scope": "fit",
+  "staging": "none",
+  "cycles": 200,
+  "n_free": 42,
+  "exit": 24,
+  "twin_exit": 24,
+  "fit_output_complete": true,
+  "artifacts_sha256": {
+    "fit.dat": "ce1dfd808b5604973213873b2592e1d2dc94764f7d94291540e92fb782f9ff8e",
+    "fit.log": "b10c9c683ccdee11fcd4a67fb36a4e7a1f5bc866559e7e734db595bc3c4f7a49",
+    "fit.new": "774c52fab51b7fd24907bd73ae988babb760258c8c4c5362d7b787eb1d1d0330",
+    "fit.out": "c4760096a75e7f1fc5a44bb9fee1991e45e7d6916aef4eeec12c47b8ed6fc83f",
+    "fit.pcr": "749b606a11bab9ef2c3ae66bbb57aad4b5b0ee9f326ba81ffa2297a6b8307c38",
+    "fit.prf": "ced1c536ac2c0341477950e136b0d528f777e00ec8a0af4f759639139e3e7099",
+    "fit.sum": "7ac14691c3f2d995ef86a17464e28de7b934c6d46e309d704ae45f7766e029ea",
+    "start.dat": "ce1dfd808b5604973213873b2592e1d2dc94764f7d94291540e92fb782f9ff8e",
+    "start.log": "bb358219e8bc836c5bd8dc57e763643bfd61059045b6e26eb7337d8d33bbe769",
+    "start.new": "9655ab4b77136269b46ad268f591360ebaed5a57ffcceca9b9051a10b285d63e",
+    "start.out": "ea5d9e95ef245ee7d2367c0a3cedcc9af2b6184c3f17cad6504cc43119a0c59f",
+    "start.pcr": "cc5158c0482be03c8ece4f0e59e3ee0425b17899444b0b5d88b37fa7b796a0d6",
+    "start.prf": "965813402675f68b4c8a9980963ac181e07fe717bfb51d03c7c4b071656b8e50",
+    "start.sum": "8f9974388786941d0dfae11a3c5d50f11b175de21e0b6dc9197c0b30a517f5e8"
+  },
+  "finite_fit": true,
+  "converged": true,
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Bck_0_pat1",
+      "value": 609.31378,
+      "uncertainty": 14.533059
+    },
+    "2": {
+      "symbol": "Bck_1_pat1",
+      "value": 581.18262,
+      "uncertainty": 9.7218027
+    },
+    "3": {
+      "symbol": "Bck_2_pat1",
+      "value": 563.36389,
+      "uncertainty": 9.2366724
+    },
+    "4": {
+      "symbol": "Bck_3_pat1",
+      "value": 540.71222,
+      "uncertainty": 8.7645912
+    },
+    "5": {
+      "symbol": "Bck_4_pat1",
+      "value": 520.1239,
+      "uncertainty": 6.0457916
+    },
+    "6": {
+      "symbol": "Bck_5_pat1",
+      "value": 507.81808,
+      "uncertainty": 3.486428
+    },
+    "7": {
+      "symbol": "Bck_6_pat1",
+      "value": 462.75793,
+      "uncertainty": 3.2057829
+    },
+    "8": {
+      "symbol": "Bck_7_pat1",
+      "value": 430.98386,
+      "uncertainty": 2.4760072
+    },
+    "9": {
+      "symbol": "Bck_8_pat1",
+      "value": 451.62265,
+      "uncertainty": 2.2541425
+    },
+    "10": {
+      "symbol": "Bck_9_pat1",
+      "value": 429.33197,
+      "uncertainty": 2.0369427
+    },
+    "11": {
+      "symbol": "Bck_10_pat1",
+      "value": 413.85815,
+      "uncertainty": 2.2647953
+    },
+    "12": {
+      "symbol": "Bck_11_pat1",
+      "value": 362.1156,
+      "uncertainty": 2.098496
+    },
+    "13": {
+      "symbol": "Bck_12_pat1",
+      "value": 292.92322,
+      "uncertainty": 1.9817756
+    },
+    "14": {
+      "symbol": "Bck_13_pat1",
+      "value": 242.16887,
+      "uncertainty": 3.0132289
+    },
+    "15": {
+      "symbol": "Zero_pat1",
+      "value": 0.28558806,
+      "uncertainty": 0.001985447
+    },
+    "16": {
+      "symbol": "Biso_Co1_ph1",
+      "value": 0.70667934,
+      "uncertainty": 0.11049343
+    },
+    "17": {
+      "symbol": "X_Co2_ph1",
+      "value": 0.2789869,
+      "uncertainty": 0.0007204985
+    },
+    "18": {
+      "symbol": "Z_Co2_ph1",
+      "value": 0.98447877,
+      "uncertainty": 0.0014835894
+    },
+    "19": {
+      "symbol": "X_Si_ph1",
+      "value": 0.09403947,
+      "uncertainty": 0.00039084663
+    },
+    "20": {
+      "symbol": "Z_Si_ph1",
+      "value": 0.42921901,
+      "uncertainty": 0.00082842505
+    },
+    "21": {
+      "symbol": "Biso_Si_ph1",
+      "value": 0.67960662,
+      "uncertainty": 0.090098158
+    },
+    "22": {
+      "symbol": "X_O1_ph1",
+      "value": 0.090992615,
+      "uncertainty": 0.00030088759
+    },
+    "23": {
+      "symbol": "Z_O1_ph1",
+      "value": 0.77149701,
+      "uncertainty": 0.0006490107
+    },
+    "24": {
+      "symbol": "Biso_O1_ph1",
+      "value": 0.47824493,
+      "uncertainty": 0.079207644
+    },
+    "25": {
+      "symbol": "Occ_O1_ph1",
+      "value": 0.45754179,
+      "uncertainty": 0.003484952
+    },
+    "26": {
+      "symbol": "X_O2_ph1",
+      "value": 0.44810519,
+      "uncertainty": 0.00025723482
+    },
+    "27": {
+      "symbol": "Z_O2_ph1",
+      "value": 0.21660097,
+      "uncertainty": 0.00068244111
+    },
+    "28": {
+      "symbol": "Biso_O2_ph1",
+      "value": 0.67796367,
+      "uncertainty": 0.081371352
+    },
+    "29": {
+      "symbol": "Occ_O2_ph1",
+      "value": 0.47910574,
+      "uncertainty": 0.0034322848
+    },
+    "30": {
+      "symbol": "X_O3_ph1",
+      "value": 0.1636,
+      "uncertainty": 0.00022914857
+    },
+    "31": {
+      "symbol": "Y_O3_ph1",
+      "value": 0.031555012,
+      "uncertainty": 0.00032834173
+    },
+    "32": {
+      "symbol": "Z_O3_ph1",
+      "value": 0.28004473,
+      "uncertainty": 0.00048966706
+    },
+    "33": {
+      "symbol": "Biso_O3_ph1",
+      "value": 0.83690828,
+      "uncertainty": 0.062824905
+    },
+    "34": {
+      "symbol": "Occ_O3_ph1",
+      "value": 0.9521575,
+      "uncertainty": 0.012034964
+    },
+    "35": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 1.3313751,
+      "uncertainty": 0.029518742
+    },
+    "36": {
+      "symbol": "U-Cagl_ph1_pat1",
+      "value": 0.24198279,
+      "uncertainty": 0.0067553269
+    },
+    "37": {
+      "symbol": "V-Cagl_ph1_pat1",
+      "value": -0.52977717,
+      "uncertainty": 0.014510895
+    },
+    "38": {
+      "symbol": "W-Cagl_ph1_pat1",
+      "value": 0.38784474,
+      "uncertainty": 0.0090540303
+    },
+    "39": {
+      "symbol": "Y-cos_ph1_pat1",
+      "value": 0.012807559,
+      "uncertainty": 0.0044679963
+    },
+    "40": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 10.308719,
+      "uncertainty": 0.00012710632
+    },
+    "41": {
+      "symbol": "Cell_B_ph1_pat1",
+      "value": 6.0037837,
+      "uncertainty": 7.5802891e-05
+    },
+    "42": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 4.786654,
+      "uncertainty": 5.8309521e-05
+    }
+  },
+  "parameter_codes": {
+    "d20.background.1.intensity": 1,
+    "d20.background.2.intensity": 2,
+    "d20.background.3.intensity": 3,
+    "d20.background.4.intensity": 4,
+    "d20.background.5.intensity": 5,
+    "d20.background.6.intensity": 6,
+    "d20.background.7.intensity": 7,
+    "d20.background.8.intensity": 8,
+    "d20.background.9.intensity": 9,
+    "d20.background.10.intensity": 10,
+    "d20.background.11.intensity": 11,
+    "d20.background.12.intensity": 12,
+    "d20.background.13.intensity": 13,
+    "d20.background.14.intensity": 14,
+    "d20.instrument.calib_twotheta_offset": 15,
+    "cosio.atom_site.Co1.adp_iso": 16,
+    "cosio.atom_site.Co2.fract_x": 17,
+    "cosio.atom_site.Co2.fract_z": 18,
+    "cosio.atom_site.Si.fract_x": 19,
+    "cosio.atom_site.Si.fract_z": 20,
+    "cosio.atom_site.Si.adp_iso": 21,
+    "cosio.atom_site.O1.fract_x": 22,
+    "cosio.atom_site.O1.fract_z": 23,
+    "cosio.atom_site.O1.adp_iso": 24,
+    "cosio.atom_site.O1.occupancy": 25,
+    "cosio.atom_site.O2.fract_x": 26,
+    "cosio.atom_site.O2.fract_z": 27,
+    "cosio.atom_site.O2.adp_iso": 28,
+    "cosio.atom_site.O2.occupancy": 29,
+    "cosio.atom_site.O3.fract_x": 30,
+    "cosio.atom_site.O3.fract_y": 31,
+    "cosio.atom_site.O3.fract_z": 32,
+    "cosio.atom_site.O3.adp_iso": 33,
+    "cosio.atom_site.O3.occupancy": 34,
+    "d20.linked_structure.cosio.scale": 35,
+    "d20.peak.broad_gauss_u": 36,
+    "d20.peak.broad_gauss_v": 37,
+    "d20.peak.broad_gauss_w": 38,
+    "d20.peak.broad_lorentz_y": 39,
+    "cosio.cell.length_a": 40,
+    "cosio.cell.length_b": 41,
+    "cosio.cell.length_c": 42
+  },
+  "r_wp_by_bank": {
+    "d20": 0.04019999999999999
+  },
+  "parameters": {},
+  "twin_artifacts_sha256": {
+    "fixed.dat": "ce1dfd808b5604973213873b2592e1d2dc94764f7d94291540e92fb782f9ff8e",
+    "fixed.log": "003e6e48053df481a81289d015fa885dc7b63bb29a76ee2a6e4dccf31c7cfa72",
+    "fixed.new": "c9733c73f6a93002b77b9555a98dc5454af001626c8bc4104dd78172baa292a5",
+    "fixed.out": "b97a56e27ab62af028dd6ddf54342d370a8727be899d427a6a9381c9e2cb0484",
+    "fixed.pcr": "9c5399e2655cba81943ba51fe1347df600d89d873315dce8964f631a60f68b87",
+    "fixed.prf": "dceff570c495c78fcc4c47ec21007cd645219b82d9c9cab53367db0b846c53ce",
+    "fixed.sum": "fb2b869f05aea4415241f2758a430df947eafc7a404051e72c208d13f625e6b2"
+  },
+  "r_wp": 0.04019999999999999
+}

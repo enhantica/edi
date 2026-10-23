@@ -708,6 +708,18 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
     ids = [p['id'] for p in registry['projects']]
+    selection = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    expected_app_ids = [row['id'] for row in selection]
+    assert oracle['catalogue_ids'] == expected_app_ids, (
+        'The app oracle must follow the independent owner selection'
+    )
+    assert [
+        row['id'] for row in registry['projects'] if row.get('user-facing')
+    ] == expected_app_ids, (
+        'App membership must agree with the independent catalogue; fixtures remain registered'
+    )
     assert [p['id'] for p in oracle['projects']] == ids, (
         'I19: fixture follows registry order without executing/offline filters'
     )

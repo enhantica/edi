@@ -1,0 +1,10 @@
+_edi.schema_version 3
+
+_metadata.name pd-xray-cwl_pbso4-lab
+_metadata.title "PbSO₄ [Pnma] · Laboratory X-ray"
+_metadata.description "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
+_metadata.authors .
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument ?
+_metadata.facility ?
