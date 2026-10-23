@@ -1123,7 +1123,7 @@
         "Taurine [P2₁/c]"
       ],
       "origin": "SENJU @ J-PARC",
-      "detail": "Single crystal · Time of flight · Isotropic displacements from a rough start",
+      "detail": "Single crystal · Time of flight · Six datasets · Anisotropic displacements",
       "values": {
         "sampleForm": [
           "single crystal"
@@ -1141,7 +1141,7 @@
           "refinement"
         ],
         "fittingMode": [
-          "single"
+          "joint"
         ],
         "facilities": [
           "J-PARC"
@@ -1159,12 +1159,17 @@
       "searchAliases": [
         "sc-neut-tof_taurine_fit",
         "Taurine [P2₁/c] · SENJU @ J-PARC",
-        "Single crystal · Time of flight · Isotropic displacements from a rough start"
+        "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
       ],
       "sources": [
         "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
         "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi",
         "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi"
       ]
     }
