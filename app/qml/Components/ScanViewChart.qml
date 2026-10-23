@@ -724,7 +724,7 @@ Item {
                 // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
                 readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
                 readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
-                enabled: hasValue
+                // Open with one entry too, so it shows how the rows are placed.
                 toolTip: qsTr("Y axis: the rows' places")
                 readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
                 model: entries
