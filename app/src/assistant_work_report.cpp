@@ -282,9 +282,9 @@ void checkDirectory(int fd,mode_t forbidden=0077) {
     if(::fstat(fd,&s) || !S_ISDIR(s.st_mode) || s.st_uid!=::getuid() || (s.st_mode&forbidden))
         throw std::runtime_error("Work report directory ownership");
 }
-Fd childDirectory(int parent,const char* name,bool privateOnly=true) {
+Fd childDirectory(int parent,const char* name,mode_t forbidden=0077) {
     if(::mkdirat(parent,name,0700) && errno!=EEXIST)throw std::runtime_error("Work report directory");
-    Fd fd(::openat(parent,name,O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(fd.n,privateOnly?0077:0022);return fd;
+    Fd fd(::openat(parent,name,O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(fd.n,forbidden);return fd;
 }
 void privateFile(int fd) {
     struct stat s{};
@@ -316,7 +316,7 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
     std::optional<Identity> rootId,folderId,lockId,candidateId,oldId;
     try {
         root=directory(projectRoot);checkDirectory(root.n,0);rootId.emplace(root.n);
-        folder=childDirectory(root.n,"reports",false);folderId.emplace(folder.n);
+        folder=childDirectory(root.n,"reports",0);folderId.emplace(folder.n);
         if(::mkdirat(folder.n,".writer",0700)) {
             result.disposition="writer_busy_or_recovery_required";result.recovery=true;return result;
         }
@@ -589,7 +589,7 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
         if(!QStringView(path).endsWith(suffix) || QStringView(path).size()!=storageRoot.size()+suffix.size() ||
            QStringView(path).first(storageRoot.size())!=storageRoot)return false;
         auto root=assistant_files::directory(storageRoot.toString());checkDirectory(root.n,0);
-        auto dir=assistant_files::below(root.n,"reports",true);checkDirectory(dir.n,0022);
+        auto dir=assistant_files::below(root.n,"reports",true);checkDirectory(dir.n,0);
         auto file=assistant_files::below(dir.n,"work-report.json");privateFile(file.n);const Identity id(file.n);
         bool ok=false;const auto bytes=artifact.value("bytes").toString().toULongLong(&ok);
         return ok && bytes<=L::record_bytes && identityToken(id)==artifact.value("physical_identity").toString() &&
