@@ -648,13 +648,16 @@ Item {
 
         readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
         readonly property real available: chart.width - 2 * chart.sideMargin
+        // The plot's centre, which each line is centred on.
+        readonly property real centre: view.x + view.plotArea.x + view.plotArea.width / 2
         // The boxes that show, then the colours and the buttons, each a group: what is laid out, and every width it
         // depends on.
         readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([colours, buttons])
-        readonly property string measure: available + ":" + units.map(unit => unit.width).join(",")
+        readonly property string measure: available + ":" + centre + ":" + units.map(unit => unit.width).join(",")
 
-        // As many as fit on a line, each group a group's spacing after the one before, each line centred as the pattern
-        // chart's are (the owner, 2026-10-22); the toolbar is as wide as its widest line.
+        // As many as fit on a line, each group a group's spacing after the one before, each line centred above the plot
+        // as the pattern chart's is (the owner, 2026-10-22) and kept inside the chart on its own, so a wide first line
+        // pushed to the chart's edge leaves the next line centred.
         function layout() {
             const lines = [];
             let line = null;
@@ -673,10 +676,9 @@ Item {
                     line.width += gap + unit.width;
                 }
             }
-            const widest = Math.max(0, ...lines.map(each => each.width));
             let top = 0;
             for (const each of lines) {
-                let left = Math.round((widest - each.width) / 2);
+                let left = Math.round(Math.max(chart.sideMargin, Math.min(chart.width - chart.sideMargin - each.width, centre - each.width / 2)));
                 for (let i = 0; i < each.units.length; ++i) {
                     left += each.gaps[i];
                     each.units[i].x = left;
@@ -685,13 +687,13 @@ Item {
                 }
                 top += AppSizes.toolbarControlSize + AppSizes.toolbarSpacing;
             }
-            width = widest;
             height = Math.max(0, top - AppSizes.toolbarSpacing);
         }
 
         objectName: "scanView." + chart.mode + ".toolbar"
-        // Centred over the plot, and kept inside the chart when the view is narrow.
-        x: Math.round(Math.max(chart.sideMargin, Math.min(chart.width - width - chart.sideMargin, view.x + view.plotArea.x + (view.plotArea.width - width) / 2)))
+        // Across the chart: each line places itself (layout).
+        x: 0
+        width: chart.width
         y: chart.toolbarTop
         height: AppSizes.toolbarControlSize
         onMeasureChanged: Qt.callLater(layout)
