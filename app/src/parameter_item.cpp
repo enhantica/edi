@@ -75,6 +75,13 @@ void ParameterItem::setRefinable(bool refinable) {
     }
 }
 
+void ParameterItem::setDomainWarning(const QString& warning) {
+    if (domain_warning_ != warning) {
+        domain_warning_ = warning;
+        emit domainWarningChanged();
+    }
+}
+
 void ParameterItem::setEstimated(bool estimated) {
     if (estimated_ != estimated) {
         estimated_ = estimated;

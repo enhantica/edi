@@ -12,6 +12,7 @@
 
 #include "app_info.hpp"
 #include "edi/io.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
 
 namespace edi_app {
@@ -108,7 +109,10 @@ void WarningListModel::recount() {
 // ---- Session ------------------------------------------------------------------------------------
 
 Session::Session(QObject* parent)
-    : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
+    : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
+    edi::collect_engine_warnings();
+}
 
 Session::~Session() = default;
 
@@ -350,6 +354,14 @@ bool Session::open(const QString& directory, const QString& example) {
         edi::Project project = edi::load_project(directory.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
         });
+        // A project loads with any value it holds; the warnings that hold for them post once, the loader's own range
+        // warnings included (the owner, 2026-10-23).
+        for (const std::string& warning : edi::standing_warnings(project, false)) {
+            warnings.append(QString::fromStdString(warning));
+        }
+        for (const std::string& warning : edi::take_engine_warnings()) {
+            warnings.append(QString::fromStdString(warning));
+        }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
@@ -380,6 +392,12 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         }
         project.path = target.toStdString();
         project.metadata.path = project.path;
+        for (const std::string& warning : edi::standing_warnings(project, false)) {
+            warnings.append(QString::fromStdString(warning));
+        }
+        for (const std::string& warning : edi::take_engine_warnings()) {
+            warnings.append(QString::fromStdString(warning));
+        }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
