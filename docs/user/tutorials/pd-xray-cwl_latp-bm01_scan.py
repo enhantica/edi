@@ -1,12 +1,13 @@
+"""Sequential fit: LATP, BM01."""
 # %% [markdown]
 # # Sequential fit: LATP, BM01
 #
-# Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at SNBL, one
-# after another, with linked displacement parameters.
+# Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at SNBL,
+# one after another, with linked displacement parameters.
 #
-# The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-xray-cwl_latp-bm01_scan/project` and the app opens from its
-# Examples.
+# The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`: the files the command line fits
+# with `python -m edi fit docs/user/cli/pd-xray-cwl_latp-bm01_scan/project` and the app opens from
+# its Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -14,6 +15,9 @@
 # > (`execution-exclusions.yml`).
 
 # %%
+import csv
+from pathlib import Path
+
 import edi
 
 # %% [markdown]
@@ -63,9 +67,8 @@ print(result.status.name.lower(), 'after', len(fitted), 'patterns')
 # One row per pattern, in the order they were fitted.
 
 # %%
-import csv
-
-with open('pd-xray-cwl_latp-bm01_scan/analysis/results.csv', newline='') as file:
+results = Path('pd-xray-cwl_latp-bm01_scan/analysis/results.csv')
+with results.open(newline='', encoding='utf-8') as file:
     rows = list(csv.DictReader(file))
 print(len(rows), 'rows; columns:', ', '.join(list(rows[0])[:6]), '...')
 

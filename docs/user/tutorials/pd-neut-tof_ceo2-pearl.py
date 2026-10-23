@@ -1,8 +1,9 @@
+"""Calibration fit: CeO₂, PEARL."""
 # %% [markdown]
 # # Calibration fit: CeO₂, PEARL
 #
-# Fit the CeO₂ standard to time-of-flight neutron powder data from PEARL at ISIS: the calibration and
-# the profile, with a polynomial background.
+# Fit the CeO₂ standard to time-of-flight neutron powder data from PEARL at ISIS: the calibration
+# and the profile, with a polynomial background.
 #
 # The project is the catalogue case `pd-neut-tof_ceo2-pearl`: the files the command line fits with
 # `python -m edi fit docs/user/cli/pd-neut-tof_ceo2-pearl/project` and the app opens from its
@@ -30,8 +31,8 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. The cell is the standard's, fixed, so the fit calibrates the
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. The cell is the standard's, fixed, so the fit calibrates the
 # instrument against it.
 #
 # The fit is free to change these parameters:
@@ -71,8 +72,8 @@ project.report.save_html('pd-neut-tof_ceo2-pearl.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-tof_ceo2-pearl')

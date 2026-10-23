@@ -1,3 +1,4 @@
+"""Calculation without data: Si, time of flight."""
 # %% [markdown]
 # # Calculation without data: Si, time of flight
 #
@@ -5,9 +6,9 @@
 # time-of-flight instrument a time window means nothing without a calibration, so the calculation
 # range follows from the instrument's d-to-TOF calibration.
 #
-# The project is the catalogue case `pd-neut-tof_si_simulation`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-tof_si_simulation/project` and the app opens from its
-# Examples.
+# The project is the catalogue case `pd-neut-tof_si_simulation`: the files the command line fits
+# with `python -m edi fit docs/user/cli/pd-neut-tof_si_simulation/project` and the app opens from
+# its Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -49,8 +50,8 @@ project.report.save_html('pd-neut-tof_si_simulation.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-tof_si_simulation')
