@@ -106,34 +106,35 @@ AppDialog {
             anchors.fill: parent
             interactive: false
             defaultInfoText: ""
+            // Read-only: no row is ever current (the owner, 2026-10-22).
+            selectable: false
             sourceModel: dialog.results
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, dialog.metricColumnWidth, dialog.valueColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Metric")
                 }
                 // The value column is padded on the right as the metric column is on the left (the owner,
                 // 2026-10-02), as diffraction-lib's table is.
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Value")
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property string icon
                 required property string metric
                 required property string value
@@ -144,7 +145,7 @@ AppDialog {
                 enabled: false
                 Component.onCompleted: dialog.passive(row)
 
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     color: EaStyle.Colors.themeForegroundMinor
                     text: row.index + 1
@@ -154,13 +155,13 @@ AppDialog {
                     icon: row.outcome !== "" ? FitOutcomes.icon(row.outcome) : row.icon
                     iconColor: String(row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForegroundMinor)
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     objectName: `fit.results.metric.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     color: EaStyle.Colors.themeForeground
                     text: row.metric
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     objectName: `fit.results.value.${row.index}`
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
@@ -191,6 +192,8 @@ AppDialog {
             height: agreementArea.tableHeight
             interactive: contentHeight > height
             defaultInfoText: ""
+            // Read-only: no row is ever current (the owner, 2026-10-22).
+            selectable: false
             sourceModel: dialog.agreement
 
             // The icon, the dataset, then one real column per factor.
@@ -199,10 +202,10 @@ AppDialog {
             header: EaComponents.ListViewHeader {
                 height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight
 
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     id: datasetHeader
 
                     horizontalAlignment: Text.AlignLeft
@@ -222,7 +225,7 @@ AppDialog {
                         width: dialog.factorWidth
                         height: datasetHeader.height
 
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             objectName: `fit.results.agreement.header.${factorHeader.index}`
                             width: parent.width
                             height: EaStyle.Sizes.tableRowHeight
@@ -243,7 +246,7 @@ AppDialog {
                                 icon: "layer-group"
                                 iconColor: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : ""
                             }
-                            EaComponents.TableViewLabel {
+                            EaComponents.ListViewLabel {
                                 objectName: `fit.results.agreement.structure.${factorHeader.index}`
                                 height: parent.height
                                 width: Math.min(implicitWidth, dialog.factorWidth - EaStyle.Sizes.fontPixelSize * 1.5)
@@ -257,10 +260,9 @@ AppDialog {
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: datasetRow
 
-                required property int index
                 required property string label
                 required property int place
                 required property var values
@@ -275,7 +277,7 @@ AppDialog {
                     icon: datasetRow.place >= 0 ? "microscope" : ""
                     iconColor: datasetRow.place >= 0 ? AppColors.experiment(datasetRow.place) : ""
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     id: datasetName
 
                     objectName: `fit.results.agreement.dataset.${datasetRow.index}`

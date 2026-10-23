@@ -4,6 +4,7 @@
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
 #include "edi/palette.hpp"
+#include "edi/scan_views.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/threading.hpp"
 
@@ -13,6 +14,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QSGRendererInterface>
 #include <QStringList>
@@ -76,37 +78,55 @@ QString ApplicationInfo::licenceLinkTarget(const QString& from, const QString& l
     return bundled_resource(from).isEmpty() || bundled_resource(target).isEmpty() ? QString() : target;
 }
 
-// The notices' "Components" list: from its heading to the next, one "- name | licence: X | use" line each.
+// DEPENDENCIES.md's component rows this build carries: every table under the header `Component | Version | Licence |
+// Desktop app | Web app | Python package | CLI | In edi`, a row whose cell for this build's surface is not empty or
+// "—". A surface's own version, in brackets in its cell, replaces the Version column's.
 QStringList ApplicationInfo::componentColumn(int column) {
+#ifdef Q_OS_WASM
+    constexpr int kSurface = 4;
+#else
+    constexpr int kSurface = 3;
+#endif
+    static const QStringList kHeader{"Component", "Version", "Licence", "Desktop app", "Web app", "Python package", "CLI",
+                                     "In edi"};
+    const auto cells_of = [](const QString& line) {
+        QStringList cells = line.trimmed().split(QLatin1Char('|'));
+        cells.removeFirst();
+        cells.removeLast();
+        for (QString& cell : cells) {
+            cell = cell.trimmed();
+        }
+        return cells;
+    };
     QStringList values;
-    bool inList = false;
-    const QStringList lines = read_resource(QStringLiteral(":/THIRD-PARTY-NOTICES")).split(QLatin1Char('\n'));
-    for (qsizetype i = 0; i < lines.size(); ++i) {
-        const QString& line = lines[i];
-        const bool heading = i + 1 < lines.size() && lines[i + 1].startsWith(QLatin1String("---"));
-        if (heading) {
-            if (inList) {
-                break;
+    bool inTable = false;
+    for (const QString& line : read_resource(QStringLiteral(":/DEPENDENCIES.md")).split(QLatin1Char('\n'))) {
+        if (!line.startsWith(QLatin1Char('|'))) {
+            inTable = false;
+            continue;
+        }
+        const QStringList cells = cells_of(line);
+        if (cells.value(0) == QLatin1String("Component")) {
+            inTable = cells == kHeader;
+            continue;
+        }
+        if (!inTable || cells.size() != kHeader.size() || cells[0].startsWith(QLatin1String("---"))) {
+            continue;
+        }
+        const QString& carried = cells[kSurface];
+        if (carried.isEmpty() || carried == QStringLiteral("\u2014")) {
+            continue;
+        }
+        switch (column) {
+            case 0: values.append(cells[0]); break;
+            case 1: values.append(cells[2]); break;
+            case 2: values.append(cells[7]); break;
+            default: {
+                static const QRegularExpression kOwnVersion(QStringLiteral("\\(([0-9][0-9A-Za-z.]*)\\)"));
+                const QRegularExpressionMatch own = kOwnVersion.match(carried);
+                values.append(own.hasMatch() ? own.captured(1) : cells[1]);
             }
-            inList = line.trimmed() == QLatin1String("Components");
-            continue;
         }
-        const QStringList cells = line.split(QLatin1String(" | "));
-        if (!inList || !line.startsWith(QLatin1String("- ")) || cells.size() != 3) {
-            continue;
-        }
-        if (column == 0 || column == 3) {
-            // "- Qt Graphs 6.11.2": the name, then the version when the last word is a dotted number ("Baloo 2" is a
-            // name).
-            const QString named = cells[0].trimmed().mid(2);
-            const qsizetype space = named.lastIndexOf(QLatin1Char(' '));
-            const bool versioned =
-                space > 0 && named.at(space + 1).isDigit() && named.indexOf(QLatin1Char('.'), space) > 0;
-            values.append(column == 0 ? (versioned ? named.left(space) : named) : (versioned ? named.mid(space + 1) : QString()));
-            continue;
-        }
-        const QString cell = cells[column].trimmed();
-        values.append(column == 1 ? QString(cell).remove(QLatin1String("licence: ")) : cell);
     }
     return values;
 }
@@ -148,9 +168,7 @@ QStringList ApplicationInfo::elementSymbols() const {
 }
 
 namespace {
-edi::ColourScheme colour_scheme(const QString& name) {
-    return edi::colour_scheme_from_name(name.toStdString()).value_or(edi::kDefaultColourScheme);
-}
+edi::ColourScheme colour_scheme(const QString& name) { return edi::colour_scheme_or_default(name.toStdString()); }
 }  // namespace
 
 QColor ApplicationInfo::patternColour(const QString& scheme, int place, int count, bool dark) const {
@@ -173,15 +191,80 @@ QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) co
     return {area.x() + std::max(0, (area.width() - width) / 2), area.y() + std::max(0, (area.height() - height) / 2)};
 }
 
-QColor ApplicationInfo::structureColour(const QString& scheme, int place, bool dark) const {
-    return QColor(QString::fromStdString(
-        edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)), dark)));
+QColor ApplicationInfo::structureColour(const QString& scheme, int place, int count, bool dark) const {
+    return QColor(QString::fromStdString(edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)),
+                                                               static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QStringList ApplicationInfo::colourSchemes() const {
+    QStringList names;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        names.append(QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size())));
+    }
+    return names;
+}
+
+QStringList ApplicationInfo::colourSchemeTitles() const {
+    QStringList titles;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        const std::string_view title = edi::colour_scheme_title(colour_scheme(QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size()))));
+        titles.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+    }
+    return titles;
+}
+
+QString ApplicationInfo::colourSchemeOrDefault(const QString& scheme) const {
+    const std::string_view name = edi::colour_scheme_names()[static_cast<std::size_t>(colour_scheme(scheme))];
+    return QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size()));
+}
+
+QStringList ApplicationInfo::scanColourMaps() const {
+    QStringList names;
+    for (const std::string& name : edi::scan_colour_map_names()) {
+        names.append(QString::fromStdString(name));
+    }
+    return names;
+}
+
+QString ApplicationInfo::scanColourMapOrDefault(const QString& name) const {
+    const std::vector<std::string>& names = edi::scan_colour_map_names();
+    return std::find(names.begin(), names.end(), name.toStdString()) != names.end() ? name : QStringLiteral("viridis");
+}
+
+QStringList ApplicationInfo::scanColourRamps() const {
+    QStringList ramps;
+    for (const std::string_view name : edi::colour_scheme_names()) {
+        ramps.append(QStringLiteral("ramp:") + QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size())));
+    }
+    return ramps;
+}
+
+QString ApplicationInfo::scanColourTitle(const QString& choice) const {
+    if (choice.startsWith(QLatin1String("ramp:"))) {
+        const std::string_view title = edi::colour_scheme_title(colour_scheme(choice.mid(5)));
+        return tr("%1 shades").arg(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
+    }
+    const std::optional<edi::ColourScheme> scheme = edi::colour_scheme_from_name(choice.toStdString());
+    if (scheme) {
+        const std::string_view title = edi::colour_scheme_title(*scheme);
+        return QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size()));
+    }
+    return QString::fromStdString(edi::scan_colour_map_title(choice.toStdString()));
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {
     const edi::ColorScheme colors = scheme == QLatin1String("vesta") ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
     const edi::ElementColor found = edi::element_color(edi::element_of(typeSymbol.toStdString()), colors);
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
+}
+
+QColor ApplicationInfo::readableColour(const QColor& colour, const QList<QColor>& backgrounds) const {
+    // A translucent background is taken as opaque: what shows through it is the same theme's background.
+    std::vector<std::string> hexes;
+    for (const QColor& background : backgrounds) {
+        hexes.push_back(background.name(QColor::HexRgb).toStdString());
+    }
+    return QColor(QString::fromStdString(edi::readable_colour(colour.name(QColor::HexRgb).toStdString(), hexes)));
 }
 
 namespace {

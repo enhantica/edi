@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -22,14 +23,18 @@ Rectangle {
     TestCase {
         name: "ReportContextBoundary"
         when: windowShown
-        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
+        property var reference: Approved.reference(SettingsProof)
         property var page
         property var frozen
         property var browserExport
-        property string savedScheme
+        property var savedScheme
         property int savedTheme
         function init() {
-            savedScheme = Preferences.colourScheme;
+            try {
+                savedScheme = Approved.getSchemes(Preferences);
+            } catch (error) {
+                savedScheme = null;
+            }
             savedTheme = Style.Colors.theme;
         }
         function cleanup() {
@@ -45,7 +50,10 @@ Rectangle {
             page = null;
             frozen = null;
             Session.closeProject();
-            Preferences.colourScheme = savedScheme;
+            if (savedScheme)
+                Approved.setSchemes(Preferences, savedScheme);
+            else
+                Preferences.resetToDefaults();
             Style.Colors.theme = savedTheme;
         }
         function normalized(document) {
@@ -84,7 +92,7 @@ Rectangle {
             const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_context/joint"));
             verify(Session.openProject(location), "The context witness loads two independently distinct saved banks: " + Session.lastError);
             tryCompare(Session.project, "calculating", false, 15000, "The actual joint-bank projection settles");
-            Preferences.colourScheme = data.scheme;
+            Approved.setSchemes(Preferences, data.scheme);
             Session.project.currentExperimentIndex = data.shown;
             tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 5000, "The selected bank finishes its real pattern projection");
             page = pageFactory.createObject(parent, {
@@ -159,7 +167,7 @@ Rectangle {
                 verify(Session.openProject(Probe.repoUrl(input)), "The live Session changes independently of the fixed report renderer");
                 tryCompare(Session.project, "calculating", false, 15000, "The unrelated project finishes opening");
                 for (const scheme of reference.schemes.map(row => row.id)) {
-                    Preferences.colourScheme = scheme;
+                    Approved.setSchemes(Preferences, scheme);
                     const charts = Render.descendants(frozen).filter(item => item.objectName === "report.evolution");
                     compare(charts.length, 6, "The native observer reaches every actual report evolution chart");
                     const expected = String(style.light).toLowerCase();

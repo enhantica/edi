@@ -9,18 +9,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 source = ROOT / 'THIRD-PARTY-NOTICES'
 text = source.read_text()
-component_list = text.split('Components\n----------\n', 1)[1].split('Acknowledgements\n', 1)[0]
+catalogue = ROOT / 'DEPENDENCIES.md'
 rows = []
-for line in component_list.splitlines():
-    match = re.fullmatch(r'- (.+?) \| licence: (.+?) \| (.+)', line)
-    if not match:
+header = []
+for line in catalogue.read_text().splitlines():
+    if not line.startswith('|'):
+        header = []
         continue
-    version = re.fullmatch(r'(.+) (\d+(?:\.\d+)+(?:[\w-]*))', match[1])
+    cells = [cell.strip() for cell in line.strip('|').split('|')]
+    if cells[0] == 'Component':
+        header = cells
+        continue
+    if not header or cells[0].startswith('---') or len(cells) != len(header):
+        continue
+    item = dict(zip(header, cells, strict=True))
+    carried = item['Desktop app']
+    if carried in {'', '—'}:
+        continue
+    version = re.search(r'\(([0-9][0-9A-Za-z.]*)\)', carried)
     rows.append({
-        'component': version[1] if version else match[1],
-        'version': version[2] if version else '',
-        'licence': match[2],
-        'use': match[3],
+        'component': item['Component'],
+        'version': version[1] if version else item['Version'],
+        'licence': item['Licence'],
+        'use': item['In edi'],
     })
 assert any(row['component'] == 'Qt' and row['licence'] == 'LGPL-3.0-only' for row in rows), (
     'The independent notice fixture contains the Qt licence witness'
@@ -41,6 +52,8 @@ Path(__file__).with_name('notices.json').write_text(
         {
             'source': 'THIRD-PARTY-NOTICES',
             'sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+            'catalogue': 'DEPENDENCIES.md',
+            'catalogue_sha256': hashlib.sha256(catalogue.read_bytes()).hexdigest(),
             'rows': rows,
             'licenceTexts': licence_texts,
         },

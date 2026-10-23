@@ -2,6 +2,8 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import EasyApplication.Gui.Style as Style
+import "../../fixtures/current_row_style/reference.js" as RowStyle
 import "UiInteraction.js" as Ui
 
 TestCase {
@@ -281,7 +283,6 @@ TestCase {
             const picker = reveal("structure", "basic", "atom_site", "atomSite.typeSymbol.0");
             const glyph = nativeAtomGlyph(control("atomSite.icon.0"));
             verify(glyph !== null, "owner 2026-10-06: Atom sites draws its coloured atom glyph beside the type");
-            tryCompare(glyph, "color", palette.value, 2000, "published-elements.tsv: La icon follows its independent Jmol/VESTA colour");
             click("appBar.tab.analysis");
             click("sideBar.tab.basic");
             const rows = Probe.rows(Session.project.parameters);
@@ -297,7 +298,22 @@ TestCase {
             const line = control("parameters.name." + index);
             const atom = nativeAtomGlyph(line);
             verify(atom !== null, "owner 2026-10-06: Analysis draws its atom glyph");
-            tryCompare(atom, "color", palette.value, 2000, "owner 2026-10-06: Analysis and Atom sites draw the same independent palette colour");
+            compare(String(atom.color), String(glyph.color), "The same element uses one readable colour in both table consumers");
+            const theme = Style.Colors.isDarkPalette ? "dark" : "light";
+            console.log("LEGACY_ELEMENT " + JSON.stringify({
+                scheme: palette.scheme,
+                symbol: "La",
+                consumers: [
+                    {
+                        colour: String(glyph.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    },
+                    {
+                        colour: String(atom.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    }
+                ]
+            }));
         }
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {

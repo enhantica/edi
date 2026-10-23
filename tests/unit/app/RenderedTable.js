@@ -20,3 +20,12 @@ function borderLines(root) {
     return descendants(root).filter(item => item.visible && item.height > 0 && item.height <= 2 &&
         item.width >= root.width * 0.8 && item.color && String(item.color) !== "#00000000");
 }
+
+function series(root) {
+    const found = [];
+    for (const item of descendants(root))
+        if (item.seriesList !== undefined)
+            for (let index = 0; index < item.seriesList.length; ++index)
+                if (!found.includes(item.seriesList[index])) found.push(item.seriesList[index]);
+    return found;
+}

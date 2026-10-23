@@ -36,21 +36,25 @@ EaElements.GroupBox {
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
+            onRowActivated: row => {
+                if (group.project)
+                    group.project.currentStructureIndex = row;
+            }
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
@@ -62,13 +66,9 @@ EaElements.GroupBox {
                 required property StructureViewModel structure
 
                 objectName: `structures.row.${index}`
-                TapHandler {
-                    onTapped: group.project.currentStructureIndex = row.index
-                }
-
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
@@ -89,7 +89,7 @@ EaElements.GroupBox {
                         group.project.currentStructureIndex = row.index
                     onCommitted: text => row.structure.name = text
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.remove.${row.index}`
                     fontIcon: "minus-circle"

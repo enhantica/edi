@@ -256,10 +256,56 @@ struct Token {
     bool quoted = false;
 };
 
+// A CIF2 list value, `[a b [c d]]`, read from its opening `[` at `index` to its matching `]` as one token: brackets
+// nest, quoted strings inside are skipped whole, and line ends and comments are white space between its values (the
+// CIF2 grammar). Only a CIF 2.0 file, whose first line is `#\#CIF_2.0`, may hold one: in CIF 1.1 `[` cannot open a
+// value. The token keeps the list's text; edi reads the categories that carry lists (crysta's per-structure
+// curves) as unmodelled.
+Token list_token(const std::string& text, std::size_t& index, bool cif2, const std::string& where) {
+    if (!cif2) {
+        fail_syntax(where, "list-without-cif2-heading",
+                    "a value opening with [ is a CIF2 list, which needs the CIF 2.0 heading #\\#CIF_2.0 on the "
+                    "file's first line");
+    }
+    const std::size_t begin = index;
+    const std::size_t size = text.size();
+    int depth = 0;
+    while (index < size) {
+        const char character = text[index];
+        if (character == '\'' || character == '"') {
+            const std::size_t close = text.find(character, index + 1);
+            if (close == std::string::npos) {
+                break;
+            }
+            index = close + 1;
+            continue;
+        }
+        if (character == '#' && (text[index - 1] == '[' || is_space(text[index - 1]))) {
+            while (index < size && text[index] != '\n') {
+                ++index;
+            }
+            continue;
+        }
+        if (character == '[') {
+            ++depth;
+        } else if (character == ']' && --depth == 0) {
+            ++index;
+            if (index < size && !is_space(text[index])) {
+                fail_syntax(where, "list-runs-into-value",
+                            "a list value runs into '" + text.substr(index, 20) + "' after its closing ]");
+            }
+            return {text.substr(begin, index - begin), false};
+        }
+        ++index;
+    }
+    fail_syntax(where, "unterminated-list", "a list value opened with [ does not close");
+}
+
 std::vector<Token> tokenize(const std::string& text, const std::string& where) {
     std::vector<Token> tokens;
     std::size_t index = 0;
     const std::size_t size = text.size();
+    const bool cif2 = text.starts_with("#\\#CIF_2.0") && (size == 10 || is_space(text[10]));
     while (index < size) {
         const char character = text[index];
         // A `;` in the first column of a line opens a CIF multi-line text field; its value runs to
@@ -311,6 +357,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
                 fail_syntax(where, "unterminated-string", "unterminated quoted string");
             }
             tokens.push_back({token, true});
+            continue;
+        }
+        if (character == '[') {
+            tokens.push_back(list_token(text, index, cif2, where));
             continue;
         }
         std::string token;  // bare token

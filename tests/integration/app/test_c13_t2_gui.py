@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.element_contrast.legacy_receipts import require_readable_elements
+
 ROOT = Path(__file__).resolve().parents[3]
 BOUNDARIES = (
     'test_separate_adp_table_and_isotropic_controls',
@@ -24,7 +26,7 @@ BOUNDARIES = (
 def gui_run():
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'GUI: app-build must supply the real Qt test runner'
-    return subprocess.run(
+    result = subprocess.run(
         [str(binary), '-input', str(ROOT / 'tests/unit/app/tst_c13_t2_gui.qml'), '-o', '-,txt'],
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
         capture_output=True,
@@ -32,6 +34,10 @@ def gui_run():
         timeout=90,
         check=False,
     )
+
+    if result.returncode == 0:
+        require_readable_elements(result.stdout + result.stderr)
+    return result
 
 
 def test_gui_owner_decisions_pass_in_the_production_host(gui_run):

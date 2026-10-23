@@ -205,9 +205,9 @@ Rectangle {
 
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"
-            toolTip: qsTr("Colour scheme")
+            toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
             model: ["jmol", "vesta"]
-            currentIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
+            shownIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
             onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
         }
         StructureToolbar {

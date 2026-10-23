@@ -6,13 +6,14 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// A table of the report preview, set as the HTML report's tables (the owner's reference report, 2026-10-13): a thin
-// border, a shaded header and alternating rows in the app tables' colours, rows one line apart, and the numbers of a
-// column aligned on their decimal point. No row tints on hover: the preview is a document. Without `columns` it is a key-value table, its
-// keys set apart from their values. A table wider than its place scrolls sideways.
+// A table of the report preview, set as the HTML report's tables (the owner's reference report, 2026-10-13), built as
+// every edi table is (edi ADR-0029): a list of TableRows and ListView cells, a shaded header, alternating rows one
+// line apart, selecting nothing, and the numbers of a column aligned on their decimal point. Without `columns` it is
+// a key-value table, its keys set apart from their values. A table wider than its place scrolls sideways.
 Flickable {
     id: table
 
@@ -26,8 +27,8 @@ Flickable {
     readonly property real padding: Math.round(em * 6 / 10.04)
     readonly property real keyGap: Math.round(em * 2)
     readonly property real border: EaStyle.Sizes.borderThickness
-    // A long table (an experiment's thousands of data points) shows a window of rows that scrolls, each row built as
-    // it comes into view, so the preview stays responsive.
+    // A long table (an experiment's thousands of data points) shows a window of rows that scrolls; the list builds each
+    // row as it comes into view, so the preview stays responsive.
     readonly property bool windowed: rows.length > 100
     readonly property int windowRows: 20
     // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
@@ -69,8 +70,9 @@ Flickable {
         }
         return out;
     }
-    // A windowed table keeps its scroll bar clear of the last column.
-    readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border + (windowed ? vertical.width : 0)
+    // The list's width: the columns, the spacing the rows put between them and the frame, and a windowed table's scroll
+    // bar clear of the last column.
+    readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + Math.max(0, columnCount - 1) * EaStyle.Sizes.tableColumnSpacing + 2 * border + (windowed ? EaStyle.Sizes.fontPixelSize : 0)
 
     // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units after a space).
     // Null for a text that is not a number.
@@ -88,7 +90,7 @@ Flickable {
     width: Math.min(tableWidth, parent ? parent.width : tableWidth)
     height: contentHeight + (horizontal.visible ? horizontal.height : 0)
     contentWidth: tableWidth
-    contentHeight: body.height + 2 * border
+    contentHeight: list.height
     flickableDirection: Flickable.HorizontalFlick
     interactive: contentWidth > width
     boundsBehavior: Flickable.StopAtBounds
@@ -105,29 +107,7 @@ Flickable {
         font.pixelSize: table.em
     }
 
-    // One row, its background alternating.
-    component Line: Rectangle {
-        id: line
-        required property var modelData
-        required property int index
-        width: body.width
-        height: table.rowHeight
-        color: index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1
-
-        Row {
-            Repeater {
-                model: line.modelData
-                delegate: Cell {
-                    required property string modelData
-                    required property int index
-                    column: index
-                    text: modelData
-                }
-            }
-        }
-    }
-
-    // One cell: a number on its decimal point, any other text from the left.
+    // One cell: a number on its decimal point, any other text from the left, each piece a ListView label.
     component Cell: Item {
         id: cell
 
@@ -138,12 +118,13 @@ Flickable {
         width: table.layout[column] ? table.layout[column].width : 0
         height: table.rowHeight
 
-        Text {
+        EaComponents.ListViewLabel {
             visible: !cell.parts
-            x: table.padding
-            anchors.verticalCenter: parent.verticalCenter
-            font: metrics.font
-            color: EaStyle.Colors.themeForeground
+            width: cell.width
+            leftPadding: table.padding
+            rightPadding: table.padding
+            horizontalAlignment: Text.AlignLeft
+            elide: Text.ElideNone
             // An agreement factor with its subscript (FactorText).
             textFormat: FactorText.has(cell.text) ? Text.RichText : Text.PlainText
             text: FactorText.has(cell.text) ? FactorText.rich(cell.text) : cell.text
@@ -151,102 +132,109 @@ Flickable {
         Row {
             visible: cell.parts !== null
             x: cell.width - table.padding - width
-            anchors.verticalCenter: parent.verticalCenter
-            Text {
+            height: cell.height
+            EaComponents.ListViewLabel {
                 width: table.layout[cell.column] ? table.layout[cell.column].left : 0
                 horizontalAlignment: Text.AlignRight
-                font: metrics.font
-                color: EaStyle.Colors.themeForeground
+                elide: Text.ElideNone
                 textFormat: Text.PlainText
                 text: cell.parts ? cell.parts.left : ""
             }
             // A number without a point gives the point's place to what follows its digits (an s.u. or units), so
             // `611(16)` stays together and its digits still end where the column's points are.
-            Text {
+            EaComponents.ListViewLabel {
                 visible: cell.parts !== null && cell.parts.dot
                 width: table.dotWidth
-                font: metrics.font
-                color: EaStyle.Colors.themeForeground
+                horizontalAlignment: Text.AlignLeft
+                elide: Text.ElideNone
                 text: "."
             }
-            Text {
+            EaComponents.ListViewLabel {
                 width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
-                font: metrics.font
-                color: EaStyle.Colors.themeForeground
+                horizontalAlignment: Text.AlignLeft
+                elide: Text.ElideNone
                 textFormat: Text.PlainText
                 text: cell.parts ? cell.parts.right : ""
             }
         }
     }
 
-    Column {
-        id: body
+    // The rows as a list model, each row's cells in one string, as the list's selection model needs a model it can
+    // index.
+    readonly property string cellSeparator: "\u001f"
+    ListModel {
+        id: rowModel
+    }
+    // Rebuilt in place: a row keeps its delegate while it exists, and only rows past the new end are removed.
+    onRowsChanged: {
+        for (let row = 0; row < rows.length; ++row) {
+            const cells = rows[row].join(table.cellSeparator);
+            if (row < rowModel.count)
+                rowModel.setProperty(row, "cells", cells);
+            else
+                rowModel.append({
+                    "cells": cells
+                });
+        }
+        if (rowModel.count > rows.length)
+            rowModel.remove(rows.length, rowModel.count - rows.length);
+    }
 
-        x: table.border
-        y: table.border
-        width: table.tableWidth - 2 * table.border
+    // The cells size themselves from `layout`, so the list sets no column widths.
+    EaComponents.ListView {
+        id: list
 
-        // The header: shaded, a line under it, a number column's title centred over its numbers.
-        Rectangle {
-            visible: !table.keyValue
-            width: body.width
-            height: table.rowHeight
-            color: EaStyle.Colors.contentBackground
+        width: table.tableWidth
+        tableRowHeight: table.rowHeight
+        rowPadding: 0
+        maxRowCountShow: table.windowed ? table.windowRows : Math.max(1, rowModel.count)
+        selectable: false
+        multiSelection: false
+        cacheBuffer: 0
+        defaultInfoText: ""
+        model: rowModel
+        scrollBarPolicy: table.windowed ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
 
-            Row {
-                // The lists themselves are the models, so a delegate holds its own text while a shorter list
-                // replaces it.
-                Repeater {
-                    model: table.keyValue ? [] : table.columns
-                    delegate: Item {
-                        id: heading
-                        required property string modelData
-                        required property int index
-                        width: table.layout[index] ? table.layout[index].width : 0
-                        height: table.rowHeight
-                        Text {
-                            x: table.layout[heading.index] && table.layout[heading.index].numeric ? Math.round((heading.width - width) / 2) : table.padding
-                            anchors.verticalCenter: parent.verticalCenter
-                            font: metrics.font
-                            // The text colour, as the app tables' headers have it.
-                            color: EaStyle.Colors.themeForeground
-                            textFormat: Text.PlainText
-                            text: heading.modelData
-                        }
-                    }
+        // The header: shaded, a number column's title centred over its numbers; none for a key-value table.
+        header: table.keyValue ? null : headerComponent
+
+        delegate: TableRow {
+            id: line
+
+            required property string cells
+
+            Repeater {
+                model: line.cells.split(table.cellSeparator)
+                delegate: Cell {
+                    required property string modelData
+                    required property int index
+                    column: index
+                    text: modelData
                 }
-            }
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: table.border
-                color: EaStyle.Colors.appBorder
-            }
-        }
-        Repeater {
-            model: table.windowed ? [] : table.rows
-            delegate: Line {}
-        }
-        ListView {
-            visible: table.windowed
-            width: body.width
-            height: visible ? table.windowRows * table.rowHeight : 0
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            model: table.windowed ? table.rows : []
-            delegate: Line {}
-            ScrollBar.vertical: EaElements.ScrollBar {
-                id: vertical
-                policy: ScrollBar.AlwaysOn
             }
         }
     }
-    // The thin border, over the cells.
-    Rectangle {
-        width: table.tableWidth
-        height: body.height + 2 * table.border
-        color: "transparent"
-        border.width: table.border
-        border.color: EaStyle.Colors.appBorder
+    Component {
+        id: headerComponent
+
+        EaComponents.ListViewHeader {
+            Repeater {
+                // The lists themselves are the models, so a delegate holds its own text while a shorter list
+                // replaces it.
+                model: table.columns
+                delegate: EaComponents.ListViewLabel {
+                    id: heading
+                    required property string modelData
+                    required property int index
+                    width: table.layout[index] ? table.layout[index].width : 0
+                    leftPadding: table.padding
+                    rightPadding: table.padding
+                    horizontalAlignment: table.layout[index] && table.layout[index].numeric ? Text.AlignHCenter : Text.AlignLeft
+                    elide: Text.ElideNone
+                    textFormat: Text.PlainText
+                    text: modelData
+                }
+            }
+        }
     }
 }

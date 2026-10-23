@@ -103,6 +103,15 @@ def pre_catalogue_bytes(path):
     if name not in pins:
         return data
     before, after = pair(name)
+    if name == 'docs/user/cli/pd-xray-cwl_latp_scan-4f/project/project.edi':
+        # Keep the older archive and scientific byte pins; only the origin changed.
+        for old, new in (
+            (b'Unknown instrument @ SNBL', b'BM01 @ ESRF'),
+            (b'_metadata.instrument ?', b'_metadata.instrument "BM01"'),
+            (b'_metadata.facility "SNBL"', b'_metadata.facility "ESRF"'),
+        ):
+            assert after.count(old) == 1, 'The retained LATP origin has one exact old field'
+            after = after.replace(old, new, 1)
     assert data == after, (
         'A live descriptive input must match its entire independently archived source, '
         'including every scientific byte'
