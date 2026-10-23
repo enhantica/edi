@@ -18,6 +18,9 @@ Row {
     property string pointerMode: "zoom"  // "zoom" or "pan"
     // Only the included range (edi ADR-0044), with the Excluded regions group's eraser icon.
     property bool includedOnly: false
+    // A chart without a legend or excluded regions (the single-crystal chart) leaves those buttons out.
+    property bool legendAvailable: true
+    property bool includedRangeAvailable: true
     signal resetClicked
     signal includedOnlyToggled
 
@@ -25,6 +28,7 @@ Row {
 
     ChartToolButton {
         objectName: "chart.toolbar.legend"
+        visible: toolbar.legendAvailable
         fontIcon: "align-left"
         toolTip: toolbar.legendShown ? qsTr("Hide legend") : qsTr("Show legend")
         checked: toolbar.legendShown
@@ -39,6 +43,7 @@ Row {
     }
     ChartToolButton {
         objectName: "chart.toolbar.includedRange"
+        visible: toolbar.includedRangeAvailable
         fontIcon: "eraser"
         toolTip: qsTr("Show only the included range")
         checked: toolbar.includedOnly

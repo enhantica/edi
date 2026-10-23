@@ -61,6 +61,9 @@ PatternModel::PatternModel(const edi::ExperimentBase& experiment, QObject* paren
 void PatternModel::readAxis() {
     count_ = 0;
     x_min_ = x_max_ = 0.0;
+    if (experiment_.reflections.has_value()) {
+        return;  // a single crystal has reflections, not a pattern: nothing for this model to hold
+    }
     if (!experiment_.data.has_value()) {
         calculation_error_ = QStringLiteral("the experiment has no data node: nothing to calculate over");
         return;

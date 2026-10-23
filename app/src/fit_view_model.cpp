@@ -118,6 +118,30 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
         columns.append(AgreementColumn{factor, structure, place});
     };
+    // A single crystal's fit is over F²: its factors are R(F²) and wR(F²), which crysta records as the profile pair.
+    const bool single_crystal =
+        !project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); });
+    if (single_crystal) {
+        column(QStringLiteral("R(F²)"));
+        column(QStringLiteral("wR(F²)"));
+        QList<Row> rows;
+        for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+            const edi::ExperimentBase& experiment = *project.experiments[i];
+            const bool own = experiment.fit_prof_wr_factor.has_value();
+            rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
+                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
+                          QStringList{percent(own ? experiment.fit_prof_r_factor : result.prof_r_factor),
+                                      percent(own ? experiment.fit_prof_wr_factor : result.prof_wr_factor)}}});
+        }
+        if (columns != columns_) {
+            columns_ = columns;
+            emit columnsChanged();
+        }
+        setTableRows(rows);
+        return;
+    }
     column(QStringLiteral("R<sub>p</sub>"));
     column(QStringLiteral("R<sub>wp</sub>"));
     column(QStringLiteral("R<sub>exp</sub>"));

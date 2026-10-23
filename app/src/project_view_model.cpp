@@ -717,6 +717,11 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     const std::string value = token.toStdString();
     if (axis == QLatin1String("sampleForm")) {
         type.sample_form = value;
+        // A single crystal is computed for neutrons only, and starts at constant wavelength.
+        if (value == "single crystal") {
+            type.beam_mode = "constant wavelength";
+            type.radiation_probe = "neutron";
+        }
     } else if (axis == QLatin1String("beamMode")) {
         type.beam_mode = value;
     } else if (axis == QLatin1String("radiationProbe")) {
@@ -734,7 +739,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     try {
         edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structures);
         // Within one beam mode the grid stays as it was set.
-        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
+        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value() &&
+            !replacement.reflections.has_value()) {
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
@@ -859,7 +865,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     if (load.derived != 0) {
         notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
     }
-    QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
+    // A single crystal's rows are reflections.
+    QString text = record.experiment->reflections.has_value()
+                       ? tr("%1 loaded into '%2': %n reflection(s)", nullptr, static_cast<int>(load.points))
+                       : tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points));
+    text = text.arg(file_name, loaded_name);
     if (!notes.isEmpty()) {
         text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
     }
@@ -2715,6 +2725,26 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
             saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
             saved_files_ = SavedFiles{{}, refusal.what()};
+            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
+            // its text, from a save without those experiments, and only theirs shows the refusal.
+            try {
+                edi::Project resolved = *project_;
+                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+                    const auto& links = resolved.experiments[index]->linked_structures;
+                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                        const std::string& id = link->structure_id.value();
+                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                           [&id](const auto& structure) { return structure->name.value() == id; });
+                    });
+                    if (missing) {
+                        resolved.experiments.erase_at(index);
+                    }
+                }
+                if (resolved.experiments.size() < project_->experiments.size()) {
+                    saved_files_->files = edi::project_edi_files(resolved);
+                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+            }
         }
     }
     if (!saved_files_->refusal.empty()) {
@@ -2728,10 +2758,20 @@ SavedFile ProjectViewModel::savedFileFunction() const {
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
-    for (const auto& [path, body] : savedFiles()) {
+    // A block the save could not write shows why; the others show their text (savedFiles).
+    std::string refusal;
+    try {
+        savedFiles();
+    } catch (const std::exception& error) {
+        refusal = error.what();
+    }
+    for (const auto& [path, body] : saved_files_->files) {
         if (path == relative) {
             return body;
         }
+    }
+    if (!refusal.empty()) {
+        throw std::runtime_error(refusal);
     }
     return {};
 }

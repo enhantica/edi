@@ -108,6 +108,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
+        qml/Components/SingleCrystalChart.qml
+        qml/Components/SingleCrystalTable.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectorField.qml
@@ -151,6 +153,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
+        qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml

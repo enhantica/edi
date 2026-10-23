@@ -317,7 +317,7 @@ EaElements.GroupBox {
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
     // that experiment wherever its row is by then, and is refused if it has gone.
-    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
+    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int"
     function chooseData(experiment) {
         if (WebFiles.available) {
             group.webRequestProject = group.project;
@@ -380,8 +380,8 @@ EaElements.GroupBox {
         id: dataDialog
         property var experiment: null
         property var project: null
-        title: qsTr("Load measured data from a plain two- or three-column file")
-        nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
+        title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file") : qsTr("Load measured data from a plain two- or three-column file")
+        nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         onAccepted: {
             if (dataDialog.project !== null && dataDialog.project === group.project)
                 group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);

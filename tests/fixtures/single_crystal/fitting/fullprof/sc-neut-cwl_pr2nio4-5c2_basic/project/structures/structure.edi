@@ -1,0 +1,39 @@
+data_structure
+_edi.schema_version 3
+_space_group.name_h_m "F m m m"
+_space_group.coord_system_code abc
+_cell.length_a 5.417799
+_cell.length_b 5.414600
+_cell.length_c 12.483399
+_cell.angle_alpha 90.000000
+_cell.angle_beta 90.000000
+_cell.angle_gamma 90.000000
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+Pr Pr i 0.50000 0.50000 0.35973 1.00000 beta 0.00000
+Ni Ni a 0.00000 0.00000 0.00000 1.00000 beta 0.00000
+O1 O e 0.25000 0.25000 0.00000 1.00000 beta 0.00000
+O2 O i 0.00000 0.00000 0.17385 0.72296 beta 0.00000
+Oi O f 0.25000 0.25000 0.25000 0.07464 beta 0.00000
+Od O p 0.07347 0.07347 0.17349 0.07465 Biso 2.31435
+loop_
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+Pr 0.00710 0.00710 0.00084 0.00000 0.00000 0.00000
+Ni 0.00280 0.00280 0.00151 0.00000 0.00000 0.00000
+O1 0.00500 0.00500 0.00413 -0.00140 0.00000 0.00000
+O2 0.01716 0.01716 0.00045 0.00000 0.00000 0.00000
+Oi 0.01033 0.01176 0.00100 0.00000 0.00000 0.00000

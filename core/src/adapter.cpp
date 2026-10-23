@@ -21,6 +21,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <type_traits>
 #include <vector>
 
 #include "edi/background_estimate.hpp"
@@ -55,6 +56,7 @@
 #include "crysta/report_settings.hpp"
 #endif
 #include "crysta/scattering.hpp"
+#include "crysta/single_crystal.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
 #include "crysta/weight_fraction.hpp"
@@ -1019,7 +1021,7 @@ void make_fit_ready(crysta::ExperimentBase& built) {
     // The reciprocal pad is TOF-only by construction: the CW instrument layout is with no
     // reciprocal slot — crysta's CW free_from_model reads exactly those, so a CW experiment
     // is already fit-ready as converted and padding it would corrupt the layout.
-    if (built.kind != crysta::BeamModeEnum::TimeOfFlight) {
+    if (built.kind != crysta::BeamModeEnum::TimeOfFlight || built.reflections.has_value()) {
         return;
     }
     if (built.instrument.size() < 4) {
@@ -1405,8 +1407,41 @@ PlainDataRows read_plain_data(const std::string& path) {
 
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
-    PlainDataRows read = read_plain_data(path);
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    if (experiment.reflections.has_value()) {
+        // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
+        // reader), taking a FullProf file's wavelength at constant wavelength.
+        const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+        const crysta::ReflectionFile file = crysta::read_reflection_file(
+            path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+        ReflnDataBase rows;
+        rows.index_h = file.index_h;
+        rows.index_k = file.index_k;
+        rows.index_l = file.index_l;
+        rows.intensity_meas = file.intensity;
+        rows.intensity_meas_su = file.sigma;
+        rows.wavelength = file.wavelength;
+        load.points = rows.size();
+        load.experiment.reflections = std::move(rows);
+        load.experiment.calculation_only = false;
+        if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
+            load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
+        }
+        load.experiment.data_file = load.file_name;
+        if (take_file_name) {
+            std::string stem = std::filesystem::path(path).stem().string();
+            for (char& character : stem) {
+                const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                                  (character >= '0' && character <= '9') || character == '_' || character == '-';
+                character = keep ? character : '_';
+            }
+            if (persistable_name(stem)) {
+                load.experiment.name = stem;
+            }
+        }
+        return load;
+    }
+    PlainDataRows read = read_plain_data(path);
     load.points = read.x.size();
     load.skipped = read.skipped;
     load.nonpositive = read.nonpositive;
@@ -2876,7 +2911,61 @@ void require_polarization_family(const ExperimentBase& e) {
     }
 }
 
+// A single crystal crosses as crysta's single-crystal form: its wavelength (constant wavelength),
+// extinction, linked structures and measured reflections.
+crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
+    const bool cw = e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(
+        cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+    built.name = e.name;
+    built.beam_mode = crossed(crysta::TokenField::BeamMode, built,
+                              e.experiment_type.beam_mode ? token(*e.experiment_type.beam_mode) : std::string());
+    built.radiation_probe = crossed(crysta::TokenField::RadiationProbe, built,
+                                    e.experiment_type.radiation_probe ? token(*e.experiment_type.radiation_probe)
+                                                                      : std::string());
+    built.scattering_type = crossed(crysta::TokenField::ScatteringType, built,
+                                    e.experiment_type.scattering_type ? token(*e.experiment_type.scattering_type)
+                                                                      : std::string());
+    built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
+                                              e.neutron_scattering_length.value_or(""));
+    built.dataset_weight = e.dataset_weight;
+    if (cw) {
+        if (!e.instrument.setup_wavelength) {
+            throw std::invalid_argument("single crystal '" + e.name + "' declares no wavelength");
+        }
+        built.instrument[0] = param(*e.instrument.setup_wavelength, crysta::INSTRUMENT, "setup_wavelength");
+    }
+    built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built,
+                                    e.extinction.type.value_or("becker-coppens"));
+    built.extinction_model = crossed(crysta::TokenField::ExtinctionModel, built,
+                                     e.extinction.model.value_or("gauss"));
+    if (e.extinction.radius) {
+        built.extinction[0] = param(*e.extinction.radius, crysta::CORRECTION, "radius");
+    }
+    if (e.extinction.mosaicity) {
+        built.extinction[1] = param(*e.extinction.mosaicity, crysta::CORRECTION, "mosaicity");
+    }
+    std::vector<crysta::LinkedStructure> links;
+    for (const auto& link : e.linked_structures) {
+        links.emplace_back(link->structure_id.value(), param(link->scale, crysta::SCALE, "scale"),
+                           link->enabled.get());
+    }
+    built.linked_structures.assign(links);
+    crysta::ReflectionFile rows;
+    rows.index_h = e.reflections->index_h;
+    rows.index_k = e.reflections->index_k;
+    rows.index_l = e.reflections->index_l;
+    rows.intensity = e.reflections->intensity_meas;
+    rows.sigma = e.reflections->intensity_meas_su;
+    rows.wavelength = e.reflections->wavelength;
+    crysta::set_measured_reflections(built, rows);
+    return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
+}
+
 crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for_relations) {
+    if (e.reflections) {
+        return to_crysta_single_crystal(e);
+    }
     require_polarization_family(e);
     if (e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH) {
         return to_crysta_cwl_experiment(e, for_relations);
@@ -3219,6 +3308,9 @@ void Project::calculate() {
             if (bank_item->data.has_value()) {
                 bank_item->data->clear_computed();
             }
+            if (bank_item->reflections.has_value()) {
+                bank_item->reflections->clear_computed();
+            }
             bank_item->refln.clear();
             bank_item->computed_source.reset();
         }
@@ -3264,6 +3356,10 @@ BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments
     banks.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const BraggPdExperiment& bank = *bank_item;
+        if (bank.reflections.has_value()) {  // a single crystal: its reflections cross with it
+            build_on_heap(banks, bank);
+            continue;
+        }
         if (!bank.data.has_value()) {
             throw std::invalid_argument(
                 "edi calculate: experiment carries no data node — a loaded project always has "
@@ -3582,6 +3678,18 @@ void Project::publish_calculation() {
     reflections.reserve(experiments.size());
     for (std::size_t index = 0; index < experiments.size(); ++index) {
         const crysta::ComputedUnits& units = crysta::current(engine, engine.experiments[index]);
+        if (experiments[index]->reflections) {
+            // A single crystal: its calculated F² and geometry, one value per measured reflection.
+            const crysta::ComputedRefln& refln = units.refln();
+            PdDataBase none;
+            data.push_back(std::move(none));
+            PowderReflnDataBase rows;
+            rows.d_spacing = shared_column(refln.d_spacing);
+            rows.sin_theta_over_lambda = shared_column(refln.sin_theta_over_lambda);
+            rows.f_squared_calc = shared_column(refln.intensity_calc);
+            reflections.push_back(std::move(rows));
+            continue;
+        }
         const crysta::ComputedData& computed = units.data();
         PdDataBase columns;
         columns.d_spacing = shared_column(computed.d_spacing);
@@ -3606,6 +3714,13 @@ void Project::publish_calculation() {
     }
     for (std::size_t index = 0; index < experiments.size(); ++index) {
         BraggPdExperiment& bank = *experiments[index];
+        if (bank.reflections) {
+            bank.reflections->d_spacing = std::move(reflections[index].d_spacing);
+            bank.reflections->sin_theta_over_lambda = std::move(reflections[index].sin_theta_over_lambda);
+            bank.reflections->intensity_calc = std::move(reflections[index].f_squared_calc);
+            bank.computed_source = std::move(sources[index]);
+            continue;
+        }
         PdDataBase& target = *bank.data;
         target.d_spacing = std::move(data[index].d_spacing);
         target.intensity_calc = std::move(data[index].intensity_calc);
@@ -3734,6 +3849,15 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
     result.data.reserve(calculated.experiments.size());
     result.refln.reserve(calculated.experiments.size());
     for (const auto& bank_item : calculated.experiments) {
+        if (bank_item->reflections.has_value()) {  // a single crystal's calculated F², by reflection
+            PowderReflnDataBase rows;
+            rows.d_spacing = bank_item->reflections->d_spacing;
+            rows.sin_theta_over_lambda = bank_item->reflections->sin_theta_over_lambda;
+            rows.f_squared_calc = bank_item->reflections->intensity_calc;
+            result.data.emplace_back();
+            result.refln.push_back(std::move(rows));
+            continue;
+        }
         PdDataBase columns;
         if (bank_item->data.has_value()) {
             const PdDataBase& computed = *bank_item->data;
@@ -3791,7 +3915,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         return PublishOutcome::Superseded;
     }
     for (std::size_t index = 0; index < banks; ++index) {
-        if (!refused && !live.experiments[index]->data.has_value()) {
+        if (!refused && !live.experiments[index]->data.has_value() &&
+            !live.experiments[index]->reflections.has_value()) {
             return PublishOutcome::Superseded;
         }
     }
@@ -3844,8 +3969,18 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
             if (bank.data.has_value()) {
                 bank.data->clear_computed();
             }
+            if (bank.reflections.has_value()) {
+                bank.reflections->clear_computed();
+            }
             bank.refln.clear();
             bank.computed_source.reset();
+            continue;
+        }
+        if (bank.reflections.has_value()) {
+            bank.reflections->d_spacing = std::move(result.refln[index].d_spacing);
+            bank.reflections->sin_theta_over_lambda = std::move(result.refln[index].sin_theta_over_lambda);
+            bank.reflections->intensity_calc = std::move(result.refln[index].f_squared_calc);
+            bank.computed_source = std::move(sources[index]);
             continue;
         }
         PdDataBase& target = *bank.data;
@@ -4349,8 +4484,12 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
     // structured ValueError, never a partial/silent result. The model is written only on success.
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit");
-    detail::validate_fit_request(grid, observed, sigma, *this);
-    if (!experiments.empty()) {
+    // A single crystal fits its own measured reflections: no pattern crosses.
+    const bool single_crystal = experiments.size() == 1 && experiment().reflections.has_value();
+    if (!single_crystal) {
+        detail::validate_fit_request(grid, observed, sigma, *this);
+    }
+    if (!experiments.empty() && !single_crystal) {
         require_auto_background_for(experiment(), grid, observed);  // the one experiment a single fit fits
     }
     try {
@@ -4385,9 +4524,12 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // Points as READ, before the mask — the caller-owned authority for `n_points_loaded`. It
         // must be taken here: apply_exclusions replaces `measured`, and the provider only ever
         // sees the masked pattern.
-        const std::size_t n_points_loaded = measured.grid.size();
-        measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
-        if (measured.grid.empty()) {
+        const std::size_t n_points_loaded =
+            single_crystal ? experiment().reflections->size() : measured.grid.size();
+        if (!single_crystal) {
+            measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
+        }
+        if (measured.grid.empty() && !single_crystal) {
             throw std::invalid_argument(
                 "edi fit: no measured data remains after applying the excluded regions");
         }
@@ -4452,11 +4594,13 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             crysta::DescentRequest request =
                 declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
             const crysta::FitResultBase result = [&] {
-                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
+                  if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
                     return crysta::fit_problem(
                         provider, /*separable_linear=*/true, request.max_iterations,
                         collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
                         should_cancel);  // The cooperative cancel
+                  }
                 }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
@@ -4531,9 +4675,16 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project, {crysta::PdDataBase(grid, observed, sigma)}, outcome.values.size()));
+                              fitted_quality(project,
+                                             single_crystal ? std::deque<crysta::PdDataBase>{}
+                                                            : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
+                                             outcome.values.size()));
             return outcome;
         };
+        if (single_crystal) {
+            crysta::SingleCrystalResidual provider(project, std::move(free));
+            return finish(provider);
+        }
         if (phases) {
             crysta::PhaseSumResidual provider(project);
             return finish(provider);

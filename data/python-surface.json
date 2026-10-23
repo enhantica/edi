@@ -816,6 +816,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "extinction": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ScExperimentBase.extinction",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "instrument": {
      "need": {
       "by": "counterpart",
@@ -3362,6 +3371,15 @@
      "need": {
       "by": "counterpart",
       "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "extinction": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ScExperimentBase.extinction",
       "verdict": "keep"
      },
      "reason": "C",
@@ -6744,6 +6762,7 @@
     "dataset_weight",
     "excluded_regions",
     "experiment_type",
+    "extinction",
     "instrument",
     "linked_structure",
     "linked_structures",
@@ -7220,6 +7239,7 @@
     "dataset_weight",
     "excluded_regions",
     "experiment_type",
+    "extinction",
     "linked_structure",
     "linked_structures",
     "name",
