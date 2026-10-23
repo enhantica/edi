@@ -717,7 +717,7 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     const std::string value = token.toStdString();
     if (axis == QLatin1String("sampleForm")) {
         type.sample_form = value;
-        // A single crystal is computed for neutrons at constant wavelength only.
+        // A single crystal is computed for neutrons only, and starts at constant wavelength.
         if (value == "single crystal") {
             type.beam_mode = "constant wavelength";
             type.radiation_probe = "neutron";
