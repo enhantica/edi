@@ -240,12 +240,12 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         {"mu_r",
          {+[](ExperimentBase& e) -> OptionalParameter& { return e.absorption.mu_r; },
           "absorption.mu_r"}},
-        {"radius",
-         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.radius; },
-          "extinction.radius"}},
-        {"mosaicity",
-         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.mosaicity; },
-          "extinction.mosaicity"}},
+        {"domain_radius",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.domain_radius; },
+          "extinction.domain_radius"}},
+        {"mosaic_spread",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.mosaic_spread; },
+          "extinction.mosaic_spread"}},
     };
     if (const auto it = kPresenceTracked.find(label); it != kPresenceTracked.end()) {
         OptionalParameter& field = it->second.first(experiment);
