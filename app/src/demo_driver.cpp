@@ -146,13 +146,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                        "_instrument.calib_sample_displacement 0.05\\n_instrument.calib_sample_transparency -0.02",
                        "group.instrument"}});
     // ... and every Example's Experiment page with its peak group open, where the types differ most; a single
-    // crystal has no peak, so its extinction group instead. The first returns to the light theme the rest are
-    // captured in.
+    // crystal has no peak, so its extinction group instead, opened from Home so `--demo-only ex-sc-` runs them
+    // alone. The first returns to the light theme the rest are captured in.
     for (const QString& id : ExampleListModel::bundledIds()) {
         const QStringList theme = steps_.back().image.startsWith(QLatin1String("t2-")) ? QStringList{"theme:light"}
                                                                                         : QStringList{};
-        const QString group = id.startsWith(QLatin1String("sc-")) ? "group.extinction" : "group.peak";
-        steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, group}});
+        if (id.startsWith(QLatin1String("sc-"))) {
+            const QStringList home{"theme:light", "appBar.tab.home", "home.start", "expand:group.examples"};
+            steps_.push_back({QStringLiteral("ex-") + id,
+                              home + open_example(id) + QStringList{experiment, basic, "group.extinction"}});
+        } else {
+            steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        }
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
