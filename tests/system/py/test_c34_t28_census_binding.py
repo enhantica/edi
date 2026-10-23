@@ -23,6 +23,7 @@ PAYLOAD_OWNERS = {
     'GeomBonds',
     'CartnTransform',
     'PowderReflnDataBase',
+    'ReflnDataBase',
 }
 ONE_ROW = {
     'Cell': '_cell',
@@ -32,6 +33,7 @@ ONE_ROW = {
     'PeakBase': '_peak',
     'InstrumentBase': '_instrument',
     'AbsorptionBase': '_absorption',
+    'ExtinctionBase': '_extinction',
     'SequentialFitConfig': '_sequential_fit',
     'ProjectMetadata': '_metadata',
 }

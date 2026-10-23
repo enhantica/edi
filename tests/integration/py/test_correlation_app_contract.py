@@ -107,12 +107,12 @@ def test_create_project_passes_the_chosen_location_to_the_session():
 
 def test_supported_only_selectors_are_disabled_and_explain_the_reason():
     source = text('Pages/Experiment/ExperimentTypeGroup.qml')
-    for identity in ('sampleForm', 'scatteringType'):
+    for identity in ('scatteringType',):
         marker = source.index('id: ' + identity)
         end = source.find('EaElements.ParamComboBox', marker)
         section = source[marker : end if end >= 0 else len(source)]
         assert re.search(r'enabled:\s*false\b', section), (
-            'Sample form and scattering type must be disabled while only one is supported'
+            'Scattering type must be disabled while only Bragg scattering is supported'
         )
         explains = re.search(r'only|support|available', section, re.IGNORECASE)
         assert 'ToolTip' in section and explains, (

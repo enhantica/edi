@@ -1,6 +1,6 @@
 {
   "upstream_revision": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
-  "fp2k": "/home/andrewsazonov/Applications/fullprof/fp2k",
+  "fp2k": "fp2k",
   "fp2k_sha256": "b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f",
   "cases": {
     "sc-neut-cwl_pr2nio4_basic": {
