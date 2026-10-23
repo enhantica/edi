@@ -1,3 +1,4 @@
+"""Rietveld fit: Co₂SiO₄, D20."""
 # %% [markdown]
 # # Rietveld fit: Co₂SiO₄, D20
 #
@@ -5,7 +6,8 @@
 # displacements and the oxygen occupancies.
 #
 # The project is the catalogue case `pd-neut-cwl_cosio-d20`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20/project` and the app opens from its Examples.
+# `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20/project` and the app opens from its
+# Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -29,8 +31,8 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. The project selects the fast descent (`_minimizer.descent
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. The project selects the fast descent (`_minimizer.descent
 # fast_descent`).
 #
 # The fit is free to change these parameters:
@@ -70,8 +72,8 @@ project.report.save_html('pd-neut-cwl_cosio-d20.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-cwl_cosio-d20')

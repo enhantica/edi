@@ -1,8 +1,9 @@
+"""Calculation without data: NaCl, laboratory X-ray."""
 # %% [markdown]
 # # Calculation without data: NaCl, laboratory X-ray
 #
-# Calculate a laboratory X-ray pattern of rock salt with Cu Kα₁ radiation and a monochromator's
-# polarization correction, without any measured data.
+# Calculate a laboratory X-ray pattern of rock salt with Cu K&alpha;₁ radiation and a
+# monochromator's polarization correction, without any measured data.
 #
 # The project is the catalogue case `pd-xray-cwl_nacl_simulation`: the files the command line fits
 # with `python -m edi fit docs/user/cli/pd-xray-cwl_nacl_simulation/project` and the app opens from
@@ -48,8 +49,8 @@ project.report.save_html('pd-xray-cwl_nacl_simulation.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-xray-cwl_nacl_simulation')

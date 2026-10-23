@@ -1,11 +1,13 @@
+"""Rietveld fit: PbSO₄, laboratory X-ray."""
 # %% [markdown]
 # # Rietveld fit: PbSO₄, laboratory X-ray
 #
-# Fit PbSO₄ to the Rietveld round robin's laboratory X-ray pattern, with the Cu Kα doublet and
-# Bérar-Baldinozzi asymmetry.
+# Fit PbSO₄ to the Rietveld round robin's laboratory X-ray pattern, with the Cu K&alpha; doublet
+# and Bérar-Baldinozzi asymmetry.
 #
 # The project is the catalogue case `pd-xray-cwl_pbso4-lab`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-xray-cwl_pbso4-lab/project` and the app opens from its Examples.
+# `python -m edi fit docs/user/cli/pd-xray-cwl_pbso4-lab/project` and the app opens from its
+# Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -29,8 +31,8 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure.
 #
 # The fit is free to change these parameters:
 
@@ -69,8 +71,8 @@ project.report.save_html('pd-xray-cwl_pbso4-lab.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-xray-cwl_pbso4-lab')

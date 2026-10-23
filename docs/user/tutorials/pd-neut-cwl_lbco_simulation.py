@@ -1,9 +1,10 @@
+"""Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT."""
 # %% [markdown]
 # # Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT
 #
-# Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without any
-# measured data. The structure, the HRPT instrument, the peak profile and the background are in the
-# project, and edi calculates the pattern over the project's 2θ range.
+# Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without
+# any measured data. The structure, the HRPT instrument, the peak profile and the background are in
+# the project, and edi calculates the pattern over the project's 2θ range.
 #
 # The project is the catalogue case `pd-neut-cwl_lbco_simulation`: the files the command line fits
 # with `python -m edi fit docs/user/cli/pd-neut-cwl_lbco_simulation/project` and the app opens from
@@ -49,8 +50,8 @@ project.report.save_html('pd-neut-cwl_lbco_simulation.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-cwl_lbco_simulation')

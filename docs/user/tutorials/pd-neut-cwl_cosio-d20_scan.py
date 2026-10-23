@@ -1,13 +1,14 @@
+"""Sequential fit: Co₂SiO₄, D20 temperature scan."""
 # %% [markdown]
 # # Sequential fit: Co₂SiO₄, D20 temperature scan
 #
-# Fit Co₂SiO₄ to a cooling scan from D20 at ILL, 155 patterns from 497.4 to 52.3 K, one after another:
-# each fit starts from the previous one's result. The magnetic frames at the lowest temperatures are
-# left out.
+# Fit Co₂SiO₄ to a cooling scan from D20 at ILL, 155 patterns from 497.4 to 52.3 K, one after
+# another: each fit starts from the previous one's result. The magnetic frames at the lowest
+# temperatures are left out.
 #
-# The project is the catalogue case `pd-neut-cwl_cosio-d20_scan`: the files the command line fits with
-# `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20_scan/project` and the app opens from its
-# Examples.
+# The project is the catalogue case `pd-neut-cwl_cosio-d20_scan`: the files the command line fits
+# with `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20_scan/project` and the app opens from
+# its Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -15,6 +16,9 @@
 # > (`execution-exclusions.yml`).
 
 # %%
+import csv
+from pathlib import Path
+
 import edi
 
 # %% [markdown]
@@ -31,9 +35,9 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. Only the template pattern starts this way; each later pattern
-# starts from the fit before it.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. Only the template pattern starts this way; each later
+# pattern starts from the fit before it.
 #
 # The fit is free to change these parameters:
 
@@ -78,9 +82,8 @@ print(result.status.name.lower(), 'with', len(fitted), 'patterns fitted in all')
 # One row per pattern, in the order they were fitted.
 
 # %%
-import csv
-
-with open('pd-neut-cwl_cosio-d20_scan/analysis/results.csv', newline='') as file:
+results = Path('pd-neut-cwl_cosio-d20_scan/analysis/results.csv')
+with results.open(newline='', encoding='utf-8') as file:
     rows = list(csv.DictReader(file))
 print(len(rows), 'rows; columns:', ', '.join(list(rows[0])[:6]), '...')
 

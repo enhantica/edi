@@ -1,12 +1,13 @@
+"""Two-phase fit: YAlO₃ and Al₂O₃, SPODI."""
 # %% [markdown]
 # # Two-phase fit: YAlO₃ and Al₂O₃, SPODI
 #
-# Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI at
-# FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
+# Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
+# at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
 #
-# The project is the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi`: the files the command line fits
-# with `python -m edi fit docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project` and the app opens from
-# its Examples.
+# The project is the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi`: the files the command line
+# fits with `python -m edi fit docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project` and the app
+# opens from its Examples.
 
 # %% [markdown]
 # > This tutorial is not run when the documentation is built yet. It loads its project from the edi
@@ -30,8 +31,8 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure.
 #
 # The fit is free to change these parameters:
 
@@ -70,8 +71,8 @@ project.report.save_html('pd-neut-cwl_yalo3-al2o3-spodi.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-cwl_yalo3-al2o3-spodi')

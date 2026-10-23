@@ -1,3 +1,4 @@
+"""Rietveld fit: high-entropy perovskite, P02.1."""
 # %% [markdown]
 # # Rietveld fit: high-entropy perovskite, P02.1
 #
@@ -30,9 +31,9 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. The background is 20 points placed by hand, all starting at 300,
-# and the project selects the fast descent (`_minimizer.descent fast_descent`).
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. The background is 20 points placed by hand, all starting at
+# 300, and the project selects the fast descent (`_minimizer.descent fast_descent`).
 #
 # The fit is free to change these parameters:
 
@@ -71,8 +72,8 @@ project.report.save_html('pd-xray-cwl_lam7o3-p021.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-xray-cwl_lam7o3-p021')

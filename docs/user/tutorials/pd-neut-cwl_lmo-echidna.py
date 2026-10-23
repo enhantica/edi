@@ -1,3 +1,4 @@
+"""Rietveld fit: LiNiO₂, ECHIDNA."""
 # %% [markdown]
 # # Rietveld fit: LiNiO₂, ECHIDNA
 #
@@ -31,9 +32,9 @@ print('Fitting mode:', project.fitting_mode)
 # ## The start
 #
 # The project starts the way your own measurement would: zero shift 0, profile terms to one
-# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and the
-# scale to one significant figure. Li1 starts at 0.95, 5 % Ni on the Li site, and the asymmetry terms
-# stay fixed at 0.08: they describe the instrument's geometry.
+# significant figure, Biso 0.5 on every site, coordinates to two decimals, a flat background and
+# the scale to one significant figure. Li1 starts at 0.95, 5 % Ni on the Li site, and the asymmetry
+# terms stay fixed at 0.08: they describe the instrument's geometry.
 #
 # The fit is free to change these parameters:
 
@@ -72,8 +73,8 @@ project.report.save_html('pd-neut-cwl_lmo-echidna.html')
 # %% [markdown]
 # ## Save
 #
-# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy stays
-# as it was.
+# `save_as` writes the project with its new values to a folder of its own; the catalogue's copy
+# stays as it was.
 
 # %%
 project.save_as('pd-neut-cwl_lmo-echidna')
