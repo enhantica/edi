@@ -1625,7 +1625,7 @@
       "samples": [
         "Taurine [P2₁/c]"
       ],
-      "origin": "Unknown instrument",
+      "origin": "SENJU @ J-PARC",
       "detail": "Single crystal · Time of flight · Isotropic ADPs · Scale-only fit",
       "values": {
         "sampleForm": [
@@ -1647,10 +1647,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "J-PARC"
         ],
         "instruments": [
-          ""
+          "SENJU"
         ],
         "dimensionality": [
           "1D"
@@ -1661,13 +1661,13 @@
       },
       "searchAliases": [
         "sc-neut-tof_taurine-unknown_basic",
-        "Taurine [P2₁/c] · Unknown instrument",
+        "Taurine [P2₁/c] · SENJU @ J-PARC",
         "Single crystal · Time of flight · Isotropic ADPs · Scale-only fit"
       ],
       "sources": [
         "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/project.edi",
         "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/taurine.edi",
+        "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/senju.edi",
         "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/structures/taurine.edi"
       ]
     },
@@ -1675,7 +1675,7 @@
       "samples": [
         "Taurine [P2₁/c]"
       ],
-      "origin": "Unknown instrument",
+      "origin": "SENJU @ J-PARC",
       "detail": "Single crystal · Time of flight · Isotropic displacements from a rough start",
       "values": {
         "sampleForm": [
@@ -1697,10 +1697,10 @@
           "single"
         ],
         "facilities": [
-          ""
+          "J-PARC"
         ],
         "instruments": [
-          ""
+          "SENJU"
         ],
         "dimensionality": [
           "1D"
@@ -1711,13 +1711,13 @@
       },
       "searchAliases": [
         "sc-neut-tof_taurine_fit",
-        "Taurine [P2₁/c] · Unknown instrument",
+        "Taurine [P2₁/c] · SENJU @ J-PARC",
         "Single crystal · Time of flight · Isotropic displacements from a rough start"
       ],
       "sources": [
         "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
         "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/taurine.edi",
+        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju.edi",
         "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi"
       ]
     },

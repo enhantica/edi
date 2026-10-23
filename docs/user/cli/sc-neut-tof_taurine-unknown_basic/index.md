@@ -1,12 +1,12 @@
 ---
-title: Taurine on time of flight, scale against FullProf
+title: Taurine on SENJU, scale against FullProf
 description: >-
-  Taurine measured by time-of-flight neutron single-crystal diffraction: the 171 reflections FullProf fits (of 286), each with its own wavelength, isotropic displacements, no extinction. The structure is the one FullProf computes, and only the scale is free.
+  Taurine on SENJU (J-PARC, time-of-flight neutron single-crystal diffraction): the 171 reflections FullProf fits (of 286), each with its own wavelength, isotropic displacements, no extinction. The structure is the one FullProf computes, and only the scale is free.
 ---
 
-# Taurine on time of flight, scale against FullProf
+# Taurine on SENJU, scale against FullProf
 
-Taurine measured by time-of-flight neutron single-crystal diffraction: the 171 reflections FullProf fits (of 286), each with its own wavelength, isotropic displacements, no extinction. The structure is the one FullProf computes, and **only the scale is free**.
+Taurine on SENJU (J-PARC, time-of-flight neutron single-crystal diffraction): the 171 reflections FullProf fits (of 286), each with its own wavelength, isotropic displacements, no extinction. The structure is the one FullProf computes, and **only the scale is free**.
 
 It is the CLI counterpart of diffraction-lib's `sc-neut-tof_taurine_basic` verification page: where the page compares calculated F² with FullProf's, this project fits the measured reflections FullProf computes.
 
