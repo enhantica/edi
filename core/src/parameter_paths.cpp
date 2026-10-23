@@ -2,7 +2,9 @@
 #include "parameter_paths.hpp"
 
 #include <algorithm>
+#include <locale>
 #include <map>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -630,6 +632,26 @@ bool copy_parameter_states(Project& to, Project& from) {
         }
     }
     return true;
+}
+
+std::vector<std::string> derived_outside_range(Project& project) {
+    std::vector<std::string> out;
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        const Parameter* parameter = entry.parameter;
+        if (parameter == nullptr || parameter->spec == nullptr || parameter->dependence == Dependence::Independent) {
+            continue;
+        }
+        const double value = parameter->value;
+        if (value < parameter->spec->range.min || value > parameter->spec->range.max) {
+            std::ostringstream message;
+            message.imbue(std::locale::classic());
+            message << entry.path << " = " << value << " is outside its admissible range ["
+                    << parameter->spec->range.min << ", " << parameter->spec->range.max
+                    << "]; a constraint derives it, and it is kept";
+            out.push_back(message.str());
+        }
+    }
+    return out;
 }
 
 }  // namespace edi

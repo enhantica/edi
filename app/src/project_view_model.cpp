@@ -26,6 +26,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/presentation.hpp"
 #include "edi/report_model.hpp"
 #include "edi/scan.hpp"
@@ -268,6 +269,13 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         syncUndo();
     };
     connect(fit_, &FitViewModel::finished, this, note_fit);
+    // A value a constraint derives outside its range is kept and named in Messages, as the owner chose
+    // (2026-10-23); the Analysis table shows it red.
+    connect(fit_, &FitViewModel::finished, this, [this] {
+        for (const std::string& warning : edi::derived_outside_range(*project_)) {
+            emit message(QString::fromStdString(warning));
+        }
+    });
     connect(fit_, &FitViewModel::outOfDateChanged, this, [this] { evolution_->setOutOfDate(fit_->outOfDate()); });
     // A single fit on a scan dataset makes its result the template, and that dataset the template dataset
     // (`_sequential_fit.template_file`; edi ADR-0017 §19): the shown state is the template from now on. The

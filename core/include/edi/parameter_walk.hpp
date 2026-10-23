@@ -38,6 +38,11 @@ std::vector<ParameterEntry> parameter_entries(Project& project);
 // nothing is written and the answer is false.
 bool copy_parameter_states(Project& to, Project& from);
 
+// One warning per value a constraint derives (an anisotropic site's equivalent isotropic displacement, a
+// declared constraint's target) that lies outside its admissible range. Such a value is kept, as a fitted value
+// outside its range is, and the app marks it red; the user decides.
+std::vector<std::string> derived_outside_range(Project& project);
+
 }  // namespace edi
 
 #endif  // EDI_PARAMETER_WALK_HPP
