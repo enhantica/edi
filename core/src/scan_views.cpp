@@ -251,14 +251,16 @@ const std::vector<std::string>& scan_colour_map_names() {
 
 std::string scan_colour_map_title(std::string_view name) {
     static const std::vector<std::pair<std::string_view, std::string_view>> titles{
-        {"batlow", "batlow (Crameri)"},     {"oslo", "oslo (Crameri)"},         {"lajolla", "lajolla (Crameri)"},
-        {"acton", "acton (Crameri)"},       {"devon", "devon (Crameri)"},       {"lapaz", "lapaz (Crameri)"},
-        {"thermal", "thermal (cmocean)"},   {"haline", "haline (cmocean)"},     {"deep", "deep (cmocean)"},
-        {"dense", "dense (cmocean)"},       {"ice", "ice (cmocean)"},           {"tempo", "tempo (cmocean)"},
-        {"turbo", "turbo (Google)"},        {"ylgnbu", "YlGnBu (ColorBrewer)"}, {"pubu", "PuBu (ColorBrewer)"},
-        {"gnbu", "GnBu (ColorBrewer)"},     {"blues", "Blues (ColorBrewer)"},   {"purples", "Purples (ColorBrewer)"},
-        {"ylorrd", "YlOrRd (ColorBrewer)"}, {"cet-gouldian", "gouldian (CET-L20)"}, {"cet-l08", "CET-L08"},
-        {"cet-l06", "CET-L06"},             {"cet-l17", "CET-L17"},             {"cet-l18", "CET-L18"}};
+        {"viridis", "Viridis"},                 {"magma", "Magma"},                 {"inferno", "Inferno"},
+        {"plasma", "Plasma"},                   {"batlow", "batlow (Crameri)"},     {"oslo", "oslo (Crameri)"},
+        {"lajolla", "lajolla (Crameri)"},       {"acton", "acton (Crameri)"},       {"devon", "devon (Crameri)"},
+        {"lapaz", "lapaz (Crameri)"},           {"thermal", "thermal (cmocean)"},   {"haline", "haline (cmocean)"},
+        {"deep", "deep (cmocean)"},             {"dense", "dense (cmocean)"},       {"ice", "ice (cmocean)"},
+        {"tempo", "tempo (cmocean)"},           {"turbo", "turbo (Google)"},        {"ylgnbu", "YlGnBu (ColorBrewer)"},
+        {"pubu", "PuBu (ColorBrewer)"},         {"gnbu", "GnBu (ColorBrewer)"},     {"blues", "Blues (ColorBrewer)"},
+        {"purples", "Purples (ColorBrewer)"},   {"ylorrd", "YlOrRd (ColorBrewer)"}, {"cet-l08", "CET-L08"},
+        {"cet-gouldian", "gouldian (CET-L20)"}, {"cet-l06", "CET-L06"},             {"cet-l17", "CET-L17"},
+        {"cet-l18", "CET-L18"}};
     for (const auto& [key, title] : titles) {
         if (key == name) {
             return std::string(title);

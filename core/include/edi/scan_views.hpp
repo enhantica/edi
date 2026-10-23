@@ -66,7 +66,7 @@ enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
 /// Every map's name, the enum's four first ("viridis", "magma", "inferno", "plasma"), then the candidates the owner
 /// chooses from (data/colormaps/PROVENANCE.md).
 const std::vector<std::string>& scan_colour_map_names();
-/// A map's title as the app lists it, naming its source ("batlow (Crameri)"); the name for one without a source note.
+/// A map's title as the app lists it, naming its source ("batlow (Crameri)"); matplotlib's capitalised ("Viridis").
 std::string scan_colour_map_title(std::string_view name);
 /// The enum value a saved name stands for; viridis for a name that is not one of the four.
 ScanColourMap scan_colour_map_or_default(std::string_view name);
