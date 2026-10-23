@@ -1030,8 +1030,12 @@ struct AssistantViewModel::State {
     }
 #endif
 #ifndef __EMSCRIPTEN__
-    auto reserve_disclosure(quint64 bytes) {
-        disclosure_room(bytes);
+    auto reserve_disclosure(quint64 bytes,quint64* measuredRoom=nullptr,bool* roomKnown=nullptr) {
+        if(roomKnown)*roomKnown=false;
+        const auto room=native_room();
+        if(measuredRoom)*measuredRoom=room;
+        if(roomKnown)*roomKnown=true;
+        if(bytes>room)throw std::length_error("Disclosure retention exceeds capacity");
         const auto publication = file_projection();
         const QPointer<CodexAgent> transport(agent.get());
         const auto transport_generation = transport ? transport->outputGeneration() : 0;
@@ -1223,8 +1227,7 @@ struct AssistantViewModel::State {
             work_failure.transport && agent.get()==work_failure.transport.data();
     }
     bool work_open_failure(const FileProjection& proof,CodexAgent::FailureKind kind) noexcept {
-        if(work_failure.stage!=WorkFailureStage::Empty || (!work_reports.automatic() && !work_reports.collecting()) ||
-           !work_reports.available() || !work_scope_bound || work_reports.attempt().isEmpty() || !agent ||
+        if(work_failure.stage!=WorkFailureStage::Empty || !work_reports.available() || !work_scope_bound || work_reports.attempt().isEmpty() || !agent ||
            agent->outputOwnerState()==CodexAgent::OutputOwnerState::Unobserved)return false;
         work_failure.stage=WorkFailureStage::Building;work_failure.kind=kind;work_failure.proof=proof;
         work_failure.transport=agent.get();work_failure.original_output=agent->outputGeneration();
@@ -1520,6 +1523,14 @@ struct AssistantViewModel::State {
             // Original room remains the sole admission. No wait/retry for a
             // writer, capacity, serial or future native scientific settlement.
             (void)native_room();
+            if(!work_failure.rows_retained) {
+                const auto originalError=error;
+                const bool retained=generic_interrupt_rows();
+                if(!current())return;
+                error=originalError;
+                work_failure.rows_retained=retained;
+                if(!retained)std::fprintf(stderr,"Edi terminal history stage=RELEASED_RECONCILIATION class=UNAVAILABLE\n");
+            }
             const auto code=work_failure.kind==CodexAgent::FailureKind::LocalCapacity?QStringLiteral("codex.local_capacity"):
                 work_failure.kind==CodexAgent::FailureKind::OperationDeadline?QStringLiteral("codex.operation_deadline"):QStringLiteral("codex.other");
             if(!work_failure.rows_retained || work_failure.explanation.isEmpty())work_reports.missEvidence();
@@ -2462,6 +2473,7 @@ struct AssistantViewModel::State {
         std::shared_ptr<NativeRecord> record;
         std::shared_ptr<NativeReceipt> receipt;
         bool may_have_written = false, resolved = false, retiring = false, finishing = false;
+        bool refresh_pending = true;
         std::uint64_t fit_attempt = 0;
         std::shared_ptr<NativeReceipt> inspection; // Only a settled read may transfer this new authority.
     };
@@ -6105,7 +6117,7 @@ struct AssistantViewModel::State {
             // it cannot borrow the original approved-context/result capacity.
             // Selected text never writes or rebuilds ProjectContext. Its
             // read-only completion cannot own the post-write refresh buffer.
-            if(native_call->record->tool!="read_selected_file" || native_call->may_have_written)raw(Limits::context_bytes);
+            if(native_call->refresh_pending && (native_call->record->tool!="read_selected_file" || native_call->may_have_written))raw(Limits::context_bytes);
             if (native_call->record->tool == "edit_background") raw(background_preparation_bytes());
         }
         QSet<const NativeWidget*> widgets;
@@ -6624,6 +6636,7 @@ struct AssistantViewModel::State {
         const auto current = [&] { return publication.input_current() && !call.receipt->stale && native_owner(call.receipt) &&
             native_call && native_call->record == call.record && native_call->receipt == call.receipt && native_call->rpc == call.rpc; };
         if (!call.may_have_written || !current()) return;
+        if(!native_call->refresh_pending)throw std::logic_error("The native refresh phase already settled");
         const char* stage = "REFRESH_STAMPS";
         const char* role = "JOINT_RETAINED";
         quint64 bound = Limits::stream_retained_bytes;
@@ -6779,6 +6792,7 @@ struct AssistantViewModel::State {
         auto record = call.record;
         const QPointer<CodexAgent> original_transport(agent.get());
         const auto original_transport_generation=original_transport?original_transport->outputGeneration():0;
+        const auto finishProjection=file_projection();
         const auto work_scope=native_settlement_scope(call);
         const auto work_done=qScopeGuard([original_transport,original_transport_generation,rpc=call.rpc,work_scope]() noexcept {
             try {if(work_scope() && original_transport && original_transport->outputGeneration()==original_transport_generation)
@@ -6831,6 +6845,9 @@ struct AssistantViewModel::State {
             try { native_refresh(call); }
             catch (...) { if (!original_call()) return; native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired)); native_fence(); }
             if (!original_call()) return;
+            native_call->refresh_pending=false;
+            native_release_charge(finishProjection,original_transport,original_transport_generation);
+            if(!original_call())return;
             bool presented=false,historyCapacity=false;
             auto present=[&]() noexcept {
                 if(!original_call())return false;
@@ -11129,8 +11146,24 @@ struct AssistantViewModel::State {
             generic_authenticated == authenticated && generic_retiring == retiring;
     }
     bool generic_interrupt_rows() noexcept {
+        const auto publication=file_projection();
         try {
+            quint64 preparation=2*(sizeof(QJsonArray)+static_cast<quint64>(history.size())*sizeof(QJsonValue));
+            bool pending=false;
+            for(const auto& value:history) {
+                const auto row=value.toObject();
+                if(row.value("status")!="pending" && row.value("status")!="in_progress")continue;
+                pending=true;CodexJsonEncoding source;
+                if(!codex_json_encoding(row,Limits::ui_history_bytes,source))throw std::length_error("Terminal row ownership exceeds capacity");
+                const auto bytes=source.owned+sizeof(Object)+2*sizeof(QJsonValue)+2*sizeof("interrupted")*sizeof(QChar);
+                if(bytes>Limits::stream_retained_bytes-preparation)throw std::length_error("Terminal history preparation exceeds capacity");
+                preparation+=bytes;
+            }
+            if(!pending)return true;
+            const auto role=reserve_disclosure(preparation);
+            if(!publication.input_current())return false;
             auto next = history;
+            const auto drop=qScopeGuard([&next]{next={};});
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
                 if (row.value("status") == "pending" || row.value("status") == "in_progress") {
@@ -11138,8 +11171,8 @@ struct AssistantViewModel::State {
                 }
             }
             if (!publish(std::move(next))) return false;
-            return true;
-        } catch (...) { error = storage_error; return false; }
+            return publication.input_current();
+        } catch (...) { if(publication.input_current())error = storage_error; return false; }
     }
     void work_failure_row(const QString& code,const QString& explanation) noexcept {
         if(!work_reports.collecting() || work_reports.attempt().isEmpty())return;
@@ -11184,6 +11217,7 @@ struct AssistantViewModel::State {
             if (!projection.retirement_current()) return;
             const bool terminalRows=generic_interrupt_rows();
             if(ownsTerminal && work_failure.stage==WorkFailureStage::Building)work_failure.rows_retained=terminalRows;
+            else if(!terminalRows)std::fprintf(stderr,"Edi terminal history stage=RELEASE_OBSERVATION class=UNAVAILABLE\n");
             if (!projection.retirement_current()) return;
             if (kind == CodexAgent::FailureKind::LocalCapacity)
                 error = bounded_error(original_explanation + QObject::tr(" This is a local data-capacity limit, not evidence that your login expired. Your task messages and project changes remain retained; inspect them before continuing after reconnecting."));
@@ -14350,17 +14384,20 @@ struct AssistantViewModel::State {
         if(native_primary_bytes(next)!=primaryBytes){if(current())error=originalError;return false;}
 #endif
 #ifndef __EMSCRIPTEN__
-        quint64 archiveEncoded=0,archiveCapacity=0;
+        quint64 archiveEncoded=0,archiveCapacity=0,archiveRequested=0,archiveAvailable=0;
+        bool archiveRoomKnown=false;
         for(unsigned pass=0;pass<2;++pass) {
+            archiveRequested=0;archiveAvailable=0;archiveRoomKnown=false;
             try {
                 CodexJsonEncoding encoding;
                 if(!codex_json_encoding(next,Limits::ui_history_bytes,encoding))throw std::length_error("Archive encoding exceeds capacity");
                 archiveEncoded=encoding.encoded;archiveCapacity=codex_json_capacity(encoding.encoded);
-                archiveRole.emplace(reserve_disclosure(archiveCapacity+encoding.writer_scratch));
+                archiveRequested=archiveCapacity+encoding.writer_scratch;
+                archiveRole.emplace(reserve_disclosure(archiveRequested,&archiveAvailable,&archiveRoomKnown));
                 if(!current())return false;
                 break;
-            }catch(const std::bad_alloc&){if(!current())return false;std::fprintf(stderr,"Edi archive admission stage=ARCHIVE_ENCODER class=ALLOCATION bound=%llu\n",static_cast<unsigned long long>(Limits::stream_retained_bytes));}
-            catch(const std::length_error&){if(!current())return false;std::fprintf(stderr,"Edi archive admission stage=ARCHIVE_ENCODER class=CAPACITY bound=%llu\n",static_cast<unsigned long long>(Limits::stream_retained_bytes));}
+            }catch(const std::bad_alloc&){if(!current())return false;std::fprintf(stderr,"Edi archive admission stage=ARCHIVE_ENCODER class=ALLOCATION bound=%llu requested=%llu available=%llu available_known=%d\n",static_cast<unsigned long long>(Limits::stream_retained_bytes),static_cast<unsigned long long>(archiveRequested),static_cast<unsigned long long>(archiveAvailable),int(archiveRoomKnown));}
+            catch(const std::length_error&){if(!current())return false;std::fprintf(stderr,"Edi archive admission stage=ARCHIVE_ENCODER class=CAPACITY bound=%llu requested=%llu available=%llu available_known=%d\n",static_cast<unsigned long long>(Limits::stream_retained_bytes),static_cast<unsigned long long>(archiveRequested),static_cast<unsigned long long>(archiveAvailable),int(archiveRoomKnown));}
             if(!current())return false;
             if(pass || report_only || next==originalNext){if(capacity)*capacity=true;if(current())error=originalError;return false;}
             next=originalNext;retainedRole.reset();temporaryRole.reset();retainedBytes=0;
