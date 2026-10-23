@@ -3431,13 +3431,13 @@ NB_MODULE(_edi, m) {
     // give them: the measured columns from the experiment's own loop, d, sin(theta)/lambda and
     // F2calc from its calculation.
     nb::class_<edi::views::ScReflnView>(m, "ReflnDataBase")
-        .def_prop_ro("index_h", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_h); })
-        .def_prop_ro("index_k", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_k); })
-        .def_prop_ro("index_l", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_l); })
+        .def_prop_ro("index_h", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_h.get()); })
+        .def_prop_ro("index_k", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_k.get()); })
+        .def_prop_ro("index_l", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_l.get()); })
         .def_prop_ro("intensity_meas",
-                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas); })
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas.get()); })
         .def_prop_ro("intensity_meas_su",
-                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas_su); })
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas_su.get()); })
         .def_prop_ro("d_spacing",
                      [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().d_spacing); })
         .def_prop_ro("sin_theta_over_lambda",
@@ -3449,7 +3449,7 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData");
     nb::class_<edi::views::ScTofReflnView, edi::views::ScReflnView>(m, "TofReflnData")
         .def_prop_ro("wavelength",
-                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength); });
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength.get()); });
 
     nb::class_<edi::PowderTofReflnData, edi::PowderReflnDataBase>(m, "PowderTofReflnData")
         .def_prop_ro("time_of_flight",

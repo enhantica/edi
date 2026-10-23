@@ -439,6 +439,7 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
         put_u64(out, link->epoch.value());
     }
     put_u64(out, experiment.absorption.epoch.value());
+    put_u64(out, experiment.extinction.epoch.value());
     for (const auto& point : experiment.background) {
         put_u64(out, point->epoch.value());
     }
@@ -502,6 +503,7 @@ template class OneRow<ScatteringSourceCategory>;
 template class OneRow<PeakCategory>;
 template class OneRow<InstrumentCategory>;
 template class OneRow<AbsorptionCategory>;
+template class OneRow<ExtinctionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;

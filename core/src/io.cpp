@@ -1609,17 +1609,28 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
         }
         return static_cast<std::int32_t>(value);
     };
+    std::vector<std::int32_t> h;
+    std::vector<std::int32_t> k;
+    std::vector<std::int32_t> l;
+    std::vector<double> meas;
+    std::vector<double> su;
+    std::vector<double> wavelength;
     for (const std::vector<std::string>& row : refln->rows) {
-        rows.index_h.push_back(index(row, "_refln.index_h"));
-        rows.index_k.push_back(index(row, "_refln.index_k"));
-        rows.index_l.push_back(index(row, "_refln.index_l"));
-        rows.intensity_meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
-        rows.intensity_meas_su.push_back(
-            to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
+        h.push_back(index(row, "_refln.index_h"));
+        k.push_back(index(row, "_refln.index_k"));
+        l.push_back(index(row, "_refln.index_l"));
+        meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
+        su.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
         if (!cw) {
-            rows.wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
+            wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
         }
     }
+    rows.index_h = std::move(h);
+    rows.index_k = std::move(k);
+    rows.index_l = std::move(l);
+    rows.intensity_meas = std::move(meas);
+    rows.intensity_meas_su = std::move(su);
+    rows.wavelength = std::move(wavelength);
     experiment.reflections = std::move(rows);
     return experiment;
 }
