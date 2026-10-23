@@ -389,9 +389,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-10b-int-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
     steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
-    steps_.push_back({"sccheck-10e-int-joint-refused", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
-    steps_.push_back({"sccheck-10e2-int-fitted-alone", {"choose:OK", experiment, basic, "expand:group.experiments", "experiments.remove.0",
-                                                        analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    // The two single crystals fit together, each with its own scale.
+    steps_.push_back({"sccheck-10e-int-joint-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
     steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
                                                     + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
     steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
@@ -399,6 +398,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                 "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
     // The extinction type selector: the Tb2Ti2O7 example's mixed type with its three fields, the type choices, and
     // type II with the domain radius alone.
+    // Taurine's six datasets: every experiment on one chart on the Stacked tabs, its legend shown, and the Pattern
+    // chart's legend behind its button.
+    steps_.push_back({"sccheck-15a-taurine-stacked-experiment", QStringList{"resize:1280x768"} + start + open_example("sc-neut-tof_taurine_fit")
+                                                                    + QStringList{experiment, basic, "mainArea.experiment.tab.stacked"}});
+    steps_.push_back({"sccheck-15b-taurine-stacked-analysis", {analysis, basic, "mainArea.analysis.tab.stacked"}});
+    steps_.push_back({"sccheck-15c-taurine-pattern-legend", {"mainArea.analysis.tab.fitting", "chart.toolbar.legend"}});
     steps_.push_back({"sccheck-11-extinction-mixed", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
                                                          + QStringList{experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sccheck-11b-extinction-types", {"extinction.type"}});

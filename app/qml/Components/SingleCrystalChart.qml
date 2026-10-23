@@ -13,20 +13,41 @@ import edi.app
 // each reflection a point with its su as an error bar, drawn as the pattern chart draws measured points
 // (MeasuredLayer), and the y = x line a perfect model would put them on. A drag zooms to its box, the wheel about the
 // pointer, a right click or the reset button shows every reflection again. A report figure draws the report model's
-// `single_crystal` as it is, in F², with its reliability above the plot and no toolbar or pointer.
+// `single_crystal` as it is, in F², with its reliability above the plot and no toolbar or pointer. Given several
+// experiments (`stackedExperiments`, the Stacked tab of a project of single crystals) it draws all of them on the one
+// chart, each in its experiment's colour, with the legend shown at first.
 Item {
     id: chart
 
     objectName: "singleCrystal.chart"
 
     property ExperimentViewModel experiment: null
-    readonly property SingleCrystalReflectionModel reflections: experiment ? experiment.singleCrystalReflections : null
+    property list<ExperimentViewModel> stackedExperiments: []
+    readonly property bool stacked: stackedExperiments.length > 0
+    readonly property SingleCrystalReflectionModel reflections: !stacked && experiment ? experiment.singleCrystalReflections : null
+    // Every shown reflection model: the stacked experiments' or the one experiment's.
+    readonly property list<SingleCrystalReflectionModel> models: {
+        if (!stacked)
+            return reflections ? [reflections] : [];
+        const out = [];
+        for (const shown of stackedExperiments)
+            if (shown && shown.singleCrystalReflections)
+                out.push(shown.singleCrystalReflections);
+        return out;
+    }
+    // Bumped when any shown model's points change, so the bindings below read them again.
+    property int revision: 0
     property FigureColors colors: FigureColors {}
     property bool shown: true
     // The report's input (edi ADR-0036): an experiment's `single_crystal` from the report model's JSON.
     property var reportData: null
     readonly property bool reportMode: reportData !== null
-    readonly property bool calculated: reportMode ? reportData.calc.length > 0 : (reflections ? reflections.calculatedShown : false)
+    readonly property bool calculated: {
+        if (reportMode)
+            return reportData.calc.length > 0;
+        void revision;
+        return models.some(model => model.calculatedShown);
+    }
     // The report's range: every bar end and every F²calc, padded as the app pads its own.
     readonly property list<real> reportRange: {
         if (!reportMode)
@@ -63,8 +84,32 @@ Item {
     readonly property string quantity: squared ? "F²" : "F"
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
-    readonly property real fullLow: reportMode ? reportRange[0] : !reflections ? 0 : squared ? reflections.low : reflections.lowF
-    readonly property real fullHigh: reportMode ? reportRange[1] : !reflections ? 1 : squared ? reflections.high : reflections.highF
+    readonly property real fullLow: {
+        if (reportMode)
+            return reportRange[0];
+        void revision;
+        const lows = models.filter(model => model.calculatedShown).map(model => squared ? model.low : model.lowF).filter(isFinite);
+        return lows.length > 0 ? Math.min(...lows) : 0;
+    }
+    readonly property real fullHigh: {
+        if (reportMode)
+            return reportRange[1];
+        void revision;
+        const highs = models.filter(model => model.calculatedShown).map(model => squared ? model.high : model.highF).filter(isFinite);
+        return highs.length > 0 ? Math.max(...highs) : 1;
+    }
+    // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
+    function legendRows() {
+        const named = chart.stacked ? chart.stackedExperiments : chart.experiment ? [chart.experiment] : [];
+        return named.map((shown, index) => ({
+                    "label": shown ? shown.name : "",
+                    "color": chart.stacked ? AppColors.experiment(index, chart.colors.isDarkPalette) : AppColors.experiment(0, chart.colors.isDarkPalette),
+                    "mark": "line"
+                }));
+    }
+    ListedLegendModel {
+        id: legendRows
+    }
     readonly property real xLow: zoom.length === 4 ? zoom[0] : fullLow
     readonly property real xHigh: zoom.length === 4 ? zoom[1] : fullHigh
     readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
@@ -80,6 +125,12 @@ Item {
     }
 
     function redraw() {
+        legendRows.setRows(chart.legendRows());
+        if (chart.stacked) {
+            for (let i = 0; i < stackedLayers.count; ++i)
+                stackedLayers.itemAt(i).redraw();
+            return;
+        }
         if (chart.reportMode) {
             if (chart.calculated)
                 layer.setPoints(chart.reportData.calc, chart.reportData.meas, chart.reportData.su);
@@ -119,9 +170,11 @@ Item {
     }
     onReflectionsChanged: redraw()
     onReportDataChanged: redraw()
+    onStackedExperimentsChanged: redraw()
     Connections {
         target: chart.reflections
         function onPointsChanged() {
+            chart.revision++;
             chart.redraw();
         }
     }
@@ -164,12 +217,18 @@ Item {
             currentIndex: chart.squared ? 0 : 1
             onActivated: index => Preferences.singleCrystalQuantity = index === 0 ? "f_squared" : "f"
         }
-        // The pattern chart's toolbar, without the legend and the included-range buttons, which have nothing to
-        // act on here; the tooltip toggle and the zoom or move mode are the same remembered settings.
+        // The pattern chart's toolbar, without the included-range button, which has nothing to act on here; the
+        // tooltip toggle and the zoom or move mode are the same remembered settings.
         ChartToolbar {
             id: buttons
 
-            legendAvailable: false
+            // The legend starts shown on the Stacked chart and hidden on the Pattern chart, which follows the
+            // pattern charts' remembered choice.
+            legendShown: chart.stacked ? true : Preferences.patternLegendShown
+            onLegendShownChanged: {
+                if (!chart.stacked)
+                    Preferences.patternLegendShown = legendShown;
+            }
             includedRangeAvailable: false
             hoverShown: Preferences.patternHoverShown
             onHoverShownChanged: Preferences.patternHoverShown = hoverShown
@@ -252,30 +311,33 @@ Item {
             hoverText.text = "";
         }
         function read(px, py) {
-            const model = chart.reflections;
-            if (!model || !model.calculatedShown) {
-                hide();
-                return;
-            }
-            const xs = chart.squared ? model.calculated : model.calculatedF;
-            const ys = chart.squared ? model.measured : model.measuredF;
-            const sus = chart.squared ? model.measuredSu : model.measuredFSu;
             const span = axisX.max - axisX.min;
-            let best = -1, bestDistance = chart.em * chart.em;
-            for (let i = 0; i < xs.length; ++i) {
-                const dx = (xs[i] - axisX.min) / span * plot.width - px;
-                const dy = (1 - (ys[i] - axisY.min) / (axisY.max - axisY.min)) * plot.height - py;
-                const distance = dx * dx + dy * dy;
-                if (isFinite(distance) && distance < bestDistance) {
-                    best = i;
-                    bestDistance = distance;
+            let best = -1, bestDistance = chart.em * chart.em, bestModel = -1, xs = [], ys = [];
+            for (let m = 0; m < chart.models.length; ++m) {
+                const model = chart.models[m];
+                if (!model.calculatedShown)
+                    continue;
+                const mx = chart.squared ? model.calculated : model.calculatedF;
+                const my = chart.squared ? model.measured : model.measuredF;
+                for (let i = 0; i < mx.length; ++i) {
+                    const dx = (mx[i] - axisX.min) / span * plot.width - px;
+                    const dy = (1 - (my[i] - axisY.min) / (axisY.max - axisY.min)) * plot.height - py;
+                    const distance = dx * dx + dy * dy;
+                    if (isFinite(distance) && distance < bestDistance) {
+                        best = i;
+                        bestDistance = distance;
+                        bestModel = m;
+                        xs = mx;
+                        ys = my;
+                    }
                 }
             }
             if (best < 0) {
                 hide();
                 return;
             }
-            hoverText.text = model.hoverText(best, chart.squared);
+            const text = chart.models[bestModel].hoverText(best, chart.squared);
+            hoverText.text = chart.stacked ? "<b>" + chart.stackedExperiments[bestModel].name + "</b><br>" + text : text;
             const atX = plot.x + (xs[best] - axisX.min) / span * plot.width;
             const atY = plot.y + (1 - (ys[best] - axisY.min) / (axisY.max - axisY.min)) * plot.height;
             x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
@@ -297,6 +359,17 @@ Item {
             textFormat: Text.RichText
             color: chart.colors.themeForeground
         }
+    }
+
+    // The legend, inside the plot's top left corner, behind the toolbar's legend button.
+    ChartLegend {
+        objectName: "singleCrystal.legend"
+        z: 1
+        colors: chart.colors
+        x: view.x + view.plotArea.x + chart.em
+        y: view.y + view.plotArea.y + chart.em
+        visible: !chart.reportMode && buttons.legendShown && chart.models.length > 0
+        entries: legendRows
     }
 
     EaElements.Label {
@@ -357,10 +430,50 @@ Item {
                 color: chart.colors.chartGridLine
             }
         }
+        // The Stacked chart's experiments, one layer each in its colour, drawn in the project's order.
+        Repeater {
+            id: stackedLayers
+
+            model: chart.stacked ? chart.stackedExperiments : []
+            delegate: MeasuredLayer {
+                id: stackedLayer
+
+                required property ExperimentViewModel modelData
+                required property int index
+                readonly property SingleCrystalReflectionModel model: modelData ? modelData.singleCrystalReflections : null
+
+                function redraw() {
+                    if (!model || !chart.shown || !model.calculatedShown)
+                        setPoints([], [], []);
+                    else if (chart.squared)
+                        setPoints(model.calculated, model.measured, model.measuredSu);
+                    else
+                        setPoints(model.calculatedF, model.measuredF, model.measuredFSu);
+                }
+
+                objectName: "singleCrystal.points." + index
+                anchors.fill: parent
+                color: AppColors.experiment(index, chart.colors.isDarkPalette)
+                markerSize: 5
+                xMin: axisX.min
+                xMax: axisX.max
+                yMin: axisY.min
+                yMax: axisY.max
+                Component.onCompleted: redraw()
+                Connections {
+                    target: stackedLayer.model
+                    function onPointsChanged() {
+                        chart.revision++;
+                        stackedLayer.redraw();
+                    }
+                }
+            }
+        }
         MeasuredLayer {
             id: layer
 
             objectName: "singleCrystal.points"
+            visible: !chart.stacked
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
             markerSize: 5
