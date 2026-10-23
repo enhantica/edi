@@ -2945,15 +2945,14 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
         }
         built.instrument[0] = param(*e.instrument.setup_wavelength, crysta::INSTRUMENT, "setup_wavelength");
     }
-    built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built,
-                                    e.extinction.type.value_or("becker-coppens"));
+    built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built, e.extinction.type.value_or("none"));
     built.extinction_model = crossed(crysta::TokenField::ExtinctionModel, built,
-                                     e.extinction.model.value_or("gauss"));
-    if (e.extinction.radius) {
-        built.extinction[0] = param(*e.extinction.radius, crysta::CORRECTION, "radius");
+                                     e.extinction.mosaic_distribution.value_or("gaussian"));
+    if (e.extinction.domain_radius) {
+        built.extinction[0] = param(*e.extinction.domain_radius, crysta::CORRECTION, "domain_radius");
     }
-    if (e.extinction.mosaicity) {
-        built.extinction[1] = param(*e.extinction.mosaicity, crysta::CORRECTION, "mosaicity");
+    if (e.extinction.mosaic_spread) {
+        built.extinction[1] = param(*e.extinction.mosaic_spread, crysta::CORRECTION, "mosaic_spread");
     }
     std::vector<crysta::LinkedStructure> links;
     for (const auto& link : e.linked_structures) {
@@ -3611,6 +3610,14 @@ void restore_dependents(Project& project, const std::set<const Parameter*>& rest
 
 int background_max_order(const std::string& type) {
     return crysta::background_max_order(crysta::background_form_of(type));
+}
+
+std::vector<std::string> extinction_type_tokens() {
+    return crysta::file_tokens(crysta::TokenField::ExtinctionType, crysta::BeamModeEnum::ConstantWavelength);
+}
+
+std::vector<std::string> mosaic_distribution_tokens() {
+    return crysta::file_tokens(crysta::TokenField::ExtinctionModel, crysta::BeamModeEnum::ConstantWavelength);
 }
 
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {

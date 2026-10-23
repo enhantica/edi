@@ -49,6 +49,11 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* absorptionTypeOptions READ absorptionTypeOptions CONSTANT)
+    Q_PROPERTY(QString extinctionType READ extinctionType WRITE setExtinctionType NOTIFY extinctionTypeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* extinctionTypeOptions READ extinctionTypeOptions CONSTANT)
+    Q_PROPERTY(QString mosaicDistribution READ mosaicDistribution WRITE setMosaicDistribution NOTIFY
+                   mosaicDistributionChanged)
+    Q_PROPERTY(edi_app::OptionListModel* mosaicDistributionOptions READ mosaicDistributionOptions CONSTANT)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
     // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
@@ -112,8 +117,6 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
     Q_PROPERTY(edi_app::SingleCrystalReflectionModel* singleCrystalReflections READ singleCrystalReflections CONSTANT)
     Q_PROPERTY(edi_app::ParameterListModel* extinction READ extinction CONSTANT)
-    // Whether the extinction's mosaic spread is Lorentzian rather than Gaussian.
-    Q_PROPERTY(bool lorentzianExtinction READ lorentzianExtinction CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
     Q_PROPERTY(edi_app::LinkedStructureListModel* linkedStructures READ linkedStructures CONSTANT)
     Q_PROPERTY(edi_app::ScatteringSourceViewModel* scatteringSource READ scatteringSource CONSTANT)
@@ -156,6 +159,13 @@ class ExperimentViewModel : public QObject {
     QString absorptionType() const { return absorption_type_; }
     void setAbsorptionType(const QString& token);
     OptionListModel* absorptionTypeOptions() const { return absorption_type_options_; }
+    QString extinctionType() const { return extinction_type_; }
+    void setExtinctionType(const QString& token);
+    OptionListModel* extinctionTypeOptions() const { return extinction_type_options_; }
+    // Empty for a type without a mosaic spread.
+    QString mosaicDistribution() const { return mosaic_distribution_; }
+    void setMosaicDistribution(const QString& token);
+    OptionListModel* mosaicDistributionOptions() const { return mosaic_distribution_options_; }
     QString backgroundType() const { return background_type_; }
     void setBackgroundType(const QString& token);
     double backgroundOrigin() const { return background_origin_; }
@@ -214,7 +224,6 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peakOther() const { return peak_families_[3]; }
     ParameterListModel* absorption() const { return absorption_; }
     ParameterListModel* extinction() const { return extinction_; }
-    bool lorentzianExtinction() const { return experiment_.extinction.model.value_or("gauss") == "lorentz"; }
     SingleCrystalReflectionModel* singleCrystalReflections() const { return single_crystal_reflections_; }
     ParameterItem* scale() const { return scale_; }
     BackgroundListModel* background() const { return background_; }
@@ -276,6 +285,8 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
+    void extinctionTypeChanged();
+    void mosaicDistributionChanged();
     void backgroundTypeChanged();
     void backgroundEstimateModeChanged();
     void backgroundEstimateMethodChanged();
@@ -327,6 +338,9 @@ class ExperimentViewModel : public QObject {
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
+    OptionListModel* extinction_type_options_;
+    OptionListModel* mosaic_distribution_options_;
+    QString extinction_type_, mosaic_distribution_;
     OptionListModel* background_type_options_;
     OptionListModel* background_estimate_methods_;
     OptionListModel* background_estimate_modes_;

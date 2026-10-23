@@ -68,6 +68,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       registry_(registry),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
+      extinction_type_options_(new OptionListModel(this)),
+      mosaic_distribution_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       background_estimate_methods_(new OptionListModel(this)),
       background_estimate_modes_(new OptionListModel(this)),
@@ -100,6 +102,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     }
     peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
+    extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_labels());
+    mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
+                                             edi::mosaic_distribution_labels());
     background_type_options_->setOptions(edi::supported_background_types());
     background_estimate_methods_->setOptions(edi::background_estimator_methods());
     background_estimate_modes_->setOptions({"manual", "auto"});
@@ -129,8 +134,8 @@ edi::Category ExperimentViewModel::category(const char* id) const {
     }
     if (std::string(id) == "extinction") {
         edi::Category extinction{"extinction"};
-        edi::detail::add_optional(extinction.fields, "radius", experiment_.extinction.radius);
-        edi::detail::add_optional(extinction.fields, "mosaicity", experiment_.extinction.mosaicity);
+        edi::detail::add_optional(extinction.fields, "domain_radius", experiment_.extinction.domain_radius);
+        edi::detail::add_optional(extinction.fields, "mosaic_spread", experiment_.extinction.mosaic_spread);
         return extinction;
     }
     return edi::absorption_category(experiment_);
@@ -306,6 +311,22 @@ void ExperimentViewModel::setAbsorptionType(const QString& token) {
     setLastError(editor_.apply(edi::Edit::absorption(experiment, token.toStdString()), true));
 }
 
+void ExperimentViewModel::setExtinctionType(const QString& token) {
+    if (token == extinction_type_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::extinction(experiment, token.toStdString()), true));
+}
+
+void ExperimentViewModel::setMosaicDistribution(const QString& token) {
+    if (token == mosaic_distribution_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
@@ -374,6 +395,10 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
+    update(extinction_type_, QString::fromStdString(experiment_.extinction.type.value_or("none")),
+           &ExperimentViewModel::extinctionTypeChanged);
+    update(mosaic_distribution_, QString::fromStdString(experiment_.extinction.mosaic_distribution.value_or("")),
+           &ExperimentViewModel::mosaicDistributionChanged);
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.

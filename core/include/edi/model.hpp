@@ -3492,14 +3492,15 @@ struct AbsorptionBase {
     detail::CategoryRow table_row;
 };
 
-// A single crystal's extinction (diffraction-lib `extinction`): the type (`becker-coppens`), the
-// mosaic model (`gauss` or `lorentz`), the crystal's radius and its mosaicity. Engaged exactly on a
-// single crystal.
+// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the type (`none`,
+// `becker-coppens-type-1`, `-type-2` or `-mixed`) and the items of that type alone: the mosaic
+// distribution (`gaussian` or `lorentzian`) and mosaic spread g for types I and mixed, the domain
+// radius for types I, II and mixed. Engaged exactly on a single crystal.
 struct ExtinctionBase {
     std::optional<std::string> type;
-    std::optional<std::string> model;
-    OptionalParameter radius;
-    OptionalParameter mosaicity;
+    std::optional<std::string> mosaic_distribution;
+    OptionalParameter domain_radius;
+    OptionalParameter mosaic_spread;
 
     std::vector<Parameter*> parameters();
     detail::RowLink row;
@@ -4278,6 +4279,9 @@ std::string default_descent();
 //     std::invalid_argument;
 //   - crysta's registry token of a file spelling — the word edi's class registry is keyed by.
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode);
+// A single crystal's extinction types and mosaic distributions, crysta's tables in their order.
+std::vector<std::string> extinction_type_tokens();
+std::vector<std::string> mosaic_distribution_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -5232,8 +5236,9 @@ static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, Absorpti
 struct ExtinctionCategory {
     using Owner = ExtinctionBase;
     static constexpr const char* name = "_extinction";
-    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::model, &ExtinctionBase::radius, &ExtinctionBase::mosaicity};
-    static constexpr std::array items{"type", "model", "radius", "mosaicity"};
+    static constexpr auto columns = std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution,
+                                               &ExtinctionBase::domain_radius, &ExtinctionBase::mosaic_spread};
+    static constexpr std::array items{"type", "mosaic_distribution", "domain_radius", "mosaic_spread"};
     static constexpr std::array legacy{"_easydiffraction_extinction"};
 };
 static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
@@ -5655,8 +5660,8 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
 }
 inline std::vector<Parameter*> ExtinctionBase::parameters() {
     std::vector<Parameter*> out;
-    detail::push_optional(out, radius);
-    detail::push_optional(out, mosaicity);
+    detail::push_optional(out, domain_radius);
+    detail::push_optional(out, mosaic_spread);
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
