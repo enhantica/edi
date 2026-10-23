@@ -130,6 +130,11 @@ edi::Category ExperimentViewModel::category(const char* id) const {
         return edi::peak_category(experiment_);
     }
     if (std::string(id) == "instrument") {
+        // A time-of-flight single crystal has no instrument category (its wavelength band is shown instead).
+        if (experiment_.reflections.has_value() &&
+            experiment_.effective_beam_mode() == edi::BeamModeEnum::TIME_OF_FLIGHT) {
+            return edi::Category{"instrument"};
+        }
         return edi::instrument_category(experiment_);
     }
     if (std::string(id) == "extinction") {
