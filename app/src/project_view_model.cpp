@@ -3729,6 +3729,8 @@ void ProjectViewModel::syncBlocks() {
 void ProjectViewModel::published(const edi::PreviewResult& result) {
     const PublicationScope publication(*this);
     if (retired_) return;
+    registry_->publish(*project_);
+    if (retired_) return;
     // The project holds the calculation now (or its refusal, with every computed category cleared): the
     // tables, the charts, the texts and the report follow, once.
     const QString error = QString::fromStdString(result.refusal);

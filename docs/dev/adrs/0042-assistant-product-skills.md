@@ -257,3 +257,20 @@ population and qualify degrees of freedom and cross-engine residual conventions.
 This adds no callable inventory, parser, workflow or scientific output. Existing
 FullProf 1.0.4/manual mappings stay exact; changed skill versions and body digests
 advance together in the original index.
+
+
+### Evidence before profile refinement and immediate recovery
+
+The generic refinement skill distinguishes convergence from observed peak alignment
+and requires physical candidate assessment before another fit consumes its sole
+fit-Undo opportunity. The live944 ON workflow demonstrated that a
+late calibration attempt cannot undo an earlier rejected width model. No sample,
+material, fitted offset or instrument coefficient becomes an instruction default.
+
+The existing ordinary setters can explicitly repair affected numerical terms from
+an actually recorded, physically valid state of the same project. Such a repair
+is not a checkpoint restoration and preserves unrelated accepted terms and inputs.
+Unavailable values or operations remain explicit limits. After Undo or repair,
+current fit/report availability is inspected and a justified fit re-establishes
+current results before reporting a completed refinement. Existing refinement
+scope, wavelength/chemistry constraints and finite exploration budget remain.

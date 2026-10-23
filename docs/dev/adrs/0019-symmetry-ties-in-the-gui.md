@@ -178,3 +178,25 @@ setting, uncertainty, coordinate, ADP or original source byte is rewritten.
 Qualification must retain genuine standalone legacy/replacement imports and
 exercise case/punctuation/scalar/loop alias collisions through the real reader.
 Private source-table inspection is not an actual importer runtime claim.
+
+
+### Accepted calculation publication refreshes parameter mirrors
+
+The original ProjectViewModel::publish path refreshes the shared ParameterRegistry
+before publishing derived views. The accepted asynchronous calculation callback
+ProjectViewModel::published does the same, inside its existing PublicationScope
+and followed by the same retirement check, before pattern, scene, report and
+calculating notifications.
+
+A calculation can commit completed dependent values after an earlier UI publish;
+ordinary Save followed by a calculation of its rounded saved values is one such
+path. ParameterItem exposes cached values, so those mirrors must be refreshed
+from the committed native model before the calculation is presented as complete.
+The registry publishes each parameter's actual value, uncertainty and flags.
+Dependent value completion does not invent or propagate an uncertainty that the
+native parameter does not hold.
+
+This refresh performs no scientific mutation, new calculation, Save or Undo step.
+A callback that retires the project stops the remaining publication through the
+existing guard, and its PublicationScope retains the old owner until the active
+stack unwinds. There is no additional hook, counter or asynchronous workflow.

@@ -2940,3 +2940,29 @@ protections are retained. Operation-local SDK source/calculation bounds remain
 ordinary bounds of those APIs; they are not subtracted from a shared future-memory
 budget. The owner override does not change numerical/scientific defaults or raise
 a declared protocol, file, history or artifact limit.
+
+
+### Authoritative read tools share the inspection settlement path
+
+The original inspect_project path also governs list_parameters and diagnostics.
+All three read the complete current native context under the same original
+project/account/thread/input disclosure and current policy. Before projecting
+the tool's existing reply fields, the host checks that complete context against
+the approved disclosure and rechecks its captured scientific stamps. Each read
+keeps its original call/response and actual payload/history limits.
+
+This matters after ordinary Save: adopting rounded saved values can start an
+asynchronous preview whose later publication completes dependent values. An
+older scientific receipt must then remain stale. A requested authoritative read
+can observe the current state through the existing inspection path; it is not
+rejected merely because that earlier scientific snapshot changed. Only a
+successful, durably retained, same-owner read may publish its separate fresh
+inspection receipt. Old receipts are retired through the original settlement
+logic, so late editors/callbacks cannot reuse them.
+
+Mutation tools, read_selected_file and acquire_inputs keep their existing
+native_current requirement. No stale stamp is accepted for a write, no project
+value is modified by inspection, no Save/calculation is replayed, and no new
+asynchronous Save hook or implicit file authority is introduced. The returned
+parameter/diagnostic projection remains unchanged; its receipt proof uses the
+complete context rather than that projection.

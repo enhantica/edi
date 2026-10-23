@@ -6479,7 +6479,8 @@ struct AssistantViewModel::State {
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
         const auto reply=[&](bool success,const Object& outcome){native_reply(rpc,success,outcome,params.value("callId").toString(),params,expectedThread,expectedTurn);};
-        const bool inspecting = params.value("tool") == "inspect_project";
+        const bool inspecting = params.value("tool") == "inspect_project" ||
+            params.value("tool") == "list_parameters" || params.value("tool") == "diagnostics";
         if (inspecting && (!policy_current() || generic_connecting)) {
             reply(false, {{"status", "refused"}, {"code", "policy_mismatch"}, {"message", "The original thread settings are not current."}}); return;
         }
@@ -6566,17 +6567,12 @@ struct AssistantViewModel::State {
         Object read_result;
         std::shared_ptr<NativeReceipt> inspection;
 
-        const QPointer<CodexAgent> inspection_transport(agent.get());
-        const auto inspection_transport_generation = inspection_transport ? inspection_transport->outputGeneration() : 0;
 
         const auto inspect_current = [&] { return publication.input_current() && native_receipt == original_receipt &&
             native_owner(original_receipt) && !native_call && !native_fit && !native_creation && !native_save && native_pending.isEmpty(); };
         if (inspecting) {
 
             if (!inspect_current()) return;
-            const auto shell = sizeof(NativeReceipt) + original_receipt->sources.size() * sizeof(std::shared_ptr<LocalInputSource>) +
-                generic_size(original_receipt->objective, Limits::context_bytes) + generic_size(original_receipt->thread, Limits::context_bytes) +
-                generic_size(original_receipt->turn, Limits::context_bytes) + generic_size(original_receipt->selected_context, Limits::context_bytes);
 
             inspection = std::make_shared<NativeReceipt>();
             inspection->disclosure = original_receipt->disclosure;
@@ -6596,28 +6592,27 @@ struct AssistantViewModel::State {
             auto context = outgoing_context();
             if(!publication.input_current())return;
             if (context.contains("error")) { reply(false, {{"status", "unavailable"}, {"code", "context_unready"}, {"message", "Complete native context is unavailable."}}); return; }
+            if (inspecting) {
+                if (!inspect_current()) return;
+                const auto actual = current_disclosure(&context);
+                if (!inspect_current()) return;
+                if (!same_disclosure(original_receipt->disclosure, actual) ||
+                    (project && (!inspection->stamps || !edi::unchanged_since(*project->assistantProject(), *inspection->stamps)))) {
+                    reply(false, {{"status", "refused"}, {"code", "request_stale"}, {"message", "The inspected project or approved input scope changed; nothing was changed."}});
+                    return;
+                }
+                (void)generic_size(context, Limits::context_bytes);
+
+                inspection->approved_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
+            }
             read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
-        }
-        if (inspecting) {
-            if (!inspect_current()) return;
-            const auto actual = current_disclosure(&read_result);
-            if (!inspect_current()) return;
-            if (!same_disclosure(original_receipt->disclosure, actual) ||
-                (project && (!inspection->stamps || !edi::unchanged_since(*project->assistantProject(), *inspection->stamps)))) {
-                reply(false, {{"status", "refused"}, {"code", "request_stale"}, {"message", "The inspected project or approved input scope changed; nothing was changed."}});
-                return;
-            }
-            const auto encoded = generic_size(read_result, Limits::context_bytes);
-
-            inspection->approved_context = QJsonDocument(read_result).toJson(QJsonDocument::Compact);
         }
         native_prepare(rpc, id, name, purpose, original);
         if (inspecting) {
             if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
             native_call->inspection = std::move(inspection);
 
-             // Retired local/callback owners remain charged after slot release.
 
             if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
         }
