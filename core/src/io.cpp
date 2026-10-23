@@ -3576,6 +3576,25 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
         }
         BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
+        // carries for one are read past, and said so (the owner, 2026-10-23).
+        if (experiment.reflections.has_value() &&
+            experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
+            std::vector<std::string> ignored;
+            for (const auto& item : experiment_block.items) {
+                if (item.first.starts_with("_instrument.")) {
+                    ignored.push_back(item.first);
+                }
+            }
+            if (!ignored.empty()) {
+                std::string list;
+                for (const std::string& tag : ignored) {
+                    list += (list.empty() ? "" : ", ") + tag;
+                }
+                warn("experiment '" + experiment.name + "': a time-of-flight single crystal has no instrument; " +
+                     list + " ignored");
+            }
+        }
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
