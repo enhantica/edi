@@ -181,6 +181,25 @@ std::vector<double> displayed(const std::vector<double>& values, YScale scale) {
     return out;
 }
 
+// Two decimations of the same rows taken together, each row once, in row order: a band keeps the extremes of both its
+// centre and its ends.
+Kept union_of(const Kept& first, const Kept& second) {
+    Kept merged;
+    std::size_t a = 0, b = 0;
+    while (a < first.rows.size() || b < second.rows.size()) {
+        const bool take_a = b == second.rows.size() || (a < first.rows.size() && first.rows[a] <= second.rows[b]);
+        const std::size_t row = take_a ? first.rows[a] : second.rows[b];
+        const std::size_t run = take_a ? first.runs[a] : second.runs[b];
+        if (take_a && b < second.rows.size() && second.rows[b] == row) {
+            ++b;
+        }
+        take_a ? ++a : ++b;
+        merged.rows.push_back(row);
+        merged.runs.push_back(run);
+    }
+    return merged;
+}
+
 // A line series from the kept rows, with one gap point between two runs.
 void fill_points(PatternSeries& series, const Kept& kept, const std::vector<double>& x,
                  const std::vector<double>& display) {
@@ -267,25 +286,37 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
     return decimate(x, low, high, x_min, x_max, columns).rows;
 }
 
-std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures) {
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
+                                             std::optional<ColourScheme> structure_scheme) {
+    const ColourScheme structural = structure_scheme.value_or(scheme);
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
-    // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02) and its role colours. The measured and tick
-    // colours are the blocks' own, from the scheme's palette by the block's place.
-    // At least three measured rows, as the table always listed; the experiments' colours depend on how many there are
-    // only past the palette's own.
+    // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the scheme's (ADR-0038): the
+    // measured and tick colours by the block's place among its group, the calculated, background and residual
+    // colours the scheme's role colours.
+    // At least three measured rows, as the table always listed.
     std::vector<SeriesStyle> table;
     const std::size_t count = std::max<std::size_t>(experiments, 1);
     for (std::size_t place = 0; place < std::max(count, kPaletteSize); ++place) {
         table.push_back({"meas." + std::to_string(place), pattern_colour(scheme, place, count, false),
                          pattern_colour(scheme, place, count, true), "line+markers+bars", 2.0, 1.0, 5.0});
     }
-    table.push_back({"calc", "#F44336", "#EF9A9A", "line", 2.0, 1.0, 0.0});
-    table.push_back({"bkg", "#607D8B", "#B0BEC5", "line", 1.0, 1.0, 0.0});
-    table.push_back({"resid", "#8BC34A", "#C5E1A5", "line", 1.0, 1.0, 0.0});
-    // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour).
-    for (std::size_t place = 0; place < std::max(structures, structure_colour_count(scheme)); ++place) {
-        table.push_back({"bragg." + std::to_string(place), structure_colour(scheme, place, false),
-                         structure_colour(scheme, place, true), "ticks", 1.0, 1.0, 0.0});
+    const auto role = [scheme](ChartRole chart_role, bool dark) { return role_colour(scheme, chart_role, dark); };
+    table.push_back({"calc", role(ChartRole::TotalCalculation, false), role(ChartRole::TotalCalculation, true), "line",
+                     2.0, 1.0, 0.0});
+    // The background dashed, as easyDiffraction drew it (the owner, 2026-10-22).
+    table.push_back({"bkg", role(ChartRole::Background, false), role(ChartRole::Background, true), "line+dash", 1.0,
+                     1.0, 0.0});
+    table.push_back({"resid", role(ChartRole::Difference, false), role(ChartRole::Difference, true), "line", 1.0, 1.0,
+                     0.0});
+    // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour among them all).
+    for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
+        table.push_back({"bragg." + std::to_string(place), structure_colour(structural, place, structures, false),
+                         structure_colour(structural, place, structures, true), "ticks", 1.0, 1.0, 0.0});
+    }
+    // A structure's curve: an outline in its structure colour over a soft fill of the same colour (ADR-0038).
+    for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
+        table.push_back({"structure." + std::to_string(place), structure_colour(structural, place, structures, false),
+                         structure_colour(structural, place, structures, true), "line+fill", 1.5, 0.25, 0.0});
     }
     table.push_back({"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0});
     return table;
@@ -332,7 +363,7 @@ double d_at(const std::vector<double>& native, const std::vector<double>& d, dou
 void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln) {
     const std::vector<double>& d = data.d_spacing.values();
     const std::vector<double> native = data.axis();
-    if (!source.current || d.size() != native.size() || d.size() < 2) {
+    if (!source.d_available) {
         return;
     }
     for (ExcludedBand& band : source.excluded) {
@@ -345,6 +376,9 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
         for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
                                               &source.resid}) {
             *column = reversed(*column);
+        }
+        for (PatternSource::Component& component : source.components) {
+            component.net = reversed(component.net);
         }
     }
     // A tick is drawn where its peak is: its native position mapped as the points are, so the zero and line shifts
@@ -392,6 +426,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     if (!source.current) {
         return source;
     }
+    source.d_available = data.d_spacing.values().size() == data.axis().size() && data.axis().size() >= 2;
     const auto shared = [](const ComputedColumn<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();
     };
@@ -408,10 +443,39 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names);
+    source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
+                                              data.axis().size(), names);
     if (axis == PatternAxis::DSpacing) {
         to_d_axis(source, data, refln);
     }
     return source;
+}
+
+std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
+                                                           std::span<const double> net, std::size_t points,
+                                                           std::span<const std::string> structure_names) {
+    std::vector<PatternSource::Component> components;
+    if (order.empty() || net.size() != points * order.size()) {
+        return components;
+    }
+    for (std::size_t k = 0; k < order.size(); ++k) {
+        PatternSource::Component component;
+        component.structure_id = order[k];
+        component.label = order[k];
+        component.place = k;
+        for (std::size_t place = 0; place < structure_names.size(); ++place) {
+            if (structure_names[place] == order[k]) {
+                component.place = place;
+            }
+        }
+        std::vector<double> values(points);
+        for (std::size_t row = 0; row < points; ++row) {
+            values[row] = net[row * order.size() + k];
+        }
+        component.net = std::make_shared<const std::vector<double>>(std::move(values));
+        components.push_back(std::move(component));
+    }
+    return components;
 }
 
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
@@ -522,14 +586,15 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.kind = SeriesKind::Measured;
         series.pane = Pane::Main;
         series.id = "meas";
-        series.label = "Measured (Imeas)";
+        series.label = "Measured (meas)";
         series.style = style_key("meas", source.experiment_place);
         const std::vector<double> display =
             view.included_only ? masked(displayed(*meas, view.y_scale)) : displayed(*meas, view.y_scale);
         const std::vector<double>* su = column_for(source.su);
         std::vector<double> bar_low(x.size()), bar_high(x.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
-            const double half = su != nullptr ? (*su)[i] : 0.0;
+            // A point without a finite s.u. has a bar (and a band) of no width, never one to the pane's floor.
+            const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
             bar_low[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] - half, view.y_scale);
             bar_high[i] = std::isnan(display[i]) ? kNaN : to_display((*meas)[i] + half, view.y_scale);
         }
@@ -545,22 +610,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
                 low[i] = std::isnan(bar_low[i]) ? display[i] : bar_low[i];
                 high[i] = std::isnan(bar_high[i]) ? display[i] : bar_high[i];
             }
-            const Kept bars = decimate(x, low, high, out.x.min, out.x.max, view.columns, measured_breaks);
-            Kept merged;
-            std::size_t a = 0, b = 0;
-            while (a < kept.rows.size() || b < bars.rows.size()) {
-                const bool take_a = b == bars.rows.size() ||
-                                    (a < kept.rows.size() && kept.rows[a] <= bars.rows[b]);
-                const std::size_t row = take_a ? kept.rows[a] : bars.rows[b];
-                const std::size_t run = take_a ? kept.runs[a] : bars.runs[b];
-                if (take_a && b < bars.rows.size() && bars.rows[b] == row) {
-                    ++b;
-                }
-                take_a ? ++a : ++b;
-                merged.rows.push_back(row);
-                merged.runs.push_back(run);
-            }
-            kept = std::move(merged);
+            kept = union_of(kept, decimate(x, low, high, out.x.min, out.x.max, view.columns, measured_breaks));
         }
         fill_points(series, kept, x, display);
         series.bar_low.reserve(series.rows.size());
@@ -600,12 +650,79 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         out.series.push_back(std::move(series));
     };
     if (source.current) {
-        line(source.calc, SeriesKind::Calculated, Pane::Main, "calc", "Total calculated (Icalc)", "calc",
+        line(source.calc, SeriesKind::Calculated, Pane::Main, "calc", "Total calculated (calc)", "calc",
              view.y_scale);
-        line(source.bkg, SeriesKind::Background, Pane::Main, "bkg", "Background (Ibkg)", "bkg",
+        line(source.bkg, SeriesKind::Background, Pane::Main, "bkg", "Background (bkg)", "bkg",
              view.y_scale);
-        line(source.resid, SeriesKind::Residual, Pane::Residual, "resid", "Residual (Imeas − Icalc)", "resid",
+        // Each structure's curve over the background, its fill down to the background (bar_low); not stacked.
+        const std::vector<double>* bkg = column_for(source.bkg);
+        for (const PatternSource::Component& component : source.components) {
+            const std::vector<double>* net = column_for(component.net);
+            if (!view.structure_curves || bkg == nullptr || net == nullptr) {
+                continue;
+            }
+            std::vector<double> upper(net->size());
+            for (std::size_t row = 0; row < upper.size(); ++row) {
+                upper[row] = (*bkg)[row] + (*net)[row];
+            }
+            const std::vector<double> display = masked(displayed(upper, view.y_scale));
+            const std::vector<double> base = masked(displayed(*bkg, view.y_scale));
+            // A background the log scale cannot show still leaves the curve drawn: its rows are kept by the curve.
+            std::vector<double> kept_low(base.size());
+            for (std::size_t row = 0; row < base.size(); ++row) {
+                kept_low[row] = std::isnan(base[row]) ? display[row] : base[row];
+            }
+            PatternSeries series;
+            series.kind = SeriesKind::StructureCurve;
+            series.pane = Pane::Main;
+            series.id = "structure/" + component.structure_id;
+            series.label = component.label;
+            series.style = style_key("structure", component.place);
+            fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns, crossing), x,
+                        display);
+            series.bar_low.reserve(series.rows.size());
+            for (const std::size_t row : series.rows) {
+                series.bar_low.push_back(row == kNoRow ? kNaN : base[row]);
+            }
+            for (const PresentedPoint& point : series.points) {
+                cover(out.y_main, any_main, point.y);
+            }
+            out.series.push_back(std::move(series));
+        }
+        line(source.resid, SeriesKind::Residual, Pane::Residual, "resid", "Residual (meas − calc)", "resid",
              YScale::Linear);
+        // In band style, the residual's band, ± the measured s.u. (none where it has none): its rows are taken, as the
+        // measured band's, from both the centre values and the band's ends, so a narrow s.u. peak between flat
+        // residuals is kept.
+        const std::vector<double>* resid = column_for(source.resid);
+        const std::vector<double>* su = column_for(source.su);
+        if (view.residual_band && resid != nullptr && !out.series.empty() &&
+            out.series.back().kind == SeriesKind::Residual) {
+            PatternSeries& series = out.series.back();
+            const std::vector<double> centre = masked(displayed(*resid, YScale::Linear));
+            std::vector<double> low(x.size()), high(x.size());
+            for (std::size_t i = 0; i < x.size(); ++i) {
+                const double half = su != nullptr && std::isfinite((*su)[i]) ? (*su)[i] : 0.0;
+                low[i] = centre[i] - half;
+                high[i] = centre[i] + half;
+            }
+            const Kept kept = union_of(decimate(x, centre, centre, out.x.min, out.x.max, view.columns, crossing),
+                                       decimate(x, low, high, out.x.min, out.x.max, view.columns, crossing));
+            series.points.clear();
+            series.rows.clear();
+            fill_points(series, kept, x, centre);
+            series.bar_low.reserve(series.rows.size());
+            series.bar_high.reserve(series.rows.size());
+            for (const std::size_t row : series.rows) {
+                series.bar_low.push_back(row == kNoRow ? kNaN : low[row]);
+                series.bar_high.push_back(row == kNoRow ? kNaN : high[row]);
+            }
+            for (std::size_t k = 0; k < series.points.size(); ++k) {
+                cover(out.y_residual, any_residual, series.points[k].y);
+                cover(out.y_residual, any_residual, series.bar_low[k]);
+                cover(out.y_residual, any_residual, series.bar_high[k]);
+            }
+        }
     }
     const bool has_residual = std::any_of(out.series.begin(), out.series.end(), [](const auto& s) {
         return s.kind == SeriesKind::Residual;
@@ -696,6 +813,16 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
     return out;
 }
 
+std::vector<TitleSegment> legend_label(const PatternPresentation& presentation, const PatternSeries& series) {
+    if (series.kind == SeriesKind::Residual && !presentation.y_residual.segments.empty()) {
+        std::vector<TitleSegment> label{{"Residual (", series.style}};
+        label.insert(label.end(), presentation.y_residual.segments.begin(), presentation.y_residual.segments.end());
+        label.push_back({")", series.style});
+        return label;
+    }
+    return {{series.label, series.style}};
+}
+
 std::string hover_text(const PatternSource& source, const PatternSeries& series, std::size_t point) {
     if (point >= series.rows.size() || series.rows[point] == kNoRow) {
         return {};
@@ -758,27 +885,35 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
             }
             const auto& hkl = (*phase.hkl)[index];
             // Only the Miller indices take the tick's colour (the owner, 2026-10-03).
-            return {{phase.structure_id, ""},
-                    {"x: " + readout_number((*read)[index]), ""},
+            return {{phase.structure_id, "", {}},
+                    {"x: " + readout_number((*read)[index]), "", {}},
                     {"Miller indices: (" + std::to_string(hkl[0]) + " " + std::to_string(hkl[1]) + " " +
                          std::to_string(hkl[2]) + ")",
-                     series.style}};
+                     series.style,
+                     {}}};
         }
         return {};
     }
     if (!source.x || row >= source.x->size()) {
         return {};
     }
-    std::vector<HoverLine> lines{{"x: " + readout_number((*source.x)[row]), ""}};
+    std::vector<HoverLine> lines{{"x: " + readout_number((*source.x)[row]), "", {}}};
     const auto line = [&lines, row](const char* name, const PatternSource::Column& column, std::string style) {
         if (column && row < column->size()) {
-            lines.push_back({std::string(name) + ": " + readout_number((*column)[row]), std::move(style)});
+            lines.push_back({std::string(name) + ": " + readout_number((*column)[row]), std::move(style), {}});
         }
     };
-    line("Imeas", source.meas, style_key("meas", source.experiment_place));
-    line("Ibkg", source.bkg, "bkg");
-    line("Icalc", source.calc, "calc");
-    line("Imeas - Icalc", source.resid, "resid");
+    const std::string measured_style = style_key("meas", source.experiment_place);
+    line("meas", source.meas, measured_style);
+    line("bkg", source.bkg, "bkg");
+    line("calc", source.calc, "calc");
+    // Named and coloured as the residual pane's title (edi ADR-0017 §15), its value in the residual's colour.
+    if (source.resid && row < source.resid->size()) {
+        const std::string value = ": " + readout_number((*source.resid)[row]);
+        lines.push_back({"meas \xE2\x88\x92 calc" + value,
+                         "resid",
+                         {{"meas", measured_style}, {" \xE2\x88\x92 ", ""}, {"calc", "calc"}, {value, "resid"}}});
+    }
     return lines;
 }
 

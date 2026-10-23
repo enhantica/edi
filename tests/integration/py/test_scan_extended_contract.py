@@ -85,6 +85,44 @@ def test_scan_stop_continue_and_follow_have_model_state(tmp_path):
     )
 
 
+def assert_structure_selector(text):
+    expressions = {
+        name: property_value(text, name)
+        for name in ('blocks', 'blockIndex', 'blockKind', 'onBlockActivated')
+    }
+    result = javascript(
+        'const project={structures:{tag:"structures"},experiments:{tag:"experiments"},'
+        'currentStructureIndex:2,currentExperimentIndex:5};const seen=[];'
+        'for(const patternShown of [false,true]){const page={project,patternShown};'
+        'seen.push([('
+        + expressions['blocks']
+        + ').tag,('
+        + expressions['blockIndex']
+        + '),('
+        + expressions['blockKind']
+        + ')]);'
+        '(' + expressions['onBlockActivated'] + ')(7);'
+        'seen.push([project.currentStructureIndex,project.currentExperimentIndex]);}'
+        'console.log(JSON.stringify(seen));'
+    )
+    assert result == [
+        ['structures', 2, 'structure'],
+        [7, 5],
+        ['experiments', 5, 'experiment'],
+        [7, 7],
+    ], (
+        'Structure selects structures in its view and experiments in Pattern, '
+        'retaining independent indices and activating only the current collection'
+    )
+    assert javascript(
+        'const project=null,patternShown=true;console.log(JSON.stringify(['
+        + expressions['blocks']
+        + ','
+        + expressions['blockIndex']
+        + ']));'
+    ) == [None, -1], 'Structure keeps the null-project selector empty on either tab'
+
+
 def test_empty_selectors_are_hidden_on_experiment_and_structure_pages():
     workflow = source('qml/Components/WorkflowPage.qml')
     selector = block(workflow, 'MainAreaBlockSelector {')
@@ -93,13 +131,15 @@ def test_empty_selectors_are_hidden_on_experiment_and_structure_pages():
         == 'page.blockSelectorShown && page.blocks !== null && page.bloc'
         'ks.count > 0'
     ), 'Selector wiring: the actual main-area selector hides for an empty bound model'
-    for page, model in [('Experiment', 'experiments'), ('Structure', 'structures')]:
+    for page, model in [('Experiment', 'experiments')]:
         text = source(f'qml/Pages/{page}/{page}Page.qml')
         require(
             text,
             r'blocks:\s*project \? project\.' + model + r' : null',
             'Selector wiring: each page supplies its own project-item model',
         )
+
+    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
 
 
 def test_selector_moves_to_main_tab_bar_once():
@@ -161,11 +201,7 @@ def test_selector_moves_to_main_tab_bar_once():
     assert result == [[17], 3], (
         'Selector wiring: activation retains the source index and rebinds the shared selection'
     )
-    for page, kind in [
-        ('Experiment', 'Experiment'),
-        ('Analysis', 'Experiment'),
-        ('Structure', 'Structure'),
-    ]:
+    for page, kind in [('Experiment', 'Experiment'), ('Analysis', 'Experiment')]:
         text = source(f'qml/Pages/{page}/{page}Page.qml')
         assert (
             property_value(text, 'blockIndex') == 'project ? project.current' + kind + 'Index : -1'
@@ -175,6 +211,8 @@ def test_selector_moves_to_main_tab_bar_once():
             == 'index => page.project.current' + kind + 'Index = index'
         ), 'Selector wiring: each page forwards the activated index to the same project selection'
 
+    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
+
 
 def test_scan_explorer_header_has_declared_columns_in_order():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
@@ -183,7 +221,7 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     assert labels[:3] == ['Fit', 'Datablock', 'Data file'], (
         'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
     )
-    number_column = block(header, 'EaComponents.TableViewLabel {')
+    number_column = block(header, 'EaComponents.ListViewLabel {')
     assert 'text:' not in number_column, (
         'Dataset list labels: the first number column stays present with an empty header'
     )
@@ -211,7 +249,7 @@ def test_scan_explorer_header_has_declared_columns_in_order():
         if model == 'group.scanColumns'
         else ''
     )
-    label = block(repeater, 'EaComponents.TableViewLabel {')
+    label = block(repeater, 'EaComponents.ListViewLabel {')
     program = (
         context + 'group.scan=true;'
         'const AppSizes={fieldSpacing:4,iconColumnWidth:16,dataColumnWidth:32};'

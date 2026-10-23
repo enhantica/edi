@@ -723,3 +723,10 @@ WeightFraction.value	other-public
 # Stored background row identifiers are public model data, not input providers.
 LineSegment.id	other-public
 PolynomialTerm.id	other-public
+# Calculated arrays and their stored column names are passive model results, not calculation entry points.
+PdCwlData.component_intensities_net	other-public
+PdCwlData.component_presentation_order	other-public
+PdDataBase.component_intensities_net	other-public
+PdDataBase.component_presentation_order	other-public
+PdTofData.component_intensities_net	other-public
+PdTofData.component_presentation_order	other-public

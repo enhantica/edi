@@ -7760,15 +7760,15 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_y2o3_beta_adp",
+        "_metadata.title": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+        "_metadata.description": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
         "_metadata.created": "06 Oct 2026 16:43:16",
         "_metadata.last_modified": "06 Oct 2026 16:43:17",
         "_metadata.timestamp": "?",
-        "_metadata.title": "Y₂O₃ [Ia-3] · Unknown instrument",
-        "_metadata.description": "Symmetry-constrained anisotropic β tensors · Scale-only refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
-        "_metadata.instrument": "?",
-        "_metadata.facility": "?",
+        "_metadata.instrument": "SPODI",
+        "_metadata.facility": "FRM II",
         "_metadata.polarisation": "none"
       },
       "analysis": {
@@ -7801,7 +7801,7 @@ var frozen = {
       "datasets": [],
       "loaderWarning": "",
       "files": {
-        "project.edi": "eb50aaa2bdec7eacb505b37b1a63bcd6066031d38008e2b14b1d1addcf688628",
+        "project.edi": "b3034aba2b825a7b419707991aadd0dfbdea99cf63a446a1b83299246a7648c5",
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
         "experiments/y2o3.edi": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
         "analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71"
@@ -13289,6 +13289,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
+        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
@@ -13334,7 +13335,6 @@ var frozen = {
         },
         "_absorption.type": "none",
         "_background.type": "line-segment",
-        "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.sample_form": "powder",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"

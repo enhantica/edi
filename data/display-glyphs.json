@@ -53,6 +53,7 @@
    "sites": [
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/src/scan_view_model.cpp",
     "core/src/adapter.cpp",
     "core/src/presentation.cpp",
     "core/src/report_model.cpp"
@@ -79,6 +80,7 @@
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
+    "app/qml/Pages/Home/AboutDialog.qml",
     "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/ExamplesGroup.qml",
     "app/src/demo_driver.cpp",
@@ -139,6 +141,7 @@
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "app/src/scan_view_model.cpp",
     "core/src/parameter_symbol.cpp",
     "core/src/presentation.cpp",
     "core/src/report_model.cpp",
@@ -152,6 +155,8 @@
    "code": "U+00D7",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/ScanViewChart.qml",
+    "app/src/demo_driver.cpp",
     "app/src/structure_view_controller.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -211,8 +216,11 @@
    "font": "PT Sans",
    "sites": [
     "app/qml/Components/PatternChart.qml",
+    "app/qml/Components/ScanViewChart.qml",
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/src/demo_driver.cpp",
+    "app/src/scan_view_model.cpp",
     "core/src/adapter.cpp",
     "core/src/parameter_symbol.cpp",
     "core/src/presentation.cpp",
@@ -304,6 +312,7 @@
    "code": "U+2014",
    "font": "PT Sans",
    "sites": [
+    "app/src/app_info.cpp",
     "core/src/adapter.cpp",
     "core/src/io.cpp",
     "core/include/edi/model.hpp",

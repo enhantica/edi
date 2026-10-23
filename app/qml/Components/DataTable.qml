@@ -2,7 +2,6 @@
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Animations as EaAnimations
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -14,6 +13,31 @@ EaComponents.ListView {
     property var sourceModel: null
     model: sourceModel ?? null
     multiSelection: false
+    // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
+    // focus selects its row, as a click on the row's background does.
+    selectOnEdit: true
+    // A row the user made current, by a click on any of its cells or by moving into one of its editors: a table whose
+    // page holds its current row (marksCurrentRow) sets it from this.
+    signal rowActivated(int row)
+
+    // Up and Down move the current row as a click does (the owner, 2026-10-22): the row is selected in a selectable
+    // table and reported as activated, so a page holding its current row moves too. A passive table (nothing
+    // selectable and no current row) keeps the keys, and a text editor keeps its own.
+    Keys.onPressed: event => {
+        if ((event.key !== Qt.Key_Up && event.key !== Qt.Key_Down) || table.count === 0 || (!table.selectable && !table.marksCurrentRow))
+            return;
+        const focused = table.Window.activeFocusItem;
+        if (focused !== null && "cursorPosition" in focused)
+            return;
+        const from = table.markerRow;
+        const row = Math.max(0, Math.min(table.count - 1, from < 0 ? 0 : from + (event.key === Qt.Key_Down ? 1 : -1)));
+        table.currentIndex = row;
+        table.positionViewAtIndex(row, ListView.Contain);
+        if (table.selectable)
+            table.selectWithModifiers(row, Qt.NoModifier);
+        table.rowActivated(row);
+        event.accepted = true;
+    }
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
     // the background, and a page's tables kept laying out for about a second after a project opened.
     cacheBuffer: 0
@@ -34,6 +58,10 @@ EaComponents.ListView {
         return metrics.advanceWidth(text);
     }
     function textColumnWidth(role: string, title: string): real {
+        return Math.min(naturalTextColumnWidth(role, title), width * maximumTextColumnShare);
+    }
+    // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
+    function naturalTextColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
         let widths = rowWidths[role];
         if (!widths || widths.length !== count) {
@@ -43,7 +71,7 @@ EaComponents.ListView {
             rowWidths[role] = widths;
         }
         const result = widths.reduce((widest, measured) => Math.max(widest, measured), metrics.advanceWidth(title));
-        return Math.min(Math.ceil(result) + AppSizes.fieldSpacing * 2, width * maximumTextColumnShare);
+        return Math.ceil(result) + AppSizes.fieldSpacing * 2;
     }
     // Cleared in place: the bindings that read the cache depend on modelRevision, never on the cache itself.
     function forgetWidths() {
@@ -55,49 +83,13 @@ EaComponents.ListView {
         modelRevision++;
     }
 
-    // The current row, -1 for none: an accent bar at its left edge marks it, and moves to a new current row as the
-    // tab bar's underline moves (edi ADR-0017 §11). Its rows are TableRows, which keep their alternating background.
-    property int currentRow: -1
-    // Set by a table with a current row: it then selects no row, since the base draws its own bar on a selected
-    // (clicked) row, which would show at once beside this one sliding in (the owner, 2026-10-13).
+    // A table with a current row (the base's `currentRow`, which its moving accent marker shows; edi ADR-0017 §11)
+    // selects no row, since the base draws a bar on a selected (clicked) row, which would show at once beside the
+    // marker (the owner, 2026-10-13).
     property bool marksCurrentRow: false
     selectable: !marksCurrentRow
-    // The row the bar is on. It moves between two shown rows, and appears on or leaves a row in place.
-    property int markedRow: -1
-    function markCurrentRow() {
-        barMove.enabled = markedRow >= 0 && currentRow >= 0;
-        markedRow = currentRow;
-    }
-    onCurrentRowChanged: markCurrentRow()
-    Component.onCompleted: markCurrentRow()
 
     onModelChanged: forgetWidths()
-
-    Rectangle {
-        objectName: "currentRowBar"
-        parent: table.contentItem
-        // Over the rows' hover tint, under the header.
-        z: 2
-        x: EaStyle.Sizes.borderThickness
-        y: Math.max(0, table.markedRow) * table.tableRowHeight
-        // The tab bar underline's thickness.
-        width: 2
-        height: table.tableRowHeight
-        visible: table.markedRow >= 0
-        color: EaStyle.Colors.themeAccent
-        Behavior on y {
-            id: barMove
-            // The tab bar's underline motion (a ListView highlight with highlightMoveDuration 250). A row is
-            // shorter than a tab, so the speed limit is off and every move takes the underline's 250 ms.
-            SmoothedAnimation {
-                duration: 250
-                velocity: -1
-            }
-        }
-        Behavior on color {
-            EaAnimations.ThemeChange {}
-        }
-    }
 
     FontMetrics {
         id: metrics

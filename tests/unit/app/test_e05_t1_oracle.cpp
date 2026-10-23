@@ -33,6 +33,7 @@
 #include <memory>
 #include <QVariantList>
 #include <QtQml/qqml.h>
+#include <QtQml/QQmlListReference>
 #include <chrono>
 #include <cmath>
 
@@ -131,30 +132,44 @@ class FitOracle final : public QObject {
         view.columns=edi::pixel_columns(controller->property("plotWidth").toDouble(),controller->property("devicePixelRatio").toDouble());
         // Regression comparison to the prior instant path, not a fit correctness oracle.
         const auto instant=edi::present_pattern(source,view);
-        QList<QPointF> ticks[3];
-        for(const auto& reference:instant.series) {
-            if(reference.kind==edi::SeriesKind::BraggTicks) {
-                const auto slot=reference.style.empty()?0:(reference.style.back()-'0')%3;
-                for(const auto& p:reference.points) ticks[slot].append(QPointF(p.x,p.y));
-                continue;
-            }
-            auto* object=chart->findChild<QObject*>("chart.series."+QString::fromStdString(reference.id));
-            auto* actual=qobject_cast<QXYSeries*>(object);if(!actual || actual->count()!=static_cast<int>(reference.points.size())) return false;
-            for(std::size_t i=0;i<reference.points.size();++i) {
-                const auto at=actual->at(static_cast<int>(i));const auto& expected=reference.points[i];
-                if(std::isnan(at.x()) && std::isnan(expected.x) && std::isnan(at.y()) && std::isnan(expected.y)) continue;
-                if(at.x()!=expected.x || at.y()!=expected.y) return false;
+        std::map<QString, QXYSeries*> actual_series;
+        for (auto* item : chart->findChildren<QObject*>()) {
+            QQmlListReference list(item, "seriesList");
+            if (!list.isValid()) continue;
+            for (qsizetype i = 0; i < list.count(); ++i) {
+                auto* series = qobject_cast<QXYSeries*>(list.at(i));
+                if (series) actual_series[series->objectName()] = series;
             }
         }
-        for(int slot=0;slot<3;++slot) {
-            auto* actual=qobject_cast<QXYSeries*>(chart->findChild<QObject*>("chart.series.bragg."+QString::number(slot)));
-            if(!actual || actual->count()!=ticks[slot].size()) return false;
-            for(int i=0;i<actual->count();++i) {
-                const auto a=actual->at(i),b=ticks[slot][i];
-                if(std::isnan(a.x()) && std::isnan(b.x()) && std::isnan(a.y()) && std::isnan(b.y())) continue;
-                if(a!=b) return false;
+        const auto same_points = [](QXYSeries* actual, const QList<QPointF>& expected) {
+            if (!actual) return false;
+            // Empty uploads retain exactly one undrawable point (edi ADR-0017 §15).
+            if (expected.isEmpty())
+                return actual->count() == 1 && std::isnan(actual->at(0).x()) && std::isnan(actual->at(0).y());
+            if (actual->count() != expected.size()) return false;
+            for (qsizetype i = 0; i < expected.size(); ++i) {
+                const auto a = actual->at(i), b = expected[i];
+                if (std::isnan(a.x()) && std::isnan(b.x()) && std::isnan(a.y()) && std::isnan(b.y())) continue;
+                if (a != b) return false;
+            }
+            return true;
+        };
+        std::map<QString, QList<QPointF>> ticks;
+        for (qsizetype place = 0; place < controller->property("braggColors").toList().size(); ++place)
+            ticks["chart.series.bragg." + QString::number(place)] = {};
+        for (const auto& reference : instant.series) {
+            QList<QPointF> expected;
+            for (const auto& point : reference.points) expected.append(QPointF(point.x, point.y));
+            if (reference.kind == edi::SeriesKind::BraggTicks) {
+                const auto name = "chart.series." + QString::fromStdString(reference.style);
+                if (!ticks.contains(name)) return false;
+                ticks[name].append(expected);
+            } else if (!same_points(actual_series["chart.series." + QString::fromStdString(reference.id)], expected)) {
+                return false;
             }
         }
+        for (const auto& [name, expected] : ticks)
+            if (!same_points(actual_series[name], expected)) return false;
         return true;
     }
     Q_INVOKABLE QVariantMap instantFittedY(QObject* object,double left,double right) const {

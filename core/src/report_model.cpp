@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <ctime>
 #include <filesystem>
 #include <limits>
@@ -341,16 +343,29 @@ ScanTemplate scan_template_of(const Project& scan) {
     return out;
 }
 
-// The structure view as the app's opens: the default scene options, the home view, the report's viewport.
-void add_scene(ReportStructure& out, const Structure& structure) {
+// The structure view as the app's opens: the default scene options in the view's element colours, the home view, the
+// report's viewport.
+void add_scene(ReportStructure& out, const Structure& structure, ColorScheme colours) {
     const SceneSource source = capture_scene(structure);
-    out.scene = present_structure(source, SceneOptions{});
+    SceneOptions options;
+    options.colors = colours;
+    out.scene = present_structure(source, options);
+    // The element legend is drawn flat on the report's white paper, so its colours are made readable there
+    // (ADR-0047); the spheres keep the scheme's.
+    for (SceneLegendEntry& entry : out.scene.legend) {
+        char hex[8];
+        std::snprintf(hex, sizeof(hex), "#%02X%02X%02X", entry.color.r, entry.color.g, entry.color.b);
+        const std::string readable = readable_colour(hex, "#FFFFFF");
+        entry.color = {static_cast<std::uint8_t>(std::stoi(readable.substr(1, 2), nullptr, 16)),
+                       static_cast<std::uint8_t>(std::stoi(readable.substr(3, 2), nullptr, 16)),
+                       static_cast<std::uint8_t>(std::stoi(readable.substr(5, 2), nullptr, 16))};
+    }
     out.view = default_view(out.scene);
     out.drawing = scene_drawing(out.scene, kReportViewport);
     for (int axis = 0; axis != 3; ++axis) {
         out.along.push_back(view_along(out.scene, axis));
     }
-    SceneOptions labelled;
+    SceneOptions labelled = options;
     labelled.labels = true;
     out.labels = present_structure(source, labelled).labels;
 }
@@ -734,16 +749,22 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
         overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
     options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
     options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
-    if (overrides.colour_scheme) {
-        const std::optional<ColourScheme> scheme = colour_scheme_from_name(*overrides.colour_scheme);
+    const auto scheme_named = [](const std::string& name) {
+        const std::optional<ColourScheme> scheme = colour_scheme_from_name(name);
         if (!scheme) {
             std::string known;
-            for (const std::string_view name : colour_scheme_names()) {
-                known += (known.empty() ? "" : ", ") + std::string(name);
+            for (const std::string_view each : colour_scheme_names()) {
+                known += (known.empty() ? "" : ", ") + std::string(each);
             }
-            throw std::invalid_argument("unknown colour scheme '" + *overrides.colour_scheme + "': one of " + known);
+            throw std::invalid_argument("unknown colour scheme '" + name + "': one of " + known);
         }
-        options.colour_scheme = *scheme;
+        return *scheme;
+    };
+    if (overrides.colour_scheme) {
+        options.colour_scheme = scheme_named(*overrides.colour_scheme);
+    }
+    if (overrides.structure_colour_scheme) {
+        options.structure_colour_scheme = scheme_named(*overrides.structure_colour_scheme);
     }
     if (overrides.correlation_experiment) {
         const auto& experiments = project.experiments;
@@ -872,7 +893,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     for (const auto& structure : project.structures) {
         ReportStructure built = structure_of(*structure, rule);
         if (charts) {
-            add_scene(built, *structure);
+            add_scene(built, *structure, options.element_colours);
         }
         model.structures.push_back(std::move(built));
     }
@@ -904,7 +925,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     // it there; the table has a measured row for each dataset.
     model.pattern_styles = pattern_style_table(options.colour_scheme,
                                                scan && scan->place ? scan->files : project.experiments.size(),
-                                               project.structures.size());
+                                               project.structures.size(), options.structure_colour_scheme);
     model.structure_styles = structure_style_table();
     return model;
 }
