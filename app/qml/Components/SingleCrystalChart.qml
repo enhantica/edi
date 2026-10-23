@@ -177,6 +177,18 @@ Item {
             onPointerModeChanged: Preferences.chartPointerMode = pointerMode
             onResetClicked: chart.zoom = []
         }
+        // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
+        // remembered settings again whenever another chart changes them.
+        Binding {
+            target: buttons
+            property: "hoverShown"
+            value: Preferences.chartHoverShown
+        }
+        Binding {
+            target: buttons
+            property: "pointerMode"
+            value: Preferences.chartPointerMode
+        }
     }
 
     GraphsView {
