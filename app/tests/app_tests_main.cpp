@@ -6,6 +6,7 @@
 #include <QtQuickTest/quicktest.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include "edi/version.hpp"
 #include "engine_setup.hpp"
@@ -15,13 +16,19 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 class Setup : public QObject {
     Q_OBJECT
 
+   public:
+    explicit Setup(bool automaticReports) : automatic_reports_(automaticReports) {}
+
    public slots:
     // Before any engine exists: the application font the host uses (engine_setup.hpp).
     void applicationAvailable() {
         edi_app::use_design_font();
         edi_app::use_fresh_settings();  // never the machine's saved settings
     }
-    void qmlEngineAvailable(QQmlEngine* engine) { edi_app::configure_engine(*engine); }
+    void qmlEngineAvailable(QQmlEngine* engine) { edi_app::configure_engine(*engine, {automatic_reports_}); }
+
+   private:
+    const bool automatic_reports_;
 };
 
 // QUICK_TEST_MAIN_WITH_SETUP, with the platform settled first. The tier checks behaviour, not pixels, so
@@ -29,6 +36,14 @@ class Setup : public QObject {
 // become active, and the cases that need keyboard or pointer focus fail there. Only the UI test's capture
 // draws with FreeType as users see it (ADR-0015 §10).
 int main(int argc, char** argv) {
+    bool automaticReports = false;
+    for (int index = 1; index < argc; ++index) {
+        if (std::strcmp(argv[index], "--assistant-work-reports") != 0) continue;
+        automaticReports = true;
+        for (int next = index; next < argc; ++next) argv[next] = argv[next + 1];
+        --argc;
+        --index;
+    }
     // The revision this runner was built from, first in its output, so whatever it measures is attributed to
     // that revision (tools/ci/latency_bank.py reads this line; `-dirty` names no revision).
     std::printf("edi_app_tests: built at %s\n", edi::build_commit());
@@ -37,7 +52,7 @@ int main(int argc, char** argv) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
     QTEST_SET_MAIN_SOURCE_PATH
-    Setup setup;
+    Setup setup(automaticReports);
     return quick_test_main_with_setup(argc, argv, "edi_app", QUICK_TEST_SOURCE_DIR, &setup);
 }
 
