@@ -1,8 +1,13 @@
 _edi.schema_version 3
 
-_fitting_mode.type single
+_fitting_mode.type joint
 
 loop_
 _joint_fit.experiment_id
 _joint_fit.weight
-senju 1
+senju_1 1
+senju_2 1
+senju_3 1
+senju_4 1
+senju_5 1
+senju_6 1

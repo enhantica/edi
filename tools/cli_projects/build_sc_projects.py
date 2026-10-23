@@ -254,6 +254,182 @@ PROJECTS = {
 }
 
 
+# FullProf's taurine project from the owner (2026-10-23, SENJU @ J-PARC, taurine.pcr): its
+# positions and beta tensors as the start, every one free as FullProf refines them, and one scale
+# per dataset (Sc1-Sc6).
+TAURINE_FULLPROF_SITES = [
+    (
+        'S1',
+        'S',
+        '0.20300()',
+        '0.34676()',
+        '0.35118()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.00608()', '0.00124()', '0.00863()', '0.00050()', '0.00186()', '-0.00031()'),
+    ),
+    (
+        'O1',
+        'O',
+        '0.33902()',
+        '0.24201()',
+        '0.35341()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.02351()', '0.00278()', '0.01353()', '0.00452()', '0.00639()', '0.00068()'),
+    ),
+    (
+        'O2',
+        'O',
+        '-0.06427()',
+        '0.33875()',
+        '0.29137()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.01088()', '0.00363()', '0.01829()', '-0.00185()', '-0.00126()', '-0.00162()'),
+    ),
+    (
+        'O3',
+        'O',
+        '0.23286()',
+        '0.40985()',
+        '0.51108()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.02111()', '0.00413()', '0.00713()', '0.00045()', '0.00246()', '-0.00082()'),
+    ),
+    (
+        'N1',
+        'N',
+        '0.26440()',
+        '0.62996()',
+        '0.33158()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.01644()', '0.00258()', '0.00836()', '0.00055()', '0.00283()', '0.00005()'),
+    ),
+    (
+        'H1',
+        'H',
+        '0.17000()',
+        '0.59950()',
+        '0.43173()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.04503()', '0.00645()', '0.01266()', '-0.00627()', '0.01230()', '0.00003()'),
+    ),
+    (
+        'H2',
+        'H',
+        '0.19405()',
+        '0.70895()',
+        '0.30623()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.03957()', '0.00324()', '0.01565()', '-0.00032()', '-0.00048()', '0.00042()'),
+    ),
+    (
+        'H3',
+        'H',
+        '0.45233()',
+        '0.63476()',
+        '0.36061()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.02533()', '0.00525()', '0.01906()', '0.00034()', '0.00246()', '-0.00526()'),
+    ),
+    (
+        'C1',
+        'C',
+        '0.34074()',
+        '0.43812()',
+        '0.19983()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.01816()', '0.00217()', '0.00715()', '0.00028()', '0.00309()', '-0.00042()'),
+    ),
+    (
+        'H11',
+        'H',
+        '0.53973()',
+        '0.44320()',
+        '0.23493()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.01829()', '0.00695()', '0.01989()', '0.00257()', '0.00840()', '-0.00019()'),
+    ),
+    (
+        'H12',
+        'H',
+        '0.32105()',
+        '0.39069()',
+        '0.08168()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.05033()', '0.00504()', '0.01083()', '0.00384()', '0.00923()', '-0.00170()'),
+    ),
+    (
+        'C2',
+        'C',
+        '0.20803()',
+        '0.55562()',
+        '0.18084()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.01723()', '0.00322()', '0.00721()', '-0.00006()', '-0.00007()', '0.00059()'),
+    ),
+    (
+        'H21',
+        'H',
+        '0.28448()',
+        '0.59948()',
+        '0.07592()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.05136()', '0.00739()', '0.00957()', '-0.00328()', '0.01154()', '0.00254()'),
+    ),
+    (
+        'H22',
+        'H',
+        '0.00169()',
+        '0.54787()',
+        '0.16446()',
+        'e',
+        '1',
+        'beta',
+        '0',
+        ('0.02922()', '0.00655()', '0.01968()', '-0.00054()', '-0.00477()', '0.00034()'),
+    ),
+]
+TAURINE_SCALES = ['2.762()', '3.829()', '3.211()', '2.809()', '2.739()', '2.936()']
+
+
 # The app's fitting examples: displacements from a small start, one extinction parameter free
 # at most, the free coordinates moved off their refined values.
 U = '0.0026()'
@@ -322,23 +498,22 @@ PR2NIO4_FIT_SITES = [
 FIT_PROJECTS = {
     'sc-neut-tof_taurine-senju': {
         'source': 'sc-neut-tof_taurine_basic/taurine.int',
-        'data': 'taurine-senju.xye',
+        # The owner's FullProf file: six datasets (column 6), one experiment each.
+        'data': 'taurine-senju.int',
+        'datasets': TAURINE_SCALES,
         'structure': 'taurine',
         'experiment': 'senju',
         'title': 'Taurine [P2₁/c] · SENJU @ J-PARC',
         'instrument': 'SENJU',
         'facility': 'J-PARC',
         'description': (
-            'Single crystal · Time of flight · Isotropic displacements from a rough start'
+            'Single crystal · Time of flight · Six datasets · Anisotropic displacements'
         ),
         'purpose': 'refinement',
         'space_group': ('P 21/c', 'b1'),
-        'cell': ('5.272901', '11.656488', '7.838297', '90', '94.010994', '90'),
-        'sites': [
-            (sid, typ, x, y, z, w, occ, adp, '1.5()', None)
-            for sid, typ, x, y, z, w, occ, adp, _, _ in TAURINE_SITES
-        ],
-        'scale': '1()',
+        'cell': ('5.272901', '11.656495', '7.838298', '90', '94.010994', '90'),
+        'sites': TAURINE_FULLPROF_SITES,
+        'scale': None,
         'extinction': None,
         'tof': True,
     },
@@ -638,6 +813,25 @@ def read_int(path: Path) -> tuple[float, list[tuple[int, int, int, str, str]]]:
     return wavelength, rows
 
 
+def read_datasets(path: Path) -> dict[str, list[tuple[int, int, int, str, str, str | None]]]:
+    """Return a FullProf .int file's (h, k, l, F², su, wavelength) rows by its column 6 dataset."""
+    datasets: dict[str, list[tuple[int, int, int, str, str, str | None]]] = {}
+    for line in path.read_text(encoding='utf-8').splitlines()[3:]:
+        fields = line.split()
+        # A reflection with no su (FullProf's forbidden ones, which it excludes) cannot be weighted.
+        if len(fields) < 7 or not float(fields[4]) > 0:
+            continue
+        datasets.setdefault(fields[5], []).append((
+            int(fields[0]),
+            int(fields[1]),
+            int(fields[2]),
+            fields[3],
+            fields[4],
+            fields[6],
+        ))
+    return dict(sorted(datasets.items(), key=lambda item: int(item[0])))
+
+
 def read_data(path: Path) -> list[tuple[int, int, int, str, str, str | None]]:
     """Return the (h, k, l, F², su, wavelength) rows of a case's data file.
 
@@ -715,9 +909,22 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         '_metadata.polarisation "none"\n',
         encoding='utf-8',
     )
+    # One experiment, or one per dataset of a FullProf file, each with its own scale.
+    if 'datasets' in spec:
+        by_dataset = read_datasets(root / pid / 'data' / spec['data'])
+        runs = [
+            (f'{experiment}_{code}', scale, dataset_rows)
+            for (code, dataset_rows), scale in zip(
+                by_dataset.items(), spec['datasets'], strict=True
+            )
+        ]
+    else:
+        runs = [(experiment, spec['scale'], rows)]
     (project / 'analysis' / 'analysis.edi').write_text(
-        '_edi.schema_version 3\n\n_fitting_mode.type single\n\n'
-        f'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n{experiment} 1\n'
+        '_edi.schema_version 3\n\n'
+        f'_fitting_mode.type {"joint" if len(runs) > 1 else "single"}\n\n'
+        'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
+        + ''.join(f'{run} 1\n' for run, _, _ in runs)
         + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else ''),
         encoding='utf-8',
     )
@@ -772,6 +979,16 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         ]
     (project / 'structures' / f'{name}.edi').write_text('\n'.join(text) + '\n', encoding='utf-8')
     beam_mode = 'time-of-flight' if spec.get('tof') else 'constant wavelength'
+    for run, scale, run_rows in runs:
+        write_experiment(project, spec, (run, name, scale), run_rows, (beam_mode, wavelength))
+
+
+def write_experiment(
+    project: Path, spec: dict, names: tuple[str, str, str], rows: list, beam: tuple[str, float]
+) -> None:
+    """Write one single-crystal experiment file: its (experiment, structure, scale) names."""
+    experiment, name, scale = names
+    beam_mode, wavelength = beam
     text = [
         f'data_{experiment}',
         '',
@@ -795,7 +1012,7 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         'loop_',
         '_linked_structure.structure_id',
         '_linked_structure.scale',
-        f'{name} {spec["scale"]}',
+        f'{name} {scale}',
         '',
         'loop_',
         '_refln.id',

@@ -1,4 +1,4 @@
-data_senju
+data_senju_1
 
 _edi.schema_version 3
 
@@ -15,7 +15,7 @@ _extinction.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-taurine 1()
+taurine 2.762()
 
 loop_
 _refln.id
