@@ -277,14 +277,14 @@ std::array<WriterCompletion::Fallback,WriterCompletion::cases> completionFallbac
 
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
 using namespace assistant_files;
-void privateDirectory(int fd,bool privateOnly=true) {
+void checkDirectory(int fd,mode_t forbidden=0077) {
     struct stat s{};
-    if(::fstat(fd,&s) || !S_ISDIR(s.st_mode) || s.st_uid!=::getuid() || (s.st_mode&(privateOnly?0077:0022)))
+    if(::fstat(fd,&s) || !S_ISDIR(s.st_mode) || s.st_uid!=::getuid() || (s.st_mode&forbidden))
         throw std::runtime_error("Work report directory ownership");
 }
 Fd childDirectory(int parent,const char* name,bool privateOnly=true) {
     if(::mkdirat(parent,name,0700) && errno!=EEXIST)throw std::runtime_error("Work report directory");
-    Fd fd(::openat(parent,name,O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));privateDirectory(fd.n,privateOnly);return fd;
+    Fd fd(::openat(parent,name,O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(fd.n,privateOnly?0077:0022);return fd;
 }
 void privateFile(int fd) {
     struct stat s{};
@@ -315,12 +315,12 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
     Fd root,folder,lock,candidate,oldFile;
     std::optional<Identity> rootId,folderId,lockId,candidateId,oldId;
     try {
-        root=directory(projectRoot);privateDirectory(root.n,false);rootId.emplace(root.n);
+        root=directory(projectRoot);checkDirectory(root.n,0);rootId.emplace(root.n);
         folder=childDirectory(root.n,"reports",false);folderId.emplace(folder.n);
         if(::mkdirat(folder.n,".writer",0700)) {
             result.disposition="writer_busy_or_recovery_required";result.recovery=true;return result;
         }
-        locked=true;lock=Fd(::openat(folder.n,".writer",O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));privateDirectory(lock.n);lockId.emplace(lock.n);
+        locked=true;lock=Fd(::openat(folder.n,".writer",O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(lock.n);lockId.emplace(lock.n);
         candidate=Fd(::openat(lock.n,"candidate.json",O_RDWR|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC,0600));created=true;candidateId.emplace(candidate.n);
         struct stat existing{};
         if(!::fstatat(folder.n,"work-report.json",&existing,AT_SYMLINK_NOFOLLOW)) {
@@ -588,8 +588,8 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
         constexpr QStringView suffix=u"/reports/work-report.json";
         if(!QStringView(path).endsWith(suffix) || QStringView(path).size()!=storageRoot.size()+suffix.size() ||
            QStringView(path).first(storageRoot.size())!=storageRoot)return false;
-        auto root=assistant_files::directory(storageRoot.toString());privateDirectory(root.n,false);
-        auto dir=assistant_files::below(root.n,"reports",true);privateDirectory(dir.n,false);
+        auto root=assistant_files::directory(storageRoot.toString());checkDirectory(root.n,0);
+        auto dir=assistant_files::below(root.n,"reports",true);checkDirectory(dir.n,0022);
         auto file=assistant_files::below(dir.n,"work-report.json");privateFile(file.n);const Identity id(file.n);
         bool ok=false;const auto bytes=artifact.value("bytes").toString().toULongLong(&ok);
         return ok && bytes<=L::record_bytes && identityToken(id)==artifact.value("physical_identity").toString() &&
