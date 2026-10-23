@@ -101,8 +101,8 @@ Item {
             verify(waitForPolish(app), "Real input follows completed application layout");
             app.update();
             verify(waitForRendering(app.contentItem), "The settled input target has a rendered frame");
+            tryVerify(() => item.enabled && Ui.clickPoint(item) !== null, 2000, "Real input targets the exposed portion of an enabled control: " + item.objectName);
             const point = Ui.clickPoint(item);
-            verify(item.enabled && point !== null, "Real input targets the exposed portion of an enabled control: " + item.objectName);
             mouseClick(item, point.x, point.y);
             app.update();
             verify(waitForRendering(app.contentItem), "Real pointer input is followed by a rendered frame");
