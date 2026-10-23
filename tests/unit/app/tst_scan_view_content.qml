@@ -136,28 +136,28 @@ Rectangle {
                 const marker = named("current"), rectangle = marker.mapToItem(layer, 0, 0);
                 const near = Math.round(inside === 1 ? rectangle.y + 1 : rectangle.y + marker.height - 2);
                 const y = [near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).find(candidate => [.25, .5, .75].every(place => coreAt(Math.round(layer.width * place), candidate)));
-                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge");
+                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge" + "; expectedCore=" + core + " bound=" + bound + " candidates=" + JSON.stringify([near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).map(candidate => ({y: candidate, pixels: [.25, .5, .75].map(place => ({x: Math.round(layer.width * place), colour: String(actual(Math.round(layer.width * place), candidate))}))}))));
                 for (const place of [.25, .5, .75]) {
                     const x = Math.round(layer.width * place);
                     for (const offset of [-1, 1]) {
                         const pixel = actual(x, y + offset), prior = below(x, y + offset);
-                        verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "Exactly one half-transparent opposite-colour pixel lies outside and inside the rectangle border");
+                        verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "Exactly one half-transparent opposite-colour pixel lies outside and inside the rectangle border" + "; x=" + x + " y=" + (y + offset) + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => (edge + prior[c]) / 2)) + " read=" + pixel + " underlay=" + prior);
                     }
                     const second = actual(x, y + inside * 2), prior = below(x, y + inside * 2);
-                    verify(["r", "g", "b"].every(c => Math.abs(second[c] - prior[c]) <= 1 / 255), "The rectangle border is one opaque pixel plus one edge on either side, with no extra interior stripe");
+                    verify(["r", "g", "b"].every(c => Math.abs(second[c] - prior[c]) <= 1 / 255), "The rectangle border is one opaque pixel plus one edge on either side, with no extra interior stripe" + "; x=" + x + " y=" + (y + inside * 2) + " expected=" + prior + " read=" + second);
                 }
             }
             for (const side of [1, Math.round(layer.width) - 2]) {
                 const y = Math.round((bounds[0] + bounds[1]) / 2);
-                verify(coreAt(side, y), "The selected dataset rectangle has a one-pixel opaque vertical side in the owner theme colour");
+                verify(coreAt(side, y), "The selected dataset rectangle has a one-pixel opaque vertical side in the owner theme colour" + "; x=" + side + " y=" + y + " expectedCore=" + core + " read=" + actual(side, y));
                 for (const offset of [-1, 1]) {
                     const pixel = actual(side + offset, y), prior = below(side + offset, y);
-                    verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "The vertical rectangle sides have the same half-transparent opposite-colour inner and outer lines");
+                    verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "The vertical rectangle sides have the same half-transparent opposite-colour inner and outer lines" + "; x=" + (side + offset) + " y=" + y + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => (edge + prior[c]) / 2)) + " read=" + pixel + " underlay=" + prior);
                 }
             }
             for (const place of [.25, .5, .75]) {
                 const x = Math.round(layer.width * place), y = Math.round((bounds[0] + bounds[1]) / 2), pixel = actual(x, y), prior = below(x, y);
-                verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - prior[c]) <= 1 / 255), "The open rectangle has an empty interior and preserves the actual data pixels underneath it");
+                verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - prior[c]) <= 1 / 255), "The open rectangle has an empty interior and preserves the actual data pixels underneath it" + "; x=" + x + " y=" + y + " expected=" + prior + " read=" + pixel);
             }
         }
         function test_current_row_tracks_async_coordinates_data() {
@@ -376,24 +376,24 @@ Rectangle {
             if (control === preferencesSelector)
                 openPreferences();
             Ui.scrollIntoView(control);
-            verify(waitForPolish(control.Window.window.contentItem), "The selector is laid out after scrolling its real viewport");
+            verify(waitForPolish(control.Window.window.contentItem), "The selector is laid out after scrolling its real viewport" + "; step=polish selector=" + control.objectName + " targetIndex=" + index);
             control.Window.window.update();
-            verify(waitForRendering(control.Window.window.contentItem), "The actual selector window has rendered before input");
+            verify(waitForRendering(control.Window.window.contentItem), "The actual selector window has rendered before input" + "; step=render selector=" + control.objectName + " targetIndex=" + index);
             let at;
             tryVerify(() => {
                 at = Ui.clickPoint(control);
                 return at !== null;
-            }, 2000, "The real selector finishes its tab transition inside the input viewport");
+            }, 2000, "The real selector finishes its tab transition inside the input viewport" + "; step=exposure selector=" + control.objectName + " targetIndex=" + index + " observedAtPollStart=" + JSON.stringify({point: Ui.clickPoint(control), visible: control.visible, enabled: control.enabled, width: control.width, height: control.height}));
             mouseClick(control, at.x, at.y);
-            tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector");
+            tryCompare(control.popup, "opened", true, 1000, "Real input opens the requested scan selector" + "; step=open selector=" + control.objectName + " targetIndex=" + index + " click=" + JSON.stringify(at));
             const windowRoot = control.Window.window.contentItem;
             mouseMove(windowRoot, windowRoot.width - 1, windowRoot.height - 1);
-            verify(SettingsProof.key(control, Qt.Key_Home), "Home reaches the actual scan selector window");
+            verify(SettingsProof.key(control, Qt.Key_Home), "Home reaches the actual scan selector window" + "; step=Home selector=" + control.objectName + " targetIndex=" + index + " readIndex=" + control.currentIndex + " highlightedIndex=" + control.highlightedIndex);
             for (let step = 0; step < index; ++step)
-                verify(SettingsProof.key(control, Qt.Key_Down), "Down reaches the actual scan selector window");
-            verify(SettingsProof.key(control, Qt.Key_Return), "Return commits the actual scan selector choice");
-            tryCompare(control, "currentIndex", index, 1000, "Real input chooses the requested scan axis or palette type");
-            tryCompare(control.popup, "visible", false, 1000, "The real popup finishes closing before another scan input");
+                verify(SettingsProof.key(control, Qt.Key_Down), "Down reaches the actual scan selector window" + "; step=Down ordinal=" + (step + 1) + " selector=" + control.objectName + " targetIndex=" + index + " readIndex=" + control.currentIndex + " highlightedIndex=" + control.highlightedIndex);
+            verify(SettingsProof.key(control, Qt.Key_Return), "Return commits the actual scan selector choice" + "; step=Return selector=" + control.objectName + " targetIndex=" + index + " readIndex=" + control.currentIndex + " highlightedIndex=" + control.highlightedIndex);
+            tryCompare(control, "currentIndex", index, 1000, "Real input chooses the requested scan axis or palette type" + "; step=commit selector=" + control.objectName + " expectedIndex=" + index + " expectedText=" + control.textAt(index) + " readTextAtPollStart=" + control.displayText + " popupOpened=" + control.popup.opened + " highlightedIndex=" + control.highlightedIndex);
+            tryCompare(control.popup, "visible", false, 1000, "The real popup finishes closing before another scan input" + "; step=close selector=" + control.objectName + " targetIndex=" + index);
             if (control === preferencesSelector) {
                 verify(SettingsProof.key(control, Qt.Key_Escape), "Actual Escape input closes Preferences after the colour choice");
                 tryCompare(preferencesDialog, "visible", false, 1000, "The Preferences overlay closes before observing actual scan pixels");
@@ -426,7 +426,7 @@ Rectangle {
             ready(scan);
             const control = axisControl(data.axis), original = control.currentIndex, before = plotDigest();
             choose(control, (original + 1) % control.count);
-            verify(plotDigest() !== before, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label");
+            verify(plotDigest() !== before, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText + " beforeDigest=" + before + " readDigest=" + plotDigest());
             choose(control, original);
             compare(plotDigest(), before, "Restoring the axis type restores the same actual analytic scan drawing");
         }
@@ -536,7 +536,7 @@ Rectangle {
                         if (["r", "g", "b"].every(channel => Math.abs(pixel[channel] - expected[channel]) <= 3 / 255))
                             coverage += pixel.a;
                     }
-                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row);
+                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({x: px, yMin: py - 6, yMax: py + 6, coordinate: coordinate, rowValue: [100, 250, 700][row], level: [0, 128, 255][row], stackHeight: scan.stackHeight, domain: [axes.axisY.min, axes.axisY.max], layerSize: [layer.width, layer.height]}) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({length: 13}, (_, i) => ({x: px, y: py + i - 6, colour: String(frame.pixel(px, py + i - 6)), alpha: frame.pixel(px, py + i - 6).a}))));
                 }
             }
         }
@@ -1018,7 +1018,7 @@ Rectangle {
             choose(selector, 1);
             const axes = named("axes");
             const expected = [10, 112.4].map(x => 1.87 / (2 * Math.sin((x - .29) * Math.PI / 360))).sort((a, b) => a - b);
-            tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Selecting newly available d actually uses the independent nontrivial Bragg conversion at both domain ends");
+            tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Selecting newly available d actually uses the independent nontrivial Bragg conversion at both domain ends" + "; expected=" + JSON.stringify(expected) + " observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText + " nativeEndpoints=[10,112.4] wavelength=1.87 zero=0.29");
         }
         function test_owner_toolbar_centred_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -1035,7 +1035,7 @@ Rectangle {
             const left = Math.min(...tools.map(item => item.mapToItem(chart, 0, 0).x));
             const right = Math.max(...tools.map(item => item.mapToItem(chart, item.width, 0).x));
             const layer = named("layer"), centre = layer.mapToItem(chart, layer.width / 2, 0).x;
-            verify(Math.abs((left + right) / 2 - centre) <= 1, "The second toolbar line is horizontally centred above its plot like the Pattern toolbar");
+            verify(Math.abs((left + right) / 2 - centre) <= 1, "The second toolbar line is horizontally centred above its plot like the Pattern toolbar" + "; expectedPlotCentre=" + centre + " readLineCentre=" + ((left + right) / 2) + " readExtents=" + JSON.stringify([left, right]) + " plot=" + JSON.stringify({left: layer.mapToItem(chart, 0, 0).x, width: layer.width}) + " tools=" + JSON.stringify(tools.map(item => ({name: item.objectName, left: item.mapToItem(chart, 0, 0).x, right: item.mapToItem(chart, item.width, 0).x}))));
         }
         function test_owner_secondary_click_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -1197,15 +1197,15 @@ Rectangle {
                 const strip = sorted[index], core = index === 1;
                 compare(vertical ? strip.width : strip.height, core ? 2 : 1, "The selected indicator uses a two-pixel core and one-pixel borders");
                 const colour = core ? (data.dark ? 1 : 0) : (data.dark ? 0 : 1);
-                verify(["r", "g", "b"].every(c => Math.abs(strip.color[c] - colour) < 1e-9) && Math.abs(strip.color.a - (core ? 1 : .5)) <= 1 / 65535, "The actual core and half-transparent border use the exact owner colours for this theme");
+                verify(["r", "g", "b"].every(c => Math.abs(strip.color[c] - colour) < 1e-9) && Math.abs(strip.color.a - (core ? 1 : .5)) <= 1 / 65535, "The actual core and half-transparent border use the exact owner colours for this theme" + "; strip=" + index + " expectedRGB=" + colour + " expectedAlpha=" + (core ? 1 : .5) + " readColour=" + strip.color + " readAlpha=" + strip.color.a);
                 for (const along of [.25, .5, .75]) {
                     const at = strip.mapToItem(chart, vertical ? strip.width / 2 : strip.width * along, vertical ? strip.height * along : strip.height / 2);
                     const actual = grabImage(chart).pixel(Math.floor(at.x), Math.floor(at.y)), before = background.pixel(Math.floor(at.x), Math.floor(at.y));
-                    verify(["r", "g", "b"].every(c => Math.abs(actual[c] - (core ? colour : (colour + before[c]) / 2)) <= 1 / 255), "Rendered indicator core and border pixels equal the exact themed alpha composite over the independent pre-selection frame");
+                    verify(["r", "g", "b"].every(c => Math.abs(actual[c] - (core ? colour : (colour + before[c]) / 2)) <= 1 / 255), "Rendered indicator core and border pixels equal the exact themed alpha composite over the independent pre-selection frame" + "; strip=" + index + " x=" + Math.floor(at.x) + " y=" + Math.floor(at.y) + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => core ? colour : (colour + before[c]) / 2)) + " read=" + actual + " readAlpha=" + actual.a + " underlay=" + before);
                 }
             }
             const actualCentre = marker.mapToItem(layer, marker.width / 2, marker.height / 2);
-            verify(Math.abs((vertical ? actualCentre.x : actualCentre.y) - position) <= 1, "The indicator centre follows the selected physical coordinate, rather than its top or left edge");
+            verify(Math.abs((vertical ? actualCentre.x : actualCentre.y) - position) <= 1, "The indicator centre follows the selected physical coordinate, rather than its top or left edge" + "; expected=" + position + " read=" + (vertical ? actualCentre.x : actualCentre.y));
         }
         function excludedButton(root) {
             return Render.descendants(root).find(item => item.visible && typeof item.checked === "boolean" && /exclud.*region|region.*exclud|Show only the included range/i.test(String(item.objectName) + " " + item.toolTip));
@@ -1287,7 +1287,7 @@ Rectangle {
                 verify([-2, -1, 0, 1, 2].some(dy => ink(sample(full, x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(sample(full, x(42), y + dy))));
             for (let px = x(40); px <= x(44); ++px)
                 for (let dy = -2; dy <= 2; ++dy)
-                    compare(String(sample(gap, px, y + dy)), String(sample(gap, px, Math.floor(layer.height * .15))), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap");
+                    compare(String(sample(gap, px, y + dy)), String(sample(gap, px, Math.floor(layer.height * .15))), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap" + "; x=" + px + " y=" + (y + dy) + " read=" + sample(gap, px, y + dy) + " expected=" + sample(gap, px, Math.floor(layer.height * .15)) + " referenceY=" + Math.floor(layer.height * .15));
             const outside = Math.round(layer.height * .8);
             verify(String(sample(gap, x(30), outside)) === String(sample(full, x(30), outside)), "The included-range toggle preserves drawable data outside the independent excluded interval");
             compare(SettingsProof.text(Qt.resolvedUrl("file:" + Session.project.path), "experiments/d20.edi"), original, "A display toggle preserves the independently specified excluded scientific ranges");
@@ -1433,7 +1433,7 @@ Rectangle {
             tryVerify(() => selector.enabled, 8000, "Real calculated bank d coordinates become selectable");
             choose(selector, 1);
             const axes = named("axes"), layer = named("layer");
-            tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 2.8) < 1e-5, 2000, "Both nontrivial TOF calibrations share the independently known physical d range");
+            tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 2.8) < 1e-5, 2000, "Both nontrivial TOF calibrations share the independently known physical d range" + "; expected=[0.8,2.8] observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText);
             Session.project.currentExperimentIndex = 0;
             verify(waitForRendering(chart), "The joint d view has a completed actual frame");
             const frame = grabImage(chart), measured = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
@@ -1446,7 +1446,7 @@ Rectangle {
                 for (let dx = -2; dx <= 2; ++dx)
                     for (let dy = -2; dy <= 2; ++dy)
                         hit = hit || ink(frame.pixel(Math.round(at.x) + dx, Math.round(at.y) + dy), expected, chart.colors.chartBackground);
-                verify(hit, "Each bank's independently placed peak aligns at physical d=1.8 on the same actual chart scale");
+                verify(hit, "Each bank's independently placed peak aligns at physical d=1.8 on the same actual chart scale" + "; row=" + row + " expectedPeakD=1.8 readDomain=" + JSON.stringify([axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max]) + " centre=" + JSON.stringify(at) + " expectedColour=" + expected + " sampleWindow=" + JSON.stringify(Array.from({length: 25}, (_, i) => ({x: Math.round(at.x) + i % 5 - 2, y: Math.round(at.y) + Math.floor(i / 5) - 2, colour: String(frame.pixel(Math.round(at.x) + i % 5 - 2, Math.round(at.y) + Math.floor(i / 5) - 2))}))));
             }
             const pointer = named("pointer"), marker = named("current");
             const py = (axes.axisY.max - 1) / (axes.axisY.max - axes.axisY.min) * pointer.height;
@@ -1506,7 +1506,7 @@ Rectangle {
                 const label = control.contentItemLabel;
                 verify(label !== undefined, "The actual selector exposes its rendered text padding and arrow clearance");
                 const clearance = label.leftPadding + label.rightPadding + control.leftPadding + control.rightPadding;
-                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance) + " entries=" + JSON.stringify(entries) + " font=" + JSON.stringify(control.font) + " measuredFont=" + JSON.stringify(metrics.font) + " cachedLongest=" + control.widestEntry);
+                verify(Math.abs(control.width - (maximum + clearance)) <= 1, "Every toolbar combobox fits its own longest entry and normal arrow/padding, with at most one pixel of rounding room; selector=" + control.objectName + " width=" + control.width + " expected=" + (maximum + clearance) + " entries=" + JSON.stringify(entries) + " font=" + JSON.stringify(control.font) + " measuredFont=" + JSON.stringify(metrics.font) + " cachedLongest=" + control.widestEntry + " maximumTextWidth=" + maximum + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({labelLeft: label.leftPadding, labelRight: label.rightPadding, controlLeft: control.leftPadding, controlRight: control.rightPadding}));
                 widths.push(control.width);
             }
             verify(Math.max(...widths) - Math.min(...widths) > 1, "Unequal longest texts produce individual selector widths rather than one shared width");
@@ -1550,7 +1550,7 @@ Rectangle {
                 compare(entries.length, 1, "Unlike native quantities are not offered as one mixed 2theta/TOF axis");
                 verify(!entries.some(text => /TOF|2θ|two.theta/i.test(text)), "A mixed joint fit exposes d only, never one bank's native quantity for all banks");
                 const axes = named("axes");
-                tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 3.2) < 1e-5, 8000, "A mixed native-axis fit actually draws the independently computed common d union");
+                tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 3.2) < 1e-5, 8000, "A mixed native-axis fit actually draws the independently computed common d union" + "; expected=[0.8,3.2] observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " entries=" + JSON.stringify(entries) + " readIndex=" + selector.currentIndex);
             } else {
                 const nativeIndex = entries.findIndex(text => data.axes === "tof" ? /TOF/i.test(text) : /2θ|two.theta/i.test(text));
                 verify(nativeIndex >= 0 && nativeIndex !== dIndex, "A shared native quantity remains available beside d, regardless of how well the banks align visually");
@@ -1559,7 +1559,7 @@ Rectangle {
                 for (const index of [nativeIndex, dIndex, nativeIndex]) {
                     choose(selector, index);
                     const axes = named("axes"), expected = index === nativeIndex ? native : data.axes === "tof" ? [.8, 2.8] : [1.2, 3.2];
-                    tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Actual joint-axis input uses every bank's own native or independently calibrated d coordinates in both directions");
+                    tryVerify(() => Math.abs(axes.axisX.min - expected[0]) < 1e-5 && Math.abs(axes.axisX.max - expected[1]) < 1e-5, 2000, "Actual joint-axis input uses every bank's own native or independently calibrated d coordinates in both directions" + "; expected=" + JSON.stringify(expected) + " observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selectedIndex=" + index + " readIndex=" + selector.currentIndex + " readText=" + selector.displayText);
                 }
             }
         }
@@ -1610,14 +1610,14 @@ Rectangle {
                 const series = Render.series(pattern), measured = series.find(item => item.objectName === "chart.series.meas"), bragg = series.find(item => item.objectName === "chart.series.bragg.0");
                 verify(measured !== undefined && bragg !== undefined, "The colour-split witness reaches real measured and structure drawing series");
                 const expectedMeasured = Approved.colours(SettingsProof, patterns, "measured", 3, data.dark)[1], expectedStructure = Approved.colours(SettingsProof, structures, "structures", 1, data.dark)[0];
-                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices");
+                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices" + "; chosen=" + JSON.stringify({patterns: patterns, structures: structures}) + " expected=" + JSON.stringify({measured: expectedMeasured, bragg: expectedStructure}) + " observedAtPollStart=" + JSON.stringify({measured: String(measured.color), bragg: String(bragg.color)}));
                 Session.project.report.active = true;
                 tryVerify(() => Session.project.report.model.pattern_styles !== undefined, 3000, "The colour split reaches the actual report style model");
                 const reportMeas = Approved.colours(SettingsProof, patterns, "measured", 3, false)[1], reportStructure = Approved.colours(SettingsProof, structures, "structures", 1, false)[0];
                 tryVerify(() => {
                     const styles = Session.project.report.model.pattern_styles;
                     return styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure);
-                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update");
+                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update" + "; chosen=" + JSON.stringify({patterns: patterns, structures: structures}) + " expected=" + JSON.stringify({"meas.1": reportMeas, "bragg.0": reportStructure}) + " observedAtPollStart=" + JSON.stringify(Session.project.report.model.pattern_styles));
                 pattern.visible = false;
             }
             choosePreference("Structures", refs[1].label);
@@ -1798,7 +1798,7 @@ Rectangle {
             const next = data.origin === "experiment" ? "analysis" : "experiment";
             for (const pageName of [next, data.origin, next]) {
                 const shown = showSharedScan(pageName, data.mode), actual = named("axes");
-                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) < 1e-9), "User zoom ranges remain identical through actual Experiment/Analysis navigation in both directions");
+                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) < 1e-9), "User zoom ranges remain identical through actual Experiment/Analysis navigation in both directions" + "; origin=" + data.origin + " page=" + pageName + " expectedOriginRanges=" + JSON.stringify(ranges) + " readPageRanges=" + JSON.stringify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max]));
                 for (const [name, index] of types)
                     compare(findChild(shown, name).currentIndex, index, "Every shared scan axis/palette control follows the same user state across pages");
                 compare(Session.project.currentExperimentIndex, row, "The same selected measured dataset remains current across both scan-view pages");
@@ -1811,7 +1811,7 @@ Rectangle {
                 mouseClick(p, p.width * .5, p.height * .5, Qt.RightButton);
                 const native = [actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max];
                 mouseDrag(p, p.width * .2, p.height * .2, p.width * .6, p.height * .6, Qt.LeftButton);
-                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) <= Math.abs(native[i % 2 ? 1 : 0]) * 1e-10 + 1e-9), "Both pages accept real reset and re-zoom input while retaining the same shared visible ranges");
+                verify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max].every((x, i) => Math.abs(x - ranges[i]) <= Math.abs(native[i % 2 ? 1 : 0]) * 1e-10 + 1e-9), "Both pages accept real reset and re-zoom input while retaining the same shared visible ranges" + "; origin=" + data.origin + " page=" + pageName + " expectedOriginRanges=" + JSON.stringify(ranges) + " readResetRanges=" + JSON.stringify(native) + " readRezoomRanges=" + JSON.stringify([actual.axisX.min, actual.axisX.max, actual.axisY.min, actual.axisY.max]));
             }
         }
         function test_chart_colour_selector_location() {
@@ -2412,7 +2412,7 @@ Rectangle {
                         top: item.mapToItem(chart, 0, 0).y,
                         bottom: item.mapToItem(chart, 0, item.height).y
                     })).sort((a, b) => a.top - b.top);
-            verify(labels.slice(1).every((box, i) => box.top >= labels[i].bottom), "Visible thinned labels do not collide, including the always-kept selected row");
+            verify(labels.slice(1).every((box, i) => box.top >= labels[i].bottom), "Visible thinned labels do not collide, including the always-kept selected row" + "; expected=each top >= previous bottom; readBoxes=" + JSON.stringify(labels) + " collidingPairs=" + JSON.stringify(labels.slice(1).map((box, i) => ({previous: labels[i], current: box})).filter(pair => pair.current.top < pair.previous.bottom)) + " labelRectangles=" + JSON.stringify(rowLabels().map(item => ({text: item.text, x: item.mapToItem(chart, 0, 0).x, y: item.mapToItem(chart, 0, 0).y, width: item.width, height: item.height}))));
             const step = data.kind === "value" ? 7 : 1, top = (axes.axisY.max - (row + 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height, bottom = (axes.axisY.max - (row - 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseDrag(pointer, pointer.width * .2, top, pointer.width * .6, bottom - top, Qt.LeftButton);
             verify(waitForRendering(chart), "Actual drag zoom gives the formerly crowded rows room to reappear");
@@ -2547,7 +2547,7 @@ Rectangle {
             let offInk = false;
             for (let y = Math.floor(layer.height * .12); y < layer.height * .88; ++y) {
                 offInk = offInk || String(pixel(full, x, y)) !== String(blank);
-                compare(String(pixel(included, x, y)), String(blank), "Included-only leaves no Stacked segment, reduced-bin stroke or Map interpolation across an excluded interval; y=" + y + " x=" + x);
+                compare(String(pixel(included, x, y)), String(blank), "Included-only leaves no Stacked segment, reduced-bin stroke or Map interpolation across an excluded interval; y=" + y + " x=" + x + " read=" + pixel(included, x, y) + " expected=" + blank + " referenceY=" + Math.floor(layer.height * .1));
             }
             verify(offInk, "Full-range control retains real measured ink at the same excluded x column");
             setIncluded(false);

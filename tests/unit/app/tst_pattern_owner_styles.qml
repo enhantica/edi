@@ -166,7 +166,7 @@ Rectangle {
             const label = group.contentItemLabel;
             verify(label !== undefined, "The actual combobox exposes its rendered text padding and arrow clearance");
             const clearance = label.leftPadding + label.rightPadding + group.leftPadding + group.rightPadding;
-            verify(Math.abs(group.width - longest - clearance) <= 1, "The measured-style combobox fits its own longest item with normal padding and arrow clearance");
+            verify(Math.abs(group.width - longest - clearance) <= 1, "The measured-style combobox fits its own longest item with normal padding and arrow clearance" + "; selector=" + group.objectName + " readWidth=" + group.width + " expected=" + (longest + clearance) + " maximumTextWidth=" + longest + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({labelLeft: label.leftPadding, labelRight: label.rightPadding, controlLeft: group.leftPadding, controlRight: group.rightPadding}));
             const axes = [findChild(chart, "chart.toolbar.xaxis"), findChild(chart, "chart.toolbar.yscale")], legend = findChild(chart, "chart.toolbar.legend");
             verify(axes.every(item => item !== null) && legend !== null, "Group placement is measured against the actual axis selectors and legend button");
             const left = group.mapToItem(chart, 0, 0).x, right = group.mapToItem(chart, group.width, 0).x;
@@ -206,9 +206,9 @@ Rectangle {
                 edges(chart, "resid.band.bottom", [12, 24, 15]);
                 for (const [name, pane, y] of [["meas.band", "main", 26.5], ["resid.band", "residual", 20.5]]) {
                     const area = series(chart, name);
-                    verify(area.visible && area.color.a > 0 && area.color.a < 1, "Measured and residual uncertainty bands have actual semi-transparent fills");
+                    verify(area.visible && area.color.a > 0 && area.color.a < 1, "Measured and residual uncertainty bands have actual semi-transparent fills" + "; series=" + name + " expected=visible and 0<alpha<1 readVisible=" + area.visible + " readColour=" + area.color + " readAlpha=" + area.color.a);
                     const value = pixel(chart, pane, 46, y), colour = area.color, bg = chart.colors.chartBackground;
-                    verify(["r", "g", "b"].every(c => Math.abs(value[c] - (colour[c] * colour.a + bg[c] * (1 - colour.a))) <= 2 / 255), "Rendered band interior uses the independent declared area with a semi-transparent colour over the plot background");
+                    verify(["r", "g", "b"].every(c => Math.abs(value[c] - (colour[c] * colour.a + bg[c] * (1 - colour.a))) <= 2 / 255), "Rendered band interior uses the independent declared area with a semi-transparent colour over the plot background" + "; series=" + name + " pane=" + pane + " dataPoint=" + JSON.stringify([46, y]) + " declaredAlpha=" + colour.a + " read=" + value + " readAlpha=" + value.a + " colour=" + colour + " background=" + bg + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => colour[c] * colour.a + bg[c] * (1 - colour.a))) + " inferredCoverageRGB=" + JSON.stringify(["r", "g", "b"].map(c => colour[c] === bg[c] ? null : (value[c] - bg[c]) / (colour[c] - bg[c]))));
                 }
                 verify(!line.visible || points(line).every(point => !isFinite(point.x)), "Band style removes the ordinary central measured line");
             } else {
