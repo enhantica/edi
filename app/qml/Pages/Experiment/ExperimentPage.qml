@@ -31,8 +31,7 @@ WorkflowPage {
             "extinction": extinctionContent,
             "preferred_orientation": preferredOrientationContent,
             "scattering_source": scatteringSourceContent,
-            "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal
-                     ? singleCrystalReflectionsContent : reflectionsContent
+            "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? singleCrystalReflectionsContent : reflectionsContent
         })
     // The Extras column, so a single crystal's reflection table can take the room left under the groups above it.
     property Flickable extrasColumn: null

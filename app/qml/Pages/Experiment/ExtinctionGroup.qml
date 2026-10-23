@@ -19,8 +19,7 @@ Column {
         const g = value * Math.PI / 10800 * 1e4;
         const fwhm = (lorentzian ? 1 / (Math.PI * g) : Math.sqrt(2 * Math.LN2 / Math.PI) / g) * 180 / Math.PI * 3600;
         const text = Number(fwhm.toPrecision(2)).toString();
-        return lorentzian ? qsTr("Mosaicity g, an inverse width: a Lorentzian mosaic spread of FWHM %1″").arg(text)
-                          : qsTr("Mosaicity g, an inverse width: a Gaussian mosaic spread of FWHM %1″").arg(text);
+        return lorentzian ? qsTr("Mosaicity g, an inverse width: a Lorentzian mosaic spread of FWHM %1″").arg(text) : qsTr("Mosaicity g, an inverse width: a Gaussian mosaic spread of FWHM %1″").arg(text);
     }
 
     spacing: AppSizes.groupContentSpacing

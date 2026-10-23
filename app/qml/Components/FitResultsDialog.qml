@@ -36,8 +36,7 @@ AppDialog {
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
     readonly property var factorColumns: dialog.agreement ? dialog.agreement.columns : []
     // Wide enough for the longest structure name under a phase factor, with its icon: a name is never cut.
-    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5,
-                                                 structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5)
+    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5)
 
     TextMetrics {
         id: structureMetrics
