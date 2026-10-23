@@ -269,10 +269,13 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         syncUndo();
     };
     connect(fit_, &FitViewModel::finished, this, note_fit);
-    // A value a constraint derives outside its range is kept and named in Messages, as the owner chose
-    // (2026-10-23); the Analysis table shows it red.
+    // The warnings that still hold for the fitted values, once each (the owner, 2026-10-23): a value outside its
+    // range and a tensor with a negative eigenvalue. The fit's trials post none.
     connect(fit_, &FitViewModel::finished, this, [this] {
-        for (const std::string& warning : edi::derived_outside_range(*project_)) {
+        for (const std::string& warning : edi::standing_warnings(*project_)) {
+            emit message(QString::fromStdString(warning));
+        }
+        for (const std::string& warning : edi::take_engine_warnings()) {
             emit message(QString::fromStdString(warning));
         }
     });

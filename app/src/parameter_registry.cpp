@@ -54,6 +54,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     }
     refreshElements(project);
     refreshEstimated(project);
+    refreshDefiniteness(project);
     if (changed) {
         emit itemsChanged();
     }
@@ -167,10 +168,28 @@ void ParameterRegistry::refreshEstimated(const edi::Project& project) {
     }
 }
 
+void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
+    // A tensor with a negative eigenvalue is kept and shown red, each of its components naming why (the owner,
+    // 2026-10-23).
+    std::unordered_map<const edi::Parameter*, QString> warned;
+    for (const edi::AdpDefinitenessWarning& warning : edi::adp_definiteness_warnings(project)) {
+        const edi::AtomSiteAniso& tensor = *warning.tensor;
+        for (const edi::Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12,
+                                                &tensor.adp_13, &tensor.adp_23}) {
+            warned[component] = QString::fromStdString(warning.message);
+        }
+    }
+    for (ParameterItem* item : items_) {
+        const auto found = warned.find(item->parameter());
+        item->setDomainWarning(found != warned.end() ? found->second : QString());
+    }
+}
+
 void ParameterRegistry::publish(edi::Project& project) {
     refreshElements(project);
     refreshRefinable(project);
     refreshEstimated(project);
+    refreshDefiniteness(project);
     for (ParameterItem* item : items_) {
         item->publish();
     }
