@@ -29,6 +29,8 @@ IDENTITIES = {
     # ITA conventional numbers/systems for the owner's FullProf LATP phases.
     'C 2 2 21': (20, 'orthorhombic'),
     'P 63 m c': (186, 'hexagonal'),
+    'P 21/c': (14, 'monoclinic'),
+    'F m m m': (69, 'orthorhombic'),
 }
 
 
@@ -45,6 +47,8 @@ DEFAULT_COORDINATE_CODES = {
     225: '1',
     227: '2',
     229: '1',
+    14: 'b1',
+    69: 'abc',
 }
 
 
@@ -128,7 +132,7 @@ def generate(added_project=None, updated_project=None):
             )
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             values = read(experiment)
-            mode = (
+            mode = values.get('_experiment_type.beam_mode') or (
                 'time-of-flight'
                 if values['_peak.type'].startswith('tof-')
                 else 'constant wavelength'
@@ -154,6 +158,19 @@ def generate(added_project=None, updated_project=None):
                 ],
                 experiment.stem,
             )
+            if values.get('_experiment_type.sample_form') == 'single crystal':
+                add(
+                    project,
+                    'experiment',
+                    'basic',
+                    'extinction',
+                    [
+                        ['extinction.' + name, values['_extinction.' + name]['value'], 'parameter']
+                        for name in ('radius', 'mosaicity')
+                    ],
+                    experiment.stem,
+                )
+                continue
             add(
                 project,
                 'experiment',

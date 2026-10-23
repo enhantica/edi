@@ -194,7 +194,7 @@ def main():
     args = parser.parse_args()
     manifest = {
         'upstream_revision': REVISION,
-        'fp2k': str(args.fp2k.resolve()),
+        'fp2k': args.fp2k.name,
         'fp2k_sha256': digest(args.fp2k),
         'cases': {},
     }

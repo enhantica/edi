@@ -459,7 +459,7 @@ TestCase {
         const radius = Review.find(group, "extinction.radius"), mosaic = Review.find(group, "extinction.mosaicity");
         verify(radius !== null && mosaic !== null, "The extinction group must display its two actual parameter fields");
         verify(/crystal radius/i.test(radius.label) && /mosaicity/i.test(mosaic.label), "Extinction inputs must use descriptive crystal radius and mosaicity labels instead of isolated symbols");
-        verify(/µm|μm/.test(radius.parameter.units) && /arcmin|′/.test(mosaic.parameter.units), "Extinction inputs must show crystal radius in micrometres and mosaicity in arcminutes");
+        verify(/µm|μm/.test(radius.parameter.units) && mosaic.parameter.units === "", "Extinction inputs retain radius in micrometres and drop the incorrect angular unit from inverse-width mosaicity");
     }
     function test_fit_lowers_objective_and_reports_single_crystal_factors_data() {
         return [
@@ -675,11 +675,13 @@ TestCase {
         Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
         const project = openCompoundExample(data.compound);
         const experiment = project.currentExperiment;
-        const oracle = JSON.parse(Probe.readReferenceFile("example-fits.json")).cases[data.compound];
+        const oracle = JSON.parse(Probe.readReferenceFile("example-fits.json")).cases[data.compound === "pr2nio4" ? "pr2nio4_biso" : data.compound];
         verify(data.compound !== "pr2nio4" || ["5c2", "llb_5c2"].includes(experiment.name), "The Pr2NiO4 experiment datablock must be named for its 5C2 instrument");
         const tensors = Probe.rows(project.currentStructure.atomSiteAdps);
-        verify(tensors.length > 0 && tensors.every(row => ["beta", "Uani", "Bani"].includes(row.adpType)), "Each single-crystal fitting exercise must start with anisotropic ADPs on its atom sites");
-        for (const tensor of tensors) {
+        verify(tensors.length > 0 && tensors.every(row => row.adpType === (data.compound === "pr2nio4" ? "Biso" : "Uani")), "The compound examples must use the owner-selected Pr Biso and Tb Uani representations");
+        if (data.compound === "pr2nio4")
+            verify(Probe.rows(project.currentStructure.atomSites).every(row => row.adpIso.value === 0.5 && row.adpIso.free), "The isotropic Pr fitting exercise starts every Biso at the independently authored small free value");
+        for (const tensor of tensors.filter(row => row.adpType !== "Biso")) {
             const cell = project.currentStructure.cell;
             verify([cell.angleAlpha.value, cell.angleBeta.value, cell.angleGamma.value].every(value => Math.abs(value - 90) < 1e-10), "The orthogonal FullProf example cells must retain the metric used by the independent beta-to-U conversion");
             const lengths = [cell.lengthA.value, cell.lengthB.value, cell.lengthC.value];
@@ -699,8 +701,8 @@ TestCase {
         const extinction = Probe.rows(experiment.extinction).map(row => row.parameter);
         verify(extinction.length === 2 && extinction.some(item => item.value === 0) && extinction.some(item => item.free), "The fitting exercise must start one extinction parameter at zero and leave an extinction parameter free");
         const parameters = Probe.rows(project.parameters);
-        verify(parameters.some(row => row.category === "atom_site_aniso" && row.free) && parameters.some(row => row.category === "atom_site" && row.name.startsWith("fract_") && row.free), "The compound exercise must leave independent displacement and coordinate parameters free");
-        verify(oracle.parameters.some(item => item.kind === "coordinate") && oracle.parameters.some(item => item.kind === "beta"), "The independent FullProf oracle must include fitted coordinates and anisotropic tensors with uncertainties");
+        verify(parameters.some(row => row.category === (data.compound === "pr2nio4" ? "atom_site" : "atom_site_aniso") && row.free && (data.compound !== "pr2nio4" || row.name === "adp_iso")) && parameters.some(row => row.category === "atom_site" && row.name.startsWith("fract_") && row.free), "The compound exercise must leave independent displacement and coordinate parameters free");
+        verify(oracle.parameters.some(item => item.kind === "coordinate") && oracle.parameters.some(item => item.kind === (data.compound === "pr2nio4" ? "Biso" : "beta")), "The independent FullProf oracle must include fitted coordinates and the matching ADP representation with uncertainties");
         const atoms = Probe.rows(project.currentStructure.atomSites);
         verify(oracle.parameters.filter(item => item.kind === "coordinate").some(item => Math.abs(atoms.find(atom => atom.label === item.atom)["fract" + item.component.toUpperCase()].value - item.value) > item.su), "The app example's initial coordinates must be perturbed beyond the independent FullProf uncertainty");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
@@ -722,6 +724,8 @@ TestCase {
                 value = experiment.scale.value;
             else if (target.kind === "coordinate")
                 value = fittedAtoms.find(atom => atom.label === target.atom)["fract" + target.component.toUpperCase()].value;
+            else if (target.kind === "Biso")
+                value = fittedAtoms.find(atom => atom.label === target.atom).adpIso.value;
             else {
                 const tensor = fittedTensors.find(row => row.label === target.atom);
                 value = tensor["ani" + target.component].value;
@@ -786,15 +790,18 @@ TestCase {
         let groups = [];
         for (const tab of ["basic", "extras"]) {
             Ui.click(test, Probe, appWindow, "sideBar.tab." + tab);
-            tryVerify(() => Ui.groupNames(Ui.page(appWindow)).length > 0, 2000, "The selected sidebar tier must finish loading its type-specific groups");
+            const required = tab === "basic" ? "extinction" : "refln";
+            tryVerify(() => Ui.groupNames(Ui.page(appWindow)).includes(required), 2000, "The selected sidebar tier must finish loading its required single-crystal category: " + required);
             groups = groups.concat(Ui.groupNames(Ui.page(appWindow)));
         }
         verify(groups.includes("extinction") && groups.includes("refln"), "Choosing single crystal before data must expose extinction and reflection categories");
         verify(["background", "peak", "peak_profile", "excluded_region", "excluded_regions"].every(name => !groups.includes(name)), "A created single crystal must omit all powder-only categories before data loading");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        tryVerify(() => Ui.find(Ui.page(appWindow), "group.experiments", true) !== null, 2000, "Returning to Basic must load the experiment explorer before checking type controls");
+        expand("group.experiments");
         const probe = Ui.find(Ui.page(appWindow), "experimentType.radiationProbe", true);
         const beam = Ui.find(Ui.page(appWindow), "experimentType.beamMode", true);
-        verify(probe !== null && !probe.enabled && probe.value === "neutron", "Single crystal must fix the probe to neutron and disable the unavailable X-ray choice");
+        verify(probe !== null && !probe.enabled && probe.value === "neutron", "Single crystal must fix the probe to neutron and disable the unavailable X-ray choice; enabled=" + (probe ? probe.enabled : "absent") + ", value=" + (probe ? probe.value : "absent") + ", model=" + Session.project.currentExperiment.radiationProbeToken);
         const expectedModes = tofAvailable ? ["constant wavelength", "time-of-flight"] : ["constant wavelength"];
         compare(JSON.stringify(Array.from(beam.permittedValues)), JSON.stringify(expectedModes), "The single-crystal beam selector must offer only independently working beam modes");
         compare(beam.enabled, expectedModes.length > 1, "The beam selector must be disabled exactly while only one single-crystal mode works");

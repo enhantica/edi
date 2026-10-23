@@ -114,3 +114,15 @@ These runs do not establish an equivalence between FullProf empirical
 extinction and Becker-Coppens, nor do they prove that different free-parameter
 sets have the same optimum. Those acceptance questions remain explicit in the
 hub evidence receipt; no extinction parameter is assigned an invented oracle.
+
+The app example references are separate from the five fixed page references.
+`generate_example_fits.py --reparse-only` re-extracts the five atom-summary
+columns from the unchanged, hash-checked FullProf summaries. The former parser
+required six columns and consequently omitted every fitted coordinate.
+`--biso-only --fp2k PATH --run-dir DIR` appends the Pr isotropic twin: the
+canonical Pr PCR and intensities, six small Biso starts, five free coordinates,
+fixed occupancies and no extinction, matching the isotropic example model. Its
+PCR, SUM and OUT remain alongside the earlier anisotropic Pr and Tb references.
+The Tb example's Becker-Coppens extinction still differs from the original
+FullProf example reference; no parameter uncertainty or tolerance is enlarged
+to claim those model optima are equivalent.

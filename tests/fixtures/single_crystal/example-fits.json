@@ -5,6 +5,13 @@
       "scale_factor": 1,
       "parameters": [
         {
+          "atom": "O1",
+          "kind": "coordinate",
+          "component": "x",
+          "value": 0.32797,
+          "su": 0.00013000000000000002
+        },
+        {
           "atom": "Tb",
           "kind": "beta",
           "component": "11",
@@ -155,6 +162,41 @@
       "parameters": [
         {
           "atom": "Pr",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.35973,
+          "su": 7.000000000000001e-05
+        },
+        {
+          "atom": "O2",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.17385,
+          "su": 9e-05
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "x",
+          "value": 0.07347,
+          "su": 0.00134
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "y",
+          "value": 0.07347,
+          "su": 0.00134
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.17349,
+          "su": 0.0006500000000000001
+        },
+        {
+          "atom": "Pr",
           "kind": "beta",
           "component": "11",
           "value": 0.0071,
@@ -276,6 +318,93 @@
         "prnio.int": "f88f9d39b820852d6ccd589d822eca864db4fb59af82bd7506ffe730ebd24735",
         "prnio.out": "ce442c6a72b45a292aa766b57ea40d5fdc9a092793fd5ce260817403391ce2bb",
         "prnio.sum": "87326e5fe8fb814eee55a609b9ca2cb834cc22e0abb014b93b5270a32426f250"
+      }
+    },
+    "pr2nio4_biso": {
+      "scale_factor": 1,
+      "parameters": [
+        {
+          "atom": "Pr",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.36004,
+          "su": 0.00044
+        },
+        {
+          "atom": "Pr",
+          "kind": "Biso",
+          "value": 0.892,
+          "su": 0.091
+        },
+        {
+          "atom": "Ni",
+          "kind": "Biso",
+          "value": 0.738,
+          "su": 0.067
+        },
+        {
+          "atom": "O1",
+          "kind": "Biso",
+          "value": 1.605,
+          "su": 0.09
+        },
+        {
+          "atom": "O2",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.17448,
+          "su": 0.0007400000000000001
+        },
+        {
+          "atom": "O2",
+          "kind": "Biso",
+          "value": 1.638,
+          "su": 0.134
+        },
+        {
+          "atom": "Oi",
+          "kind": "Biso",
+          "value": 0.109,
+          "su": 0.521
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "x",
+          "value": 0.06529,
+          "su": 0.00425
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "y",
+          "value": 0.06211,
+          "su": 0.00406
+        },
+        {
+          "atom": "Od",
+          "kind": "coordinate",
+          "component": "z",
+          "value": 0.17293,
+          "su": 0.0016600000000000002
+        },
+        {
+          "atom": "Od",
+          "kind": "Biso",
+          "value": -0.06,
+          "su": 0.242
+        },
+        {
+          "kind": "scale",
+          "value": 4.14261,
+          "su": 0.15572
+        }
+      ],
+      "artifacts": {
+        "input.pcr": "59dd8dc231499f78300af338d01d5285fc65a9af30686204bcca00992a937a17",
+        "prnio.int": "f88f9d39b820852d6ccd589d822eca864db4fb59af82bd7506ffe730ebd24735",
+        "prnio.out": "ba1782838d4ca28ddef1251b8fec32062fef4ba97b786dde8923142472f75bcf",
+        "prnio.sum": "2b8c6ca98b731249dc5706f1f3613894340772177d9ea2548a71a24ab4a059db"
       }
     }
   }

@@ -65,7 +65,7 @@ def main():  # noqa: PLR0914 - one authoring run and its provenance
     args = parser.parse_args()
     manifest = {
         'upstream_revision': args.revision,
-        'fp2k': str(args.fp2k.resolve()),
+        'fp2k': args.fp2k.name,
         'fp2k_sha256': digest(args.fp2k),
         'cases': {},
     }

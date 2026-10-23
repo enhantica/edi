@@ -42,6 +42,25 @@ EXTENSION = json.loads(
 
 RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text())
 NEW_FIXED_POINTS = BASELINE.get('post_feature_fixed_points', {})
+SINGLE_CRYSTAL_FIXED_POINTS = {
+    'repo:docs/user/cli/sc-neut-tof_taurine-unknown_basic/project',
+    'corpus:single-crystal-page-cwl-tbti-isotropic-extinction/project',
+    'corpus:single-crystal-page-tof-taurine-basic/project',
+    'corpus:single-crystal-tof-taurine-basic/project',
+    'corpus:single-crystal-page-cwl-pr2nio4-basic/project',
+    'repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project',
+    'corpus:single-crystal-cwl-tbti-anisotropic-adp/project',
+    'corpus:single-crystal-page-cwl-tbti-anisotropic-adp/project',
+    'repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project',
+    'repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project',
+    'repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project',
+    'corpus:single-crystal-cwl-tbti-basic/project',
+    'repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project',
+    'corpus:single-crystal-cwl-pr2nio4-basic/project',
+    'repo:docs/user/cli/sc-neut-tof_taurine_fit/project',
+    'repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project',
+    'corpus:single-crystal-page-cwl-tbti-basic/project',
+}
 
 
 def restored_source(source, tmp_path):
@@ -154,7 +173,9 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
         'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
         'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
-    }, 'every declared extended or new X-ray input retains its separate complete byte witness'
+    } | SINGLE_CRYSTAL_FIXED_POINTS | {'corpus:multiphase-scales/project'}, (
+        'every declared extended or new X-ray input retains its separate complete byte witness'
+    )
     assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
         'a new project invariant cannot replace any old serialization oracle'
     )

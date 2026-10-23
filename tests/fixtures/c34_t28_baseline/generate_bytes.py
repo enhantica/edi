@@ -44,8 +44,9 @@ def inputs(root=ROOT):
     sources = {}
     for path in sorted((root / 'docs/user').rglob('project.edi')):
         sources['repo:' + path.parent.relative_to(root).as_posix()] = path.parent
-    for path in sorted(corpus_root(root).glob('*/project/project.edi')):
-        sources['corpus:' + path.parent.relative_to(corpus_root(root)).as_posix()] = path.parent
+    for path in sorted(corpus_root(root).glob('*/project')):
+        if path.is_dir() and (path / 'structures').is_dir() and (path / 'experiments').is_dir():
+            sources['corpus:' + path.relative_to(corpus_root(root)).as_posix()] = path
     if PACKAGE == 'crysta':
         prior = root / 'tests/fixtures/c34_t26_diffraction_lib'
         for group in ('inputs', 'calculated'):
@@ -165,7 +166,11 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
         controlled = Path(temporary) / 'input'
         shutil.copytree(source, controlled)
         project_file = controlled / 'project.edi'
-        text = project_file.read_text()
+        text = (
+            project_file.read_text()
+            if project_file.is_file()
+            else '_edi.schema_version 3\n_metadata.name untitled_project\n'
+        )
         for name, value in (
             ('created', '01 Jan 2099 00:00:00'),
             ('last_modified', '01 Jan 2099 00:00:01'),
@@ -200,18 +205,29 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--record', action='store_true')
-    parser.add_argument('--add-fixed-point', metavar='PROJECT_ID')
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument('--add-fixed-point', metavar='PROJECT_ID')
+    selection.add_argument('--add-corpus-fixed-point', metavar='CASE_ID')
     parser.add_argument('--source-root', type=Path, default=ROOT)
     args = parser.parse_args()
-    if args.add_fixed_point:
+    if args.add_fixed_point or args.add_corpus_fixed_point:
         if args.record:
             parser.error('a new-project invariant cannot regenerate historical save pins')
-        source = ROOT / 'docs/user/cli' / args.add_fixed_point / 'project'
-        if not re.fullmatch(r'[a-z0-9_-]+', args.add_fixed_point) or not source.is_dir():
+        identity = args.add_fixed_point or args.add_corpus_fixed_point
+        source = (
+            (ROOT / 'docs/user/cli' if args.add_fixed_point else corpus_root())
+            / identity
+            / 'project'
+        )
+        if not re.fullmatch(r'[a-z0-9_-]+', identity) or not source.is_dir():
             parser.error('fixed-point addition requires an existing CLI project')
         destination = Path(__file__).with_name('saved-bytes.json')
         retained = json.loads(destination.read_text())
-        case = 'repo:' + source.relative_to(ROOT).as_posix()
+        case = (
+            ('repo:' + source.relative_to(ROOT).as_posix())
+            if args.add_fixed_point
+            else 'corpus:' + source.relative_to(corpus_root()).as_posix()
+        )
         additions = retained.setdefault('post_feature_fixed_points', {})
         if case in retained['cases'] or case in additions:
             parser.error('a new-project invariant cannot replace any existing byte witness')

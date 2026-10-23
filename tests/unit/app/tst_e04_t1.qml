@@ -51,17 +51,14 @@ TestCase {
         appWindow.destroy();
     }
     function open(path) {
-        const url = path.startsWith("tests/fixtures/")
-            ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length))
-            : Probe.repoUrl(path);
+        const url = path.startsWith("tests/fixtures/") ? Qt.resolvedUrl("../../fixtures/" + path.slice("tests/fixtures/".length)) : Probe.repoUrl(path);
         Session.openProject(url);
         verify(Session.hasProject, "gate 3: committed project loads: " + path + " " + Session.lastError);
         return Session.project;
     }
     function example(index) {
         const project = open("docs/user/cli/" + Oracle.frozen.examples[index].id + "/project");
-        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000,
-                  "I9: the committed example completes its initial calculation");
+        tryVerify(() => Probe.computedCurrent(project.currentExperiment), 10000, "I9: the committed example completes its initial calculation");
         return project;
     }
     function rows(model) {
@@ -190,17 +187,26 @@ TestCase {
             project.currentExperimentIndex = index;
             const experiment = project.currentExperiment;
             compare(experiment.name, expected.experiment, "I7: current-experiment selection changes the rendered object");
+            if (expected.singleCrystal) {
+                compare(rows(experiment.peak).length, 0, "I15: a single crystal exposes no powder profile slots");
+                compare(rows(experiment.singleCrystalReflections).length, expected.loops.refln.length, "I7: the single-crystal category retains every authored reflection");
+                ordered(fieldNames(experiment.extinction).sort(), ["mosaicity", "radius"], "I15: a single crystal exposes exactly its two extinction fields");
+                rows(experiment.extinction).forEach(row => {
+                    const frozen = expected.scalars["_extinction." + row.parameter.name];
+                    verify(frozen !== undefined, "I7: every extinction field has an independent input declaration");
+                    compare(row.parameter.value, frozen.value, "I7: extinction values equal committed single-crystal inputs");
+                    compare(row.parameter.free, frozen.free, "I7: extinction free flags equal committed brackets");
+                });
+                return;
+            }
             compare(experiment.peakType, expected.peakType, "I7: the selector shows the loaded profile");
             ordered(fieldNames(experiment.instrument), expected.instrumentFields, "I15: mode-specific instrument fields");
             const peakRows = rows(experiment.peak).concat(rows(experiment.peakAsymmetry));
             const wanted = expected.peakFields.concat(expected.unusedFreeFields);
             ordered(peakRows.map(r => r.parameter.name).sort(), wanted.slice().sort(), "I15: no inert storage fields, no hidden free parameters");
             peakRows.forEach(row => {
-                const frozen = expected.scalars["_peak." + row.parameter.name]
-                    || expected.peakDefaults[row.parameter.name];
-                verify(frozen !== undefined,
-                       "Every displayed peak field has a saved input or declared neutral default: "
-                       + expected.project + " " + expected.experiment + " " + row.parameter.name);
+                const frozen = expected.scalars["_peak." + row.parameter.name] || expected.peakDefaults[row.parameter.name];
+                verify(frozen !== undefined, "Every displayed peak field has a saved input or declared neutral default: " + expected.project + " " + expected.experiment + " " + row.parameter.name);
                 compare(row.parameter.value, frozen.value, "I7: displayed value equals project text");
                 compare(row.parameter.free, frozen.free, "I7: displayed free flag equals bracket rule");
                 compare(row.usedByProfile, !expected.unusedFreeFields.includes(row.parameter.name), "I15: unused free storage is explicitly marked");
