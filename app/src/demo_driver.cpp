@@ -374,6 +374,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-09e-missing-link-red", {"choose:OK", "expand:group.linked_structure"}});
     steps_.push_back({"sccheck-09f-structure-text", {"appBar.tab.structure", text}});
     steps_.push_back({"sccheck-09g-relinked", {experiment, basic, "linkedStructure.structureId.0", "choose:tb2ti2o7"}});
+    // A time-of-flight single crystal's Instrument group: its reflections' wavelength band, read-only.
+    steps_.push_back({"sccheck-14-taurine-instrument",
+                      start + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic, "group.instrument"}});
     // A single crystal's reflections through the row's Load data: FullProf's .int (its wavelength taken), a plain
     // h k l F² su file, then a malformed one; each into a created experiment linked to the project's structure.
     // The files are named by EDI_DEMO_SC_FILES, a folder holding prnio.int, tbti.dat and malformed.dat.
