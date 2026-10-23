@@ -22,7 +22,9 @@ Grid {
     property ProjectViewModel project: null
     property ExperimentViewModel experiment: null
     property int experimentIndex: -1
-    readonly property bool editable: experiment !== null && experiment.typeEditable
+    // The type axes may change while nothing measured is held: a calculation grid, or a single crystal with no
+    // reflections loaded yet.
+    readonly property bool editable: experiment !== null && experiment.calculationOnly
     readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
