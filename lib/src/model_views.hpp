@@ -153,8 +153,8 @@ struct ScTofReflnView : ScReflnView {
     using ScReflnView::ScReflnView;
 };
 
-// A single crystal's Becker-Coppens extinction (diffraction-lib BeckerCoppensExtinction): its
-// mosaic model, crystal radius and mosaicity.
+// A single crystal's isotropic Becker-Coppens extinction: its type, mosaic distribution, domain
+// radius and mosaic spread.
 struct ExtinctionNode {
     edi::ExperimentBase* experiment;
     explicit ExtinctionNode(edi::ExperimentBase* experiment) : experiment(experiment) {}

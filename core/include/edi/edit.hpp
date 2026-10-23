@@ -257,6 +257,12 @@ class Edit {
     static Edit absorption(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
     }
+    static Edit extinction(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_extinction(experiment, token); });
+    }
+    static Edit mosaic_distribution(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_mosaic_distribution(experiment, token); });
+    }
     // The background model, the old type's rows and constants removed (select_background_type).
     static Edit background_type(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_background_type(experiment, token); });

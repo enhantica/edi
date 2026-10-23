@@ -193,8 +193,8 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         // instead.
         categories.push_back(instrument_category(experiment));
         Category extinction{"extinction"};
-        detail::add_optional(extinction.fields, "radius", experiment.extinction.radius);
-        detail::add_optional(extinction.fields, "mosaicity", experiment.extinction.mosaicity);
+        detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
+        detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
         categories.push_back(extinction);
         Category linked{"linked_structure", true, experiment.linked_structures.size()};
         for (const auto& link : experiment.linked_structures) {

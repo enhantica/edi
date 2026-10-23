@@ -10,10 +10,7 @@ _scattering_source.neutron_scattering_length sears1992
 
 _calculator.type crysta
 
-_extinction.type becker-coppens
-_extinction.model gauss
-_extinction.radius 0
-_extinction.mosaicity 0
+_extinction.type none
 
 loop_
 _linked_structure.structure_id
