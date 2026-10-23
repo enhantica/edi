@@ -14,8 +14,9 @@ _instrument.setup_wavelength 0.793
 
 _extinction.type becker-coppens-mixed
 _extinction.mosaic_distribution gaussian
-_extinction.domain_radius 25
+_extinction.domain_radius 25()
 _extinction.mosaic_spread 0()
+_extinction.crystal_radius 0.025
 
 loop_
 _linked_structure.structure_id

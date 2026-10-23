@@ -1357,6 +1357,13 @@
           "items": [
             "mosaic_spread"
           ]
+        },
+        {
+          "member": "ExtinctionBase::crystal_radius",
+          "type": "OptionalParameter",
+          "items": [
+            "crystal_radius"
+          ]
         }
       ],
       "owner": "ExtinctionBase",
@@ -3795,6 +3802,11 @@
     },
     {
       "member": "ExtinctionBase::mosaic_spread",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::crystal_radius",
       "type": "OptionalParameter",
       "category": "_extinction"
     },

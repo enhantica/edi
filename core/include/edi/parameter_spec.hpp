@@ -167,6 +167,8 @@ inline constexpr const char* kExtinctionDomainRadius[] = {"_extinction.domain_ra
 inline constexpr const char* kExtinctionDomainRadiusCif[] = {"_easydiffraction_extinction.domain_radius"};
 inline constexpr const char* kExtinctionMosaicSpread[] = {"_extinction.mosaic_spread"};
 inline constexpr const char* kExtinctionMosaicSpreadCif[] = {"_easydiffraction_extinction.mosaic_spread"};
+inline constexpr const char* kExtinctionCrystalRadius[] = {"_extinction.crystal_radius"};
+inline constexpr const char* kExtinctionCrystalRadiusCif[] = {"_easydiffraction_extinction.crystal_radius"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -467,9 +469,9 @@ inline const ParameterSpec absorption_mu_r{
     "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
     "each reflection's Bragg theta",
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
-// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the domain radius r in micrometres, which
-// also sets the crystal's mean path, and the mosaic spread g in inverse radians, the inverse width of the mosaic
-// distribution (larger is narrower), a plain number like any other.
+// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the domain radius r in micrometres and the
+// mosaic spread g in inverse radians, the inverse width of the mosaic distribution (larger is narrower), a plain
+// number like any other.
 inline const ParameterSpec extinction_domain_radius{
     "extinction", "domain_radius", "micrometres", "Becker-Coppens domain radius of the crystal",
     {0.0, detail::kInf}, "Domain radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionDomainRadius,
@@ -479,6 +481,11 @@ inline const ParameterSpec extinction_mosaic_spread{
     "Becker-Coppens mosaic spread of the crystal, the inverse width of its mosaic distribution",
     {0.0, detail::kInf}, "Mosaic spread", "rad⁻¹", "", "\\mathrm{rad}^{-1}",
     detail::kExtinctionMosaicSpread, detail::kExtinctionMosaicSpreadCif};
+// The crystal taken as a sphere, in millimetres as `_exptl_crystal.size_rad`: each reflection's mean path through it.
+inline const ParameterSpec extinction_crystal_radius{
+    "extinction", "crystal_radius", "millimetres", "Radius of the crystal, which sets the mean path length",
+    {0.0, detail::kInf}, "Crystal radius", "mm", "", "\\mathrm{mm}", detail::kExtinctionCrystalRadius,
+    detail::kExtinctionCrystalRadiusCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.
