@@ -1,6 +1,6 @@
 {
   "program": "edi",
-  "crysta_sdk": "build-74acdc8a3937c3d36191cf2f904a0532a2201fb0",
+  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
   "banks": [
     "wish_1_10",
     "wish_2_9",
