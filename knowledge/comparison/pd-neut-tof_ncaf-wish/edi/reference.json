@@ -1,0 +1,41 @@
+{
+  "program": "edi",
+  "commit": "d7f063001e1ec2a09ab7c68ffc7f32a5b15b32b1",
+  "crysta_sdk": "build-74acdc8a3937c3d36191cf2f904a0532a2201fb0",
+  "banks": [
+    "wish_1_10",
+    "wish_2_9",
+    "wish_3_8",
+    "wish_4_7",
+    "wish_5_6"
+  ],
+  "n_free": 193,
+  "status": "done",
+  "converged": true,
+  "iterations": 15,
+  "rwp": 0.07694105118718435,
+  "reduced_chi_square": 9.496662871615095,
+  "cells": {
+    "ncaf": {
+      "a": [
+        10.250256,
+        0.0
+      ],
+      "b": [
+        10.250256,
+        0.0
+      ],
+      "c": [
+        10.250256,
+        0.0
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "wish_1_10.csv": "1b5747e4759761d2bad81c0cef475c29361704fa6e97b4b94d9d69f7e07e142f",
+    "wish_2_9.csv": "f083a6260eca47b8dadf39a27c3e8353709a2ea2f3ff928bb374e5d0091ec56f",
+    "wish_3_8.csv": "7a68aed60cc9ed545281fd702ea5a222f6a7ec4931af5330a7eb713d4b8231a3",
+    "wish_4_7.csv": "298293d8986b5b45048d3c352fffce45a63c991a1db803b8ebf5812ae26c1631",
+    "wish_5_6.csv": "ceab0aa9f0474b57a5fad5d8ef31e7ddc088841092954f4c215d568a82915503"
+  }
+}

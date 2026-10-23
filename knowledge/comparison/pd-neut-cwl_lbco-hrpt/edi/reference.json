@@ -1,0 +1,33 @@
+{
+  "program": "edi",
+  "commit": "d7f063001e1ec2a09ab7c68ffc7f32a5b15b32b1",
+  "crysta_sdk": "build-74acdc8a3937c3d36191cf2f904a0532a2201fb0",
+  "banks": [
+    "hrpt"
+  ],
+  "n_free": 15,
+  "status": "done",
+  "converged": true,
+  "iterations": 8,
+  "rwp": 0.07229128411007546,
+  "reduced_chi_square": 1.2968485498212763,
+  "cells": {
+    "lbco": {
+      "a": [
+        3.8907905347817335,
+        3.812507668246775e-05
+      ],
+      "b": [
+        3.8907905347817335,
+        3.812507668246775e-05
+      ],
+      "c": [
+        3.8907905347817335,
+        3.812507668246775e-05
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "hrpt.csv": "8367ae8c994b57a15d21bdf904a5806186c4ea803410bd7e38579016ee67d3e9"
+  }
+}

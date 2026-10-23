@@ -1,0 +1,49 @@
+{
+  "program": "edi",
+  "commit": "d7f063001e1ec2a09ab7c68ffc7f32a5b15b32b1",
+  "crysta_sdk": "build-74acdc8a3937c3d36191cf2f904a0532a2201fb0",
+  "banks": [
+    "expt_n2",
+    "expt_s2"
+  ],
+  "n_free": 73,
+  "status": "done",
+  "converged": true,
+  "iterations": 6,
+  "rwp": 0.07131024942335144,
+  "reduced_chi_square": 6.891212545842183,
+  "cells": {
+    "austenite": {
+      "a": [
+        3.6468,
+        0.0
+      ],
+      "b": [
+        3.6468,
+        0.0
+      ],
+      "c": [
+        3.6468,
+        0.0
+      ]
+    },
+    "ferrite": {
+      "a": [
+        2.886,
+        0.0
+      ],
+      "b": [
+        2.886,
+        0.0
+      ],
+      "c": [
+        2.886,
+        0.0
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "expt_n2.csv": "58d44aceb647a042c8c1aeb00a1b9ab6be396074e0f04acc41cdd80522933b6c",
+    "expt_s2.csv": "ebb857c378f7e00a9380023b81a41931dacbe65238f0af7c4f65b9eab45c72e7"
+  }
+}

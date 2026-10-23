@@ -1,0 +1,35 @@
+{
+  "program": "edi",
+  "commit": "d7f063001e1ec2a09ab7c68ffc7f32a5b15b32b1",
+  "crysta_sdk": "build-74acdc8a3937c3d36191cf2f904a0532a2201fb0",
+  "banks": [
+    "d1a",
+    "lab"
+  ],
+  "n_free": 52,
+  "status": "done",
+  "converged": true,
+  "iterations": 14,
+  "rwp": 0.052297784603089904,
+  "reduced_chi_square": 1.5911938014901135,
+  "cells": {
+    "pbso4": {
+      "a": [
+        8.481021278105146,
+        8.209160742699225e-05
+      ],
+      "b": [
+        5.398723842547272,
+        5.34457311470795e-05
+      ],
+      "c": [
+        6.960391989453053,
+        7.018503628435143e-05
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "d1a.csv": "e2e1a32db738a6da6a464b89a00573b46c9d4bf127d08f6175ba694278b7b003",
+    "lab.csv": "882c21db37c576ed4c1748c2ce8c76dbd03c988c01518964a92de012ea4f3c09"
+  }
+}

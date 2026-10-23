@@ -3,5 +3,5 @@
   "version": "0.21.1+dev3",
   "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
   "model_compatible": false,
-  "reason": "Time-of-flight absorption: the fit refines the cylinder absorption ABSCOR1, and diffraction-lib has no time-of-flight absorption."
+  "reason": "Time-of-flight absorption: the fit frees the cylinder absorption ABSCOR1, and diffraction-lib has no time-of-flight absorption."
 }
