@@ -21,9 +21,23 @@ _atom_site.wyckoff_letter
 _atom_site.occupancy
 _atom_site.adp_type
 _atom_site.adp_iso
-Pr Pr 0 0 0.3620() i 1 Biso 0.5()
-Ni Ni 0 0 0 a 1 Biso 0.5()
-O1 O 0.25 0.25 0 e 1 Biso 0.5()
-O2 O 0 0 0.1760() i 0.722965 Biso 0.5()
-Oi O 0.25 0.25 0.25 f 0.074655 Biso 0.5()
-Od O 0.0750() 0.0750() 0.1750() p 0.074654 Biso 0.5()
+Pr Pr 0 0 0.3620() i 1 Bani 0
+Ni Ni 0 0 0 a 1 Bani 0
+O1 O 0.25 0.25 0 e 1 Bani 0
+O2 O 0 0 0.1760() i 0.722965 Bani 0
+Oi O 0.25 0.25 0.25 f 0.074655 Bani 0
+Od O 0.0750() 0.0750() 0.1750() p 0.074654 Biso 0()
+
+loop_
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+Pr 0() 0() 0() 0 0 0
+Ni 0() 0() 0() 0 0 0
+O1 0() 0() 0() 0() 0 0
+O2 0() 0() 0() 0 0 0
+Oi 0() 0() 0() 0 0 0
