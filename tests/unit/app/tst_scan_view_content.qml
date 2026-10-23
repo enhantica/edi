@@ -1734,6 +1734,10 @@ Rectangle {
             chart = found[0];
             tryVerify(() => fullyExposed(named("pointer")), 2000, "The shown scan plot finishes its SwipeView transition inside every actual clip before capture");
             tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "Shared measured views finish their real asynchronous data reads");
+            if (!Session.project.scanViews.nativeShared) {
+                tryCompare(Session.project.scanViews, "dAvailable", true, 8000, "Unlike native quantities wait for every calculated bank d column before observing a shared physical plot; observedAtPollStart=" + JSON.stringify({loaded: Session.project.scanViews.loaded, count: Session.project.scanViews.count, dAvailable: Session.project.scanViews.dAvailable, dShown: Session.project.scanViews.dShown, calculating: Session.project.calculating, lastError: Session.project.lastError}));
+                tryCompare(Session.project.scanViews, "dShown", true, 1000, "Mixed native axes are actually placed on their only common d quantity");
+            }
             applicationWindow.update();
             verify(waitForRendering(chart), "The shown shared scan drawing reaches a completed actual frame");
             return chart;
@@ -1781,7 +1785,8 @@ Rectangle {
                     colours.add(String(firstPixel(x, y)));
             verify(colours.size > 3, "Before any fit the actual plot contains measured map/curve ink rather than only an empty canvas");
             const expectedLine = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", scan.count, false)[1]);
-            const mapReferences = new Set(JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours.map(colour => colour.toLowerCase()));
+            const frozenMap = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
+            const mapReferences = new Set([32, 96, 128, 192, 255].map(index => frozenMap[index].toLowerCase()));
             let measuredInk = false;
             for (let x = 2; x < captureLayer.width - 2 && !measuredInk; ++x)
                 for (let y = 2; y < captureLayer.height - 2 && !measuredInk; ++y) {
@@ -1797,9 +1802,10 @@ Rectangle {
             const palette = paletteSelector(data.mode);
             choose(palette, (palette.currentIndex + 1) % palette.count);
             const selectionPointer = named("pointer"), selectionAxes = named("axes");
-            const selectY = (selectionAxes.axisY.max - scan.rowOf(1)) / (selectionAxes.axisY.max - selectionAxes.axisY.min) * selectionPointer.height;
+            const selectCoordinate = scan.rowOf(1);
+            const selectY = (selectionAxes.axisY.max - selectCoordinate) / (selectionAxes.axisY.max - selectionAxes.axisY.min) * selectionPointer.height;
             mouseClick(selectionPointer, selectionPointer.width * .4, Math.max(2, Math.min(selectionPointer.height - 2, selectY)));
-            tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real scan-view input selects a non-default measured dataset before changing pages");
+            tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real scan-view input selects a non-default measured dataset before changing pages; coordinate=" + selectCoordinate + " readIndex=" + Session.project.currentExperimentIndex);
             const pointer = named("pointer"), axes = named("axes");
             mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .6, pointer.height * .6, Qt.LeftButton);
             let ranges = [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max];
