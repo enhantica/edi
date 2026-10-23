@@ -153,6 +153,10 @@ bool adopt_saved_values(Project& project, const std::string& directory);
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
 
+// The project's report as a CIF, written by crysta from the project a save would write: every item under its default
+// CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.
+std::string cif_report_text(const Project& project);
+
 // Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.
 bool save_report_settings(const Project& project, const std::string& directory);
