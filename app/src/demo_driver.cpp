@@ -119,9 +119,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t2-02-linked-structure", {"group.linked_structure"}});
     steps_.push_back({"t2-03-experiment-extras-peak", {extras, "group.peak"}});
     steps_.push_back({"t2-04-analysis-slider", {analysis, basic, "parameters.row.0"}});
+    // The Report page's Text tab holds the report's own settings, not the project's CIF, so nothing is scrolled to.
     steps_.push_back({"t2-05-report-text",
-                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text,
-                       "scroll-to:text.view:_atom_site.multiplicity"}});
+                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text}});
     steps_.push_back({"t2-06-dark-experiment", {"theme:dark", experiment, basic}});
     steps_.push_back({"t2-07-dark-analysis", {analysis, basic}});
     steps_.push_back({"t2-08-dark-structure-text", {"appBar.tab.structure", text}});
