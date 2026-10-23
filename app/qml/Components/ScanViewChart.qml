@@ -481,7 +481,9 @@ Item {
         const texts = rowLabels && scan !== null ? scan.rowTexts : [];
         if (texts.length === 0 || scan.revision < 0 || !(axisY.max > axisY.min) || plot.height <= 0)
             return shown;
-        const gap = AppSizes.legendRowHeight;
+        // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
+        // the label is given.
+        const gap = Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height));
         const placed = [];
         for (let i = 0; i < texts.length; ++i) {
             const at = scan.rowOf(i);
