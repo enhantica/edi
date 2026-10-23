@@ -191,12 +191,16 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     if (experiment.reflections.has_value()) {
         // A single crystal: no profile, background, excluded regions or absorption; its extinction
         // instead.
-        // Its wavelength at constant wavelength; at time of flight, which reads none, no instrument at all.
-        if (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH) {
-            categories.push_back(instrument_category(experiment));
-        }
+        // Its wavelength at constant wavelength. At time of flight, which reads none, the category holds no
+        // parameter: the app's Instrument group shows the reflections' wavelength band.
+        categories.push_back(experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH
+                                 ? instrument_category(experiment)
+                                 : Category{"instrument"});
         Category extinction{"extinction"};
         detail::add_optional(extinction.fields, "crystal_radius", experiment.extinction.crystal_radius);
+        if (experiment.extinction.crystal_radius) {
+            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
+        }
         detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
         detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
         categories.push_back(extinction);

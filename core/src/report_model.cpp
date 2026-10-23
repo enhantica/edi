@@ -553,6 +553,9 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
     ReportExperiment out;
     out.id = experiment.name.value();
     for (const Category& listed : experiment_categories(walked)) {
+        if (listed.id == "instrument" && listed.fields.empty()) {
+            continue;  // a time-of-flight single crystal's: no instrument parameter to report
+        }
         ReportCategory next = category(listed.id);
         if (listed.id == "experiment_type") {
             const ExperimentType& type = experiment.experiment_type;
