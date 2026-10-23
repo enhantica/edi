@@ -13,6 +13,7 @@ TestCase {
     name: "E04T1DisplayedValues"
     when: windowShown
     property var appWindow
+    property bool firstDisplayCase: true
     Component { id: application; Main {} }
     Component { id: textWitness; Text { width: 160; height: 30; text: "powder" } }
     Component { id: fieldWitness; TextField { width: 160; height: 30; readOnly: true; text: "62" } }
@@ -70,8 +71,9 @@ TestCase {
     }
     function test_loaded_display_data() { return Oracle.frozen.cases; }
     function test_loaded_display(data) {
-        failOnWarning(data.tag === Oracle.frozen.cases[0].tag
+        failOnWarning(firstDisplayCase
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
+        firstDisplayCase = false;
         const url = Probe.repoUrl(data.path);
         // Reuse only the same unedited, read-only input; a different fixture is
         // always reopened. Selection and page setup below run for every row.
