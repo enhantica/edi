@@ -4279,6 +4279,11 @@ std::string default_descent();
 //     std::invalid_argument;
 //   - crysta's registry token of a file spelling — the word edi's class registry is keyed by.
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode);
+// crysta's own non-fatal warnings kept for the app instead of printed: once called, each warning is held until
+// take_engine_warnings, one copy of each text. A tensor with a negative eigenvalue and a derived value outside its
+// range are left out: standing_warnings names those that still hold.
+void collect_engine_warnings();
+std::vector<std::string> take_engine_warnings();
 // A single crystal's extinction types and mosaic distributions, crysta's tables in their order.
 std::vector<std::string> extinction_type_tokens();
 std::vector<std::string> mosaic_distribution_tokens();

@@ -634,11 +634,11 @@ bool copy_parameter_states(Project& to, Project& from) {
     return true;
 }
 
-std::vector<std::string> derived_outside_range(Project& project) {
+std::vector<std::string> standing_warnings(Project& project, bool ranges) {
     std::vector<std::string> out;
-    for (const ParameterEntry& entry : parameter_entries(project)) {
+    for (const ParameterEntry& entry : ranges ? parameter_entries(project) : std::vector<ParameterEntry>{}) {
         const Parameter* parameter = entry.parameter;
-        if (parameter == nullptr || parameter->spec == nullptr || parameter->dependence == Dependence::Independent) {
+        if (parameter == nullptr || parameter->spec == nullptr) {
             continue;
         }
         const double value = parameter->value;
@@ -646,10 +646,14 @@ std::vector<std::string> derived_outside_range(Project& project) {
             std::ostringstream message;
             message.imbue(std::locale::classic());
             message << entry.path << " = " << value << " is outside its admissible range ["
-                    << parameter->spec->range.min << ", " << parameter->spec->range.max
-                    << "]; a constraint derives it, and it is kept";
+                    << parameter->spec->range.min << ", " << parameter->spec->range.max << "]; "
+                    << (parameter->dependence == Dependence::Independent ? "it is kept"
+                                                                         : "a constraint derives it, and it is kept");
             out.push_back(message.str());
         }
+    }
+    for (AdpDefinitenessWarning& warning : adp_definiteness_warnings(project)) {
+        out.push_back(std::move(warning.message));
     }
     return out;
 }
