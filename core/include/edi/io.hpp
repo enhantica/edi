@@ -57,6 +57,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 // class implements (powder + bragg); a project directory keeps the loader's presence-tracked
 // axes. Nothing is changed by a load: adding is the separate step below.
 Structure load_structure_edi_file(const std::string& path);
+// A structure from a CIF file (or a `.edi` one), read through crysta's dictionary CIF names in
+// either notation; the values are the published ones, fixed. Throws IoError naming the file.
+Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name
 // unique against the project and within the batch. The first refusal names its file.

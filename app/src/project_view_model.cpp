@@ -611,7 +611,11 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::load_structure_edi_file(file.toLocalFile().toStdString())),
+        // A CIF file is read through crysta's CIF names, a `.edi` block as it is.
+        const std::string path = file.toLocalFile().toStdString();
+        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
+        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
+                                                            : edi::load_structure_edi_file(path)),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
