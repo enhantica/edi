@@ -1,0 +1,10 @@
+{
+  "source": "Closed-form weighted least squares on the listed observations; the excluded point has an arbitrarily large residual",
+  "n_free": 1,
+  "banks": [
+    {"observed": [100, 200, 300, 400, 1000000], "calculated": [110, 190, 300, 380, -1000000], "sigma": [10, 10, 20, 20, 1], "included": [true, true, true, true, false]},
+    {"observed": [50, 50], "calculated": [45, 55], "sigma": [5, 5], "included": [true, true]}
+  ],
+  "single": {"r_p": 0.04, "r_wp": 0.051639777949432225, "r_exp": 0.051639777949432225, "reduced_chi_square": 1.0, "n_points": 4},
+  "pooled": {"r_p": 0.045454545454545456, "r_wp": 0.06142951168339512, "r_exp": 0.06142951168339512, "reduced_chi_square": 1.0, "n_points": 6}
+}

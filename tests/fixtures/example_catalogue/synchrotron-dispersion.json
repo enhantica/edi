@@ -1,0 +1,176 @@
+{
+  "source": "Sasaki (1989), KEK Report 88-14, cctbx reference/sasaki/fpwide.tbl",
+  "source_url": "https://github.com/cctbx/cctbx_project/blob/master/cctbx/reference/sasaki/fpwide.tbl",
+  "table_sha256": "366fd51e8ffbbde89fe86fd536761fd43ea6f9a797c9f2d62f9ce59b2f5157bb",
+  "interpolation": "linear in photon energy between independent table nodes",
+  "case": "pd-xray-cwl_lam7o3-p021",
+  "experiment": "p021",
+  "dispersion_source": "sasaki1989",
+  "wavelength_angstrom": 0.207109,
+  "brackets": {
+    "La": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.4505,
+        -0.5011
+      ],
+      "f_double_prime": [
+        1.5987,
+        1.738
+      ]
+    },
+    "Ti": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0163,
+        -0.0116
+      ],
+      "f_double_prime": [
+        0.0353,
+        0.0391
+      ]
+    },
+    "Cr": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0154,
+        -0.0094
+      ],
+      "f_double_prime": [
+        0.0512,
+        0.0566
+      ]
+    },
+    "Mn": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0139,
+        -0.0071
+      ],
+      "f_double_prime": [
+        0.0609,
+        0.0673
+      ]
+    },
+    "Fe": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0134,
+        -0.0059
+      ],
+      "f_double_prime": [
+        0.0719,
+        0.0794
+      ]
+    },
+    "Co": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0113,
+        -0.003
+      ],
+      "f_double_prime": [
+        0.0843,
+        0.093
+      ]
+    },
+    "Ni": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0121,
+        -0.0031
+      ],
+      "f_double_prime": [
+        0.0982,
+        0.1084
+      ]
+    },
+    "Cu": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0094,
+        0.0004
+      ],
+      "f_double_prime": [
+        0.1137,
+        0.1254
+      ]
+    },
+    "O": {
+      "wavelength_angstrom": [
+        0.2,
+        0.21
+      ],
+      "f_prime": [
+        -0.0055,
+        -0.0053
+      ],
+      "f_double_prime": [
+        0.0003,
+        0.0004
+      ]
+    }
+  },
+  "values": {
+    "La": [
+      -0.4869736607293743,
+      1.6991106905059652
+    ],
+    "Ti": [
+      -0.012912130327508708,
+      0.03803912867137594
+    ],
+    "Cr": [
+      -0.01107505999256431,
+      0.05509244600669212
+    ],
+    "Mn": [
+      -0.00899840132490622,
+      0.06551326934126474
+    ],
+    "Fe": [
+      -0.00799382499070539,
+      0.07730617500929461
+    ],
+    "Co": [
+      -0.005317166323047297,
+      0.09057116301078175
+    ],
+    "Ni": [
+      -0.005612589988846467,
+      0.10555239801264067
+    ],
+    "Cu": [
+      -0.0023359313211883757,
+      0.1221336330144996
+    ],
+    "O": [
+      -0.005355835333085477,
+      0.0003720823334572615
+    ]
+  }
+}

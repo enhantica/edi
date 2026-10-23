@@ -1,0 +1,11 @@
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ncaf-wish
+_metadata.title "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS"
+_metadata.description "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+_metadata.authors .
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "WISH"
+_metadata.facility "ISIS"
+_metadata.polarisation "none"

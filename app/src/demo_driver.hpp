@@ -18,6 +18,10 @@ class QQuickWindow;
 
 namespace edi_app {
 
+// Copies the CLI project docs/user/cli/<id>/project of this build's source tree into <into>/<id>/project, for a
+// test project the app does not bundle. Returns the copy's path, or an empty string when it cannot be made.
+QString copy_cli_project(const QString& id, const QDir& into);
+
 // The scripted demo mode: clicks through the app with real mouse events on controls found by
 // objectName, waits for each state to settle, and saves one image per state into <dir>. The UI test
 // compares those images with the committed expected set. A step whose control is missing, hidden or

@@ -411,8 +411,11 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
 - **The sidebar's width** (the owner, 2026-10-22): the sidebar reaches from the window's edge to the centre of the
   Experiment button in the top bar, so its edge sits under that button on every page that has one. The width is read
   from the top bar's layout (the centred tabs' position and the button's), not a fixed number, so it follows the window
-  and any change to the buttons: 609 px at the 1280 px minimum window width, 929 px at 1920 px (the base's own was
-  584 px). The sidebar on the left keeps the same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
+  and any change to the buttons: 610 px at the 1280 px minimum window width, 930 px at 1920 px (the base's own was
+  584 px), the same on every page. Each workflow tab is as wide as it is when selected
+  (`Components/WorkflowTabButton.qml`): the base widens only the selected tab, for its bold name, so the tabs, and
+  with them the sidebar's edge, shifted by a pixel or two whenever the page changed. The sidebar on the left keeps the
+  same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
   with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
 - **One green** (the owner, 2026-10-22): a free parameter's bold value, the status bar's Success and its ✓ count, a
   succeeded fit's outcome, an included dataset's mark and an available recent project's mark all draw the base's
