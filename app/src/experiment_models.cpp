@@ -299,6 +299,16 @@ void SingleCrystalReflectionModel::sync() {
     low_ = std::min(0.0, low - pad);
     high_ = high + pad;
     calculated_shown_ = shown;
+    wavelength_low_ = qQNaN();
+    wavelength_high_ = qQNaN();
+    if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
+        for (const double wavelength : reflections->wavelength.get()) {
+            if (std::isfinite(wavelength)) {
+                wavelength_low_ = std::isnan(wavelength_low_) ? wavelength : std::min(wavelength_low_, wavelength);
+                wavelength_high_ = std::isnan(wavelength_high_) ? wavelength : std::max(wavelength_high_, wavelength);
+            }
+        }
+    }
     emit pointsChanged();
 }
 

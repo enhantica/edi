@@ -1,12 +1,12 @@
 ---
-title: Taurine on time of flight, fitted from a rough start
+title: Taurine on SENJU, fitted from a rough start
 description: >-
-  Taurine by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
+  Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
 ---
 
-# Taurine on time of flight, fitted from a rough start
+# Taurine on SENJU, fitted from a rough start
 
-Taurine by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
+Taurine on SENJU at J-PARC, by time-of-flight neutron single-crystal diffraction, starting from an isotropic displacement of 1.5 on every atom and a scale of 1.
 
 ## Run it
 
