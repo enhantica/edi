@@ -2955,12 +2955,48 @@ void require_polarization_family(const ExperimentBase& e) {
     }
 }
 
+// A single crystal's measured reflections as crysta reads them.
+crysta::ReflectionFile reflection_file(const ExperimentBase& e) {
+    crysta::ReflectionFile rows;
+    rows.index_h = e.reflections->index_h;
+    rows.index_k = e.reflections->index_k;
+    rows.index_l = e.reflections->index_l;
+    rows.intensity = e.reflections->intensity_meas;
+    rows.sigma = e.reflections->intensity_meas_su;
+    rows.wavelength = e.reflections->wavelength;
+    return rows;
+}
+
+crysta::BeamModeEnum single_crystal_kind(const ExperimentBase& e) {
+    return e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? crysta::BeamModeEnum::ConstantWavelength
+                                                                         : crysta::BeamModeEnum::TimeOfFlight;
+}
+
+// Why crysta refuses the first single crystal's reflection table (a column without one value per reflection), or
+// empty. A calculation asks it before anything is cleared, so a refused table leaves every computed column as it
+// was.
+std::string reflection_refusal(const Project& project) {
+    for (const auto& bank_item : project.experiments) {
+        const ExperimentBase& bank = *bank_item;
+        if (!bank.reflections) {
+            continue;
+        }
+        crysta::BraggPdExperiment scratch = crysta::single_crystal_experiment(single_crystal_kind(bank));
+        scratch.name = bank.name;
+        try {
+            crysta::set_measured_reflections(scratch, reflection_file(bank));
+        } catch (const std::invalid_argument& error) {
+            return error.what();
+        }
+    }
+    return {};
+}
+
 // A single crystal crosses as crysta's single-crystal form: its wavelength (constant wavelength),
 // extinction, linked structures and measured reflections.
 crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     const bool cw = e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(
-        cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(single_crystal_kind(e));
     built.name = e.name;
     built.beam_mode = crossed(crysta::TokenField::BeamMode, built,
                               e.experiment_type.beam_mode ? token(*e.experiment_type.beam_mode) : std::string());
@@ -3013,14 +3049,7 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                            link->enabled.get());
     }
     built.linked_structures.assign(links);
-    crysta::ReflectionFile rows;
-    rows.index_h = e.reflections->index_h;
-    rows.index_k = e.reflections->index_k;
-    rows.index_l = e.reflections->index_l;
-    rows.intensity = e.reflections->intensity_meas;
-    rows.sigma = e.reflections->intensity_meas_su;
-    rows.wavelength = e.reflections->wavelength;
-    crysta::set_measured_reflections(built, rows);
+    crysta::set_measured_reflections(built, reflection_file(e));
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
 }
 
@@ -3353,6 +3382,11 @@ bool ExperimentBase::computed_current() const {
 }
 
 void Project::calculate() {
+    // A single crystal's reflection table is admitted before anything is touched: a refused one leaves every
+    // computed column and the geometry as they were.
+    if (const std::string why = detail::reflection_refusal(*this); !why.empty()) {
+        throw std::invalid_argument(why);
+    }
     refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // The reference shape (diffraction-lib Analysis.calculate): no arguments — every input is
     // read from the model (grid = the data node's engaged axis, bank angle and
@@ -3943,6 +3977,12 @@ CalculationResult calculate(WorkSnapshot& snapshot, const work::CancelToken& tok
         result.cancelled = true;
         return result;
     }
+    // A refused reflection table changes nothing: publish keeps what is shown.
+    if (std::string why = detail::reflection_refusal(snapshot.project); !why.empty()) {
+        result.refusal = std::move(why);
+        result.kept = true;
+        return result;
+    }
     std::string refusal;
     try {
         snapshot.project.calculate();
@@ -4052,7 +4092,13 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
     const std::size_t banks = live.experiments.size();
     const std::size_t structures = live.structures.size();
     // --- preflight: nothing the result depends on was written since the snapshot -----------------
-    if (result.cancelled || !unchanged_since(live, stamps) || result.geometry.size() != structures) {
+    if (result.cancelled || !unchanged_since(live, stamps)) {
+        return PublishOutcome::Superseded;
+    }
+    if (result.kept) {  // refused before anything was calculated: nothing to write
+        return PublishOutcome::Published;
+    }
+    if (result.geometry.size() != structures) {
         return PublishOutcome::Superseded;
     }
     const bool refused = !result.refusal.empty();

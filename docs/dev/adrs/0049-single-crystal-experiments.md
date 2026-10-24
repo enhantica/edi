@@ -22,7 +22,10 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 2. **File.** The reader takes the `_refln` loop's measured columns and the `_extinction` category; the save goes
    through crysta's writer as every save does.
 3. **Calculation and fit.** The adapter converts a single crystal to crysta's single-crystal form; a calculation
-   publishes the calculated F² per reflection, and a fit runs crysta's single-crystal residual.
+   publishes the calculated F² per reflection, and a fit runs crysta's single-crystal residual. A calculation first
+   admits each single crystal's reflection table by crysta's rule (one value of each column per reflection): a
+   malformed table is refused by name, and every computed column and the geometry stay as they were. ADR 0016's
+   rule that a refused calculation clears every experiment's computed categories holds once the calculation starts.
 4. **Views.** For a single crystal the Experiment and Analysis pages show, where the pattern chart was, a chart of
    F²calc against F²meas (each reflection a point with its su bar, and the y = x line) over a table of h, k, l,
    F²meas, su, F²calc and (F²meas − F²calc)/su. The sidebar shows Extinction and leaves out the pattern-only groups.
