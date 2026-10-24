@@ -58,6 +58,8 @@ struct PatternSource {
     };
     std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
+    // A single crystal's calculated F², one per measured reflection in its order (it has no pattern).
+    Column refln_calc;
     std::size_t experiment_place = 0;  // the experiment's place in the project's list: its colour
     bool current = false;              // the computed columns describe the model now
     bool d_available = false;          // a current d column, so the pattern can be shown on the d axis
