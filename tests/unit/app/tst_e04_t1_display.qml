@@ -5,6 +5,7 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "DisplayedText.js" as Displayed
+import "FileSpelling.js" as FileSpelling
 import "../../fixtures/dictionary_display/display_expectations.js" as Dictionary
 import "../../fixtures/e04_t1/display_oracle.js" as Oracle
 
@@ -122,13 +123,20 @@ TestCase {
                         : isCombo ? renderers(control.contentItem) : [control];
             verify(items.length > 0, "gate 3: each field has an actual native glyph renderer");
             // Before: raw selector tokens and three significant digits.
-            // Input values stay frozen; names and display precision follow the dictionary.
+            // Input values stay frozen; selector names follow the dictionary.
             const key = data.tag + "::" + name;
+            const rangeField = name.startsWith("range.");
             const dictionaryExpected = Object.prototype.hasOwnProperty.call(Dictionary.expected, key);
-            const displayedExpected = dictionaryExpected ? Dictionary.expected[key] : expected;
-            // Before: numeric equality after a global precision. Now: the exact dictionary text.
+            const displayedExpected = rangeField
+                ? FileSpelling.range(Session.project.currentExperiment.text.text, name.split(".")[1],
+                                     dictionaryExpected ? Dictionary.expected[key] : expected)
+                : dictionaryExpected ? Dictionary.expected[key] : expected;
+            if (rangeField && typeof expected === "number" && name !== "range.step")
+                fuzzyCompare(Session.project.currentExperiment.measuredRange[name.split(".")[1]], expected, 1e-9,
+                             "Field formatting preserves the independently frozen measured value");
+            // Range fields compare exact file/Text spelling; derived step intervals use decimal input differences.
             const errors = items.map(item => Displayed.problem(item, displayedExpected,
-                                                               kind === "number" && !dictionaryExpected));
+                                                               kind === "number" && !dictionaryExpected && !rangeField));
             if (!errors.includes("")) failures.push(name + ": " + errors.join("; "));
         });
         // Collect every field in a group so a blank first axis cannot hide the
@@ -136,6 +144,14 @@ TestCase {
         compare(failures.join("\n"), "", "gate 3: native rendered text equals independent .edi/ITA values");
     }
     function test_display_oracle_escape_controls() {
+        const file = "data_a\n_cell.length_a 1.28666035868(12)\nloop_\n_atom_site.id\n_atom_site.fract_x\nA 0.17\nB 0.23\n";
+        compare(FileSpelling.parameter(file, "cell.length_a"), "1.28666035868",
+                "The field oracle reads the exact value spelling and separates parenthesised uncertainty");
+        compare(FileSpelling.parameter(file, "atom_site.fract_x", 1), "0.23",
+                "The field oracle keeps distinct loop rows and quantities separate");
+        let refused = false;
+        try { FileSpelling.parameter(file, "cell.length_b"); } catch (error) { refused = true; }
+        verify(refused, "An absent file item cannot become a blank passing field expectation");
         const label = createTemporaryObject(textWitness, appWindow.contentItem);
         const field = createTemporaryObject(fieldWitness, appWindow.contentItem);
         const combo = createTemporaryObject(comboWitness, appWindow.contentItem);

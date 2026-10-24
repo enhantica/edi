@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T12:42:17Z
+# measured_utc = 2026-10-24T08:47:27Z
 #
-# Recorded from: measured test run (60 node(s) measured once, 14446 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (13 node(s) measured once, 14502 banked, 9 stale row(s) dropped)
 # Collected tests: 16075; with a reported duration: 9544
 # Module-scoped fixture costs recorded: 61
 #
@@ -10770,15 +10770,15 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[absorption]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[background]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[cell]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[fractional]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[instrument]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[linked_structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[occupancy]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[peak]
-UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_dictionary_format[preferred_orientation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[absorption]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[background]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[cell]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[fractional]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[instrument]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[linked_structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[occupancy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[peak]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[preferred_orientation]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[analysis]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[experiment]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[report]

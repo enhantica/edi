@@ -4,11 +4,11 @@ import argparse
 import importlib.util
 import json
 import re
+from decimal import Decimal
 from functools import cache
 from pathlib import Path
 
 import yaml
-from reference import display
 
 ROOT = Path(__file__).resolve().parents[3]
 AXES = {
@@ -31,26 +31,15 @@ def input_rows(path):
     return axis, module.tables(path, ('_data',)).get('data', [])
 
 
-def numeric_expectation(case, field, items, categories):
-    name, value, kind = field
+def numeric_expectation(case, field):
+    name, value, _kind = field
     path = ROOT / case['path'] / 'experiments' / (case['selection'] + '.edi')
     axis, rows = input_rows(path)
-    leaf = name.split('.')[1]
-    uid = (
-        'data.' + axis
-        if rows
-        else 'data_range.'
-        + axis
-        + '_'
-        + {'minimum': 'min', 'maximum': 'max', 'step': 'step'}[leaf]
-    )
-    row = items[uid]
-    mode, digits = (row.get('format') or categories[row['category']]['format']).split()
-    if kind == 'number':
-        return float(display(float(value), mode, int(digits)))
-    values = [row[axis]['value'] for row in rows]
+    if name != 'range.step' or not rows:
+        return str(value)
+    values = [Decimal(str(row[axis]['value'])) for row in rows]
     steps = [right - left for left, right in zip(values, values[1:], strict=False)]
-    low, high = [display(value, mode, int(digits)) for value in (min(steps), max(steps))]
+    low, high = [format(value.normalize(), 'f') for value in (min(steps), max(steps))]
     return low if low == high else low + '\N{EN DASH}' + high
 
 
@@ -60,7 +49,6 @@ def main():
     args = parser.parse_args()
     source = yaml.safe_load(args.dictionary.read_text())
     items = {row['uid']: row for row in source['parameters'] + source.get('items', [])}
-    categories = {row['id']: row for row in source['categories']}
     frozen = json.loads(
         (ROOT / 'tests/fixtures/e04_t1/display_oracle.js')
         .read_text()
@@ -76,9 +64,12 @@ def main():
                 expected[key] = next(
                     option['display_name'] for option in row['options'] if option['token'] == value
                 )
-            elif name.startswith('range.') and name != 'range.points':
-                expected[key] = numeric_expectation(case, (name, value, kind), items, categories)
-    output = '// Input values remain frozen; display text follows the dictionary.\nvar expected = '
+            elif name == 'range.step':
+                expected[key] = numeric_expectation(case, (name, value, kind))
+    output = (
+        '// Selector names follow the dictionary; derived steps use decimal input differences.\n'
+        'var expected = '
+    )
     Path(__file__).with_name('display_expectations.js').write_text(
         output + json.dumps(expected, indent=2, ensure_ascii=False) + ';\n'
     )

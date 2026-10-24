@@ -1,4 +1,4 @@
-"""The real application consumes the same dictionary and independent file values."""
+"""The real app keeps dictionary labels and file-spelled numeric fields."""
 
 import json
 import os
@@ -18,6 +18,9 @@ def run_actor(tmp_path, function):
     dictionary = ROOT / 'build/crysta-src/data/dictionary/parameters.yaml'
     assert dictionary.is_file(), 'App label expectations come from the SDK pin source dictionary'
     source = yaml.safe_load(dictionary.read_text())
+    assert isinstance(source.get('categories'), list), (
+        'The SDK source dictionary contains the reviewed category display metadata'
+    )
     rows = source['parameters'] + source.get('items', [])
     expected = {
         'items': {row['uid']: row for row in rows},
@@ -57,7 +60,7 @@ def run_actor(tmp_path, function):
     )
     output = result.stdout + result.stderr
     assert result.returncode == 0, (
-        'The real app satisfies the dictionary and published-CIF display contract: ' + output
+        'The real app satisfies the dictionary-label and file-spelling contract: ' + output
     )
     assert 'PASS' in output and '0 failed' in output, (
         'The selected app actor reaches a passing assertion rather than an empty launch'
@@ -83,5 +86,5 @@ def test_actual_app_pages_follow_dictionary_contract(tmp_path, case):
         'preferred_orientation',
     ],
 )
-def test_actual_app_numeric_categories_follow_dictionary_format(tmp_path, case):
+def test_actual_app_numeric_categories_follow_file_spelling(tmp_path, case):
     run_actor(tmp_path, 'DictionaryDisplay::test_category:' + case)

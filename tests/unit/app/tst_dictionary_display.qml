@@ -6,6 +6,7 @@ import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
 import "DisplayedText.js" as Displayed
+import "FileSpelling.js" as FileSpelling
 
 TestCase {
     id: test
@@ -89,33 +90,34 @@ TestCase {
         const field = Ui.control(Probe, appWindow, "cell.length_a");
         verify(field !== null, "Cell display is checked through its real field");
         Ui.scrollIntoView(field);
-        tryCompare(field, "value", "3.8909", 2000,
-                   "The rendered cell field follows Python fixed-four formatting");
+        const written = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
+        tryCompare(field, "text", written, 2000,
+                   "The rendered cell field follows file/Text spelling under the active save rule");
         compare(field.label, expected.items["cell.length_a"].display_name,
                 "The field label is read from the independently loaded dictionary file");
         verify(field.ToolTip.text.includes("_cell.length_a"),
                "The field tooltip identifies the EDI item it labels");
         field.forceActiveFocus();
-        tryCompare(field, "text", "3.890915", 2000,
-                   "An active edit field exposes the shortest round-trip value");
+        tryCompare(field, "text", written, 2000,
+                   "An active edit field retains the same file/Text spelling");
         root.forceActiveFocus();
         compare(parameter.value, 3.890915, "Leaving an unchanged edit preserves the stored double");
         parameter.value = 3.8;
-        tryCompare(field, "value", "3.8000", 2000,
-                   "Fixed dictionary precision retains meaningful trailing zeros on screen");
+        tryCompare(field, "text", FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a"), 2000,
+                   "A field retains exactly the file/Text trailing-zero spelling");
         compare(parameter.value, 3.8, "Display padding leaves the stored value unchanged");
     }
     function test_category_data() {
         return [
-            {tag: "cell", page: "structure", tier: "basic", group: "cell", uid: "cell.length_a", value: 3.890915, text: "3.8909"},
-            {tag: "fractional", page: "structure", tier: "basic", group: "atom_site", uid: "atom_site.fract_x", value: 0.33333, text: "0.33333"},
-            {tag: "occupancy", page: "structure", tier: "basic", group: "atom_site", uid: "atom_site.occupancy", value: 0.5823456, text: "0.5823"},
-            {tag: "instrument", page: "experiment", tier: "basic", group: "instrument", uid: "instrument.setup_wavelength", value: 1.49412345, text: "1.49412"},
-            {tag: "peak", page: "experiment", tier: "basic", group: "peak", uid: "peak.broad_gauss_u", value: 0.123456789, text: "0.12346"},
-            {tag: "background", page: "experiment", tier: "basic", group: "background", uid: "background.intensity", value: 0.000012345678, text: "1.2346e-5"},
-            {tag: "linked_structure", page: "experiment", tier: "basic", group: "linked_structure", uid: "linked_structure.scale", value: 1234567.8, text: "1.2346e6"},
-            {tag: "absorption", page: "experiment", tier: "extras", group: "absorption", uid: "absorption.mu_r", value: 0.036123456, text: "0.0361"},
-            {tag: "preferred_orientation", page: "experiment", tier: "extras", group: "preferred_orientation", uid: "preferred_orientation.march_r", value: 0.923456, text: "0.9235"}
+            {tag: "cell", page: "structure", tier: "basic", group: "cell", uid: "cell.length_a", value: 3.890915},
+            {tag: "fractional", page: "structure", tier: "basic", group: "atom_site", uid: "atom_site.fract_x", value: 0.33333},
+            {tag: "occupancy", page: "structure", tier: "basic", group: "atom_site", uid: "atom_site.occupancy", value: 0.5823456},
+            {tag: "instrument", page: "experiment", tier: "basic", group: "instrument", uid: "instrument.setup_wavelength", value: 1.49412345},
+            {tag: "peak", page: "experiment", tier: "basic", group: "peak", uid: "peak.broad_gauss_u", value: 0.123456789},
+            {tag: "background", page: "experiment", tier: "basic", group: "background", uid: "background.intensity", value: 0.000012345678},
+            {tag: "linked_structure", page: "experiment", tier: "basic", group: "linked_structure", uid: "linked_structure.scale", value: 1234567.8},
+            {tag: "absorption", page: "experiment", tier: "extras", group: "absorption", uid: "absorption.mu_r", value: 0.036123456},
+            {tag: "preferred_orientation", page: "experiment", tier: "extras", group: "preferred_orientation", uid: "preferred_orientation.march_r", value: 0.923456}
         ];
     }
     function test_category(data) {
@@ -137,9 +139,12 @@ TestCase {
         const field = candidates[0];
         Ui.scrollIntoView(field);
         field.item.value = data.value;
+        const written = FileSpelling.parameter(FileSpelling.block(Session.project, field.item), data.uid);
+        verify(written !== "" && Number.isFinite(Number(written)),
+               "Every numeric category has a nonempty numeric file/Text witness");
         tryVerify(() => Review.descendants(field).some(item =>
-            Displayed.problem(item, data.text, false) === ""), 2000,
-            "Each numeric category renders the complete independent Python format in a native text item");
+            Displayed.problem(item, written, false) === ""), 2000,
+            "Every category field renders exactly its file/Text value in a native text item");
         compare(field.item.value, data.value, "The native rendered display preserves the input double");
     }
 
