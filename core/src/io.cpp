@@ -4466,6 +4466,16 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // A single-crystal fit has no derivative for its wavelength, so a free one loads fixed, and said so (crysta's fit
+    // refuses one).
+    for (const auto& experiment : project.experiments) {
+        if (experiment->reflections.has_value() && experiment->instrument.setup_wavelength &&
+            experiment->instrument.setup_wavelength->free) {
+            experiment->instrument.setup_wavelength->free = false;
+            warn("experiment '" + experiment->name.value() +
+                 "': a single-crystal fit does not refine the wavelength; _instrument.setup_wavelength loaded fixed");
+        }
+    }
     // A single crystal's integrated intensities do not fix the cell, which comes from its reflections' positions, so a
     // fit of single crystals only does not refine it: a cell parameter marked free loads fixed, and said so.
     if (!project.experiments.empty() &&
