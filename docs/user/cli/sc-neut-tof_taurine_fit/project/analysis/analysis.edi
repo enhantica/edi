@@ -11,3 +11,44 @@ senju_3 1
 senju_4 1
 senju_5 1
 senju_6 1
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+senju_1_coefficient_11 senju_1.extinction.coefficient_11
+senju_1_coefficient_22 senju_1.extinction.coefficient_22
+senju_1_coefficient_33 senju_1.extinction.coefficient_33
+senju_2_coefficient_11 senju_2.extinction.coefficient_11
+senju_2_coefficient_22 senju_2.extinction.coefficient_22
+senju_2_coefficient_33 senju_2.extinction.coefficient_33
+senju_3_coefficient_11 senju_3.extinction.coefficient_11
+senju_3_coefficient_22 senju_3.extinction.coefficient_22
+senju_3_coefficient_33 senju_3.extinction.coefficient_33
+senju_4_coefficient_11 senju_4.extinction.coefficient_11
+senju_4_coefficient_22 senju_4.extinction.coefficient_22
+senju_4_coefficient_33 senju_4.extinction.coefficient_33
+senju_5_coefficient_11 senju_5.extinction.coefficient_11
+senju_5_coefficient_22 senju_5.extinction.coefficient_22
+senju_5_coefficient_33 senju_5.extinction.coefficient_33
+senju_6_coefficient_11 senju_6.extinction.coefficient_11
+senju_6_coefficient_22 senju_6.extinction.coefficient_22
+senju_6_coefficient_33 senju_6.extinction.coefficient_33
+
+loop_
+_constraint.id
+_constraint.expression
+senju_2_coefficient_11 "senju_2_coefficient_11 = senju_1_coefficient_11"
+senju_2_coefficient_22 "senju_2_coefficient_22 = senju_1_coefficient_22"
+senju_2_coefficient_33 "senju_2_coefficient_33 = senju_1_coefficient_33"
+senju_3_coefficient_11 "senju_3_coefficient_11 = senju_1_coefficient_11"
+senju_3_coefficient_22 "senju_3_coefficient_22 = senju_1_coefficient_22"
+senju_3_coefficient_33 "senju_3_coefficient_33 = senju_1_coefficient_33"
+senju_4_coefficient_11 "senju_4_coefficient_11 = senju_1_coefficient_11"
+senju_4_coefficient_22 "senju_4_coefficient_22 = senju_1_coefficient_22"
+senju_4_coefficient_33 "senju_4_coefficient_33 = senju_1_coefficient_33"
+senju_5_coefficient_11 "senju_5_coefficient_11 = senju_1_coefficient_11"
+senju_5_coefficient_22 "senju_5_coefficient_22 = senju_1_coefficient_22"
+senju_5_coefficient_33 "senju_5_coefficient_33 = senju_1_coefficient_33"
+senju_6_coefficient_11 "senju_6_coefficient_11 = senju_1_coefficient_11"
+senju_6_coefficient_22 "senju_6_coefficient_22 = senju_1_coefficient_22"
+senju_6_coefficient_33 "senju_6_coefficient_33 = senju_1_coefficient_33"
