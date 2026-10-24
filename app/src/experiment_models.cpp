@@ -228,6 +228,16 @@ void SingleCrystalReflectionModel::publish() {
 }
 
 void SingleCrystalReflectionModel::sync() {
+    frame_.reset();
+    refresh();
+}
+
+void SingleCrystalReflectionModel::showFrame(std::shared_ptr<const std::vector<double>> calculated) {
+    frame_ = std::move(calculated);
+    refresh();
+}
+
+void SingleCrystalReflectionModel::refresh() {
     QList<Row> rows;
     QList<double> calculated;
     QList<double> measured;
@@ -236,8 +246,9 @@ void SingleCrystalReflectionModel::sync() {
     double high = -qInf();
     bool shown = false;
     if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
-        const std::vector<double>& calc = reflections->intensity_calc.values();
-        const bool current = calc.size() == reflections->size() && experiment_.computed_current();
+        // A fit's frame shows its own F²calc; the rest of the computed columns are the model's, as they were.
+        const std::vector<double>& calc = frame_ ? *frame_ : reflections->intensity_calc.values();
+        const bool current = calc.size() == reflections->size() && (frame_ || experiment_.computed_current());
         for (std::size_t i = 0; i < reflections->size(); ++i) {
             const double meas = reflections->intensity_meas[i];
             const double sigma = reflections->intensity_meas_su[i];
