@@ -286,6 +286,8 @@ app = ["app"]
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }
 nanobind = "*"
+# An independent CIF reader for the CIF report checks.
+gemmi = "==0.7.5"
 
 [tasks]
 # --- lint / format -----------------------------------------------------------------
