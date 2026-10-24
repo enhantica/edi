@@ -2,8 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-22
-- **Implementation:** 🟡 Partially implemented — the catalogue, its three forms and its check are shipped; the FullProf
-  references and the comparison page follow
+- **Implementation:** ✅ Implemented — the catalogue, its three forms, its check, the FullProf references and the
+  comparison page
 - **Priority:** High
 
 Amends [Example metadata and filters](0031-example-metadata-and-filters.md): the app bundles the registry's
@@ -53,7 +53,14 @@ matched neither. A user could not tell which example showed a technique, and a f
    or an alias, fails the check, so whether a load runs never has to be inferred.
 10. **References.** Each fitted case has a FullProf fit from the same start, committed with its inputs and outputs, and
     the catalogue's comparison page sets edi beside FullProf and diffraction-lib with the agreement factors recomputed
-    from the committed curves. Rows whose models differ are marked as such, never presented as agreement.
+    from the committed curves. Rows whose models differ are marked as such, never presented as agreement. A case's
+    `expected.json` holds FullProf's number of free parameters, its R<sub>wp</sub> within 5 % and its shared values
+    within two of edi's standard uncertainties. A scan is compared on its template file's single fit, as its FullProf
+    fit is (`"template": true`). The two programs' Bérar-Baldinozzi asymmetry differs in form and no mapping of the
+    coefficients removes the difference, so a case using it is compared on R<sub>wp</sub> and the number of free
+    parameters only, and every shared value on a second FullProf fit with the four coefficients fixed at 0 against
+    edi's fit of the same (the record's `asymmetry-off` variant). FullProf runs once, when a reference is written,
+    never in a check.
 
 ## Consequences
 
