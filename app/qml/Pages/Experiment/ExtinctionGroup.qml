@@ -34,10 +34,13 @@ Column {
     }
 
     ParameterGrid {
+        id: grid
         fields: group.experiment ? group.experiment.extinction : null
         prefix: "extinction"
-        // The type's two or three fields on one line, at equal widths (the owner, 2026-10-23).
-        maxColumns: 3
-        fillRows: true
+
+        // The type's two or three fields on one line, at equal widths; a lone field (Larson's coefficient) as wide as the
+        // type selector above it (the owner, 2026-10-23).
+        maxColumns: fieldCount > 1 ? 3 : 2
+        fillRows: fieldCount > 1
     }
 }
