@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T14:06:04Z
+# measured_utc = 2026-10-24T14:12:26Z
 #
-# Recorded from: banked rows of both branches, merged by node (145 stale row(s) dropped)
-# Collected tests: 16646; with a reported duration: 9554
+# Recorded from: measured test run (2 node(s) measured once, 14816 banked, 0 stale row(s) dropped)
+# Collected tests: 16646; with a reported duration: 9556
 # Module-scoped fixture costs recorded: 73
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16644
+# inventory_python = 16646
 # inventory_cpp = 396
-# inventory_measured = 14816
+# inventory_measured = 14818
 # inventory_unmeasured = 2224
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -7801,6 +7801,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_background_estimate_series_cl
 0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
 0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
 1.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
+1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::fast-descent]
+1.080	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::ladder]
 0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
