@@ -146,6 +146,12 @@ edi::Category ExperimentViewModel::category(const char* id) const {
         edi::detail::add_optional(extinction.fields, "domain_radius", experiment_.extinction.domain_radius);
         edi::detail::add_optional(extinction.fields, "mosaic_spread", experiment_.extinction.mosaic_spread);
         edi::detail::add_optional(extinction.fields, "coefficient", experiment_.extinction.coefficient);
+        edi::detail::add_optional(extinction.fields, "coefficient_11", experiment_.extinction.coefficient_11);
+        edi::detail::add_optional(extinction.fields, "coefficient_22", experiment_.extinction.coefficient_22);
+        edi::detail::add_optional(extinction.fields, "coefficient_33", experiment_.extinction.coefficient_33);
+        edi::detail::add_optional(extinction.fields, "coefficient_12", experiment_.extinction.coefficient_12);
+        edi::detail::add_optional(extinction.fields, "coefficient_13", experiment_.extinction.coefficient_13);
+        edi::detail::add_optional(extinction.fields, "coefficient_23", experiment_.extinction.coefficient_23);
         return extinction;
     }
     return edi::absorption_category(experiment_);

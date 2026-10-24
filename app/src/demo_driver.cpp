@@ -428,6 +428,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-11c-extinction-type-2", {"choose:Isotropic Becker-Coppens type II"}});
     steps_.push_back({"sccheck-11d-extinction-type-1", {"extinction.type", "choose:Isotropic Becker-Coppens type I"}});
     steps_.push_back({"sccheck-11e-extinction-larson", {"extinction.type", "choose:Isotropic Larson"}});
+    steps_.push_back({"sccheck-11f-extinction-larson-anisotropic", {"extinction.type", "choose:Anisotropic Larson"}});
     // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
     steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
                                                             + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});

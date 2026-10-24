@@ -1371,6 +1371,48 @@
           "items": [
             "coefficient"
           ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_11",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_11"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_22",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_22"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_33",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_33"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_12",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_12"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_13",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_13"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_23",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_23"
+          ]
         }
       ],
       "owner": "ExtinctionBase",
@@ -3819,6 +3861,36 @@
     },
     {
       "member": "ExtinctionBase::coefficient",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_11",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_22",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_33",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_12",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_13",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_23",
       "type": "OptionalParameter",
       "category": "_extinction"
     },

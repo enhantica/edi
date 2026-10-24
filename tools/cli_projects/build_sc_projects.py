@@ -428,6 +428,16 @@ TAURINE_FULLPROF_SITES = [
     ),
 ]
 TAURINE_SCALES = ['2.762()', '3.829()', '3.211()', '2.809()', '2.739()', '2.936()']
+# Its Shelx-like anisotropic extinction (Ext-Model 4): Ext1-Ext3 free, Ext4-Ext6 0 and fixed.
+TAURINE_EXTINCTION = {
+    'type': 'larson-anisotropic',
+    'coefficient_11': '0.07352()',
+    'coefficient_22': '0.01329()',
+    'coefficient_33': '0.007952()',
+    'coefficient_12': '0',
+    'coefficient_13': '0',
+    'coefficient_23': '0',
+}
 
 
 # The app's fitting examples: displacements from a small start, one extinction parameter free
@@ -514,7 +524,9 @@ FIT_PROJECTS = {
         'cell': ('5.272901', '11.656495', '7.838298', '90', '94.010994', '90'),
         'sites': TAURINE_FULLPROF_SITES,
         'scale': None,
-        'extinction': None,
+        # FullProf's model 4, Ext1-Ext3 free; one crystal, so experiments 2-6 take experiment 1's.
+        'extinction': TAURINE_EXTINCTION,
+        'shared_extinction': ('coefficient_11', 'coefficient_22', 'coefficient_33'),
         'tof': True,
     },
     'sc-neut-cwl_tb2ti2o7-heidi': {
@@ -660,48 +672,51 @@ CASES = {
     'sc-neut-tof_taurine-senju': {
         'heading': 'Single-crystal fit: taurine, SENJU',
         'lede': (
-            'Fit the amino-sulfonic acid taurine to time-of-flight neutron single-crystal data '
-            'from SENJU at J-PARC, each reflection measured at its own wavelength.'
+            'Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal '
+            'datasets from SENJU at J-PARC together, each reflection measured at its own '
+            'wavelength.'
         ),
         'start': (
-            'The project starts from rough values: Biso 1.5 on every site and the scale 1, with '
-            'the extinction off.'
+            "The project starts from FullProf's own values: its positions and beta tensors, one "
+            'scale per dataset and its anisotropic Larson extinction, every one free.'
         ),
         'model': (
             "{lib}'s verification page `sc-neut-tof_taurine_basic` (FullProf `taurine.pcr`): "
-            'the P2₁/c structure and its 14 sites. The tutorial `refine-taurine-senju` fits the '
-            'same data.'
+            'the P2₁/c structure and its 14 sites.'
         ),
         'data': (
-            '`data/taurine-senju.xye`, dataset `meas-taurine-senju` of {repo} (path '
-            '`data/measured/taurine-senju.xye`), licence BSD-3-Clause. The project embeds its '
-            '286 reflections unchanged (h, k, l, F², su, wavelength).'
+            "`data/taurine-senju.int`, FullProf's reflection file of the taurine project with "
+            'its six SENJU datasets (the dataset in column 6), one experiment each. The project '
+            'embeds the 1540 reflections with a positive su (286, 255, 276, 221, 242 and 260) '
+            'unchanged (h, k, l, F², su, wavelength).'
         ),
         'start_detail': (
-            'Biso 1.5 Å² on every site; the scale 1; no extinction (type None). '
-            'Free: the scale and every Biso (15 parameters).'
+            "FullProf's positions and beta tensors, its scales Sc1-Sc6 and its extinction model 4 "
+            '(anisotropic Larson) with x11, x22 and x33 as FullProf left them, x12, x13 and x23 0 '
+            "and fixed. Experiments 2-6 take experiment 1's extinction through constraints. Free: "
+            'every position and beta, the six scales and the three extinction terms (135 '
+            'parameters).'
         ),
         'differences': [
             (
-                'The tutorial starts with Becker-Coppens extinction (domain radius 100 μm, '
-                'mosaic spread 2909 rad⁻¹) and frees the radius, then refines anisotropic '
-                'displacements; here the '
-                'extinction is off and the displacements are isotropic, as on the verification '
-                'page.'
+                'FullProf leaves the reflections it marks forbidden out; they have no su here and '
+                'are not in the project.'
             ),
         ],
         'result': (
-            'From this start edi converges in 6 iterations to reduced χ² 24.22 over the 286 '
-            'reflections, with the scale 2.751(47).'
+            'From this start edi converges in 10 iterations to reduced χ² 50.42 over the 1540 '
+            'reflections, with x11 0.0752(57), x22 0.0144(23) and x33 0.0139(25).'
         ),
     },
 }
 
 
-def extinction_lines(extinction: tuple | None) -> list[str]:
+def extinction_lines(extinction: tuple | dict | None) -> list[str]:
     """The experiment's _extinction items: the type, then that type's own items."""
     if extinction is None:
         return ['_extinction.type none']
+    if isinstance(extinction, dict):
+        return [f'_extinction.{item} {value}' for item, value in extinction.items()]
     kind, distribution, radius, spread, crystal = extinction
     return [
         f'_extinction.type {kind}',
@@ -720,6 +735,36 @@ SINGLE_RADIUS = (
     '\nloop_\n_constraint.id\n_constraint.expression\n'
     'crystal_radius "crystal_radius = domain_radius / 1000"\n'
 )
+
+
+def shared_extinction(runs: list[str], items: tuple[str, ...]) -> str:
+    """The aliases and constraints that give every experiment the first one's extinction items."""
+    if not items or len(runs) < 2:
+        return ''
+    aliases = [f'{run}_{item} {run}.extinction.{item}' for run in runs for item in items]
+    constraints = [
+        f'{run}_{item} "{run}_{item} = {runs[0]}_{item}"' for run in runs[1:] for item in items
+    ]
+    return (
+        '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+        + ''.join(line + '\n' for line in aliases)
+        + '\nloop_\n_constraint.id\n_constraint.expression\n'
+        + ''.join(line + '\n' for line in constraints)
+    )
+
+
+def tied_extinction(spec: dict) -> tuple | dict | None:
+    """A later experiment's extinction: the items it takes from the first written without "()".
+
+    A constrained parameter is dependent, so marking it free only draws a warning at load.
+    """
+    extinction, shared = spec['extinction'], spec.get('shared_extinction', ())
+    if not isinstance(extinction, dict):
+        return extinction
+    return {
+        item: value.removesuffix('()') if item in shared else value
+        for item, value in extinction.items()
+    }
 
 
 def write_case_pages(root: Path, pid: str, spec: dict) -> None:
@@ -818,7 +863,7 @@ def read_datasets(path: Path) -> dict[str, list[tuple[int, int, int, str, str, s
     datasets: dict[str, list[tuple[int, int, int, str, str, str | None]]] = {}
     for line in path.read_text(encoding='utf-8').splitlines()[3:]:
         fields = line.split()
-        # A reflection with no su (FullProf's forbidden ones, which it excludes) cannot be weighted.
+        # A reflection with no su (FullProf's forbidden ones, which it excludes) has no weight.
         if len(fields) < 7 or not float(fields[4]) > 0:
             continue
         datasets.setdefault(fields[5], []).append((
@@ -925,7 +970,8 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         f'_fitting_mode.type {"joint" if len(runs) > 1 else "single"}\n\n'
         'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
         + ''.join(f'{run} 1\n' for run, _, _ in runs)
-        + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else ''),
+        + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else '')
+        + shared_extinction([run for run, _, _ in runs], spec.get('shared_extinction', ())),
         encoding='utf-8',
     )
     group, code = spec['space_group']
@@ -979,8 +1025,9 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         ]
     (project / 'structures' / f'{name}.edi').write_text('\n'.join(text) + '\n', encoding='utf-8')
     beam_mode = 'time-of-flight' if spec.get('tof') else 'constant wavelength'
-    for run, scale, run_rows in runs:
-        write_experiment(project, spec, (run, name, scale), run_rows, (beam_mode, wavelength))
+    for index, (run, scale, run_rows) in enumerate(runs):
+        run_spec = spec if index == 0 else {**spec, 'extinction': tied_extinction(spec)}
+        write_experiment(project, run_spec, (run, name, scale), run_rows, (beam_mode, wavelength))
 
 
 def write_experiment(

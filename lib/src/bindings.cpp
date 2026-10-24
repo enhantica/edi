@@ -2915,6 +2915,18 @@ NB_MODULE(_edi, m) {
                                       edi::spec::extinction_crystal_radius);
     def_view_optional_parameter_field(extinction, "coefficient", &edi::ExtinctionBase::coefficient,
                                       edi::spec::extinction_coefficient);
+    def_view_optional_parameter_field(extinction, "coefficient_11", &edi::ExtinctionBase::coefficient_11,
+                                      edi::spec::extinction_coefficient_11);
+    def_view_optional_parameter_field(extinction, "coefficient_22", &edi::ExtinctionBase::coefficient_22,
+                                      edi::spec::extinction_coefficient_22);
+    def_view_optional_parameter_field(extinction, "coefficient_33", &edi::ExtinctionBase::coefficient_33,
+                                      edi::spec::extinction_coefficient_33);
+    def_view_optional_parameter_field(extinction, "coefficient_12", &edi::ExtinctionBase::coefficient_12,
+                                      edi::spec::extinction_coefficient_12);
+    def_view_optional_parameter_field(extinction, "coefficient_13", &edi::ExtinctionBase::coefficient_13,
+                                      edi::spec::extinction_coefficient_13);
+    def_view_optional_parameter_field(extinction, "coefficient_23", &edi::ExtinctionBase::coefficient_23,
+                                      edi::spec::extinction_coefficient_23);
 
     def_parameters(peak);
     def_parameters(instrument);
