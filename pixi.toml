@@ -425,7 +425,7 @@ wasm-parallel-check = { cmd = ["bash", "tools/ci/wasm-parallel-check.sh"] }
 # The cadence entry points: `verify-quick` — the static checks, the core build, the audit and
 # the quick group — runs ONCE before handing to review; `verify-full` (== `verify`, the mount
 # `verify:` command and the x-ship gate) runs ONCE when ready to merge, after the accept.
-verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
+verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
 # Gate the audit: every collected test must have a recorded runtime backing its tier. Collection
 # imports `edi._edi`, so without core-build the audit dies with
 # `ImportError: edi's compiled extension ... is not importable`. It passed locally and inside
@@ -439,6 +439,9 @@ entity-path-check = { cmd = ["python", "tools/checks/entity_path_convention.py"]
 # ADR-0018: every category has its schema, and the committed census is the generated one —
 # in verify-quick, verify-full and the CI lint job's static policy step.
 category-census-check = { cmd = ["python", "tools/checks/category_census.py"] }
+# ADR-0051: every name and number a surface shows comes from crysta's dictionary through the display bridge. It reads
+# the dictionary from the pinned crysta source, which core-build fetches.
+display-sources-check = { cmd = ["python", "tools/checks/display_sources.py"], depends-on = ["core-build"] }
 # The declared tutorial execution-exclusion gate (edi half).
 tutorial-exclusions = { cmd = ["python", "tools/checks/tutorial_execution_exclusions.py"] }
 # Re-measure and rewrite the manifest (serial, so per-test numbers are attributable).
@@ -510,7 +513,7 @@ verify = { depends-on = ["verify-full"] }
 # `verify-full` is the merge-time FULL chain (the `full` group replaces the former per-commit
 # selection; `verify` == `verify-full` — the mount `verify:` command and the x-ship gate, run
 # ONCE after the accept). `verify-quick` is the review-time chain.
-verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
+verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
 # The merge-Linux equivalence set: the full chain itself (`verify` now IS the full chain,
 # so the two are one). `tools/ci/local-ci.sh` runs this.
 merge-tasks = { depends-on = ["verify-full"] }
