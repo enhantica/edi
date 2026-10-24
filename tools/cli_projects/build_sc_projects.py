@@ -706,14 +706,31 @@ CASES = {
                 'are not in the project.'
             ),
             (
-                'FullProf stopped at its 20-cycle limit with χ² still falling (36.5, then 35.2), '
-                'so its values are not a minimum; from them edi continues to a lower χ².'
+                "FullProf multiplies each s.u. by its parameter's codeword coefficient (its "
+                'manual, eq. 3.7), and this .pcr codes the six scales and the three extinction '
+                'terms with 0.20, so FullProf prints their s.u. at a fifth: x11 0.000760 against '
+                "edi's 0.0036. With the 0.20 undone the s.u. agree: edi's are 1.00 to 1.02 times "
+                "FullProf's for the scales, 0.94 to 0.96 for the extinction, 1.04 to 1.10 for the"
+                ' positions and 1.02 to 1.08 for the betas.'
+            ),
+            (
+                'FullProf prints χ² 30.1; its own reflection list gives sum((F²obs - F²calc)/su)²'
+                ' = 24676 over the 947 reflections, which is 30.39 over N - P = 812 as edi and '
+                "FullProf's manual (eq. 3.8) define it. Started from FullProf's values, edi finds"
+                ' 30.41 there and goes on in 4 iterations to 30.27, the minimum it reaches from '
+                "this example's start: FullProf applies its scale and extinction shifts at 0.20 "
+                'too (the same codewords) and stops just above the minimum.'
             ),
         ],
         'result': (
-            'From this start edi converges in 5 iterations to reduced χ² 30.27 over the same 947 '
-            'reflections FullProf fits (its own χ² 35.17), with x11 0.0584(36), x22 0.0139(15) '
-            "and x33 0.0076(15) against FullProf's 0.0735(11), 0.0133(4) and 0.0080(4)."
+            'From this start edi converges in 5 iterations to reduced χ² 30.27, wR(F²) 12.2 %, '
+            'over the same 947 reflections FullProf fits (FullProf, converged at its cycle 52 '
+            'with Eps 0.01: χ² 30.1, RF2w 12.2 %). Every one of the 135 parameters is within 0.6 '
+            "of edi's s.u. of FullProf's value (positions within 0.41, betas 0.38, scales 0.58, "
+            'extinction 0.44): x11 0.0584(36), x22 0.0139(15) and x33 0.0076(15) against '
+            "FullProf's 0.0568(38), 0.0135(16) and 0.0071(15) with its 0.20 undone, and scales "
+            "2.80(6), 3.87(9), 3.25(6), 2.84(7), 2.78(6) and 2.97(6) against FullProf's 2.78, "
+            '3.85, 3.23, 2.83, 2.74 and 2.96.'
         ),
     },
 }
