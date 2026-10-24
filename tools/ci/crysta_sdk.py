@@ -254,8 +254,11 @@ def qualified(sdk_dir: Path, tested: dict) -> None:
     allow_untested = untested_allowed()
     for tier in ('cpp_tier', 'corpus'):
         t = tested.get(tier) or {}
-        # An SDK packed for a local trial without its tests says so; only that trial may use it.
-        if t == {'untested': True}:
+        # An SDK packed for a local trial without its tests says so, whatever counts sit beside the
+        # marker; only that trial may use it.
+        if 'untested' in t:
+            if t['untested'] is not True:
+                refuse(f'{sdk_dir}: the {tier} untested marker is malformed ({t})')
             if not allow_untested:
                 refuse(
                     f'{sdk_dir}: the {tier} qualification never ran (an untested SDK); '
