@@ -4111,7 +4111,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
                                   "' outside [-1, 1]: " + where);
                 }
-                pair->correlation = text;
+                pair->correlation = value;
                 if (per_file) {
                     pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
                 }
@@ -4700,13 +4700,6 @@ void clear_fit_share(ExperimentBase& experiment) {
     }
 }
 
-double correlation_value(const FitParameterCorrelation& row) {
-    double value = 0.0;
-    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
-               ? value
-               : std::numeric_limits<double>::quiet_NaN();
-}
-
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
@@ -4851,9 +4844,9 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     const auto key_of = [](const FitParameterCorrelation& row) {
         return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
     };
-    std::map<RowKey, std::string> written;
+    std::map<RowKey, double> written;
     for (const auto& row : saved.fit_result.correlations) {
-        written.emplace(key_of(*row), row->correlation.value());
+        written.emplace(key_of(*row), row->correlation.get());
     }
     // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
     // correlations of a few hundred free parameters.
@@ -4862,7 +4855,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     bool rows_changed = false;
     for (auto& row : rows) {
         const auto found = written.find(key_of(*row));
-        if (found != written.end() && row->correlation.value() != found->second) {
+        if (found != written.end() && row->correlation.get() != found->second) {
             auto adopted = std::make_shared<FitParameterCorrelation>(*row);
             adopted->correlation = found->second;
             row = std::move(adopted);
@@ -4873,7 +4866,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         project.fit_result.correlations.assign(std::move(rows));
         changed = true;
     }
-    for (const auto& [key, text] : written) {
+    for (const auto& [key, coefficient] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));
         if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
             table->second->correlations) {

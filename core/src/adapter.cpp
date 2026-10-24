@@ -2299,7 +2299,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             copy.source_kind = row->source_kind.value();
             copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
             copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-            copy.correlation = row->correlation.value();
+            copy.correlation = row->correlation.get();
             copy.file_path = row->file_path.value();
         }
         to.correlations.assign(rows);
@@ -3498,7 +3498,7 @@ std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
         copy.id = row->id.value();
         copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
         copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-        copy.correlation = row->correlation.value();
+        copy.correlation = row->correlation.get();
         copy.file_path = row->file_path.value();
     }
     converted.project->fit_result.correlations.assign(rows);
@@ -4550,7 +4550,7 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
             row.source_kind = std::string("deterministic");
             row.parameter_unique_name_i = names[i];
             row.parameter_unique_name_j = names[j];
-            row.correlation = crysta::correlation_text(values[rows.size() - 1]);
+            row.correlation = values[rows.size() - 1];
             row.file_path = file;
         }
     }

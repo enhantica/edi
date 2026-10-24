@@ -3633,7 +3633,7 @@ NB_MODULE(_edi, m) {
         .def_prop_ro("parameter_unique_name_j",
                      [](const edi::FitParameterCorrelation& self) { return self.parameter_unique_name_j.value(); })
         .def_prop_ro("correlation",
-                     [](const edi::FitParameterCorrelation& self) { return edi::correlation_value(self); });
+                     [](const edi::FitParameterCorrelation& self) { return self.correlation.get(); });
 
     nb::class_<edi::FitResultBase>(m, "FitResultBase")
         .def_ro("values", &edi::FitResultBase::values)

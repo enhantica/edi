@@ -193,7 +193,7 @@ void matrix_of_rows(const std::vector<const FitParameterCorrelation*>& rows, con
         const auto i = index.find(row->parameter_unique_name_i.value());
         const auto j = index.find(row->parameter_unique_name_j.value());
         if (i != index.end() && j != index.end()) {
-            const double value = correlation_value(*row);
+            const double value = row->correlation.get();
             matrix[i->second * n + j->second] = value;
             matrix[j->second * n + i->second] = value;
         }
