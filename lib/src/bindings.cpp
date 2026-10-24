@@ -2913,6 +2913,8 @@ NB_MODULE(_edi, m) {
                                       edi::spec::extinction_mosaic_spread);
     def_view_optional_parameter_field(extinction, "crystal_radius", &edi::ExtinctionBase::crystal_radius,
                                       edi::spec::extinction_crystal_radius);
+    def_view_optional_parameter_field(extinction, "coefficient", &edi::ExtinctionBase::coefficient,
+                                      edi::spec::extinction_coefficient);
 
     def_parameters(peak);
     def_parameters(instrument);

@@ -169,6 +169,8 @@ inline constexpr const char* kExtinctionMosaicSpread[] = {"_extinction.mosaic_sp
 inline constexpr const char* kExtinctionMosaicSpreadCif[] = {"_easydiffraction_extinction.mosaic_spread"};
 inline constexpr const char* kExtinctionCrystalRadius[] = {"_extinction.crystal_radius"};
 inline constexpr const char* kExtinctionCrystalRadiusCif[] = {"_easydiffraction_extinction.crystal_radius"};
+inline constexpr const char* kExtinctionCoefficient[] = {"_extinction.coefficient"};
+inline constexpr const char* kExtinctionCoefficientCif[] = {"_easydiffraction_extinction.coefficient"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -486,6 +488,11 @@ inline const ParameterSpec extinction_crystal_radius{
     "extinction", "crystal_radius", "millimetres", "Radius of the crystal, which sets the mean path length",
     {0.0, detail::kInf}, "Crystal radius", "mm", "", "\\mathrm{mm}", detail::kExtinctionCrystalRadius,
     detail::kExtinctionCrystalRadiusCif};
+// Larson's empirical extinction coefficient x, SHELXL's EXTI: F² calc is multiplied by [1 + 0.001 x F² λ³ / sin 2θ]^(-1/2).
+inline const ParameterSpec extinction_coefficient{
+    "extinction", "coefficient", "dimensionless", "Larson's empirical extinction coefficient",
+    {0.0, detail::kInf}, "Extinction coefficient", "", "", "", detail::kExtinctionCoefficient,
+    detail::kExtinctionCoefficientCif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.

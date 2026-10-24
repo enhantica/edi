@@ -2986,6 +2986,9 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
         built.extinction[2] = param(*e.extinction.crystal_radius, crysta::CORRECTION, "crystal_radius");
         built.extinction[2].set_free(false);  // a descriptor, whatever its flag (is_fixed_setting)
     }
+    if (e.extinction.coefficient) {
+        built.extinction[3] = param(*e.extinction.coefficient, crysta::CORRECTION, "coefficient");
+    }
     std::vector<crysta::LinkedStructure> links;
     for (const auto& link : e.linked_structures) {
         links.emplace_back(link->structure_id.value(), param(link->scale, crysta::SCALE, "scale"),
