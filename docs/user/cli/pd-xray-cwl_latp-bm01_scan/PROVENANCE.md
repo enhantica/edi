@@ -54,8 +54,8 @@ With the asymmetry off, the cells of the two weak AlPO₄ phases have flat, many
 their asymmetric tails, and the minor phases' cells shift to absorb them. Both programs fit the same 57 parameters from
 the same start. edi moves the C222₁ cell by about 0.1 Å, to the same place from either start; FullProf keeps both
 phases' cells within 0.006 Å of the start, also with a ten times tighter tolerance. Evaluated by either program, edi's
-result is the lower: FullProf's own R<sub>wp</sub> is 4.70 % at edi's values and 4.71 % at its own. So in the
-`asymmetry-off` variant the five AlPO₄ cell lengths are regression pins of edi's result, labelled as such, while every
-LATP-phase value stays a FullProf reference. That fit also ends at crysta's limit of two resumed descents after a
+result is the lower: FullProf's own R<sub>wp</sub> is 4.70 % at edi's values and 4.71 % at its own. The LATP phase's P1
+Biso moves with those cells. So in the `asymmetry-off` variant the five AlPO₄ cell lengths and P1's Biso are regression
+pins of edi's result, labelled as such, while every other LATP-phase value stays a FullProf reference. That fit also ends at crysta's limit of two resumed descents after a
 convergence verdict the final polish disproves, with every value settled (a refit from its end converges at the same
 values), so the variant's expected status is `max_iter`.

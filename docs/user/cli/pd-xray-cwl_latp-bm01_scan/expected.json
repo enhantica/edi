@@ -90,8 +90,8 @@
           "tol_rel": null
         },
         "param.latp.P1.adp_iso.value": {
-          "value": 0.22026333,
-          "kind": "reference",
+          "value": 0.2647700881,
+          "kind": "regression-pin",
           "tol_abs": 0.04311452546,
           "tol_rel": null
         },

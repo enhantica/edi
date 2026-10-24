@@ -52,9 +52,16 @@ RWP_TOLERANCE = 0.05
 LADDER_WITNESS = {'pd-xray-cwl_lam7o3-p021': ('param.O1.fract_x',)}
 LADDER_RWP_TOLERANCE = 0.02
 # With the asymmetry off, LATP's two weak AlPO4 phases have flat cells: edi moves them to a lower
-# minimum than FullProf reaches, so they are pins of edi's own result. That fit stops after the
-# engine's allowed resumes, every value settled; a refit from its end converges at the same values.
-ASYMMETRY_OFF_PINNED = {'pd-xray-cwl_latp-bm01_scan': ('alpo4_c2221.cell.', 'alpo4_p63mc.cell.')}
+# minimum than FullProf reaches, and P1's Biso moves with them, so they are pins of edi's own
+# result. That fit stops after the engine's allowed resumes, every value settled; a refit from its
+# end converges at the same values.
+ASYMMETRY_OFF_PINNED = {
+    'pd-xray-cwl_latp-bm01_scan': (
+        'alpo4_c2221.cell.',
+        'alpo4_p63mc.cell.',
+        'latp.atom_site.P1.adp_iso',
+    )
+}
 ASYMMETRY_OFF_STATUS = {'pd-xray-cwl_latp-bm01_scan': 'max_iter'}
 
 

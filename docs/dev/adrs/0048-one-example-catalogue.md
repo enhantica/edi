@@ -62,7 +62,7 @@ matched neither. A user could not tell which example showed a technique, and a f
     edi's fit of the same (the record's `asymmetry-off` variant). FullProf runs once, when a reference is written,
     never in a check. A value whose two minima differ in a flat direction, where edi's is the lower by both programs'
     own evaluation, is a labelled regression pin of edi's result, with the reason in the case's PROVENANCE; LATP's
-    AlPO₄ cells are the one such case. A unit may name the status its fit ends with (`"status": "max_iter"`) when
+    AlPO₄ cells and the P1 Biso that moves with them are the one such case. A unit may name the status its fit ends with (`"status": "max_iter"`) when
     crysta's limit on resumed descents stops a fit whose values have settled.
 
 ## Consequences
