@@ -1,0 +1,1388 @@
+{
+  "engine": "** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **",
+  "cycle": 52,
+  "n_free": 135,
+  "n_selected": 947,
+  "parameters": [
+    {
+      "number": 1,
+      "symbol": "Scale1",
+      "start": 2.762,
+      "path": "senju_1.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 2.7828329,
+      "reported_su": 0.011854684,
+      "su": 0.05927342
+    },
+    {
+      "number": 2,
+      "symbol": "Scale2",
+      "start": 3.829,
+      "path": "senju_2.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 3.8545978,
+      "reported_su": 0.017708614,
+      "su": 0.08854307
+    },
+    {
+      "number": 3,
+      "symbol": "Scale3",
+      "start": 3.211,
+      "path": "senju_3.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 3.2303052,
+      "reported_su": 0.012602463,
+      "su": 0.063012315
+    },
+    {
+      "number": 4,
+      "symbol": "Scale4",
+      "start": 2.809,
+      "path": "senju_4.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 2.8254454,
+      "reported_su": 0.012958854,
+      "su": 0.06479427
+    },
+    {
+      "number": 5,
+      "symbol": "Scale5",
+      "start": 2.739,
+      "path": "senju_5.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 2.7439315,
+      "reported_su": 0.012427757,
+      "su": 0.062138784999999995
+    },
+    {
+      "number": 6,
+      "symbol": "Scale6",
+      "start": 2.936,
+      "path": "senju_6.linked_structure.taurine.scale",
+      "codeword_coefficient": 0.2,
+      "value": 2.9599769,
+      "reported_su": 0.012730008,
+      "su": 0.06365003999999999
+    },
+    {
+      "number": 7,
+      "symbol": "Ext1",
+      "start": 0.07352,
+      "path": "senju_1.extinction.coefficient_11",
+      "codeword_coefficient": 0.2,
+      "value": 0.056818154,
+      "reported_su": 0.0007596052,
+      "su": 0.0037980259999999995
+    },
+    {
+      "number": 8,
+      "symbol": "bet11_H22",
+      "start": 0.02922,
+      "path": "taurine.atom_site_aniso.H22.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.029431067,
+      "reported_su": 0.0041134935,
+      "su": 0.0041134935
+    },
+    {
+      "number": 9,
+      "symbol": "bet11_H21",
+      "start": 0.05136,
+      "path": "taurine.atom_site_aniso.H21.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.050957616,
+      "reported_su": 0.0041393875,
+      "su": 0.0041393875
+    },
+    {
+      "number": 10,
+      "symbol": "X_S1",
+      "start": 0.203,
+      "path": "taurine.atom_site.S1.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.20300902,
+      "reported_su": 0.0012776569,
+      "su": 0.0012776569
+    },
+    {
+      "number": 11,
+      "symbol": "Y_S1",
+      "start": 0.34676,
+      "path": "taurine.atom_site.S1.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.34672728,
+      "reported_su": 0.00069872994,
+      "su": 0.00069872994
+    },
+    {
+      "number": 12,
+      "symbol": "Z_S1",
+      "start": 0.35118,
+      "path": "taurine.atom_site.S1.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.35113505,
+      "reported_su": 0.00081839424,
+      "su": 0.00081839424
+    },
+    {
+      "number": 13,
+      "symbol": "X_O1",
+      "start": 0.33902,
+      "path": "taurine.atom_site.O1.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.33905324,
+      "reported_su": 0.00081362168,
+      "su": 0.00081362168
+    },
+    {
+      "number": 14,
+      "symbol": "Y_O1",
+      "start": 0.24201,
+      "path": "taurine.atom_site.O1.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.2420143,
+      "reported_su": 0.00039287657,
+      "su": 0.00039287657
+    },
+    {
+      "number": 15,
+      "symbol": "Z_O1",
+      "start": 0.35341,
+      "path": "taurine.atom_site.O1.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.35338402,
+      "reported_su": 0.00049004093,
+      "su": 0.00049004093
+    },
+    {
+      "number": 16,
+      "symbol": "X_O2",
+      "start": -0.06427,
+      "path": "taurine.atom_site.O2.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": -0.06426625,
+      "reported_su": 0.00077253697,
+      "su": 0.00077253697
+    },
+    {
+      "number": 17,
+      "symbol": "Y_O2",
+      "start": 0.33875,
+      "path": "taurine.atom_site.O2.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.33876389,
+      "reported_su": 0.00046671598,
+      "su": 0.00046671598
+    },
+    {
+      "number": 18,
+      "symbol": "Z_O2",
+      "start": 0.29137,
+      "path": "taurine.atom_site.O2.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.29136729,
+      "reported_su": 0.00054904982,
+      "su": 0.00054904982
+    },
+    {
+      "number": 19,
+      "symbol": "X_O3",
+      "start": 0.23286,
+      "path": "taurine.atom_site.O3.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.2329047,
+      "reported_su": 0.0007600268,
+      "su": 0.0007600268
+    },
+    {
+      "number": 20,
+      "symbol": "Y_O3",
+      "start": 0.40985,
+      "path": "taurine.atom_site.O3.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.4098419,
+      "reported_su": 0.000427791,
+      "su": 0.000427791
+    },
+    {
+      "number": 21,
+      "symbol": "Z_O3",
+      "start": 0.51108,
+      "path": "taurine.atom_site.O3.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.51109278,
+      "reported_su": 0.00041139475,
+      "su": 0.00041139475
+    },
+    {
+      "number": 22,
+      "symbol": "X_N1",
+      "start": 0.2644,
+      "path": "taurine.atom_site.N1.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.26441282,
+      "reported_su": 0.00062866963,
+      "su": 0.00062866963
+    },
+    {
+      "number": 23,
+      "symbol": "Y_N1",
+      "start": 0.62996,
+      "path": "taurine.atom_site.N1.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.62995923,
+      "reported_su": 0.00025047178,
+      "su": 0.00025047178
+    },
+    {
+      "number": 24,
+      "symbol": "Z_N1",
+      "start": 0.33158,
+      "path": "taurine.atom_site.N1.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.33158854,
+      "reported_su": 0.00033218035,
+      "su": 0.00033218035
+    },
+    {
+      "number": 25,
+      "symbol": "X_H1",
+      "start": 0.17,
+      "path": "taurine.atom_site.H1.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.17000763,
+      "reported_su": 0.0016120707,
+      "su": 0.0016120707
+    },
+    {
+      "number": 26,
+      "symbol": "Y_H1",
+      "start": 0.5995,
+      "path": "taurine.atom_site.H1.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.59948277,
+      "reported_su": 0.00072913052,
+      "su": 0.00072913052
+    },
+    {
+      "number": 27,
+      "symbol": "Z_H1",
+      "start": 0.43173,
+      "path": "taurine.atom_site.H1.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.43174511,
+      "reported_su": 0.00092817785,
+      "su": 0.00092817785
+    },
+    {
+      "number": 28,
+      "symbol": "X_H2",
+      "start": 0.19405,
+      "path": "taurine.atom_site.H2.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.1940548,
+      "reported_su": 0.001695189,
+      "su": 0.001695189
+    },
+    {
+      "number": 29,
+      "symbol": "Y_H2",
+      "start": 0.70895,
+      "path": "taurine.atom_site.H2.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.70891196,
+      "reported_su": 0.00079479517,
+      "su": 0.00079479517
+    },
+    {
+      "number": 30,
+      "symbol": "Z_H2",
+      "start": 0.30623,
+      "path": "taurine.atom_site.H2.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.3063013,
+      "reported_su": 0.0009241635,
+      "su": 0.0009241635
+    },
+    {
+      "number": 31,
+      "symbol": "X_H3",
+      "start": 0.45233,
+      "path": "taurine.atom_site.H3.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.45234463,
+      "reported_su": 0.001783812,
+      "su": 0.001783812
+    },
+    {
+      "number": 32,
+      "symbol": "Y_H3",
+      "start": 0.63476,
+      "path": "taurine.atom_site.H3.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.63479334,
+      "reported_su": 0.00071740377,
+      "su": 0.00071740377
+    },
+    {
+      "number": 33,
+      "symbol": "Z_H3",
+      "start": 0.36061,
+      "path": "taurine.atom_site.H3.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.36051771,
+      "reported_su": 0.0010100161,
+      "su": 0.0010100161
+    },
+    {
+      "number": 34,
+      "symbol": "X_C1",
+      "start": 0.34074,
+      "path": "taurine.atom_site.C1.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.34080228,
+      "reported_su": 0.00079291995,
+      "su": 0.00079291995
+    },
+    {
+      "number": 35,
+      "symbol": "Y_C1",
+      "start": 0.43812,
+      "path": "taurine.atom_site.C1.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.4381071,
+      "reported_su": 0.0003310889,
+      "su": 0.0003310889
+    },
+    {
+      "number": 36,
+      "symbol": "Z_C1",
+      "start": 0.19983,
+      "path": "taurine.atom_site.C1.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.19985954,
+      "reported_su": 0.00040144869,
+      "su": 0.00040144869
+    },
+    {
+      "number": 37,
+      "symbol": "X_H11",
+      "start": 0.53973,
+      "path": "taurine.atom_site.H11.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.53968364,
+      "reported_su": 0.0016871159,
+      "su": 0.0016871159
+    },
+    {
+      "number": 38,
+      "symbol": "Y_H11",
+      "start": 0.4432,
+      "path": "taurine.atom_site.H11.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.44317248,
+      "reported_su": 0.00080192171,
+      "su": 0.00080192171
+    },
+    {
+      "number": 39,
+      "symbol": "Z_H11",
+      "start": 0.23493,
+      "path": "taurine.atom_site.H11.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.23489782,
+      "reported_su": 0.00098657701,
+      "su": 0.00098657701
+    },
+    {
+      "number": 40,
+      "symbol": "X_H12",
+      "start": 0.32105,
+      "path": "taurine.atom_site.H12.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.32110888,
+      "reported_su": 0.0016809994,
+      "su": 0.0016809994
+    },
+    {
+      "number": 41,
+      "symbol": "Y_H12",
+      "start": 0.39069,
+      "path": "taurine.atom_site.H12.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.39065549,
+      "reported_su": 0.0006938905,
+      "su": 0.0006938905
+    },
+    {
+      "number": 42,
+      "symbol": "Z_H12",
+      "start": 0.08168,
+      "path": "taurine.atom_site.H12.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.081695303,
+      "reported_su": 0.00087353919,
+      "su": 0.00087353919
+    },
+    {
+      "number": 43,
+      "symbol": "X_C2",
+      "start": 0.20803,
+      "path": "taurine.atom_site.C2.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.20798104,
+      "reported_su": 0.0008489989,
+      "su": 0.0008489989
+    },
+    {
+      "number": 44,
+      "symbol": "Y_C2",
+      "start": 0.55562,
+      "path": "taurine.atom_site.C2.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.55562025,
+      "reported_su": 0.00031963375,
+      "su": 0.00031963375
+    },
+    {
+      "number": 45,
+      "symbol": "Z_C2",
+      "start": 0.18084,
+      "path": "taurine.atom_site.C2.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.18080252,
+      "reported_su": 0.00040232303,
+      "su": 0.00040232303
+    },
+    {
+      "number": 46,
+      "symbol": "X_H21",
+      "start": 0.28448,
+      "path": "taurine.atom_site.H21.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.28449017,
+      "reported_su": 0.0017937217,
+      "su": 0.0017937217
+    },
+    {
+      "number": 47,
+      "symbol": "Y_H21",
+      "start": 0.59948,
+      "path": "taurine.atom_site.H21.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.5994671,
+      "reported_su": 0.00074901071,
+      "su": 0.00074901071
+    },
+    {
+      "number": 48,
+      "symbol": "Z_H21",
+      "start": 0.07592,
+      "path": "taurine.atom_site.H21.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.075942747,
+      "reported_su": 0.00088703231,
+      "su": 0.00088703231
+    },
+    {
+      "number": 49,
+      "symbol": "X_H22",
+      "start": 0.00169,
+      "path": "taurine.atom_site.H22.fract_x",
+      "codeword_coefficient": 1.0,
+      "value": 0.001645231,
+      "reported_su": 0.0018764472,
+      "su": 0.0018764472
+    },
+    {
+      "number": 50,
+      "symbol": "Y_H22",
+      "start": 0.54787,
+      "path": "taurine.atom_site.H22.fract_y",
+      "codeword_coefficient": 1.0,
+      "value": 0.54788822,
+      "reported_su": 0.00078632688,
+      "su": 0.00078632688
+    },
+    {
+      "number": 51,
+      "symbol": "Z_H22",
+      "start": 0.16446,
+      "path": "taurine.atom_site.H22.fract_z",
+      "codeword_coefficient": 1.0,
+      "value": 0.16449943,
+      "reported_su": 0.00097463268,
+      "su": 0.00097463268
+    },
+    {
+      "number": 52,
+      "symbol": "bet11_S1",
+      "start": 0.00608,
+      "path": "taurine.atom_site_aniso.S1.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.0061157783,
+      "reported_su": 0.0027519078,
+      "su": 0.0027519078
+    },
+    {
+      "number": 53,
+      "symbol": "bet11_O1",
+      "start": 0.02351,
+      "path": "taurine.atom_site_aniso.O1.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.023427652,
+      "reported_su": 0.0020245614,
+      "su": 0.0020245614
+    },
+    {
+      "number": 54,
+      "symbol": "bet11_O2",
+      "start": 0.01088,
+      "path": "taurine.atom_site_aniso.O2.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.010794861,
+      "reported_su": 0.00162904,
+      "su": 0.00162904
+    },
+    {
+      "number": 55,
+      "symbol": "bet11_O3",
+      "start": 0.02111,
+      "path": "taurine.atom_site_aniso.O3.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.021111522,
+      "reported_su": 0.0020114505,
+      "su": 0.0020114505
+    },
+    {
+      "number": 56,
+      "symbol": "bet11_N1",
+      "start": 0.01644,
+      "path": "taurine.atom_site_aniso.N1.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.01646366,
+      "reported_su": 0.0012193241,
+      "su": 0.0012193241
+    },
+    {
+      "number": 57,
+      "symbol": "bet11_H1",
+      "start": 0.04503,
+      "path": "taurine.atom_site_aniso.H1.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.044774391,
+      "reported_su": 0.0043349252,
+      "su": 0.0043349252
+    },
+    {
+      "number": 58,
+      "symbol": "bet11_H2",
+      "start": 0.03957,
+      "path": "taurine.atom_site_aniso.H2.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.039767783,
+      "reported_su": 0.0040439432,
+      "su": 0.0040439432
+    },
+    {
+      "number": 59,
+      "symbol": "bet11_H3",
+      "start": 0.02533,
+      "path": "taurine.atom_site_aniso.H3.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.025233224,
+      "reported_su": 0.0039425772,
+      "su": 0.0039425772
+    },
+    {
+      "number": 60,
+      "symbol": "bet11_C1",
+      "start": 0.01816,
+      "path": "taurine.atom_site_aniso.C1.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.018138209,
+      "reported_su": 0.0016306379,
+      "su": 0.0016306379
+    },
+    {
+      "number": 61,
+      "symbol": "bet11_H11",
+      "start": 0.01829,
+      "path": "taurine.atom_site_aniso.H11.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.018409094,
+      "reported_su": 0.0039549409,
+      "su": 0.0039549409
+    },
+    {
+      "number": 62,
+      "symbol": "bet11_H12",
+      "start": 0.05033,
+      "path": "taurine.atom_site_aniso.H12.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.050042734,
+      "reported_su": 0.0042831069,
+      "su": 0.0042831069
+    },
+    {
+      "number": 63,
+      "symbol": "bet11_C2",
+      "start": 0.01723,
+      "path": "taurine.atom_site_aniso.C2.adp_11",
+      "codeword_coefficient": 1.0,
+      "value": 0.017135283,
+      "reported_su": 0.0017236228,
+      "su": 0.0017236228
+    },
+    {
+      "number": 64,
+      "symbol": "bet22_S1",
+      "start": 0.00124,
+      "path": "taurine.atom_site_aniso.S1.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0012393262,
+      "reported_su": 0.00066424906,
+      "su": 0.00066424906
+    },
+    {
+      "number": 65,
+      "symbol": "bet33_S1",
+      "start": 0.00863,
+      "path": "taurine.atom_site_aniso.S1.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0086469464,
+      "reported_su": 0.0011815706,
+      "su": 0.0011815706
+    },
+    {
+      "number": 66,
+      "symbol": "bet12_S1",
+      "start": 0.0005,
+      "path": "taurine.atom_site_aniso.S1.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.00052002649,
+      "reported_su": 0.0009368363,
+      "su": 0.0009368363
+    },
+    {
+      "number": 67,
+      "symbol": "bet13_S1",
+      "start": 0.00186,
+      "path": "taurine.atom_site_aniso.S1.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0019038119,
+      "reported_su": 0.0013521111,
+      "su": 0.0013521111
+    },
+    {
+      "number": 68,
+      "symbol": "bet23_S1",
+      "start": -0.00031,
+      "path": "taurine.atom_site_aniso.S1.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.00032659335,
+      "reported_su": 0.00057510455,
+      "su": 0.00057510455
+    },
+    {
+      "number": 69,
+      "symbol": "bet22_O1",
+      "start": 0.00278,
+      "path": "taurine.atom_site_aniso.O1.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0027873022,
+      "reported_su": 0.00046463183,
+      "su": 0.00046463183
+    },
+    {
+      "number": 70,
+      "symbol": "bet33_O1",
+      "start": 0.01353,
+      "path": "taurine.atom_site_aniso.O1.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.013569972,
+      "reported_su": 0.00071450626,
+      "su": 0.00071450626
+    },
+    {
+      "number": 71,
+      "symbol": "bet12_O1",
+      "start": 0.00452,
+      "path": "taurine.atom_site_aniso.O1.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.0045160176,
+      "reported_su": 0.00060589978,
+      "su": 0.00060589978
+    },
+    {
+      "number": 72,
+      "symbol": "bet13_O1",
+      "start": 0.00639,
+      "path": "taurine.atom_site_aniso.O1.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0064191376,
+      "reported_su": 0.00093771552,
+      "su": 0.00093771552
+    },
+    {
+      "number": 73,
+      "symbol": "bet23_O1",
+      "start": 0.00068,
+      "path": "taurine.atom_site_aniso.O1.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 0.00069027802,
+      "reported_su": 0.00038298863,
+      "su": 0.00038298863
+    },
+    {
+      "number": 74,
+      "symbol": "bet22_O2",
+      "start": 0.00363,
+      "path": "taurine.atom_site_aniso.O2.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0036421428,
+      "reported_su": 0.00047326821,
+      "su": 0.00047326821
+    },
+    {
+      "number": 75,
+      "symbol": "bet33_O2",
+      "start": 0.01829,
+      "path": "taurine.atom_site_aniso.O2.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.01833852,
+      "reported_su": 0.00088945637,
+      "su": 0.00088945637
+    },
+    {
+      "number": 76,
+      "symbol": "bet12_O2",
+      "start": -0.00185,
+      "path": "taurine.atom_site_aniso.O2.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -0.001832628,
+      "reported_su": 0.00061241543,
+      "su": 0.00061241543
+    },
+    {
+      "number": 77,
+      "symbol": "bet13_O2",
+      "start": -0.00126,
+      "path": "taurine.atom_site_aniso.O2.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": -0.0012545553,
+      "reported_su": 0.00088510942,
+      "su": 0.00088510942
+    },
+    {
+      "number": 78,
+      "symbol": "bet23_O2",
+      "start": -0.00162,
+      "path": "taurine.atom_site_aniso.O2.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.0016344436,
+      "reported_su": 0.00044133191,
+      "su": 0.00044133191
+    },
+    {
+      "number": 79,
+      "symbol": "bet22_O3",
+      "start": 0.00413,
+      "path": "taurine.atom_site_aniso.O3.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0041328566,
+      "reported_su": 0.00043145061,
+      "su": 0.00043145061
+    },
+    {
+      "number": 80,
+      "symbol": "bet33_O3",
+      "start": 0.00713,
+      "path": "taurine.atom_site_aniso.O3.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0071397852,
+      "reported_su": 0.00062853552,
+      "su": 0.00062853552
+    },
+    {
+      "number": 81,
+      "symbol": "bet12_O3",
+      "start": 0.00045,
+      "path": "taurine.atom_site_aniso.O3.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.00044006488,
+      "reported_su": 0.00060059363,
+      "su": 0.00060059363
+    },
+    {
+      "number": 82,
+      "symbol": "bet13_O3",
+      "start": 0.00246,
+      "path": "taurine.atom_site_aniso.O3.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0024488908,
+      "reported_su": 0.00085469784,
+      "su": 0.00085469784
+    },
+    {
+      "number": 83,
+      "symbol": "bet23_O3",
+      "start": -0.00082,
+      "path": "taurine.atom_site_aniso.O3.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.00082498393,
+      "reported_su": 0.00032474342,
+      "su": 0.00032474342
+    },
+    {
+      "number": 84,
+      "symbol": "bet22_N1",
+      "start": 0.00258,
+      "path": "taurine.atom_site_aniso.N1.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0025798827,
+      "reported_su": 0.00027343509,
+      "su": 0.00027343509
+    },
+    {
+      "number": 85,
+      "symbol": "bet33_N1",
+      "start": 0.00836,
+      "path": "taurine.atom_site_aniso.N1.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0083694877,
+      "reported_su": 0.00041261784,
+      "su": 0.00041261784
+    },
+    {
+      "number": 86,
+      "symbol": "bet12_N1",
+      "start": 0.00055,
+      "path": "taurine.atom_site_aniso.N1.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.00054268597,
+      "reported_su": 0.00045389446,
+      "su": 0.00045389446
+    },
+    {
+      "number": 87,
+      "symbol": "bet13_N1",
+      "start": 0.00283,
+      "path": "taurine.atom_site_aniso.N1.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0028594013,
+      "reported_su": 0.00051343563,
+      "su": 0.00051343563
+    },
+    {
+      "number": 88,
+      "symbol": "bet23_N1",
+      "start": 5e-05,
+      "path": "taurine.atom_site_aniso.N1.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 4.5367869e-05,
+      "reported_su": 0.00023369757,
+      "su": 0.00023369757
+    },
+    {
+      "number": 89,
+      "symbol": "bet22_H1",
+      "start": 0.00645,
+      "path": "taurine.atom_site_aniso.H1.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0064896159,
+      "reported_su": 0.00088711019,
+      "su": 0.00088711019
+    },
+    {
+      "number": 90,
+      "symbol": "bet33_H1",
+      "start": 0.01266,
+      "path": "taurine.atom_site_aniso.H1.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.012676583,
+      "reported_su": 0.0013490856,
+      "su": 0.0013490856
+    },
+    {
+      "number": 91,
+      "symbol": "bet12_H1",
+      "start": -0.00627,
+      "path": "taurine.atom_site_aniso.H1.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -0.0063694064,
+      "reported_su": 0.0013829812,
+      "su": 0.0013829812
+    },
+    {
+      "number": 92,
+      "symbol": "bet13_H1",
+      "start": 0.0123,
+      "path": "taurine.atom_site_aniso.H1.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0123087,
+      "reported_su": 0.0019050656,
+      "su": 0.0019050656
+    },
+    {
+      "number": 93,
+      "symbol": "bet23_H1",
+      "start": 3e-05,
+      "path": "taurine.atom_site_aniso.H1.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 5.2691881e-05,
+      "reported_su": 0.00078879815,
+      "su": 0.00078879815
+    },
+    {
+      "number": 94,
+      "symbol": "bet22_H2",
+      "start": 0.00324,
+      "path": "taurine.atom_site_aniso.H2.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.00323068,
+      "reported_su": 0.00085731206,
+      "su": 0.00085731206
+    },
+    {
+      "number": 95,
+      "symbol": "bet33_H2",
+      "start": 0.01565,
+      "path": "taurine.atom_site_aniso.H2.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.015691156,
+      "reported_su": 0.001291877,
+      "su": 0.001291877
+    },
+    {
+      "number": 96,
+      "symbol": "bet12_H2",
+      "start": -0.00032,
+      "path": "taurine.atom_site_aniso.H2.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -0.00025455799,
+      "reported_su": 0.0013343405,
+      "su": 0.0013343405
+    },
+    {
+      "number": 97,
+      "symbol": "bet13_H2",
+      "start": -0.00048,
+      "path": "taurine.atom_site_aniso.H2.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": -0.00049479614,
+      "reported_su": 0.0017512743,
+      "su": 0.0017512743
+    },
+    {
+      "number": 98,
+      "symbol": "bet23_H2",
+      "start": 0.00042,
+      "path": "taurine.atom_site_aniso.H2.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 0.00043613947,
+      "reported_su": 0.0007909931,
+      "su": 0.0007909931
+    },
+    {
+      "number": 99,
+      "symbol": "bet22_H3",
+      "start": 0.00525,
+      "path": "taurine.atom_site_aniso.H3.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0051940917,
+      "reported_su": 0.00091061502,
+      "su": 0.00091061502
+    },
+    {
+      "number": 100,
+      "symbol": "bet33_H3",
+      "start": 0.01906,
+      "path": "taurine.atom_site_aniso.H3.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.019079832,
+      "reported_su": 0.0015486784,
+      "su": 0.0015486784
+    },
+    {
+      "number": 101,
+      "symbol": "bet12_H3",
+      "start": 0.00034,
+      "path": "taurine.atom_site_aniso.H3.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.00031677348,
+      "reported_su": 0.001243678,
+      "su": 0.001243678
+    },
+    {
+      "number": 102,
+      "symbol": "bet13_H3",
+      "start": 0.00246,
+      "path": "taurine.atom_site_aniso.H3.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0025751751,
+      "reported_su": 0.0018170148,
+      "su": 0.0018170148
+    },
+    {
+      "number": 103,
+      "symbol": "bet23_H3",
+      "start": -0.00526,
+      "path": "taurine.atom_site_aniso.H3.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.0052306666,
+      "reported_su": 0.00080903003,
+      "su": 0.00080903003
+    },
+    {
+      "number": 104,
+      "symbol": "bet22_C1",
+      "start": 0.00217,
+      "path": "taurine.atom_site_aniso.C1.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0021702119,
+      "reported_su": 0.00031688053,
+      "su": 0.00031688053
+    },
+    {
+      "number": 105,
+      "symbol": "bet33_C1",
+      "start": 0.00715,
+      "path": "taurine.atom_site_aniso.C1.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0071655954,
+      "reported_su": 0.0005301215,
+      "su": 0.0005301215
+    },
+    {
+      "number": 106,
+      "symbol": "bet12_C1",
+      "start": 0.00028,
+      "path": "taurine.atom_site_aniso.C1.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.00026809383,
+      "reported_su": 0.00049898203,
+      "su": 0.00049898203
+    },
+    {
+      "number": 107,
+      "symbol": "bet13_C1",
+      "start": 0.00309,
+      "path": "taurine.atom_site_aniso.C1.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0031148107,
+      "reported_su": 0.00066345651,
+      "su": 0.00066345651
+    },
+    {
+      "number": 108,
+      "symbol": "bet23_C1",
+      "start": -0.00042,
+      "path": "taurine.atom_site_aniso.C1.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.00041729724,
+      "reported_su": 0.00028723507,
+      "su": 0.00028723507
+    },
+    {
+      "number": 109,
+      "symbol": "bet22_H11",
+      "start": 0.00695,
+      "path": "taurine.atom_site_aniso.H11.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0069283522,
+      "reported_su": 0.00095102447,
+      "su": 0.00095102447
+    },
+    {
+      "number": 110,
+      "symbol": "bet33_H11",
+      "start": 0.01989,
+      "path": "taurine.atom_site_aniso.H11.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.019899577,
+      "reported_su": 0.0016151964,
+      "su": 0.0016151964
+    },
+    {
+      "number": 111,
+      "symbol": "bet12_H11",
+      "start": 0.00257,
+      "path": "taurine.atom_site_aniso.H11.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.0025961362,
+      "reported_su": 0.0012414231,
+      "su": 0.0012414231
+    },
+    {
+      "number": 112,
+      "symbol": "bet13_H11",
+      "start": 0.0084,
+      "path": "taurine.atom_site_aniso.H11.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0086018937,
+      "reported_su": 0.0017372682,
+      "su": 0.0017372682
+    },
+    {
+      "number": 113,
+      "symbol": "bet23_H11",
+      "start": -0.00019,
+      "path": "taurine.atom_site_aniso.H11.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.00019115473,
+      "reported_su": 0.00077688048,
+      "su": 0.00077688048
+    },
+    {
+      "number": 114,
+      "symbol": "bet22_H12",
+      "start": 0.00504,
+      "path": "taurine.atom_site_aniso.H12.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0050595663,
+      "reported_su": 0.0009048403,
+      "su": 0.0009048403
+    },
+    {
+      "number": 115,
+      "symbol": "bet33_H12",
+      "start": 0.01083,
+      "path": "taurine.atom_site_aniso.H12.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.010835684,
+      "reported_su": 0.0012344547,
+      "su": 0.0012344547
+    },
+    {
+      "number": 116,
+      "symbol": "bet12_H12",
+      "start": 0.00384,
+      "path": "taurine.atom_site_aniso.H12.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": 0.003835653,
+      "reported_su": 0.0013366587,
+      "su": 0.0013366587
+    },
+    {
+      "number": 117,
+      "symbol": "bet13_H12",
+      "start": 0.00923,
+      "path": "taurine.atom_site_aniso.H12.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.0092803175,
+      "reported_su": 0.0017849022,
+      "su": 0.0017849022
+    },
+    {
+      "number": 118,
+      "symbol": "bet23_H12",
+      "start": -0.0017,
+      "path": "taurine.atom_site_aniso.H12.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": -0.0017102861,
+      "reported_su": 0.00069547369,
+      "su": 0.00069547369
+    },
+    {
+      "number": 119,
+      "symbol": "bet22_C2",
+      "start": 0.00322,
+      "path": "taurine.atom_site_aniso.C2.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0032126091,
+      "reported_su": 0.00035762257,
+      "su": 0.00035762257
+    },
+    {
+      "number": 120,
+      "symbol": "bet33_C2",
+      "start": 0.00721,
+      "path": "taurine.atom_site_aniso.C2.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0072253612,
+      "reported_su": 0.00054742885,
+      "su": 0.00054742885
+    },
+    {
+      "number": 121,
+      "symbol": "bet12_C2",
+      "start": -6e-05,
+      "path": "taurine.atom_site_aniso.C2.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -8.5182975e-05,
+      "reported_su": 0.000577292,
+      "su": 0.000577292
+    },
+    {
+      "number": 122,
+      "symbol": "bet13_C2",
+      "start": -7e-05,
+      "path": "taurine.atom_site_aniso.C2.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": -7.3553136e-05,
+      "reported_su": 0.00067765132,
+      "su": 0.00067765132
+    },
+    {
+      "number": 123,
+      "symbol": "bet23_C2",
+      "start": 0.00059,
+      "path": "taurine.atom_site_aniso.C2.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 0.00059572398,
+      "reported_su": 0.00030769903,
+      "su": 0.00030769903
+    },
+    {
+      "number": 124,
+      "symbol": "bet22_H21",
+      "start": 0.00739,
+      "path": "taurine.atom_site_aniso.H21.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.0074057472,
+      "reported_su": 0.00098573591,
+      "su": 0.00098573591
+    },
+    {
+      "number": 125,
+      "symbol": "bet33_H21",
+      "start": 0.00957,
+      "path": "taurine.atom_site_aniso.H21.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.0096202483,
+      "reported_su": 0.0012129084,
+      "su": 0.0012129084
+    },
+    {
+      "number": 126,
+      "symbol": "bet12_H21",
+      "start": -0.00328,
+      "path": "taurine.atom_site_aniso.H21.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -0.0033486979,
+      "reported_su": 0.0014592783,
+      "su": 0.0014592783
+    },
+    {
+      "number": 127,
+      "symbol": "bet13_H21",
+      "start": 0.01154,
+      "path": "taurine.atom_site_aniso.H21.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": 0.011604639,
+      "reported_su": 0.0016381557,
+      "su": 0.0016381557
+    },
+    {
+      "number": 128,
+      "symbol": "bet23_H21",
+      "start": 0.00254,
+      "path": "taurine.atom_site_aniso.H21.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 0.0025307315,
+      "reported_su": 0.00076585903,
+      "su": 0.00076585903
+    },
+    {
+      "number": 129,
+      "symbol": "bet22_H22",
+      "start": 0.00655,
+      "path": "taurine.atom_site_aniso.H22.adp_22",
+      "codeword_coefficient": 1.0,
+      "value": 0.00651717,
+      "reported_su": 0.00090849015,
+      "su": 0.00090849015
+    },
+    {
+      "number": 130,
+      "symbol": "bet33_H22",
+      "start": 0.01968,
+      "path": "taurine.atom_site_aniso.H22.adp_33",
+      "codeword_coefficient": 1.0,
+      "value": 0.019656574,
+      "reported_su": 0.0016611039,
+      "su": 0.0016611039
+    },
+    {
+      "number": 131,
+      "symbol": "bet12_H22",
+      "start": -0.00054,
+      "path": "taurine.atom_site_aniso.H22.adp_12",
+      "codeword_coefficient": 1.0,
+      "value": -0.00055451569,
+      "reported_su": 0.0013344768,
+      "su": 0.0013344768
+    },
+    {
+      "number": 132,
+      "symbol": "bet13_H22",
+      "start": -0.00477,
+      "path": "taurine.atom_site_aniso.H22.adp_13",
+      "codeword_coefficient": 1.0,
+      "value": -0.0046892399,
+      "reported_su": 0.0019705459,
+      "su": 0.0019705459
+    },
+    {
+      "number": 133,
+      "symbol": "bet23_H22",
+      "start": 0.00034,
+      "path": "taurine.atom_site_aniso.H22.adp_23",
+      "codeword_coefficient": 1.0,
+      "value": 0.00035595955,
+      "reported_su": 0.00082936999,
+      "su": 0.00082936999
+    },
+    {
+      "number": 134,
+      "symbol": "Ext2",
+      "start": 0.01329,
+      "path": "senju_1.extinction.coefficient_22",
+      "codeword_coefficient": 0.2,
+      "value": 0.013540797,
+      "reported_su": 0.00031671437,
+      "su": 0.0015835718499999998
+    },
+    {
+      "number": 135,
+      "symbol": "Ext3",
+      "start": 0.007952,
+      "path": "senju_1.extinction.coefficient_33",
+      "codeword_coefficient": 0.2,
+      "value": 0.0071489117,
+      "reported_su": 0.00030636101,
+      "su": 0.00153180505
+    }
+  ],
+  "reduced_chi_square_from_printed_rows": 30.389562541096065,
+  "chi_square_reported": 30.1,
+  "rf2w_percent": 12.2,
+  "rf2_percent": 13.6,
+  "artifacts": {
+    "input.pcr": "1695c3d6e44857aba52fce419286ed3025d6b78fd79bec320c62ae0d9691986c",
+    "original.pcr": "e7d8923b661d719c1b0b8c7d17e8bab65e6b8629ab2bcc0ea3f3582d315e43ae",
+    "project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
+    "project/experiments/senju_1.edi": "5ee2c0ebedb18740a456b09809666de5c1bcd35a94ec09fe15ee196cd1712910",
+    "project/experiments/senju_2.edi": "d29ee7274beb54e510b204c6b6c84a7f83956b3085e34532d2929508f6264c2f",
+    "project/experiments/senju_3.edi": "3995943a84cb9f9bd4d7129da719f2a0da45e94ed02734f223d624deff73ddbb",
+    "project/experiments/senju_4.edi": "5986ed046d87ca8888802f6d5f1345aac2d56fdab74ec0b91c1178fd86f0ad8c",
+    "project/experiments/senju_5.edi": "94ed0c48b0a0b4c22f492eb4869d5d60e8c5b6e050864cdb829364c056aa69cd",
+    "project/experiments/senju_6.edi": "3fb802f989059b3c5c6ac3ff3d0ae312ff7f226b7a47aa1426ecc3b8d3bee996",
+    "project/project.edi": "6c8f1aa8db1f136f24914cb6ddcbab01de0254d4a5f2ab41b10300cadfb9b094",
+    "project/structures/taurine.edi": "ad96a68e5f512dd6ee90b7c2863abb655d1e56da6f8bdfb00f72610ff59a409d",
+    "run.log": "1814ef70a5239bb8e3d1ff38e5532dc2583e9d747f03d8b1a21b69a99cafe090",
+    "taurine.int": "3a4921c04418d3112c36039bff79c10bda771be49dec163258f083c94cd8162b",
+    "taurine.out": "87a9f036dff9f6ea4227a67ea52814f3608377545c35bd26171c36011552c4df",
+    "taurine.pcr": "5d6dc4a8635ed2bede06c1107ec3be932c74fb0ff37612d82331c52d1ecd5a53",
+    "taurine.prf": "e8751beadca09244397a510acd97b8dad7468f0d058c47c1dee1dc8bff075bc3",
+    "taurine.sum": "46f14dcae68d93c0f0463a994d6c5125cb1309af3020839f8e2d62eb545552bb"
+  },
+  "conventions": {
+    "coordinates": "fractional",
+    "adp": "beta as printed by the final parameter list, not Betas*1E04",
+    "su": "FullProf manual eq. 3.7: divide printed sigma by the codeword coefficient",
+    "chi_square": "sum of selected printed Dif/sig squared divided by N minus p; printed headline retained separately",
+    "tolerances": "values within one conventional FullProf sigma; s.u. ratio within 20 percent; N-p objective within 1 percent; rounded RF2w within 0.1 percentage point"
+  }
+}
