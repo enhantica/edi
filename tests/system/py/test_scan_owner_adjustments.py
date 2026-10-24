@@ -85,25 +85,37 @@ def test_progress_remains_at_the_status_bar_far_right():
     progress_edge(source('qml/Components/StatusBar.qml'))
 
 
-def steady_marker(text):
+def steady_marker(text, line=None):
     marker = item(text, 'evolution.current')
+    line = source('qml/Components/SelectedPatternLine.qml') if line is None else line
+    assert 'SelectedPatternLine ' + marker in text, (
+        'Evolution uses the shared selected-pattern line whose effective geometry is observed'
+    )
     observed = evaluate(
         '[17,17,17,18].map((index,i)=>{chart.project.currentExperimentIndex=index;'
         'chart.evolution.count=[162,0,1,162][i];chart.project.calculating=i===1;'
         'const at=('
         + property_value(marker, 'at')
-        + ');return [at,('
-        + property_value(marker, 'visible')
+        + ');const position=('
+        + property_value(marker, 'position')
+        + '),vertical=('
+        + property_value(marker, 'vertical')
+        + '),thickness=('
+        + property_value(line, 'thickness')
+        + '),span=plot.width,start=('
+        + property_value(line, 'start')
+        + ');return [at,position,('
+        + property_value(line, 'visible')
         + '),('
-        + property_value(marker, 'x')
+        + property_value(line, 'x')
         + ')];})',
         'const chart={project:{currentExperimentIndex:17,calculating:false},'
         'evolution:{count:162,xMode:0,datasetX:index=>137.25+index}};'
         'const axisX={min:120,max:220},plot={width:500};',
     )
-    assert observed == [[154.25, True, 171]] * 3 + [[155.25, True, 176]], (
+    assert observed == [[154.25, 171.25, True, 169]] * 3 + [[155.25, 176.25, True, 174]], (
         'Evolution marker: the shown dataset stays visible at its own x while results rebuild; '
-        'only a changed selection moves it'
+        'only a changed selection moves its centre, with the shared four-pixel line geometry'
     )
 
 
@@ -288,8 +300,8 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
         'marker': (
             'qml/Components/EvolutionChart.qml',
             steady_marker,
-            'visible: !isNaN(at)',
-            'visible: chart.evolution.count > 0',
+            'chart.evolution.datasetX(chart.project.currentExperimentIndex)',
+            '137.25',
         ),
         'wheel': (
             'qml/Components/EvolutionChart.qml',
@@ -330,3 +342,13 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
     )
     with pytest.raises(AssertionError):
         observer(changed)
+    if channel == 'marker':
+        line = source('qml/Components/SelectedPatternLine.qml')
+        for old, new in [
+            ('visible: !isNaN(position)', 'visible: false'),
+            ('x: vertical ? start : 0', 'x: 0'),
+        ]:
+            changed = line.replace(old, new)
+            assert changed != line, 'The shared marker escape reaches its effective component'
+            with pytest.raises(AssertionError):
+                steady_marker(good, changed)

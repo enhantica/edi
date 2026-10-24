@@ -704,6 +704,8 @@ void install_test_observer(QQmlApplicationEngine& engine) {
     static ScreenObservation o;
     o.window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     o.session = engine.singletonInstance<Session*>("edi.app", "Session");
+    // The frames are read from the measured markers, which only the points styles draw: the default band draws none.
+    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     o.clock.start();
     o.result = {{"mode", setting("SCAN_SCREEN_MODE", "adaptive")}, {"frames", QJsonArray{}}};
     o.finish = new QTimer(o.window);
