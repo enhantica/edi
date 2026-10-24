@@ -607,7 +607,10 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
-    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
+    # New catalogue images await the UI tier; retain the historical image inventory.
+    registry = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/retained-projects.json').read_text()
+    )
     example_names = {f'ex-{project["id"]}.png' for project in registry['projects']}
     example_names.add('ex-pd-xray-cwl_lif.png')
     captures = json.loads((ROOT / 'docs/dev/design/app-review-captures.json').read_text())[

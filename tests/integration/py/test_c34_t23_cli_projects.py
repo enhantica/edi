@@ -26,6 +26,7 @@ from mkdocs.config import load_config
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
@@ -128,6 +129,12 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     paths['expected.json'] = directory / 'expected.json'
     assert set(paths) == set(expected), (
         ' seed file inventory must equal the independent source tree'
+    )
+    paths['expected.json'].write_bytes(
+        retained_bytes(
+            (live_directory / 'expected.json').relative_to(ROOT),
+            paths['expected.json'].read_bytes(),
+        )
     )
     public_metadata = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()

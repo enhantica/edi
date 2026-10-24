@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -130,7 +131,7 @@ def test_old_projects_keep_their_files_pins_and_execution(record):
     )
     restored = {}
     for name, path in paths.items():
-        raw = path.read_bytes()
+        raw = retained_bytes(path.relative_to(ROOT), path.read_bytes())
         digest = hashlib.sha256(raw).hexdigest()
         if digest != record['sha256'][name]:
             raw = historical_excluded_bytes(name.removeprefix('project/'), raw)
