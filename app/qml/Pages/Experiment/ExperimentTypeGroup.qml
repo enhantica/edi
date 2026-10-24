@@ -11,11 +11,9 @@ import edi.app
 // table: the selected experiment's four type axes, editable while it has no measured data and fixed once it has
 // (its data sets them), and two placeholders, disabled until they are implemented: dimensionality (1D) and
 // polarization (None, for a neutron probe only). A choice makes the experiment anew with that type
-// (ProjectViewModel.setExperimentType). Each box binds its index to the value's position in its permitted list:
-// the base binds currentIndex to indexOfValue(value), which runs before the model is populated and re-runs only
-// when the value changes, so a value that never changes stayed at -1 and showed nothing. A grid three wide, so
-// each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the row by its parent's
-// children.
+// (ProjectViewModel.setExperimentType). The four axes show their values by the dictionary's names (edi ADR-0051).
+// A grid three wide, so each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the
+// row by its parent's children.
 Grid {
     id: row
 
@@ -25,12 +23,10 @@ Grid {
     readonly property bool editable: experiment !== null && experiment.calculationOnly
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
-    // A choice on one axis: the experiment made anew, or the box back at the stored value.
-    function choose(box, axis, index) {
-        const token = box.permittedValues[index];
-        if (token !== box.value && row.project)
+    // A choice on one axis makes the experiment anew; the selector returns to the stored value otherwise.
+    function choose(axis, token) {
+        if (row.project)
             row.project.setExperimentType(row.experimentIndex, axis, token);
-        box.currentIndex = Qt.binding(() => box.permittedValues.indexOf(box.value));
     }
 
     objectName: "experimentType"
@@ -44,19 +40,15 @@ Grid {
         width: row.cellWidth
         height: sampleForm.height
 
-        EaElements.ParamComboBox {
+        SelectorField {
             id: sampleForm
             objectName: "experimentType.sampleForm"
             width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(sampleForm)
-            enabled: false
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.sampleFormToken : "",
-                    "shortPrettyName": qsTr("sample form"),
-                    "permittedValues": ["powder", "single crystal"]
-                })
-            onActivated: index => row.choose(sampleForm, "sampleForm", index)
+            uid: "experiment_type.sample_form"
+            options: row.experiment ? row.experiment.sampleFormOptions : null
+            token: row.experiment ? row.experiment.sampleFormToken : ""
+            writable: false
+            onSelected: token => row.choose("sampleForm", token)
         }
         HoverHandler {
             id: sampleFormHover
@@ -66,33 +58,25 @@ Grid {
             visible: sampleFormHover.hovered && EaGlobals.Vars.showToolTips
         }
     }
-    EaElements.ParamComboBox {
+    SelectorField {
         id: beamMode
         objectName: "experimentType.beamMode"
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(beamMode)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.beamModeToken : "",
-                "shortPrettyName": qsTr("beam mode"),
-                "permittedValues": ["constant wavelength", "time-of-flight"]
-            })
-        onActivated: index => row.choose(beamMode, "beamMode", index)
+        uid: "experiment_type.beam_mode"
+        options: row.experiment ? row.experiment.beamModeOptions : null
+        token: row.experiment ? row.experiment.beamModeToken : ""
+        writable: row.editable
+        onSelected: token => row.choose("beamMode", token)
     }
-    EaElements.ParamComboBox {
+    SelectorField {
         id: radiationProbe
         objectName: "experimentType.radiationProbe"
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(radiationProbe)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.radiationProbeToken : "",
-                "shortPrettyName": qsTr("probe"),
-                "permittedValues": ["neutron", "xray"]
-            })
-        onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
+        uid: "experiment_type.radiation_probe"
+        options: row.experiment ? row.experiment.radiationProbeOptions : null
+        token: row.experiment ? row.experiment.radiationProbeToken : ""
+        writable: row.editable
+        onSelected: token => row.choose("radiationProbe", token)
     }
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
     // the tool tip is the cell's, since a disabled box takes no hover.
@@ -100,19 +84,15 @@ Grid {
         width: row.cellWidth
         height: scatteringType.height
 
-        EaElements.ParamComboBox {
+        SelectorField {
             id: scatteringType
             objectName: "experimentType.scatteringType"
             width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(scatteringType)
-            enabled: false
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.scatteringTypeToken : "",
-                    "shortPrettyName": qsTr("scattering type"),
-                    "permittedValues": ["bragg", "total"]
-                })
-            onActivated: index => row.choose(scatteringType, "scatteringType", index)
+            uid: "experiment_type.scattering_type"
+            options: row.experiment ? row.experiment.scatteringTypeOptions : null
+            token: row.experiment ? row.experiment.scatteringTypeToken : ""
+            writable: false
+            onSelected: token => row.choose("scatteringType", token)
         }
         HoverHandler {
             id: scatteringTypeHover

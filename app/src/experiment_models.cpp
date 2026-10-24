@@ -455,7 +455,7 @@ void ScatteringSourceViewModel::sync() {
         if (options == nullptr) {
             options = new OptionListModel(this);
         }
-        options->setOptions(edi::supported_scattering_sources(item));
+        options->setItemOptions("scattering_source." + name.toStdString(), edi::supported_scattering_sources(item));
         const QString token = QString::fromStdString(edi::scattering_source_value(experiment_, item));
         const QString effective = token.isEmpty() ? options->tokenAt(0) : token;
         rows.append({options, {name, token, effective, !token.isEmpty(), QVariant::fromValue<QObject*>(options)}});

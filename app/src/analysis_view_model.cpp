@@ -275,8 +275,8 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
-    descent_options_->setOptions(edi::supported_descents(), edi::default_descent());
-    minimizer_type_options_->setOptions(edi::supported_minimizer_types());
+    descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
+    minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
 }
 
@@ -326,11 +326,7 @@ void AnalysisViewModel::sync() {
     const std::vector<std::string> modes = edi::applicable_fitting_modes(project_);
     if (modes != fitting_modes_) {
         fitting_modes_ = modes;
-        std::vector<std::string> labels;
-        for (const std::string& token : modes) {
-            labels.push_back(edi::option_label("fitting_mode.type", token));
-        }
-        fitting_mode_options_->setOptions(modes, modes.front(), labels);
+        fitting_mode_options_->setItemOptions("fitting_mode.type", modes, modes.front());
     }
     if (std::find(modes.begin(), modes.end(), edi::effective_fitting_mode(project_)) == modes.end()) {
         QMetaObject::invokeMethod(
