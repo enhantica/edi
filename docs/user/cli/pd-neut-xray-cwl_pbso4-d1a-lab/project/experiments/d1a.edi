@@ -22,7 +22,7 @@ _peak.asym_beba_b1 0()
 _peak.asym_beba_limit 180
 _peak.cutoff_fwhm 30
 
-_instrument.setup_wavelength 1.91()
+_instrument.setup_wavelength 1.91
 _instrument.calib_twotheta_offset 0()
 
 loop_

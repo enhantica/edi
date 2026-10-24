@@ -58,7 +58,7 @@ def pbso4_d1a(rows) -> str:
             '_peak.cutoff_fwhm 30',
         ],
         [
-            f'_instrument.setup_wavelength {free(1.91)}',
+            '_instrument.setup_wavelength 1.91',
             f'_instrument.calib_twotheta_offset {free(0)}',
         ],
         loop(

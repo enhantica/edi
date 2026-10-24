@@ -2,7 +2,8 @@
 
 PbSO4 from the Rietveld round robin (R. J. Hill, J. Appl. Cryst. 25, 589, 1992), fitted against two patterns at once:
 the D1A (ILL) constant-wavelength neutron pattern and the laboratory Cu Kα X-ray pattern. One structure is linked to
-both experiments, so the X-ray pattern fixes the cell while the neutron wavelength is free.
+both experiments, so the X-ray pattern fixes the cell. The neutron wavelength stays at D1A's 1.91 Å, as in FullProf's
+reference fit.
 
 ## Sources
 
@@ -30,13 +31,14 @@ The project starts the way a user's own measurement would: zero shift 0 on both 
 right (U, V, W to one significant figure, mixing 0.5, asymmetry 0), Biso 0.5 on every site, the coordinates of the
 round-robin structure rounded to two decimals, and a flat background at the level read off each pattern (the tenth
 percentile of the fitted intensities: 200 counts for D1A, 140 for the X-ray pattern). The free set is what a user fits
-here: the cell, every free coordinate and Biso, both scales and zero shifts, the neutron wavelength, both profiles with
-their asymmetry, the eight D1A background points and the six Chebyshev terms of the X-ray background (52 parameters).
+here: the cell, every free coordinate and Biso, both scales and zero shifts, both profiles with their asymmetry, the
+eight D1A background points and the six Chebyshev terms of the X-ray background (51 parameters). The neutron wavelength
+is fixed, as FullProf's reference fit keeps it, so the two programs fit the same model.
 
 ## Differences from the tutorial
 
 - The tutorial fixes the profile and background at a converged fit and frees only the cell, Biso, scales, zero shifts
-  and neutron wavelength; here they start rough and are free.
+  and neutron wavelength; here they start rough and are free, and the wavelength is fixed.
 - diffraction-lib's Bérar-Baldinozzi profile has the Thompson-Cox-Hastings Lorentzian terms; edi's has a pseudo-Voigt
   mixing parameter (`mixing_eta_0`) in their place.
 - The X-ray polarization (coefficient 0.5, monochromator 2θ 26.565°) and the Bérar-Baldinozzi limits (180° neutron,
