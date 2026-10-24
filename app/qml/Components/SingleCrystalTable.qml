@@ -10,7 +10,9 @@ import edi.app
 
 // `refln` of a single crystal, in the Extra tab: the Miller indices, d, sinθ/λ, the measured F² and its su,
 // the calculated F² and the normalised residual (F²meas - F²calc) / su, with the app's one rule for numbers; in time of
-// flight each reflection's wavelength last. A click on a column title sorts the rows by that column.
+// flight each reflection's wavelength; last, whether the fit uses the reflection (the fit's cutoff, F² > n su(F²), or
+// every one without), as an icon with the reason in its tooltip, as the measured data's status column. A click on a
+// column title sorts the rows by that column.
 DataTable {
     id: table
 
@@ -55,7 +57,9 @@ DataTable {
     defaultInfoText: qsTr("No reflections")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
-    columnWidths: timeOfFlight ? [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1] : [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+    // The Miller indices are short integers, so their columns are narrow and the numbers keep their room.
+    readonly property real indexColumnWidth: EaStyle.Sizes.fontPixelSize * 2.5
+    columnWidths: [numberColumnWidth, indexColumnWidth, indexColumnWidth, indexColumnWidth, -1, -1, -1, -1, -1, -1].concat(timeOfFlight ? [-1] : []).concat([AppSizes.iconOnlyColumnWidth])
 
     header: EaComponents.ListViewHeader {
         EaComponents.TableViewLabel {
@@ -101,6 +105,10 @@ DataTable {
             visible: table.timeOfFlight
             role: "wavelength"
             label: qsTr("λ (Å)")
+        }
+        SortTitle {
+            role: "fitUse"
+            label: qsTr("fit")
         }
     }
 
@@ -162,6 +170,16 @@ DataTable {
             horizontalAlignment: Text.AlignHCenter
             number: table.fixed(row.model.wavelength, 4)
             full: NumberText.plainFull(row.model.wavelength)
+        }
+        IconCell {
+            readonly property bool used: row.model.fitUse === 1
+            readonly property real cutoff: table.sourceModel ? table.sourceModel.fitCutoff : NaN
+
+            horizontalAlignment: Text.AlignHCenter
+            objectName: `singleCrystal.reflections.fitUse.${row.index}`
+            icon: used ? FitOutcomes.icon("success") : "minus-circle"
+            iconColor: String(used ? EaStyle.Colors.green : EaStyle.Colors.themeForegroundMinor)
+            toolTip: used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(cutoff)) : qsTr("Left out of the fit: F² ≤ %1 s.u.").arg(cutoff)
         }
     }
 }

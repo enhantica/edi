@@ -42,6 +42,8 @@ Item {
     // The report's input (edi ADR-0036): an experiment's `single_crystal` from the report model's JSON.
     property var reportData: null
     readonly property bool reportMode: reportData !== null
+    // How faint the reflections the fit leaves out are drawn.
+    readonly property real leftOutOpacity: 0.3
     readonly property bool calculated: {
         if (reportMode)
             return reportData.calc.length > 0;
@@ -124,6 +126,35 @@ Item {
         return (scaled < 1.5 ? 1 : scaled < 3.5 ? 2 : scaled < 7.5 ? 5 : 10) * power;
     }
 
+    // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
+    // a report's points are all used.
+    function part(x, y, su, used, want) {
+        const out = [[], [], []];
+        for (let i = 0; i < x.length; ++i) {
+            if ((used && i < used.length ? used[i] : true) === want) {
+                out[0].push(x[i]);
+                out[1].push(y[i]);
+                out[2].push(su[i]);
+            }
+        }
+        return out;
+    }
+    // Draws a model's points on `usedLayer` and the ones its fit leaves out, dimmed, on `leftOutLayer`.
+    function drawModel(model, usedLayer, leftOutLayer) {
+        if (!model || !chart.shown || !model.calculatedShown) {
+            usedLayer.setPoints([], [], []);
+            leftOutLayer.setPoints([], [], []);
+            return;
+        }
+        const x = chart.squared ? model.calculated : model.calculatedF;
+        const y = chart.squared ? model.measured : model.measuredF;
+        const su = chart.squared ? model.measuredSu : model.measuredFSu;
+        const used = part(x, y, su, model.used, true);
+        const left = part(x, y, su, model.used, false);
+        usedLayer.setPoints(used[0], used[1], used[2]);
+        leftOutLayer.setPoints(left[0], left[1], left[2]);
+    }
+
     function redraw() {
         legendRows.setRows(chart.legendRows());
         if (chart.stacked) {
@@ -136,17 +167,13 @@ Item {
                 layer.setPoints(chart.reportData.calc, chart.reportData.meas, chart.reportData.su);
             else
                 layer.setPoints([], [], []);
+            leftOutLayer.setPoints([], [], []);
             return;
         }
         if (!chart.reflections || !chart.shown)
             return;
         // Points only once F²calc is calculated: a reflection is placed by it.
-        if (chart.reflections.calculatedShown && chart.squared)
-            layer.setPoints(chart.reflections.calculated, chart.reflections.measured, chart.reflections.measuredSu);
-        else if (chart.reflections.calculatedShown)
-            layer.setPoints(chart.reflections.calculatedF, chart.reflections.measuredF, chart.reflections.measuredFSu);
-        else
-            layer.setPoints([], [], []);
+        chart.drawModel(chart.reflections, layer, leftOutLayer);
     }
 
     // The y = x line across whatever both axes show.
@@ -443,12 +470,7 @@ Item {
                 readonly property SingleCrystalReflectionModel model: modelData ? modelData.singleCrystalReflections : null
 
                 function redraw() {
-                    if (!model || !chart.shown || !model.calculatedShown)
-                        setPoints([], [], []);
-                    else if (chart.squared)
-                        setPoints(model.calculated, model.measured, model.measuredSu);
-                    else
-                        setPoints(model.calculatedF, model.measuredF, model.measuredFSu);
+                    chart.drawModel(model, stackedLayer, stackedLeftOut);
                 }
 
                 objectName: "singleCrystal.points." + index
@@ -467,6 +489,20 @@ Item {
                         stackedLayer.redraw();
                     }
                 }
+                // The reflections this experiment's fit leaves out, dimmed.
+                MeasuredLayer {
+                    id: stackedLeftOut
+
+                    objectName: "singleCrystal.leftOut." + stackedLayer.index
+                    anchors.fill: parent
+                    opacity: chart.leftOutOpacity
+                    color: stackedLayer.color
+                    markerSize: 5
+                    xMin: axisX.min
+                    xMax: axisX.max
+                    yMin: axisY.min
+                    yMax: axisY.max
+                }
             }
         }
         MeasuredLayer {
@@ -476,6 +512,21 @@ Item {
             visible: !chart.stacked
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            markerSize: 5
+            xMin: axisX.min
+            xMax: axisX.max
+            yMin: axisY.min
+            yMax: axisY.max
+        }
+        // The reflections the fit leaves out (its cutoff), dimmed; the hover says why.
+        MeasuredLayer {
+            id: leftOutLayer
+
+            objectName: "singleCrystal.leftOut"
+            visible: !chart.stacked
+            anchors.fill: parent
+            opacity: chart.leftOutOpacity
+            color: layer.color
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max

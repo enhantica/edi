@@ -188,8 +188,9 @@ void ReflectionListModel::sync() {
 
 namespace {
 // The reflection table's columns, in the order the delegates read them.
-const QStringList kSingleCrystalReflectionRoles{"h", "k", "l", "dSpacing", "sinThetaOverLambda", "intensityMeas",
-                                                "intensityMeasSu", "intensityCalc", "residual", "wavelength"};
+const QStringList kSingleCrystalReflectionRoles{"h",        "k",        "l",          "dSpacing", "sinThetaOverLambda",
+                                                "intensityMeas", "intensityMeasSu", "intensityCalc", "residual",
+                                                "wavelength", "fitUse"};
 }  // namespace
 
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
@@ -242,6 +243,10 @@ void SingleCrystalReflectionModel::refresh() {
     QList<double> calculated;
     QList<double> measured;
     QList<double> su;
+    QList<bool> used;
+    // The fit's cutoff (`_refine_ls.threshold_sigma`): a reflection is fitted when F² > n su(F²), as crysta selects
+    // them; every one without a cutoff.
+    const std::optional<double> cutoff = project_.refine_ls_threshold_sigma;
     double low = qInf();
     double high = -qInf();
     bool shown = false;
@@ -257,11 +262,14 @@ void SingleCrystalReflectionModel::refresh() {
             const auto column = [current, i](const edi::ComputedColumn<double>& values) {
                 return current && i < values.size() ? values[i] : qQNaN();
             };
+            const bool fitted = !cutoff.has_value() || meas > *cutoff * sigma;
+            used.append(fitted);
             rows.append({reinterpret_cast<const void*>(i + 1),
                          {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i],
                           column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
                           value, residual,
-                          i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN()}});
+                          i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN(),
+                          fitted ? 1.0 : 0.0}});
             calculated.append(value);
             measured.append(meas);
             su.append(sigma);
@@ -310,6 +318,8 @@ void SingleCrystalReflectionModel::refresh() {
     calculated_ = calculated;
     measured_ = measured;
     measured_su_ = su;
+    used_ = used;
+    fit_cutoff_ = cutoff.value_or(qQNaN());
     low_ = std::min(0.0, low - pad);
     high_ = high + pad;
     calculated_shown_ = shown;
@@ -354,6 +364,9 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     }
     if (std::isfinite(calc)) {
         lines.append(QStringLiteral("%1 calc: %2").arg(quantity, QString::number(calc, 'f', decimals)));
+    }
+    if (at < used_.size() && !used_.at(at)) {
+        lines.append(QStringLiteral("left out of the fit: F² ≤ %1 s.u.").arg(fit_cutoff_));
     }
     return lines.join(QStringLiteral("<br>"));
 }

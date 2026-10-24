@@ -135,6 +135,10 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
     Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
     Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
+    // Whether the fit uses each reflection (F² > n su(F²) under the fit's cutoff, every one without), and the cutoff's
+    // n, NaN without one.
+    Q_PROPERTY(QList<bool> used READ used NOTIFY pointsChanged)
+    Q_PROPERTY(double fitCutoff READ fitCutoff NOTIFY pointsChanged)
     // The smallest and the largest reflection wavelength of a time-of-flight single crystal, NaN without one.
     Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY pointsChanged)
     Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY pointsChanged)
@@ -166,6 +170,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     QList<double> measuredFSu() const { return measured_f_su_; }
     double lowF() const { return low_f_; }
     double highF() const { return high_f_; }
+    QList<bool> used() const { return used_; }
+    double fitCutoff() const { return fit_cutoff_; }
     double wavelengthLow() const { return wavelength_low_; }
     double wavelengthHigh() const { return wavelength_high_; }
 
@@ -196,6 +202,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double high_f_ = 1.0;
     double wavelength_low_ = qQNaN();
     double wavelength_high_ = qQNaN();
+    QList<bool> used_;
+    double fit_cutoff_ = qQNaN();
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.

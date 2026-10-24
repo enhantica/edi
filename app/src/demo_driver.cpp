@@ -423,6 +423,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The aliases and constraints that share the first dataset's extinction, each id column as wide as its ids.
     steps_.push_back({"sccheck-12f-taurine-aliases", {analysis, extras, "expand:group.alias"}});
     steps_.push_back({"sccheck-12g-taurine-constraints", {"expand:group.constraint", "reveal:constraints.list"}});
+    // At the 3 su cutoff: the reflection table's fit column and the chart's dimmed points, on both views.
+    steps_.push_back({"sccheck-12h-taurine-fit-use", {experiment, extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-12i-taurine-fit-use-stacked", {"mainArea.experiment.tab.stacked"}});
+    // On F axes the weak reflections the cutoff leaves out spread away from the origin; then back to F².
+    steps_.push_back({"sccheck-12j-taurine-fit-use-on-f",
+                      {"mainArea.experiment.tab.chart", "singleCrystal.toolbar.quantity", "choose:F"}});
+    steps_.push_back({"sccheck-12k-taurine-back-on-f-squared", {"singleCrystal.toolbar.quantity", "choose:F²"}});
     // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
     steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
                                                               + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
