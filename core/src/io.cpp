@@ -689,7 +689,7 @@ const std::set<std::string>& known_covered_tags() {
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
         // _extinction (a single crystal's)
         "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
-        "_extinction.mosaic_spread", "_extinction.crystal_radius",
+        "_extinction.mosaic_spread", "_extinction.crystal_radius", "_extinction.coefficient",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -1651,7 +1651,8 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     for (const auto& [field, specification] :
          {std::pair{&experiment.extinction.domain_radius, &spec::extinction_domain_radius},
           std::pair{&experiment.extinction.mosaic_spread, &spec::extinction_mosaic_spread},
-          std::pair{&experiment.extinction.crystal_radius, &spec::extinction_crystal_radius}}) {
+          std::pair{&experiment.extinction.crystal_radius, &spec::extinction_crystal_radius},
+          std::pair{&experiment.extinction.coefficient, &spec::extinction_coefficient}}) {
         std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
         if (!found) {
             continue;
@@ -2596,6 +2597,9 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         if (experiment.extinction.crystal_radius) {
             add(prefix + "crystal_radius", prefix + "extinction.crystal_radius", &*experiment.extinction.crystal_radius);
+        }
+        if (experiment.extinction.coefficient) {
+            add(prefix + "coefficient", prefix + "extinction.coefficient", &*experiment.extinction.coefficient);
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
@@ -4282,8 +4286,10 @@ void apply_extinction_type(ExtinctionBase& extinction, const std::string& token)
     const bool domain = token == "becker-coppens-type-2" || token == "becker-coppens-mixed";
     keep(extinction.domain_radius, domain, spec::extinction_domain_radius, "0");
     keep(extinction.mosaic_spread, spread, spec::extinction_mosaic_spread, "0");
+    const bool larson = token == "larson-isotropic";
     // 1 mm until the crystal's own radius is given (the owner, 2026-10-23).
-    keep(extinction.crystal_radius, token != "none", spec::extinction_crystal_radius, "1");
+    keep(extinction.crystal_radius, token != "none" && !larson, spec::extinction_crystal_radius, "1");
+    keep(extinction.coefficient, larson, spec::extinction_coefficient, "0");
     if (!spread) {
         extinction.mosaic_distribution.reset();
     } else if (!extinction.mosaic_distribution) {
