@@ -77,7 +77,7 @@ def structure(case, stem):  # noqa: PLR0914 - the external structure table
     return text
 
 
-def main():  # noqa: PLR0914 - independent decimal sample variables
+def generate_projects():
     reference = json.loads((HERE / 'fullprof.json').read_text())
     for case, record in reference['cases'].items():
         path = HERE / 'projects' / case
@@ -107,13 +107,13 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
             )
             text += f'_instrument.setup_wavelength {wavelength}\n'
         if 'extinction' in case:
-            text += '_extinction.type becker-coppens-mixed\n_extinction.mosaic_distribution gaussian\n'
+            text += (
+                '_extinction.type becker-coppens-mixed\n_extinction.mosaic_distribution gaussian\n'
+            )
             text += '_extinction.crystal_radius 0.01\n_extinction.domain_radius 10\n'
             text += '_extinction.mosaic_spread 101810.87303300254\n'
         else:
-            text += (
-                '_extinction.type none\n'
-            )
+            text += '_extinction.type none\n'
         text += 'loop_\n_linked_structure.structure_id\n_linked_structure.scale\n'
         text += f'structure {scale}\nloop_\n'
         text += ''.join(
@@ -124,6 +124,9 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
             text += '_refln.wavelength\n'
         text += ''.join(' '.join(str(v) for v in row) + '\n' for row in record['input_rows'])
         (path / 'experiments/experiment.edi').write_text(text)
+
+
+def generate_extinction_samples():  # noqa: PLR0914 - independent decimal sample variables
     samples = []
     with localcontext() as ctx:
         ctx.prec = 50
@@ -189,4 +192,5 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
 
 
 if __name__ == '__main__':
-    main()
+    generate_projects()
+    generate_extinction_samples()
