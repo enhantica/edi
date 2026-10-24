@@ -21,3 +21,5 @@ The scan rows claim only their single template fit.
 
 Bérar-Baldinozzi uses FullProf Npr=5 for the mixing-eta model, with its signed
 coefficient map. This is distinct from diffraction-lib's TCH-based BeBa model.
+
+The committed D1A wavelength is fixed at 1.91 A, as the FullProf input already does. Re-exporting both the start calculation and the fit reproduces every committed PCR and observation-data byte. Their authoring outputs are reused unchanged; only the source receipt digest is rebound.

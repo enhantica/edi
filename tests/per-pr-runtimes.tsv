@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T07:08:07Z
+# measured_utc = 2026-10-24T07:36:18Z
 #
-# Recorded from: measured test run (80 node(s) measured once, 14907 banked, 0 stale row(s) dropped)
-# Collected tests: 16713; with a reported duration: 9635
+# Recorded from: measured test run (14 node(s) measured once, 14941 banked, 0 stale row(s) dropped)
+# Collected tests: 16727; with a reported duration: 9635
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16713
+# inventory_python = 16727
 # inventory_cpp = 393
-# inventory_measured = 14941
+# inventory_measured = 14955
 # inventory_unmeasured = 2165
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -2228,6 +2228,20 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_cli_fit_expectations_retain_independent_factors_and_reference_kinds[pd-xray-cwl_lam7o3-p021]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_cli_fit_expectations_retain_independent_factors_and_reference_kinds[pd-xray-cwl_latp-bm01_scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_cli_fit_expectations_retain_independent_factors_and_reference_kinds[pd-xray-cwl_pbso4-lab]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[changed-full-rwp]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[changed-shared-value]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[empty-shared]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[extra-shared]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[missing-one-shared]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[missing-scan-template]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[missing-variant]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[ordinary-case-moved-to-variant]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[relabelled-full-rwp]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[relabelled-off-free-count]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[relabelled-shared]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[relaxed-full-rwp]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[unbounded-shared]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_comparison_contract_refuses_missing_or_relabelled_references[wrong-off-free-count]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_diffraction_library_marks_the_beba_model_gap_instead_of_comparing_minima[pd-neut-cwl_hs-hrpt]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_diffraction_library_marks_the_beba_model_gap_instead_of_comparing_minima[pd-neut-cwl_yalo3-al2o3-spodi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_diffraction_library_marks_the_beba_model_gap_instead_of_comparing_minima[pd-neut-xray-cwl_pbso4-d1a-lab]
