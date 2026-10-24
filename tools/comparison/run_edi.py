@@ -26,17 +26,11 @@ import edi
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools' / 'checks'))
+from cli_projects import fit_template_only  # noqa: E402 - the record check's own template rule
+
 CLI_DIR = ROOT / 'docs' / 'user' / 'cli'
 OUT_DIR = ROOT / 'knowledge' / 'comparison'
-
-
-def template_only(project: Path) -> None:
-    """Make a scan copy fit its template file alone: its experiment holds that file's points."""
-    analysis = project / 'analysis' / 'analysis.edi'
-    text = analysis.read_text(encoding='utf-8')
-    text = re.sub(r'(?m)^_sequential_fit\.\S+ .*\n', '', text)
-    text = re.sub(r'(?m)^_fitting_mode\.type sequential$', '_fitting_mode.type single', text)
-    analysis.write_text(text, encoding='utf-8')
 
 
 def write_curves(experiment, path: Path) -> None:
@@ -82,7 +76,9 @@ def run(case: str) -> dict:
     with tempfile.TemporaryDirectory() as scratch:
         copy = Path(scratch) / 'project'
         shutil.copytree(CLI_DIR / case / 'project', copy)
-        template_only(copy)
+        analysis = (copy / 'analysis' / 'analysis.edi').read_text(encoding='utf-8')
+        if re.search(r'(?m)^_fitting_mode\.type sequential$', analysis):
+            fit_template_only(copy)
         project = edi.Project.load(copy)
         n_free = len(project.free_parameters)
         result = project.analysis.fit()

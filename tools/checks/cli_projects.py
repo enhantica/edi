@@ -17,10 +17,14 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a dis
 - a top-level ``quantities`` block — the default invocation;
 - each ``variants.<name>`` block — the descent ``<name>`` with ``-`` spelled ``_`` (the corpus
   names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
-  copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); an unknown
-  descent fails;
+  copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); or
+  ``asymmetry-off``, the copy with every Bérar-Baldinozzi coefficient fixed at 0, which compares
+  a model whose asymmetry form differs between programs on everything else; any other name fails;
 - an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
 - a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
+
+A record with ``"template": true`` belongs to a scan and fits its template file alone, as a single
+fit, in every unit: the scan's experiment already holds that file's points.
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
@@ -48,6 +52,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import yaml
@@ -220,29 +225,67 @@ def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
 # ----------------------------------------------------------------------
 
 
-def _units(expected: dict) -> list[tuple[str, dict[str, str], dict]]:
-    """``(label, declared conditions, quantities)`` for every unit an expected.json declares.
+_ASYMMETRY = re.compile(r'(?m)^(_peak\.asym_beba_(?:a0|b0|a1|b1)) .*$')
+
+
+def fix_asymmetry_off(project: Path) -> None:
+    """Fix every Bérar-Baldinozzi coefficient of the project copy at 0."""
+    changed = 0
+    for path in sorted((project / 'experiments').glob('*.edi')):
+        text, count = _ASYMMETRY.subn(r'\1 0', path.read_text(encoding='utf-8'))
+        changed += count
+        path.write_text(text, encoding='utf-8')
+    if not changed:
+        raise ValueError('asymmetry-off: the project has no Bérar-Baldinozzi coefficients')
+
+
+def fit_template_only(project: Path) -> None:
+    """Make a scan copy fit its template file alone, as a single fit."""
+    analysis = project / 'analysis' / 'analysis.edi'
+    text = analysis.read_text(encoding='utf-8')
+    if not re.search(r'(?m)^_fitting_mode\.type sequential$', text):
+        raise ValueError('template: the project is not a scan')
+    text = re.sub(r'(?m)^_sequential_fit\.\S+ .*\n', '', text)
+    text = re.sub(r'(?m)^_fitting_mode\.type sequential$', '_fitting_mode.type single', text)
+    analysis.write_text(text, encoding='utf-8')
+
+
+# A variant names a registered descent, or one of these changes to the project copy.
+PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off}
+
+Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None]
+
+
+def _units(expected: dict) -> list[Unit]:
+    """``(label, conditions, quantities, change)`` for every unit an expected.json declares.
 
     The conditions are ``_minimizer.<item>`` values the unit's project copy declares on top of
     the project's own analysis.edi — a variant's descent; empty for the project as committed.
+    The change edits the copy for a project variant; None otherwise.
     """
     import edi  # noqa: PLC0415
 
-    units: list[tuple[str, dict[str, str], dict]] = []
+    units: list[Unit] = []
     if 'quantities' in expected:
-        units.append(('default', {}, expected['quantities']))
+        units.append(('default', {}, expected['quantities'], None))
     descents = set(edi._descent_ids())
     for name, block in expected.get('variants', {}).items():
+        if name in PROJECT_VARIANTS:
+            units.append((name, {}, block['quantities'], PROJECT_VARIANTS[name]))
+            continue
         descent = name.replace('-', '_')
         if descent not in descents:
-            raise ValueError(f'variant {name!r} names no registered descent {sorted(descents)}')
-        units.append((name, {'descent': descent}, block['quantities']))
+            raise ValueError(
+                f'variant {name!r} names no registered descent {sorted(descents)} and no '
+                f'project variant {sorted(PROJECT_VARIANTS)}'
+            )
+        units.append((name, {'descent': descent}, block['quantities'], None))
     if 'edi' in expected:
-        units.append(('edi', {}, expected['edi']['quantities']))
+        units.append(('edi', {}, expected['edi']['quantities'], None))
     # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
     if 'calc' in expected:
-        units.append(('calc', {}, expected['calc']['quantities']))
-    if not units or not all(quantities for _, _, quantities in units):
+        units.append(('calc', {}, expected['calc']['quantities'], None))
+    if not units or not all(quantities for _, _, quantities, _ in units):
         raise ValueError('expected.json declares no quantities to compare')
     return units
 
@@ -321,12 +364,16 @@ def run_project(root: Path, pid: str) -> list[str]:
     source = root / CLI_DIR / pid
     expected = json.loads((source / 'expected.json').read_text(encoding='utf-8'))
     deviations: list[str] = []
-    for label, conditions, quantities in _units(expected):
+    for label, conditions, quantities, change in _units(expected):
         with tempfile.TemporaryDirectory(
             prefix=f'edi-cli-{pid}-', dir=os.environ.get('RUNNER_TEMP') or None
         ) as scratch:
             project = Path(scratch) / 'project'
             shutil.copytree(source / 'project', project, symlinks=True)
+            if expected.get('template') is True:
+                fit_template_only(project)
+            if change is not None:
+                change(project)
             declare_conditions(project, conditions)
             command = 'calc' if label == 'calc' else 'fit'
             argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
