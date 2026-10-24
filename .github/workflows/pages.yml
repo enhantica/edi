@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: enhantica/crysta
-          ref: 31279c65e7fc962fa754c6581637c63558ea72dd
+          ref: 7693c8d4ad2f9b849e3d97b36824bed2c67b945c
           token: ${{ steps.crysta-token.outputs.token }}
           path: crysta-source
       - name: Strict docs build
