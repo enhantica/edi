@@ -417,7 +417,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
     // The fit's cutoff (FullProf's Rmub 3), and the observed threshold above the reflection table switched to F.
-    steps_.push_back({"sccheck-12d-taurine-refinement-cutoff", {"choose:OK", extras, "expand:group.refine_ls"}});
+    steps_.push_back({"sccheck-12d-taurine-fitted-reflections", {"choose:OK", extras, "expand:group.refine_ls"}});
     steps_.push_back({"sccheck-12e-taurine-observed-on-f",
                       {experiment, extras, "expand:group.refln", "reflns.thresholdBasis", "choose:F"}});
     // The aliases and constraints that share the first dataset's extinction, each id column as wide as its ids.

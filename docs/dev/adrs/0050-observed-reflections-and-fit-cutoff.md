@@ -22,7 +22,7 @@ compared with it until both could be set.
    factors over all, observed and fitted reflections and each reflection's include status.
 2. **The Reflections group** (Experiment page, Extras) shows the threshold above the reflection table: the multiple
    of the su, the basis as I or F, and the expression they make. Blank fields show the default as a placeholder.
-3. **The Refinement group** (Analysis page, shown when the project has a single crystal) holds the fit cutoff, blank
+3. **The Fitted reflections group** (Analysis page, shown when the project has a single crystal) holds the fit cutoff, blank
    for all reflections.
 4. A fit passes the cutoff to crysta, which fits only the reflections above it.
 
