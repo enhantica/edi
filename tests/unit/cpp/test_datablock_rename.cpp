@@ -53,7 +53,7 @@ void relations(edi::Project& project, const std::string& name, bool structural =
     pair.source_kind = "deterministic";
     pair.parameter_unique_name_i = name + target;
     pair.parameter_unique_name_j = name + peer;
-    pair.correlation = "-0.625";
+    pair.correlation = -0.625;
     pair.file_path = "structure1.xy";
     project.fit_result.correlations.push_back(pair);
     edi::SequentialExtractRule rule;
@@ -98,8 +98,8 @@ void check_relations(const edi::Project& project, const std::string& old_name,
     CHECK_MESSAGE(
         project.fit_result.correlations[0]->parameter_unique_name_j.value() == next + peer,
         "The second correlation endpoint must follow its renamed datablock");
-    CHECK_MESSAGE(project.fit_result.correlations[0]->correlation.value() == "-0.625",
-                  "Renaming preserves the authored correlation coefficient text");
+    CHECK_MESSAGE(project.fit_result.correlations[0]->correlation.value() == -0.625,
+                  "Renaming preserves the authored numeric correlation coefficient");
     CHECK_MESSAGE(project.fit_result.correlations[0]->file_path.value() == "structure1.xy",
                   "A scan data filename is not a datablock reference");
     CHECK_MESSAGE(project.sequential_fit.extract[0]->target.value() == next + extract,
@@ -184,7 +184,7 @@ void parameter_relations(edi::Project& project, const std::vector<std::string>& 
             pair.source_kind = "deterministic";
             pair.parameter_unique_name_i = first ? name : "other.cell.length_a";
             pair.parameter_unique_name_j = first ? "other.cell.length_a" : name;
-            pair.correlation = "-0.625";
+            pair.correlation = -0.625;
             pair.file_path = "old.xy";
             project.fit_result.correlations.push_back(pair);
         }
@@ -206,8 +206,8 @@ void require_parameter_relations(const edi::Project& project,
         CHECK_MESSAGE(project.fit_result.correlations[2 * i]->parameter_unique_name_j.value() ==
                           "other.cell.length_a",
                       "A rename must preserve endpoints owned by another identity");
-        CHECK_MESSAGE(project.fit_result.correlations[2 * i]->correlation.value() == "-0.625",
-                      "A reference rewrite must retain the exact coefficient text");
+        CHECK_MESSAGE(project.fit_result.correlations[2 * i]->correlation.value() == -0.625,
+                      "A reference rewrite must retain the exact numeric coefficient");
         CHECK_MESSAGE(project.fit_result.correlations[2 * i]->file_path.value() == "old.xy",
                       "A reference rewrite must retain the data filename");
     }

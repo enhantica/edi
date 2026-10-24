@@ -79,15 +79,15 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
     b = {(base, curve): -0.25}
     if scenario == 'alias-reorder':
         expected = [a | b, a | b]
-        parses = [2, 4]
+        reads = [2, 4]
         assert frames[0]['pointers'] == list(reversed(frames[1]['pointers'])), (
             'The reorder escape must exchange actual pointees under their one shared owner'
         )
     elif scenario == 'repeat':
-        expected, parses = [a, a, a], [1, 1, 1]
+        expected, reads = [a, a, a], [1, 1, 1]
     elif scenario == 'tail-alias-replace':
         expected = [a | b, a | {(curve, ramp): 0.125}]
-        parses = [2, 4]
+        reads = [2, 4]
         assert frames[0]['pointers'][0] == frames[1]['pointers'][0], (
             'A tail-only replacement must keep the earlier row object unchanged'
         )
@@ -96,7 +96,7 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
         )
     elif scenario == 'second-coefficient-write':
         expected = [a | b, a | {(base, curve): 0.125}]
-        parses = [2, 4]
+        reads = [2, 4]
         assert frames[0]['pointers'] == frames[1]['pointers'], (
             'A later coefficient write must preserve every row object'
         )
@@ -104,7 +104,7 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
             'The later-slot escape must leave the earlier coefficient unwritten'
         )
     elif scenario == 'owner-replace':
-        expected, parses = [a, {(base, ramp): -0.875}], [1, 2]
+        expected, reads = [a, {(base, ramp): -0.875}], [1, 2]
         assert frames[0]['pointers'] == frames[1]['pointers'], (
             'Replacing an unbound row within its live owner must exercise address reuse'
         )
@@ -113,10 +113,10 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
         )
     elif scenario == 'name-rename':
         expected = [a, {('renamed.background.base.coef', 'renamed.background.ramp.coef'): 0.5}]
-        parses = [1, 1]
+        reads = [1, 1]
     elif scenario in {'coefficient-write', 'same-value-write'}:
         expected = [a, {(base, ramp): -0.25 if scenario == 'coefficient-write' else 0.5}]
-        parses = [1, 2]
+        reads = [1, 2]
         assert frames[0]['pointers'] == frames[1]['pointers'], (
             'Coefficient writes must reach the same still-live row object'
         )
@@ -124,27 +124,27 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
             'The coefficient-write escape must carry its newly recorded write identity'
         )
     elif scenario == 'alias-replace':
-        expected, parses = [a, b], [1, 2]
+        expected, reads = [a, b], [1, 2]
         assert frames[0]['pointers'] != frames[1]['pointers'], (
             'Alias replacement must change the pointee while preserving its ownership block'
         )
     elif scenario == 'replace-undo':
-        expected, parses = [a, b, a], [1, 2, 3]
+        expected, reads = [a, b, a], [1, 2, 3]
     elif scenario in {'clear-undo', 'clear-write-undo'}:
         expected = [a, {}, a if scenario == 'clear-undo' else {(base, ramp): -0.25}]
-        parses = [1, 1, 1 if scenario == 'clear-undo' else 2]
+        reads = [1, 1, 1 if scenario == 'clear-undo' else 2]
         assert frames[1]['available'] == 0, (
             'Clearing current rows must leave no stale matrix cells'
         )
     else:
         other = {('other.background.base.coef', 'other.background.ramp.coef'): -0.25}
         expected = [a, b if channel == 'rows' else other, a]
-        parses = [1, 2, 2] if channel == 'rows' else [2, 2, 2]
+        reads = [1, 2, 2] if channel == 'rows' else [2, 2, 2]
     assert [cells(frame) for frame in frames] == expected, (
         'Every loaded matrix must describe the current row object and coefficient at ' + scenario
     )
-    assert [frame['parses'] for frame in frames] == parses, (
-        'Unchanged repeats and name-only changes reuse numbers; changed input parses '
+    assert [frame['reads'] for frame in frames] == reads, (
+        'Unchanged repeats and name-only changes reuse numbers; changed input is read '
         'before display '
         'at ' + scenario
     )
