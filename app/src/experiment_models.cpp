@@ -280,15 +280,18 @@ void SingleCrystalReflectionModel::refresh() {
         low = 0.0;
         high = 1.0;
     }
-    // The F view: F from F², the su carried by dF = dF² / (2 F); a non-positive F² has no F.
+    // The F view, by the Xtal ADDREF convention (as cctbx's f_sq_as_f_xtal_3_7): F = √F² for F² > 0 and 0 otherwise,
+    // so a weak or negative reflection stays on the chart, and σ(F) = σ(F²) / (F + √(F² + σ(F²))), which is
+    // σ(F²) / 2F for a strong reflection and √σ(F²) at F = 0 rather than growing without bound.
     QList<double> calculated_f;
     QList<double> measured_f;
     QList<double> measured_f_su;
     double high_f = 0.0;
     for (qsizetype i = 0; i < measured.size(); ++i) {
-        const double calc_f = calculated[i] >= 0.0 ? std::sqrt(calculated[i]) : qQNaN();
-        const double meas_f = measured[i] > 0.0 ? std::sqrt(measured[i]) : qQNaN();
-        const double su_f = measured[i] > 0.0 ? su[i] / (2.0 * meas_f) : qQNaN();
+        const double calc_f = std::isfinite(calculated[i]) ? std::sqrt(std::max(calculated[i], 0.0)) : qQNaN();
+        const double meas_f = std::isfinite(measured[i]) ? std::sqrt(std::max(measured[i], 0.0)) : qQNaN();
+        const double su_f = std::isfinite(meas_f) && su[i] > 0.0 ? su[i] / (meas_f + std::sqrt(meas_f * meas_f + su[i]))
+                                                                 : qQNaN();
         calculated_f.append(calc_f);
         measured_f.append(meas_f);
         measured_f_su.append(su_f);

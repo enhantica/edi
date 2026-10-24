@@ -203,6 +203,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         }
         detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
         detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
+        detail::add_optional(extinction.fields, "coefficient", experiment.extinction.coefficient);
         categories.push_back(extinction);
         Category linked{"linked_structure", true, experiment.linked_structures.size()};
         for (const auto& link : experiment.linked_structures) {

@@ -1364,6 +1364,13 @@
           "items": [
             "crystal_radius"
           ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient"
+          ]
         }
       ],
       "owner": "ExtinctionBase",
@@ -3807,6 +3814,11 @@
     },
     {
       "member": "ExtinctionBase::crystal_radius",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient",
       "type": "OptionalParameter",
       "category": "_extinction"
     },
