@@ -42,32 +42,32 @@
           "tol_rel": null
         },
         "param.alpo4_c2221.cell_length_a.value": {
-          "value": 6.9705553,
-          "kind": "reference",
+          "value": 6.872886376,
+          "kind": "regression-pin",
           "tol_abs": 0.0247817917,
           "tol_rel": null
         },
         "param.alpo4_c2221.cell_length_b.value": {
-          "value": 7.1160316,
-          "kind": "reference",
+          "value": 7.274268774,
+          "kind": "regression-pin",
           "tol_abs": 0.02688388234,
           "tol_rel": null
         },
         "param.alpo4_c2221.cell_length_c.value": {
-          "value": 7.005022,
-          "kind": "reference",
+          "value": 7.110837994,
+          "kind": "regression-pin",
           "tol_abs": 0.02245298244,
           "tol_rel": null
         },
         "param.alpo4_p63mc.cell_length_a.value": {
-          "value": 4.9886746,
-          "kind": "reference",
+          "value": 5.075693517,
+          "kind": "regression-pin",
           "tol_abs": 0.011201818298,
           "tol_rel": null
         },
         "param.alpo4_p63mc.cell_length_c.value": {
-          "value": 9.5048351,
-          "kind": "reference",
+          "value": 9.451465914,
+          "kind": "regression-pin",
           "tol_abs": 0.0322107216,
           "tol_rel": null
         },
@@ -167,7 +167,8 @@
           "tol_abs": 1e-06,
           "tol_rel": null
         }
-      }
+      },
+      "status": "max_iter"
     }
   }
 }

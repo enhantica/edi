@@ -49,3 +49,13 @@ So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, wi
 of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
 coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
 `knowledge/fitting/fullprof/pd-xray-cwl_latp-bm01_scan/asymmetry-off/`.
+
+With the asymmetry off, the cells of the two weak AlPO₄ phases have flat, many-basin directions: the LATP peaks lose
+their asymmetric tails, and the minor phases' cells shift to absorb them. Both programs fit the same 57 parameters from
+the same start. edi moves the C222₁ cell by about 0.1 Å, to the same place from either start; FullProf keeps both
+phases' cells within 0.006 Å of the start, also with a ten times tighter tolerance. Evaluated by either program, edi's
+result is the lower: FullProf's own R<sub>wp</sub> is 4.70 % at edi's values and 4.71 % at its own. So in the
+`asymmetry-off` variant the five AlPO₄ cell lengths are regression pins of edi's result, labelled as such, while every
+LATP-phase value stays a FullProf reference. That fit also ends at crysta's limit of two resumed descents after a
+convergence verdict the final polish disproves, with every value settled (a refit from its end converges at the same
+values), so the variant's expected status is `max_iter`.

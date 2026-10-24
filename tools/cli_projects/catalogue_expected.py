@@ -51,6 +51,11 @@ RWP_TOLERANCE = 0.05
 # these values within two standard uncertainties. The case keeps its declared fast descent.
 LADDER_WITNESS = {'pd-xray-cwl_lam7o3-p021': ('param.O1.fract_x',)}
 LADDER_RWP_TOLERANCE = 0.02
+# With the asymmetry off, LATP's two weak AlPO4 phases have flat cells: edi moves them to a lower
+# minimum than FullProf reaches, so they are pins of edi's own result. That fit stops after the
+# engine's allowed resumes, every value settled; a refit from its end converges at the same values.
+ASYMMETRY_OFF_PINNED = {'pd-xray-cwl_latp-bm01_scan': ('alpo4_c2221.cell.', 'alpo4_p63mc.cell.')}
+ASYMMETRY_OFF_STATUS = {'pd-xray-cwl_latp-bm01_scan': 'max_iter'}
 
 
 def machine_run(project: Path, command: str = 'fit') -> tuple[dict[str, str], float]:
@@ -134,9 +139,14 @@ def n_free(case: str, record: dict, machine: dict[str, str], notes: list[str]) -
 
 
 def shared_values(
-    case: str, project: Path, shared: dict[str, float], machine: dict[str, str], notes: list[str]
+    case: str,
+    project: Path,
+    shared: dict[str, float],
+    machine: dict[str, str],
+    notes: list[str],
+    pinned: tuple[str, ...] = (),
 ) -> dict:
-    """Each shared FullProf value, within two of edi's standard uncertainties."""
+    """Each shared FullProf value within two of edi's uncertainties; a pinned one is edi's own."""
     structures = count(project, 'structures')
     quantities = {}
     for unique, value in shared.items():
@@ -144,6 +154,11 @@ def shared_values(
         su = float(machine.get(f'{name}.uncertainty', 'nan'))
         if not su > 0:
             raise SystemExit(f'{case}: {unique} has no edi uncertainty as {name}')
+        if unique.startswith(pinned):
+            quantities[f'{name}.value'] = quantity(
+                machine[f'{name}.value'], 'regression-pin', SIGMA_MULTIPLE * su, None
+            )
+            continue
         spec = quantity(value, 'reference', SIGMA_MULTIPLE * su, None)
         quantities[f'{name}.value'] = spec
         check(case, f'{name}.value', spec, float(machine[f'{name}.value']), notes)
@@ -168,12 +183,19 @@ def asymmetry_off_variant(case: str, start: Path, notes: list[str]) -> tuple[dic
     shutil.copytree(start, off)
     fix_asymmetry_off(off)
     machine, seconds = machine_run(off)
+    pinned = ASYMMETRY_OFF_PINNED.get(case, ())
     quantities = {
         **n_free(case, record, machine, notes),
-        **shared_values(case, off, shared, machine, notes),
+        **shared_values(case, off, shared, machine, notes, pinned),
         **pins(machine),
     }
-    return {ASYMMETRY_OFF: {'quantities': quantities}}, seconds
+    block = {'quantities': quantities}
+    status = ASYMMETRY_OFF_STATUS.get(case, 'done')
+    if machine['status'] != status:
+        notes.append(f'{case}: {ASYMMETRY_OFF} ends {machine["status"]}, not {status}')
+    if status != 'done':
+        block['status'] = status
+    return {ASYMMETRY_OFF: block}, seconds
 
 
 def fitted(case: str, start: Path, notes: list[str]) -> tuple[dict, dict, float]:
