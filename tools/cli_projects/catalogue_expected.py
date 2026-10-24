@@ -11,7 +11,8 @@ programs refine, each within two of edi's standard uncertainties. One ``python -
 copy gives the regression pins: iterations and reduced chi-square. A reference the fit misses
 is kept and printed, so the check reports it. A scan is checked on its
 template file's row of ``results.csv``, which has no R_wp. A simulation pins the point count and
-the checksum ``python -m edi calc`` reports. The run's seconds are printed for ``runtimes.tsv``.
+the checksum ``python -m edi calc`` reports. A dropped example with no FullProf fit keeps edi's
+result as regression pins. The run's seconds are printed for ``runtimes.tsv``.
 """
 
 from __future__ import annotations
@@ -38,6 +39,10 @@ SHARED = re.compile(
 )
 SIGMA_MULTIPLE = 2.0
 RWP_TOLERANCE = 0.05
+# The default descent must reach a fast-descent case's own result: R_wp within 2 % relative and
+# these values within two standard uncertainties. The case keeps its declared fast descent.
+LADDER_WITNESS = {'pd-xray-cwl_lam7o3-p021': ('param.O1.fract_x',)}
+LADDER_RWP_TOLERANCE = 0.02
 
 
 def machine_run(project: Path, command: str = 'fit') -> tuple[dict[str, str], float]:
@@ -114,7 +119,33 @@ def template_row(case: str, project: Path, template: str, shared: dict, notes: l
     return quantities
 
 
-def fitted(case: str, project: Path, notes: list[str]) -> tuple[dict, float]:
+def pins_only(machine: dict[str, str]) -> dict:
+    """A dropped example with no FullProf fit of its own keeps edi's result as regression pins."""
+    return {
+        'n_free': quantity(machine['n_free'], 'regression-pin', 0.0, None),
+        'rwp': quantity(machine['rwp'], 'regression-pin', None, 1e-6),
+        'iterations': quantity(machine['iterations'], 'regression-pin', 0.0, None),
+        'reduced_chi_square': quantity(
+            machine['reduced_chi_square'], 'regression-pin', 1e-6, None
+        ),
+    }
+
+
+def ladder_variant(case: str, machine: dict[str, str]) -> dict:
+    """The default descent's witness for a fast-descent case, from that case's own fit."""
+    quantities = {'rwp': quantity(machine['rwp'], 'regression-pin', None, LADDER_RWP_TOLERANCE)}
+    for name in LADDER_WITNESS[case]:
+        su = float(machine[f'{name}.uncertainty'])
+        quantities[f'{name}.value'] = quantity(
+            machine[f'{name}.value'], 'regression-pin', SIGMA_MULTIPLE * su, None
+        )
+    return {'ladder': {'quantities': quantities}}
+
+
+def fitted(case: str, project: Path, notes: list[str]) -> tuple[dict, float, dict]:
+    if not (FULLPROF / case / 'reference.json').exists():
+        machine, seconds = machine_run(project)
+        return pins_only(machine), seconds, machine
     record, shared = references(case)
     machine, seconds = machine_run(project)
     quantities = {'n_free': quantity(record['n_free'], 'reference', 0.0, None)}
@@ -122,7 +153,7 @@ def fitted(case: str, project: Path, notes: list[str]) -> tuple[dict, float]:
     template = setting(project, '_sequential_fit.template_file')
     if template:
         quantities.update(template_row(case, project, template, shared, notes))
-        return quantities, seconds
+        return quantities, seconds, machine
     structures = count(project, 'structures')
     quantities['rwp'] = quantity(record['r_wp'], 'reference', None, RWP_TOLERANCE)
     check(case, 'rwp', quantities['rwp'], float(machine['rwp']), notes)
@@ -138,7 +169,7 @@ def fitted(case: str, project: Path, notes: list[str]) -> tuple[dict, float]:
     quantities['reduced_chi_square'] = quantity(
         machine['reduced_chi_square'], 'regression-pin', 1e-6, None
     )
-    return quantities, seconds
+    return quantities, seconds, machine
 
 
 def write(case: str, notes: list[str]) -> float:
@@ -163,16 +194,23 @@ def write(case: str, notes: list[str]) -> float:
                 },
             }
         else:
-            quantities, seconds = fitted(case, project, notes)
+            quantities, seconds, machine = fitted(case, project, notes)
+            referenced = (FULLPROF / case / 'reference.json').exists()
             document = {
                 'schema': 1,
                 'source': {
-                    'engine': 'FullProf 8.40 (references); edi (regression pins)',
-                    'artifact': f'../../../../knowledge/fitting/fullprof/{case}/reference.json',
+                    'engine': 'FullProf 8.40 (references); edi (regression pins)'
+                    if referenced
+                    else 'edi (regression pins; no FullProf fit of this start)',
+                    'artifact': f'../../../../knowledge/fitting/fullprof/{case}/reference.json'
+                    if referenced
+                    else 'machine record (python -m edi fit --report machine)',
                     'provenance': 'PROVENANCE.md',
                 },
                 'quantities': quantities,
             }
+            if case in LADDER_WITNESS:
+                document['variants'] = ladder_variant(case, machine)
     (home / 'expected.json').write_text(json.dumps(document, indent=2) + '\n', encoding='utf-8')
     return seconds
 
