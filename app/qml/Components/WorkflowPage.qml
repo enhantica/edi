@@ -52,6 +52,9 @@ EaComponents.ContentPage {
     signal blockActivated(int index)
 
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
+    // The main area's shown tab.
+    readonly property int mainTabIndex: mainContent.children.length > 0 ? mainContent.children[0].currentIndex : 0
+
     function showMainTab(index) {
         mainContent.children[0].currentIndex = index;
     }

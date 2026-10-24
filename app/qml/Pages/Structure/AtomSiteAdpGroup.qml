@@ -62,7 +62,7 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
             HeaderLabel {
@@ -104,10 +104,9 @@ Column {
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string label
             required property string adpType
             required property ParameterItem adpIso
@@ -119,9 +118,9 @@ Column {
             required property var ani23
             readonly property bool anisotropic: adpType === "Bani" || adpType === "Uani" || adpType === "beta"
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {

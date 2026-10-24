@@ -90,10 +90,13 @@ Column {
         defaultInfoText: qsTr("No measured points")
         sourceModel: visible ? group.experiment.pattern : null
 
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
+        // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
+        // itself, so the Repeater, declared last, takes the last width, kept narrow.
+        readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
+        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
             HeaderLabel {
@@ -116,25 +119,33 @@ Column {
             HeaderLabel {
                 uid: "data.intensity_bkg"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("resid")
             }
             HeaderLabel {
                 uid: "data.calc_status"
             }
+            Repeater {
+                model: table.componentNames
+                delegate: EaComponents.ListViewLabel {
+                    required property string modelData
+                    objectName: "data.header.component." + modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: modelData
+                }
+            }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             // The roles by the model (its `x` role would shadow the delegate's own x).
             required property var model
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             NumberLabel {
@@ -183,6 +194,14 @@ Column {
                 iconColor: String(status === "incl" ? EaStyle.Colors.green : status === "failed" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
                 ring: status === "pending"
                 toolTip: status === "incl" ? Session.optionLabel("data.calc_status", "incl") : status === "excl" ? Session.optionLabel("data.calc_status", "excl") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
+            }
+            Repeater {
+                model: row.model.componentIntensities
+                delegate: EaComponents.ListViewLabel {
+                    required property var modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: group.intensity(modelData)
+                }
             }
         }
     }

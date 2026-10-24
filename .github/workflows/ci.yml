@@ -749,6 +749,16 @@ jobs:
             build/app/ui-actual
             build/app/ui-diff
           if-no-files-found: ignore
+      # Each delivered surface carries the notices of exactly the components it ships, checked on the real outputs this
+      # job has built: the desktop install, the Python wheel and the CLI with the notices its build puts beside it
+      # (tests/system/py/test_distribution_licences.py, which the system parts leave to this job and app-wasm). On
+      # Linux only: the lists do not depend on the platform.
+      - name: Stage the desktop, Python and CLI surfaces
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py --surfaces desktop,python,cli
+      - name: Check those surfaces' notices
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py -k "desktop or python or cli"
       - name: app-build recovers a build/app configured under another toolchain
         if: needs.changes.outputs.app_build == 'true'
         run: pixi run -e app --skip-deps app-build-recovery
@@ -841,3 +851,11 @@ jobs:
           path: ${{ runner.temp }}/edi-webapp-checks
           retention-days: 7
           if-no-files-found: ignore
+      # The site built above carries the notices of exactly the components it ships
+      # (tests/system/py/test_distribution_licences.py, whose other surfaces the app job checks).
+      - name: Stage the web surface
+        if: ${{ !cancelled() }}
+        run: pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py --surfaces web
+      - name: Check the web surface's notices
+        if: ${{ !cancelled() }}
+        run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py -k web

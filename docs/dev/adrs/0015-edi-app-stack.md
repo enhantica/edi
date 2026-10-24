@@ -43,12 +43,12 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
+   `540cda20a0c15982c5a3c5bdefab275f3e343c43` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
-   declared replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0029),
-   Fonts for edi's font inventory (§10), Sizes for a sidebar width the app window sets (ADR-0017 §12), and ListView
-   for the null-safe selection-model initialization recorded in ADR-0029; configuration refuses another commit or local changes under `src/`. The pinned
+   declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
+   focused colour, ProjectDescriptionDialog, Fonts for edi's font inventory (§10) and Sizes for a sidebar width the app
+   window sets (ADR-0017 §12); configuration refuses another commit or local changes under `src/`. The pinned
    commit is downloaded as GitHub's archive of it, checked against a committed SHA-256, with a message and a timeout (a
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
@@ -143,7 +143,19 @@ notice (`app/DISTRIBUTION-LICENSE.md`) says so, as `DEPENDENCIES.md` does. **Ame
 About dialog's licence link opens that notice, bundled in the app, and the dialog carries no separate
 "distributed under" sentence; its second link opens the bundled third-party notices. The notice's own links
 (`COPYING`, `LICENSE`, `THIRD-PARTY-NOTICES`) open those bundled texts in the same viewer, resolved against the
-notice's location, and nothing outside the bundled licence texts opens there.
+notice's location, and nothing outside the bundled licence texts opens there. **Amended 2026-10-21 (owner):** the
+About window has no tabs. It names the app's licences by their identifiers, `BSD-3-Clause` and `GPL-3.0-only`, each
+opening its bundled text (`LICENSE`, `COPYING`) as plain text, and a *Third-party licences* link opens the table of
+the components the build bundles (ADR-0017 §1). The notice stays bundled beside the app.
+
+**Each surface lists only what it carries (owner, 2026-10-21).** `DEPENDENCIES.md` is the one list of third-party
+components: a row per component and its licence, and a column for each surface (the desktop app, the web app, the
+Python package and the command-line binary) saying whether it links, bundles or compiles the component in. The app
+embeds the file and its About window lists the column of the build's own surface, desktop or web.
+`tools/licences/sync.py` writes the rest from it: each `THIRD-PARTY-NOTICES` section's licence and use lines, and the
+Python package's `licenses/`, one licence text per component of its column, with `pyproject.toml`'s `license-files`;
+`--check` compares without writing. `THIRD-PARTY-NOTICES` keeps every licence text as its component distributes it.
+A version that differs on one surface (the web build compiles Qt's own HarfBuzz) is written in that surface's cell.
 
 The pattern chart is built on Qt Graphs (ADR-0017 §15, ADR-0020, ADR-0021). The structure view is built on Qt
 Quick 3D, which the app now links (ADR-0017 §16, ADR-0022).

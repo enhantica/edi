@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <atomic>
 #include <memory>
@@ -660,7 +661,9 @@ class Written {
     }
 
     // Comparison with whatever the value compares with. A type that compares through a template
-    // (an optional, a container) would not find the conversion alone.
+    // (an optional, a container) would not find the conversion alone. Iterators are left out first:
+    // an iterator over values that mention a cell finds these operators too, and libc++ 23 then
+    // checks the requirement below in terms of itself.
     template <typename U>
         requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t == u; }
@@ -3304,6 +3307,11 @@ struct PdDataBase {
     ComputedColumn<double> intensity_calc;
     ComputedColumn<double> intensity_bkg;
     ComputedColumn<std::string> calc_status;
+    // crysta's structure curves (its ADR-0096): each linked structure's calculated curve above the background,
+    // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
+    // calculation ran, and when no structure is linked.
+    ComputedColumn<double> component_intensities_net;
+    ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
     // above; never saved, and not a Python member.
@@ -3340,6 +3348,8 @@ struct PdDataBase {
         intensity_calc.clear();
         intensity_bkg.clear();
         calc_status.clear();
+        component_intensities_net.clear();
+        component_order.clear();
         residual.clear();
     }
 
@@ -5381,6 +5391,21 @@ struct DataCategory {
     static constexpr std::array legacy{"_pd_data", "_pd_meas", "_pd_proc"};
 };
 static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::items));
+
+// Each structure's curve: the per-point lists in the `_data` loop and the block's list of the structures they follow,
+// crysta's computed buffers, shared like the other computed columns.
+struct PdCalcCategory {
+    static constexpr const char* name = "_pd_calc";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
+    static constexpr std::array items{"component_intensities_net"};
+};
+static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
+struct PdCalcOverallCategory {
+    static constexpr const char* name = "_pd_calc_overall";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_order};
+    static constexpr std::array items{"component_presentation_order"};
+};
+static_assert(detail::one_entry_per_column(PdCalcOverallCategory::columns, PdCalcOverallCategory::items));
 
 // Categories on file that the model does not store.
 struct FitParameterCategory {

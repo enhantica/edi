@@ -47,7 +47,7 @@ Column {
         columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
             HeaderLabel {
@@ -78,15 +78,14 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 uid: "atom_site.occupancy"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string label
             required property string typeSymbol
             required property string wyckoffLetter
@@ -95,9 +94,9 @@ Column {
             required property ParameterItem fractZ
             required property ParameterItem occupancy
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
@@ -194,7 +193,7 @@ Column {
                 objectName: `atomSite.occupancy.${row.index}`
                 item: row.occupancy
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.remove.${row.index}`
                 fontIcon: "minus-circle"

@@ -8,5 +8,6 @@ Tools, which are available under GPL-3.0 only, so the application as a whole is 
 
 The source code in this directory, like all of edi's source, is licensed under the BSD 3-Clause
 License ([LICENSE](../LICENSE)): a file of it can be reused under that licence on its own. The
-licences of the components the application links or bundles are in
-[THIRD-PARTY-NOTICES](../THIRD-PARTY-NOTICES), which the application shows in its About window.
+components the application links or bundles are listed in [DEPENDENCIES.md](../DEPENDENCIES.md), whose
+column for the application its About window shows, and their licence texts are in
+[THIRD-PARTY-NOTICES](../THIRD-PARTY-NOTICES).

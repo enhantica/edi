@@ -81,6 +81,18 @@ static nb::object readonly_array(const edi::ComputedColumn<T>& column) {
         nb::ndarray<nb::numpy, const T, nb::ndim<1>>(values.data(), {values.size()}, keeper));
 }
 
+// A row-major computed column of `columns` values per row as a read-only (rows, columns) NumPy array over
+// crysta's buffer, zero-copy as readonly_array; (0, 0) when it is empty.
+static nb::object readonly_matrix(const edi::ComputedColumn<double>& column, std::size_t columns) {
+    using Buffer = edi::ComputedColumn<double>::Buffer;
+    auto* owner = new Buffer(column.buffer() ? column.buffer() : std::make_shared<const std::vector<double>>());
+    nb::capsule keeper(owner, [](void* held) noexcept { delete static_cast<Buffer*>(held); });
+    const std::vector<double>& values = **owner;
+    const std::size_t width = values.empty() ? 0 : columns;
+    const std::size_t rows = width == 0 ? 0 : values.size() / width;
+    return nb::cast(nb::ndarray<nb::numpy, const double, nb::ndim<2>>(values.data(), {rows, width}, keeper));
+}
+
 // A computed text column — `calc_status`, `structure_id` — as `tuple[str, ...]` (ADR-0073 §2).
 static nb::tuple text_tuple(const edi::ComputedColumn<std::string>& column) {
     nb::list out;
@@ -3311,7 +3323,21 @@ NB_MODULE(_edi, m) {
                          return readonly_array(live_data(p).intensity_bkg);
                      })
         .def_prop_ro("calc_status",
-                     [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).calc_status); });
+                     [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).calc_status); })
+        // crysta's structure curves (its ADR-0096), as crysta-py spells them.
+        .def_prop_ro(
+            "component_intensities_net",
+            [live_data](const edi::PdDataBase& p) {
+                const edi::PdDataBase& data = live_data(p);
+                return readonly_matrix(data.component_intensities_net, data.component_order.size());
+            },
+            "Each linked structure's calculated curve above the background: one row per point, one column per "
+            "structure in component_presentation_order; NaN on an excluded row. The background plus the row's "
+            "values is intensity_calc.")
+        .def_prop_ro(
+            "component_presentation_order",
+            [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).component_order); },
+            "The ids of the structures whose curves component_intensities_net holds, in its column order.");
 
     // The data leaves: the axis member lives on the concrete class, upstream's schema; construction
     // takes exactly that axis.

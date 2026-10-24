@@ -10,7 +10,7 @@ import edi.app
 // A table column's header for a `.edi` item: its label, and its units when asked, from crysta's dictionary through
 // Session, and as its tooltip the label and the `.edi` name it labels, so every header says which item of the file
 // its column shows.
-EaComponents.TableViewLabel {
+EaComponents.ListViewLabel {
     id: header
 
     // The item, `category.name`, and the token its label depends on (an ADP's type).

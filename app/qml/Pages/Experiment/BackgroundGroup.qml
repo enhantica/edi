@@ -150,7 +150,7 @@ Column {
                 columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     HeaderLabel {
@@ -165,22 +165,21 @@ Column {
                         horizontalAlignment: Text.AlignHCenter
                         uid: "background.intensity"
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: row
 
-                    required property int index
                     required property var model
                     required property real position
                     required property ParameterItem intensity
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: row.index + 1
                     }
                     TextCell {
@@ -205,7 +204,7 @@ Column {
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
                         enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.remove.${row.index}`
@@ -273,7 +272,7 @@ Column {
                 columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     HeaderLabel {
@@ -288,22 +287,21 @@ Column {
                         horizontalAlignment: Text.AlignHCenter
                         uid: "background.coef"
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: termRow
 
-                    required property int index
                     required property var model
                     required property int order
                     required property ParameterItem coef
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: termRow.index + 1
                     }
                     TextCell {
@@ -327,7 +325,7 @@ Column {
                         objectName: `background.coef.${termRow.index}`
                         item: termRow.coef
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
                         enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.removeTerm.${termRow.index}`

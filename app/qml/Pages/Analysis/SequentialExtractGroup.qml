@@ -26,7 +26,7 @@ DataTable {
     columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("sequential_fit_extract.id")), width * 0.3), Math.min(textColumnWidth("target", Session.label("sequential_fit_extract.target")), width * 0.4), -1, AppSizes.iconOnlyColumnWidth]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
         HeaderLabel {
@@ -41,36 +41,35 @@ DataTable {
             horizontalAlignment: Text.AlignLeft
             uid: "sequential_fit_extract.pattern"
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index
         // The roles by the model: `id` and `required` cannot be property names.
         required property var model
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.id
             ToolTip.text: row.model.id
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideMiddle
             text: row.model.target
             ToolTip.text: row.model.target
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.pattern

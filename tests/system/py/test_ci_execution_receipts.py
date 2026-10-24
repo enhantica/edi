@@ -21,6 +21,7 @@ SHIPPED = json.loads((ROOT / 'tests/fixtures/ci_cadence/shipped-policy.json').re
 REPO = SHIPPED['repo']
 MODES = ['all', 'nightly'] if REPO == 'crysta' else ['1', '2', '3']
 NIGHTLY_GROUP = 'nightly' if REPO == 'crysta' else 'nightly-only'
+LICENCE_MODULE = 'tests/system/py/test_distribution_licences.py'
 
 
 def execute(tmp_path, mode, skip, result, *, empty=False):
@@ -88,8 +89,12 @@ def test_shipped_driver_executes_exact_selection_and_preserves_exit(tmp_path, mo
     expected_ignored = (
         ['--ignore=' + path for path in frozen] if skip and mode != 'nightly' else []
     )
+    if REPO == 'edi':
+        # The app and app-wasm jobs execute this module on their real build outputs.
+        expected_ignored.append('--ignore=' + LICENCE_MODULE)
     assert ignored == expected_ignored, (
-        'only the independently shipped nightly paths can leave the declared PR cohort'
+        'only the independently shipped nightly paths and the staged licence delegation '
+        'can leave the declared system cohort'
     )
     selected = [arg for arg in args if arg.startswith('tests/')]
     if REPO == 'crysta':

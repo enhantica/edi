@@ -31,6 +31,10 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString appLicenseUrl READ appLicenseUrl CONSTANT)
     Q_PROPERTY(QString copyingUrl READ copyingUrl CONSTANT)
     Q_PROPERTY(QString noticesUrl READ noticesUrl CONSTANT)
+    // edi's own licences, as the About window names them: their SPDX identifiers and their bundled texts, index for
+    // index.
+    Q_PROPERTY(QStringList appLicenceIds READ appLicenceIds CONSTANT)
+    Q_PROPERTY(QStringList appLicenceUrls READ appLicenceUrls CONSTANT)
     Q_PROPERTY(QStringList componentNames READ componentNames CONSTANT)
     Q_PROPERTY(QStringList componentVersions READ componentVersions CONSTANT)
     Q_PROPERTY(QStringList componentLicences READ componentLicences CONSTANT)
@@ -69,8 +73,10 @@ class ApplicationInfo : public QObject {
     QString appLicenseUrl() const { return QStringLiteral("qrc:/app/DISTRIBUTION-LICENSE.md"); }
     QString copyingUrl() const { return QStringLiteral("qrc:/COPYING"); }
     QString noticesUrl() const { return QStringLiteral("qrc:/THIRD-PARTY-NOTICES"); }
-    // The components the notices list, in their order: their names, versions (empty when the notices give none),
-    // licences and uses, index for index.
+    QStringList appLicenceIds() const { return {QStringLiteral("BSD-3-Clause"), QStringLiteral("GPL-3.0-only")}; }
+    QStringList appLicenceUrls() const { return {licenseUrl(), copyingUrl()}; }
+    // The components this build carries, from DEPENDENCIES.md's column for its surface (the desktop or the web app), in
+    // that file's order: their names, versions (empty when none is given), licences and uses, index for index.
     QStringList componentNames() const { return componentColumn(0); }
     QStringList componentVersions() const { return componentColumn(3); }
     QStringList componentLicences() const { return componentColumn(1); }
@@ -115,20 +121,42 @@ class ApplicationInfo : public QObject {
     // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
     // element the table does not have. The app holds no element colour of its own.
     QStringList elementSymbols() const;
-    // The experiment at `place` among `count` and the structure at `place`, in the colour scheme `scheme` (a token of
-    // edi::colour_scheme_from_name, data/palettes) and the theme: edi::pattern_colour and edi::structure_colour.
+    // The experiment or structure at `place` among `count`, in the colour scheme `scheme` (a token of
+    // edi::colour_scheme_from_name, data/palettes; an unknown one reads as the default) and the theme:
+    // edi::pattern_colour and edi::structure_colour.
     Q_INVOKABLE QColor patternColour(const QString& scheme, int place, int count, bool dark) const;
     // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
     Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }
-    Q_INVOKABLE QColor structureColour(const QString& scheme, int place, bool dark) const;
+    Q_INVOKABLE QColor structureColour(const QString& scheme, int place, int count, bool dark) const;
+    // The colour schemes' tokens and their titles, in the order Preferences lists them (edi::colour_scheme_names), and
+    // the token a stored preference stands for: itself, or the default's for an unknown or removed one.
+    Q_PROPERTY(QStringList colourSchemes READ colourSchemes CONSTANT)
+    Q_PROPERTY(QStringList colourSchemeTitles READ colourSchemeTitles CONSTANT)
+    QStringList colourSchemes() const;
+    QStringList colourSchemeTitles() const;
+    Q_INVOKABLE QString colourSchemeOrDefault(const QString& scheme) const;
+    // A scan map's colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for: itself
+    // when listed, else viridis.
+    Q_PROPERTY(QStringList scanColourMaps READ scanColourMaps CONSTANT)
+    QStringList scanColourMaps() const;
+    Q_INVOKABLE QString scanColourMapOrDefault(const QString& name) const;
+    // The ramps from the chart's background to each colour scheme's first measured colour (`ramp:<scheme>`, in the
+    // schemes' order), which both scan views offer beside their own colours, and a colour choice's title: a scheme's, a
+    // map's with its source (edi::scan_colour_map_title), or "<scheme title> shades" for a ramp.
+    Q_PROPERTY(QStringList scanColourRamps READ scanColourRamps CONSTANT)
+    QStringList scanColourRamps() const;
+    Q_INVOKABLE QString scanColourTitle(const QString& choice) const;
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
+    // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 3:1 contrast on each, its hue kept (edi
+    // ADR-0047).
+    Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
 };
 
 #endif  // EDI_APP_APP_INFO_HPP

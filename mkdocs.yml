@@ -72,9 +72,11 @@ nav:
           - dev/adrs/0038-colour-schemes-and-their-rules.md
           - dev/adrs/0039-project-output.md
           - dev/adrs/0040-automatic-background-estimation.md
+          - dev/adrs/0041-scan-pattern-views.md
           - dev/adrs/0044-pattern-charts-and-excluded-regions.md
           - dev/adrs/0045-fit-results-tables-and-agreement-factors.md
           - dev/adrs/0046-analysis-sidebar-scan-controls-and-filters.md
+          - dev/adrs/0047-element-colours-readable-in-2d.md
           - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
           - dev/adrs/template.md
       - Design:

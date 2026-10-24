@@ -26,7 +26,7 @@ class Project;
 
 enum class YScale : std::uint8_t { Linear, Sqrt, Log10 };
 enum class Pane : std::uint8_t { Main, Bragg, Residual };
-enum class SeriesKind : std::uint8_t { Measured, Calculated, Background, Residual, BraggTicks };
+enum class SeriesKind : std::uint8_t { Measured, Calculated, Background, Residual, BraggTicks, StructureCurve };
 
 // One excluded region of the experiment, as [min, max] on the x axis. Never decimated.
 struct ExcludedBand {
@@ -49,9 +49,18 @@ struct PatternSource {
     std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
     Column x, meas, su, calc, bkg, resid;  // null: the column is absent
     std::vector<Phase> phases;
+    // Each linked structure's calculated curve above the background (crysta's component_intensities_net), in the
+    // order the experiment links them; captured with the calculated columns.
+    struct Component {
+        std::string structure_id, label;
+        std::size_t place = 0;  // the structure's place in the project's list: its colour
+        Column net;
+    };
+    std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
     std::size_t experiment_place = 0;  // the experiment's place in the project's list: its colour
     bool current = false;              // the computed columns describe the model now
+    bool d_available = false;          // a current d column, so the pattern can be shown on the d axis
 };
 
 // The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.
@@ -76,11 +85,21 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
                                                     std::span<const std::int32_t> index_l,
                                                     std::span<const std::string> structure_names);
 
+// Each structure's curve above the background out of crysta's row-major table (`net`, one value per point and
+// structure in `order`), one component per structure, placed as group_reflections places phases. None when the
+// table does not hold one value per point and structure.
+std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
+                                                           std::span<const double> net, std::size_t points,
+                                                           std::span<const std::string> structure_names);
+
 // What the renderer asks for.
 struct PatternView {
     std::optional<double> x_min, x_max;  // absent: the data's full range (the included range when included_only)
     int columns = 0;                     // plot width in device pixels (pixel_columns); 0: no decimation
     YScale y_scale = YScale::Linear;
+    bool structure_curves = false;  // each structure's curve over the background (edi ADR-0017 §15)
+    // The residual drawn as a band, (meas − calc) ± s.u. (edi ADR-0017 §15): its band's ends count in its pane's range.
+    bool residual_band = false;
     // Only the included range (ADR-0044): the default x range runs from the first to the last included point, and
     // no measured point is drawn inside an excluded region. Reflection ticks are hidden there in both states.
     bool included_only = false;
@@ -96,14 +115,15 @@ inline constexpr std::size_t kNoRow = std::numeric_limits<std::size_t>::max();
 struct PatternSeries {
     SeriesKind kind{};
     Pane pane{};
-    std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>"
+    std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>", "structure/<structure id>"
     std::string label;  // the legend text
     std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place>`
     std::vector<PresentedPoint> points;
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
-    // Measured only, per point: the error bar's ends in the display scale. A NaN lower end is
-    // drawn to the bottom of the pane.
+    // Measured, per point: the error bar's ends in the display scale. A NaN lower end is
+    // drawn to the bottom of the pane. A structure curve: bar_low is the background its fill starts from. The
+    // residual, when the view asks for its band: (meas − calc) ∓ the measured s.u.
     std::vector<double> bar_low, bar_high;
 };
 
@@ -154,11 +174,14 @@ struct SeriesStyle {
     double marker_px = 0.0;
 };
 // The style table of a project of `experiments` experiments and `structures` structures in `scheme`: a
-// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least the scheme's
-// structure colours), each colour the palette's (edi::pattern_colour, edi::structure_colour, which takes the structure
-// colours round again), and the role rows, the calculated, background, residual and excluded-region styles.
+// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least five), each
+// colour the scheme's for its place among its group (edi::pattern_colour, edi::structure_colour), and the role rows:
+// the calculated, background and residual styles in the scheme's role colours (edi::role_colour) and the
+// excluded-region style. With `structure_scheme`, the structures' rows take their colours from that scheme instead
+// (the app's separate Structures and Patterns colours, the owner, 2026-10-22).
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
-                                             std::size_t structures = 0);
+                                             std::size_t structures = 0,
+                                             std::optional<ColourScheme> structure_scheme = std::nullopt);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.
@@ -172,13 +195,19 @@ int pixel_columns(double plot_width, double device_pixel_ratio);
 // Empty for a gap or a tick's end.
 std::string hover_text(const PatternSource& source, const PatternSeries& series, std::size_t point);
 
+// A series' legend label as coloured pieces: its label in its own style, except the residual's, "Residual (meas −
+// calc)", whose `meas − calc` is coloured as the residual pane's title colours it.
+std::vector<TitleSegment> legend_label(const PatternPresentation& presentation, const PatternSeries& series);
+
 // One line of a hover read-out: its text and the style key whose colour draws it (empty: the theme's
-// text colour).
+// text colour), or, when `segments` is not empty, the same text as pieces each in its own style's colour.
 struct HoverLine {
     std::string text, style;
+    std::vector<TitleSegment> segments;
 };
-// Diffraction-lib's read-out of one presented point. A data or residual point: `x`, then `Imeas`, `Ibkg`,
-// `Icalc` and `Imeas - Icalc` at its `_data` row, each present column in its series' colour. A Bragg tick:
+// Diffraction-lib's read-out of one presented point, named as the y titles name the series. A data or residual
+// point: `x`, then `meas`, `bkg`, `calc` and `meas − calc` at its `_data` row, each present column in its series'
+// colour, `meas − calc` coloured as the residual pane's title with its value in the residual's colour. A Bragg tick:
 // the structure's name, `x` and `Miller indices: (h k l)` of its `_refln` row, the Miller indices alone in the
 // tick's colour. Numbers with two decimals and a thousands separator. Empty for a gap or a tick's end.
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point);
