@@ -484,6 +484,9 @@ void ExperimentViewModel::capturePattern() {
 }
 
 void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
+    if (source.refln_calc) {  // a single crystal's F²calc at a fit's iteration
+        single_crystal_reflections_->showFrame(source.refln_calc);
+    }
     pattern_source_ = std::move(source);
     pattern_source_.experiment_place = colourPlace();
     if (d_source) {
