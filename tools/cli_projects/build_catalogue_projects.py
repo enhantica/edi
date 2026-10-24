@@ -23,11 +23,13 @@ from pathlib import Path
 import edi
 from catalogue_common import CLI, write_project
 
-# Every sibling catalogue_<group>.py module contributes its CASES.
+# Every sibling catalogue_<group>.py module contributes its CASES; the shared helpers and the
+# expected-record writer are not groups.
+NOT_GROUPS = {'catalogue_common', 'catalogue_expected'}
 GROUPS = [
     importlib.import_module(path.stem)
     for path in sorted(Path(__file__).parent.glob('catalogue_*.py'))
-    if path.stem != 'catalogue_common'
+    if path.stem not in NOT_GROUPS
 ]
 CASES = {pid: build for group in GROUPS for pid, build in group.CASES.items()}
 AFTER = {pid: step for group in GROUPS for pid, step in getattr(group, 'AFTER', {}).items()}
