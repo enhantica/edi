@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_scan/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 39.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Co1.adp_iso": {
+      "value": 0.71187961,
+      "kind": "reference",
+      "tol_abs": 0.1951169185748615,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Co2.fract_x": {
+      "value": 0.28083345,
+      "kind": "reference",
+      "tol_abs": 0.001627333966820548,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Co2.fract_z": {
+      "value": 0.98231232,
+      "kind": "reference",
+      "tol_abs": 0.0035418078012848897,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Si.fract_x": {
+      "value": 0.094082192,
+      "kind": "reference",
+      "tol_abs": 0.0009460301472816112,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Si.fract_z": {
+      "value": 0.42974803,
+      "kind": "reference",
+      "tol_abs": 0.0019338735177520314,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.Si.adp_iso": {
+      "value": 0.69422358,
+      "kind": "reference",
+      "tol_abs": 0.1549376934535368,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O1.fract_x": {
+      "value": 0.090694234,
+      "kind": "reference",
+      "tol_abs": 0.0007346408598724664,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O1.fract_z": {
+      "value": 0.76959145,
+      "kind": "reference",
+      "tol_abs": 0.0015925245836060557,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O1.adp_iso": {
+      "value": 1.1535896,
+      "kind": "reference",
+      "tol_abs": 0.14655069864670697,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O2.fract_x": {
+      "value": 0.44873708,
+      "kind": "reference",
+      "tol_abs": 0.0006366278870320322,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O2.fract_z": {
+      "value": 0.21564622,
+      "kind": "reference",
+      "tol_abs": 0.001684303622696348,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O2.adp_iso": {
+      "value": 1.143844,
+      "kind": "reference",
+      "tol_abs": 0.14485761741262096,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O3.fract_x": {
+      "value": 0.16401707,
+      "kind": "reference",
+      "tol_abs": 0.0005482639974718771,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O3.fract_y": {
+      "value": 0.032091107,
+      "kind": "reference",
+      "tol_abs": 0.0008357072404900511,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O3.fract_z": {
+      "value": 0.28000066,
+      "kind": "reference",
+      "tol_abs": 0.0012248737572687757,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.atom_site.O3.adp_iso": {
+      "value": 1.3666862,
+      "kind": "reference",
+      "tol_abs": 0.1248462137344663,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.cell.length_a": {
+      "value": 10.335896,
+      "kind": "reference",
+      "tol_abs": 0.0006000914550481105,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.cell.length_b": {
+      "value": 6.0296464,
+      "kind": "reference",
+      "tol_abs": 0.0003494368595731293,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].cosio.cell.length_c": {
+      "value": 4.7975779,
+      "kind": "reference",
+      "tol_abs": 0.0002751973121572012,
+      "tol_rel": null
+    },
+    "results[01_001_497p3790.dat].fit_result.reduced_chi_square": {
+      "value": 4.80078367045128,
+      "kind": "regression-pin",
+      "tol_abs": null,
+      "tol_rel": 1e-05
+    },
+    "results[01_001_497p3790.dat].fit_result.iterations": {
+      "value": 9.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    }
+  }
+}

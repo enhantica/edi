@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_yalo3-al2o3-spodi/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 56.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.040999999999999995,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.Al2O3.Al1.fract_z.value": {
+      "value": 0.33331043,
+      "kind": "reference",
+      "tol_abs": 0.006071734058,
+      "tol_rel": null
+    },
+    "param.Al2O3.Al1.adp_iso.value": {
+      "value": -0.19099122,
+      "kind": "reference",
+      "tol_abs": 0.4885105804,
+      "tol_rel": null
+    },
+    "param.Al2O3.O1.fract_x.value": {
+      "value": 0.34596279,
+      "kind": "reference",
+      "tol_abs": 0.00945329784,
+      "tol_rel": null
+    },
+    "param.Al2O3.O1.adp_iso.value": {
+      "value": 1.3474534,
+      "kind": "reference",
+      "tol_abs": 0.5874158456,
+      "tol_rel": null
+    },
+    "param.Al2O3.cell_length_a.value": {
+      "value": 4.756742,
+      "kind": "reference",
+      "tol_abs": 0.0008596635152,
+      "tol_rel": null
+    },
+    "param.Al2O3.cell_length_c.value": {
+      "value": 12.972623,
+      "kind": "reference",
+      "tol_abs": 0.0043288814,
+      "tol_rel": null
+    },
+    "param.YAlO3.Y.fract_x.value": {
+      "value": 0.012441033,
+      "kind": "reference",
+      "tol_abs": 0.0002318650388,
+      "tol_rel": null
+    },
+    "param.YAlO3.Y.fract_y.value": {
+      "value": 0.55406731,
+      "kind": "reference",
+      "tol_abs": 0.00016461136608,
+      "tol_rel": null
+    },
+    "param.YAlO3.Y.adp_iso.value": {
+      "value": 0.11793363,
+      "kind": "reference",
+      "tol_abs": 0.01764517553,
+      "tol_rel": null
+    },
+    "param.YAlO3.Al.adp_iso.value": {
+      "value": 0.12667784,
+      "kind": "reference",
+      "tol_abs": 0.03104541606,
+      "tol_rel": null
+    },
+    "param.YAlO3.O1.fract_x.value": {
+      "value": -0.083826303,
+      "kind": "reference",
+      "tol_abs": 0.0002952402846,
+      "tol_rel": null
+    },
+    "param.YAlO3.O1.fract_y.value": {
+      "value": -0.021949621,
+      "kind": "reference",
+      "tol_abs": 0.0002497204508,
+      "tol_rel": null
+    },
+    "param.YAlO3.O1.adp_iso.value": {
+      "value": 0.057761349,
+      "kind": "reference",
+      "tol_abs": 0.02025811032,
+      "tol_rel": null
+    },
+    "param.YAlO3.O2.fract_x.value": {
+      "value": 0.20465809,
+      "kind": "reference",
+      "tol_abs": 0.0001973490697,
+      "tol_rel": null
+    },
+    "param.YAlO3.O2.fract_y.value": {
+      "value": 0.29482174,
+      "kind": "reference",
+      "tol_abs": 0.0001754768873,
+      "tol_rel": null
+    },
+    "param.YAlO3.O2.fract_z.value": {
+      "value": 0.044272028,
+      "kind": "reference",
+      "tol_abs": 0.00012697889068,
+      "tol_rel": null
+    },
+    "param.YAlO3.O2.adp_iso.value": {
+      "value": 0.1416672,
+      "kind": "reference",
+      "tol_abs": 0.01554087861,
+      "tol_rel": null
+    },
+    "param.YAlO3.cell_length_a.value": {
+      "value": 5.1724081,
+      "kind": "reference",
+      "tol_abs": 0.00014492124154,
+      "tol_rel": null
+    },
+    "param.YAlO3.cell_length_b.value": {
+      "value": 5.3265843,
+      "kind": "reference",
+      "tol_abs": 0.00014766899872,
+      "tol_rel": null
+    },
+    "param.YAlO3.cell_length_c.value": {
+      "value": 7.360837,
+      "kind": "reference",
+      "tol_abs": 0.0002091783212,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 36.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 9.731270484,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

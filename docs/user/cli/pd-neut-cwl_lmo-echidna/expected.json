@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_lmo-echidna/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 24.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.0507,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.O.fract_z.value": {
+      "value": 0.25884059,
+      "kind": "reference",
+      "tol_abs": 0.00013569640866,
+      "tol_rel": null
+    },
+    "param.O.adp_iso.value": {
+      "value": 0.73836148,
+      "kind": "reference",
+      "tol_abs": 0.05233687176,
+      "tol_rel": null
+    },
+    "param.Li1.adp_iso.value": {
+      "value": 1.5444678,
+      "kind": "reference",
+      "tol_abs": 0.2257603912,
+      "tol_rel": null
+    },
+    "param.Ni2.adp_iso.value": {
+      "value": 0.29797092,
+      "kind": "reference",
+      "tol_abs": 0.031408631,
+      "tol_rel": null
+    },
+    "param.cell_length_a.value": {
+      "value": 2.8751578,
+      "kind": "reference",
+      "tol_abs": 0.00012480178198,
+      "tol_rel": null
+    },
+    "param.cell_length_c.value": {
+      "value": 14.183333,
+      "kind": "reference",
+      "tol_abs": 0.0007328419254,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 18.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 2.394068351,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

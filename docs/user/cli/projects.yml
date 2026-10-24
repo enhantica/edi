@@ -80,68 +80,69 @@ projects:
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
   - id: pd-neut-cwl_lab6-11b-echidna_basic
-    executing: false
+    executing: true
   - id: pd-neut-tof_diamond-dream_mcstas
-    executing: false
+    executing: true
   # The example catalogue: its user-facing cases in the order the app lists them, simplest first:
   # calculations, constant-wavelength neutron, time-of-flight neutron, X-ray, joint, scans.
   - id: pd-neut-cwl_lbco_simulation
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_si_simulation
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-xray-cwl_nacl_simulation
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_lbco-hrpt
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_hs-hrpt
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_cosio-d20
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_lmo-echidna
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_y2o3-spodi
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_yalo3-al2o3-spodi
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_si-sepd
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_cecoal-polaris
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_ceo2-pearl
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_lbco-si-mcstas
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_ncaf-wish
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-tof_ferrite-austenite-beer
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-xray-cwl_pbso4-lab
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-xray-cwl_lam7o3-p021
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-xray-cwl_pbso4-d1a-lab
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-neut-cwl_cosio-d20_scan
-    executing: false
+    executing: true
     user-facing: true
   - id: pd-xray-cwl_latp-bm01_scan
-    executing: false
+    executing: true
+    offline: true
     user-facing: true

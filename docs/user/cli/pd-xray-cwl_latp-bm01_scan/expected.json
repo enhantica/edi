@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-xray-cwl_latp-bm01_scan/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 59.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].alpo4_c2221.cell.length_a": {
+      "value": 6.969635,
+      "kind": "reference",
+      "tol_abs": 0.041685122026075376,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].alpo4_c2221.cell.length_b": {
+      "value": 7.1159272,
+      "kind": "reference",
+      "tol_abs": 0.04105608756466661,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].alpo4_c2221.cell.length_c": {
+      "value": 7.0037022,
+      "kind": "reference",
+      "tol_abs": 0.0378678129079748,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].alpo4_p63mc.cell.length_a": {
+      "value": 4.9869475,
+      "kind": "reference",
+      "tol_abs": 0.01351426302815911,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].alpo4_p63mc.cell.length_c": {
+      "value": 9.5042715,
+      "kind": "reference",
+      "tol_abs": 0.0370127038613421,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.Ti1.fract_z": {
+      "value": 0.14179918,
+      "kind": "reference",
+      "tol_abs": 0.0001737999750592282,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.Ti1.adp_iso": {
+      "value": 0.30653703,
+      "kind": "reference",
+      "tol_abs": 0.03949587684788862,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.P1.fract_x": {
+      "value": 0.28771874,
+      "kind": "reference",
+      "tol_abs": 0.0005185578844795622,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.P1.adp_iso": {
+      "value": 0.21843778,
+      "kind": "reference",
+      "tol_abs": 0.04089522138636513,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O1.fract_x": {
+      "value": 0.1816974,
+      "kind": "reference",
+      "tol_abs": 0.0012722013983411462,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O1.fract_y": {
+      "value": 0.99127054,
+      "kind": "reference",
+      "tol_abs": 0.0012242324316307617,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O1.fract_z": {
+      "value": 0.188914,
+      "kind": "reference",
+      "tol_abs": 0.0004486404967471166,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O1.adp_iso": {
+      "value": 0.94833887,
+      "kind": "reference",
+      "tol_abs": 0.13812802255580323,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O2.fract_x": {
+      "value": 0.18788302,
+      "kind": "reference",
+      "tol_abs": 0.0009137240162427114,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O2.fract_y": {
+      "value": 0.16268472,
+      "kind": "reference",
+      "tol_abs": 0.0008682472895675408,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O2.fract_z": {
+      "value": 0.081728861,
+      "kind": "reference",
+      "tol_abs": 0.0004089082934907092,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.atom_site.O2.adp_iso": {
+      "value": 0.54765111,
+      "kind": "reference",
+      "tol_abs": 0.11611951896910967,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.cell.length_a": {
+      "value": 8.4969044,
+      "kind": "reference",
+      "tol_abs": 0.0004907573130419603,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].latp.cell.length_c": {
+      "value": 20.832134,
+      "kind": "reference",
+      "tol_abs": 0.001733795522715697,
+      "tol_rel": null
+    },
+    "results[latp_312.dat].fit_result.reduced_chi_square": {
+      "value": 142232098.7639063,
+      "kind": "regression-pin",
+      "tol_abs": null,
+      "tol_rel": 1e-05
+    },
+    "results[latp_312.dat].fit_result.iterations": {
+      "value": 5.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    }
+  }
+}
