@@ -191,9 +191,10 @@ def _settings_of_saved_tree(tree: Path) -> dict[str, dict[str, dict]]:
                 settings.setdefault(attribute, {})[where] = setting
             elif attribute.endswith('type') or category == 'experiment_type':
                 settings.setdefault(raw, {})[where] = {'value': raw}
-            elif category == 'minimizer':
-                # A declared minimization condition that is a name, not a number
-                # (`_minimizer.descent`), is exercised under its item name.
+            elif category in {'minimizer', 'sequential_fit'}:
+                # A declared fit condition that is a name, not a number
+                # (`_minimizer.descent`, `_sequential_fit.template_file`), is exercised
+                # under its item name.
                 settings.setdefault(attribute, {})[where] = {'value': raw}
     return settings
 
@@ -204,8 +205,8 @@ def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
     The project is loaded through edi's own loader and re-saved, and only that canonical output is
     read — so a word in a comment, in ``PROVENANCE.md``, on the docs page or in any field the
     loader ignores is not a token. A token is a numeric setting's name (``broad_gauss_sigma_0``,
-    ``scale``), a type value (``tof-jorgensen``) or a named minimization condition's item name
-    (``descent``). Returns
+    ``scale``), a type value (``tof-jorgensen``) or the item name of a fit condition that is a
+    name (``descent``, ``template_file``). Returns
     ``{token: {occurrence: setting}}``: the occurrence names the file, item and loop row, so the
     same parameter in two experiments stays two entries; a numeric setting is
     ``{'value': float, 'refined': bool}``, a type value ``{'value': str}``.
