@@ -86,10 +86,13 @@ void ParameterItem::refreshFileText() {
         value = QString::fromStdString(text.value);
         su = QString::fromStdString(text.su);
     }
-    if (value != file_value_ || su != file_su_) {
+    if (value != file_value_) {
         file_value_ = value;
+        emit fileValueChanged();
+    }
+    if (su != file_su_) {
         file_su_ = su;
-        emit fileTextChanged();
+        emit fileSuChanged();
     }
 }
 

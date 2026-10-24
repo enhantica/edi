@@ -62,8 +62,8 @@ class ParameterItem : public QObject {
     Q_PROPERTY(int phaseIndex READ phaseIndex NOTIFY phaseIndexChanged)
     // The value and its s.u. as the project file and the Text tab spell them under the project's rule
     // (edi::file_text): what a field, the slider and the Analysis table show. The s.u. is empty without one.
-    Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileTextChanged)
-    Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileTextChanged)
+    Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileValueChanged)
+    Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileSuChanged)
     // One unit of the last digit the item's display format shows: the slider's step (edi::display_step).
     Q_PROPERTY(double sliderStep READ sliderStep NOTIFY sliderStepChanged)
 
@@ -145,7 +145,8 @@ class ParameterItem : public QObject {
     void phaseIndexChanged();
     void shortNameChanged();
     void displayUnitsChanged();
-    void fileTextChanged();
+    void fileValueChanged();
+    void fileSuChanged();
     void sliderStepChanged();
 
    private:
