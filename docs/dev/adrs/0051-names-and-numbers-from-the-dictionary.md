@@ -49,6 +49,9 @@ value as the file and the Text tab spell it (2026-10-24).
       s.u. takes its own item's format (amending its §2).
    3. A number with no dictionary item (a duration, a chart tick, a computed phase fraction) keeps the app's own rule,
       and a value too wide for its cell still shows in scientific notation (owner, 2026-10-22).
+   4. The report's Data table keeps one number of decimals for every row of an intensity column, chosen from the
+      largest measured value, with no exponent (owner, 2026-10-13); its axis column, like the reflections table, takes
+      its item's fixed format.
 5. **A check keeps it so.** `tools/checks/display_sources.py` reads the app, the core and the Python library and
    fails on a rounding primitive outside the bridge, on a literal that copies a dictionary name, and on an exception
    that no longer matches anything. It reads the dictionary from crysta's source (the pinned fetch, or

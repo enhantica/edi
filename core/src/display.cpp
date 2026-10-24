@@ -162,6 +162,10 @@ std::string file_text(std::string_view uid, double value) {
         .value;
 }
 
+std::string fixed_text(double value, int decimals) {
+    return crysta::format_display(value, crysta::DisplayFormat{crysta::DisplayFormat::Kind::Fixed, decimals});
+}
+
 std::optional<std::string> exact_fraction(double value) { return crysta::exact_fraction(value); }
 
 }  // namespace edi

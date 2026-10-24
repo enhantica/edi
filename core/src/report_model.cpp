@@ -449,9 +449,18 @@ ReportTable data_table(const BraggPdExperiment& experiment) {
                                              });
     }
     const bool any_excluded = std::find(excluded.begin(), excluded.end(), true) != excluded.end();
-    // An excluded row's computed values are NaN; its cell stays empty.
-    const auto cell = [](const char* uid, const std::vector<double>& column, std::size_t row) {
-        return row < column.size() ? formatted(uid, column[row]) : std::string();
+    // Every intensity column keeps one number of decimals for all its rows, chosen from the largest measured value
+    // (owner, 2026-10-13): about three significant digits there, one to six decimals. An excluded row's computed
+    // values are NaN; its cell stays empty.
+    double largest = 0.0;
+    for (const double value : measured) {
+        if (std::isfinite(value)) {
+            largest = std::max(largest, std::abs(value));
+        }
+    }
+    const int decimals = largest > 0.0 ? std::clamp(3 - static_cast<int>(std::floor(std::log10(largest))), 1, 6) : 1;
+    const auto cell = [decimals](const std::vector<double>& column, std::size_t row) {
+        return row < column.size() && std::isfinite(column[row]) ? fixed_text(column[row], decimals) : std::string();
     };
     ReportTable table;
     table.columns = {header(axis_uid), header("data.intensity_meas"), header("data.intensity_meas_su")};
@@ -463,11 +472,11 @@ ReportTable data_table(const BraggPdExperiment& experiment) {
     }
     table.rows.reserve(axis.size());
     for (std::size_t row = 0; row < axis.size(); ++row) {
-        std::vector<std::string> cells{formatted(axis_uid, axis[row]), cell("data.intensity_meas", measured, row),
-                                       cell("data.intensity_meas_su", data.intensity_meas_su, row)};
+        std::vector<std::string> cells{formatted(axis_uid, axis[row]), cell(measured, row),
+                                       cell(data.intensity_meas_su, row)};
         if (computed) {
-            cells.push_back(cell("data.intensity_calc", data.intensity_calc.values(), row));
-            cells.push_back(cell("data.intensity_bkg", data.intensity_bkg.values(), row));
+            cells.push_back(cell(data.intensity_calc.values(), row));
+            cells.push_back(cell(data.intensity_bkg.values(), row));
         }
         if (any_excluded) {
             cells.emplace_back(excluded[row] ? "excluded" : "");

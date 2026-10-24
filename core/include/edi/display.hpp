@@ -89,6 +89,10 @@ FileText file_text(const Parameter& parameter, const std::string& su_rule);
 /// writes it. Throws std::invalid_argument for a uid the dictionary does not hold.
 std::string file_text(std::string_view uid, double value);
 
+/// A number with `decimals` decimals, as `fixed N` shows one: for a table column that keeps one number of decimals
+/// for every row, chosen from its values.
+std::string fixed_text(double value, int decimals);
+
 /// The exact fraction a value the space group fixes shows as (`1/3`), or nullopt.
 std::optional<std::string> exact_fraction(double value);
 
