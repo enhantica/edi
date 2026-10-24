@@ -170,7 +170,7 @@ var frozen = {
     "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi": "d166c4fa0b68e1ce01791d070d96bdde27b5ed69f750a5c8bd14a1919647a01b",
     "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36",
     "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5",
-    "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi": "26e46ae4ecfc954b05f2f1feba64db526d47c0cfd9f691ace720980331eec35e",
+    "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
     "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff",
     "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/analysis/analysis.edi": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi": "db297a9cb8148c8be36f3d5d52d5151e9b0f67e31ffcf92e52854a678c4f24d6",

@@ -9301,7 +9301,7 @@ var frozen = {
       "files": {
         "project.edi": "7e8257868dac01bd2aee23562171eeb2c18d9d1563a58ee9da7d6dbef64c2c42",
         "structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5",
-        "experiments/d1a.edi": "26e46ae4ecfc954b05f2f1feba64db526d47c0cfd9f691ace720980331eec35e",
+        "experiments/d1a.edi": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
         "experiments/lab.edi": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff",
         "analysis/analysis.edi": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e"
       }
@@ -20809,7 +20809,7 @@ var frozen = {
     {
       "project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
       "experiment": "d1a",
-      "sha256": "26e46ae4ecfc954b05f2f1feba64db526d47c0cfd9f691ace720980331eec35e",
+      "sha256": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
       "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
       "mode": "cwl",
       "peakFields": [
@@ -20905,8 +20905,8 @@ var frozen = {
         },
         "_instrument.setup_wavelength": {
           "value": 1.91,
-          "free": true,
-          "uncertainty": null
+          "free": false,
+          "uncertainty": 0.0
         },
         "_instrument.calib_twotheta_offset": {
           "value": 0.0,

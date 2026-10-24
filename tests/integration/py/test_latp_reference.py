@@ -12,7 +12,8 @@ def test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins(
     template = json.loads(
         (ROOT / 'knowledge/fitting/fullprof/pd-xray-cwl_latp-bm01_scan/reference.json').read_text()
     )
-    assert {name for name, row in quantities.items() if row['kind'] == 'reference'} == {'n_free'}, (
+    reference_names = {name for name, row in quantities.items() if row['kind'] == 'reference'}
+    assert reference_names == {'n_free'}, (
         'The rebuilt scan keeps only its same-model FullProf free count as a reference'
     )
     assert quantities['n_free']['value'] == template['n_free'], (
@@ -28,7 +29,8 @@ def test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins(
         'Exactly the four owner-selected frames keep per-file chi-square and cell-c pins'
     )
     assert all(quantities[name]['kind'] == 'regression-pin' for name in expected), (
-        'Sequential results are regression pins and cannot claim agreement with another measurement'
+        'Sequential results are regression pins and cannot claim agreement '
+        'with another measurement'
     )
     assert not (CASE / 'fullprof').exists(), (
         'The rebuilt fixture must not retain FullProf evidence from the replaced measurement'
