@@ -233,9 +233,9 @@ def test_fit_from_fitted_start_keeps_dependent_in_range(tmp_path, geometry, capf
     assert parent == pytest.approx(1, abs=2e-6), (
         'Constant observations of one have optimum a=1 even when its dependent leaves its range'
     )
-    for index, structure in enumerate(project.structures):
-        dependent = structure.atom_sites[0].adp_iso.value
-        expected = parent - 2 if index == 0 else 2 * parent - 4
+    for name in ('phase',) if geometry == 'single' else ('phase', 'other'):
+        dependent = project.structures[name].atom_sites[0].adp_iso.value
+        expected = parent - 2 if name == 'phase' else 2 * parent - 4
         assert dependent == pytest.approx(expected, abs=2e-6) and dependent < 0, (
             'Every phase must keep the finite negative value prescribed by its relation'
         )
