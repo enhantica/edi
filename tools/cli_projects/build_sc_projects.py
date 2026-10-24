@@ -527,7 +527,7 @@ FIT_PROJECTS = {
         # FullProf's model 4, Ext1-Ext3 free; one crystal, so experiments 2-6 take experiment 1's.
         'extinction': TAURINE_EXTINCTION,
         'shared_extinction': ('coefficient_11', 'coefficient_22', 'coefficient_33'),
-        # FullProf fits only reflections with F2 > 3 su(F2) (taurine.pcr's Rmub 3.0).
+        # FullProf fits only reflections with F² > 3 su(F²) (taurine.pcr's Rmub 3.0).
         'fit_cutoff': 3,
         'tof': True,
     },
