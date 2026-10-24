@@ -1564,6 +1564,31 @@ void read_background_estimate(const Block& block, ExperimentBase& experiment, co
     experiment.background_estimate_points = digest("_background_estimate.points_digest");
 }
 
+// The `_linked_structure` loop of a powder or a single crystal: every row a linked structure with its scale and an
+// optional enabled flag (absent = taking part).
+std::vector<std::shared_ptr<LinkedStructure>> read_linked_structures(const Block& block, const std::string& where) {
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        if (linked->column("_linked_structure.enabled") >= 0) {
+            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
+            if (token != "true" && token != "false") {
+                fail_schema(where, "invalid-linked-structure-enabled",
+                            "_linked_structure.enabled is '" + token + "', expected true or false");
+            }
+            link->enabled = token == "true";
+        }
+        links.push_back(std::move(link));
+    }
+    return links;
+}
+
 // A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
 // the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
 BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
@@ -1673,20 +1698,8 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
         }
         *field = *found;
     }
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row :
-         linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        links.push_back(std::move(link));
-    }
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
@@ -2084,30 +2097,10 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
     }
 
-    // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
-    // = taking part). No loop: the experiment links no structure (one made before any structure existed, or whose
-    // structures were removed); it calculates as background alone and cannot be fitted.
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        if (linked->column("_linked_structure.enabled") >= 0) {
-            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
-            if (token != "true" && token != "false") {
-                fail_schema(where, "invalid-linked-structure-enabled",
-                            "_linked_structure.enabled is '" + token + "', expected true or false");
-            }
-            link->enabled = token == "true";
-        }
-        links.push_back(std::move(link));
-    }
+    // No loop: the experiment links no structure (one made before any structure existed, or whose structures were
+    // removed); it calculates as background alone and cannot be fitted.
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
