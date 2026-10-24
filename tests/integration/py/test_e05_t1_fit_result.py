@@ -31,11 +31,11 @@ MODEL_COUNTS = {
 }
 
 
-def scalars(text):
+def scalars(text, prefix='_fit_result.'):
     output = {}
     for line in text.splitlines():
         tokens = shlex.split(line, comments=True)
-        if len(tokens) == 2 and tokens[0].startswith('_fit_result.'):
+        if len(tokens) == 2 and tokens[0].startswith(prefix):
             assert tokens[0] not in output, ' gate 8 persisted fit-result tags are unique'
             output[tokens[0]] = tokens[1]
     return output
@@ -51,10 +51,8 @@ def declared_background(case):
             if line.startswith('_background.type ')
         ]
         models.add(tags[0] if tags else 'line-segment')
-    assert len(models) == 1, (
-        ' gate 8 these registered codec witnesses declare one shared background'
-    )
-    return next(iter(models))
+    assert models, ' gate 8 every codec witness must declare its background models'
+    return ' + '.join(sorted(models))
 
 
 def projection(case):
@@ -89,9 +87,14 @@ def test_cli_fixture_inventory():
         for row in registry
         if str(edi.Project.load(ROOT / 'docs/user/cli' / row['id'] / 'project').fitting_mode)
         in {'single', 'joint'}
+        and scalars(
+            (ROOT / 'docs/user/cli' / row['id'] / 'project/project.edi').read_text(),
+            '_metadata.',
+        ).get('_metadata.purpose')
+        != 'simulation'
     }
     assert len(CASES) == len(expected) and {row['id'] for row in CASES} == expected, (
-        ' gate 1 every registered single and joint project has exactly one CLI fixture; '
+        ' gate 1 every registered measured single and joint project has exactly one CLI fixture; '
         f'missing={sorted(expected - {row["id"] for row in CASES})}'
     )
     for row in CASES:
@@ -195,9 +198,21 @@ def test_legacy_project_without_fit_result_keeps_model_state(case, tmp_path):
         ' gate 8 saving a legacy project invents no fit result'
     )
     after = edi.Project.load(target)
-    assert [(p.value, p.uncertainty, p.free) for p in after.parameters] == before, (
-        ' gate 8 files lacking the category load with unchanged values errors and free flags'
-    )
+    actual = [(p.value, p.uncertainty, p.free) for p in after.parameters]
+    assert len(actual) == len(before), ' gate 8 legacy persistence retains every model parameter'
+    for parameter, old, saved in zip(after.parameters, before, actual, strict=True):
+        assert saved[1:] == old[1:], (
+            ' gate 8 legacy persistence retains uncertainty and free flags exactly'
+        )
+        if parameter.name == 'occupancy' and not parameter.free:
+            # Complementary occupancies can evaluate as 1 - 0.95 before decimal output.
+            assert math.isclose(saved[0], old[0], rel_tol=0, abs_tol=math.ulp(1.0)), (
+                ' gate 8 fixed occupancy arithmetic retains its value within one unit-interval ulp'
+            )
+        else:
+            assert saved[0] == old[0], (
+                ' gate 8 every other legacy parameter retains its exact value'
+            )
 
 
 @pytest.mark.parametrize('status', ['done', 'cancelled', 'maxiter', 'nostep'])

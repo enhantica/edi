@@ -11,20 +11,28 @@ does not go into CI) stays executing but runs only when asked for explicitly —
 ``--offline`` runs every offline project, ``--project <id>`` any executing one. ``--project``
 otherwise narrows the run for diagnosis.
 
-Per project, every unit in its ``expected.json`` runs ``python -m edi fit`` on a disposable copy
+Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a disposable copy
 (the project tree is never written) with ``--report machine --verbosity full``:
 
 - a top-level ``quantities`` block — the default invocation;
 - each ``variants.<name>`` block — the descent ``<name>`` with ``-`` spelled ``_`` (the corpus
   names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
-  copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); an unknown
-  descent fails;
-- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay).
+  copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); or
+  ``asymmetry-off``, the copy with every Bérar-Baldinozzi coefficient fixed at 0, which compares
+  a model whose asymmetry form differs between programs on everything else; any other name fails;
+- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
+- a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
+
+A record with ``"template": true`` belongs to a scan and fits its template file alone, as a single
+fit, in every unit: the scan's experiment already holds that file's points. A variant block may
+name the status its fit ends with (``"status": "max_iter"``): a fit the engine stops after its
+allowed resumes, though every value has settled. Every other fit must end ``done``.
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``. Every non-null ``tol_abs``/``tol_rel`` bound must hold; the record must say
-``status=done``. Every deviation is reported, never only the first, and any deviation is red.
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
+non-null ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
+deviation is reported, never only the first, and any deviation is red.
 
 ``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
 check reads a project's settings through edi's own loader this way, never by scanning text.
@@ -46,6 +54,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import yaml
@@ -53,8 +62,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CLI_DIR = Path('docs') / 'user' / 'cli'
 REGISTRY = CLI_DIR / 'projects.yml'
-# <technique>_<sample>[-<instrument>]_<variant>, three kebab-case parts (owner, 2026-09-24).
-PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}')
+# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only
+# when it tells the user something, such as simulation or scan.
+PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}')
 RESULTS_KEY = re.compile(r'results\[(?P<key>[^\]]+)\]\.(?P<column>.+)')
 FIT_TIMEOUT_S = 900
 
@@ -71,7 +81,8 @@ _NUMBER = re.compile(r'(?P<value>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<e
 def registry(root: Path) -> list[dict]:
     """The registered projects, fail-closed: ``[{'id': str, 'executing': bool}]``.
 
-    An optional boolean ``offline`` is only meaningful on an executing project.
+    An optional boolean ``offline`` is only meaningful on an executing project; an optional boolean
+    ``user-facing`` puts the project in the app's example list.
     """
     path = root / REGISTRY
     data = yaml.safe_load(path.read_text(encoding='utf-8'))
@@ -82,15 +93,19 @@ def registry(root: Path) -> list[dict]:
         raise ValueError(f'{path}: projects must be a non-empty list')
     seen: set[str] = set()
     for row in projects:
-        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline'}:
-            raise ValueError(f'{path}: each project is {{id, executing[, offline]}}, got {row!r}')
+        if not isinstance(row, dict) or set(row) - {'id', 'executing', 'offline', 'user-facing'}:
+            raise ValueError(
+                f'{path}: each project is {{id, executing[, offline][, user-facing]}}, got {row!r}'
+            )
         pid = row.get('id')
         if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
-            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>_<variant>')
+            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>[_<variant>]')
         if not isinstance(row.get('executing'), bool):
             raise TypeError(f'{path}: {pid}: executing must be true or false')
         if 'offline' in row and not isinstance(row['offline'], bool):
             raise TypeError(f'{path}: {pid}: offline must be true or false')
+        if 'user-facing' in row and not isinstance(row['user-facing'], bool):
+            raise TypeError(f'{path}: {pid}: user-facing must be true or false')
         if row.get('offline') and not row['executing']:
             raise ValueError(f'{path}: {pid}: offline applies only to an executing project')
         if pid in seen:
@@ -176,9 +191,10 @@ def _settings_of_saved_tree(tree: Path) -> dict[str, dict[str, dict]]:
                 settings.setdefault(attribute, {})[where] = setting
             elif attribute.endswith('type') or category == 'experiment_type':
                 settings.setdefault(raw, {})[where] = {'value': raw}
-            elif category == 'minimizer':
-                # A declared minimization condition that is a name, not a number
-                # (`_minimizer.descent`), is exercised under its item name.
+            elif category in {'minimizer', 'sequential_fit'}:
+                # A declared fit condition that is a name, not a number
+                # (`_minimizer.descent`, `_sequential_fit.template_file`), is exercised
+                # under its item name.
                 settings.setdefault(attribute, {})[where] = {'value': raw}
     return settings
 
@@ -189,8 +205,8 @@ def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
     The project is loaded through edi's own loader and re-saved, and only that canonical output is
     read — so a word in a comment, in ``PROVENANCE.md``, on the docs page or in any field the
     loader ignores is not a token. A token is a numeric setting's name (``broad_gauss_sigma_0``,
-    ``scale``), a type value (``tof-jorgensen``) or a named minimization condition's item name
-    (``descent``). Returns
+    ``scale``), a type value (``tof-jorgensen``) or the item name of a fit condition that is a
+    name (``descent``, ``template_file``). Returns
     ``{token: {occurrence: setting}}``: the occurrence names the file, item and loop row, so the
     same parameter in two experiments stays two entries; a numeric setting is
     ``{'value': float, 'refined': bool}``, a type value ``{'value': str}``.
@@ -212,26 +228,69 @@ def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
 # ----------------------------------------------------------------------
 
 
-def _units(expected: dict) -> list[tuple[str, dict[str, str], dict]]:
-    """``(label, declared conditions, quantities)`` for every unit an expected.json declares.
+_ASYMMETRY = re.compile(r'(?m)^(_peak\.asym_beba_(?:a0|b0|a1|b1)) .*$')
+
+
+def fix_asymmetry_off(project: Path) -> None:
+    """Fix every Bérar-Baldinozzi coefficient of the project copy at 0."""
+    changed = 0
+    for path in sorted((project / 'experiments').glob('*.edi')):
+        text, count = _ASYMMETRY.subn(r'\1 0', path.read_text(encoding='utf-8'))
+        changed += count
+        path.write_text(text, encoding='utf-8')
+    if not changed:
+        raise ValueError('asymmetry-off: the project has no Bérar-Baldinozzi coefficients')
+
+
+def fit_template_only(project: Path) -> None:
+    """Make a scan copy fit its template file alone, as a single fit."""
+    analysis = project / 'analysis' / 'analysis.edi'
+    text = analysis.read_text(encoding='utf-8')
+    if not re.search(r'(?m)^_fitting_mode\.type sequential$', text):
+        raise ValueError('template: the project is not a scan')
+    text = re.sub(r'(?m)^_sequential_fit\.\S+ .*\n', '', text)
+    text = re.sub(r'(?m)^_fitting_mode\.type sequential$', '_fitting_mode.type single', text)
+    analysis.write_text(text, encoding='utf-8')
+
+
+# A variant names a registered descent, or one of these changes to the project copy.
+PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off}
+
+Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None, str]
+
+
+def _units(expected: dict) -> list[Unit]:
+    """``(label, conditions, quantities, change, status)`` for every unit of an expected.json.
 
     The conditions are ``_minimizer.<item>`` values the unit's project copy declares on top of
     the project's own analysis.edi — a variant's descent; empty for the project as committed.
+    The change edits the copy for a project variant; None otherwise. The status is the one its
+    fit must end with.
     """
     import edi  # noqa: PLC0415
 
-    units: list[tuple[str, dict[str, str], dict]] = []
+    units: list[Unit] = []
     if 'quantities' in expected:
-        units.append(('default', {}, expected['quantities']))
+        units.append(('default', {}, expected['quantities'], None, 'done'))
     descents = set(edi._descent_ids())
     for name, block in expected.get('variants', {}).items():
+        status = block.get('status', 'done')
+        if name in PROJECT_VARIANTS:
+            units.append((name, {}, block['quantities'], PROJECT_VARIANTS[name], status))
+            continue
         descent = name.replace('-', '_')
         if descent not in descents:
-            raise ValueError(f'variant {name!r} names no registered descent {sorted(descents)}')
-        units.append((name, {'descent': descent}, block['quantities']))
+            raise ValueError(
+                f'variant {name!r} names no registered descent {sorted(descents)} and no '
+                f'project variant {sorted(PROJECT_VARIANTS)}'
+            )
+        units.append((name, {'descent': descent}, block['quantities'], None, status))
     if 'edi' in expected:
-        units.append(('edi', {}, expected['edi']['quantities']))
-    if not units or not all(quantities for _, _, quantities in units):
+        units.append(('edi', {}, expected['edi']['quantities'], None, 'done'))
+    # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
+    if 'calc' in expected:
+        units.append(('calc', {}, expected['calc']['quantities'], None, 'done'))
+    if not units or not all(unit[2] for unit in units):
         raise ValueError('expected.json declares no quantities to compare')
     return units
 
@@ -257,7 +316,13 @@ def _results_row(project: Path, key: str) -> dict[str, str]:
     path = project / 'analysis' / 'results.csv'
     with path.open(encoding='utf-8', newline='') as handle:
         rows = list(csv.DictReader(handle))
-    target = float(key)
+    target = _float_or_none(key)
+    if target is None:
+        # A scan whose files carry no diffrn.* value names its row by the data file.
+        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        if len(matches) != 1:
+            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+        return matches[0]
     matches = [
         row
         for row in rows
@@ -304,14 +369,19 @@ def run_project(root: Path, pid: str) -> list[str]:
     source = root / CLI_DIR / pid
     expected = json.loads((source / 'expected.json').read_text(encoding='utf-8'))
     deviations: list[str] = []
-    for label, conditions, quantities in _units(expected):
+    for label, conditions, quantities, change, status in _units(expected):
         with tempfile.TemporaryDirectory(
             prefix=f'edi-cli-{pid}-', dir=os.environ.get('RUNNER_TEMP') or None
         ) as scratch:
             project = Path(scratch) / 'project'
             shutil.copytree(source / 'project', project, symlinks=True)
+            if expected.get('template') is True:
+                fit_template_only(project)
+            if change is not None:
+                change(project)
             declare_conditions(project, conditions)
-            argv = [sys.executable, '-m', 'edi', 'fit', str(project), '--report', 'machine']
+            command = 'calc' if label == 'calc' else 'fit'
+            argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
             argv += ['--verbosity', 'full']
             result = subprocess.run(
                 argv, capture_output=True, text=True, timeout=FIT_TIMEOUT_S, check=False
@@ -320,8 +390,8 @@ def run_project(root: Path, pid: str) -> list[str]:
                 deviations.append(f'{label}: rc={result.returncode}: {result.stderr[-400:]}')
                 continue
             record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
-            if record.get('status') != 'done':
-                deviations.append(f'{label}: status={record.get("status")!r}, expected done')
+            if command == 'fit' and record.get('status') != status:
+                deviations.append(f'{label}: status={record.get("status")!r}, expected {status}')
             for name, spec in quantities.items():
                 try:
                     measured = _measured(name, record, project)

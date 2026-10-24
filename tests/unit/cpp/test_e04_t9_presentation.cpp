@@ -79,8 +79,11 @@ std::set<std::size_t> oracle(const std::vector<double>& x, const std::vector<dou
     }
     auto first = std::find_if(x.begin(), x.end(), [&](double v) { return v >= left; });
     auto end = std::find_if(x.begin(), x.end(), [&](double v) { return v > right; });
-    if (first != x.begin()) keep.insert(static_cast<std::size_t>(first - x.begin() - 1));
-    if (end != x.end()) keep.insert(static_cast<std::size_t>(end - x.begin()));
+    const auto keep_neighbour = [&](std::size_t row) {
+        if (!std::isnan(low[row]) && !std::isnan(high[row])) keep.insert(row);
+    };
+    if (first != x.begin()) keep_neighbour(static_cast<std::size_t>(first - x.begin() - 1));
+    if (end != x.end()) keep_neighbour(static_cast<std::size_t>(end - x.begin()));
     return keep;
 }
 void exercise_decimator(const std::vector<double>& x, const std::vector<double>& lo,
@@ -93,6 +96,9 @@ void exercise_decimator(const std::vector<double>& x, const std::vector<double>&
         CHECK_MESSAGE((std::is_sorted(actual.begin(), actual.end())), " I17 kept rows are ascending");
         const std::set<std::size_t> retained(actual.begin(), actual.end());
         CHECK_MESSAGE((retained.size() == actual.size()), " I17 a retained row appears only once");
+        CHECK_MESSAGE((std::all_of(actual.begin(), actual.end(), [&](auto row) {
+            return row < x.size() && !std::isnan(lo[row]) && !std::isnan(hi[row]);
+        })), " ADR-0021 excluded NaN rows are gaps, including outside viewport edges");
         // The invariant chooses an extremum value, not an arbitrary tied row.
         // Require bin/run first and last rows separately, then compare all extrema.
         std::map<std::pair<int,int>,std::vector<std::size_t>> bins;
@@ -140,19 +146,25 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
             const auto p = edi::present_pattern(source, {});
             REQUIRE_MESSAGE((p.current), " I22 successful calculation presents current columns");
             const auto& data = *experiment.data;
-            compare_points(series(p, edi::SeriesKind::Measured), data.grid, data.intensity);
             compare_points(series(p, edi::SeriesKind::Calculated), data.grid, computed.data().intensity_calc);
             compare_points(series(p, edi::SeriesKind::Background), data.grid, computed.data().intensity_bkg);
-            compare_points(series(p, edi::SeriesKind::Residual), data.grid, crysta::residual(experiment));
-            const auto& measured = series(p, edi::SeriesKind::Measured);
-            REQUIRE_MESSAGE((measured.bar_low.size() == measured.points.size() && measured.bar_high.size() == measured.points.size()),
-                            " I16 uncertainty ends remain aligned with measured provenance");
-            for (std::size_t i = 0; i < measured.rows.size(); ++i) {
-                auto r = measured.rows[i];
-                CHECK_MESSAGE((identical(measured.bar_low[i], data.intensity[r] - data.sigma[r])),
-                              " I16 lower bar is the independent measured minus one su");
-                CHECK_MESSAGE((identical(measured.bar_high[i], data.intensity[r] + data.sigma[r])),
-                              " I16 upper bar is the independent measured plus one su");
+            if (experiment.calculation_only) {
+                CHECK_MESSAGE((std::none_of(p.series.begin(), p.series.end(), [](const auto& s) {
+                    return s.kind == edi::SeriesKind::Measured || s.kind == edi::SeriesKind::Residual;
+                })), " I16 a calculation has no measured or residual presentation series");
+            } else {
+                compare_points(series(p, edi::SeriesKind::Measured), data.grid, data.intensity);
+                compare_points(series(p, edi::SeriesKind::Residual), data.grid, crysta::residual(experiment));
+                const auto& measured = series(p, edi::SeriesKind::Measured);
+                REQUIRE_MESSAGE((measured.bar_low.size() == measured.points.size() && measured.bar_high.size() == measured.points.size()),
+                                " I16 uncertainty ends remain aligned with measured provenance");
+                for (std::size_t i = 0; i < measured.rows.size(); ++i) {
+                    auto r = measured.rows[i];
+                    CHECK_MESSAGE((identical(measured.bar_low[i], data.intensity[r] - data.sigma[r])),
+                                  " I16 lower bar is the independent measured minus one su");
+                    CHECK_MESSAGE((identical(measured.bar_high[i], data.intensity[r] + data.sigma[r])),
+                                  " I16 upper bar is the independent measured plus one su");
+                }
             }
             std::set<std::size_t> tick_rows;
             for (const auto& s : p.series) if (s.kind == edi::SeriesKind::BraggTicks)
@@ -185,11 +197,22 @@ TEST_CASE("E04-T9 gate 2 independent pixel extrema over corpus and stress measur
         INFO(path);
         auto project = path == "D3" ? e04_t9_fixture::stress() : edi::load_project(path);
         project.calculate();
+        const auto reference = crysta::load_project(path == "D3" ? e04_t9_fixture::echidna : path);
+        REQUIRE_MESSAGE((project.experiments.size() == reference.experiments.size()),
+                        " gate 2 independently loaded experiment modes cover every bank");
         for (std::size_t b = 0; b < project.experiments.size(); ++b) {
             const auto s = edi::capture_pattern(project, b);
-            REQUIRE_MESSAGE((s.x && s.meas && s.su && s.calc && s.bkg && s.resid),
-                            " gate 2 fixture exposes every calculated and measured curve");
-            for (auto column : {s.meas, s.calc, s.bkg, s.resid}) exercise_decimator(*s.x, *column, *column);
+            REQUIRE_MESSAGE((s.x && s.calc && s.bkg),
+                            " gate 2 every fixture exposes its axis and calculated curves");
+            for (auto column : {s.calc, s.bkg}) exercise_decimator(*s.x, *column, *column);
+            if (reference.experiments[b].calculation_only) {
+                CHECK_MESSAGE((!s.meas && !s.su && !s.resid),
+                              " gate 2 calculation-only experiments have no measured, su or residual curve");
+                continue;
+            }
+            REQUIRE_MESSAGE((s.meas && s.su && s.resid),
+                            " gate 2 measured fixtures expose every measured, su and residual curve");
+            for (auto column : {s.meas, s.resid}) exercise_decimator(*s.x, *column, *column);
             auto low = *s.meas, high = low;
             for (std::size_t i = 0; i < low.size(); ++i) { low[i] -= (*s.su)[i]; high[i] += (*s.su)[i]; }
             exercise_decimator(*s.x, low, high);

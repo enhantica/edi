@@ -91,55 +91,28 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    // A workflow tab as wide when it is the current page's as when it is not: the base sets the current tab's name in
-    // bold, so the tab bar changed width with every page switch, which moved the Experiment button the sidebar is
-    // measured from, resized every page's main area and drew each shown chart a second time.
-    component WorkflowTab: EaElements.AppBarTabButton {
-        id: tab
-
-        // The base binds the width to the name's width in its current weight; this is the wider of the two.
-        width: implicitWidth
-        implicitWidth: Math.ceil(Math.max(plainName.advanceWidth, boldName.advanceWidth) + font.pixelSize * 1.5)
-
-        TextMetrics {
-            id: plainName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            text: tab.text
-        }
-        TextMetrics {
-            id: boldName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            font.bold: true
-            text: tab.text
-        }
-    }
-
     appBarCentralTabs.contentData: [
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.home"
             fontIcon: "home"
             text: qsTr("Home")
             ToolTip.text: qsTr("Home page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.project"
             enabled: AppState.projectPageEnabled
             fontIcon: "archive"
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.structure"
             enabled: AppState.structurePageEnabled
             fontIcon: "layer-group"
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: experimentTab
             objectName: "appBar.tab.experiment"
             enabled: AppState.experimentPageEnabled
@@ -147,14 +120,14 @@ EaComponents.ApplicationWindow {
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.analysis"
             enabled: AppState.analysisPageEnabled
             fontIcon: "calculator"
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.report"
             enabled: AppState.reportPageEnabled
             fontIcon: "clipboard-list"

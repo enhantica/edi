@@ -1,0 +1,31 @@
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Ti lam7o3.atom_site.Ti.adp_iso
+biso_Cr lam7o3.atom_site.Cr.adp_iso
+biso_Mn lam7o3.atom_site.Mn.adp_iso
+biso_Fe lam7o3.atom_site.Fe.adp_iso
+biso_Co lam7o3.atom_site.Co.adp_iso
+biso_Ni lam7o3.atom_site.Ni.adp_iso
+biso_Cu lam7o3.atom_site.Cu.adp_iso
+biso_O1 lam7o3.atom_site.O1.adp_iso
+biso_O2 lam7o3.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_Cr = biso_Ti"
+2 "biso_Mn = biso_Ti"
+3 "biso_Fe = biso_Ti"
+4 "biso_Co = biso_Ti"
+5 "biso_Ni = biso_Ti"
+6 "biso_Cu = biso_Ti"
+7 "biso_O2 = biso_O1"

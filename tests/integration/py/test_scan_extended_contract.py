@@ -27,6 +27,13 @@ from tests.integration.py.test_scan_app_contract import (
     spans,
 )
 
+CATALOGUE_CASES = [
+    row['id']
+    for row in json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+]
+
 
 def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
     text = re.sub(
@@ -829,24 +836,42 @@ def assert_web_exclusion(files, index):
     assert full not in index and not any(full in line.split('\t')[2] for line in files), (
         'Examples: the full scan has no resource address on web under any label or target'
     )
-    # Cooling shares the first run's bytes. Anything outside its approved addresses is excluded.
+    # Selected cooling shares old full-run bytes; every other deployment address is excluded.
+    approved = expected_bundle(155)
     assert not any(
         line.split('\t')[3] in full_hashes
-        and not line.split('\t')[2].startswith('/edi/examples/pd-neut-cwl_cosio-d20_scan-162f/')
+        and approved.get(line.split('\t')[2]) != line.split('\t')[3]
         for line in files
     ), 'Examples: full-scan data cannot be rebundled under another label, path or target on web'
 
 
 def expected_bundle(count):
-    project_id = f'pd-neut-cwl_cosio-d20_scan-{count}f'
+    project_id = {155: 'pd-neut-cwl_cosio-d20_scan', 73: 'pd-xray-cwl_latp-bm01_scan'}.get(
+        count, f'pd-neut-cwl_cosio-d20_scan-{count}f'
+    )
     base = ROOT / 'docs/user/cli' / project_id / 'project'
     declaration = dict(
         shlex.split(line)
         for line in (base / 'analysis/analysis.edi').read_text().splitlines()
         if line.startswith('_sequential_fit.') and len(shlex.split(line)) == 2
     )
-    inventory = example_inventory(count)
-    assert_source_inventory(inventory, count)
+    if count in {155, 73}:
+        inventory = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in (base / declaration['_sequential_fit.data_dir']).glob(
+                declaration['_sequential_fit.file_pattern']
+            )
+            if path.is_file()
+        }
+        assert len(inventory) == count, 'The selected scan retains every owner-declared dataset'
+        if count == 155:
+            legacy = example_inventory(162)
+            assert inventory == dict(sorted(legacy.items())[:155]), (
+                'The selected cooling scan retains the first 155 frozen nonmagnetic inputs'
+            )
+    else:
+        inventory = example_inventory(count)
+        assert_source_inventory(inventory, count)
     directory = declaration['_sequential_fit.data_dir']
     expected = {
         f'/edi/examples/{project_id}/project/{directory}/{name}': digest
@@ -872,26 +897,22 @@ def expected_bundle(count):
 def test_effective_bundle_contains_selected_scan_payloads(tmp_path, web):
     files, index = resource_inventory(tmp_path, web)
     assert_bundled_index(files, index)
-    small = 'pd-neut-cwl_cosio-d20_scan-162f'
-    large = 'pd-neut-cwl_cosio-d20_scan-324f'
-    assert small in index, 'Examples: the cooling run must be offered in desktop and web'
-    assert bundled_inputs(files, small) == expected_bundle(162), (
-        'Examples: cooling resources bind every input path to its frozen source bytes'
+    assert index == CATALOGUE_CASES, (
+        'The deployed index follows the independent twenty-case owner selection on each platform'
     )
-    if web:
-        assert_web_exclusion(files, index)
-    else:
-        assert large in index and bundled_inputs(files, large) == expected_bundle(324), (
-            'Examples: desktop bundles the full scan with the correct input paths and bytes'
+    for case, count in [('pd-neut-cwl_cosio-d20_scan', 155), ('pd-xray-cwl_latp-bm01_scan', 73)]:
+        assert case in index and bundled_inputs(files, case) == expected_bundle(count), (
+            'Each selected scan bundles its complete project and datasets in desktop and web'
         )
+    assert_web_exclusion(files, index)
 
 
 def test_resource_observer_rejects_comment_only_and_inactive_bundle_calls(tmp_path):
     cmake = (APP / 'CMakeLists.txt').read_text()
     live = cmake
     good, _index = resource_inventory(tmp_path / 'good', False, live)
-    full = 'pd-neut-cwl_cosio-d20_scan-324f'
-    expected = expected_bundle(324)
+    full = 'pd-neut-cwl_cosio-d20_scan'
+    expected = expected_bundle(155)
     assert bundled_inputs(good, full) == expected, (
         'Examples: the control must reach the live full-scan resource inventory'
     )
@@ -924,8 +945,8 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
     tmp_path, dimension, bundle_control
 ):
     cmake, good, index = bundle_control
-    full = 'pd-neut-cwl_cosio-d20_scan-324f'
-    expected = expected_bundle(324)
+    full = 'pd-neut-cwl_cosio-d20_scan'
+    expected = expected_bundle(155)
     assert bundled_inputs(good, full) == expected, (
         'Examples: the escape baseline carries every opening resource'
     )
@@ -983,7 +1004,9 @@ def test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden
         return
     injection = (
         '\nqt_add_resources(edi_app "other_label" PREFIX "/hidden" BASE '
-        '${_cli} FILES ${_cli}/' + full + '/project/experiments/d20_scan/02_00601.dat)\n'
+        '${_cli} FILES ${_cli}/'
+        'pd-neut-cwl_cosio-d20_scan-324f'
+        '/project/experiments/d20_scan/02_00601.dat)\n'
     )
     # Choose a frozen full-run file, independently of the bundle label.
     file = next(name for name in example_inventory(324) if name.startswith('02_'))
@@ -1258,7 +1281,7 @@ def test_resource_observer_accepts_a_separately_linked_example_library(tmp_path)
     cmake += '\ntarget_link_libraries(edi_app_module PRIVATE example_layer)\n'
     files, index = resource_inventory(tmp_path, False, cmake)
     assert_bundled_index(files, index)
-    assert bundled_inputs(files, 'pd-neut-cwl_cosio-d20_scan-324f') == expected_bundle(324), (
+    assert bundled_inputs(files, 'pd-neut-cwl_cosio-d20_scan') == expected_bundle(155), (
         'Examples: resource inclusion follows the target linked to the app'
     )
 
@@ -1315,7 +1338,7 @@ def test_resource_observer_distinguishes_executable_and_library_interfaces(tmp_p
     else:
         relocated += '\ntarget_link_libraries(edi_app ' + link + ' example_layer)\n'
     files, index = resource_inventory(tmp_path, False, relocated)
-    full = 'pd-neut-cwl_cosio-d20_scan-324f'
+    full = 'pd-neut-cwl_cosio-d20_scan'
     if link == 'INTERFACE':
         assert bundled_inputs(files, full) == {}, (
             'Examples: an executable INTERFACE edge does not deploy its resources'
@@ -1323,7 +1346,7 @@ def test_resource_observer_distinguishes_executable_and_library_interfaces(tmp_p
         with pytest.raises(AssertionError, match='advertised index'):
             assert_bundled_index(files, index)
     else:
-        assert bundled_inputs(files, full) == expected_bundle(324), (
+        assert bundled_inputs(files, full) == expected_bundle(155), (
             'Examples: own links and linked-library usage requirements deploy their resources'
         )
         assert_bundled_index(files, index)
@@ -1334,10 +1357,10 @@ def test_resource_observer_rejects_a_second_payload_at_the_index_address(tmp_pat
     good, index = resource_inventory(tmp_path / 'good', False, cmake)
     assert_bundled_index(good, index)
     cmake += """
-set_source_files_properties(${_cli}/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi
+set_source_files_properties(${_cli}/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi
  PROPERTIES QT_RESOURCE_ALIAS index.txt)
 qt_add_resources(edi_app "index_collision" PREFIX "/edi/examples" BASE ${_cli}
- FILES ${_cli}/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi)
+ FILES ${_cli}/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi)
 """
     bad, index = resource_inventory(tmp_path / 'bad', False, cmake)
     payloads = [

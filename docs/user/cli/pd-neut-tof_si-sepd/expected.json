@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-tof_si-sepd/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 23.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.0695,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.Si.adp_iso.value": {
+      "value": 0.52929556,
+      "kind": "reference",
+      "tol_abs": 0.00858932922,
+      "tol_rel": null
+    },
+    "param.cell_length_a.value": {
+      "value": 5.4308834,
+      "kind": "reference",
+      "tol_abs": 0.0001191783385,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 10.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 3.610940727,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

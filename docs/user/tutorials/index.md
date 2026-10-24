@@ -1,17 +1,59 @@
 # Tutorials
 
-Hands-on walkthroughs of complete edi workflows, ported from diffraction-lib: define or load a
-project, refine or simulate, and inspect the results.
+One tutorial for each example: it loads the example's project with `edi.Project.load` and works through it with
+edi's Python API, from the model to the fit and the report. The same project is the one the command line fits and
+the app opens.
 
-⛔ **Execution-disabled for now.** These notebooks are committed ahead of the API they exercise
-(durability over runnability): each is excluded from notebook execution until the `C34` task
-named in [`execution-exclusions.yml`](execution-exclusions.yml) lands, and the exclusion list
-shrinks to empty as those tasks land. The pages below render the unexecuted notebooks.
+The tutorials are not run when the documentation is built yet: they load their projects from the edi repository,
+and run once a tutorial runner can provide the projects elsewhere. [`execution-exclusions.yml`](execution-exclusions.yml)
+lists each one with what it waits for.
+
+## Calculations without data
 
 | tutorial | what it shows |
 | --- | --- |
-| [refine-lbco-hrpt-from-data](refine-lbco-hrpt-from-data.ipynb) | Rietveld refinement of La0.5Ba0.5CoO3 (HRPT, constant wavelength), structure and experiment defined in code |
-| [refine-si-sepd](refine-si-sepd.ipynb) | Si standard refinement (SEPD, time-of-flight) |
-| [refine-ncaf-wish](refine-ncaf-wish.ipynb) | Joint multi-bank refinement of Na2Ca3Al2F14 (WISH) |
-| [refine-cosio-d20-tscan](refine-cosio-d20-tscan.ipynb) | Sequential refinement over a D20 temperature scan (CoSiO) |
-| [simulate-si-tof](simulate-si-tof.ipynb) | Forward simulation of a Si time-of-flight pattern |
+| [Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco_simulation.ipynb) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI |
+| [Calculation without data: Si, time of flight](pd-neut-tof_si_simulation.ipynb) | Silicon [Fd-3m] · SEPD @ Argonne |
+| [Calculation without data: NaCl, laboratory X-ray](pd-xray-cwl_nacl_simulation.ipynb) | NaCl [Fm-3m] · Laboratory X-ray |
+
+## Constant-wavelength neutron
+
+| tutorial | what it shows |
+| --- | --- |
+| [Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco-hrpt.ipynb) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI |
+| [Rietveld fit: herbertsmithite, HRPT](pd-neut-cwl_hs-hrpt.ipynb) | ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI |
+| [Rietveld fit: Co₂SiO₄, D20](pd-neut-cwl_cosio-d20.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
+| [Rietveld fit: LiNiO₂, ECHIDNA](pd-neut-cwl_lmo-echidna.ipynb) | LiNiO₂ [R-3m] · ECHIDNA @ ANSTO |
+| [Rietveld fit: Y₂O₃, SPODI](pd-neut-cwl_y2o3-spodi.ipynb) | Y₂O₃ [Ia-3] · SPODI @ FRM II |
+| [Two-phase fit: YAlO₃ and Al₂O₃, SPODI](pd-neut-cwl_yalo3-al2o3-spodi.ipynb) | YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II |
+
+## Time-of-flight neutron
+
+| tutorial | what it shows |
+| --- | --- |
+| [Rietveld fit: Si, SEPD](pd-neut-tof_si-sepd.ipynb) | Silicon [Fd-3m] · SEPD @ Argonne |
+| [Rietveld fit: CeCoAl₃, POLARIS](pd-neut-tof_cecoal-polaris.ipynb) | CeCoAl₃ [Pmma] · POLARIS @ ISIS |
+| [Calibration fit: CeO₂, PEARL](pd-neut-tof_ceo2-pearl.ipynb) | CeO₂ [Fm-3m] · PEARL @ ISIS |
+| [Two-phase fit: La₀.₅Ba₀.₅CoO₃ and Si, McStas](pd-neut-tof_lbco-si-mcstas.ipynb) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation |
+| [Joint fit: Na₂Ca₃Al₂F₁₄, WISH](pd-neut-tof_ncaf-wish.ipynb) | Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS |
+| [Joint fit: ferrite and austenite, BEER](pd-neut-tof_ferrite-austenite-beer.ipynb) | Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS |
+
+## X-ray
+
+| tutorial | what it shows |
+| --- | --- |
+| [Rietveld fit: PbSO₄, laboratory X-ray](pd-xray-cwl_pbso4-lab.ipynb) | PbSO₄ [Pnma] · Laboratory X-ray |
+| [Rietveld fit: high-entropy perovskite, P02.1](pd-xray-cwl_lam7o3-p021.ipynb) | La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III |
+
+## Neutron and X-ray joint
+
+| tutorial | what it shows |
+| --- | --- |
+| [Joint fit: PbSO₄, neutron and X-ray](pd-neut-xray-cwl_pbso4-d1a-lab.ipynb) | PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray |
+
+## Scans
+
+| tutorial | what it shows |
+| --- | --- |
+| [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
+| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan.ipynb) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL |
