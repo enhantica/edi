@@ -3502,6 +3502,7 @@ struct ExtinctionBase {
     OptionalParameter domain_radius;
     OptionalParameter mosaic_spread;
     OptionalParameter crystal_radius;
+    OptionalParameter coefficient;  // Larson's (type larson-isotropic)
 
     std::vector<Parameter*> parameters();
     detail::RowLink row;
@@ -5244,8 +5245,9 @@ struct ExtinctionCategory {
     static constexpr const char* name = "_extinction";
     static constexpr auto columns =
         std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution, &ExtinctionBase::domain_radius,
-                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius};
-    static constexpr std::array items{"type", "mosaic_distribution", "domain_radius", "mosaic_spread", "crystal_radius"};
+                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius, &ExtinctionBase::coefficient};
+    static constexpr std::array items{"type",          "mosaic_distribution", "domain_radius",
+                                      "mosaic_spread", "crystal_radius",      "coefficient"};
     static constexpr std::array legacy{"_easydiffraction_extinction"};
 };
 static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
@@ -5670,6 +5672,7 @@ inline std::vector<Parameter*> ExtinctionBase::parameters() {
     detail::push_optional(out, domain_radius);
     detail::push_optional(out, mosaic_spread);
     detail::push_optional(out, crystal_radius);
+    detail::push_optional(out, coefficient);
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {

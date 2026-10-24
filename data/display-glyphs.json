@@ -399,7 +399,8 @@
    "sites": [
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/BlockNames.qml",
-    "app/qml/Pages/Project/GetStartedGroup.qml"
+    "app/qml/Pages/Project/GetStartedGroup.qml",
+    "app/src/project_view_model.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
