@@ -40,7 +40,7 @@ EaElements.ParamTextField {
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     enabled: refinable
-    // The value and its uncertainty as the project file and the Text tab spell them (edi ADR-0041); a parameter the
+    // The value and its uncertainty as the project file and the Text tab spell them (edi ADR-0051); a parameter the
     // dictionary does not know by the app's rule for numbers (NumberText).
     readonly property bool written: item !== null && item.fileValue !== ""
     parameter: item ? {

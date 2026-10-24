@@ -57,7 +57,7 @@ EaComponents.TableViewParameter {
     // The value as its rule writes it, and as the cell shows it: in scientific notation when that text would not fit
     // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
     // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
-    // The value as the project file and the Text tab spell it (edi ADR-0041); a parameter the dictionary does not know
+    // The value as the project file and the Text tab spell it (edi ADR-0051); a parameter the dictionary does not know
     // by the app's rule for numbers.
     readonly property bool written: item !== null && item.fileValue !== ""
     readonly property string valueText: written ? item.fileValue : item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""

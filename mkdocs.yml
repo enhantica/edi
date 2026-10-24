@@ -75,6 +75,7 @@ nav:
           - dev/adrs/0044-pattern-charts-and-excluded-regions.md
           - dev/adrs/0045-fit-results-tables-and-agreement-factors.md
           - dev/adrs/0046-analysis-sidebar-scan-controls-and-filters.md
+          - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

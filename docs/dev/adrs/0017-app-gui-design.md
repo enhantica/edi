@@ -10,6 +10,9 @@
 - **Forward constraint (binding on new features):** a new page, group, field or button follows the layout,
   naming, colour and icon rules below; a change to one of them changes this ADR in the same commit.
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** the titles, icons and field names of §3, §5, §8 and §21 are crysta dictionary values
+read through the display bridge, not app code; the choices themselves are unchanged.
+
 ## Context
 
 ADR-0015 fixes the app's stack: easydiffractionbeta v0.9.9 is the layout authority, gui-components v0.9.1 is the

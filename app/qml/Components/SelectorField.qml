@@ -12,7 +12,7 @@ import edi.app
 // block's type, showing the stored token. `selected` carries the token the user chose; the owner
 // writes it through the view-model's core call. A refused choice returns the selector to the
 // stored token and shows the core's message, as ParameterField does. A selector of a `.edi` item names it by `uid`:
-// its label comes from crysta's dictionary and its tooltip names the item and the token stored (edi ADR-0041).
+// its label comes from crysta's dictionary and its tooltip names the item and the token stored (edi ADR-0051).
 EaElements.ParamComboBox {
     id: selector
 
