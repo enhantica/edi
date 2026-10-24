@@ -746,12 +746,26 @@ SINGLE_RADIUS = (
 
 
 def shared_extinction(runs: list[str], items: tuple[str, ...]) -> str:
-    """The aliases and constraints that give every experiment the first one's extinction items."""
+    """The aliases and constraints that give every experiment the first one's extinction items.
+
+    An alias is FullProf's short name with the experiment's number, x11_2 for the second
+    experiment's coefficient_11, and a constraint's id is its left-hand alias.
+    """
     if not items or len(runs) < 2:
         return ''
-    aliases = [f'{run}_{item} {run}.extinction.{item}' for run in runs for item in items]
+
+    def alias(number: int, item: str) -> str:
+        return f'{item.replace("coefficient_", "x")}_{number}'
+
+    aliases = [
+        f'{alias(number, item)} {run}.extinction.{item}'
+        for number, run in enumerate(runs, 1)
+        for item in items
+    ]
     constraints = [
-        f'{run}_{item} "{run}_{item} = {runs[0]}_{item}"' for run in runs[1:] for item in items
+        f'{alias(number, item)} "{alias(number, item)} = {alias(1, item)}"'
+        for number in range(2, len(runs) + 1)
+        for item in items
     ]
     return (
         '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
