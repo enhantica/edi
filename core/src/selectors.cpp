@@ -197,6 +197,8 @@ std::vector<std::string> extinction_type_labels() {
             labels.emplace_back("Isotropic Becker-Coppens mixed");
         } else if (token == "larson-isotropic") {
             labels.emplace_back("Isotropic Larson");
+        } else if (token == "larson-anisotropic") {
+            labels.emplace_back("Anisotropic Larson");
         } else {
             labels.push_back(token);
         }

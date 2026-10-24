@@ -171,6 +171,18 @@ inline constexpr const char* kExtinctionCrystalRadius[] = {"_extinction.crystal_
 inline constexpr const char* kExtinctionCrystalRadiusCif[] = {"_easydiffraction_extinction.crystal_radius"};
 inline constexpr const char* kExtinctionCoefficient[] = {"_extinction.coefficient"};
 inline constexpr const char* kExtinctionCoefficientCif[] = {"_easydiffraction_extinction.coefficient"};
+inline constexpr const char* kExtinctionCoefficient11[] = {"_extinction.coefficient_11"};
+inline constexpr const char* kExtinctionCoefficient11Cif[] = {"_easydiffraction_extinction.coefficient_11"};
+inline constexpr const char* kExtinctionCoefficient22[] = {"_extinction.coefficient_22"};
+inline constexpr const char* kExtinctionCoefficient22Cif[] = {"_easydiffraction_extinction.coefficient_22"};
+inline constexpr const char* kExtinctionCoefficient33[] = {"_extinction.coefficient_33"};
+inline constexpr const char* kExtinctionCoefficient33Cif[] = {"_easydiffraction_extinction.coefficient_33"};
+inline constexpr const char* kExtinctionCoefficient12[] = {"_extinction.coefficient_12"};
+inline constexpr const char* kExtinctionCoefficient12Cif[] = {"_easydiffraction_extinction.coefficient_12"};
+inline constexpr const char* kExtinctionCoefficient13[] = {"_extinction.coefficient_13"};
+inline constexpr const char* kExtinctionCoefficient13Cif[] = {"_easydiffraction_extinction.coefficient_13"};
+inline constexpr const char* kExtinctionCoefficient23[] = {"_extinction.coefficient_23"};
+inline constexpr const char* kExtinctionCoefficient23Cif[] = {"_easydiffraction_extinction.coefficient_23"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -493,6 +505,26 @@ inline const ParameterSpec extinction_coefficient{
     "extinction", "coefficient", "dimensionless", "Larson's empirical extinction coefficient",
     {0.0, detail::kInf}, "Extinction coefficient", "", "", "", detail::kExtinctionCoefficient,
     detail::kExtinctionCoefficientCif};
+// Larson's anisotropic tensor (FullProf's model 4; Qureshi, Mag2Pol manual 5.1.3, eq. 3.2): x_aniso =
+// x11 h² + x22 k² + x33 l² + x12 hk + x13 hl + x23 kl in place of 4 x (sin θ/λ)².
+inline const ParameterSpec extinction_coefficient_11{
+    "extinction", "coefficient_11", "dimensionless", "The h² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x11", "", "x_{11}", "", detail::kExtinctionCoefficient11, detail::kExtinctionCoefficient11Cif};
+inline const ParameterSpec extinction_coefficient_22{
+    "extinction", "coefficient_22", "dimensionless", "The k² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x22", "", "x_{22}", "", detail::kExtinctionCoefficient22, detail::kExtinctionCoefficient22Cif};
+inline const ParameterSpec extinction_coefficient_33{
+    "extinction", "coefficient_33", "dimensionless", "The l² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x33", "", "x_{33}", "", detail::kExtinctionCoefficient33, detail::kExtinctionCoefficient33Cif};
+inline const ParameterSpec extinction_coefficient_12{
+    "extinction", "coefficient_12", "dimensionless", "The hk term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x12", "", "x_{12}", "", detail::kExtinctionCoefficient12, detail::kExtinctionCoefficient12Cif};
+inline const ParameterSpec extinction_coefficient_13{
+    "extinction", "coefficient_13", "dimensionless", "The hl term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x13", "", "x_{13}", "", detail::kExtinctionCoefficient13, detail::kExtinctionCoefficient13Cif};
+inline const ParameterSpec extinction_coefficient_23{
+    "extinction", "coefficient_23", "dimensionless", "The kl term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x23", "", "x_{23}", "", detail::kExtinctionCoefficient23, detail::kExtinctionCoefficient23Cif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.
