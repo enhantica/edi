@@ -238,6 +238,9 @@ def assert_cli_expectations(case, expected):
     assert values['rwp']['tol_rel'] == 0.05, (
         'Rwp must retain the agreed five-percent relative bound'
     )
+    assert values['rwp']['tol_abs'] is None, (
+        'The five-percent Rwp bound cannot be overridden by an absolute tolerance'
+    )
     for name in ['reduced_chi_square', 'iterations']:
         assert values[name]['kind'] == 'regression-pin', (
             'Solver-specific terminal quantities must be identified as regression pins'
@@ -353,7 +356,12 @@ def test_comparison_contract_refuses_missing_or_relabelled_references(escape):  
         elif escape == 'changed-full-rwp':
             bad['quantities']['rwp']['value'] += 1
         elif escape == 'relaxed-full-rwp':
-            bad['quantities']['rwp']['tol_rel'] = 0.5
+            for field, value in [('tol_rel', 0.5), ('tol_abs', 1.0)]:
+                relaxed = copy.deepcopy(expected)
+                relaxed['quantities']['rwp'][field] = value
+                with pytest.raises(AssertionError):
+                    assert_cli_expectations(case, relaxed)
+            return
         elif escape == 'relabelled-full-rwp':
             bad['quantities']['rwp']['kind'] = 'regression-pin'
     with pytest.raises(AssertionError):
