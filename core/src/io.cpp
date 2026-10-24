@@ -341,20 +341,27 @@ bool is_tag(const Token& token) {
 // Parse a file's single `data_` block. A second `data_` header ends the parse (these files are one
 // block each). Any dangling tag/row (truncation) fails closed. `require_data` is relaxed for the
 // analysis section, which is a headerless STAR body (no `data_` line). An older spelling of a name
-// is read as the current one, and a block giving one name in both spellings is refused.
-Block parse_block(const std::string& text, const std::string& where, bool require_data = true) {
+// is read as the current one, and with `every_name` (a structure or experiment block) any name crysta's
+// dictionary lists, `.edi` or CIF, in either notation, as crysta reads it. Two spellings of one item are
+// refused, naming both; with `every_name` so is one name repeated with another value, or a repeated
+// loop column. Other files keep their own precedence for a repeated line, and a repeated schema line
+// reads as before.
+Block parse_block(const std::string& text, const std::string& where, bool require_data = true,
+                  bool every_name = false) {
     const std::vector<Token> tokens = tokenize(text, where);
     Block block;
-    std::set<std::string> renamed;
-    const auto current = [&renamed](const std::string& tag) {
-        std::string name = detail::current_edi_name(tag);
-        if (name != tag) {
-            renamed.insert(name);
+    // The spelling each item was first given in, and a single item's value, by its lowercase current name.
+    std::map<std::string, std::pair<std::string, std::optional<std::string>>> given;
+    const auto current = [&where, &given, every_name](const std::string& tag, const std::optional<std::string>& value) {
+        std::string name = detail::current_edi_name(tag, every_name);
+        std::string key = name;
+        std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        const auto [first, added] = given.emplace(std::move(key), std::pair{tag, value});
+        const bool other_value = !value.has_value() || first->second.second != value;
+        if (!added && first->first != "_edi.schema_version" && (first->second.first != tag || (every_name && other_value))) {
+            fail_syntax(where, "both-spellings", "a block carries both " + first->second.first + " and " + tag + ", one item");
         }
         return name;
-    };
-    const auto refuse_both = [&where](const std::string& tag) {
-        fail_syntax(where, "both-spellings", tag + " is given twice, in its current and an older spelling");
     };
     bool have_data = false;
     std::size_t index = 0;
@@ -377,11 +384,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             std::vector<std::string> tags;
             std::vector<std::vector<std::string>> rows;
             while (index < size && is_tag(tokens[index])) {
-                std::string tag = current(tokens[index].text);
-                if (renamed.contains(tag) && std::ranges::count(tags, tag) > 0) {
-                    refuse_both(tag);
-                }
-                tags.push_back(std::move(tag));
+                tags.push_back(current(tokens[index].text, std::nullopt));
                 ++index;
             }
             if (tags.empty()) {
@@ -401,16 +404,12 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
         } else if (is_tag(token)) {
-            const std::string tag = current(token.text);
-            if (renamed.contains(tag) && block.find(tag) != nullptr) {
-                refuse_both(tag);
+            if (index + 1 >= size || is_control(tokens[index + 1])) {
+                fail_syntax(where, "tag-without-value", "tag " + token.text + " has no value (truncated)");
             }
-            ++index;
-            if (index >= size || is_control(tokens[index])) {
-                fail_syntax(where, "tag-without-value", "tag " + tag + " has no value (truncated)");
-            }
-            block.items.emplace_back(tag, tokens[index].text);
-            ++index;
+            const std::string tag = current(token.text, tokens[index + 1].text);
+            block.items.emplace_back(tag, tokens[index + 1].text);
+            index += 2;
         } else {
             fail_syntax(where, "unexpected-token", "unexpected token '" + token.text + "'");
         }
@@ -2548,8 +2547,10 @@ Structure structure_from_edi_text(const std::string& text) {
         edi = detail::structure_edi_from_cif(text);
     } catch (const std::invalid_argument& error) {
         throw IoError(where + ": " + error.what());
+    } catch (const std::runtime_error&) {
+        // Text crysta cannot parse is refused by the parser below, with edi's own diagnostic.
     }
-    const Block block = parse_block(edi.has_value() ? *edi : text, where);
+    const Block block = parse_block(edi.has_value() ? *edi : text, where, true, true);
     return structure_from_block(block, where);
 }
 
@@ -2565,8 +2566,10 @@ Structure load_structure_cif_file(const std::string& path) {
         edi = detail::structure_edi_from_cif(text.str());
     } catch (const std::invalid_argument& error) {
         throw IoError(path + ": " + error.what());
+    } catch (const std::runtime_error&) {
+        // Text crysta cannot parse is refused by the parser below, with edi's own diagnostic.
     }
-    return structure_from_block(parse_block(edi.has_value() ? *edi : text.str(), path), path);
+    return structure_from_block(parse_block(edi.has_value() ? *edi : text.str(), path, true, true), path);
 }
 
 // ---- classic-CIF experiment translation (experiment half) ----------------------------
@@ -2875,16 +2878,19 @@ Block translate_experiment_cif(const Block& in) {
     return out;
 }
 
+// An experiment block as crysta reads one: a block spelling the classic diffraction-lib `cif_names`
+// vocabulary is translated to the dot-form `.edi` tags; any other is read by every name an item lists.
+Block experiment_edi_block(const std::string& text, const std::string& where) {
+    const Block block = parse_block(text, where);
+    if (experiment_block_is_classic_cif(block)) {
+        return translate_experiment_cif(block);
+    }
+    return parse_block(text, where, true, true);
+}
+
 BraggPdExperiment experiment_from_edi_text(const std::string& text) {
     const std::string where = "<from_cif_str>";
-    const Block block = parse_block(text, where);
-    // Vocabulary dispatch: a block spelling any tag of the classic diffraction-lib
-    // `cif_names` vocabulary is translated to the dot-form `.edi` tags and built by the one
-    // experiment builder; everything else takes the `.edi` path exactly as before.
-    if (experiment_block_is_classic_cif(block)) {
-        return experiment_from_block(translate_experiment_cif(block), where);
-    }
-    return experiment_from_block(block, where);
+    return experiment_from_block(experiment_edi_block(text, where), where);
 }
 
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
@@ -2945,7 +2951,7 @@ Block edi_file_block(const std::string& path) {
         throw IoError(path + ": not a .edi file - structures and experiments load from .edi block "
                              "files only");
     }
-    Block block = parse_block(read_file(path), path);
+    Block block = parse_block(read_file(path), path, true, true);
     require_edi_schema(block, path);
     return block;
 }
@@ -3179,7 +3185,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // Every structure file is a structure (phase), in file order; two declaring one name refuse.
     for (const fs::path& file : structure_files) {
         Structure structure =
-            structure_from_block(parse_block(read_file(file.string()), file.string()), file.string());
+            structure_from_block(parse_block(read_file(file.string()), file.string(), true, true), file.string());
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
                             return datablock_key(held->name, "structure") ==
@@ -3199,7 +3205,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // not modelled, so the value is not kept.
     std::set<std::string> warned_calculators;
     for (const fs::path& file : sorted_edi_files(root / "experiments")) {
-        const Block experiment_block = parse_block(read_file(file.string()), file.string());
+        const Block experiment_block = experiment_edi_block(read_file(file.string()), file.string());
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");

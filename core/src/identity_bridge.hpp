@@ -24,8 +24,9 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
                                 double gamma_deg);
 std::string wavelength_domain_message(double wavelength);
 
-// The current `.edi` name of `tag` when it is an older spelling crysta's dictionary lists, else `tag` itself.
-std::string current_edi_name(const std::string& tag);
+// The current `.edi` name `tag` reads as by crysta's dictionary: an older `.edi` spelling's, and with `every_name` (a
+// structure or experiment block) any name an item lists, `.edi` or CIF, in either notation; else `tag` itself.
+std::string current_edi_name(const std::string& tag, bool every_name);
 
 // A structure CIF as the `.edi` document crysta's save would write for it, or nullopt when the text
 // is already `.edi`. Throws std::invalid_argument naming a missing item.
