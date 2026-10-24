@@ -9,16 +9,20 @@ A fitted example takes its references from FullProf's fit of the same start
 within 5 % relative, and the cell lengths and angles, atomic coordinates and isotropic ADPs both
 programs refine, each within two of edi's standard uncertainties. One ``python -m edi fit`` of a
 copy gives the regression pins: iterations and reduced chi-square. A reference the fit misses
-is kept and printed, so the check reports it. A scan is checked on its
-template file's row of ``results.csv``, which has no R_wp. A simulation pins the point count and
-the checksum ``python -m edi calc`` reports. A dropped example with no FullProf fit keeps edi's
-result as regression pins. The run's seconds are printed for ``runtimes.tsv``.
+is kept and printed, so the check reports it.
+
+A scan is compared on its template file's single fit, as FullProf's reference is. An example whose
+Bérar-Baldinozzi asymmetry differs in form between the programs has a FullProf fit with the
+asymmetry fixed at 0 beside its reference (``asymmetry-off/``): the full model is compared on
+R_wp and the number of free parameters only, and every shared value on the ``asymmetry-off``
+variant. A simulation pins the point count and the checksum ``python -m edi calc`` reports. A
+dropped example with no FullProf fit keeps edi's result as regression pins. The run's seconds are
+printed for ``runtimes.tsv``.
 """
 
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import re
 import shutil
@@ -31,8 +35,12 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools' / 'checks'))
+from cli_projects import fit_template_only, fix_asymmetry_off  # noqa: E402 - the check's own rules
+
 CLI = ROOT / 'docs' / 'user' / 'cli'
 FULLPROF = ROOT / 'knowledge' / 'fitting' / 'fullprof'
+ASYMMETRY_OFF = 'asymmetry-off'
 SHARED = re.compile(
     r'^(?P<structure>[^.]+)\.(?:cell\.(?P<cell>(length|angle)_\w+)'
     r'|atom_site\.(?P<site>[^.]+)\.(?P<attr>fract_[xyz]|adp_iso))$'
@@ -82,9 +90,9 @@ def quantity(value: float, kind: str, tol_abs: float | None, tol_rel: float | No
     return {'value': float(value), 'kind': kind, 'tol_abs': tol_abs, 'tol_rel': tol_rel}
 
 
-def references(case: str) -> tuple[dict, dict[str, tuple[float, str]]]:
-    """FullProf's record and its shared values by edi unique name."""
-    record = json.loads((FULLPROF / case / 'reference.json').read_text(encoding='utf-8'))
+def references(case: str, fit: str = '') -> tuple[dict, dict[str, float]]:
+    """A FullProf record and its shared values by edi unique name."""
+    record = json.loads((FULLPROF / case / fit / 'reference.json').read_text(encoding='utf-8'))
     values = {}
     for unique, code in record['parameter_codes'].items():
         if SHARED.match(unique) and code:
@@ -101,22 +109,13 @@ def check(case: str, name: str, spec: dict, measured: float, notes: list[str]) -
         )
 
 
-def template_row(case: str, project: Path, template: str, shared: dict, notes: list[str]) -> dict:
-    """A scan's references and pins on its template file's row of ``results.csv``."""
-    with (project / 'analysis' / 'results.csv').open(encoding='utf-8', newline='') as handle:
-        (row,) = [row for row in csv.DictReader(handle) if Path(row['file_path']).name == template]
-    quantities = {}
-    for unique, value in shared.items():
-        key = f'results[{template}].{unique}'
-        su = float(row[f'{unique}.uncertainty'])
-        quantities[key] = quantity(value, 'reference', SIGMA_MULTIPLE * su, None)
-        check(case, key, quantities[key], float(row[unique]), notes)
-    prefix = f'results[{template}].fit_result'
-    chi = float(row['fit_result.reduced_chi_square'])
-    quantities[f'{prefix}.reduced_chi_square'] = quantity(chi, 'regression-pin', None, 1e-5)
-    iterations = float(row['fit_result.iterations'])
-    quantities[f'{prefix}.iterations'] = quantity(iterations, 'regression-pin', 0.0, None)
-    return quantities
+def pins(machine: dict[str, str]) -> dict:
+    return {
+        'iterations': quantity(machine['iterations'], 'regression-pin', 0.0, None),
+        'reduced_chi_square': quantity(
+            machine['reduced_chi_square'], 'regression-pin', 1e-6, None
+        ),
+    }
 
 
 def pins_only(machine: dict[str, str]) -> dict:
@@ -124,11 +123,31 @@ def pins_only(machine: dict[str, str]) -> dict:
     return {
         'n_free': quantity(machine['n_free'], 'regression-pin', 0.0, None),
         'rwp': quantity(machine['rwp'], 'regression-pin', None, 1e-6),
-        'iterations': quantity(machine['iterations'], 'regression-pin', 0.0, None),
-        'reduced_chi_square': quantity(
-            machine['reduced_chi_square'], 'regression-pin', 1e-6, None
-        ),
+        **pins(machine),
     }
+
+
+def n_free(case: str, record: dict, machine: dict[str, str], notes: list[str]) -> dict:
+    spec = quantity(record['n_free'], 'reference', 0.0, None)
+    check(case, 'n_free', spec, float(machine['n_free']), notes)
+    return {'n_free': spec}
+
+
+def shared_values(
+    case: str, project: Path, shared: dict[str, float], machine: dict[str, str], notes: list[str]
+) -> dict:
+    """Each shared FullProf value, within two of edi's standard uncertainties."""
+    structures = count(project, 'structures')
+    quantities = {}
+    for unique, value in shared.items():
+        name = f'param.{label(unique, structures)}'
+        su = float(machine.get(f'{name}.uncertainty', 'nan'))
+        if not su > 0:
+            raise SystemExit(f'{case}: {unique} has no edi uncertainty as {name}')
+        spec = quantity(value, 'reference', SIGMA_MULTIPLE * su, None)
+        quantities[f'{name}.value'] = spec
+        check(case, f'{name}.value', spec, float(machine[f'{name}.value']), notes)
+    return quantities
 
 
 def ladder_variant(case: str, machine: dict[str, str]) -> dict:
@@ -142,40 +161,51 @@ def ladder_variant(case: str, machine: dict[str, str]) -> dict:
     return {'ladder': {'quantities': quantities}}
 
 
-def fitted(case: str, project: Path, notes: list[str]) -> tuple[dict, float, dict]:
-    if not (FULLPROF / case / 'reference.json').exists():
-        machine, seconds = machine_run(project)
-        return pins_only(machine), seconds, machine
-    record, shared = references(case)
+def asymmetry_off_variant(case: str, start: Path, notes: list[str]) -> tuple[dict, float]:
+    """Every shared value on the fit with the Bérar-Baldinozzi asymmetry fixed at 0 in both."""
+    record, shared = references(case, ASYMMETRY_OFF)
+    off = start.parent / ASYMMETRY_OFF
+    shutil.copytree(start, off)
+    fix_asymmetry_off(off)
+    machine, seconds = machine_run(off)
+    quantities = {
+        **n_free(case, record, machine, notes),
+        **shared_values(case, off, shared, machine, notes),
+        **pins(machine),
+    }
+    return {ASYMMETRY_OFF: {'quantities': quantities}}, seconds
+
+
+def fitted(case: str, start: Path, notes: list[str]) -> tuple[dict, dict, float]:
+    """The record's quantities and variants, and the seconds the fits took.
+
+    Every fit runs on its own copy of ``start``: a fit saves its result into its project.
+    """
+    project = start.parent / 'project'
+    shutil.copytree(start, project)
     machine, seconds = machine_run(project)
-    quantities = {'n_free': quantity(record['n_free'], 'reference', 0.0, None)}
-    check(case, 'n_free', quantities['n_free'], float(machine['n_free']), notes)
-    template = setting(project, '_sequential_fit.template_file')
-    if template:
-        quantities.update(template_row(case, project, template, shared, notes))
-        return quantities, seconds, machine
-    structures = count(project, 'structures')
+    if not (FULLPROF / case / 'reference.json').exists():
+        return pins_only(machine), {}, seconds
+    record, shared = references(case)
+    quantities = n_free(case, record, machine, notes)
     quantities['rwp'] = quantity(record['r_wp'], 'reference', None, RWP_TOLERANCE)
     check(case, 'rwp', quantities['rwp'], float(machine['rwp']), notes)
-    for unique, value in shared.items():
-        name = f'param.{label(unique, structures)}'
-        su = float(machine.get(f'{name}.uncertainty', 'nan'))
-        if not su > 0:
-            raise SystemExit(f'{case}: {unique} has no edi uncertainty as {name}')
-        spec = quantity(value, 'reference', SIGMA_MULTIPLE * su, None)
-        quantities[f'{name}.value'] = spec
-        check(case, f'{name}.value', spec, float(machine[f'{name}.value']), notes)
-    quantities['iterations'] = quantity(machine['iterations'], 'regression-pin', 0.0, None)
-    quantities['reduced_chi_square'] = quantity(
-        machine['reduced_chi_square'], 'regression-pin', 1e-6, None
-    )
-    return quantities, seconds, machine
+    variants = {}
+    if (FULLPROF / case / ASYMMETRY_OFF / 'reference.json').exists():
+        variants, more = asymmetry_off_variant(case, start, notes)
+        seconds += more
+    else:
+        quantities.update(shared_values(case, project, shared, machine, notes))
+    quantities.update(pins(machine))
+    if case in LADDER_WITNESS:
+        variants.update(ladder_variant(case, machine))
+    return quantities, variants, seconds
 
 
 def write(case: str, notes: list[str]) -> float:
     home = CLI / case
     with tempfile.TemporaryDirectory(prefix=f'catalogue-{case}-') as scratch:
-        project = Path(scratch) / 'project'
+        project = Path(scratch) / 'start'
         shutil.copytree(home / 'project', project)
         if setting(project, '_metadata.purpose') == 'simulation':
             machine, seconds = machine_run(project, 'calc')
@@ -194,7 +224,10 @@ def write(case: str, notes: list[str]) -> float:
                 },
             }
         else:
-            quantities, seconds, machine = fitted(case, project, notes)
+            scan = setting(project, '_fitting_mode.type') == 'sequential'
+            if scan:
+                fit_template_only(project)
+            quantities, variants, seconds = fitted(case, project, notes)
             referenced = (FULLPROF / case / 'reference.json').exists()
             document = {
                 'schema': 1,
@@ -207,10 +240,12 @@ def write(case: str, notes: list[str]) -> float:
                     else 'machine record (python -m edi fit --report machine)',
                     'provenance': 'PROVENANCE.md',
                 },
-                'quantities': quantities,
             }
-            if case in LADDER_WITNESS:
-                document['variants'] = ladder_variant(case, machine)
+            if scan:
+                document['template'] = True
+            document['quantities'] = quantities
+            if variants:
+                document['variants'] = variants
     (home / 'expected.json').write_text(json.dumps(document, indent=2) + '\n', encoding='utf-8')
     return seconds
 
