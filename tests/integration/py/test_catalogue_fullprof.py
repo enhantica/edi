@@ -23,6 +23,18 @@ ASYMMETRY_OFF_CASES = {
     'pd-neut-xray-cwl_pbso4-d1a-lab',
     'pd-xray-cwl_latp-bm01_scan',
 }
+# The October 24 minor-phase decision applies only to this template variant.
+LATP_CASE = 'pd-xray-cwl_latp-bm01_scan'
+LATP_CELL_PINS = {
+    'param.alpo4_c2221.cell_length_a.value',
+    'param.alpo4_c2221.cell_length_b.value',
+    'param.alpo4_c2221.cell_length_c.value',
+    'param.alpo4_p63mc.cell_length_a.value',
+    'param.alpo4_p63mc.cell_length_c.value',
+}
+COMPARISON_BOUNDS = json.loads(
+    (ROOT / 'tests/fixtures/example_catalogue/comparison-bounds.json').read_text()
+)['cases']
 
 
 def reference_home(case):
@@ -177,7 +189,7 @@ def test_diffraction_library_marks_the_beba_model_gap_instead_of_comparing_minim
     )
 
 
-def assert_shared_references(values, source):
+def assert_shared_references(values, source, regression_pins=frozenset()):
     project = ROOT / source['start_project']
     structures = len(list((project / 'structures').glob('*.edi')))
     expected = {}
@@ -203,19 +215,80 @@ def assert_shared_references(values, source):
     assert shared and shared.keys() == expected.keys(), (
         'Every shared fitted value must be present exactly once in its comparison model'
     )
-    assert all(spec['kind'] == 'reference' for spec in shared.values()), (
-        'Shared fitted values must be independently referenced rather than relabelled regressions'
-    )
     for name, spec in shared.items():
-        assert spec['value'] == expected[name], (
-            'Each shared fitted value must equal its independent FullProf parameter'
-        )
+        if name in regression_pins:
+            assert spec.get('kind') == 'regression-pin', (
+                'Only the five decided minor-phase cells are explicitly labelled regression pins'
+            )
+            assert isinstance(spec['value'], (int, float)) and math.isfinite(spec['value']), (
+                'Every labelled minor-phase regression pin requires a finite numeric value'
+            )
+        else:
+            assert spec.get('kind') == 'reference', (
+                'Shared fitted values remain independent references '
+                'outside the exact cell exception'
+            )
+            assert spec['value'] == expected[name], (
+                'Each shared fitted value must equal its independent FullProf parameter'
+            )
         assert (
             spec['tol_rel'] is None
             and spec['tol_abs'] is not None
             and math.isfinite(spec['tol_abs'])
             and spec['tol_abs'] > 0
         ), 'Shared fitted values require finite positive absolute uncertainty bounds'
+
+
+def assert_comparison_disposition(case, expected):
+    groups = {'default': expected}
+    groups.update(expected.get('variants', {}))
+    assert groups.keys() == COMPARISON_BOUNDS[case].keys(), (
+        'The comparison retains its complete declared model and variant inventory'
+    )
+    for group, block in groups.items():
+        disposition = case == LATP_CASE and group == 'asymmetry-off'
+        status = 'max_iter' if disposition else 'done'
+        assert block.get('status', 'done') == status, (
+            'Only the decided LATP template asymmetry-off fit '
+            'expects the resume-cap max_iter status'
+        )
+        frozen = COMPARISON_BOUNDS[case][group]
+        values = block['quantities']
+        assert values.keys() == frozen.keys(), (
+            'Every comparison quantity remains present across the case-specific disposition'
+        )
+        for name, spec in values.items():
+            bounds = {key: spec[key] for key in ('tol_abs', 'tol_rel')}
+            if disposition and name in LATP_CELL_PINS:
+                assert (
+                    bounds['tol_rel'] is None
+                    and bounds['tol_abs'] is not None
+                    and math.isfinite(bounds['tol_abs'])
+                    and 0 < bounds['tol_abs'] <= frozen[name]['tol_abs']
+                ), 'The five labelled cell pins require an explicit unrelaxed numeric bound'
+            else:
+                assert bounds == frozen[name], (
+                    'Every other comparison bound remains exactly as committed before the decision'
+                )
+    if case == LATP_CASE:
+        assert expected['source']['provenance'] == 'PROVENANCE.md', (
+            'The minor-phase disposition must point to its own committed provenance explanation'
+        )
+
+
+def assert_latp_provenance(reason):
+    reason = reason.casefold().replace('₄', '4')
+    assert all(
+        word in reason
+        for word in ('alpo4', 'cell', 'fullprof', 'regression', 'max_iter', 'adr-0098', 'resume')
+    ) and any(word in reason for word in ('lower', 'better')), (
+        'The provenance explains the minor-phase minimum gap and names the ADR-0098 resume cap'
+    )
+
+
+def test_latp_disposition_provenance_names_the_resume_cap():
+    reason = (ROOT / 'docs/user/cli' / LATP_CASE / 'PROVENANCE.md').read_text()
+    assert_latp_provenance(reason)
 
 
 def assert_cli_expectations(case, expected):
@@ -283,12 +356,15 @@ def assert_cli_expectations(case, expected):
             assert alternate[name]['kind'] == 'regression-pin', (
                 'The asymmetry-off solver terminal quantities remain labelled regression pins'
             )
-        assert_shared_references(alternate, off)
+        assert_shared_references(
+            alternate, off, LATP_CELL_PINS if case == LATP_CASE else frozenset()
+        )
     else:
         assert 'asymmetry-off' not in variants, (
             'Only the four decided cases may move shared values to an asymmetry-off comparison'
         )
         assert_shared_references(values, source)
+    assert_comparison_disposition(case, expected)
 
 
 @pytest.mark.parametrize('case', [case for case in SELECTED if not case.endswith('_simulation')])
@@ -364,5 +440,91 @@ def test_comparison_contract_refuses_missing_or_relabelled_references(escape):  
             return
         elif escape == 'relabelled-full-rwp':
             bad['quantities']['rwp']['kind'] = 'regression-pin'
+    with pytest.raises(AssertionError):
+        assert_cli_expectations(case, bad)
+
+
+@pytest.mark.parametrize(
+    'escape',
+    [
+        'unlabelled-cell',
+        'missing-cell',
+        'extra-cell',
+        'relaxed-cell-pin',
+        'relabelled-latp-phase',
+        'changed-latp-reference',
+        'relaxed-latp-bound',
+        'relaxed-other-case-bound',
+        'unlabelled-other-case-value',
+        'other-case-pin',
+        'wrong-status',
+        'missing-status',
+        'other-case-max-iter',
+        'default-model-pin',
+        'wrong-default-status',
+        'wrong-provenance-link',
+        'missing-resume-explanation',
+    ],
+)
+def test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds(escape):  # noqa: PLR0912, PLR0915 - explicit disposition escapes
+    case = 'pd-neut-cwl_hs-hrpt' if 'other-case' in escape else LATP_CASE
+    path = ROOT / 'docs/user/cli' / case / 'expected.json'
+    expected = json.loads(path.read_text())
+    assert_cli_expectations(case, expected)
+    bad = copy.deepcopy(expected)
+    alternate = bad['variants']['asymmetry-off']
+    values = alternate['quantities']
+    cell = min(LATP_CELL_PINS)
+    p1 = 'param.latp.P1.adp_iso.value'
+    if escape == 'unlabelled-cell':
+        for name in sorted(LATP_CELL_PINS):
+            unlabelled = copy.deepcopy(expected)
+            del unlabelled['variants']['asymmetry-off']['quantities'][name]['kind']
+            with pytest.raises(AssertionError):
+                assert_cli_expectations(case, unlabelled)
+        return
+    if escape == 'missing-cell':
+        del values[cell]
+    elif escape == 'extra-cell':
+        values['param.alpo4_c2221.cell_angle_alpha.value'] = copy.deepcopy(values[cell])
+    elif escape == 'relaxed-cell-pin':
+        values[cell]['tol_abs'] = 2 * COMPARISON_BOUNDS[case]['asymmetry-off'][cell]['tol_abs']
+    elif escape == 'relabelled-latp-phase':
+        values[p1]['kind'] = 'regression-pin'
+    elif escape == 'changed-latp-reference':
+        values[p1]['value'] += 1
+    elif escape == 'relaxed-latp-bound':
+        for name in [key for key in values if key.startswith('param.latp.')]:
+            relaxed = copy.deepcopy(expected)
+            relaxed['variants']['asymmetry-off']['quantities'][name]['tol_abs'] *= 1.01
+            with pytest.raises(AssertionError):
+                assert_cli_expectations(case, relaxed)
+        return
+    elif escape in {'relaxed-other-case-bound', 'unlabelled-other-case-value', 'other-case-pin'}:
+        name = next(key for key in values if key.startswith('param.'))
+        if escape == 'relaxed-other-case-bound':
+            values[name]['tol_abs'] *= 1.01
+        elif escape == 'unlabelled-other-case-value':
+            del values[name]['kind']
+        else:
+            values[name]['kind'] = 'regression-pin'
+    elif escape == 'wrong-status':
+        alternate['status'] = 'done'
+    elif escape == 'missing-status':
+        del alternate['status']
+    elif escape == 'other-case-max-iter':
+        alternate['status'] = 'max_iter'
+    elif escape == 'default-model-pin':
+        bad['quantities'][cell] = copy.deepcopy(values[cell])
+    elif escape == 'wrong-default-status':
+        bad['status'] = 'max_iter'
+    elif escape == 'wrong-provenance-link':
+        bad['source']['provenance'] = 'README.md'
+    elif escape == 'missing-resume-explanation':
+        with pytest.raises(AssertionError):
+            assert_latp_provenance(
+                'AlPO4 cells; FullProf lower minimum; regression pins; max_iter'
+            )
+        return
     with pytest.raises(AssertionError):
         assert_cli_expectations(case, bad)

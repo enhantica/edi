@@ -2,6 +2,10 @@
 
 `catalogue-selection.json` transcribes the owner's chosen cases and order. It is
 independent of the registry, metadata generator, app bundle and documentation.
+`freeze_comparison_bounds.py` captures the explicitly named pre-disposition commit
+into `comparison-bounds.json`. These are tolerance-policy retention pins: every
+other bound stays exact when the five decided LATP minor-phase cells become
+labelled regression pins. FullProf still supplies the correctness values.
 `capture_retention.py` freezes the original project and expected-result bytes;
 `retained-projects.json` is checked without needing historical Git objects in CI.
 
