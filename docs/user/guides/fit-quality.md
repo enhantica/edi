@@ -16,8 +16,7 @@ example together; N is the number of points and P the program's number of free p
 - R<sub>exp</sub> = √((N − P) / Σw·y<sub>o</sub>²)
 - reduced χ² = Σw(y<sub>o</sub> − y<sub>c</sub>)² / (N − P)
 
-So the three rows of an example differ only in the calculated curve and in P. A scan is compared on its template
-file alone, the file the scan starts from. Running `python tools/comparison/fit_quality.py --check` recomputes every
+So the three rows of an example differ only in the calculated curve and in P. Running `python tools/comparison/fit_quality.py --check` recomputes every
 number from the committed curves and fails if this page differs.
 
 ## Where the curves come from
@@ -36,8 +35,11 @@ counts are below 1, its factors carry that rounding.
 
 ## What differs between the fits
 
-- **PbSO₄, neutron and X-ray together:** edi also fits the D1A wavelength, which FullProf's reference keeps
-  fixed. Its rows compare different free sets, and the list after the table names this example.
+- **Bérar-Baldinozzi asymmetry:** the two programs write this asymmetry in different forms, and no mapping of its
+  coefficients makes them agree. For the four examples that fit it from the start (Herbertsmithite, YAlO₃ with
+  Al₂O₃, the PbSO₄ joint fit and the LATP scan) the factors below compare the full models, and each example's
+  `expected.json` compares every other fitted value on a second fit of both programs with the asymmetry fixed at 0.
+- **Scans:** a scan is compared on its template file's single fit, the file the scan starts from.
 - **LATP:** the measured σ are small, so reduced χ² is of order 10⁸ and R<sub>exp</sub> rounds to 0.00 % in all
   programs.
 
@@ -89,7 +91,7 @@ counts are below 1, its factors carry that rounding.
 | [`pd-xray-cwl_lam7o3-p021`](../cli/pd-xray-cwl_lam7o3-p021/index.md) | edi | 1236 | 39 | 1.21 | 1.64 | 3.80 | 0.1867 |
 |  | FullProf | 1236 | 39 | 1.24 | 1.70 | 3.80 | 0.1999 |
 |  | diffraction-lib | 1236 | 39 | 1.18 | 1.61 | 3.80 | 0.1803 |
-| [`pd-neut-xray-cwl_pbso4-d1a-lab`](../cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md) | edi | 8709 | 52 | 5.41 | 5.23 | 2.93 | 3.182 |
+| [`pd-neut-xray-cwl_pbso4-d1a-lab`](../cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md) | edi | 8709 | 51 | 5.78 | 5.80 | 2.93 | 3.915 |
 |  | FullProf | 8709 | 51 | 5.72 | 5.76 | 2.93 | 3.855 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
 | [`pd-neut-cwl_cosio-d20_scan`](../cli/pd-neut-cwl_cosio-d20_scan/index.md) | edi | 1419 | 39 | 3.25 | 4.62 | 2.11 | 4.801 |
@@ -116,7 +118,7 @@ Examples where edi's R<sub>wp</sub> exceeds FullProf's by more than 5 %:
 
 Examples whose programs free different numbers of parameters:
 
-- `pd-neut-xray-cwl_pbso4-d1a-lab`: edi 52, FullProf 51
+- none
 
 ### Cell lengths
 
@@ -139,7 +141,7 @@ Examples whose programs free different numbers of parameters:
 | `pd-neut-tof_ferrite-austenite-beer` | ferrite | 2.88600 | 2.88600 | 2.88600 |
 | `pd-xray-cwl_pbso4-lab` | pbso4 | 8.480763(89), 5.398867(58), 6.960385(75) | 8.48066, 5.39888, 6.96026 | – |
 | `pd-xray-cwl_lam7o3-p021` | lam7o3 | 5.46218(11), 7.73302(16), 5.49022(11) | 5.46218, 7.73294, 5.49018 | 5.46225(10), 7.73308(16), 5.49026(11) |
-| `pd-neut-xray-cwl_pbso4-d1a-lab` | pbso4 | 8.481021(82), 5.398724(53), 6.960392(70) | 8.48004, 5.39848, 6.95972 | – |
+| `pd-neut-xray-cwl_pbso4-d1a-lab` | pbso4 | 8.479965(85), 5.398120(56), 6.959593(73) | 8.48004, 5.39848, 6.95972 | – |
 | `pd-neut-cwl_cosio-d20_scan` | cosio | 10.33593(30), 6.02972(17), 4.79759(14) | 10.33590, 6.02965, 4.79758 | 10.33614(30), 6.02985(17), 4.79767(14) |
 | `pd-xray-cwl_latp-bm01_scan` | alpo4_c2221 | 6.968(21), 7.111(21), 7.003(19) | 6.96964, 7.11593, 7.00370 | – |
 | `pd-xray-cwl_latp-bm01_scan` | alpo4_p63mc | 4.9828(68), 9.504(19) | 4.98695, 9.50427 | – |
