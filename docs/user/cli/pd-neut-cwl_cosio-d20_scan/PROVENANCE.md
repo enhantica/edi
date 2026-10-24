@@ -31,3 +31,8 @@ to two decimals, scale 1 and a flat background of 360 counts (the tenth percenti
 dataset, from which the run starts, is the first file (497.4 K).
 
 `project/` is built by `tools/cli_projects/build_catalogue_projects.py`.
+
+## The check against FullProf
+
+`expected.json` checks the scan's template file, fitted alone as a single fit (`"template": true`),
+because FullProf's reference is a fit of that file alone.

@@ -36,3 +36,12 @@ Biso (32 parameters).
 From this start edi converges in 9 iterations to R<sub>wp</sub> 5.30 % and reduced χ² 2.15, with a
 6.86399 Å, c 14.1417 Å and scale 0.5115. diffraction-lib's own tutorial record reports R<sub>wp</sub>
 5.05 %, reduced χ² 1.95, a 6.86397 Å, c 14.1418 Å and scale 0.511.
+
+## The check against FullProf
+
+FullProf and edi write the Bérar-Baldinozzi asymmetry in different forms, and no mapping of the four
+coefficients makes them agree; crysta tracks this difference in the asymmetry convention as a known issue.
+So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, within 5 %, and on the number
+of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
+coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
+`knowledge/fitting/fullprof/pd-neut-cwl_hs-hrpt/asymmetry-off/`.

@@ -37,3 +37,15 @@ the owner left it, and every parameter value is one of his fitted values.
 The reduced χ² is in the 10⁷–10⁸ range because the files' third column, the integration's own error, is small: about
 1.8·10³ at the strongest peak (9.8·10⁸), a median 0.03 √I over the fitted range, so R<sub>exp</sub> is about 0.0005 %.
 R<sub>wp</sub> is the measure to read for this case.
+
+## The check against FullProf
+
+`expected.json` checks the scan's template file, fitted alone as a single fit (`"template": true`),
+because FullProf's reference is a fit of that file alone.
+
+FullProf and edi write the Bérar-Baldinozzi asymmetry in different forms, and no mapping of the four
+coefficients makes them agree; crysta tracks this difference in the asymmetry convention as a known issue.
+So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, within 5 %, and on the number
+of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
+coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
+`knowledge/fitting/fullprof/pd-xray-cwl_latp-bm01_scan/asymmetry-off/`.

@@ -18,78 +18,6 @@
       "tol_abs": null,
       "tol_rel": 0.05
     },
-    "param.Zn.adp_iso.value": {
-      "value": 0.28185844,
-      "kind": "reference",
-      "tol_abs": 0.12738566386,
-      "tol_rel": null
-    },
-    "param.Cu.adp_iso.value": {
-      "value": 1.5675348,
-      "kind": "reference",
-      "tol_abs": 0.08219558692,
-      "tol_rel": null
-    },
-    "param.O.fract_x.value": {
-      "value": 0.2065578,
-      "kind": "reference",
-      "tol_abs": 0.0003223096884,
-      "tol_rel": null
-    },
-    "param.O.fract_z.value": {
-      "value": 0.060904961,
-      "kind": "reference",
-      "tol_abs": 0.0002657601588,
-      "tol_rel": null
-    },
-    "param.O.adp_iso.value": {
-      "value": 1.127,
-      "kind": "reference",
-      "tol_abs": 0.07931564638,
-      "tol_rel": null
-    },
-    "param.Cl.fract_z.value": {
-      "value": 0.19673583,
-      "kind": "reference",
-      "tol_abs": 0.0002331305432,
-      "tol_rel": null
-    },
-    "param.Cl.adp_iso.value": {
-      "value": 1.4619818,
-      "kind": "reference",
-      "tol_abs": 0.0799071881,
-      "tol_rel": null
-    },
-    "param.H.fract_x.value": {
-      "value": 0.1326284,
-      "kind": "reference",
-      "tol_abs": 0.0003102438978,
-      "tol_rel": null
-    },
-    "param.H.fract_z.value": {
-      "value": 0.089617133,
-      "kind": "reference",
-      "tol_abs": 0.0002580790888,
-      "tol_rel": null
-    },
-    "param.H.adp_iso.value": {
-      "value": 2.547739,
-      "kind": "reference",
-      "tol_abs": 0.0867470285,
-      "tol_rel": null
-    },
-    "param.cell_length_a.value": {
-      "value": 6.8624449,
-      "kind": "reference",
-      "tol_abs": 0.0009408111384,
-      "tol_rel": null
-    },
-    "param.cell_length_c.value": {
-      "value": 14.138643,
-      "kind": "reference",
-      "tol_abs": 0.002125407918,
-      "tol_rel": null
-    },
     "iterations": {
       "value": 9.0,
       "kind": "regression-pin",
@@ -101,6 +29,102 @@
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null
+    }
+  },
+  "variants": {
+    "asymmetry-off": {
+      "quantities": {
+        "n_free": {
+          "value": 28.0,
+          "kind": "reference",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "param.Zn.adp_iso.value": {
+          "value": 0.32759193,
+          "kind": "reference",
+          "tol_abs": 0.12716252924,
+          "tol_rel": null
+        },
+        "param.Cu.adp_iso.value": {
+          "value": 1.5562768,
+          "kind": "reference",
+          "tol_abs": 0.08342322018,
+          "tol_rel": null
+        },
+        "param.O.fract_x.value": {
+          "value": 0.20643879,
+          "kind": "reference",
+          "tol_abs": 0.0003203844288,
+          "tol_rel": null
+        },
+        "param.O.fract_z.value": {
+          "value": 0.060838439,
+          "kind": "reference",
+          "tol_abs": 0.0002702192888,
+          "tol_rel": null
+        },
+        "param.O.adp_iso.value": {
+          "value": 1.1324029,
+          "kind": "reference",
+          "tol_abs": 0.08003207502,
+          "tol_rel": null
+        },
+        "param.Cl.fract_z.value": {
+          "value": 0.19669178,
+          "kind": "reference",
+          "tol_abs": 0.0002380484286,
+          "tol_rel": null
+        },
+        "param.Cl.adp_iso.value": {
+          "value": 1.460644,
+          "kind": "reference",
+          "tol_abs": 0.08085672892,
+          "tol_rel": null
+        },
+        "param.H.fract_x.value": {
+          "value": 0.1325376,
+          "kind": "reference",
+          "tol_abs": 0.0003182299474,
+          "tol_rel": null
+        },
+        "param.H.fract_z.value": {
+          "value": 0.089672789,
+          "kind": "reference",
+          "tol_abs": 0.0002635701454,
+          "tol_rel": null
+        },
+        "param.H.adp_iso.value": {
+          "value": 2.560813,
+          "kind": "reference",
+          "tol_abs": 0.08704979336,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "value": 6.8613186,
+          "kind": "reference",
+          "tol_abs": 0.0002894085036,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "value": 14.135404,
+          "kind": "reference",
+          "tol_abs": 0.0007500507352,
+          "tol_rel": null
+        },
+        "iterations": {
+          "value": 7.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "value": 2.270151952,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
     }
   }
 }

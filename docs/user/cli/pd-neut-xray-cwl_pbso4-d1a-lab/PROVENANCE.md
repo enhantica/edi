@@ -45,3 +45,12 @@ is fixed, as FullProf's reference fit keeps it, so the two programs fit the same
   160° X-ray) and profile cutoffs are those of edi's two single-pattern PbSO4 projects, which were checked against
   FullProf; the tutorial gives 0.58 and 28°.
 - The tutorial's minimizer tolerance setting is left out; edi fits with its own minimizer.
+
+## The check against FullProf
+
+FullProf and edi write the Bérar-Baldinozzi asymmetry in different forms, and no mapping of the four
+coefficients makes them agree; crysta tracks this difference in the asymmetry convention as a known issue.
+So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, within 5 %, and on the number
+of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
+coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
+`knowledge/fitting/fullprof/pd-neut-xray-cwl_pbso4-d1a-lab/asymmetry-off/`.

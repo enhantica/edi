@@ -24,3 +24,12 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.p
 - **Note:** the Al2O3 aluminium Biso ends slightly negative, as it does in the source project and in FullProf's fit of
   this pattern; the minor phase determines it poorly.
 - **Left out:** the tutorial's automatic background estimate, its cryspy calculator and its bumps minimizer choice.
+
+## The check against FullProf
+
+FullProf and edi write the Bérar-Baldinozzi asymmetry in different forms, and no mapping of the four
+coefficients makes them agree; crysta tracks this difference in the asymmetry convention as a known issue.
+So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, within 5 %, and on the number
+of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
+coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
+`knowledge/fitting/fullprof/pd-neut-cwl_yalo3-al2o3-spodi/asymmetry-off/`.
