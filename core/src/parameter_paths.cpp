@@ -2,7 +2,9 @@
 #include "parameter_paths.hpp"
 
 #include <algorithm>
+#include <locale>
 #include <map>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -238,6 +240,36 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         {"mu_r",
          {+[](ExperimentBase& e) -> OptionalParameter& { return e.absorption.mu_r; },
           "absorption.mu_r"}},
+        {"domain_radius",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.domain_radius; },
+          "extinction.domain_radius"}},
+        {"mosaic_spread",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.mosaic_spread; },
+          "extinction.mosaic_spread"}},
+        {"crystal_radius",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.crystal_radius; },
+          "extinction.crystal_radius"}},
+        {"coefficient",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient; },
+          "extinction.coefficient"}},
+        {"coefficient_11",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_11; },
+          "extinction.coefficient_11"}},
+        {"coefficient_22",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_22; },
+          "extinction.coefficient_22"}},
+        {"coefficient_33",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_33; },
+          "extinction.coefficient_33"}},
+        {"coefficient_12",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_12; },
+          "extinction.coefficient_12"}},
+        {"coefficient_13",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_13; },
+          "extinction.coefficient_13"}},
+        {"coefficient_23",
+         {+[](ExperimentBase& e) -> OptionalParameter& { return e.extinction.coefficient_23; },
+          "extinction.coefficient_23"}},
     };
     if (const auto it = kPresenceTracked.find(label); it != kPresenceTracked.end()) {
         OptionalParameter& field = it->second.first(experiment);
@@ -624,6 +656,30 @@ bool copy_parameter_states(Project& to, Project& from) {
         }
     }
     return true;
+}
+
+std::vector<std::string> standing_warnings(Project& project, bool ranges) {
+    std::vector<std::string> out;
+    for (const ParameterEntry& entry : ranges ? parameter_entries(project) : std::vector<ParameterEntry>{}) {
+        const Parameter* parameter = entry.parameter;
+        if (parameter == nullptr || parameter->spec == nullptr) {
+            continue;
+        }
+        const double value = parameter->value;
+        if (value < parameter->spec->range.min || value > parameter->spec->range.max) {
+            std::ostringstream message;
+            message.imbue(std::locale::classic());
+            message << entry.path << " = " << value << " is outside its admissible range ["
+                    << parameter->spec->range.min << ", " << parameter->spec->range.max << "]; "
+                    << (parameter->dependence == Dependence::Independent ? "it is kept"
+                                                                         : "a constraint derives it, and it is kept");
+            out.push_back(message.str());
+        }
+    }
+    for (AdpDefinitenessWarning& warning : adp_definiteness_warnings(project)) {
+        out.push_back(std::move(warning.message));
+    }
+    return out;
 }
 
 }  // namespace edi

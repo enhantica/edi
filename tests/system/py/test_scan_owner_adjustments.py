@@ -42,16 +42,16 @@ def button_states(text):
     )
     row = text[parents[1][0] : parents[1][1]]
     reset_visibility = evaluate(
-        '[null,{scan:false},{scan:true}].map(project=>{Session.project=project;'
-        'buttons.scan=('
-        + property_value(row, 'scan')
+        '[null,{scanMode:false},{scanMode:true}].map(fit=>{group.fit=fit;'
+        'buttons.scanMode=('
+        + property_value(row, 'scanMode')
         + ');return ('
         + property_value(reset, 'visible')
         + ');})',
-        'const Session={project:null},buttons={scan:false};',
+        'const group={fit:null},buttons={scanMode:false};',
     )
     assert reset_visibility == [False, False, True], (
-        'Reset fits: the actual row shows its reset action only for a declared scan project'
+        'Reset fits: the actual row shows its reset action only in a scan fitting mode'
     )
     calls = evaluate(
         '(()=>{(' + property_value(reset, 'onClicked') + ');return calls;})()',

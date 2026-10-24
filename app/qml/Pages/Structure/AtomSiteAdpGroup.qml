@@ -123,11 +123,12 @@ Column {
                 marksCurrentRow: true
                 text: row.index + 1
             }
+            // An atom's id is edited in the Atom sites table only (the owner, 2026-10-23).
             TextCell {
                 objectName: `atomSiteAdp.label.${row.index}`
                 horizontalAlignment: Text.AlignLeft
+                readOnly: true
                 value: row.label
-                onCommitted: text => group.structure.atomSites.setText(row.index, "label", text)
             }
             Item {
                 property int horizontalAlignment: Text.AlignHCenter

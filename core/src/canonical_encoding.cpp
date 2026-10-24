@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "canonical_encoding.hpp"
 
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
@@ -107,6 +108,42 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.absorption.abscor1, scope);
     put_optional_parameter(out, experiment.absorption.abscor2, scope);
     put_optional_parameter(out, experiment.absorption.mu_r, scope);  // The CW body
+    // A single crystal's extinction and the Miller indices (and wavelengths) it is calculated for.
+    put_optional_parameter(out, experiment.extinction.domain_radius, scope);
+    put_optional_parameter(out, experiment.extinction.mosaic_spread, scope);
+    put_optional_parameter(out, experiment.extinction.crystal_radius, scope);
+    put_optional_parameter(out, experiment.extinction.coefficient, scope);
+    for (const OptionalParameter* term :
+         {&experiment.extinction.coefficient_11, &experiment.extinction.coefficient_22, &experiment.extinction.coefficient_33,
+          &experiment.extinction.coefficient_12, &experiment.extinction.coefficient_13, &experiment.extinction.coefficient_23}) {
+        put_optional_parameter(out, *term, scope);
+    }
+    put_text(out, experiment.extinction.type.value_or(""));
+    put_text(out, experiment.extinction.mosaic_distribution.value_or(""));
+    out += experiment.reflections ? 'R' : '-';
+    if (experiment.reflections) {
+        put_u64(out, experiment.reflections->size());
+        // Ragged columns, which no calculation accepts, still encode without reading past one.
+        const std::size_t whole = std::min({experiment.reflections->index_h.size(),
+                                            experiment.reflections->index_k.size(),
+                                            experiment.reflections->index_l.size()});
+        for (std::size_t row = 0; row < whole; ++row) {
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_h[row])));
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_k[row])));
+            put_u64(out, static_cast<std::uint64_t>(
+                             static_cast<std::int64_t>(experiment.reflections->index_l[row])));
+        }
+        if (whole != experiment.reflections->index_h.size() || whole != experiment.reflections->index_k.size() ||
+            whole != experiment.reflections->index_l.size()) {
+            put_u64(out, experiment.reflections->index_k.size());
+            put_u64(out, experiment.reflections->index_l.size());
+        }
+        for (const double wavelength : experiment.reflections->wavelength) {
+            put_double(out, wavelength);
+        }
+    }
     // The preferred-orientation rows — key, fit pair and fixed axis all move P.
     put_u64(out, experiment.preferred_orientation.size());
     for (const auto& row : experiment.preferred_orientation) {
@@ -200,6 +237,12 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_text(out, experiment.background_estimate_in_peaks.value_or(""));
     put_text(out, experiment.background_estimate_use_model.value_or(""));
     put_u64(out, static_cast<std::uint64_t>(experiment.background_estimate_max_terms.value_or(0)));
+    // A single crystal's observed threshold (edi ADR-0050).
+    out += experiment.reflns_threshold_sigma.has_value() ? 'G' : '-';
+    if (experiment.reflns_threshold_sigma.has_value()) {
+        put_double(out, *experiment.reflns_threshold_sigma);
+    }
+    put_text(out, experiment.reflns_threshold_basis.value_or(""));
     // `ExperimentBase::data` is DELIBERATELY NOT ENCODED: the encoding fingerprints the
     // model content, and embedded data alters nothing a forward calculation computes.
 }
@@ -293,6 +336,10 @@ std::string canonical_encoding(const Project& project) {
         put_experiment(out, *experiment_item, Scope::Everything);
     }
     put_text(out, project.fitting_mode);
+    out += project.refine_ls_threshold_sigma.has_value() ? 'G' : '-';
+    if (project.refine_ls_threshold_sigma.has_value()) {
+        put_double(out, *project.refine_ls_threshold_sigma);
+    }
     // The declared scan block is fit-relevant state exactly as the mode is — two sequential
     // projects differing only in data_dir/pattern/order/extract rules must never share an
     // encoding.
@@ -419,6 +466,7 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
         put_u64(out, link->epoch.value());
     }
     put_u64(out, experiment.absorption.epoch.value());
+    put_u64(out, experiment.extinction.epoch.value());
     for (const auto& point : experiment.background) {
         put_u64(out, point->epoch.value());
     }
@@ -482,15 +530,18 @@ template class OneRow<ScatteringSourceCategory>;
 template class OneRow<PeakCategory>;
 template class OneRow<InstrumentCategory>;
 template class OneRow<AbsorptionCategory>;
+template class OneRow<ExtinctionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
+template class OneRow<ReflnsCategory>;
 template class OneRow<BackgroundEstimateCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
 template class OneRow<SuFormatCategory>;
 template class OneRow<ReportSettingsCategory>;
 template class OneRow<CorrelationChartCategory>;
+template class OneRow<RefineLsCategory>;
 template class OneRow<PatternChartCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;

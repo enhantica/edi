@@ -26,6 +26,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/presentation.hpp"
 #include "edi/report_model.hpp"
 #include "edi/scan.hpp"
@@ -268,6 +269,16 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         syncUndo();
     };
     connect(fit_, &FitViewModel::finished, this, note_fit);
+    // The warnings that still hold for the fitted values, once each (the owner, 2026-10-23): a value outside its
+    // range and a tensor with a negative eigenvalue. The fit's trials post none.
+    connect(fit_, &FitViewModel::finished, this, [this] {
+        for (const std::string& warning : edi::standing_warnings(*project_)) {
+            emit message(QString::fromStdString(warning));
+        }
+        for (const std::string& warning : edi::take_engine_warnings()) {
+            emit message(QString::fromStdString(warning));
+        }
+    });
     connect(fit_, &FitViewModel::outOfDateChanged, this, [this] { evolution_->setOutOfDate(fit_->outOfDate()); });
     // A single fit on a scan dataset makes its result the template, and that dataset the template dataset
     // (`_sequential_fit.template_file`; edi ADR-0017 §19): the shown state is the template from now on. The
@@ -717,6 +728,11 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     const std::string value = token.toStdString();
     if (axis == QLatin1String("sampleForm")) {
         type.sample_form = value;
+        // A single crystal is computed for neutrons only, and starts at constant wavelength.
+        if (value == "single crystal") {
+            type.beam_mode = "constant wavelength";
+            type.radiation_probe = "neutron";
+        }
     } else if (axis == QLatin1String("beamMode")) {
         type.beam_mode = value;
     } else if (axis == QLatin1String("radiationProbe")) {
@@ -734,7 +750,8 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     try {
         edi::BraggPdExperiment replacement = edi::simulation_experiment(experiment.name, type, structures);
         // Within one beam mode the grid stays as it was set.
-        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
+        if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value() &&
+            !replacement.reflections.has_value()) {
             replacement.data = experiment.data;
         }
         const edi::ExperimentBase* before = &experiment;
@@ -842,9 +859,37 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     record.experiment = project.experiments[static_cast<std::size_t>(index)].get();
     undo_history_.emplace_back(std::move(record));
     syncUndo();
+    // A FullProf file of several datasets: the first went into this experiment, each other one becomes its own.
+    const std::size_t datasets = load.more.size() + 1;
+    if (!load.more.empty()) {
+        QString error;
+        try {
+            error = apply(edi::Edit::add_experiments(project, std::move(load.more)), true);
+        } catch (const std::exception& refusal) {
+            error = QString::fromUtf8(refusal.what());
+        }
+        if (!error.isEmpty()) {
+            return refuse(error);
+        }
+        syncLoadState();
+        noteAddedExperiments(project.experiments.size() - (datasets - 1));
+    }
     // One message: the points, then what the reader skipped or changed.
     QStringList notes;
-    if (load.skipped != 0) {
+    if (!load.skipped_lines.empty()) {
+        // A reflection file's lines that are not reflections, by number, the first few (the owner, 2026-10-23).
+        QStringList numbers;
+        for (std::size_t i = 0; i < load.skipped_lines.size() && i < 5; ++i) {
+            numbers.append(QString::number(load.skipped_lines[i]));
+        }
+        const QString listed = numbers.join(QStringLiteral(", ")) +
+                               (load.skipped_lines.size() > 5 ? QStringLiteral(", …") : QString());
+        notes.append(load.skipped_lines.size() == 1
+                         ? tr("1 line skipped that is not a reflection (line %1)").arg(listed)
+                         : tr("%1 lines skipped that are not reflections (lines %2)")
+                               .arg(load.skipped_lines.size())
+                               .arg(listed));
+    } else if (load.skipped != 0) {
         notes.append(tr("%n line(s) skipped that are not two or three numbers", nullptr, static_cast<int>(load.skipped)));
     }
     if (load.nonpositive != 0) {
@@ -859,7 +904,17 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     if (load.derived != 0) {
         notes.append(tr("σ = √max(y, 1) used for %n row(s) without a σ column", nullptr, static_cast<int>(load.derived)));
     }
-    QString text = tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points)).arg(file_name, loaded_name);
+    if (load.unweighted != 0) {
+        notes.append(tr("%n reflection(s) with su 0 skipped", nullptr, static_cast<int>(load.unweighted)));
+    }
+    if (datasets > 1) {
+        notes.append(tr("%n datasets, one experiment each", nullptr, static_cast<int>(datasets)));
+    }
+    // A single crystal's rows are reflections.
+    QString text = record.experiment->reflections.has_value()
+                       ? tr("%1 loaded into '%2': %n reflection(s)", nullptr, static_cast<int>(load.points))
+                       : tr("%1 loaded into '%2': %n point(s)", nullptr, static_cast<int>(load.points));
+    text = text.arg(file_name, loaded_name);
     if (!notes.isEmpty()) {
         text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
     }
@@ -1962,6 +2017,14 @@ int ProjectViewModel::structureIndex(const QString& name) const {
     return -1;
 }
 
+QList<ExperimentViewModel*> ProjectViewModel::singleCrystalExperiments() const {
+    const bool all = experiment_models_.size() > 1 &&
+                     std::all_of(experiment_models_.begin(), experiment_models_.end(), [](const ExperimentViewModel* model) {
+                         return model->sampleForm() == ExperimentViewModel::SingleCrystal;
+                     });
+    return all ? experiment_models_ : QList<ExperimentViewModel*>{};
+}
+
 void ProjectViewModel::removeExperiment(int index) {
     if (index < 0 || index >= experiment_models_.size()) {
         return;
@@ -2657,6 +2720,7 @@ void ProjectViewModel::syncBlocks() {
         }
         experiment_models_ = next;
     }
+    emit experimentModelsChanged();  // a sample form may have changed too
     syncLoadState();
     structure_list_->setStructures(structure_models_);
     syncDatasets();
@@ -2723,6 +2787,26 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
             saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
             saved_files_ = SavedFiles{{}, refusal.what()};
+            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
+            // its text, from a save without those experiments, and only theirs shows the refusal.
+            try {
+                edi::Project resolved = *project_;
+                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+                    const auto& links = resolved.experiments[index]->linked_structures;
+                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                        const std::string& id = link->structure_id.value();
+                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                           [&id](const auto& structure) { return structure->name.value() == id; });
+                    });
+                    if (missing) {
+                        resolved.experiments.erase_at(index);
+                    }
+                }
+                if (resolved.experiments.size() < project_->experiments.size()) {
+                    saved_files_->files = edi::project_edi_files(resolved);
+                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+            }
         }
     }
     if (!saved_files_->refusal.empty()) {
@@ -2736,10 +2820,20 @@ SavedFile ProjectViewModel::savedFileFunction() const {
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
-    for (const auto& [path, body] : savedFiles()) {
+    // A block the save could not write shows why; the others show their text (savedFiles).
+    std::string refusal;
+    try {
+        savedFiles();
+    } catch (const std::exception& error) {
+        refusal = error.what();
+    }
+    for (const auto& [path, body] : saved_files_->files) {
         if (path == relative) {
             return body;
         }
+    }
+    if (!refusal.empty()) {
+        throw std::runtime_error(refusal);
     }
     return {};
 }

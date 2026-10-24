@@ -68,6 +68,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       registry_(registry),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
+      extinction_type_options_(new OptionListModel(this)),
+      mosaic_distribution_options_(new OptionListModel(this)),
+      reflns_threshold_basis_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       background_estimate_methods_(new OptionListModel(this)),
       background_estimate_modes_(new OptionListModel(this)),
@@ -78,10 +81,12 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
+      extinction_(new ParameterListModel([this] { return category("extinction").fields; }, registry, this)),
       background_(new BackgroundListModel(experiment, editor, registry, this)),
       background_terms_(new BackgroundTermListModel(experiment, editor, registry, this)),
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
+      single_crystal_reflections_(new SingleCrystalReflectionModel(experiment, project, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
       linked_structures_(new LinkedStructureListModel(project, experiment, editor, registry, this)),
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
@@ -98,6 +103,11 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     }
     peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
+    extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_labels());
+    mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
+                                             edi::mosaic_distribution_labels());
+    reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
+                                                edi::reflns_threshold_basis_labels());
     background_type_options_->setOptions(edi::supported_background_types());
     background_estimate_methods_->setOptions(edi::background_estimator_methods());
     background_estimate_modes_->setOptions({"manual", "auto"});
@@ -123,7 +133,29 @@ edi::Category ExperimentViewModel::category(const char* id) const {
         return edi::peak_category(experiment_);
     }
     if (std::string(id) == "instrument") {
+        // A time-of-flight single crystal has no instrument category (its wavelength band is shown instead).
+        if (experiment_.reflections.has_value() &&
+            experiment_.effective_beam_mode() == edi::BeamModeEnum::TIME_OF_FLIGHT) {
+            return edi::Category{"instrument"};
+        }
         return edi::instrument_category(experiment_);
+    }
+    if (std::string(id) == "extinction") {
+        edi::Category extinction{"extinction"};
+        edi::detail::add_optional(extinction.fields, "crystal_radius", experiment_.extinction.crystal_radius);
+        if (experiment_.extinction.crystal_radius) {
+            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
+        }
+        edi::detail::add_optional(extinction.fields, "domain_radius", experiment_.extinction.domain_radius);
+        edi::detail::add_optional(extinction.fields, "mosaic_spread", experiment_.extinction.mosaic_spread);
+        edi::detail::add_optional(extinction.fields, "coefficient", experiment_.extinction.coefficient);
+        edi::detail::add_optional(extinction.fields, "coefficient_11", experiment_.extinction.coefficient_11);
+        edi::detail::add_optional(extinction.fields, "coefficient_22", experiment_.extinction.coefficient_22);
+        edi::detail::add_optional(extinction.fields, "coefficient_33", experiment_.extinction.coefficient_33);
+        edi::detail::add_optional(extinction.fields, "coefficient_12", experiment_.extinction.coefficient_12);
+        edi::detail::add_optional(extinction.fields, "coefficient_13", experiment_.extinction.coefficient_13);
+        edi::detail::add_optional(extinction.fields, "coefficient_23", experiment_.extinction.coefficient_23);
+        return extinction;
     }
     return edi::absorption_category(experiment_);
 }
@@ -298,6 +330,41 @@ void ExperimentViewModel::setAbsorptionType(const QString& token) {
     setLastError(editor_.apply(edi::Edit::absorption(experiment, token.toStdString()), true));
 }
 
+void ExperimentViewModel::setExtinctionType(const QString& token) {
+    if (token == extinction_type_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::extinction(experiment, token.toStdString()), true));
+}
+
+void ExperimentViewModel::setMosaicDistribution(const QString& token) {
+    if (token == mosaic_distribution_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
+}
+
+void ExperimentViewModel::setReflnsThresholdSigma(double sigma) {
+    const std::optional<double> value = qIsNaN(sigma) ? std::nullopt : std::optional<double>(sigma);
+    if (value == experiment_.reflns_threshold_sigma) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::reflns_threshold_sigma(experiment, value), false));
+}
+
+void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_threshold_basis) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::reflns_threshold_basis(experiment, value), false));
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
@@ -366,6 +433,21 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
+    update(extinction_type_, QString::fromStdString(experiment_.extinction.type.value_or("none")),
+           &ExperimentViewModel::extinctionTypeChanged);
+    update(mosaic_distribution_, QString::fromStdString(experiment_.extinction.mosaic_distribution.value_or("")),
+           &ExperimentViewModel::mosaicDistributionChanged);
+    // The observed threshold, one signal for its three properties.
+    const double threshold_sigma = experiment_.reflns_threshold_sigma.value_or(qQNaN());
+    const QString threshold_basis = QString::fromStdString(experiment_.reflns_threshold_basis.value_or(""));
+    if ((qIsNaN(threshold_sigma) != qIsNaN(reflns_threshold_sigma_)) ||
+        (!qIsNaN(threshold_sigma) && threshold_sigma != reflns_threshold_sigma_) ||
+        threshold_basis != reflns_threshold_basis_ || reflns_threshold_expression_.isEmpty()) {
+        reflns_threshold_sigma_ = threshold_sigma;
+        reflns_threshold_basis_ = threshold_basis;
+        reflns_threshold_expression_ = QString::fromStdString(edi::reflns_threshold_expression(experiment_));
+        emit reflnsThresholdChanged();
+    }
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.
@@ -408,6 +490,8 @@ void ExperimentViewModel::sync() {
         family->sync();
     }
     absorption_->sync();
+    extinction_->sync();
+    single_crystal_reflections_->sync();
     background_->sync();
     background_terms_->sync();
     excluded_regions_->sync();
@@ -428,6 +512,7 @@ std::size_t ExperimentViewModel::place() const {
 }
 
 void ExperimentViewModel::capturePattern() {
+    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {
@@ -439,6 +524,9 @@ void ExperimentViewModel::capturePattern() {
 }
 
 void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
+    if (source.refln_calc) {  // a single crystal's F²calc at a fit's iteration
+        single_crystal_reflections_->showFrame(source.refln_calc);
+    }
     pattern_source_ = std::move(source);
     pattern_source_.experiment_place = colourPlace();
     if (d_source) {

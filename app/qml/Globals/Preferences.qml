@@ -74,6 +74,7 @@ QtObject {
         preferences.scanStackedHeight = 2;
         preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
+        preferences.singleCrystalQuantity = "f_squared";
     }
 
     property Settings settings: Settings {
@@ -137,11 +138,14 @@ QtObject {
     property bool scanStackedReversed: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
     property bool chartIncludedOnly: false
+    // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
+    property string singleCrystalQuantity: "f_squared"
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Charts"
         property alias includedOnly: preferences.chartIncludedOnly
+        property alias singleCrystalQuantity: preferences.singleCrystalQuantity
     }
 
     property Settings analysisSettings: Settings {

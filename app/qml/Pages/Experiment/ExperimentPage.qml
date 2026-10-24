@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -18,6 +19,9 @@ WorkflowPage {
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
     // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
     readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
+    // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
+    // there is no Map.
+    readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -29,10 +33,13 @@ WorkflowPage {
             "linked_structure": linkedStructureContent,
             "excluded_region": excludedRegionsContent,
             "absorption": absorptionContent,
+            "extinction": extinctionContent,
             "preferred_orientation": preferredOrientationContent,
             "scattering_source": scatteringSourceContent,
-            "refln": reflectionsContent
+            "refln": page.experiment && page.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? singleCrystalReflectionsContent : reflectionsContent
         })
+    // The Extras column, so a single crystal's reflection table can take the room left under the groups above it.
+    property Flickable extrasColumn: null
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent,
@@ -52,12 +59,12 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.experiment.tab.stacked"
             text: qsTr("Stacked")
-            enabled: page.patternViews
+            enabled: page.patternViews || page.singleCrystals
         },
         IconTabButton {
             objectName: "mainArea.experiment.tab.map"
             text: qsTr("Map")
-            enabled: page.patternViews
+            enabled: page.patternViews && !page.singleCrystals
         }
     ]
     mainItems: [
@@ -68,10 +75,25 @@ WorkflowPage {
             settingsPage: "pattern"
             shown: page.current && SwipeView.isCurrentItem
         },
-        ScanViewChart {
-            project: page.project
-            mode: "stacked"
-            shown: page.current && SwipeView.isCurrentItem
+        Item {
+            id: stackedTab
+
+            readonly property bool shown: page.current && SwipeView.isCurrentItem
+
+            ScanViewChart {
+                anchors.fill: parent
+                visible: !page.singleCrystals
+                project: page.project
+                mode: "stacked"
+                shown: stackedTab.shown && !page.singleCrystals
+            }
+            SingleCrystalChart {
+                objectName: "singleCrystal.stacked"
+                anchors.fill: parent
+                visible: page.singleCrystals
+                stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
+                shown: stackedTab.shown && page.singleCrystals
+            }
         },
         ScanViewChart {
             project: page.project
@@ -97,6 +119,12 @@ WorkflowPage {
     }
     extrasItem: Component {
         EaComponents.SideBarColumn {
+            id: extrasColumn
+            Binding {
+                target: page
+                property: "extrasColumn"
+                value: extrasColumn
+            }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
@@ -145,6 +173,42 @@ WorkflowPage {
         }
     }
     Component {
+        id: singleCrystalReflectionsContent
+        // The observed threshold above the reflection table (edi ADR-0050).
+        Column {
+            spacing: AppSizes.groupContentSpacing
+            ObservedThresholdRow {
+                experiment: page.experiment
+            }
+            SingleCrystalTable {
+                id: reflectionTable
+
+                // From the column's height and where the table starts in it, never from the table's own height, so a
+                // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
+                // Set after the column has laid out: the table's place is read, not bound.
+                function place() {
+                    const column = page.extrasColumn;
+                    if (!column || !column.contentItem)
+                        return;
+                    const top = mapToItem(column.contentItem, 0, 0).y;
+                    spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
+                }
+
+                experiment: page.experiment
+                Component.onCompleted: Qt.callLater(place)
+                Connections {
+                    target: page.extrasColumn
+                    function onHeightChanged() {
+                        Qt.callLater(reflectionTable.place);
+                    }
+                    function onContentHeightChanged() {
+                        Qt.callLater(reflectionTable.place);
+                    }
+                }
+            }
+        }
+    }
+    Component {
         id: reflectionsContent
         ReflectionsGroup {
             experiment: page.experiment
@@ -184,6 +248,12 @@ WorkflowPage {
     Component {
         id: absorptionContent
         AbsorptionGroup {
+            experiment: page.experiment
+        }
+    }
+    Component {
+        id: extinctionContent
+        ExtinctionGroup {
             experiment: page.experiment
         }
     }

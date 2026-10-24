@@ -76,3 +76,19 @@ projects:
     executing: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
+  - id: sc-neut-cwl_pr2nio4-5c2_basic
+    executing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_basic
+    executing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
+    executing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
+    executing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_fit
+    executing: false
+  - id: sc-neut-cwl_pr2nio4-5c2_fit
+    executing: false
+  - id: sc-neut-tof_taurine-unknown_basic
+    executing: true
+  - id: sc-neut-tof_taurine_fit
+    executing: false

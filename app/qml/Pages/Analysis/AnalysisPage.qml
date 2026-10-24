@@ -19,6 +19,9 @@ WorkflowPage {
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
     // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
     readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
+    // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
+    // there is no Map.
+    readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
     readonly property bool scanMode: project !== null && project.fit.scanMode
     // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
     onScanModeChanged: {
@@ -29,6 +32,7 @@ WorkflowPage {
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
             "minimizer": minimizerContent,
+            "refine_ls": refinementContent,
             "fitting_mode": fittingModeContent,
             "alias": aliasesContent,
             "constraint": constraintsContent,
@@ -67,12 +71,12 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.analysis.tab.stacked"
             text: qsTr("Stacked")
-            enabled: page.patternViews
+            enabled: page.patternViews || page.singleCrystals
         },
         IconTabButton {
             objectName: "mainArea.analysis.tab.map"
             text: qsTr("Map")
-            enabled: page.patternViews
+            enabled: page.patternViews && !page.singleCrystals
         }
     ]
     mainItems: [
@@ -92,10 +96,25 @@ WorkflowPage {
             project: page.project
             shown: page.current && SwipeView.isCurrentItem
         },
-        ScanViewChart {
-            project: page.project
-            mode: "stacked"
-            shown: page.current && SwipeView.isCurrentItem
+        Item {
+            id: stackedTab
+
+            readonly property bool shown: page.current && SwipeView.isCurrentItem
+
+            ScanViewChart {
+                anchors.fill: parent
+                visible: !page.singleCrystals
+                project: page.project
+                mode: "stacked"
+                shown: stackedTab.shown && !page.singleCrystals
+            }
+            SingleCrystalChart {
+                objectName: "singleCrystal.stacked"
+                anchors.fill: parent
+                visible: page.singleCrystals
+                stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
+                shown: stackedTab.shown && page.singleCrystals
+            }
         },
         ScanViewChart {
             project: page.project
@@ -163,6 +182,12 @@ WorkflowPage {
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Report)
 
+    Component {
+        id: refinementContent
+        RefinementGroup {
+            analysis: page.analysis
+        }
+    }
     Component {
         id: minimizerContent
         MinimizerGroup {

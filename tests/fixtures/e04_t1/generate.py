@@ -244,14 +244,17 @@ def profile_fixtures():
     return projects
 
 
-def generate(warning_project=None, added_project=None, updated_project=None):  # noqa: PLR0914 - one capture retains old witnesses
-    selected_project = added_project or updated_project
+def generate(warning_project=None, added_project=None, updated_project=None):  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old witnesses
+    new_ids = [added_project] if isinstance(added_project, str) else (added_project or [])
+    selected_project = new_ids or updated_project
     projects = []
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     selected = [
-        entry for entry in registry if selected_project is None or entry['id'] == selected_project
+        entry
+        for entry in registry
+        if selected_project is None or entry['id'] in new_ids or entry['id'] == updated_project
     ]
-    if selected_project is not None and len(selected) != 1:
+    if selected_project is not None and len(selected) != (len(new_ids) or 1):
         raise ValueError('Project addition requires exactly one registered project')
     for entry in selected:
         project = ROOT / 'docs/user/cli' / entry['id'] / 'project'
@@ -301,13 +304,27 @@ def generate(warning_project=None, added_project=None, updated_project=None):  #
         })
     corpus = []
     corpus_projects = (
-        [ROOT / 'docs/user/cli' / selected_project / 'project']
+        [ROOT / 'docs/user/cli' / entry['id'] / 'project' for entry in selected]
         if selected_project is not None
         else [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]
     )
     for project in corpus_projects:
         for file in sorted((project / 'experiments').glob('*.edi')):
             fields = scalars(file)
+            if fields.get('_experiment_type.sample_form') == 'single crystal':
+                corpus.append({
+                    'project': str(project.relative_to(ROOT)),
+                    'experiment': file.stem,
+                    'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+                    'singleCrystal': True,
+                    'mode': 'tof'
+                    if fields['_experiment_type.beam_mode'] == 'time-of-flight'
+                    else 'cwl',
+                    'peakType': '',
+                    'scalars': fields,
+                    'loops': tables(file, ('_refln',)),
+                })
+                continue
             profile = fields['_peak.type']
             mode = 'cwl' if profile.startswith('cwl-') else 'tof'
             expected = list(PROFILES[profile])
@@ -445,7 +462,7 @@ def generate(warning_project=None, added_project=None, updated_project=None):  #
         data = warning_only_oracle(output, projects, warning_project)
     if added_project is not None:
         retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
-        if any(row['id'] == added_project for row in retained['projects']):
+        if any(row['id'] in new_ids for row in retained['projects']):
             # Re-run an uncommitted addition from its committed prior fixture;
             # never refresh a previously committed project's expectations.
             prior = subprocess.check_output(
@@ -453,7 +470,7 @@ def generate(warning_project=None, added_project=None, updated_project=None):  #
                 text=True,
             )
             retained = json.loads(prior.split('var frozen = ', 1)[1].rsplit(';', 1)[0])
-            if any(row['id'] == added_project for row in retained['projects']):
+            if any(row['id'] in new_ids for row in retained['projects']):
                 raise ValueError('Project addition cannot replace a committed oracle row')
         by_id = {row['id']: row for row in [*retained['projects'], *projects]}
         if set(by_id) != {entry['id'] for entry in registry}:
@@ -556,7 +573,7 @@ def loader_warning(analysis, experiments, metadata, project_id=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
-    parser.add_argument('--add-project', metavar='PROJECT_ID')
+    parser.add_argument('--add-project', metavar='PROJECT_ID', nargs='+')
     parser.add_argument('--update-project', metavar='PROJECT_ID')
     args = parser.parse_args()
     if (

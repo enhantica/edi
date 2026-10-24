@@ -180,10 +180,21 @@ struct ReportPattern {
     bool legend = false;
 };
 
+/// A single crystal's chart (edi ADR-0049), as the app draws it: per reflection its Miller indices, its measured F²
+/// and s.u., and its calculated F², which is empty before a calculation; F²meas against F²calc with the y = x line.
+struct ReportSingleCrystal {
+    std::vector<int> h, k, l;
+    std::vector<double> meas, su, calc;
+    /// The experiment's reliability text (reliability_text); empty with no fit.
+    std::string title;
+};
+
 struct ReportExperiment {
     std::string id;
     std::vector<ReportCategory> categories;
+    /// A powder experiment's chart; empty for a single crystal, whose chart is `single_crystal`.
     ReportPattern pattern;
+    std::optional<ReportSingleCrystal> single_crystal;
 };
 
 /// A project's report (ADR-0036).
@@ -213,6 +224,7 @@ struct ReportModel {
 /// The reliability of the experiment at `experiment` in the project's last fit, as every pattern plot shows it:
 /// "Rwp 16.35 % · χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both with two decimals,
 /// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+/// A single crystal's fit is over F²: "R(F²) 5.12 % · wR(F²) 4.25 % · χ² 9.78".
 std::string reliability_text(const Project& project, std::size_t experiment);
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0036 §2).
