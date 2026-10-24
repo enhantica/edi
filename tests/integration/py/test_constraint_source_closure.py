@@ -116,9 +116,8 @@ def test_wyckoff_letter_change_renews_completed_coordinates(tmp_path, entry):
 
 
 @pytest.mark.parametrize('entry', ['stored', 'window'])
-def test_out_of_range_relation_warns_and_nonfinite_refuses_without_partial_write(
-    tmp_path, entry, capfd
-):
+def test_out_of_range_relation_refuses_before_any_dependent_write(tmp_path, entry, capfd):
+    """Finite range exits warn and keep; only nonfinite completion refuses atomically."""
     aliases = [
         ('a', 'phase.atom_site.A.adp_iso'),
         ('b', 'phase.atom_site.B.fract_y'),

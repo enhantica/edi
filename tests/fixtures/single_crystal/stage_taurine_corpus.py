@@ -15,9 +15,9 @@ def stage(reference, destination):
             raise ValueError(message)
     destination.mkdir(parents=True, exist_ok=False)
     for name in record['artifacts']:
-        target = destination/name
+        target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(reference/name, target)
+        shutil.copyfile(reference / name, target)
     shutil.copyfile(reference / 'reference.json', destination / 'reference.json')
     shutil.copyfile(reference / 'PROVENANCE.md', destination / 'PROVENANCE.md')
     quantities = {}
