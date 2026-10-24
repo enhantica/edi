@@ -216,6 +216,6 @@ sites:
 
   - file: tests/system/py/test_single_crystal_edges.py
     case: single-crystal-joint-larson
-    why: Authored one-atom boundary variants isolate admission, state retention and a shared weighted coefficient.
-    assertion_feed: Sears Ni length, closed-form Larson weighted mean, independent sphere interpolation and exact persistence invariants.
-    audit: 2026-10-24; no fitted engine output supplies an accuracy reference.
+
+  - file: tests/system/py/test_single_crystal_taurine_converged.py
+    case: single-crystal-senju-taurine-converged

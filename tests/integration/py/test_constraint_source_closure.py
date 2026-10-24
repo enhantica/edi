@@ -1,6 +1,7 @@
 """Relation input closure and refusal precede every lazy geometry read."""
 
 import runpy
+import warnings
 from pathlib import Path
 
 import edi as engine
@@ -115,7 +116,9 @@ def test_wyckoff_letter_change_renews_completed_coordinates(tmp_path, entry):
 
 
 @pytest.mark.parametrize('entry', ['stored', 'window'])
-def test_out_of_range_relation_refuses_before_any_dependent_write(tmp_path, entry):
+def test_out_of_range_relation_warns_and_nonfinite_refuses_without_partial_write(
+    tmp_path, entry, capfd
+):
     aliases = [
         ('a', 'phase.atom_site.A.adp_iso'),
         ('b', 'phase.atom_site.B.fract_y'),
@@ -125,18 +128,28 @@ def test_out_of_range_relation_refuses_before_any_dependent_write(tmp_path, entr
     project.analysis.calculate()
     structure = project.structure
     first, second = project.analysis.aliases['b'].param, project.analysis.aliases['c'].param
-    before = (first.value, second.value)
+    source = project.analysis.aliases['a'].param.value
     project.analysis.constraints['b'].expression = 'b = 3*a+.1'
     project.analysis.constraints['c'].expression = 'c = 2'
-    refused = False
-    try:
+    capfd.readouterr()
+    with warnings.catch_warnings(record=True) as messages:
+        warnings.simplefilter('always')
         _ = structure.expanded_atom_sites if entry == 'stored' else structure.geometry()
-    except (ValueError, RuntimeError):
-        refused = True
-    assert (first.value, second.value) == before, (
-        'An inadmissible later dependent must prevent writes to every earlier target'
+    diagnostics = capfd.readouterr().err + '\n'.join(str(item.message) for item in messages)
+    assert (first.value, second.value) == pytest.approx((3 * source + 0.1, 2), abs=2e-13), (
+        'Finite out-of-range dependents must keep every exact relation result without clipping'
     )
-    assert refused, 'Finite occupancy outside its declared range must refuse geometry completion'
+    assert 'occupancy' in diagnostics, 'A finite range warning must name the affected parameter'
+    assert 'outside' in diagnostics, 'A finite dependent outside its range must emit the warning'
+
+    before = [(p.value, p.free, p.start_value) for p in (first, second)]
+    project.analysis.constraints['b'].expression = 'b = 4*a+.1'
+    project.analysis.constraints['c'].expression = 'c = sqrt(-1)'
+    with pytest.raises((ValueError, RuntimeError), match=r'(?i)non.finite|sqrt|domain'):
+        _ = structure.expanded_atom_sites if entry == 'stored' else structure.geometry()
+    assert [(p.value, p.free, p.start_value) for p in (first, second)] == before, (
+        'A later nonfinite relation must refuse before any earlier value, free flag or start write'
+    )
 
 
 @pytest.mark.parametrize(

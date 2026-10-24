@@ -18,7 +18,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def codewords(text):  # noqa: C901 - three explicit FullProf codeword blocks
+def codewords(text):
     lines = text.splitlines()
     result = {}
 
@@ -81,7 +81,7 @@ def codewords(text):  # noqa: C901 - three explicit FullProf codeword blocks
     return result
 
 
-def extract(folder, original):  # noqa: C901 - independent final-list and row-table decoders
+def extract(folder, original):
     codes = codewords(original)
     output = (folder / 'taurine.out').read_text()
     summary = (folder / 'taurine.sum').read_text()
