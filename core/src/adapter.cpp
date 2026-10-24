@@ -3046,6 +3046,16 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     if (e.extinction.coefficient) {
         built.extinction[3] = param(*e.extinction.coefficient, crysta::CORRECTION, "coefficient");
     }
+    std::size_t slot = 4;
+    for (const auto& [name, term] :
+         {std::pair{"coefficient_11", &e.extinction.coefficient_11}, std::pair{"coefficient_22", &e.extinction.coefficient_22},
+          std::pair{"coefficient_33", &e.extinction.coefficient_33}, std::pair{"coefficient_12", &e.extinction.coefficient_12},
+          std::pair{"coefficient_13", &e.extinction.coefficient_13}, std::pair{"coefficient_23", &e.extinction.coefficient_23}}) {
+        if (*term) {
+            built.extinction[slot] = param(**term, crysta::CORRECTION, name);
+        }
+        ++slot;
+    }
     std::vector<crysta::LinkedStructure> links;
     for (const auto& link : e.linked_structures) {
         links.emplace_back(link->structure_id.value(), param(link->scale, crysta::SCALE, "scale"),

@@ -3503,6 +3503,8 @@ struct ExtinctionBase {
     OptionalParameter mosaic_spread;
     OptionalParameter crystal_radius;
     OptionalParameter coefficient;  // Larson's (type larson-isotropic)
+    // Larson's anisotropic tensor (type larson-anisotropic): x11, x22, x33, x12, x13, x23.
+    OptionalParameter coefficient_11, coefficient_22, coefficient_33, coefficient_12, coefficient_13, coefficient_23;
 
     std::vector<Parameter*> parameters();
     detail::RowLink row;
@@ -5245,9 +5247,12 @@ struct ExtinctionCategory {
     static constexpr const char* name = "_extinction";
     static constexpr auto columns =
         std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution, &ExtinctionBase::domain_radius,
-                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius, &ExtinctionBase::coefficient};
-    static constexpr std::array items{"type",          "mosaic_distribution", "domain_radius",
-                                      "mosaic_spread", "crystal_radius",      "coefficient"};
+                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius, &ExtinctionBase::coefficient,
+                   &ExtinctionBase::coefficient_11, &ExtinctionBase::coefficient_22, &ExtinctionBase::coefficient_33,
+                   &ExtinctionBase::coefficient_12, &ExtinctionBase::coefficient_13, &ExtinctionBase::coefficient_23};
+    static constexpr std::array items{"type",           "mosaic_distribution", "domain_radius",  "mosaic_spread",
+                                      "crystal_radius", "coefficient",         "coefficient_11", "coefficient_22",
+                                      "coefficient_33", "coefficient_12",      "coefficient_13", "coefficient_23"};
     static constexpr std::array legacy{"_easydiffraction_extinction"};
 };
 static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
@@ -5673,6 +5678,10 @@ inline std::vector<Parameter*> ExtinctionBase::parameters() {
     detail::push_optional(out, mosaic_spread);
     detail::push_optional(out, crystal_radius);
     detail::push_optional(out, coefficient);
+    for (OptionalParameter* term :
+         {&coefficient_11, &coefficient_22, &coefficient_33, &coefficient_12, &coefficient_13, &coefficient_23}) {
+        detail::push_optional(out, *term);
+    }
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
