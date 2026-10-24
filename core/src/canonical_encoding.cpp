@@ -112,6 +112,11 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.extinction.mosaic_spread, scope);
     put_optional_parameter(out, experiment.extinction.crystal_radius, scope);
     put_optional_parameter(out, experiment.extinction.coefficient, scope);
+    for (const OptionalParameter* term :
+         {&experiment.extinction.coefficient_11, &experiment.extinction.coefficient_22, &experiment.extinction.coefficient_33,
+          &experiment.extinction.coefficient_12, &experiment.extinction.coefficient_13, &experiment.extinction.coefficient_23}) {
+        put_optional_parameter(out, *term, scope);
+    }
     put_text(out, experiment.extinction.type.value_or(""));
     put_text(out, experiment.extinction.mosaic_distribution.value_or(""));
     out += experiment.reflections ? 'R' : '-';
