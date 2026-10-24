@@ -4556,7 +4556,9 @@ void apply_extinction_type(ExtinctionBase& extinction, const std::string& token)
     keep(extinction.coefficient_12, tensor, spec::extinction_coefficient_12, "0");
     keep(extinction.coefficient_13, tensor, spec::extinction_coefficient_13, "0");
     keep(extinction.coefficient_23, tensor, spec::extinction_coefficient_23, "0");
-    if (!spread) {
+    // Every Becker-Coppens type has a distribution: it selects the secondary extinction's coefficients, type II's
+    // included, as in cryspy.
+    if (!spread && !domain) {
         extinction.mosaic_distribution.reset();
     } else if (!extinction.mosaic_distribution) {
         extinction.mosaic_distribution = "gaussian";

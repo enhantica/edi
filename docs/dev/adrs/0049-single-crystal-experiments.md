@@ -30,8 +30,9 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
    mixed. It shows only the selected type's fields, on one line: nothing for None; for every Becker–Coppens type the
    crystal radius in mm (the crystal as a sphere, whose mean path the extinction reads; 1 mm until set), a descriptor
    that is edited, saved and loaded but never fitted, so it has no Analysis row and no fit toggle; then the mosaic
-   distribution (Gaussian or Lorentzian) and the mosaic spread for type I, the domain radius for type II, both for
-   mixed. A new single crystal starts
+   distribution (Gaussian or Lorentzian), which every Becker–Coppens type has because it selects the secondary
+   extinction's coefficients, type II's included; then the mosaic spread for type I, the domain radius for type II,
+   both for mixed. A new single crystal starts
    at None, and a file without `_extinction.type` reads as None. The mosaic spread is Becker–Coppens' g in rad⁻¹, the
    inverse width of the mosaic distribution (larger is narrower), shown as a plain number like any other parameter;
    the domain radius is in μm. edi reads no other spelling of either (no CrysPy arc-minute value).
