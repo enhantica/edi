@@ -24,6 +24,7 @@
 #include "background.hpp"
 #include "engine_setup.hpp"
 #include "edi/background_estimate.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
@@ -1167,7 +1168,8 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     const auto& results = scan_session_->index().rows;
     if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
         dataset.reliability = QStringLiteral("χ² ") +
-                              QString::number(results[static_cast<std::size_t>(index)].reduced_chi_square, 'f', 2);
+                              QString::fromStdString(edi::display_text(
+                                  "fit_result.reduced_chi_square", results[static_cast<std::size_t>(index)].reduced_chi_square));
     }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
     if (dataset.outcome.isEmpty() && dataset.is_template && scanTemplateOrModel().fit_result.held()) {

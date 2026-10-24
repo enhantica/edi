@@ -19,7 +19,7 @@ EaElements.GroupRow {
     ValueField {
         id: cutoffField
         objectName: "peak.cutoff_fwhm"
-        label: qsTr("cutoff (FWHM)")
+        uid: "peak.cutoff_fwhm"
         fieldValue: group.experiment ? group.experiment.cutoffFwhm : ""
         accepts: "number"
         onCommitted: text => group.experiment.cutoffFwhm = Number(text)

@@ -25,15 +25,15 @@ Column {
         defaultInfoText: qsTr("No preferred orientation")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("structureId", Session.label("preferred_orientation.structure_id")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "preferred_orientation.structure_id"
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter

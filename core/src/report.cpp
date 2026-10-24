@@ -302,7 +302,7 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
     append_scan_part(line, std::to_string(fail_count) + " fail");
     if (!total_files.has_value() || completed < *total_files) {
         append_scan_part(line, scan_display_name(file_name));
-        append_scan_part(line, "χ² " + fixed(reduced_chi_square, 2));
+        append_scan_part(line, "χ² " + display_text("fit_result.reduced_chi_square", reduced_chi_square));
     }
     return line;
 }
@@ -319,7 +319,8 @@ std::string scan_summary(int total_files, int ok_count, int fail_count, double c
     // follows. (the caller's fold now spans the resume rows too, so a resumed scan
     // reaches this blank only when nothing anywhere recorded one.)
     if (std::isfinite(chi2_min) && std::isfinite(chi2_max)) {
-        append_scan_part(line, "χ² " + fixed(chi2_min, 2) + "-" + fixed(chi2_max, 2));
+        append_scan_part(line, "χ² " + display_text("fit_result.reduced_chi_square", chi2_min) + "-" +
+                                   display_text("fit_result.reduced_chi_square", chi2_max));
     }
     // The duration is the ONE quantity history cannot supply, so it is rendered on its own
     // basis or not at all: nothing fitted this call means no duration to report (a completed

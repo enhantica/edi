@@ -33,13 +33,13 @@ Column {
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("alias")
+                uid: "alias.id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("parameter")
+                uid: "alias.parameter_unique_name"
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter

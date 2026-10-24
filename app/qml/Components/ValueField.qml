@@ -12,8 +12,8 @@ import edi.app
 // through the view-model, whose value then comes back through `value`. A refused commit (text that
 // is not of the kind the field `accepts`, or a value the core refuses) returns the field to the
 // model's value and shows why, as ParameterField does. A field of a `.edi` item names it by `uid` (and `variant`):
-// its label and units then come from crysta's dictionary, a number shows in the item's display format, and its
-// tooltip names the item it shows (edi ADR-0041).
+// its label and units then come from crysta's dictionary, a number shows as the project file spells it, and its
+// tooltip names the item it shows (edi ADR-0051).
 EaElements.ParamTextField {
     id: field
 
@@ -36,11 +36,11 @@ EaElements.ParamTextField {
     property string refusal: ""
     signal committed(string text)
 
-    // A number of an item shows in its display format, any other number by the app's rule for numbers (NumberText).
-    // Display only: the model keeps the full value, and an unedited field commits nothing. Anything else (a
-    // name, a token, a whole number) is shown as it is.
+    // A number of an item shows as the project file spells it, any other number by the app's rule for numbers
+    // (NumberText). Display only: the model keeps the full value, and an unedited field commits nothing. Anything
+    // else (a name, a token, a whole number) is shown as it is.
     parameter: ({
-            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? (field.uid !== "" ? Session.display(field.uid, field.fieldValue, field.variant) : NumberText.plain(field.fieldValue, 10)) : String(field.fieldValue),
+            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? (field.uid !== "" ? Session.written(field.uid, field.fieldValue) : NumberText.plain(field.fieldValue, 10)) : String(field.fieldValue),
             "error": 0,
             "enabled": field.editable,
             "fittable": false,

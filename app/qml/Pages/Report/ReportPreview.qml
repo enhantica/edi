@@ -421,7 +421,7 @@ Flickable {
             width: parent.width
             visible: preview.shown("correlations")
             Heading {
-                text: `${preview.number("correlations")}.  ` + qsTr("Correlations")
+                text: `${preview.number("correlations")}.  ` + Session.categoryTitle("fit_parameter_correlation")
             }
             ReportCorrelations {
                 correlations: preview.model.correlations ?? null

@@ -18,9 +18,12 @@ DataTable {
     property ExperimentViewModel experiment: null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
 
-    // A reflection's values by the app's one rule for numbers (NumberText).
-    function shown(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
+    // A reflection's position on the experiment's axis.
+    readonly property string positionItem: timeOfFlight ? "refln.time_of_flight" : "refln.two_theta"
+
+    // A reflection's values, each in its item's display format.
+    function shown(uid, value) {
+        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
     }
 
     objectName: "reflections.list"
@@ -37,17 +40,17 @@ DataTable {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("h k l")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("d (Å)")
+        HeaderLabel {
+            uid: "refln.d_spacing"
+            withUnits: true
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
+        HeaderLabel {
+            uid: table.positionItem
+            withUnits: true
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("F² calc")
+            uid: "refln.f_squared_calc"
         }
     }
 
@@ -68,17 +71,17 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.dSpacing)
+            number: table.shown("refln.d_spacing", row.model.dSpacing)
             full: NumberText.plainFull(row.model.dSpacing)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.position)
+            number: table.shown(table.positionItem, row.model.position)
             full: NumberText.plainFull(row.model.position)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.fSquaredCalc)
+            number: table.shown("refln.f_squared_calc", row.model.fSquaredCalc)
             full: NumberText.plainFull(row.model.fSquaredCalc)
         }
     }

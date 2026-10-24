@@ -42,13 +42,13 @@ Column {
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "linked_structure.structure_id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("scale")
+                uid: "linked_structure.scale"
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter

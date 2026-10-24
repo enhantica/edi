@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "analysis_view_model.hpp"
+#include "edi/display.hpp"
 #include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
@@ -16,8 +17,8 @@
 namespace edi_app {
 namespace {
 
-// The goodness-of-fit and the fit-results table show χ² as diffraction-lib's table does.
-QString chi(double value) { return QString::number(value, 'f', 2); }
+// The goodness-of-fit and the fit-results table show χ² in its dictionary format.
+QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
 
 // The status a recorded result names (its exit reason, crysta's status label).
 edi::FitStatus status_of(const edi::FitResultRecord& result) {
@@ -108,9 +109,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         clear();
         return;
     }
-    // crysta's R factors are fractions; the table shows them in per cent, as FullProf and diffraction-lib do.
-    const auto percent = [](const std::optional<double>& value) {
-        return value.has_value() ? QString::number(*value * 100.0, 'f', 2) : QString();
+    // crysta's R factors are fractions; each shows in its dictionary format, in per cent as FullProf prints them.
+    const auto percent = [](const char* uid, const std::optional<double>& value) {
+        return value.has_value() ? QString::fromStdString(edi::display_text(uid, *value)) : QString();
     };
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).
@@ -168,9 +169,11 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         datasets += in_fit(i) ? 1 : 0;
     }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
-    const QStringList global{percent(result.prof_r_factor), percent(result.prof_wr_factor),
-                             percent(result.prof_wr_expected), percent(result.prof_cr_factor),
-                             percent(result.prof_cwr_factor)};
+    const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
+                             percent("fit_result.prof_wr_factor", result.prof_wr_factor),
+                             percent("fit_result.prof_wr_expected", result.prof_wr_expected),
+                             percent("fit_result.prof_cr_factor", result.prof_cr_factor),
+                             percent("fit_result.prof_cwr_factor", result.prof_cwr_factor)};
     // The global row only when it does not repeat a single dataset's own (the owner, 2026-10-21); a phase factor is
     // not defined over several datasets.
     if (datasets != 1) {
@@ -182,18 +185,18 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         }
         const edi::ExperimentBase& experiment = *project.experiments[i];
         // Without its own factors the one dataset's are the global ones.
-        QStringList values = shares ? QStringList{percent(experiment.fit_prof_r_factor),
-                                                  percent(experiment.fit_prof_wr_factor),
-                                                  percent(experiment.fit_prof_wr_expected),
-                                                  percent(experiment.fit_prof_cr_factor),
-                                                  percent(experiment.fit_prof_cwr_factor)}
+        QStringList values = shares ? QStringList{percent("fit_result_bank.prof_r_factor", experiment.fit_prof_r_factor),
+                                                  percent("fit_result_bank.prof_wr_factor", experiment.fit_prof_wr_factor),
+                                                  percent("fit_result_bank.prof_wr_expected", experiment.fit_prof_wr_expected),
+                                                  percent("fit_result_bank.prof_cr_factor", experiment.fit_prof_cr_factor),
+                                                  percent("fit_result_bank.prof_cwr_factor", experiment.fit_prof_cwr_factor)}
                                     : global;
         for (const auto& [name, place] : ordered) {
             QString bragg, f;
             for (const auto& link : experiment.linked_structures) {
                 if (structure_of(*link) == name) {
-                    bragg = percent(link->fit_bragg_r_factor);
-                    f = percent(link->fit_f_r_factor);
+                    bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
+                    f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
                 }
             }
             values << bragg << f;

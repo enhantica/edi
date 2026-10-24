@@ -48,7 +48,7 @@ WorkflowPage {
         // before Evolution: every fit has them (owner, 2026-10-11).
         IconTabButton {
             objectName: "mainArea.analysis.tab.correlations"
-            text: qsTr("Correlations")
+            text: Session.categoryTitle("fit_parameter_correlation")
         },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
         // independent fitting modes, and enabled in a scan project (edi ADR-0046).

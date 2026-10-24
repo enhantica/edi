@@ -452,8 +452,11 @@ Item {
                 objectName: "chart.toolbar.xaxis"
                 enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
-                model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d-spacing")]
+                // The measured axis and d-spacing, by their dictionary names.
+                readonly property string nativeName: Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta")
+                readonly property string dName: Session.optionLabel("pattern_chart.x_axis", "d_spacing")
+                model: [nativeName, dName]
+                closedTexts: [qsTr("x: %1").arg(nativeName), qsTr("x: %1").arg(dName)]
                 currentIndex: controller.dSpacing ? 1 : 0
                 onActivated: index => {
                     if (chart.axisProject)

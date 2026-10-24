@@ -36,9 +36,9 @@ DataTable {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("experiment")
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("weight")
+            uid: "joint_fit.weight"
         }
     }
 
@@ -68,6 +68,7 @@ DataTable {
         TextCell {
             horizontalAlignment: Text.AlignHCenter
             objectName: `jointFit.weight.${row.index}`
+            uid: "joint_fit.weight"
             accepts: "number"
             value: row.experiment ? row.experiment.datasetWeight : ""
             onCommitted: text => row.experiment.datasetWeight = Number(text)

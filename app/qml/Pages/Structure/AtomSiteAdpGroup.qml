@@ -51,56 +51,56 @@ Column {
                 beta = group.adps.text(row, "adpType") === "beta";
             if (!beta)
                 return -1;  // without a beta row no value is measured
-            let widest = advance(qsTr("iso/eq"));
+            let widest = advance(Session.label("atom_site.adp_iso"));
             for (let row = 0; row < count; ++row) {
                 const item = group.adps.item(row, "adpIso") as ParameterItem;
                 if (item)
-                    widest = Math.max(widest, advance(NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 5)));
+                    widest = Math.max(widest, advance(item.fileValue !== "" ? item.fileValue : NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 5)));
             }
             return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
         }
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
+        columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
+                uid: "atom_site.id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("type")
+                uid: "atom_site.adp_type"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
                 // B iso or U iso, editable, or a tensor's read-only equivalent B eq or U eq (owner, 2026-10-12).
-                text: qsTr("iso/eq")
+                uid: "atom_site.adp_iso"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "11"
+                uid: "atom_site_aniso.adp_11"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "22"
+                uid: "atom_site_aniso.adp_22"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "33"
+                uid: "atom_site_aniso.adp_33"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "12"
+                uid: "atom_site_aniso.adp_12"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "13"
+                uid: "atom_site_aniso.adp_13"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "23"
+                uid: "atom_site_aniso.adp_23"
             }
         }
 

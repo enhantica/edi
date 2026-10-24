@@ -123,7 +123,7 @@ EaElements.GroupBox {
                 objectName: "report.writesHtml"
                 width: group.boxWidth
                 enabled: group.report !== null
-                text: qsTr("HTML")
+                text: Session.label("report.html")
                 checked: group.report ? group.report.writesHtml : false
                 onToggled: group.report.writesHtml = checked
                 ToolTip.text: qsTr("Save the report as one HTML file with interactive charts")
@@ -155,7 +155,7 @@ EaElements.GroupBox {
                 objectName: "report.writesPdf"
                 width: group.boxWidth
                 enabled: group.report !== null && group.preview !== null
-                text: qsTr("PDF")
+                text: Session.label("report.pdf")
                 checked: group.report ? group.report.writesPdf : false
                 onToggled: group.report.writesPdf = checked
                 ToolTip.text: qsTr("Save the report as a PDF on A4 pages, its charts as images")
@@ -176,7 +176,7 @@ EaElements.GroupBox {
                 objectName: "report.writesCif"
                 width: group.boxWidth
                 enabled: group.report !== null
-                text: qsTr("CIF")
+                text: Session.label("report.cif")
                 checked: group.report ? group.report.writesCif : false
                 onToggled: group.report.writesCif = checked
                 ToolTip.text: qsTr("Save the report as a CIF, every item under its official CIF name")
