@@ -32,6 +32,7 @@ WorkflowPage {
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
             "minimizer": minimizerContent,
+            "refine_ls": refinementContent,
             "fitting_mode": fittingModeContent,
             "alias": aliasesContent,
             "constraint": constraintsContent,
@@ -181,6 +182,12 @@ WorkflowPage {
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Report)
 
+    Component {
+        id: refinementContent
+        RefinementGroup {
+            analysis: page.analysis
+        }
+    }
     Component {
         id: minimizerContent
         MinimizerGroup {

@@ -1617,6 +1617,17 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
                         spelled_tokens(types) + ")");
     }
     apply_extinction_type(experiment.extinction, extinction_type);
+    // The observed-reflection threshold (edi ADR-0050), each item absent until declared.
+    try {
+        if (const std::string* sigma = block.find("_reflns.threshold_sigma")) {
+            experiment.reflns_threshold_sigma = detail::read_threshold_sigma(*sigma, "_reflns.threshold_sigma");
+        }
+        if (const std::string* basis = block.find("_reflns.threshold_basis")) {
+            experiment.reflns_threshold_basis = detail::read_threshold_basis(*basis);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-threshold", error.what());
+    }
     if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
         const std::vector<std::string> distributions = mosaic_distribution_tokens();
         if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
@@ -3749,6 +3760,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
             if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
                 project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+            // A single-crystal fit's cutoff (edi ADR-0050).
+            if (const std::string* cutoff = block.find("_refine_ls.threshold_sigma")) {
+                project.refine_ls_threshold_sigma = detail::read_threshold_sigma(*cutoff, "_refine_ls.threshold_sigma");
             }
         } catch (const std::invalid_argument& error) {
             throw IoError(std::string(error.what()) + ": " + analysis_file.string());

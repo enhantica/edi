@@ -154,10 +154,12 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/MinimizerGroup.qml
         qml/Pages/Analysis/ParametersGroup.qml
         qml/Pages/Analysis/PatternUpdatesGroup.qml
+        qml/Pages/Analysis/RefinementGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
+        qml/Pages/Experiment/ObservedThresholdRow.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml

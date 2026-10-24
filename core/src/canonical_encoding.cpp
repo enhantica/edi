@@ -227,6 +227,12 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_text(out, experiment.background_estimate_in_peaks.value_or(""));
     put_text(out, experiment.background_estimate_use_model.value_or(""));
     put_u64(out, static_cast<std::uint64_t>(experiment.background_estimate_max_terms.value_or(0)));
+    // A single crystal's observed threshold (edi ADR-0050).
+    out += experiment.reflns_threshold_sigma.has_value() ? 'G' : '-';
+    if (experiment.reflns_threshold_sigma.has_value()) {
+        put_double(out, *experiment.reflns_threshold_sigma);
+    }
+    put_text(out, experiment.reflns_threshold_basis.value_or(""));
     // `ExperimentBase::data` is DELIBERATELY NOT ENCODED: the encoding fingerprints the
     // model content, and embedded data alters nothing a forward calculation computes.
 }
@@ -320,6 +326,10 @@ std::string canonical_encoding(const Project& project) {
         put_experiment(out, *experiment_item, Scope::Everything);
     }
     put_text(out, project.fitting_mode);
+    out += project.refine_ls_threshold_sigma.has_value() ? 'G' : '-';
+    if (project.refine_ls_threshold_sigma.has_value()) {
+        put_double(out, *project.refine_ls_threshold_sigma);
+    }
     // The declared scan block is fit-relevant state exactly as the mode is — two sequential
     // projects differing only in data_dir/pattern/order/extract rules must never share an
     // encoding.
@@ -514,12 +524,14 @@ template class OneRow<ExtinctionCategory>;
 template class OneRow<BackgroundCategory>;
 template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
+template class OneRow<ReflnsCategory>;
 template class OneRow<BackgroundEstimateCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
 template class OneRow<SuFormatCategory>;
 template class OneRow<ReportSettingsCategory>;
 template class OneRow<CorrelationChartCategory>;
+template class OneRow<RefineLsCategory>;
 template class OneRow<PatternChartCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;

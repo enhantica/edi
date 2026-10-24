@@ -3827,6 +3827,11 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<std::string> background_estimate_in_peaks;
     std::optional<std::string> background_estimate_use_model;
     std::optional<int> background_estimate_max_terms;
+    // A single crystal's observed-reflection threshold (`_reflns`, edi ADR-0050): the multiple n of the su and the
+    // basis (`intensity` or `amplitude`), each absent until set (absent: I > 2u(I)). It decides which reflections the
+    // reported R factors and counts are taken over, never which a fit uses.
+    std::optional<double> reflns_threshold_sigma;
+    std::optional<std::string> reflns_threshold_basis;
     // In auto mode, a digest of what the points came from (the included measured pattern and the settings; 1 when
     // the next calculation estimates) and one of the points as auto was chosen, loaded or last estimated; 0 in
     // manual mode. Saved as `_background_estimate.inputs_digest` and `.points_digest` (ADR-0040).
@@ -4291,6 +4296,8 @@ std::vector<std::string> take_engine_warnings();
 // A single crystal's extinction types and mosaic distributions, crysta's tables in their order.
 std::vector<std::string> extinction_type_tokens();
 std::vector<std::string> mosaic_distribution_tokens();
+// The observed threshold's bases (`intensity`, `amplitude`).
+std::vector<std::string> reflns_threshold_basis_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -4776,6 +4783,9 @@ class Project : public detail::ProjectAnchor {
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
+    // A single-crystal fit's cutoff (`_refine_ls.threshold_sigma`, edi ADR-0050): only reflections with
+    // F² > n su(F²) are fitted; absent, every one is.
+    std::optional<double> refine_ls_threshold_sigma;
     // The directory this project was loaded from / last saved to:
     // `save()` writes here and fails closed when empty; load and save_as set it.
     std::string path;
@@ -5267,6 +5277,16 @@ struct BackgroundCategory {
 };
 static_assert(detail::one_entry_per_column(BackgroundCategory::columns, BackgroundCategory::items));
 
+// A single crystal's observed-reflection threshold.
+struct ReflnsCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_reflns";
+    static constexpr auto columns =
+        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis};
+    static constexpr std::array items{"threshold_sigma", "threshold_basis"};
+};
+static_assert(detail::one_entry_per_column(ReflnsCategory::columns, ReflnsCategory::items));
+
 struct DataSourceCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_data_source";
@@ -5337,6 +5357,15 @@ struct CorrelationChartCategory {
     static constexpr std::array items{"threshold"};
 };
 static_assert(detail::one_entry_per_column(CorrelationChartCategory::columns, CorrelationChartCategory::items));
+
+// A single-crystal fit's reflection cutoff.
+struct RefineLsCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_refine_ls";
+    static constexpr auto columns = std::tuple{&Project::refine_ls_threshold_sigma};
+    static constexpr std::array items{"threshold_sigma"};
+};
+static_assert(detail::one_entry_per_column(RefineLsCategory::columns, RefineLsCategory::items));
 
 struct PatternChartCategory {
     using Owner = Project;

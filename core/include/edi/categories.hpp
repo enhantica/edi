@@ -11,6 +11,7 @@
 // shown and marked not refinable (edi ADR-0019): a page shows it disabled, with its implied value.
 // So is a field a declared constraint sets (ADR-0024), from the dependence crysta marks it with.
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -349,6 +350,11 @@ std::vector<NamedSlot> named_slots(Project& project);
 // the fit start state when there are any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
+    // A single crystal's fit cutoff (edi ADR-0050).
+    if (std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
+        categories.push_back({"refine_ls"});
+    }
     // The declared aliases and constraints, in diffraction-lib's analysis order, empty when there are none.
     categories.push_back({"alias", true, project.aliases.size()});
     categories.push_back({"constraint", true, project.constraints.size()});

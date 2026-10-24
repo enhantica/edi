@@ -136,6 +136,14 @@ std::vector<std::string> mosaic_distribution_labels();
 // only a type with a mosaic spread carries.
 void select_extinction(ExperimentBase& experiment, const std::string& token);
 void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token);
+// A single crystal's observed threshold (edi ADR-0050), checked by crysta's rules: n finite and not below 0, the
+// basis `intensity` or `amplitude`, and the threshold's labels (I, F); empty clears. The fit's cutoff the same way.
+std::vector<std::string> reflns_threshold_basis_labels();
+void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma);
+void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis);
+void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma);
+// The expression the threshold makes, as CIF writes it (`I>2u(I)`).
+std::string reflns_threshold_expression(const ExperimentBase& experiment);
 // Switch the background model as diffraction-lib's `_replace_background` does: the new type starts empty, and the
 // old type's points or terms and its constants are removed. The constants the new type needs start from the measured
 // axis: the polynomial origin at the middle of its range, the Chebyshev domain at its ends (1, and 0..1, without

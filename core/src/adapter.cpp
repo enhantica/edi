@@ -2155,6 +2155,7 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
         cproject.report_files.push_back(row);
     }
     cproject.correlation_threshold = model.correlation_threshold;
+    cproject.refine_ls_threshold_sigma = model.refine_ls_threshold_sigma;
     cproject.pattern_x_axis = model.pattern_x_axis;
 }
 #endif
@@ -2529,6 +2530,11 @@ double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
 std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
 std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
 #endif
+
+double read_threshold_sigma(const std::string& value, const char* tag) {
+    return crysta::read_threshold_sigma(value, tag);
+}
+std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
@@ -2976,6 +2982,8 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built, e.extinction.type.value_or("none"));
     built.extinction_model = crossed(crysta::TokenField::ExtinctionModel, built,
                                      e.extinction.mosaic_distribution.value_or("gaussian"));
+    built.reflns_threshold_sigma = e.reflns_threshold_sigma;
+    built.reflns_threshold_basis = e.reflns_threshold_basis;
     if (e.extinction.domain_radius) {
         built.extinction[0] = param(*e.extinction.domain_radius, crysta::CORRECTION, "domain_radius");
     }
@@ -3706,6 +3714,32 @@ std::vector<std::string> extinction_type_tokens() {
 
 std::vector<std::string> mosaic_distribution_tokens() {
     return crysta::file_tokens(crysta::TokenField::ExtinctionModel, crysta::BeamModeEnum::ConstantWavelength);
+}
+
+std::vector<std::string> reflns_threshold_basis_tokens() { return {"intensity", "amplitude"}; }
+
+void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
+    experiment.reflns_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_reflns.threshold_sigma"))
+              : std::nullopt;
+}
+
+void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis) {
+    experiment.reflns_threshold_basis =
+        basis ? std::optional<std::string>(crysta::read_threshold_basis(*basis)) : std::nullopt;
+}
+
+void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma) {
+    project.refine_ls_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_refine_ls.threshold_sigma"))
+              : std::nullopt;
+}
+
+std::string reflns_threshold_expression(const ExperimentBase& experiment) {
+    crysta::BraggPdExperiment crystal = crysta::single_crystal_experiment(crysta::BeamModeEnum::ConstantWavelength);
+    crystal.reflns_threshold_sigma = experiment.reflns_threshold_sigma;
+    crystal.reflns_threshold_basis = experiment.reflns_threshold_basis;
+    return crysta::threshold_expression(crystal);
 }
 
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
@@ -4795,6 +4829,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             return outcome;
         };
         if (single_crystal) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
             crysta::SingleCrystalResidual provider(project, std::move(free));
             return finish(provider);
         }
@@ -5587,6 +5622,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             return outcome;
         };
         if (single_crystals) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
             std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
             crysta::SingleCrystalResidual provider(project, std::move(free));
             return finish(provider);

@@ -2,6 +2,8 @@ _edi.schema_version 3
 
 _fitting_mode.type joint
 
+_refine_ls.threshold_sigma 3
+
 loop_
 _joint_fit.experiment_id
 _joint_fit.weight

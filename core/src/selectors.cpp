@@ -221,6 +221,14 @@ void select_extinction(ExperimentBase& experiment, const std::string& token) {
     apply_extinction_type(experiment.extinction, token);
 }
 
+std::vector<std::string> reflns_threshold_basis_labels() {
+    std::vector<std::string> labels;
+    for (const std::string& token : reflns_threshold_basis_tokens()) {
+        labels.push_back(token == "amplitude" ? "F" : "I");
+    }
+    return labels;
+}
+
 void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token) {
     const std::vector<std::string> distributions = mosaic_distribution_tokens();
     if (std::find(distributions.begin(), distributions.end(), token) == distributions.end()) {

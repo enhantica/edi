@@ -1456,6 +1456,27 @@
       "owner": "ExperimentBase"
     },
     {
+      "name": "_reflns",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExperimentBase::reflns_threshold_sigma",
+          "type": "std::optional<double>",
+          "items": [
+            "threshold_sigma"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_threshold_basis",
+          "type": "std::optional<std::string>",
+          "items": [
+            "threshold_basis"
+          ]
+        }
+      ],
+      "owner": "ExperimentBase"
+    },
+    {
       "name": "_data_source",
       "form": "one row",
       "columns": [
@@ -1647,6 +1668,20 @@
           "type": "std::optional<double>",
           "items": [
             "threshold"
+          ]
+        }
+      ],
+      "owner": "Project"
+    },
+    {
+      "name": "_refine_ls",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "Project::refine_ls_threshold_sigma",
+          "type": "std::optional<double>",
+          "items": [
+            "threshold_sigma"
           ]
         }
       ],
@@ -4321,6 +4356,16 @@
       "category": "_background_estimate"
     },
     {
+      "member": "ExperimentBase::reflns_threshold_sigma",
+      "type": "std::optional<double>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::reflns_threshold_basis",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
+    },
+    {
       "member": "ExperimentBase::background_estimate_inputs",
       "type": "std::uint64_t",
       "category": "_background_estimate"
@@ -5030,6 +5075,11 @@
       "category": "_pattern_chart"
     },
     {
+      "member": "Project::refine_ls_threshold_sigma",
+      "type": "std::optional<double>",
+      "category": "_refine_ls"
+    },
+    {
       "member": "Project::path",
       "type": "std::string",
       "category": "project"
@@ -5282,8 +5332,14 @@
     "_preferred_orientation": [
       "_preferred_orientation"
     ],
+    "_refine_ls": [
+      "_refine_ls"
+    ],
     "_refln": [
       "_refln"
+    ],
+    "_reflns": [
+      "_reflns"
     ],
     "_rendering_plot": [
       "_rendering_plot"

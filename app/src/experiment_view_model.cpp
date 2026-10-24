@@ -70,6 +70,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       absorption_type_options_(new OptionListModel(this)),
       extinction_type_options_(new OptionListModel(this)),
       mosaic_distribution_options_(new OptionListModel(this)),
+      reflns_threshold_basis_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       background_estimate_methods_(new OptionListModel(this)),
       background_estimate_modes_(new OptionListModel(this)),
@@ -105,6 +106,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_labels());
     mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
                                              edi::mosaic_distribution_labels());
+    reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
+                                                edi::reflns_threshold_basis_labels());
     background_type_options_->setOptions(edi::supported_background_types());
     background_estimate_methods_->setOptions(edi::background_estimator_methods());
     background_estimate_modes_->setOptions({"manual", "auto"});
@@ -343,6 +346,25 @@ void ExperimentViewModel::setMosaicDistribution(const QString& token) {
     setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
 }
 
+void ExperimentViewModel::setReflnsThresholdSigma(double sigma) {
+    const std::optional<double> value = qIsNaN(sigma) ? std::nullopt : std::optional<double>(sigma);
+    if (value == experiment_.reflns_threshold_sigma) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::reflns_threshold_sigma(experiment, value), false));
+}
+
+void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_threshold_basis) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::reflns_threshold_basis(experiment, value), false));
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
@@ -415,6 +437,17 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::extinctionTypeChanged);
     update(mosaic_distribution_, QString::fromStdString(experiment_.extinction.mosaic_distribution.value_or("")),
            &ExperimentViewModel::mosaicDistributionChanged);
+    // The observed threshold, one signal for its three properties.
+    const double threshold_sigma = experiment_.reflns_threshold_sigma.value_or(qQNaN());
+    const QString threshold_basis = QString::fromStdString(experiment_.reflns_threshold_basis.value_or(""));
+    if ((qIsNaN(threshold_sigma) != qIsNaN(reflns_threshold_sigma_)) ||
+        (!qIsNaN(threshold_sigma) && threshold_sigma != reflns_threshold_sigma_) ||
+        threshold_basis != reflns_threshold_basis_ || reflns_threshold_expression_.isEmpty()) {
+        reflns_threshold_sigma_ = threshold_sigma;
+        reflns_threshold_basis_ = threshold_basis;
+        reflns_threshold_expression_ = QString::fromStdString(edi::reflns_threshold_expression(experiment_));
+        emit reflnsThresholdChanged();
+    }
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.

@@ -78,6 +78,7 @@ nav:
           - dev/adrs/0046-analysis-sidebar-scan-controls-and-filters.md
           - dev/adrs/0047-element-colours-readable-in-2d.md
           - dev/adrs/0049-single-crystal-experiments.md
+          - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

@@ -527,6 +527,8 @@ FIT_PROJECTS = {
         # FullProf's model 4, Ext1-Ext3 free; one crystal, so experiments 2-6 take experiment 1's.
         'extinction': TAURINE_EXTINCTION,
         'shared_extinction': ('coefficient_11', 'coefficient_22', 'coefficient_33'),
+        # FullProf fits only reflections with F2 > 3 su(F2) (taurine.pcr's Rmub 3.0).
+        'fit_cutoff': 3,
         'tof': True,
     },
     'sc-neut-cwl_tb2ti2o7-heidi': {
@@ -695,17 +697,23 @@ CASES = {
             '(anisotropic Larson) with x11, x22 and x33 as FullProf left them, x12, x13 and x23 0 '
             "and fixed. Experiments 2-6 take experiment 1's extinction through constraints. Free: "
             'every position and beta, the six scales and the three extinction terms (135 '
-            'parameters).'
+            'parameters). As FullProf (Rmub 3.0), the fit uses only reflections with '
+            'F² > 3 su(F²).'
         ),
         'differences': [
             (
                 'FullProf leaves the reflections it marks forbidden out; they have no su here and '
                 'are not in the project.'
             ),
+            (
+                'FullProf stopped at its 20-cycle limit with χ² still falling (36.5, then 35.2), '
+                'so its values are not a minimum; from them edi continues to a lower χ².'
+            ),
         ],
         'result': (
-            'From this start edi converges in 10 iterations to reduced χ² 50.42 over the 1540 '
-            'reflections, with x11 0.0752(57), x22 0.0144(23) and x33 0.0139(25).'
+            'From this start edi converges in 5 iterations to reduced χ² 30.27 over the same 947 '
+            'reflections FullProf fits (its own χ² 35.17), with x11 0.0584(36), x22 0.0139(15) '
+            "and x33 0.0076(15) against FullProf's 0.0735(11), 0.0133(4) and 0.0080(4)."
         ),
     },
 }
@@ -968,7 +976,12 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     (project / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n\n'
         f'_fitting_mode.type {"joint" if len(runs) > 1 else "single"}\n\n'
-        'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
+        + (
+            f'_refine_ls.threshold_sigma {spec["fit_cutoff"]}\n\n'
+            if spec.get('fit_cutoff') is not None
+            else ''
+        )
+        + 'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
         + ''.join(f'{run} 1\n' for run, _, _ in runs)
         + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else '')
         + shared_extinction([run for run, _, _ in runs], spec.get('shared_extinction', ())),

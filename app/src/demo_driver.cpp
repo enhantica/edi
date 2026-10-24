@@ -416,6 +416,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                             + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
     steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    // The fit's cutoff (FullProf's Rmub 3), and the observed threshold above the reflection table switched to F.
+    steps_.push_back({"sccheck-12d-taurine-refinement-cutoff", {"choose:OK", extras, "expand:group.refine_ls"}});
+    steps_.push_back({"sccheck-12e-taurine-observed-on-f",
+                      {experiment, extras, "expand:group.refln", "reflns.thresholdBasis", "choose:F"}});
     // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
     steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
                                                               + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
