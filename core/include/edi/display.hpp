@@ -81,10 +81,13 @@ struct FileText {
     std::string su;     ///< the bracket as a decimal, e.g. "0.00013"; empty without one, "0" for an engaged zero
 };
 
-/// What an input field, the slider and the Analysis table show for a parameter (edi ADR-0041): the
+/// What an input field, the slider and the Analysis table show for a parameter (edi ADR-0051): the
 /// value exactly as a save writes it, the s.u. apart, so a field reads as the Text tab does. Throws
 /// std::invalid_argument for a parameter without a spec.
 FileText file_text(const Parameter& parameter, const std::string& su_rule);
+/// The same for a value of item `uid` without an s.u. (a setting, a range limit, a table cell): the value as a save
+/// writes it. Throws std::invalid_argument for a uid the dictionary does not hold.
+std::string file_text(std::string_view uid, double value);
 
 /// The exact fraction a value the space group fixes shows as (`1/3`), or nullopt.
 std::optional<std::string> exact_fraction(double value);

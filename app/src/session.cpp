@@ -478,6 +478,10 @@ QString Session::categoryTitle(const QString& id) const {
     return from_bridge([&] { return edi::category_label(id.toStdString()); }, id);
 }
 
+QString Session::written(const QString& uid, double value) const {
+    return from_bridge([&] { return edi::file_text(uid.toStdString(), value); }, QString::number(value));
+}
+
 QString Session::display(const QString& uid, double value, const QString& variant) const {
     return from_bridge([&] { return edi::display_text(uid.toStdString(), value, variant.toStdString()); },
                        QString::number(value));

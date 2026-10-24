@@ -156,6 +156,12 @@ FileText file_text(const Parameter& parameter, const std::string& su_rule) {
     return {text.value, text.su};
 }
 
+std::string file_text(std::string_view uid, double value) {
+    return crysta::written_text(value, std::nullopt, false, crysta::Dependence::Independent, item(uid),
+                                crysta::SuRule::Iucr19)
+        .value;
+}
+
 std::optional<std::string> exact_fraction(double value) { return crysta::exact_fraction(value); }
 
 }  // namespace edi
