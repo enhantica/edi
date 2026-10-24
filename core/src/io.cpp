@@ -1661,9 +1661,15 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
                         std::string(specification->edi_names[0]) + " is not an item of _extinction.type '" +
                             extinction_type + "'");
         }
-        if (!(found->value.get() >= 0.0) || !std::isfinite(found->value.get())) {
+        // The tensor's cross terms x12, x13 and x23 multiply hk, hl and kl and may be negative.
+        const bool signed_term = field == &experiment.extinction.coefficient_12 ||
+                                 field == &experiment.extinction.coefficient_13 ||
+                                 field == &experiment.extinction.coefficient_23;
+        const double value = found->value.get();
+        if (!std::isfinite(value) || (!signed_term && !(value >= 0.0))) {
             fail_domain(where, "extinction-domain",
-                        std::string(specification->edi_names[0]) + " must be finite and not negative");
+                        std::string(specification->edi_names[0]) +
+                            (signed_term ? " must be finite" : " must be finite and not negative"));
         }
         *field = *found;
     }
