@@ -151,12 +151,12 @@ llvm-openmp = "23.*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-5543d4a93a4d215aff36723625caa5038fad6c5d"
-CRYSTA_SDK_SHA256 = "dcce9eb462bf66f6448e438730338170064c857035a893d0c0bd8ce7b04b0d46"
+CRYSTA_SDK_TAG = "build-335edcba7c8f6847c2157d48e281907909fce1ad"
+CRYSTA_SDK_SHA256 = "00f5991cb741598bbb9195f084fc654963d5a0548f5e1de543860c61e9bea92f"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-5543d4a93a4d215aff36723625caa5038fad6c5d"
-CRYSTA_SDK_SHA256 = "b0ea39026e0fc7fe9f03fd806609948d845a7ec5f36e0ecb1907871aeaf9a743"
+CRYSTA_SDK_TAG = "build-335edcba7c8f6847c2157d48e281907909fce1ad"
+CRYSTA_SDK_SHA256 = "2a0d68811aaac2c348d4a0e60128c9012f3e982683113aa2e3b6d6d44800a689"
 
 [target.linux-64.dependencies]
 cxx-compiler = "*"
