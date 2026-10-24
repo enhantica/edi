@@ -38,11 +38,21 @@ import yaml
 HERE = Path(__file__).resolve().parent
 EXCEPTIONS = Path('data/display-format-exceptions.json')
 BRIDGE = 'core/src/display.cpp'
-SURFACES = (('app', ('.qml', '.cpp', '.hpp', '.js')), ('core', ('.cpp', '.hpp')), ('lib/edi', ('.py',)))
+SURFACES = (
+    ('app', ('.qml', '.cpp', '.hpp', '.js')),
+    ('core', ('.cpp', '.hpp')),
+    ('lib/edi', ('.py',)),
+)
 
 ROUNDING = {
-    '.qml': [r'\.(toFixed|toPrecision|toExponential)\s*\(', r'\b(toDefaultPrecision|toSinglePrecision|toErrSinglePrecision)\b'],
-    '.js': [r'\.(toFixed|toPrecision|toExponential)\s*\(', r'\b(toDefaultPrecision|toSinglePrecision|toErrSinglePrecision)\b'],
+    '.qml': [
+        r'\.(toFixed|toPrecision|toExponential)\s*\(',
+        r'\b(toDefaultPrecision|toSinglePrecision|toErrSinglePrecision)\b',
+    ],
+    '.js': [
+        r'\.(toFixed|toPrecision|toExponential)\s*\(',
+        r'\b(toDefaultPrecision|toSinglePrecision|toErrSinglePrecision)\b',
+    ],
     '.cpp': [
         r"QString::number\([^;]*,\s*'[fgeFGE]'",
         r'\bsetprecision\s*\(',
@@ -102,12 +112,14 @@ def distinctive(text: str) -> bool:
 
 def surface_files(root: Path) -> list[Path]:
     """Every source of a surface, the bridge itself left out."""
-    found = []
-    for folder, suffixes in SURFACES:
-        for path in sorted((root / folder).rglob('*')):
-            if path.suffix in suffixes and path.is_file() and path.relative_to(root).as_posix() != BRIDGE:
-                found.append(path)
-    return found
+    return [
+        path
+        for folder, suffixes in SURFACES
+        for path in sorted((root / folder).rglob('*'))
+        if path.suffix in suffixes
+        and path.is_file()
+        and path.relative_to(root).as_posix() != BRIDGE
+    ]
 
 
 def rounding_sites(root: Path) -> list[tuple[str, int, str]]:
@@ -116,7 +128,8 @@ def rounding_sites(root: Path) -> list[tuple[str, int, str]]:
     for path in surface_files(root):
         patterns = [re.compile(p) for p in ROUNDING.get(path.suffix, [])]
         rel = path.relative_to(root).as_posix()
-        for number, line in enumerate(path.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+        lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+        for number, line in enumerate(lines, 1):
             if line.lstrip().startswith(('//', '#', '*')):
                 continue
             if any(p.search(line) for p in patterns):
@@ -125,7 +138,7 @@ def rounding_sites(root: Path) -> list[tuple[str, int, str]]:
 
 
 def copied_names(root: Path, display: set[str], names: set[str]) -> list[tuple[str, int, str]]:
-    """Every literal that copies a dictionary name instead of asking the bridge: file, line, literal."""
+    """Every literal that copies a dictionary name instead of asking the bridge."""
     found = []
     readable = {text for text in display if distinctive(text)}
     for path in surface_files(root):
@@ -135,28 +148,23 @@ def copied_names(root: Path, display: set[str], names: set[str]) -> list[tuple[s
             if raw.lstrip().startswith(('//', '#', '*')):
                 continue
             line = code_of(raw) if path.suffix != '.py' else raw
-            for literal in QSTR.findall(line):
-                if literal in display or literal in names:
-                    found.append((rel, number, literal))
+            found.extend(
+                (rel, number, literal)
+                for literal in QSTR.findall(line)
+                if literal in display or literal in names
+            )
             if path.suffix in {'.cpp', '.hpp'} and 'qsTr(' not in line:
-                found.extend((rel, number, literal) for literal in CPP_STRING.findall(line) if literal in readable)
+                found.extend(
+                    (rel, number, literal)
+                    for literal in CPP_STRING.findall(line)
+                    if literal in readable
+                )
     return found
 
 
-def findings(root: Path) -> list[str]:
-    """Every way a surface keeps its own number format or name."""
-    source = crysta_source(root)
-    try:
-        display, names = dictionary_strings(source)
-    except (OSError, yaml.YAMLError, AttributeError) as error:
-        return [f'cannot read crysta\'s dictionary under {source}: {error}']
-    exceptions_path = root / EXCEPTIONS
-    try:
-        recorded = json.loads(exceptions_path.read_text(encoding='utf-8'))
-        exceptions, admitted = recorded['exceptions'], recorded['names']
-    except (OSError, ValueError, KeyError) as error:
-        return [f'cannot read {EXCEPTIONS}: {error}']
-    found: list[str] = []
+def rounding_findings(root: Path, exceptions: list[dict]) -> list[str]:
+    """Each rounding outside the bridge no exception admits; each exception unreasoned, unused."""
+    found = []
     used = [False] * len(exceptions)
     for rel, number, line in rounding_sites(root):
         matched = False
@@ -166,10 +174,19 @@ def findings(root: Path) -> list[str]:
         if not matched:
             found.append(f'{rel}:{number}: rounds a number outside the display bridge: {line}')
     for index, exception in enumerate(exceptions):
+        where = f'{EXCEPTIONS}: the exception {exception["match"]!r} in {exception["file"]}'
         if not exception.get('reason'):
-            found.append(f'{EXCEPTIONS}: the exception for {exception["file"]} gives no reason')
+            found.append(f'{where} gives no reason')
         if not used[index]:
-            found.append(f'{EXCEPTIONS}: the exception {exception["match"]!r} in {exception["file"]} is stale')
+            found.append(f'{where} is stale')
+    return found
+
+
+def name_findings(
+    root: Path, display: set[str], names: set[str], admitted: list[dict]
+) -> list[str]:
+    """Each copied name no exception admits, and each admitted name without a reason or a use."""
+    found = []
     named = [False] * len(admitted)
     for rel, number, literal in copied_names(root, display, names):
         matched = False
@@ -179,11 +196,27 @@ def findings(root: Path) -> list[str]:
         if not matched:
             found.append(f'{rel}:{number}: "{literal}" copies a dictionary name')
     for index, name in enumerate(admitted):
+        where = f'{EXCEPTIONS}: the name {name["literal"]!r} in {name["file"]}'
         if not name.get('reason'):
-            found.append(f'{EXCEPTIONS}: the name {name["literal"]!r} in {name["file"]} gives no reason')
+            found.append(f'{where} gives no reason')
         if not named[index]:
-            found.append(f'{EXCEPTIONS}: the name {name["literal"]!r} in {name["file"]} is stale')
+            found.append(f'{where} is stale')
     return found
+
+
+def findings(root: Path) -> list[str]:
+    """Every way a surface keeps its own number format or name."""
+    source = crysta_source(root)
+    try:
+        display, names = dictionary_strings(source)
+    except (OSError, yaml.YAMLError, AttributeError) as error:
+        return [f"cannot read crysta's dictionary under {source}: {error}"]
+    try:
+        recorded = json.loads((root / EXCEPTIONS).read_text(encoding='utf-8'))
+        exceptions, admitted = recorded['exceptions'], recorded['names']
+    except (OSError, ValueError, KeyError) as error:
+        return [f'cannot read {EXCEPTIONS}: {error}']
+    return rounding_findings(root, exceptions) + name_findings(root, display, names, admitted)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -196,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(f'display_sources: {finding}\n')
     if found:
         return 1
-    sys.stdout.write('display_sources: every number and name on screen comes from the dictionary\n')
+    sys.stdout.write(
+        'display_sources: every number and name on screen comes from the dictionary\n'
+    )
     return 0
 
 
