@@ -24,7 +24,9 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a dis
 - a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
 
 A record with ``"template": true`` belongs to a scan and fits its template file alone, as a single
-fit, in every unit: the scan's experiment already holds that file's points.
+fit, in every unit: the scan's experiment already holds that file's points. A variant block may
+name the status its fit ends with (``"status": "max_iter"``): a fit the engine stops after its
+allowed resumes, though every value has settled. Every other fit must end ``done``.
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
@@ -253,25 +255,27 @@ def fit_template_only(project: Path) -> None:
 # A variant names a registered descent, or one of these changes to the project copy.
 PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off}
 
-Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None]
+Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None, str]
 
 
 def _units(expected: dict) -> list[Unit]:
-    """``(label, conditions, quantities, change)`` for every unit an expected.json declares.
+    """``(label, conditions, quantities, change, status)`` for every unit of an expected.json.
 
     The conditions are ``_minimizer.<item>`` values the unit's project copy declares on top of
     the project's own analysis.edi — a variant's descent; empty for the project as committed.
-    The change edits the copy for a project variant; None otherwise.
+    The change edits the copy for a project variant; None otherwise. The status is the one its
+    fit must end with.
     """
     import edi  # noqa: PLC0415
 
     units: list[Unit] = []
     if 'quantities' in expected:
-        units.append(('default', {}, expected['quantities'], None))
+        units.append(('default', {}, expected['quantities'], None, 'done'))
     descents = set(edi._descent_ids())
     for name, block in expected.get('variants', {}).items():
+        status = block.get('status', 'done')
         if name in PROJECT_VARIANTS:
-            units.append((name, {}, block['quantities'], PROJECT_VARIANTS[name]))
+            units.append((name, {}, block['quantities'], PROJECT_VARIANTS[name], status))
             continue
         descent = name.replace('-', '_')
         if descent not in descents:
@@ -279,13 +283,13 @@ def _units(expected: dict) -> list[Unit]:
                 f'variant {name!r} names no registered descent {sorted(descents)} and no '
                 f'project variant {sorted(PROJECT_VARIANTS)}'
             )
-        units.append((name, {'descent': descent}, block['quantities'], None))
+        units.append((name, {'descent': descent}, block['quantities'], None, status))
     if 'edi' in expected:
-        units.append(('edi', {}, expected['edi']['quantities'], None))
+        units.append(('edi', {}, expected['edi']['quantities'], None, 'done'))
     # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
     if 'calc' in expected:
-        units.append(('calc', {}, expected['calc']['quantities'], None))
-    if not units or not all(quantities for _, _, quantities, _ in units):
+        units.append(('calc', {}, expected['calc']['quantities'], None, 'done'))
+    if not units or not all(unit[2] for unit in units):
         raise ValueError('expected.json declares no quantities to compare')
     return units
 
@@ -364,7 +368,7 @@ def run_project(root: Path, pid: str) -> list[str]:
     source = root / CLI_DIR / pid
     expected = json.loads((source / 'expected.json').read_text(encoding='utf-8'))
     deviations: list[str] = []
-    for label, conditions, quantities, change in _units(expected):
+    for label, conditions, quantities, change, status in _units(expected):
         with tempfile.TemporaryDirectory(
             prefix=f'edi-cli-{pid}-', dir=os.environ.get('RUNNER_TEMP') or None
         ) as scratch:
@@ -385,8 +389,8 @@ def run_project(root: Path, pid: str) -> list[str]:
                 deviations.append(f'{label}: rc={result.returncode}: {result.stderr[-400:]}')
                 continue
             record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
-            if command == 'fit' and record.get('status') != 'done':
-                deviations.append(f'{label}: status={record.get("status")!r}, expected done')
+            if command == 'fit' and record.get('status') != status:
+                deviations.append(f'{label}: status={record.get("status")!r}, expected {status}')
             for name, spec in quantities.items():
                 try:
                     measured = _measured(name, record, project)
