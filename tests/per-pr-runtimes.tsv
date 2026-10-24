@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T08:49:54Z
+# measured_utc = 2026-10-24T10:28:14Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 14972 banked, 0 stale row(s) dropped)
-# Collected tests: 16745; with a reported duration: 9637
+# Recorded from: measured test run (6 node(s) measured once, 14973 banked, 0 stale row(s) dropped)
+# Collected tests: 16751; with a reported duration: 9643
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16745
+# inventory_python = 16751
 # inventory_cpp = 393
-# inventory_measured = 14973
+# inventory_measured = 14979
 # inventory_unmeasured = 2165
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -1909,6 +1909,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t23_cli_projects.py:
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[ncaf-wish-3bank-s5]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s2]
 0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s5]
+0.460	tests/integration/py/test_c34_t23_cli_projects.py::test_settings_cli_exposes_loaded_sequential_conditions_by_item_name[latp_304.dat]
+0.470	tests/integration/py/test_c34_t23_cli_projects.py::test_settings_cli_exposes_loaded_sequential_conditions_by_item_name[latp_312.dat]
 0.010	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_analysis_reference_documents_conditions_and_all_registered_values
 0.050	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_declared_conditions_survive_load_save_and_second_round_trip
 0.000	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_invalid_declared_condition_refuses_at_load[chi_square_tolerance--0.00037]
@@ -9375,6 +9377,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-2]
 0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-3]
 0.590	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco-hrpt_start-4-4]
+1.020	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lbco_simulation-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_lmo-echidna-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_y2o3-spodi-0]
 0.640	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-cwl_y2o3_beta-adp-0]
@@ -9405,6 +9408,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 1.070	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-2]
 1.040	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-3]
 1.580	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd_start-5-4]
+0.470	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si_simulation-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-xray-cwl_pbso4-d1a-lab-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-xray-cwl_pbso4-d1a-lab-1]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_lam7o3-p021-0]
@@ -9413,9 +9417,11 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_latp-bm01_scan-1]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_latp_scan-4f-0]
 0.740	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_lif_single-0]
+0.500	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_nacl_simulation-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_pbso4-lab-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-xray-cwl_pbso4-lab_round-robin-0]
 2.670	tests/system/py/test_c34_t24_cli_variants.py::test_later_variant_corruption_is_not_hidden_by_an_earlier_pass
+3.300	tests/system/py/test_c34_t24_cli_variants.py::test_project_variant_terminal_status_is_enforced
 1.220	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_absent_conditions_equal_explicit_engine_defaults
 1.030	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_guarded_scan_records_its_observed_outcomes_without_assuming_convergence
 0.000	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_provenance_gate_rejects_each_misattribution[chi_square_tolerance]

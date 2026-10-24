@@ -15,6 +15,7 @@ import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -639,3 +640,39 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
+
+
+@pytest.mark.parametrize('template', ['latp_312.dat', 'latp_304.dat'])
+def test_settings_cli_exposes_loaded_sequential_conditions_by_item_name(tmp_path, template):
+    target = tmp_path / 'project'
+    shutil.copytree(CLI / 'pd-xray-cwl_latp-bm01_scan/project', target)
+    analysis = target / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text().replace('latp_312.dat', template)
+        + '\n# _sequential_fit.phantom_sequence ignored\n'
+        + '_sequential_fit.unknown_condition ignored\n'
+    )
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'tools/checks/cli_projects.py'), '--settings', str(target)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, 'The settings CLI must load and report a real scan project'
+    settings = json.loads(result.stdout)
+    for item, value in {
+        'data_dir': 'experiments/bm01_scan',
+        'file_pattern': '*.dat',
+        'reverse': 'true',
+        'template_file': template,
+    }.items():
+        assert settings.get(item) == {
+            f'analysis/analysis.edi:_sequential_fit.{item}': {'value': value}
+        }, 'Loaded sequential conditions use item-named tokens with exact saved values'
+    assert template not in settings, (
+        'A sequential file name is a value rather than an exercise token'
+    )
+    assert 'phantom_sequence' not in settings and 'unknown_condition' not in settings, (
+        'Comments and sequential fields ignored by the real loader cannot become exercise tokens'
+    )
