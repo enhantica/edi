@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T08:02:43Z
+# measured_utc = 2026-10-24T08:04:31Z
 #
 # Scoped single-crystal evidence: seq14/bank-edi.log, app-wrappers.log and app-bank.log.
 # Full collection is blocked by three development-artifact comparison modules; this is a scoped inventory update.
-# 22 added or previously unmeasured green nodes banked; existing module costs retained.
+# 1 added or previously unmeasured green nodes banked; existing module costs retained.
 # The old inventory holes remain explicit; no full suite was measured.
 #
 # Breaches are decided PER TIER against the table
@@ -32,8 +32,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 16527
 # inventory_cpp = 393
-# inventory_measured = 14872
-# inventory_unmeasured = 2048
+# inventory_measured = 14873
+# inventory_unmeasured = 2047
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -380,7 +380,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_chart_table_and_sidebar[experiment-light-sc-neut-cwl_tbti_basic]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_chart_table_and_sidebar[experiment-light-sc-neut-cwl_tbti_isotropic-extinction]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_chart_table_and_sidebar[experiment-light-sc-neut-tof_taurine_basic]
-UNMEASURED:product-red-in-scoped-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_extended_contracts[multidataset_split_stacked_and_legend]
+0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_extended_contracts[multidataset_split_stacked_and_legend]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_extended_contracts[plain_reflections_one_warning]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_extended_contracts[weak_negative_f_axes]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_report_chart_html_and_pdf[dark]
