@@ -13,6 +13,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/selectors.hpp"
 #include "parameter_registry.hpp"
@@ -21,6 +22,16 @@
 namespace edi_app {
 
 namespace {
+
+// The values a selector of `uid` takes, in the dictionary's order.
+std::vector<std::string> option_tokens(const char* uid) {
+    std::vector<std::string> tokens;
+    for (const edi::DisplayOption& option : edi::options(uid)) {
+        tokens.push_back(option.token);
+    }
+    return tokens;
+}
+
 // A peak field's family, its sidebar row (edi ADR-0017 §5): 0 the back-to-back exponentials, 1 the Gaussian
 // broadening with the CW profile's two shape fields (U V W, then X Y or eta0 eta1, on one row), 2 the TOF
 // Lorentzian, 3 any other.
@@ -66,6 +77,10 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       experiment_(experiment),
       editor_(editor),
       registry_(registry),
+      sample_form_options_(new OptionListModel(this)),
+      beam_mode_options_(new OptionListModel(this)),
+      radiation_probe_options_(new OptionListModel(this)),
+      scattering_type_options_(new OptionListModel(this)),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
@@ -91,17 +106,19 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
-    const std::vector<std::string> profiles = edi::supported_peak_profiles(mode);
-    std::vector<std::string> profile_labels;
-    for (const std::string& profile : profiles) {
-        profile_labels.push_back(edi::peak_profile_label(profile));
+    for (const auto& [options, uid] : {std::pair{sample_form_options_, "experiment_type.sample_form"},
+                                       std::pair{beam_mode_options_, "experiment_type.beam_mode"},
+                                       std::pair{radiation_probe_options_, "experiment_type.radiation_probe"},
+                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"}}) {
+        options->setItemOptions(uid, option_tokens(uid));
     }
-    peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
-    absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
-    background_type_options_->setOptions(edi::supported_background_types());
-    background_estimate_methods_->setOptions(edi::background_estimator_methods());
-    background_estimate_modes_->setOptions({"manual", "auto"});
-    background_estimate_models_->setOptions({"auto", "subtract", "ignore"});
+    peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
+    absorption_type_options_->setItemOptions("absorption.type", edi::supported_absorption_families(mode));
+    background_type_options_->setItemOptions("background.type", edi::supported_background_types());
+    background_estimate_methods_->setItemOptions("background_estimate.method", edi::background_estimator_methods());
+    background_estimate_modes_->setItemOptions("background_estimate.mode", option_tokens("background_estimate.mode"));
+    background_estimate_models_->setItemOptions("background_estimate.use_model",
+                                                option_tokens("background_estimate.use_model"));
     for (int family = 0; family < 4; ++family) {
         peak_families_[family] = new ParameterListModel(
             [this, family] {

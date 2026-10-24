@@ -33,13 +33,13 @@ Column {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("alias")
+                uid: "alias.id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("parameter")
+                uid: "alias.parameter_unique_name"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter

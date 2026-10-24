@@ -7,10 +7,13 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <exception>
+#include <string>
 #include <utility>
 #include <filesystem>
 
 #include "app_info.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/scan.hpp"
 
@@ -435,6 +438,53 @@ void Session::setLastError(const QString& error) {
         last_error_ = error;
         emit lastErrorChanged();
     }
+}
+
+namespace {
+
+// A bridge answer as text, or `fallback` for an item the dictionary lacks.
+template <typename Call>
+QString from_bridge(Call&& call, const QString& fallback) {
+    try {
+        return QString::fromStdString(call());
+    } catch (const std::exception&) {
+        return fallback;
+    }
+}
+
+}  // namespace
+
+QString Session::label(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::label(uid.toStdString(), variant.toStdString()); }, uid);
+}
+
+QString Session::units(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::units_label(uid.toStdString(), variant.toStdString()); }, QString());
+}
+
+QString Session::tooltip(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::tooltip(uid.toStdString(), variant.toStdString()); }, uid);
+}
+
+QString Session::optionLabel(const QString& uid, const QString& token) const {
+    return from_bridge([&] { return edi::option_label(uid.toStdString(), token.toStdString()); }, token);
+}
+
+QString Session::optionTooltip(const QString& uid, const QString& token) const {
+    return from_bridge([&] { return edi::option_tooltip(uid.toStdString(), token.toStdString()); }, uid);
+}
+
+QString Session::categoryTitle(const QString& id) const {
+    return from_bridge([&] { return edi::category_label(id.toStdString()); }, id);
+}
+
+QString Session::written(const QString& uid, double value) const {
+    return from_bridge([&] { return edi::file_text(uid.toStdString(), value); }, QString::number(value));
+}
+
+QString Session::display(const QString& uid, double value, const QString& variant) const {
+    return from_bridge([&] { return edi::display_text(uid.toStdString(), value, variant.toStdString()); },
+                       QString::number(value));
 }
 
 }  // namespace edi_app

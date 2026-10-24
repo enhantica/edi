@@ -7,6 +7,7 @@
 #include <exception>
 #include <optional>
 
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
 #include "parameter_item.hpp"
@@ -33,9 +34,9 @@ void ParameterListModel::sync() {
         const ParameterItem* item = registry_.find(field.parameter);
         rows.append({field.parameter,
                      {parameter_role(registry_, field.parameter), QString::fromStdString(field.name),
-                      spec != nullptr ? QString::fromUtf8(spec->display_name) : QString::fromStdString(field.name),
+                      spec != nullptr ? QString::fromStdString(edi::label(edi::uid_of(*spec))) : QString::fromStdString(field.name),
                       item != nullptr ? item->shortName() : QString::fromStdString(field.name),
-                      spec != nullptr ? QString::fromUtf8(spec->display_units) : QString(), field.used_by_profile}});
+                      spec != nullptr ? QString::fromStdString(edi::units_label(edi::uid_of(*spec))) : QString(), field.used_by_profile}});
     }
     setTableRows(rows);
     if (used_count != used_count_) {
@@ -454,7 +455,7 @@ void ScatteringSourceViewModel::sync() {
         if (options == nullptr) {
             options = new OptionListModel(this);
         }
-        options->setOptions(edi::supported_scattering_sources(item));
+        options->setItemOptions("scattering_source." + name.toStdString(), edi::supported_scattering_sources(item));
         const QString token = QString::fromStdString(edi::scattering_source_value(experiment_, item));
         const QString effective = token.isEmpty() ? options->tokenAt(0) : token;
         rows.append({options, {name, token, effective, !token.isEmpty(), QVariant::fromValue<QObject*>(options)}});

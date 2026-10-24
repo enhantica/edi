@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-23T04:25:35Z
+# measured_utc = 2026-10-24T14:12:26Z
 #
-# Recorded from: measured test run (18 node(s) measured once, 14729 banked, 1 stale row(s) dropped)
-# Collected tests: 16338; with a reported duration: 9490
-# Module-scoped fixture costs recorded: 72
+# Recorded from: measured test run (2 node(s) measured once, 14816 banked, 0 stale row(s) dropped)
+# Collected tests: 16646; with a reported duration: 9556
+# Module-scoped fixture costs recorded: 73
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16338
-# inventory_cpp = 393
-# inventory_measured = 14737
-# inventory_unmeasured = 1994
+# inventory_python = 16646
+# inventory_cpp = 396
+# inventory_measured = 14818
+# inventory_unmeasured = 2224
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2181,6 +2181,162 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[Bani-B_11-0.52]
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[Uani-U_11-0.0123]
+0.000	tests/integration/py/test_cif_structure_import.py::test_anisotropic_official_name_retains_the_tensor_convention[beta-beta_11-0.00045678]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_cif_and_edi_brackets_keep_their_distinct_meanings
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.Wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.Wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site.wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_Wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_wyckoff_letter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.Wyckoff_symbol-_atom_site_wyckoff_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_x-_atom_site.fract_x]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_x-_atom_site_fract_x]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_y-_atom_site.fract_y]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_y-_atom_site_fract_y]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_z-_atom_site.fract_z]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.fract_z-_atom_site_fract_z]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site.id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site.label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site_id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.label-_atom_site_label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.occupancy-_atom_site.occupancy]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.occupancy-_atom_site_occupancy]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.type_symbol-_atom_site.type_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_atom_site.type_symbol-_atom_site_type_symbol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_alpha-_cell.angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_alpha-_cell_angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_beta-_cell.angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_beta-_cell_angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_gamma-_cell.angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.angle_gamma-_cell_angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_a-_cell.length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_a-_cell_length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_b-_cell.length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_b-_cell_length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_c-_cell.length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_cell.length_c-_cell_length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group.IT_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group.it_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group_IT_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_space_group_it_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry.Int_Tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry.int_tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry_Int_Tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.IT_number-_symmetry_int_tables_number]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group.name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group.name_h-m_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group_name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_space_group_name_h-m_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry.space_group_name_H-M]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry.space_group_name_h-m]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry_space_group_name_H-M]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_every_independent_structure_name_in_both_notations_loads_the_same_quantity[_space_group.name_H-M_alt-_symmetry_space_group_name_h-m]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_matched_cif_adp_name_selects_type_without_unit_conversion[_atom_site.U_iso_or_equiv-Uiso-0.0066]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_matched_cif_adp_name_selects_type_without_unit_conversion[_atom_site_B_iso_or_equiv-Biso-0.52]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_x-2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_y-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_atom_coordinates_are_refused_and_named[_atom_site.fract_z-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_alpha]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.angle_gamma]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_a]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_b]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_cell.length_c]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_missing_required_structure_scalars_are_refused_and_named[_space_group.name_H-M_alt]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-dot]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-underscore]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_path-upper]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-dot]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-underscore]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_published_cod_import_keeps_cell_atoms_symmetry_and_fixes_su[from_cif_str-upper]
+0.010	tests/integration/py/test_cif_structure_import.py::test_published_fixture_is_parsed_by_gemmi_independently_of_the_product
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_second_published_cod_structure_retains_rocksalt_cell_and_sites[from_cif_path]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_structure_import.py::test_second_published_cod_structure_retains_rocksalt_cell_and_sites[from_cif_str]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_a_supplied_letter_is_kept_instead_of_reclassified[from_cif_path]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_a_supplied_letter_is_kept_instead_of_reclassified[from_cif_str]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_path-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_every_cif_import_saves_wyckoff_values_that_the_edi_loader_accepts[from_cif_str-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-.-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-?-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_path-absent-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-.-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-?-underscore-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-dot-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-elpasolite]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-magnesium]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-nacl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-owner-tbti]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_wyckoff_positions.py::test_missing_published_wyckoff_letters_follow_international_tables[from_cif_str-absent-underscore-tbti]
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
@@ -4412,6 +4568,68 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[Bani-B]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[Uani-U]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[beta-beta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Biso-_atom_site.B_iso_or_equiv-0.52]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Uiso-_atom_site.U_iso_or_equiv-0.0066]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_report_always_uses_iucr_independently_of_project_rule[iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_report_always_uses_iucr_independently_of_project_rule[iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_symmetry_fixed_special_positions_are_decimal_without_su_and_flagged
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_distinct_edi_aliases_of_one_item_are_refused_together
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_edi_alias_loads_and_only_current_name_is_written
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_edi_atom_label_alias_writes_only_the_current_site_id_name
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_report_cif_is_parsed_independently_with_official_names
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_two_edi_spellings_of_one_item_are_refused_with_both_names[False]
+0.000	tests/integration/py/test_dictionary_cif_contract.py::test_two_edi_spellings_of_one_item_are_refused_with_both_names[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_constrained_value_without_su_saves_without_binary_noise
+0.090	tests/integration/py/test_dictionary_display_consumers.py::test_display_operations_never_change_saved_scientific_bytes
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[absorption.mu_r-0.036123456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[atom_site.fract_x-0.33333-fixed-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[atom_site.occupancy-0.5823456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[background.intensity-1.2345678e-05-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[cell.length_a-3.890915-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[instrument.setup_wavelength-1.49412345-fixed-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[linked_structure.scale-1234567.8-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[peak.broad_gauss_u-0.123456789-significant-5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_every_numeric_category_reaches_repr_report_and_html[preferred_orientation.march_r-0.923456-fixed-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[angle_beta-91.234567-3]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_a-3.890915-4]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_b-4.12345678-4]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
+0.040	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.value]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength_value]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength_wavelength]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_easydiffraction_peak.broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_easydiffraction_peak_broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_edi_peak.broad_gauss_u]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_edi_peak_broad_gauss_u]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_instr.wavelength]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_instr_wavelength]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-absorption.mu_r-0.0361]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-background.intensity-4.12345]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-instrument.setup_wavelength-1.54]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-linked_structure.scale-0.71345]
+0.000	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-peak.broad_gauss_u-0.0834]
+0.010	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[False-preferred_orientation.march_r-0.92345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-absorption.mu_r-0.0361]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-background.intensity-4.12345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-instrument.setup_wavelength-1.54]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-linked_structure.scale-0.71345]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-peak.broad_gauss_u-0.0834]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_external_edi_names_reach_each_existing_category[True-preferred_orientation.march_r-0.92345]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -5802,13 +6020,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#F44336-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_exactly_five_approved_tables_and_attribution_are_published
-0.420	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
-0.120	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
+0.460	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
 0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#4CAF50light]
-0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
-0.190	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
+0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
+0.200	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
 0.130	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Tol#CCBB44light]
-0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
+0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#010100-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#808080-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#FF0000-False]
@@ -6024,11 +6242,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 0.000	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
 0.010	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
 0.000	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
-0.010	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[False]
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[True]
-0.010	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
-0.040	tests/integration/py/test_report_chart_amendments.py::test_unfitted_scan_evolution_names_every_free_parameter_without_points
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_unfitted_scan_evolution_names_every_free_parameter_without_points
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[first-fallback]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[later-template]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[correlation_matrix-correlation_view_model.cpp]
@@ -6294,7 +6512,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.010	tests/integration/py/test_report_storage.py::test_save_as_copies_every_report_row_and_file_without_touching_the_source
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[incomplete-row]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[unknown-format]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
+0.030	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-experiment]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-html]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-settings]
@@ -6780,6 +6998,66 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[short-delay]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-baseline]
 0.000	tests/integration/py/test_scan_timing_contract.py::test_provenance_ordering_and_negative_controls_fail_closed[wrong-compiled-source]
+0.180	tests/integration/py/test_sdk_untested_opt_in.py::test_a_fully_qualified_sdk_remains_accepted_without_an_override[linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_a_fully_qualified_sdk_remains_accepted_without_an_override[osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[corpus-linux-64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[corpus-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[cpp_tier-linux-64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_sdk_untested_opt_in.py::test_an_untested_marker_cannot_hide_behind_retained_numeric_counts[cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-corpus-linux-64]
+0.120	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-cpp_tier-linux-64]
+0.130	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-0-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-corpus-linux-64]
+0.130	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[0-7-cpp_tier-osx-arm64]
+0.140	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-cpp_tier-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[6-7-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-corpus-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-corpus-osx-arm64]
+0.140	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_opt_in_never_admits_partial_or_vacuous_numeric_qualification[8-7-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[0-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-both-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-both-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-corpus-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-cpp_tier-linux-64]
+0.180	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[01-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-corpus-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-cpp_tier-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[1-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-both-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-both-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-corpus-linux-64]
+0.090	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-corpus-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[None-cpp_tier-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-both-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-both-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-corpus-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-corpus-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-cpp_tier-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_manifest_tiers_require_the_exact_local_opt_in[true-cpp_tier-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[binary-libcrysta_core-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[binary-libcrysta_core-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[fingerprint-fingerprint-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_opt_in_keeps_binary_hash_and_toolchain_checks[fingerprint-fingerprint-osx-arm64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[CI-linux-64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[CI-osx-arm64]
+0.100	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[GITHUB_ACTIONS-linux-64]
+0.110	tests/integration/py/test_sdk_untested_opt_in.py::test_untested_sdk_opt_in_is_never_a_ci_permission[GITHUB_ACTIONS-osx-arm64]
 0.097	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[scan]
 0.079	tests/integration/py/test_shared_correlation_saved_bytes.py::test_fitted_correlation_loop_matches_pre_change_regression_pin[single]
 0.004	tests/integration/py/test_shared_correlation_saved_bytes.py::test_frozen_numeric_table_keeps_the_declared_pre_change_fitted_state[scan]
@@ -7476,18 +7754,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_background_estimate_series_cl
 0.520	tests/system/py/test_background_estimate_settings_cli.py::test_new_default_policy_and_exact_count_agree_in_cli_and_python[fabc]
 0.550	tests/system/py/test_background_estimate_settings_cli.py::test_new_default_policy_and_exact_count_agree_in_cli_and_python[snip]
 0.000	tests/system/py/test_background_estimate_settings_cli.py::test_published_cli_project_records_manual_estimate_settings
-4.020	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-chebyshev-chebyshev]
-4.550	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-line-segment-points]
-4.250	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-polynomial-polynomial]
-3.600	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-chebyshev-chebyshev]
-3.620	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-line-segment-points]
-3.450	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-polynomial-polynomial]
-4.440	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-chebyshev-chebyshev]
-4.620	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-line-segment-points]
-3.990	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-polynomial-polynomial]
-3.610	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-chebyshev-chebyshev]
-3.940	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-line-segment-points]
-3.820	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-polynomial-polynomial]
+3.320	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-chebyshev-chebyshev]
+3.968	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-line-segment-points]
+3.339	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[data-polynomial-polynomial]
+2.747	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-chebyshev-chebyshev]
+2.823	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-line-segment-points]
+2.780	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[manual-control-polynomial-polynomial]
+2.809	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-chebyshev-chebyshev]
+3.048	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-line-segment-points]
+2.783	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[retain-polynomial-polynomial]
+2.906	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-chebyshev-chebyshev]
+2.961	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-line-segment-points]
+2.945	tests/system/py/test_background_fitted_baseline_action.py::test_app_free_auto_fit_retains_its_baseline_and_reports_due_replacement[settings-polynomial-polynomial]
 2.801	tests/system/py/test_background_readonly_action.py::test_adapted_existing_edit_actors_choose_manual_explicitly[BackgroundEstimateLifecycle::test_first_edit_with_excluded_data_selects_manual]
 3.768	tests/system/py/test_background_readonly_action.py::test_adapted_existing_edit_actors_choose_manual_explicitly[BackgroundEstimateSettings::test_point_keyboard_edit_sets_manual]
 3.844	tests/system/py/test_background_readonly_action.py::test_auto_table_guards_values_and_allows_free_context_actions[fixed-chebyshev-chebyshev]
@@ -7523,6 +7801,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_background_estimate_series_cl
 0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
 0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
 1.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
+1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::fast-descent]
+1.080	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::ladder]
 0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
@@ -10481,6 +10761,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
 0.167	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]
 0.000	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]
+UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
+UNMEASURED:failed-in-this-run	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = 1/0]
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = a.__class__]
 0.180	tests/system/py/test_constraint_surfaces.py::test_cli_warns_and_ignores_a_loaded_dependent_free_flag
@@ -10783,6 +11065,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[absorption]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[background]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[cell]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[fractional]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[instrument]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[linked_structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[occupancy]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[peak]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[preferred_orientation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[analysis]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[report]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_pages_follow_dictionary_contract[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[cpp-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[display-label]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[python-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[qml-fixed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[raw-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_display_source_guard_reaches_new_surface_files[raw-token]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_display_sources.py::test_surfaces_call_the_dictionary_bridge_instead_of_their_own_tables
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[cli-EDI_CLI_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
@@ -14773,6 +15075,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_thread_selector.py::test_sele
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[serial-fill-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-browser]
 0.000	tests/system/py/test_thread_selector.py::test_selector_contract_refuses_actual_engine_and_persistence_escapes[thread-local-desktop]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_directory_has_the_owner_execute_bit[packFiles]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_directory_has_the_owner_execute_bit[pack]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_member_has_the_owner_read_bit[packFiles]
+0.000	tests/system/py/test_web_archive_permissions.py::test_every_stored_zip_member_has_the_owner_read_bit[pack]
+0.000	tests/system/py/test_web_archive_permissions.py::test_owner_can_list_and_read_the_extracted_archive_with_stored_modes[packFiles]
+UNMEASURED:failed-in-this-run	tests/system/py/test_web_archive_permissions.py::test_owner_can_list_and_read_the_extracted_archive_with_stored_modes[pack]
 0.000	tests/system/py/test_web_parallel_build.py::test_app_pthread_pool_is_preallocated_and_sized_for_the_engine
 0.001	tests/system/py/test_web_parallel_build.py::test_each_kit_selects_its_own_engine_backend_and_simd
 0.140	tests/system/py/test_web_parallel_oracles.py::test_native_fit_retains_the_owner_five_iteration_final_values
@@ -15021,11 +15329,13 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.006	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Site and tensor key edits follow every coordinate and ADP reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
+UNMEASURED:red-first native baseline ae20ff66 fails; green execution cost is not measured	tests/unit/cpp/test_dictionary_metadata.cpp::The core metadata bridge retains every dictionary label unit and file tooltip
+UNMEASURED:red-first native baseline ae20ff66 fails; green execution cost is not measured	tests/unit/cpp/test_dictionary_parameter_table.cpp::CLI parameter tables use the dictionary format for each numeric category
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I13 I14 both projections and pointer transformations
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions
 0.001	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I9 published home orientation fits the whole drawing
 UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
-UNMEASURED:failed-on-pre-palette-swap-core	tests/unit/cpp/test_e04_t9_presentation.cpp::E04-T9 I17 identity modes and I23 authoritative style colors
+0.000	tests/unit/cpp/test_e04_t9_presentation.cpp::E04-T9 I17 identity modes and I23 authoritative style colors
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
@@ -15180,7 +15490,8 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Rep
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
 0.010	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
-0.003	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
+0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure palette entry and wraparound retains its Bragg colour
+0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
 0.000	tests/unit/cpp/test_scan_visible_range.cpp::A resolved scan range retains its measured samples without a full-range envelope
 0.001	tests/unit/cpp/test_scan_visible_range.cpp::Visible scan columns retain every in-range minimum and maximum
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
@@ -16790,7 +17101,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.091	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
@@ -16841,6 +17152,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
+# module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py

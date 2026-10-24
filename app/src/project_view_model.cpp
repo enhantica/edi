@@ -24,6 +24,7 @@
 #include "background.hpp"
 #include "engine_setup.hpp"
 #include "edi/background_estimate.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
@@ -603,7 +604,11 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::load_structure_edi_file(file.toLocalFile().toStdString())),
+        // A CIF file is read through crysta's CIF names, a `.edi` block as it is.
+        const std::string path = file.toLocalFile().toStdString();
+        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
+        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
+                                                            : edi::load_structure_edi_file(path)),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -1164,7 +1169,8 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     const auto& results = scan_session_->index().rows;
     if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
         dataset.reliability = QStringLiteral("χ² ") +
-                              QString::number(results[static_cast<std::size_t>(index)].reduced_chi_square, 'f', 2);
+                              QString::fromStdString(edi::display_text(
+                                  "fit_result.reduced_chi_square", results[static_cast<std::size_t>(index)].reduced_chi_square));
     }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
     if (dataset.outcome.isEmpty() && dataset.is_template && scanTemplateOrModel().fit_result.held()) {

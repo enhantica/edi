@@ -42,13 +42,13 @@ Column {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "linked_structure.structure_id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("scale")
+                uid: "linked_structure.scale"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter

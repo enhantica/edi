@@ -93,9 +93,6 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
-// What a profile selector shows for a token: the constant-wavelength profiles' short names
-//, the token itself for any other.
-std::string peak_profile_label(const std::string& token);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
 // cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
 // vocabulary table (ADR-0017).
@@ -110,8 +107,6 @@ std::vector<std::string> supported_fitting_modes();
 // modes and `single`, which fits the shown dataset and makes it the template; `joint` for several experiments;
 // else `single`.
 std::vector<std::string> applicable_fitting_modes(const Project& project);
-// What a fitting-mode selector shows for a token (the owner, 2026-10-11); `.edi` keeps the token.
-std::string fitting_mode_label(const std::string& token);
 // The registered descent flows (model.hpp descent_ids, crysta's registration order).
 std::vector<std::string> supported_descents();
 

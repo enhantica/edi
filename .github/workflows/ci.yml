@@ -257,6 +257,7 @@ jobs:
           pixi run --skip-deps python-surface-superset
           pixi run --skip-deps python-surface-check
           pixi run --skip-deps cli-vocabulary-check
+          pixi run --skip-deps display-sources-check
       # The declared group runs as parallel jobs (owner, 2026-10-08): the C++ unit tests, unit and
       # integration here, and the system tier in the three `system` jobs below, which pull requests skip.
       - name: Tests (declared group, C++ unit, unit and integration)

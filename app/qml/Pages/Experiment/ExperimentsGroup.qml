@@ -187,7 +187,7 @@ EaElements.GroupBox {
                             height: parent.height
                             elide: Text.ElideNone
                             color: EaStyle.Colors.themeAccent
-                            text: qsTr("template")
+                            text: Session.label("sequential_fit.template_file")
                         }
                     }
                     // The file name as left-aligned text that loads another file in its place: the accent blue and a

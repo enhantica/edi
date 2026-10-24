@@ -2,6 +2,7 @@
 #include "edi/report.hpp"
 
 #include "crysta/fit_report.hpp"
+#include "edi/display.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -21,6 +22,7 @@ namespace {
 // (`experiments[wish_1_10].background[10].intensity`) rather than by short engine labels; a
 // narrower column would ragged the numeric columns on almost every row.
 constexpr int kLabelWidth = 48;
+constexpr int kNameWidth = 16;
 
 // Hand-aligned to the data-row widths below (7/11/10/12). The header and the change column carry
 // UTF-8; every DATA cell is ASCII, so byte width equals display width there and the numeric columns
@@ -39,9 +41,37 @@ std::string fixed(double value, int precision, int width = 0) {
     return out.str();
 }
 
+// The dictionary item of an identity path, `<datablock>.<category>[.<entry>].<name>`: its category and
+// name; empty when the dictionary has none.
+std::string item_of(const std::string& path) {
+    const std::size_t first = path.find('.');
+    const std::size_t second = first == std::string::npos ? first : path.find('.', first + 1);
+    const std::size_t last = path.rfind('.');
+    if (second == std::string::npos || last <= first) {
+        return {};
+    }
+    const std::string uid = path.substr(first + 1, second - first - 1) + path.substr(last);
+    return has_item(uid) ? uid : std::string();
+}
+
+// A number of a fitted parameter: by its dictionary format, or to five decimals for a path the dictionary has
+// no item for.
+std::string number_of(const std::string& uid, double value, int width) {
+    std::string text = uid.empty() ? fixed(value, 5) : display_text(uid, value);
+    if (static_cast<int>(text.size()) < width) {
+        text.insert(0, static_cast<std::size_t>(width) - text.size(), ' ');
+    }
+    return text;
+}
+
+// Pads to `width` characters, counted as UTF-8 code points, so a label with Å or ² keeps the columns aligned.
 void append_padded(std::ostringstream& out, const std::string& text, int width) {
     out << text;
-    for (int pad = static_cast<int>(text.size()); pad < width; ++pad) {
+    int shown = 0;
+    for (const char byte : text) {
+        shown += (static_cast<unsigned char>(byte) & 0xC0U) != 0x80U ? 1 : 0;
+    }
+    for (int pad = shown; pad < width; ++pad) {
         out << ' ';
     }
 }
@@ -272,7 +302,7 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
     append_scan_part(line, std::to_string(fail_count) + " fail");
     if (!total_files.has_value() || completed < *total_files) {
         append_scan_part(line, scan_display_name(file_name));
-        append_scan_part(line, "χ² " + fixed(reduced_chi_square, 2));
+        append_scan_part(line, "χ² " + display_text("fit_result.reduced_chi_square", reduced_chi_square));
     }
     return line;
 }
@@ -289,7 +319,8 @@ std::string scan_summary(int total_files, int ok_count, int fail_count, double c
     // follows. (the caller's fold now spans the resume rows too, so a resumed scan
     // reaches this blank only when nothing anywhere recorded one.)
     if (std::isfinite(chi2_min) && std::isfinite(chi2_max)) {
-        append_scan_part(line, "χ² " + fixed(chi2_min, 2) + "-" + fixed(chi2_max, 2));
+        append_scan_part(line, "χ² " + display_text("fit_result.reduced_chi_square", chi2_min) + "-" +
+                                   display_text("fit_result.reduced_chi_square", chi2_max));
     }
     // The duration is the ONE quantity history cannot supply, so it is rendered on its own
     // basis or not at all: nothing fitted this call means no duration to report (a completed
@@ -373,6 +404,7 @@ std::string parameter_table(const FitResultBase& outcome) {
         out << '\n';
     }
     out << "\n  refined parameters (" << outcome.values.size() << " free):\n  ";
+    append_padded(out, "name", kNameWidth);
     append_padded(out, "parameter", kLabelWidth);
     out << std::setw(13) << "start" << std::setw(13) << "value" << std::setw(10) << "s.u."
         << "   change\n";
@@ -381,10 +413,17 @@ std::string parameter_table(const FitResultBase& outcome) {
         const auto start_it = outcome.start.find(path);
         const double start = start_it == outcome.start.end() ? value : start_it->second;
         const auto esd_it = outcome.uncertainty.find(path);
+        // The dictionary's label and units name the row; the identity path stays its identity.
+        const std::string uid = item_of(path);
+        std::string name = uid.empty() ? std::string() : label(uid);
+        if (const std::string units = uid.empty() ? std::string() : units_label(uid); !units.empty()) {
+            name += ", " + units;
+        }
         out << "  ";
+        append_padded(out, name, kNameWidth);
         append_padded(out, path, kLabelWidth);
-        out << fixed(start, 5, 13) << fixed(value, 5, 13)
-            << fixed(esd_it == outcome.uncertainty.end() ? 0.0 : esd_it->second, 5, 10) << "   "
+        out << number_of(uid, start, 13) << number_of(uid, value, 13)
+            << number_of(uid, esd_it == outcome.uncertainty.end() ? 0.0 : esd_it->second, 10) << "   "
             << format_change(value, start) << '\n';
     }
     return out.str();

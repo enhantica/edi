@@ -57,6 +57,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 // class implements (powder + bragg); a project directory keeps the loader's presence-tracked
 // axes. Nothing is changed by a load: adding is the separate step below.
 Structure load_structure_edi_file(const std::string& path);
+// A structure from a CIF file (or a `.edi` one), read through crysta's dictionary CIF names in
+// either notation; the values are the published ones, fixed. Throws IoError naming the file.
+Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name
 // unique against the project and within the batch. The first refusal names its file.
@@ -149,6 +152,10 @@ bool adopt_saved_values(Project& project, const std::string& directory);
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
+
+// The project's report as a CIF, written by crysta from the project a save would write: every item under its default
+// CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.
+std::string cif_report_text(const Project& project);
 
 // Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.

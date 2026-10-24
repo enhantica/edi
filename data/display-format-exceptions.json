@@ -1,0 +1,301 @@
+{
+ "exceptions": [
+  {
+   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
+   "match": "EaLogic.Utils.toErrSinglePrecision(parameter.value, parameter.error)",
+   "reason": "the base library rounds only a number it is given; every edi field passes the value as text from the bridge"
+  },
+  {
+   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
+   "match": "EaLogic.Utils.toSinglePrecision(parameter.error)",
+   "reason": "the base library rounds only a number it is given; every edi field passes the s.u. as text from the bridge"
+  },
+  {
+   "file": "app/qml/Components/CorrelationChart.qml",
+   "match": "text: modelData.toFixed(1)",
+   "reason": "the colour bar tick labels (1, 0.5, 0, -0.5, -1), not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "return exponentOf(value.toExponential(3));",
+   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "return value.toExponential(3).replace(\"e+\", \"e\");",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const place = exponentOf(error.toExponential(0));",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "text = value.toFixed(Math.min(-place, 100));",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "text = String(Number(value.toPrecision(most)));",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "return mantissa.toFixed(3) + \"e\" + power;",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const plain = String(Number(value.toPrecision(1)));",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const shift = exponentOf(value.toExponential()) - power;",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "thousandths = String(Math.round(Number(value.toExponential().split(\"e\")[0])",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const text = value.toExponential(Math.min(shift + 3, 14));",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "Math.abs(mantissa - Number(mantissa.toFixed(decimals)))",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "(tick / Math.pow(10, power)).toFixed(decimals)",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "exponent(value, 4).replace(\"e+\", \"e\") : String(Number(value.toPrecision(6)))",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const text = (value / Math.pow(10, format.power)).toFixed(format.decimals);",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "return format.power !== 0 ? \"0\" : (0).toFixed(format.decimals);",
+   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "number.power - exponentOf(error.toExponential(0)) + 1",
+   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const written = text ? text.su : String(Number(value.toPrecision(1)));",
+   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
+  },
+  {
+   "file": "app/qml/Globals/NumberText.qml",
+   "match": "const text = value.toExponential(Math.max(0, digits - 1));",
+   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
+  },
+  {
+   "file": "app/src/scan_view_model.cpp",
+   "match": "QString::number(values_[i], 'g', 6)",
+   "reason": "a scan row's value read from a dataset title, shown only when its text as the file writes it was not kept; not a value of an item"
+  },
+  {
+   "file": "app/tools/chart_bench.cpp",
+   "match": "std::printf(\"%s\\t%d\\t%d\\t%.2f\\t%.2f\\t%.2f\\t%s\\t%s\\n\"",
+   "reason": "a developer benchmark printing timings, not part of the app"
+  },
+  {
+   "file": "app/tools/ui_compare.cpp",
+   "match": "std::printf(\"%s %s: min tile %.4f, image %.4f\\n\"",
+   "reason": "a test tool printing image similarity scores, not part of the app"
+  },
+  {
+   "file": "core/src/duration_text.cpp",
+   "match": "\"%.0f\", seconds",
+   "reason": "a duration, which has no dictionary item"
+  },
+  {
+   "file": "core/src/duration_text.cpp",
+   "match": "\"%.2g\", seconds",
+   "reason": "a duration, which has no dictionary item"
+  },
+  {
+   "file": "core/src/fit_job.cpp",
+   "match": "settings << std::setprecision(17)",
+   "reason": "a fingerprint of the fit settings that tells two fits apart; never shown"
+  },
+  {
+   "file": "core/src/presentation.cpp",
+   "match": "stream << std::setprecision(6) << value;",
+   "reason": "the pattern chart hover and point labels, in the chart readout style, not a value of an item"
+  },
+  {
+   "file": "core/src/presentation.cpp",
+   "match": "stream << std::fixed << std::setprecision(2) << std::fabs(value);",
+   "reason": "the pattern chart cursor readout with thousands separators (as diffraction-lib shows it), not a value of an item"
+  },
+  {
+   "file": "core/src/report.cpp",
+   "match": "out << std::fixed << std::setprecision(precision) << value;",
+   "reason": "the CLI fit progress table (iteration, time, Rwp, change) in fixed-width columns, and a parameter path the dictionary has no item for"
+  },
+  {
+   "file": "core/src/selectors.cpp",
+   "match": "text << std::fixed << std::setprecision(places) << position;",
+   "reason": "a background point id spelled from its position and written to the file, not a display"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.profile_difference_percent:.2f",
+   "reason": "the verification report profile difference against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.max_deviation_percent:.2f",
+   "reason": "the verification report maximum deviation against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "tolerances.min_intensity_ratio:.10g",
+   "reason": "the verification report intensity ratio bounds against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.intensity_ratio:.6f",
+   "reason": "the verification report intensity ratio against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "tolerances.min_correlation:.12g",
+   "reason": "the verification report correlation bound against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.correlation:.9f",
+   "reason": "the verification report correlation against a reference engine, not a value of an item"
+  }
+ ],
+ "names": [
+  {
+   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Auto",
+   "reason": "an app preference (engine threads), outside the dictionary (I1)"
+  },
+  {
+   "file": "app/qml/Components/ParameterCell.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Components/PatternChart.qml",
+   "literal": "points",
+   "reason": "a way of drawing the measured data, a chart preference; not the background points"
+  },
+  {
+   "file": "app/qml/Components/ScanViewChart.qml",
+   "literal": "file",
+   "reason": "the scan view's rows in the order of their files, its own word; not a selector token"
+  },
+  {
+   "file": "app/qml/Components/StructureToolbar.qml",
+   "literal": "Bonds",
+   "reason": "a view toggle tooltip, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Components/StructureToolbar.qml",
+   "literal": "Cell",
+   "reason": "a view toggle tooltip, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Main.qml",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/qml/Main.qml",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/AnalysisPage.qml",
+   "literal": "Correlations",
+   "reason": "a main-area tab name beside Pattern and Evolution (edi ADR-0017), not the correlation loop"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "literal": "name",
+   "reason": "the parameter table column of parameter names, not an item of the file"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "literal": "s.u.",
+   "reason": "the parameter table column of parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "literal": "min",
+   "reason": "the parameter table column of fit lower bounds, not the calculation range"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "literal": "max",
+   "reason": "the parameter table column of fit upper bounds, not the calculation range"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+   "literal": "points",
+   "reason": "the measured range point count, a summary with no item of its own"
+  },
+  {
+   "file": "app/qml/Pages/Project/ProjectPage.qml",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportPage.qml",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportPreview.qml",
+   "literal": "Correlations",
+   "reason": "a report section heading (edi ADR-0036), not the correlation loop"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Auto",
+   "reason": "an app preference (engine threads) in the About details, outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/example_list_model.cpp",
+   "literal": "Fitting mode",
+   "reason": "an example filter facet title; the facets move to experiment items with the metadata move"
+  },
+  {
+   "file": "core/src/adapter.cpp",
+   "literal": "TOF",
+   "reason": "the beam mode abbreviation in a diagnostic, not a label"
+  }
+ ]
+}

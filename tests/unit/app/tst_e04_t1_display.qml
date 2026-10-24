@@ -5,6 +5,8 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "DisplayedText.js" as Displayed
+import "FileSpelling.js" as FileSpelling
+import "../../fixtures/dictionary_display/display_expectations.js" as Dictionary
 import "../../fixtures/e04_t1/display_oracle.js" as Oracle
 
 TestCase {
@@ -12,6 +14,7 @@ TestCase {
     name: "E04T1DisplayedValues"
     when: windowShown
     property var appWindow
+    property bool firstDisplayCase: true
     Component { id: application; Main {} }
     Component { id: textWitness; Text { width: 160; height: 30; text: "powder" } }
     Component { id: fieldWitness; TextField { width: 160; height: 30; readOnly: true; text: "62" } }
@@ -69,8 +72,9 @@ TestCase {
     }
     function test_loaded_display_data() { return Oracle.frozen.cases; }
     function test_loaded_display(data) {
-        failOnWarning(data.tag === Oracle.frozen.cases[0].tag
+        failOnWarning(firstDisplayCase
             ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
+        firstDisplayCase = false;
         const url = Probe.repoUrl(data.path);
         // Reuse only the same unedited, read-only input; a different fixture is
         // always reopened. Selection and page setup below run for every row.
@@ -84,7 +88,11 @@ TestCase {
             Session.project[data.page === "structure" ? "currentStructureIndex" : "currentExperimentIndex"] = index;
         }
         click("appBar.tab." + data.page);
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
+                  2000, "The workflow page reaches the viewport before its sidebar is selected");
         click("sideBar.tab." + data.tier);
+        tryVerify(() => !Ui.moving(Ui.page(appWindow)), 2000,
+                  "The sidebar transition settles before the frozen field is inspected");
         let root = Ui.page(appWindow);
         if (data.group !== "engines") {
             Ui.expandGroup(test, Probe, appWindow, "group." + data.group);
@@ -114,13 +122,21 @@ TestCase {
             const items = kind === "label" ? renderers(control)
                         : isCombo ? renderers(control.contentItem) : [control];
             verify(items.length > 0, "gate 3: each field has an actual native glyph renderer");
-            //  note 14: gui-components Utils.toDefaultPrecision uses
-            // three significant digits. Only display expectations are rounded;
-            // frozen input doubles and  measuredRange model checks stay whole.
-            // Point counts remain exact integers, never precision-rounded.
-            const displayedExpected = kind === "number" && name !== "range.points"
-                ? Number(expected.toPrecision(3)) : expected;
-            const errors = items.map(item => Displayed.problem(item, displayedExpected, kind === "number"));
+            // Before: raw selector tokens and three significant digits.
+            // Input values stay frozen; selector names follow the dictionary.
+            const key = data.tag + "::" + name;
+            const rangeField = name.startsWith("range.");
+            const dictionaryExpected = Object.prototype.hasOwnProperty.call(Dictionary.expected, key);
+            const displayedExpected = rangeField
+                ? FileSpelling.range(Session.project.currentExperiment.text.text, name.split(".")[1],
+                                     dictionaryExpected ? Dictionary.expected[key] : expected)
+                : dictionaryExpected ? Dictionary.expected[key] : expected;
+            if (rangeField && typeof expected === "number" && name !== "range.step")
+                fuzzyCompare(Session.project.currentExperiment.measuredRange[name.split(".")[1]], expected, 1e-9,
+                             "Field formatting preserves the independently frozen measured value");
+            // Range fields compare exact file/Text spelling; derived step intervals use decimal input differences.
+            const errors = items.map(item => Displayed.problem(item, displayedExpected,
+                                                               kind === "number" && !dictionaryExpected && !rangeField));
             if (!errors.includes("")) failures.push(name + ": " + errors.join("; "));
         });
         // Collect every field in a group so a blank first axis cannot hide the
@@ -128,6 +144,14 @@ TestCase {
         compare(failures.join("\n"), "", "gate 3: native rendered text equals independent .edi/ITA values");
     }
     function test_display_oracle_escape_controls() {
+        const file = "data_a\n_cell.length_a 1.28666035868(12)\nloop_\n_atom_site.id\n_atom_site.fract_x\nA 0.17\nB 0.23\n";
+        compare(FileSpelling.parameter(file, "cell.length_a"), "1.28666035868",
+                "The field oracle reads the exact value spelling and separates parenthesised uncertainty");
+        compare(FileSpelling.parameter(file, "atom_site.fract_x", 1), "0.23",
+                "The field oracle keeps distinct loop rows and quantities separate");
+        let refused = false;
+        try { FileSpelling.parameter(file, "cell.length_b"); } catch (error) { refused = true; }
+        verify(refused, "An absent file item cannot become a blank passing field expectation");
         const label = createTemporaryObject(textWitness, appWindow.contentItem);
         const field = createTemporaryObject(fieldWitness, appWindow.contentItem);
         const combo = createTemporaryObject(comboWitness, appWindow.contentItem);
