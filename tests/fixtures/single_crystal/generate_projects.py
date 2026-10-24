@@ -107,12 +107,12 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
             )
             text += f'_instrument.setup_wavelength {wavelength}\n'
         if 'extinction' in case:
-            text += '_extinction.type becker-coppens\n_extinction.model gauss\n'
-            text += '_extinction.radius 10\n_extinction.mosaicity 35000\n'
+            text += '_extinction.type becker-coppens-mixed\n_extinction.mosaic_distribution gaussian\n'
+            text += '_extinction.crystal_radius 0.01\n_extinction.domain_radius 10\n'
+            text += '_extinction.mosaic_spread 101810.87303300254\n'
         else:
             text += (
-                '_extinction.type becker-coppens\n_extinction.model gauss\n'
-                '_extinction.radius 0\n_extinction.mosaicity 0\n'
+                '_extinction.type none\n'
             )
         text += 'loop_\n_linked_structure.structure_id\n_linked_structure.scale\n'
         text += f'structure {scale}\nloop_\n'
@@ -156,7 +156,8 @@ def main():  # noqa: PLR0914 - independent decimal sample variables
                 'cell': [str(v) for v in cell],
                 'wavelength': wavelength,
                 'radius': radius,
-                'mosaicity': mosaicity,
+                'mosaic_spread': str(dec(mosaicity) * pi / 10800 * 10000),
+                'crystal_radius': str(r / 1000),
                 'f2': str(f2),
                 'primary': str(yp),
             }

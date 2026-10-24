@@ -84,7 +84,7 @@ def stage_project(case, record, destination):
     text = experiment.read_text()
     text = re.sub(r'(?m)^structure (\S+)$', r'structure \1()', text)
     if 'extinction' in case:
-        text = text.replace('_extinction.radius 10\n', '_extinction.radius 10()\n')
+        text = text.replace('_extinction.domain_radius 10\n', '_extinction.domain_radius 10()\n')
     header, rows = text.split('_refln.intensity_meas_su\n')
     if 'tof' in case:
         wavelength, rows = rows.split('\n', 1)

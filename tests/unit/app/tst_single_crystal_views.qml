@@ -18,6 +18,21 @@ TestCase {
     property var originalTheme
     property var originalQuantity
     property var originalPointer
+    property var liveChart: null
+    property int liveFrames: 0
+    property var initialFitWarnings: []
+    property int transientWarnings: 0
+    Connections {
+        target: test.liveChart
+        ignoreUnknownSignals: true
+        function onRevisionChanged() {
+            if (Session.hasProject && Session.project.fit.running) {
+                test.liveFrames += 1;
+                const notices = Probe.rows(Session.loadWarnings).map(row => row.message);
+                test.transientWarnings += notices.filter(text => /adp_not_positive_definite|constraint_range|outside.*range/i.test(text) && !test.initialFitWarnings.includes(text)).length;
+            }
+        }
+    }
     property var originalHover
     SignalSpy {
         id: recalculated
@@ -30,26 +45,28 @@ TestCase {
     function init() {
         originalTheme = Style.Colors.theme;
         originalQuantity = Preferences.singleCrystalQuantity;
-        originalHover = Preferences.chartHoverShown;
-        originalPointer = Preferences.chartPointerMode;
+        originalHover = Preferences.patternHoverShown;
+        originalPointer = Preferences.patternPointerMode;
         if (originalPointer !== undefined)
-            Preferences.chartPointerMode = "zoom";
+            Preferences.patternPointerMode = "zoom";
         Preferences.singleCrystalQuantity = "f_squared";
-        Preferences.chartHoverShown = true;
+        Preferences.patternHoverShown = true;
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Single-crystal views must load the production Main window");
+        appWindow.requestActivate();
         appWindow.width = 1280;
         appWindow.height = 720;
         verify(waitForRendering(appWindow.contentItem), "The production window must render before input");
     }
     function cleanup() {
+        liveChart = null;
         recalculated.target = null;
         Session.closeProject();
         Probe.releaseScratchProjects();
         Preferences.singleCrystalQuantity = originalQuantity;
-        Preferences.chartHoverShown = originalHover;
+        Preferences.patternHoverShown = originalHover;
         if (originalPointer !== undefined)
-            Preferences.chartPointerMode = originalPointer;
+            Preferences.patternPointerMode = originalPointer;
         Style.Colors.theme = originalTheme;
         if (appWindow)
             appWindow.destroy();
@@ -251,9 +268,9 @@ TestCase {
     }
     function initTestCase() {
         compare(Preferences.singleCrystalQuantity, "f_squared", "Fresh chart preferences must default to F squared before a test writes them");
-        if (Preferences.chartPointerMode !== undefined)
-            compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
-        compare(Preferences.chartHoverShown, true, "Fresh chart preferences must default to showing reflection tooltips");
+        if (Preferences.patternPointerMode !== undefined)
+            compare(Preferences.patternPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
+        compare(Preferences.patternHoverShown, true, "Fresh chart preferences must default to showing reflection tooltips");
     }
     function expand(name) {
         const group = Review.findGroup(Ui.page(appWindow), name);
@@ -331,9 +348,9 @@ TestCase {
         const points = SettingsProof.points(layer);
         compare(points.length, rows.length, "Switching to F must retain every positive measured reflection");
         for (let i = 0; i < rows.length; ++i) {
-            const f = Math.sqrt(rows[i][3]), sigma = rows[i][4] / (2 * f);
+            const f = Math.sqrt(Math.max(0, rows[i][3])), sigma = rows[i][4] / (f + Math.sqrt(f * f + rows[i][4]));
             verify(Math.abs(points[i].y - f) < 1e-10, "The plotted measured F must equal the independent square root of the frozen measured F squared");
-            verify(Math.abs(model.measuredFSu[i] - sigma) < 1e-10, "The F uncertainty must follow independent first-order propagation sigma-F equals sigma-F-squared over twice F");
+            verify(Math.abs(model.measuredFSu[i] - sigma) < 1e-10, "The F uncertainty must follow Xtal ADDREF conversion at the measured intensity and uncertainty");
             verify(Math.abs(points[i].x * points[i].x - model.calculated[i]) < 1e-7, "The plotted calculated F squared must recover the calculated F squared reflection value");
         }
         verify(/F calc/.test(Ui.text(chart)) && /F meas/.test(Ui.text(chart)), "Both axis titles must change to F with the selector");
@@ -356,7 +373,7 @@ TestCase {
         const index = rows.findIndex(row => row[0] === 17 && row[1] === 3 && row[2] === 3);
         verify(index >= 0, "The independent Tb input must retain the wide uncertainty reflection");
         const point = SettingsProof.points(layer)[index];
-        const sigma = amplitude ? rows[index][4] / (2 * Math.sqrt(rows[index][3])) : rows[index][4];
+        const sigma = amplitude ? rows[index][4] / (Math.sqrt(Math.max(0, rows[index][3])) + Math.sqrt(Math.max(0, rows[index][3]) + rows[index][4])) : rows[index][4];
         const x = (point.x - layer.xMin) / (layer.xMax - layer.xMin) * layer.width;
         const at = value => (1 - (value - layer.yMin) / (layer.yMax - layer.yMin)) * layer.height;
         const colour = layer.color;
@@ -411,7 +428,7 @@ TestCase {
             verify(text.includes(amplitude ? "F meas:" : "F² meas:"), "The tooltip must name the currently selected quantity");
         }
         mouseClick(toggle, toggle.width / 2, toggle.height / 2);
-        compare(Preferences.chartHoverShown, false, "The single-crystal tooltip button must update the shared remembered chart setting");
+        compare(Preferences.patternHoverShown, false, "The single-crystal tooltip button must update the shared remembered chart setting");
         mouseMove(pointer, 1, 1);
         tryVerify(() => Review.find(chart, "singleCrystal.hover") === null, 2000, "Disabling tooltips must suppress reflection hover content");
         verify(Session.openProject(Probe.referenceUrl("powder")), "The shared-setting witness must open its powder control");
@@ -419,9 +436,9 @@ TestCase {
         const patternToggle = Review.find(Ui.page(appWindow), "chart.toolbar.hover");
         verify(patternToggle !== null && !patternToggle.checked, "The powder chart's tooltip button must observe the same saved disabled setting");
         mouseClick(patternToggle, patternToggle.width / 2, patternToggle.height / 2);
-        if (Preferences.chartPointerMode !== undefined)
-            compare(Preferences.chartPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
-        compare(Preferences.chartHoverShown, true, "The powder tooltip button must update the same remembered setting");
+        if (Preferences.patternPointerMode !== undefined)
+            compare(Preferences.patternPointerMode, "zoom", "Fresh chart preferences must initially enable box zoom");
+        compare(Preferences.patternHoverShown, true, "The powder tooltip button must update the same remembered setting");
         const restored = openSingle(data);
         compare(toolbarControl(restored, "hover").checked, true, "Reopening single crystal must retain the tooltip choice made on the pattern chart");
     }
@@ -451,15 +468,43 @@ TestCase {
         verify(model.calculated.every((value, i) => Math.abs(value - before[i] * 1.37) <= 1e-8 + Math.abs(value) * 1e-10), "Automatic recalculation after a scale edit must obey the independent linear-scale invariant");
         const plotted = SettingsProof.points(Review.find(chart, "singleCrystal.points"));
         verify(plotted.every((point, i) => Math.abs(point.x - model.calculated[i]) < 1e-7), "The real chart must display the new calculated values after an edit");
-        Ui.click(test, Probe, appWindow, "sideBar.tab.extras");
-        if (!Ui.groupNames(Ui.page(appWindow)).includes("extinction"))
-            Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        tryVerify(() => Ui.groupNames(Ui.page(appWindow)).includes("extinction"), 2000, "The Basic sidebar must finish loading the extinction category");
         const group = expand("group.extinction");
         verify(group !== null, "The expanded extinction group must remain in the live sidebar");
-        const radius = Review.find(group, "extinction.radius"), mosaic = Review.find(group, "extinction.mosaicity");
-        verify(radius !== null && mosaic !== null, "The extinction group must display its two actual parameter fields");
-        verify(/crystal radius/i.test(radius.label) && /mosaicity/i.test(mosaic.label), "Extinction inputs must use descriptive crystal radius and mosaicity labels instead of isolated symbols");
-        verify(/µm|μm/.test(radius.parameter.units) && mosaic.parameter.units === "", "Extinction inputs retain radius in micrometres and drop the incorrect angular unit from inverse-width mosaicity");
+        const radius = Review.find(group, "extinction.domain_radius"), mosaic = Review.find(group, "extinction.mosaic_spread");
+        const crystal = Review.find(group, "extinction.crystal_radius");
+        verify(radius !== null && mosaic !== null && crystal !== null, "Mixed extinction must display separate path, domain and spread fields");
+        verify(/domain radius/i.test(radius.label) && /mosaic spread/i.test(mosaic.label) && /crystal radius/i.test(crystal.label), "Extinction fields must use the owner-selected descriptive names");
+        verify(/µm|μm/.test(radius.parameter.units) && /rad/.test(mosaic.parameter.units) && crystal.parameter.units === "mm", "Extinction units must distinguish domain micrometres, plain inverse radians and crystal millimetres");
+        verify(!crystal.parameter.fittable && !crystal.parameter.free && !Probe.rows(Session.project.parameters).some(row => row.category === "extinction" && row.name === "crystal_radius"), "Crystal radius must stay a descriptor outside the Analysis parameter list");
+        const experiment = Session.project.currentExperiment;
+        const choices = [["none", "None", []], ["becker-coppens-type-1", "Isotropic Becker-Coppens type I", ["crystal_radius", "mosaic_spread"]], ["becker-coppens-type-2", "Isotropic Becker-Coppens type II", ["crystal_radius", "domain_radius"]], ["becker-coppens-mixed", "Isotropic Becker-Coppens mixed", ["crystal_radius", "domain_radius", "mosaic_spread"]], ["larson-isotropic", "Isotropic Larson", ["coefficient"]], ["larson-anisotropic", "Anisotropic Larson", ["coefficient_11", "coefficient_22", "coefficient_33", "coefficient_12", "coefficient_13", "coefficient_23"]]];
+        const options = Probe.rows(experiment.extinctionTypeOptions);
+        compare(options.length, choices.length, "The extinction selector must offer exactly the owner-selected six types");
+        for (const choice of choices) {
+            const option = options.find(row => row.token === choice[0]);
+            verify(option !== undefined && option.label === choice[1], "Each extinction selector entry must have its descriptive scientific label");
+            tryVerify(() => !Session.project.calculating, 10000, "Changing extinction type must finish its normal calculation before the next choice");
+            const selector = Review.find(group, "extinction.type");
+            tryVerify(() => selector !== null && selector.enabled, 3000, "The extinction selector must be enabled between completed calculations");
+            Ui.scrollIntoView(selector);
+            verify(waitForPolish(appWindow.contentItem), "The extinction selector must finish layout before a real click");
+            tryVerify(() => Ui.exposed(selector), 3000, "The extinction selector must enter the actual viewport before input");
+            appWindow.requestActivate();
+            selector.forceActiveFocus();
+            keyClick(Qt.Key_Space);
+            tryCompare(selector.popup, "opened", true, 2000, "The focused extinction selector must open its real popup from a keyboard action: " + choice[0]);
+            const index = selector.options.indexOf(choice[0]);
+            const list = selector.popup.contentItem;
+            list.positionViewAtIndex(index, ListView.Contain);
+            tryVerify(() => list.itemAtIndex(index) !== null, 2000, "The requested extinction type must have a rendered popup row");
+            const item = list.itemAtIndex(index);
+            mouseClick(item, item.width / 2, item.height / 2);
+            tryCompare(experiment, "extinctionType", choice[0], 2000, "A real selector choice must update the selected extinction type");
+            const names = Probe.rows(experiment.extinction).map(row => row.parameter.name).sort();
+            compare(names.join(","), choice[2].slice().sort().join(","), "The app must expose only the chosen extinction type's fields");
+        }
     }
     function test_fit_lowers_objective_and_reports_single_crystal_factors_data() {
         return [
@@ -571,7 +616,7 @@ TestCase {
         const chart = openSingle(data);
         const pan = toolbarControl(chart, "pan"), zoom = toolbarControl(chart, "zoom"), reset = toolbarControl(chart, "reset");
         verify(pan !== null && zoom !== null && reset !== null && Ui.exposed(pan) && Ui.exposed(zoom), "The single-crystal chart must expose working move, box zoom and reset buttons as the pattern chart does");
-        compare(Preferences.chartPointerMode, "zoom", "The single-crystal chart must expose the shared remembered pointer setting");
+        compare(Preferences.patternPointerMode, "zoom", "The single-crystal chart must expose the shared remembered pointer setting");
         verify(zoom.checked && !pan.checked, "The shared initial chart pointer mode must enable box zoom and exclude move");
         const layer = Review.find(chart, "singleCrystal.points");
         const pointer = Review.find(chart, "singleCrystal.pointer") || Review.descendants(chart).find(item => typeof item.pressX === "number");
@@ -606,7 +651,7 @@ TestCase {
         tryVerify(() => [layer.xMin, layer.xMax, layer.yMin, layer.yMax].every((value, i) => Math.abs(value - expected[i]) < 1e-6 * Math.max(1, Math.abs(expected[i]))), 2000, "Box zoom must use both independently mapped coordinate intervals as the pattern chart does");
         mouseClick(pan, pan.width / 2, pan.height / 2);
         tryVerify(() => pan.checked && !zoom.checked, 2000, "Selecting move must enable pan and turn box zoom off");
-        compare(Preferences.chartPointerMode, "pan", "The single-crystal move button must write the shared remembered chart pointer mode");
+        compare(Preferences.patternPointerMode, "pan", "The single-crystal move button must write the shared remembered chart pointer mode");
         const span = layer.xMax - layer.xMin;
         const left = layer.xMin, bottom = layer.yMin, top = layer.yMax;
         const from = Math.round(pointer.width * .45), to = Math.round(pointer.width * .58);
@@ -628,7 +673,7 @@ TestCase {
         const patternPan = Review.find(pattern, "chart.toolbar.pan"), patternZoom = Review.find(pattern, "chart.toolbar.zoom");
         verify(patternPan !== null && patternZoom !== null && patternPan.checked && !patternZoom.checked, "The pattern chart must restore the move mode selected on the single-crystal chart");
         mouseClick(patternZoom, patternZoom.width / 2, patternZoom.height / 2);
-        compare(Preferences.chartPointerMode, "zoom", "The pattern chart's zoom button must update the same saved pointer setting");
+        compare(Preferences.patternPointerMode, "zoom", "The pattern chart's zoom button must update the same saved pointer setting");
         const reopened = openSingle(data);
         verify(toolbarControl(reopened, "zoom").checked && !toolbarControl(reopened, "pan").checked, "Reopening single crystal must restore the box-zoom mode selected on the pattern chart");
     }
@@ -675,12 +720,14 @@ TestCase {
         Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
         const project = openCompoundExample(data.compound);
         const experiment = project.currentExperiment;
-        const oracle = JSON.parse(Probe.readReferenceFile("example-fits.json")).cases[data.compound === "pr2nio4" ? "pr2nio4_biso" : data.compound];
+        const oracle = JSON.parse(Probe.readReferenceFile("example-fits.json")).cases[data.compound === "tb2ti2o7" ? "tb2ti2o7_becker_coppens" : "pr2nio4_none"];
         verify(data.compound !== "pr2nio4" || ["5c2", "llb_5c2"].includes(experiment.name), "The Pr2NiO4 experiment datablock must be named for its 5C2 instrument");
         const tensors = Probe.rows(project.currentStructure.atomSiteAdps);
-        verify(tensors.length > 0 && tensors.every(row => row.adpType === (data.compound === "pr2nio4" ? "Biso" : "Uani")), "The compound examples must use the owner-selected Pr Biso and Tb Uani representations");
         if (data.compound === "pr2nio4")
-            verify(Probe.rows(project.currentStructure.atomSites).every(row => row.adpIso.value === 0.5 && row.adpIso.free), "The isotropic Pr fitting exercise starts every Biso at the independently authored small free value");
+            verify(!Probe.rows(Session.loadWarnings).some(row => /adp_not_positive_definite/.test(row.message)), "Zero displacement tensors must not warn when the example loads");
+        verify(tensors.length > 0 && tensors.every(row => row.adpType === (data.compound === "pr2nio4" ? (row.label === "Od" ? "Biso" : "Bani") : "Uani")), "The compound examples must use the owner-selected Pr Bani with Od Biso and Tb Uani representations");
+        if (data.compound === "pr2nio4")
+            verify(Probe.rows(project.currentStructure.atomSites).every(row => row.adpIso.value === 0), "The Pr fitting exercise starts its displacement tensors and Od Biso at zero");
         for (const tensor of tensors.filter(row => row.adpType !== "Biso")) {
             const cell = project.currentStructure.cell;
             verify([cell.angleAlpha.value, cell.angleBeta.value, cell.angleGamma.value].every(value => Math.abs(value - 90) < 1e-10), "The orthogonal FullProf example cells must retain the metric used by the independent beta-to-U conversion");
@@ -690,7 +737,7 @@ TestCase {
                 const a = Number(component[0]) - 1, b = Number(component[1]) - 1;
                 return tensor.adpType === "Uani" ? value : tensor.adpType === "Bani" ? value / (8 * Math.PI * Math.PI) : value * lengths[a] * lengths[b] / (2 * Math.PI * Math.PI);
             });
-            verify(u.slice(0, 3).every(value => Number.isFinite(value) && value > 0), "Initial anisotropic tensors must represent positive isotropic-equivalent displacements");
+            verify(u.slice(0, 3).every(value => Number.isFinite(value) && (data.compound === "pr2nio4" ? value === 0 : value > 0)), "Initial tensors must follow the zero Pr and positive Tb starts");
             const fittedDiagonal = oracle.parameters.filter(item => item.atom === tensor.label && item.kind === "beta" && ["11", "22", "33"].includes(item.component));
             verify(fittedDiagonal.every(item => {
                 const axis = Number(item.component[0]) - 1;
@@ -699,14 +746,19 @@ TestCase {
             verify(Math.max(...u.slice(0, 3)) - Math.min(...u.slice(0, 3)) < 1e-10 && u.slice(3).every(value => Math.abs(value) < 1e-12), "Initial anisotropic tensors must be isotropic-equivalent in Cartesian U, including non-cubic cells");
         }
         const extinction = Probe.rows(experiment.extinction).map(row => row.parameter);
-        verify(extinction.length === 2 && extinction.some(item => item.value === 0) && extinction.some(item => item.free), "The fitting exercise must start one extinction parameter at zero and leave an extinction parameter free");
+        verify((data.compound === "pr2nio4" ? experiment.extinctionType === "none" && extinction.length === 0 : extinction.length === 3 && extinction.some(item => item.value === 0) && extinction.filter(item => item.free).length === 2), "The fitting exercise must start Pr extinction off and Tb domain radius and mosaic spread free with a fixed crystal size");
         const parameters = Probe.rows(project.parameters);
-        verify(parameters.some(row => row.category === (data.compound === "pr2nio4" ? "atom_site" : "atom_site_aniso") && row.free && (data.compound !== "pr2nio4" || row.name === "adp_iso")) && parameters.some(row => row.category === "atom_site" && row.name.startsWith("fract_") && row.free), "The compound exercise must leave independent displacement and coordinate parameters free");
-        verify(oracle.parameters.some(item => item.kind === "coordinate") && oracle.parameters.some(item => item.kind === (data.compound === "pr2nio4" ? "Biso" : "beta")), "The independent FullProf oracle must include fitted coordinates and the matching ADP representation with uncertainties");
+        verify(parameters.some(row => row.category === "atom_site_aniso" && row.free) && parameters.some(row => row.category === "atom_site" && row.name.startsWith("fract_") && row.free), "The compound exercise must leave independent displacement and coordinate parameters free");
+        verify(oracle.parameters.some(item => item.kind === "coordinate") && oracle.parameters.some(item => item.kind === "beta"), "The independent FullProf oracle must include fitted coordinates and the matching ADP representation with uncertainties");
         const atoms = Probe.rows(project.currentStructure.atomSites);
         verify(oracle.parameters.filter(item => item.kind === "coordinate").some(item => Math.abs(atoms.find(atom => atom.label === item.atom)["fract" + item.component.toUpperCase()].value - item.value) > item.su), "The app example's initial coordinates must be perturbed beyond the independent FullProf uncertainty");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        liveChart = Review.find(Ui.page(appWindow), "singleCrystal.chart");
+        liveFrames = 0;
+        transientWarnings = 0;
+        initialFitWarnings = Probe.rows(Session.loadWarnings).map(row => row.message);
+        project.fit.patternUpdates = 1;
         const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
         verify(start !== null && start.enabled, "The loaded compound exercise must enable the real Start fitting action");
         Ui.scrollIntoView(start);
@@ -716,6 +768,8 @@ TestCase {
         mouseClick(start, point.x, point.y);
         const dialog = findChild(appWindow, "fit.results");
         tryVerify(() => dialog !== null && dialog.opened && !project.fit.running, 30000, "The compound's normal app fit must finish and display results");
+        verify(liveFrames > 0, "The actual single-crystal chart must update before the running fit completes");
+        compare(transientWarnings, 0, "Intermediate fit trials must post no new tensor or range warnings to Messages");
         const fittedAtoms = Probe.rows(project.currentStructure.atomSites);
         const fittedTensors = Probe.rows(project.currentStructure.atomSiteAdps);
         for (const target of oracle.parameters) {
@@ -834,6 +888,84 @@ TestCase {
         const fixedForm = Ui.find(Ui.page(appWindow), "experimentType.sampleForm", true);
         verify(fixedForm !== null && !fixedForm.enabled && fixedForm.value === "single crystal", "Loading reflections must fix the created experiment's sample form");
         verify(!Ui.find(Ui.page(appWindow), "experimentType.radiationProbe", true).enabled && !Ui.find(Ui.page(appWindow), "experimentType.beamMode", true).enabled, "Loaded reflection data must fix the experiment type axes");
+    }
+    function test_weak_negative_f_axes() {
+        const location = SettingsProof.copyProject(Probe.referenceUrl("projects/sc-neut-cwl_tbti_basic"));
+        let source = Probe.readReferenceFile("projects/sc-neut-cwl_tbti_basic/experiments/experiment.edi");
+        source = source.slice(0, source.indexOf("loop_\n_refln.index_h")) + "loop_\n_refln.index_h\n_refln.index_k\n_refln.index_l\n_refln.intensity_meas\n_refln.intensity_meas_su\n2 2 2 -4 .7\n4 0 0 0 1.3\n2 2 0 .04 .8\n4 4 0 9 .6\n";
+        verify(SettingsProof.write(location, "experiments/experiment.edi", source), "The F-axis witness must write signed measured reflections");
+        const chart = openSingle({
+            dark: false,
+            page: "experiment"
+        }, location);
+        selectQuantity(chart, 1);
+        const model = Session.project.currentExperiment.singleCrystalReflections;
+        const measured = [-4, 0, .04, 9], su = [.7, 1.3, .8, .6];
+        const points = SettingsProof.points(Review.find(chart, "singleCrystal.points"));
+        compare(points.length, 4, "F axes must retain weak, zero and negative measured reflections");
+        for (let i = 0; i < 4; ++i) {
+            const f = Math.sqrt(Math.max(0, measured[i]));
+            verify(Math.abs(points[i].y - f) < 1e-12, "Negative measured F squared must plot at F zero and positive rows at their square root");
+            verify(Math.abs(model.measuredFSu[i] - su[i] / (f + Math.sqrt(f * f + su[i]))) < 1e-12, "Every amplitude uncertainty must follow Xtal ADDREF, including zero and negative intensities");
+        }
+    }
+    function test_multidataset_split_stacked_and_legend() {
+        const chart = openSingle({
+            dark: false,
+            page: "experiment"
+        }, Probe.referenceUrl("projects/sc-neut-tof_taurine_basic"));
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        tryVerify(() => Ui.groupNames(Ui.page(appWindow)).includes("instrument"), 2000, "TOF single crystals must retain their informational Instrument group");
+        const instrument = expand("group.instrument");
+        const band = Review.find(instrument, "instrument.wavelengthBand");
+        verify(band !== null && band.readOnly && !band.editable && !band.parameter.fittable, "The TOF wavelength band must be a disabled informational field");
+        const experiment = Session.project.currentExperiment;
+        verify(!Probe.rows(Session.project.parameters).some(row => row.category === "instrument"), "A TOF single crystal must contribute no unused instrument fit parameters");
+        verify(Session.project.loadDataInto(experiment, Probe.referenceUrl("multidataset.int")), "Loading a FullProf multi-dataset file must use the production load action");
+        tryVerify(() => !Session.project.calculating, 10000, "Every imported dataset must finish calculation");
+        const experiments = Probe.rows(Session.project.experiments).map(row => row.experiment);
+        compare(experiments.length, 3, "FullProf dataset flags must create one experiment per distinct dataset");
+        const rows = experiments.map(e => Probe.rows(e.singleCrystalReflections));
+        compare(rows.map(r => r.length).join(","), "2,1,1", "Each FullProf dataset must keep exactly its own ordered observations");
+        compare(rows[0].map(r => r.wavelength).join(","), "1.3,1.7", "FullProf wavelength column seven must survive the split");
+        const notices = Probe.rows(Session.loadWarnings).filter(r => /su 0/.test(r.message));
+        compare(notices.length, 1, "The multi-dataset load must post one summary of forbidden zero-su rows");
+        for (const page of ["experiment", "analysis"]) {
+            Ui.click(test, Probe, appWindow, "appBar.tab." + page);
+            tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "The selected workflow page must enter the viewport before its Stacked action");
+            tryVerify(() => {
+                const candidate = Ui.find(Ui.page(appWindow), "mainArea." + page + ".tab.stacked", true);
+                return candidate !== null && candidate.enabled;
+            }, 3000, "Several single crystals must enable Stacked on both workflow pages");
+            const tab = Ui.find(Ui.page(appWindow), "mainArea." + page + ".tab.stacked", true);
+            mouseClick(tab, tab.width / 2, tab.height / 2);
+            const stacked = Review.find(Ui.page(appWindow), "singleCrystal.stacked");
+            tryVerify(() => stacked !== null && stacked.shown && Ui.exposed(stacked) && stacked.models.length === 3, 3000, "The Stacked chart must contain every imported dataset");
+            verify(waitForRendering(stacked), "The Stacked chart must draw all imported experiments");
+            const legend = Review.find(stacked, "singleCrystal.legend"), toggle = toolbarControl(stacked, "legend");
+            verify(legend !== null && legend.visible && toggle !== null && toggle.checked, "Stacked legend must start visible with its real toolbar toggle");
+            for (let i = 0; i < 3; ++i) {
+                const layer = Review.find(stacked, "singleCrystal.points." + i);
+                verify(layer !== null && SettingsProof.points(layer).length === rows[i].length, "Each Stacked series must draw exactly its experiment's reflections");
+            }
+            verify(waitForPolish(stacked), "The visible Stacked toolbar must finish layout before the legend click");
+            tryVerify(() => Ui.exposed(toggle), 3000, "The Stacked legend toggle must enter the viewport after the tab transition");
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+            tryCompare(legend, "visible", false, 1000, "The real legend button must hide the Stacked legend");
+        }
+    }
+    function test_plain_reflections_one_warning() {
+        const chart = openSingle({
+            dark: false,
+            page: "experiment"
+        });
+        Session.loadWarnings.dismissAll();
+        verify(Session.project.loadDataInto(Session.project.currentExperiment, Probe.referenceUrl("mixed.hkl")), "The plain .hkl file must load through the real project action");
+        tryVerify(() => !Session.project.calculating, 10000, "The valid plain reflections must calculate normally");
+        compare(Probe.rows(Session.project.currentExperiment.singleCrystalReflections).length, 2, "Plain reflection import must retain valid signed rows and skip unparsed lines");
+        const messages = Probe.rows(Session.loadWarnings).filter(r => /skipped/.test(r.message));
+        compare(messages.length, 1, "A plain reflection load must post exactly one skip warning");
+        verify(/4/.test(messages[0].message) && /1, 2, 4, 6/.test(messages[0].message), "The plain-file summary must name the skipped count and physical lines");
     }
     function fittedReport(data) {
         const location = SettingsProof.copyProject(Probe.referenceUrl("projects/sc-neut-cwl_tbti_isotropic-extinction"));
@@ -997,8 +1129,8 @@ TestCase {
         const rows = categories.reduce((all, category) => all.concat(category.rows || []), []);
         verify(rows.some(row => /wavelength|λ/i.test(row.label)), "The single-crystal report must list its wavelength");
         const extinction = categories.find(category => category.id === "extinction");
-        verify(extinction !== undefined && extinction.rows.some(row => /type|model/i.test(row.label) && /becker/i.test(row.text)) && extinction.rows.some(row => /spread|model/i.test(row.label) && /gauss|lorentz/i.test(row.text)), "The single-crystal report must list its extinction model and mosaic distribution");
-        verify(rows.some(row => /radius/i.test(row.label)) && rows.some(row => /mosaicity/i.test(row.label)), "The single-crystal report must list the descriptive extinction values");
+        verify(extinction !== undefined && extinction.rows.some(row => /type|model/i.test(row.label) && /becker/i.test(row.text)) && extinction.rows.some(row => /distribution|model/i.test(row.label) && /gauss|lorentz/i.test(row.text)), "The single-crystal report must list its extinction model and mosaic distribution");
+        verify(rows.some(row => /radius/i.test(row.label)) && rows.some(row => /mosaic spread/i.test(row.label)), "The single-crystal report must list the descriptive extinction values");
         verify(rows.some(row => /reflection/i.test(row.label) && Number(row.text) === expected.length), "The single-crystal report must state the actual reflection count");
         const fitRows = model.analysis_categories.reduce((all, category) => all.concat(category.rows || []), []);
         const rRow = fitRows.find(row => /R\(F²\)/.test(row.label) && !/wR\(F²\)/.test(row.label));
@@ -1035,7 +1167,7 @@ TestCase {
         }
         const pdf = SettingsProof.pdfFacts(files.pdf);
         verify(!pdf.error && pdf.pages.length > 0, "The actual exported PDF must be parseable and contain pages");
-        verify(/R\(F²\)/.test(pdf.text) && /wR\(F²\)/.test(pdf.text) && /wavelength|λ/i.test(pdf.text) && /mosaicity|radius/i.test(pdf.text), "The exported PDF must carry the single-crystal fields and agreement factors");
+        verify(/R\(F²\)/.test(pdf.text) && /wR\(F²\)/.test(pdf.text) && /wavelength|λ/i.test(pdf.text) && /mosaic spread|radius/i.test(pdf.text), "The exported PDF must carry the single-crystal fields and agreement factors");
         const colour = model.pattern_styles.find(style => style.key === "meas.0").light;
         const ink = SettingsProof.pdfImageColours(files.pdf, [colour]);
         verify(!ink.error && ink.images >= model.structures.length + 1 && ink.counts[colour] > expected.length, "The PDF must contain a populated reflection figure in addition to its structure figures");
