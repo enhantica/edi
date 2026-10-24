@@ -214,7 +214,7 @@ Item {
             toolTip: qsTr("Plotted quantity")
             model: [qsTr("F²"), qsTr("F")]
             closedTexts: [qsTr("axes: F²"), qsTr("axes: F")]
-            currentIndex: chart.squared ? 0 : 1
+            shownIndex: chart.squared ? 0 : 1
             onActivated: index => Preferences.singleCrystalQuantity = index === 0 ? "f_squared" : "f"
         }
         // The pattern chart's toolbar, without the included-range button, which has nothing to act on here; the
