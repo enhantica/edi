@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         for (const auto& pair : outcome.correlations) {
             std::cout << std::quoted(pair.parameter_unique_name_i.value()) << ' '
                       << std::quoted(pair.parameter_unique_name_j.value()) << ' '
-                      << std::hexfloat << pair.correlation.value() << '\n';
+                      << std::hexfloat << pair.correlation.get() << '\n';
         }
     }
     edi::save_project_as(project, argv[3]);

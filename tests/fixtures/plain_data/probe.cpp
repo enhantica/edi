@@ -119,7 +119,7 @@ QJsonArray correlation_pairs(const edi::Project& project) {
         result.append(
             QJsonObject{{"i", QString::fromStdString(pair->parameter_unique_name_i.value())},
                         {"j", QString::fromStdString(pair->parameter_unique_name_j.value())},
-                        {"coefficient", pair->correlation.value()},
+                        {"coefficient", pair->correlation.get()},
                         {"file", QString::fromStdString(pair->file_path.value())}});
     return result;
 }

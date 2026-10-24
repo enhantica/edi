@@ -54,7 +54,7 @@ void storage_case_0() {
                               "The first endpoint must follow the free column order");
                 CHECK_MESSAGE(rows[k].parameter_unique_name_j.value() == table->names->at(j),
                               "The second endpoint must follow the free column order");
-                CHECK_MESSAGE(rows[k].correlation.value() == expected[k],
+                CHECK_MESSAGE(rows[k].correlation.get() == expected[k],
                               "Numeric rows must retain a clamped end and the "
                               "17-digit witness");
                 CHECK_MESSAGE(rows[k].file_path.value() == "template.xy",
@@ -138,9 +138,9 @@ void storage_case_2() {
                         "Another file's new fit must not replace the loaded template's rows");
         CHECK_MESSAGE(
             (record.correlations[0]->id.value() == "pair17" &&
-             record.correlations[0]->correlation.value() == 0.50),
+             record.correlations[0]->correlation.get() == 0.50),
             "A loaded nonordinal identity and numeric coefficient survive unrelated live results");
-        CHECK_MESSAGE(record.correlations[0]->correlation.value() == .5,
+        CHECK_MESSAGE(record.correlations[0]->correlation.get() == .5,
                       "The numeric view must retain the loaded coefficient as one half");
 
     } else {

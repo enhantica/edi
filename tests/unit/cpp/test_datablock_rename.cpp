@@ -98,7 +98,7 @@ void check_relations(const edi::Project& project, const std::string& old_name,
     CHECK_MESSAGE(
         project.fit_result.correlations[0]->parameter_unique_name_j.value() == next + peer,
         "The second correlation endpoint must follow its renamed datablock");
-    CHECK_MESSAGE(project.fit_result.correlations[0]->correlation.value() == -0.625,
+    CHECK_MESSAGE(project.fit_result.correlations[0]->correlation.get() == -0.625,
                   "Renaming preserves the authored numeric correlation coefficient");
     CHECK_MESSAGE(project.fit_result.correlations[0]->file_path.value() == "structure1.xy",
                   "A scan data filename is not a datablock reference");
@@ -206,7 +206,7 @@ void require_parameter_relations(const edi::Project& project,
         CHECK_MESSAGE(project.fit_result.correlations[2 * i]->parameter_unique_name_j.value() ==
                           "other.cell.length_a",
                       "A rename must preserve endpoints owned by another identity");
-        CHECK_MESSAGE(project.fit_result.correlations[2 * i]->correlation.value() == -0.625,
+        CHECK_MESSAGE(project.fit_result.correlations[2 * i]->correlation.get() == -0.625,
                       "A reference rewrite must retain the exact numeric coefficient");
         CHECK_MESSAGE(project.fit_result.correlations[2 * i]->file_path.value() == "old.xy",
                       "A reference rewrite must retain the data filename");
