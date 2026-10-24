@@ -3527,6 +3527,13 @@ struct ReflnDataBase {
     ComputedColumn<double> intensity_calc;
 
     std::size_t size() const noexcept { return intensity_meas.size(); }
+    // Whether every measured column has one value per reflection (the wavelengths none or one each). A reader that
+    // indexes the columns together asks this first; a calculation refuses columns that are not.
+    bool rectangular() const noexcept {
+        const std::size_t n = size();
+        return index_h.size() == n && index_k.size() == n && index_l.size() == n && intensity_meas_su.size() == n &&
+               (wavelength.size() == 0 || wavelength.size() == n);
+    }
     void clear_computed() noexcept {
         d_spacing.clear();
         sin_theta_over_lambda.clear();

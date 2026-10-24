@@ -245,7 +245,7 @@ void SingleCrystalReflectionModel::refresh() {
     double low = qInf();
     double high = -qInf();
     bool shown = false;
-    if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
+    if (const auto& reflections = experiment_.reflections; reflections.has_value() && reflections->rectangular()) {
         // A fit's frame shows its own F²calc; the rest of the computed columns are the model's, as they were.
         const std::vector<double>& calc = frame_ ? *frame_ : reflections->intensity_calc.values();
         const bool current = calc.size() == reflections->size() && (frame_ || experiment_.computed_current());
@@ -328,7 +328,8 @@ void SingleCrystalReflectionModel::refresh() {
 
 QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     const auto& reflections = experiment_.reflections;
-    if (!reflections.has_value() || row < 0 || static_cast<std::size_t>(row) >= reflections->size()) {
+    if (!reflections.has_value() || !reflections->rectangular() || row < 0 ||
+        static_cast<std::size_t>(row) >= reflections->size()) {
         return {};
     }
     const auto at = static_cast<qsizetype>(row);

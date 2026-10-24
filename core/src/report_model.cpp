@@ -403,6 +403,9 @@ ReportPattern pattern_of(const Project& project, std::size_t index, const Report
 ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment) {
     const ReflnDataBase& reflections = *experiment.reflections;
     ReportSingleCrystal out;
+    if (!reflections.rectangular()) {
+        return out;
+    }
     out.h.assign(reflections.index_h.begin(), reflections.index_h.end());
     out.k.assign(reflections.index_k.begin(), reflections.index_k.end());
     out.l.assign(reflections.index_l.begin(), reflections.index_l.end());
@@ -679,7 +682,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         const bool current = experiment.computed_current() && calc.size() == reflections.size();
         ReportCategory next = category("refln");
         next.table.columns = {"h", "k", "l", "F² meas", "s.u.", "F² calc", "(F² meas \xE2\x88\x92 F² calc)/s.u."};
-        for (std::size_t row = 0; row < reflections.size(); ++row) {
+        for (std::size_t row = 0; reflections.rectangular() && row < reflections.size(); ++row) {
             const double meas = reflections.intensity_meas[row];
             const double su = reflections.intensity_meas_su[row];
             next.table.rows.push_back(

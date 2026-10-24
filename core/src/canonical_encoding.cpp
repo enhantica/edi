@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "canonical_encoding.hpp"
 
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
@@ -122,13 +123,22 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     out += experiment.reflections ? 'R' : '-';
     if (experiment.reflections) {
         put_u64(out, experiment.reflections->size());
-        for (std::size_t row = 0; row < experiment.reflections->index_h.size(); ++row) {
+        // Ragged columns, which no calculation accepts, still encode without reading past one.
+        const std::size_t whole = std::min({experiment.reflections->index_h.size(),
+                                            experiment.reflections->index_k.size(),
+                                            experiment.reflections->index_l.size()});
+        for (std::size_t row = 0; row < whole; ++row) {
             put_u64(out, static_cast<std::uint64_t>(
                              static_cast<std::int64_t>(experiment.reflections->index_h[row])));
             put_u64(out, static_cast<std::uint64_t>(
                              static_cast<std::int64_t>(experiment.reflections->index_k[row])));
             put_u64(out, static_cast<std::uint64_t>(
                              static_cast<std::int64_t>(experiment.reflections->index_l[row])));
+        }
+        if (whole != experiment.reflections->index_h.size() || whole != experiment.reflections->index_k.size() ||
+            whole != experiment.reflections->index_l.size()) {
+            put_u64(out, experiment.reflections->index_k.size());
+            put_u64(out, experiment.reflections->index_l.size());
         }
         for (const double wavelength : experiment.reflections->wavelength) {
             put_double(out, wavelength);
