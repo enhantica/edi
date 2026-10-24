@@ -420,6 +420,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-12d-taurine-refinement-cutoff", {"choose:OK", extras, "expand:group.refine_ls"}});
     steps_.push_back({"sccheck-12e-taurine-observed-on-f",
                       {experiment, extras, "expand:group.refln", "reflns.thresholdBasis", "choose:F"}});
+    // The aliases and constraints that share the first dataset's extinction, each id column as wide as its ids.
+    steps_.push_back({"sccheck-12f-taurine-aliases", {analysis, extras, "expand:group.alias"}});
+    steps_.push_back({"sccheck-12g-taurine-constraints", {"expand:group.constraint", "reveal:constraints.list"}});
     // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
     steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
                                                               + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
