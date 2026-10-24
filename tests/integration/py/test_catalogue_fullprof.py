@@ -23,7 +23,7 @@ ASYMMETRY_OFF_CASES = {
     'pd-neut-xray-cwl_pbso4-d1a-lab',
     'pd-xray-cwl_latp-bm01_scan',
 }
-# The October 24 minor-phase decision applies only to this template variant.
+# The October 24 correction applies only to this template variant.
 LATP_CASE = 'pd-xray-cwl_latp-bm01_scan'
 LATP_CELL_PINS = {
     'param.alpo4_c2221.cell_length_a.value',
@@ -32,6 +32,7 @@ LATP_CELL_PINS = {
     'param.alpo4_p63mc.cell_length_a.value',
     'param.alpo4_p63mc.cell_length_c.value',
 }
+LATP_REGRESSION_PINS = LATP_CELL_PINS | {'param.latp.P1.adp_iso.value'}
 COMPARISON_BOUNDS = json.loads(
     (ROOT / 'tests/fixtures/example_catalogue/comparison-bounds.json').read_text()
 )['cases']
@@ -218,15 +219,15 @@ def assert_shared_references(values, source, regression_pins=frozenset()):
     for name, spec in shared.items():
         if name in regression_pins:
             assert spec.get('kind') == 'regression-pin', (
-                'Only the five decided minor-phase cells are explicitly labelled regression pins'
+                'Only the six decided LATP template values are explicitly labelled regression pins'
             )
             assert isinstance(spec['value'], (int, float)) and math.isfinite(spec['value']), (
-                'Every labelled minor-phase regression pin requires a finite numeric value'
+                'Every labelled LATP regression pin requires a finite numeric value'
             )
         else:
             assert spec.get('kind') == 'reference', (
                 'Shared fitted values remain independent references '
-                'outside the exact cell exception'
+                'outside the exact six-value exception'
             )
             assert spec['value'] == expected[name], (
                 'Each shared fitted value must equal its independent FullProf parameter'
@@ -259,13 +260,13 @@ def assert_comparison_disposition(case, expected):
         )
         for name, spec in values.items():
             bounds = {key: spec[key] for key in ('tol_abs', 'tol_rel')}
-            if disposition and name in LATP_CELL_PINS:
+            if disposition and name in LATP_REGRESSION_PINS:
                 assert (
                     bounds['tol_rel'] is None
                     and bounds['tol_abs'] is not None
                     and math.isfinite(bounds['tol_abs'])
                     and 0 < bounds['tol_abs'] <= frozen[name]['tol_abs']
-                ), 'The five labelled cell pins require an explicit unrelaxed numeric bound'
+                ), 'The six labelled LATP pins require an explicit unrelaxed numeric bound'
             else:
                 assert bounds == frozen[name], (
                     'Every other comparison bound remains exactly as committed before the decision'
@@ -280,10 +281,16 @@ def assert_latp_provenance(reason):
     reason = reason.casefold().replace('₄', '4')
     assert all(
         word in reason
-        for word in ('alpo4', 'cell', 'fullprof', 'regression', 'max_iter', 'adr-0098', 'resume')
+        for word in ('alpo4', 'cell', 'fullprof', 'regression', 'max_iter', 'crysta')
     ) and any(word in reason for word in ('lower', 'better')), (
-        'The provenance explains the minor-phase minimum gap and names the ADR-0098 resume cap'
+        'The provenance explains the minor-phase minimum gap and the engine-limited fit status'
     )
+    assert re.search(r'\b(?:limit|cap)\b[^.]{0,60}\b(?:two|2)\b[^.]{0,30}\bresum', reason), (
+        'The provenance describes crysta stopping after its limit of two resumed descents'
+    )
+    assert re.search(
+        r'\b(?:so|therefore|hence)\b[^.]{0,100}\b(?:status|ends?)\b[^.]{0,40}\bmax_iter\b', reason
+    ), 'The provenance connects the two-resume cap to the expected max_iter status'
 
 
 def test_latp_disposition_provenance_names_the_resume_cap():
@@ -357,7 +364,7 @@ def assert_cli_expectations(case, expected):
                 'The asymmetry-off solver terminal quantities remain labelled regression pins'
             )
         assert_shared_references(
-            alternate, off, LATP_CELL_PINS if case == LATP_CASE else frozenset()
+            alternate, off, LATP_REGRESSION_PINS if case == LATP_CASE else frozenset()
         )
     else:
         assert 'asymmetry-off' not in variants, (
@@ -475,9 +482,9 @@ def test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds(escape):
     alternate = bad['variants']['asymmetry-off']
     values = alternate['quantities']
     cell = min(LATP_CELL_PINS)
-    p1 = 'param.latp.P1.adp_iso.value'
+    reference_name = 'param.latp.P1.fract_x.value'
     if escape == 'unlabelled-cell':
-        for name in sorted(LATP_CELL_PINS):
+        for name in sorted(LATP_REGRESSION_PINS):
             unlabelled = copy.deepcopy(expected)
             del unlabelled['variants']['asymmetry-off']['quantities'][name]['kind']
             with pytest.raises(AssertionError):
@@ -490,9 +497,9 @@ def test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds(escape):
     elif escape == 'relaxed-cell-pin':
         values[cell]['tol_abs'] = 2 * COMPARISON_BOUNDS[case]['asymmetry-off'][cell]['tol_abs']
     elif escape == 'relabelled-latp-phase':
-        values[p1]['kind'] = 'regression-pin'
+        values[reference_name]['kind'] = 'regression-pin'
     elif escape == 'changed-latp-reference':
-        values[p1]['value'] += 1
+        values[reference_name]['value'] += 1
     elif escape == 'relaxed-latp-bound':
         for name in [key for key in values if key.startswith('param.latp.')]:
             relaxed = copy.deepcopy(expected)
@@ -521,10 +528,14 @@ def test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds(escape):
     elif escape == 'wrong-provenance-link':
         bad['source']['provenance'] = 'README.md'
     elif escape == 'missing-resume-explanation':
-        with pytest.raises(AssertionError):
-            assert_latp_provenance(
-                'AlPO4 cells; FullProf lower minimum; regression pins; max_iter'
-            )
+        reason = (ROOT / 'docs/user/cli' / LATP_CASE / 'PROVENANCE.md').read_text()
+        for missing in [
+            reason.replace('two resumed', 'three resumed'),
+            reason.replace('max_iter', 'done'),
+            'AlPO4 cells; FullProf lower minimum; regression pins; crysta; max_iter',
+        ]:
+            with pytest.raises(AssertionError):
+                assert_latp_provenance(missing)
         return
     with pytest.raises(AssertionError):
         assert_cli_expectations(case, bad)

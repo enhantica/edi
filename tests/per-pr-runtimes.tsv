@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T08:39:47Z
+# measured_utc = 2026-10-24T08:49:54Z
 #
-# Recorded from: measured test run (18 node(s) measured once, 14955 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 14972 banked, 0 stale row(s) dropped)
 # Collected tests: 16745; with a reported duration: 9637
 # Module-scoped fixture costs recorded: 72
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 16745
 # inventory_cpp = 393
-# inventory_measured = 14972
-# inventory_unmeasured = 2166
+# inventory_measured = 14973
+# inventory_unmeasured = 2165
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2288,7 +2288,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_latp-bm01_scan]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_nacl_simulation]
 0.010	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-xray-cwl_pbso4-lab]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_latp_disposition_provenance_names_the_resume_cap
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_latp_disposition_provenance_names_the_resume_cap
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds[changed-latp-reference]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds[default-model-pin]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_latp_minor_phase_disposition_cannot_escape_its_case_and_bounds[extra-cell]
