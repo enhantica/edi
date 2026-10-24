@@ -4473,6 +4473,25 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // A single crystal's integrated intensities do not fix the cell, which comes from its reflections' positions, so a
+    // fit of single crystals only does not refine it: a cell parameter marked free loads fixed, and said so.
+    if (!project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
+        for (const auto& structure : project.structures) {
+            std::string fixed;
+            for (Parameter* parameter : structure->cell.parameters()) {
+                if (parameter->free && parameter->spec != nullptr) {
+                    parameter->free = false;
+                    fixed += (fixed.empty() ? "" : ", ") + std::string(parameter->spec->edi_names[0]);
+                }
+            }
+            if (!fixed.empty()) {
+                warn("structure '" + structure->name.value() + "': a single-crystal fit does not refine the cell; " +
+                     fixed + " loaded fixed");
+            }
+        }
+    }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.).
