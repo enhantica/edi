@@ -65,8 +65,8 @@ class CategoryListModel : public QAbstractListModel {
 // (`peak`'s `cutoff_fwhm`).
 struct CategoryPresentation {
     CategoryListModel::Tier tier;
-    const char* title;
-    const char* icon;
+    QString title;
+    QString icon;
     bool extras_part = false;
 };
 CategoryPresentation category_presentation(const QString& id);

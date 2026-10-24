@@ -3,49 +3,34 @@
 
 #include <QHash>
 #include <algorithm>
+#include <string>
 #include <utility>
+
+#include "edi/display.hpp"
 
 namespace edi_app {
 
 CategoryPresentation category_presentation(const QString& id) {
     using T = CategoryListModel::Tier;
-    // The titles are the core's (edi::category_title), which the report shows too; icons are Font Awesome 5 names, as
-    // the base's GroupBox takes them.
-    struct Look {
+    // Titles and icons are crysta's dictionary's, through the core's bridge, which the report reads too; the app keeps
+    // only where a category sits: the Basic or the Extras group, and whether it also shows in Extras.
+    struct Place {
         T tier;
-        const char* icon;
         bool extras_part = false;
     };
-    static const QHash<QString, Look> table{
-        {QStringLiteral("metadata"), {T::Basic, "archive"}},
-        {QStringLiteral("space_group"), {T::Basic, "satellite"}},
-        {QStringLiteral("cell"), {T::Basic, "cube"}},
-        {QStringLiteral("atom_site"), {T::Basic, "atom"}},
-        {QStringLiteral("atom_site_aniso"), {T::Basic, "arrows-alt"}},
-        {QStringLiteral("scattering_length"), {T::Extras, "ruler"}},
-        {QStringLiteral("experiment_type"), {T::Basic, "radiation"}},
-        {QStringLiteral("data"), {T::Extras, "arrows-alt-h"}},
-        {QStringLiteral("data_range"), {T::Basic, "arrows-alt-h"}},
-        {QStringLiteral("instrument"), {T::Basic, "microscope"}},
-        {QStringLiteral("peak"), {T::Basic, "shapes", true}},
-        {QStringLiteral("background"), {T::Basic, "wave-square", true}},
-        {QStringLiteral("linked_structure"), {T::Basic, "layer-group"}},
-        {QStringLiteral("excluded_region"), {T::Basic, "eraser"}},
-        {QStringLiteral("absorption"), {T::Extras, "tint"}},
-        {QStringLiteral("preferred_orientation"), {T::Extras, "compass"}},
-        {QStringLiteral("scattering_source"), {T::Extras, "atom"}},
-        {QStringLiteral("refln"), {T::Extras, "list"}},
-        {QStringLiteral("minimizer"), {T::Extras, "level-down-alt"}},
-        {QStringLiteral("fitting_mode"), {T::Extras, "sliders-h"}},
-        {QStringLiteral("alias"), {T::Extras, "tag"}},
-        {QStringLiteral("constraint"), {T::Extras, "equals"}},
-        {QStringLiteral("joint_fit"), {T::Extras, "link"}},
-        {QStringLiteral("sequential_fit"), {T::Extras, "list-ol"}},
-        {QStringLiteral("sequential_fit_extract"), {T::Extras, "filter"}},
-        {QStringLiteral("fit_parameter"), {T::Extras, "history"}},
+    static const QHash<QString, Place> places{
+        {QStringLiteral("metadata"), {T::Basic}},         {QStringLiteral("space_group"), {T::Basic}},
+        {QStringLiteral("cell"), {T::Basic}},             {QStringLiteral("atom_site"), {T::Basic}},
+        {QStringLiteral("atom_site_aniso"), {T::Basic}},  {QStringLiteral("experiment_type"), {T::Basic}},
+        {QStringLiteral("data_range"), {T::Basic}},       {QStringLiteral("instrument"), {T::Basic}},
+        {QStringLiteral("peak"), {T::Basic, true}},       {QStringLiteral("background"), {T::Basic, true}},
+        {QStringLiteral("linked_structure"), {T::Basic}}, {QStringLiteral("excluded_region"), {T::Basic}},
     };
-    const Look look = table.value(id, {T::Extras, "question"});
-    return {look.tier, edi::category_title(id.toStdString()), look.icon, look.extras_part};
+    const Place place = places.value(id, {T::Extras});
+    const std::string key = id.toStdString();
+    const QString icon = QString::fromStdString(edi::category_icon(key));
+    return {place.tier, QString::fromStdString(edi::category_label(key)),
+            icon.isEmpty() ? QStringLiteral("question") : icon, place.extras_part};
 }
 
 namespace {
@@ -170,8 +155,8 @@ QVariant CategoryListModel::data(const QModelIndex& index, int role) const {
         case CategoryIdRole: return row.id;
         case TierRole: return presentation.tier == Basic ? QStringLiteral("Basic") : QStringLiteral("Extras");
         case TitleRole:
-        case Qt::DisplayRole: return QString::fromUtf8(presentation.title);
-        case IconRole: return QString::fromUtf8(presentation.icon);
+        case Qt::DisplayRole: return presentation.title;
+        case IconRole: return presentation.icon;
         case ItemCountRole: return row.items;
         case IsLoopRole: return row.is_loop;
         case AdmittedRole: return row.admitted;

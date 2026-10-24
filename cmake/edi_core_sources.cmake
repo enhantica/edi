@@ -18,11 +18,9 @@ function(edi_core_sources root out)
         ${root}/core/src/report_html.cpp
         ${root}/core/src/report_save.cpp
         ${root}/core/src/palette.cpp
-        ${root}/core/src/category_title.cpp
         ${root}/core/src/display.cpp
         ${root}/core/src/duration_text.cpp
         ${root}/core/src/correlation_matrix.cpp
-        ${root}/core/src/parameter_symbol.cpp
         ${root}/core/src/su_text.cpp
         ${root}/core/src/selectors.cpp
         ${root}/core/src/worker.cpp

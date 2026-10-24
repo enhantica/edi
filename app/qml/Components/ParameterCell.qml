@@ -57,7 +57,10 @@ EaComponents.TableViewParameter {
     // The value as its rule writes it, and as the cell shows it: in scientific notation when that text would not fit
     // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
     // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
-    readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // The value as the project file and the Text tab spell it (edi ADR-0041); a parameter the dictionary does not know
+    // by the app's rule for numbers.
+    readonly property bool written: item !== null && item.fileValue !== ""
+    readonly property string valueText: written ? item.fileValue : item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
     // Its scientific form, whose digits also follow the uncertainty and the project's rule when the plain text does not
     // change (9e5 or 9.0e5 for 900000 ± 200000).
     readonly property string narrowText: item !== null && !fitDigits ? NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
@@ -100,8 +103,8 @@ EaComponents.TableViewParameter {
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
     clip: true
 
-    // The value as edited: in full, where the cell shows it rounded (NumberText).
-    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+    // The value as edited: the same text, so a cell left as it was changes nothing.
+    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: {
         if (activeFocus && text === value) {
@@ -125,7 +128,7 @@ EaComponents.TableViewParameter {
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
         "value": cell.shownValue,
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
+        "error": cell.written ? item.fileSu : item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,

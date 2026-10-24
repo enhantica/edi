@@ -3,6 +3,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/parameter_walk.hpp"
 #include "parameter_item.hpp"
 #include "project_editor.hpp"
@@ -38,6 +39,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         const auto place = indices.find(entry.block_name);
         item->setBlockIndex(place != indices.end() ? place->second : -1);
         item->setRefinable(entry.refinable);
+        item->setSuRule(project.su_rule);
         items.append(item);
         by_key.emplace(key, item);
     }
@@ -67,21 +69,32 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
     // without changing the set of parameters: it is read again at every publish, never kept from a rebuild.
     // Likewise an ADP parameter's symbol and units, which follow its site's declared type.
     std::unordered_map<const edi::Parameter*, std::string> element;
-    std::unordered_map<const edi::Parameter*, edi::AdpDisplay> adp;
+    // An ADP's label and units for its site's declared type, from the dictionary's variants.
+    struct AdpLabel {
+        std::string label;
+        std::string units;
+        std::string variant;
+    };
+    const auto adp_label = [](const char* uid, const std::string& type) {
+        return AdpLabel{edi::label(uid, type), edi::units_label(uid, type), type};
+    };
+    std::unordered_map<const edi::Parameter*, AdpLabel> adp;
     for (const auto& structure : project.structures) {
         for (const auto& site : structure->atom_sites) {
             for (const edi::Parameter* parameter :
                  {&site->fract_x, &site->fract_y, &site->fract_z, &site->occupancy, &site->adp_iso}) {
                 element.emplace(parameter, site->type_symbol);
             }
-            adp.emplace(&site->adp_iso, edi::adp_display(site->adp_type.value(), "iso"));
+            adp.emplace(&site->adp_iso, adp_label("atom_site.adp_iso", site->adp_type.value()));
             for (const auto& tensor : structure->atom_site_aniso) {
                 if (tensor->id.value() == site->id.value()) {
-                    const char* const components[] = {"11", "22", "33", "12", "13", "23"};
+                    const char* const components[] = {"atom_site_aniso.adp_11", "atom_site_aniso.adp_22",
+                                                      "atom_site_aniso.adp_33", "atom_site_aniso.adp_12",
+                                                      "atom_site_aniso.adp_13", "atom_site_aniso.adp_23"};
                     const auto parameters = tensor->parameters();
                     for (std::size_t i = 0; i < parameters.size(); ++i) {
                         element.emplace(parameters[i], site->type_symbol);
-                        adp.emplace(parameters[i], edi::adp_display(site->adp_type.value(), components[i]));
+                        adp.emplace(parameters[i], adp_label(components[i], site->adp_type.value()));
                     }
                 }
             }
@@ -117,8 +130,9 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
         const auto owner = phase.find(item->parameter());
         item->setPhaseIndex(owner != phase.end() ? owner->second : -1);
         if (const auto label = adp.find(item->parameter()); label != adp.end()) {
-            item->setLabel(QString::fromStdString(label->second.short_name),
-                           QString::fromStdString(label->second.display_units));
+            item->setLabel(QString::fromStdString(label->second.label),
+                           QString::fromStdString(label->second.units));
+            item->setVariant(QString::fromStdString(label->second.variant));
         }
     }
 }
@@ -172,6 +186,7 @@ void ParameterRegistry::publish(edi::Project& project) {
     refreshRefinable(project);
     refreshEstimated(project);
     for (ParameterItem* item : items_) {
+        item->setSuRule(project.su_rule);
         item->publish();
     }
 }

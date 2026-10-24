@@ -4526,6 +4526,9 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
+// The s.u. rule of a project that states none: IUCr recommendation 12 (`iucr_19`).
+inline constexpr const char* kDefaultSuRule = "iucr_19";
+
 class Project : public detail::ProjectAnchor {
    public:
     // A default project holds ONE default structure and ONE default experiment, so the
@@ -4697,7 +4700,7 @@ class Project : public detail::ProjectAnchor {
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
     // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
     // rule.
-    std::string su_rule = "iucr_19";
+    std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its

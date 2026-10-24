@@ -31,6 +31,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -2040,9 +2041,28 @@ NB_MODULE(_edi, m) {
         .def_prop_ro("name", [](const edi::Parameter& p) { return require_spec(p).name; })
         .def_prop_ro("units", [](const edi::Parameter& p) { return require_spec(p).units; })
         .def_prop_ro("description",
-                     [](const edi::Parameter& p) { return require_spec(p).description; })
+                     [](const edi::Parameter& p) { return edi::description(edi::uid_of(require_spec(p))); })
         .def_prop_ro("min_value", [](const edi::Parameter& p) { return require_spec(p).range.min; })
-        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; });
+        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; })
+        // diffraction-lib's shape, `<name = value units (free=...)>`, the value as every surface shows it: by the
+        // rule of the project that holds the parameter, else the default rule.
+        .def("__repr__", [](const edi::Parameter& p) {
+            if (p.spec == nullptr || !edi::has_item(edi::uid_of(*p.spec))) {
+                return std::string("<Parameter = ") + nb::cast<std::string>(nb::repr(nb::float_(p.value.get()))) + ">";
+            }
+            std::string rule = edi::kDefaultSuRule;
+            const edi::detail::RowLink* row = p.category.get();
+            const edi::detail::Membership* record = row != nullptr ? row->record() : nullptr;
+            if (record != nullptr && record->owner != nullptr && record->owner->host() != nullptr) {
+                rule = record->owner->host()->su_rule;
+            }
+            const std::string uid = edi::uid_of(*p.spec);
+            std::string text = "<" + uid + " = " + edi::display_text(p, rule);
+            if (const std::string units = edi::units_label(uid); !units.empty()) {
+                text += " " + units;
+            }
+            return text + (p.free.get() ? " (free=True)>" : " (free=False)>");
+        });
 
     nb::class_<edi::AtomSite> atom_site(m, "AtomSite", nb::is_weak_referenceable());
     atom_site.def("__setattr__", renewing_setattr<edi::AtomSite>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());

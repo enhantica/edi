@@ -337,9 +337,6 @@ inline std::vector<Category> analysis_categories(const Project& project) {
 // The project block's one category.
 inline std::vector<Category> project_categories(const Project&) { return {{"metadata"}}; }
 
-// A category's title, as the app's pages and the report show it; empty for an id it does not know.
-const char* category_title(std::string_view id);
-
 }  // namespace edi
 
 #endif  // EDI_CATEGORIES_HPP

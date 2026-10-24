@@ -75,6 +75,17 @@ double display_step(const Parameter& parameter, std::string_view variant = {});
 /// The same for a value of a numeric item.
 double display_step(std::string_view uid, double value, std::string_view variant = {});
 
+/// A parameter's value and s.u. as the project file and the Text tab spell them under `su_rule`.
+struct FileText {
+    std::string value;  ///< the file's value without its bracket, e.g. "3.89087"
+    std::string su;     ///< the bracket as a decimal, e.g. "0.00013"; empty without one, "0" for an engaged zero
+};
+
+/// What an input field, the slider and the Analysis table show for a parameter (edi ADR-0041): the
+/// value exactly as a save writes it, the s.u. apart, so a field reads as the Text tab does. Throws
+/// std::invalid_argument for a parameter without a spec.
+FileText file_text(const Parameter& parameter, const std::string& su_rule);
+
 /// The exact fraction a value the space group fixes shows as (`1/3`), or nullopt.
 std::optional<std::string> exact_fraction(double value);
 

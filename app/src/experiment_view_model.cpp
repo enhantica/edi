@@ -13,6 +13,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/selectors.hpp"
 #include "parameter_registry.hpp"
@@ -94,7 +95,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     const std::vector<std::string> profiles = edi::supported_peak_profiles(mode);
     std::vector<std::string> profile_labels;
     for (const std::string& profile : profiles) {
-        profile_labels.push_back(edi::peak_profile_label(profile));
+        profile_labels.push_back(edi::option_label("peak.type", profile));
     }
     peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
     absorption_type_options_->setOptions(edi::supported_absorption_families(mode));

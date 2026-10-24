@@ -128,6 +128,18 @@ class Session : public QObject {
     /// Turn a native directory path into the file URL accepted by openProject.
     Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
 
+    // Every name and number a page shows, from crysta's dictionary through the core's display bridge: an item's
+    // label, units and tooltip (the label and the `.edi` name it labels), a selector option's name, a category's
+    // title, and a value in the item's display format. `uid` is `category.name`; `variant` the token its label or
+    // format depends on (an ADP's type). An item the dictionary lacks shows its uid, so the page still reads.
+    Q_INVOKABLE QString label(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString units(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString tooltip(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString optionLabel(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QString optionTooltip(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QString categoryTitle(const QString& id) const;
+    Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
+
    signals:
     void projectChanged();
     void projectDirectoryUsed(const QString& path);

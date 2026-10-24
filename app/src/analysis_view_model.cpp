@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
 #include "project_editor.hpp"
@@ -327,7 +328,7 @@ void AnalysisViewModel::sync() {
         fitting_modes_ = modes;
         std::vector<std::string> labels;
         for (const std::string& token : modes) {
-            labels.push_back(edi::fitting_mode_label(token));
+            labels.push_back(edi::option_label("fitting_mode.type", token));
         }
         fitting_mode_options_->setOptions(modes, modes.front(), labels);
     }

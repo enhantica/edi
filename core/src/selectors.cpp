@@ -81,24 +81,6 @@ std::string default_peak_profile(BeamModeEnum mode) {
     return mode == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt" : "tof-jorgensen";
 }
 
-std::string peak_profile_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"cwl-gaussian", "Gaussian"},
-        {"cwl-lorentzian", "Lorentzian"},
-        {"cwl-pseudo-voigt", "Pseudo-Voigt"},
-        {"cwl-pseudo-voigt-berar-baldinozzi", "Pseudo-Voigt + Bérar-Baldinozzi asymmetry"},
-        {"cwl-tch-pseudo-voigt", "Thompson-Cox-Hastings pseudo-Voigt (TCH)"},
-        {"cwl-tch-pseudo-voigt-fcj",
-         "Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
-}
-
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode) {
     // crysta's vocabulary table, in its order (ADR-0017): edi keeps no list of its own.
     return absorption_file_tokens(mode);
@@ -122,21 +104,6 @@ std::vector<std::string> applicable_fitting_modes(const Project& project) {
         return {"joint"};
     }
     return {"single"};
-}
-
-std::string fitting_mode_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"single", "Single experiment"},
-        {"joint", "Joint: all experiments at once"},
-        {"sequential", "Sequential: each from the previous"},
-        {"independent", "Independent: each from the same start"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
 }
 
 void select_peak_profile(ExperimentBase& experiment, const std::string& token) {

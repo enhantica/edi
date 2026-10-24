@@ -9,6 +9,7 @@
 #include <sstream>
 #include <utility>
 
+#include "edi/display.hpp"
 #include "edi/model.hpp"
 
 namespace edi {
@@ -197,6 +198,12 @@ void fill_points(PatternSeries& series, const Kept& kept, const std::vector<doub
     }
 }
 
+// An axis title from its data item in the dictionary: `2θ (deg)`.
+std::string axis_title(const char* uid) {
+    const std::string units = units_label(uid);
+    return units.empty() ? label(uid) : label(uid) + " (" + units + ")";
+}
+
 // An experiment's or a structure's style row is its place's.
 std::string style_key(const char* base, std::size_t place) { return std::string(base) + "." + std::to_string(place); }
 
@@ -339,7 +346,7 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
         const double a = d_at(native, d, band.x_min), b = d_at(native, d, band.x_max);
         band = {std::min(a, b), std::max(a, b)};
     }
-    source.x_title = "d (Å)";
+    source.x_title = axis_title("data.d_spacing");
     source.x = data.d_spacing.buffer();
     if (d.front() > d.back()) {
         for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
@@ -381,7 +388,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     if (data.two_theta.has_value() == data.time_of_flight.has_value()) {
         return source;  // no single engaged axis: nothing to present
     }
-    source.x_title = data.two_theta.has_value() ? "2θ (deg)" : "TOF (µs)";
+    source.x_title = axis_title(data.two_theta.has_value() ? "data.two_theta" : "data.time_of_flight");
     const auto copy = [](const std::vector<double>& values) -> PatternSource::Column {
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(values);
     };

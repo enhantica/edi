@@ -40,6 +40,20 @@ const ParameterSpec& spec_of(const Parameter& parameter) {
     return *parameter.spec;
 }
 
+crysta::Dependence dependence_of(Dependence dependence) {
+    switch (dependence) {
+        case Dependence::SymmetryFixed:
+            return crysta::Dependence::SymmetryFixed;
+        case Dependence::SymmetryTied:
+            return crysta::Dependence::SymmetryTied;
+        case Dependence::Constrained:
+            return crysta::Dependence::Constrained;
+        case Dependence::Independent:
+            break;
+    }
+    return crysta::Dependence::Independent;
+}
+
 crysta::DisplayFormat format_of(const crysta::DictionaryItem& found, std::string_view variant) {
     const std::optional<crysta::DisplayFormat> format = found.format_for(variant);
     if (!format.has_value()) {
@@ -132,6 +146,14 @@ double display_step(const Parameter& parameter, std::string_view variant) {
 double display_step(std::string_view uid, double value, std::string_view variant) {
     const crysta::DictionaryItem& found = item(uid);
     return crysta::display_step(value, format_of(found, variant));
+}
+
+FileText file_text(const Parameter& parameter, const std::string& su_rule) {
+    const crysta::DictionaryItem& found = item(uid_of(spec_of(parameter)));
+    const crysta::WrittenText text =
+        crysta::written_text(parameter.value, parameter.uncertainty.get(), parameter.free.get(),
+                             dependence_of(parameter.dependence), found, rule_of(su_rule));
+    return {text.value, text.su};
 }
 
 std::optional<std::string> exact_fraction(double value) { return crysta::exact_fraction(value); }

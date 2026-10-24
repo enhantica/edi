@@ -40,10 +40,12 @@ EaElements.ParamTextField {
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     enabled: refinable
-    // The value and its uncertainty as text, by the app's one rule for numbers (NumberText).
+    // The value and its uncertainty as the project file and the Text tab spell them (edi ADR-0041); a parameter the
+    // dictionary does not know by the app's rule for numbers (NumberText).
+    readonly property bool written: item !== null && item.fileValue !== ""
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
+        "value": written ? item.fileValue : NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
+        "error": written ? item.fileSu : item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": field.refinable,
         "fittable": field.canFit,
         "fit": item.free && field.canFit,
@@ -53,8 +55,8 @@ EaElements.ParamTextField {
         "units": item.displayUnits
     } : ({})
 
-    // The value as edited: in full, where the cell shows it rounded (NumberText).
-    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+    // The value as edited: the same text, so a field left as it was changes nothing.
+    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
     // A value wider than the field shows from its start and clips at the end, without an ellipsis, as a table
     // cell does; it is shown in full while edited.
