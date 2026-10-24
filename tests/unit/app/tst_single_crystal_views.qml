@@ -18,6 +18,12 @@ TestCase {
     property var originalTheme
     property var originalQuantity
     property var originalPointer
+    property var legendButton: null
+    SignalSpy {
+        id: legendClicks
+        target: test.legendButton
+        signalName: "clicked"
+    }
     property var liveChart: null
     property int liveFrames: 0
     property var initialFitWarnings: []
@@ -491,10 +497,8 @@ TestCase {
             Ui.scrollIntoView(selector);
             verify(waitForPolish(appWindow.contentItem), "The extinction selector must finish layout before a real click");
             tryVerify(() => Ui.exposed(selector), 3000, "The extinction selector must enter the actual viewport before input");
-            appWindow.requestActivate();
-            selector.forceActiveFocus();
-            keyClick(Qt.Key_Space);
-            tryCompare(selector.popup, "opened", true, 2000, "The focused extinction selector must open its real popup from a keyboard action: " + choice[0]);
+            Ui.click(test, Probe, appWindow, "extinction.type");
+            tryCompare(selector.popup, "opened", true, 2000, "A real click must open the extinction selector popup: " + choice[0]);
             const index = selector.options.indexOf(choice[0]);
             const list = selector.popup.contentItem;
             list.positionViewAtIndex(index, ListView.Contain);
@@ -502,6 +506,7 @@ TestCase {
             const item = list.itemAtIndex(index);
             mouseClick(item, item.width / 2, item.height / 2);
             tryCompare(experiment, "extinctionType", choice[0], 2000, "A real selector choice must update the selected extinction type");
+            tryCompare(selector.popup, "visible", false, 2000, "A selected extinction popup must finish closing before the next real input");
             const names = Probe.rows(experiment.extinction).map(row => row.parameter.name).sort();
             compare(names.join(","), choice[2].slice().sort().join(","), "The app must expose only the chosen extinction type's fields");
         }
@@ -950,8 +955,15 @@ TestCase {
             }
             verify(waitForPolish(stacked), "The visible Stacked toolbar must finish layout before the legend click");
             tryVerify(() => Ui.exposed(toggle), 3000, "The Stacked legend toggle must enter the viewport after the tab transition");
-            mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+            legendButton = toggle;
+            legendClicks.clear();
+            verify(waitForRendering(stacked), "The settled Stacked toolbar must render before pointer delivery");
+            const point = Ui.clickPoint(toggle);
+            verify(point !== null, "The legend button must have an unclipped pointer target");
+            mouseClick(toggle, point.x, point.y, Qt.LeftButton, Qt.NoModifier, 20);
+            tryCompare(legendClicks, "count", 1, 1000, "The actual Stacked legend button must receive the pointer click");
             tryCompare(legend, "visible", false, 1000, "The real legend button must hide the Stacked legend");
+            legendButton = null;
         }
     }
     function test_plain_reflections_one_warning() {
