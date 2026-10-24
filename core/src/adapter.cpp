@@ -4535,6 +4535,8 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
     record.correlations.assign(std::move(kept));
 }
 
+std::string single_crystal_forbidden_tag(const std::string& tag) { return crysta::single_crystal_forbidden_tag(tag); }
+
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {
     std::vector<FitParameterCorrelation> rows;
     if (!table.names || !table.values) {

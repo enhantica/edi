@@ -1604,6 +1604,22 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     const bool cw = *beam == kBeamModeCwl;
     experiment.experiment_type.beam_mode =
         cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    // A category only a powder pattern has is refused by name before anything is read, as crysta refuses it; it would
+    // otherwise be dropped silently and lost on save.
+    const auto refuse_pattern_category = [&where](const std::string& tag) {
+        if (const std::string found = single_crystal_forbidden_tag(tag); !found.empty()) {
+            fail_schema(where, "pattern-category-on-single-crystal",
+                        found + " on a single crystal, which has no powder pattern");
+        }
+    };
+    for (const auto& item : block.items) {
+        refuse_pattern_category(item.first);
+    }
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            refuse_pattern_category(tag);
+        }
+    }
     if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
         if (*probe != "neutron") {
             fail_schema(where, "unknown-radiation-probe",

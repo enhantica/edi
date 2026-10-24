@@ -253,9 +253,11 @@ void copy_fit_result(Project& to, const Project& from);
 void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
-// A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
+// `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
+// crysta's list, the one both loaders refuse from.
+std::string single_crystal_forbidden_tag(const std::string& tag);
 // ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
-// names and the coefficient in crysta's shortest round-trip text, `file` naming the scan file (empty for a single fit).
+// names and the coefficient, `file` naming the scan file (empty for a single fit).
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
 // ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
 // (I7) and, for the template file, the saved rows made from its table (I6), the other files' read rows moving to their
