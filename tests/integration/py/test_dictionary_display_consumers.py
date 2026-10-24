@@ -111,31 +111,38 @@ def test_constrained_value_without_su_saves_without_binary_noise(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ('rule', 'value', 'su', 'expected'),
+    ('rule', 'value', 'su', 'expected', 'report_expected'),
     [
-        ('iucr_19', 1.54249, 0.01532, '1.542(16)'),
-        ('iucr_19', 2.16352, 0.00481, '2.164(5)'),
-        ('iucr_99', 2.16352, 0.00481, '2.1635(49)'),
+        ('iucr_19', 1.54249, 0.01532, '1.542(16)', '1.542(16)'),
+        ('iucr_19', 2.16352, 0.00481, '2.164(5)', '2.164(5)'),
+        ('iucr_99', 2.16352, 0.00481, '2.1635(49)', '2.164(5)'),
     ],
 )
-def test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples(
-    tmp_path, rule, value, su, expected
+@pytest.mark.parametrize('surface', ['repr', 'model', 'html'])
+def test_repr_follows_project_rule_and_report_always_uses_iucr(
+    tmp_path, rule, value, su, expected, report_expected, surface
 ):
-    project = model(tmp_path)
-    project.su_rule = rule
+    source = tmp_path / 'input'
+    shutil.copytree(INPUT, source)
+    metadata = source / 'project.edi'
+    metadata.write_text(metadata.read_text() + '\n_su_format.rule ' + rule + '\n')
+    project = edi.Project.load(source)
     parameter = project.structures['phase'].cell.length_a
     parameter.value = value
     parameter.uncertainty = su
     parameter.free = True
-    assert expected in repr(parameter), (
-        'Python repr follows the selected project IUCr uncertainty rule'
-    )
-    assert expected in project.report.model().to_json(), (
-        'The report model retains the selected IUCr worked-example spelling'
-    )
-    assert expected in project.report.as_html(), (
-        'The HTML report keeps the same worked-example uncertainty spelling'
-    )
+    if surface == 'repr':
+        assert expected in repr(parameter), (
+            'Python repr follows the selected project IUCr uncertainty rule'
+        )
+    elif surface == 'model':
+        assert report_expected in project.report.model().to_json(), (
+            'The report model always uses the IUCr worked-example spelling'
+        )
+    else:
+        assert report_expected in project.report.as_html(), (
+            'The HTML report always uses IUCr even when the project selects two uncertainty digits'
+        )
 
 
 @pytest.mark.parametrize(

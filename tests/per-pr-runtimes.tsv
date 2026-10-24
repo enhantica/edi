@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T08:47:27Z
+# measured_utc = 2026-10-24T09:39:38Z
 #
-# Recorded from: measured test run (13 node(s) measured once, 14502 banked, 9 stale row(s) dropped)
-# Collected tests: 16075; with a reported duration: 9544
+# Recorded from: measured test run (11 node(s) measured once, 14502 banked, 3 stale row(s) dropped)
+# Collected tests: 16083; with a reported duration: 9548
 # Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16075
+# inventory_python = 16083
 # inventory_cpp = 391
-# inventory_measured = 14502
-# inventory_unmeasured = 1964
+# inventory_measured = 14506
+# inventory_unmeasured = 1968
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4505,6 +4505,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[beta-beta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Biso-_atom_site.B_iso_or_equiv-0.52]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_uses_the_native_adp_variant_without_conversion[Uiso-_atom_site.U_iso_or_equiv-0.0066]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_report_always_uses_iucr_independently_of_project_rule[iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_report_always_uses_iucr_independently_of_project_rule[iucr_99]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_symmetry_fixed_special_positions_are_decimal_without_su_and_flagged
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_distinct_edi_aliases_of_one_item_are_refused_together
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_edi_alias_loads_and_only_current_name_is_written
@@ -4526,9 +4528,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consu
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[angle_beta-91.234567-3]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_a-3.890915-4]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_python_repr_and_report_share_the_dictionary_format[length_b-4.12345678-4]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_19-1.54249-0.01532-1.542(16)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_19-2.16352-0.00481-2.164(5)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_and_report_use_the_project_iucr_rule_from_the_published_examples[iucr_99-2.16352-0.00481-2.1635(49)]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[html-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
+0.040	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+0.010	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[model-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_19-1.54249-0.01532-1.542(16)-1.542(16)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_19-2.16352-0.00481-2.164(5)-2.164(5)]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_display_consumers.py::test_repr_follows_project_rule_and_report_always_uses_iucr[repr-iucr_99-2.16352-0.00481-2.1635(49)-2.164(5)]
 0.000	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.value]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength.wavelength]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.py::test_every_external_experiment_spelling_loads_its_nondefault_value[_diffrn_radiation_wavelength]

@@ -263,3 +263,24 @@ def test_cif_export_preserves_each_native_anisotropic_tensor(tmp_path, kind, pre
         assert gemmi.cif.as_number(column[0]) == pytest.approx(expected, abs=1e-12), (
             'CIF publication preserves each native tensor magnitude without convention conversion'
         )
+
+
+@pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
+def test_cif_report_always_uses_iucr_independently_of_project_rule(tmp_path, rule):
+    source = tmp_path / 'input'
+    shutil.copytree(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment', source)
+    metadata = source / 'project.edi'
+    metadata.write_text(metadata.read_text() + '\n_su_format.rule ' + rule + '\n')
+    project = engine().Project.load(source)
+    parameter = project.structures['phase'].cell.length_a
+    parameter.value = 2.16352
+    parameter.uncertainty = 0.00481
+    parameter.free = True
+    assert hasattr(project.report, 'save_cif'), 'The report exposes the official CIF writer'
+    path = save_cif(project, tmp_path / 'iucr.cif')
+    gemmi = importlib.import_module('gemmi')
+    blocks = gemmi.cif.read_file(str(path))
+    block = next(block for block in blocks if block.find_value('_cell.length_a'))
+    assert block.find_value('_cell.length_a') == '2.164(5)', (
+        'The CIF report always uses IUCr recommendation 12 even under the project two-digit rule'
+    )
