@@ -349,6 +349,7 @@ int main(int argc, char** argv) {
         } catch (const std::exception& failure) {
             error = failure.what();
         }
+        if (action == "shape") computed(p, "retained:");
         describe(p, "after:");
     } catch (const std::exception& failure) {
         error = failure.what();

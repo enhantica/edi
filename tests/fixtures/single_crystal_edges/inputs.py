@@ -185,7 +185,7 @@ def powder(root):
         '_instrument.setup_wavelength 1.54\n_instrument.calib_twotheta_offset 0\n'
         '_peak.type cwl-tch-pseudo-voigt\n'
         '_peak.broad_gauss_u 0\n_peak.broad_gauss_v 0\n_peak.broad_gauss_w .15\n'
-        '_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n'
+        '_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n_peak.cutoff_fwhm 5\n'
         '_background.type polynomial\n_background.origin 40\n'
         'loop_\n_background.id\n_background.order\n_background.coef\n'
         'base 0 4\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\nstructure .7\n'
