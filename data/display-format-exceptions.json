@@ -243,6 +243,16 @@
    "reason": "a page name (edi ADR-0017), not the _report category"
   },
   {
+   "file": "app/qml/Pages/Analysis/AnalysisPage.qml",
+   "literal": "Correlations",
+   "reason": "a main-area tab name beside Pattern and Evolution (edi ADR-0017), not the correlation loop"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportPreview.qml",
+   "literal": "Correlations",
+   "reason": "a report section heading (edi ADR-0036), not the correlation loop"
+  },
+  {
    "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
    "literal": "name",
    "reason": "the parameter table column of parameter names, not an item of the file"

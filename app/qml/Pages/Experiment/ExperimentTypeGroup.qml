@@ -47,7 +47,7 @@ Grid {
             uid: "experiment_type.sample_form"
             options: row.experiment ? row.experiment.sampleFormOptions : null
             token: row.experiment ? row.experiment.sampleFormToken : ""
-            writable: false
+            enabled: false
             onSelected: token => row.choose("sampleForm", token)
         }
         HoverHandler {
@@ -65,7 +65,7 @@ Grid {
         uid: "experiment_type.beam_mode"
         options: row.experiment ? row.experiment.beamModeOptions : null
         token: row.experiment ? row.experiment.beamModeToken : ""
-        writable: row.editable
+        enabled: row.editable
         onSelected: token => row.choose("beamMode", token)
     }
     SelectorField {
@@ -75,7 +75,7 @@ Grid {
         uid: "experiment_type.radiation_probe"
         options: row.experiment ? row.experiment.radiationProbeOptions : null
         token: row.experiment ? row.experiment.radiationProbeToken : ""
-        writable: row.editable
+        enabled: row.editable
         onSelected: token => row.choose("radiationProbe", token)
     }
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
@@ -91,7 +91,7 @@ Grid {
             uid: "experiment_type.scattering_type"
             options: row.experiment ? row.experiment.scatteringTypeOptions : null
             token: row.experiment ? row.experiment.scatteringTypeToken : ""
-            writable: false
+            enabled: false
             onSelected: token => row.choose("scatteringType", token)
         }
         HoverHandler {
