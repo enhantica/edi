@@ -303,6 +303,70 @@ function drawPattern(figure, pattern) {
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
+// A single crystal's chart (edi ADR-0049), as the app draws it: each reflection's F²meas with its s.u. bar against its
+// F²calc, the y = x line a perfect model puts them on, one range on both axes; "Not calculated yet" before a
+// calculation.
+function drawSingleCrystal(figure, crystal) {
+  if (!window.Plotly) {
+    notice(figure, 'The chart needs plotly.js, which could not be loaded.');
+    return;
+  }
+  if (crystal.calc.length === 0) {
+    notice(figure, 'Not calculated yet');
+    return;
+  }
+  const font = pageStyle('--head-font');
+  const grid = pageStyle('--rowshade');
+  const frame = pageStyle('--tableborder');
+  const style = patternStyle('meas.0');
+  let low = 0;
+  let high = 0;
+  crystal.meas.forEach((meas, i) => {
+    for (const end of [meas - crystal.su[i], meas + crystal.su[i], crystal.calc[i]]) {
+      if (Number.isFinite(end)) {
+        low = Math.min(low, end);
+        high = Math.max(high, end);
+      }
+    }
+  });
+  const pad = (high - low) * 0.05 || 1;
+  const range = [Math.min(0, low - pad), high + pad];
+  const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false, range };
+  const points = {
+    type: 'scatter',
+    mode: 'markers',
+    name: 'Reflections',
+    x: crystal.calc,
+    y: crystal.meas,
+    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: style.light },
+    text: crystal.meas.map((meas, i) => `${crystal.h[i]} ${crystal.k[i]} ${crystal.l[i]}`),
+    hovertemplate: '%{text}<br>F²meas %{y}<br>F²calc %{x}<extra></extra>',
+    marker: { color: style.light, size: 5 },
+  };
+  const diagonal = {
+    type: 'scatter',
+    mode: 'lines',
+    x: range,
+    y: range,
+    hoverinfo: 'skip',
+    line: { color: frame, width: 1 },
+  };
+  const layout = {
+    height: figure.clientHeight,
+    margin: { l: 16, r: 16, t: 36, b: 16 },
+    font: { family: font },
+    showlegend: false,
+    hovermode: 'closest',
+    annotations: crystal.title
+      ? [{ text: crystal.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
+           showarrow: false, font: { family: font } }]
+      : [],
+    xaxis: { ...axis, title: { text: 'F² calc' } },
+    yaxis: { ...axis, title: { text: 'F² meas' } },
+  };
+  window.Plotly.newPlot(figure, [diagonal, points], layout, { responsive: true, displaylogo: false });
+}
+
 // One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
 // titled with its name and units; "No fitted results yet" before any dataset is fitted.
 function drawEvolution(figure, series) {
@@ -658,7 +722,9 @@ async function drawStructure(figure, structure) {
 
 for (const figure of document.querySelectorAll('.pattern-figure')) {
   const experiment = model.experiments?.[Number(figure.dataset.index)];
-  if (experiment) {
+  if (experiment?.single_crystal) {
+    drawSingleCrystal(figure, experiment.single_crystal);
+  } else if (experiment) {
     drawPattern(figure, experiment.pattern);
   }
 }

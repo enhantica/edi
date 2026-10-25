@@ -32,6 +32,8 @@ class ParameterItem : public QObject {
     // True for an auto-mode background's point intensity or term coefficient (ADR-0040): the estimate owns the value,
     // so a page shows it locked and a value write refuses; it can still be freed or fixed.
     Q_PROPERTY(bool estimated READ isEstimated NOTIFY estimatedChanged)
+    // Why the value is non-physical though in range (an anisotropic tensor with a negative eigenvalue); empty if not.
+    Q_PROPERTY(QString domainWarning READ domainWarning NOTIFY domainWarningChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QString path READ path CONSTANT)
     Q_PROPERTY(QString uid READ uid CONSTANT)
@@ -78,6 +80,8 @@ class ParameterItem : public QObject {
     bool isEstimated() const { return estimated_; }
     // Set by the registry at each publish, as the mode changes while the parameter stays shown.
     void setEstimated(bool estimated);
+    QString domainWarning() const { return domain_warning_; }
+    void setDomainWarning(const QString& warning);
     QString lastError() const { return last_error_; }
     QString path() const { return path_; }
     QString uid() const { return uid_; }
@@ -122,6 +126,7 @@ class ParameterItem : public QObject {
     void freeChanged();
     void refinableChanged();
     void estimatedChanged();
+    void domainWarningChanged();
     void lastErrorChanged();
     void blockIndexChanged();
     void elementSymbolChanged();
@@ -140,6 +145,7 @@ class ParameterItem : public QObject {
     bool refinable_;
     bool fittable_;
     bool estimated_ = false;
+    QString domain_warning_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
         short_name_, category_icon_, element_symbol_;

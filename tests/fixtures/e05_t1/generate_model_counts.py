@@ -132,6 +132,10 @@ def project_model_names(reference_names, experiments, path):
     for experiment in experiments:
         original = (path / 'experiments' / (experiment.name + '.edi')).read_text()
         prefix = experiment.name + '.'
+        if re.search(
+            r'^_experiment_type.sample_form [\"\']?single crystal', original, re.MULTILINE
+        ):
+            continue
         if str(experiment.experiment_type.beam_mode.value) == 'time-of-flight':
             names.remove(prefix + 'instrument.twotheta_bank')
             for coefficient in (

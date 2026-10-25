@@ -1,7 +1,7 @@
 #  adaptation: seed inputs/pins were byte-identical and three seeds non-executing.
 #  additionally requires the seven declared imported minimizers to be crysta.
 # Only those declarations, analysis settings, scan pins and validated excluded cells may change;
-# all seeds execute. Every other original blob stays pinned.
+# all seeds execute. Other original blobs stay pinned; four exact re-taken pins are restored below.
 """CLI project plane: independent source identity and consumed-model semantics.
 
 The source object inventory was measured from crysta origin/main, independently of edi.
@@ -23,6 +23,8 @@ import pytest
 import yaml
 from mkdocs.config import load_config
 
+from tests.fixtures.c34_t23_cli_projects.retaken_pins import SEEDS as RETAKEN_SEEDS
+from tests.fixtures.c34_t23_cli_projects.retaken_pins import retained_pin_bytes
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import original_tokens
@@ -35,20 +37,6 @@ FIXTURES = ROOT / 'tests/fixtures/c34_t23_cli_projects'
 SOURCE = json.loads((FIXTURES / 'source-objects.json').read_text())
 IDS = json.loads((FIXTURES / 'project-ids.json').read_text())
 PROJECT_IDS = IDS['source_to_project']
-# Regression bytes from edi b339d832 after crysta's resumed descent, not correctness references.
-# The catalogue rework replaces these four pins when it merges.
-RETAKEN_EXPECTED_BLOBS = {
-    'ncaf-wish-2bank-s3': 'c3a53c1ebb70e3cf0ae5fd4412a7f3a384422115',
-    'ncaf-wish-3bank-s5': '785c3f12aabcee5813f42cb2ea52e0e8b9713c05',
-    'si-sepd-s2': '7578f236f3cf383c91b6baa97945b4c63994803b',
-    'si-sepd-s5': 'f27ed028d543ee5ac3c8056fea2c6c1aa5e2ab58',
-}
-
-
-def pinned_seed_blob(project_id, name, expected):
-    return (
-        RETAKEN_EXPECTED_BLOBS.get(project_id, expected) if name == 'expected.json' else expected
-    )
 
 
 def content_id(raw):
@@ -122,6 +110,25 @@ def registry():
     return rows
 
 
+def restore_retaken_pin(project_id, name, path):
+    if project_id not in RETAKEN_SEEDS or name != 'expected.json':
+        return
+    raw = path.read_bytes()
+    retained = retained_pin_bytes(project_id, raw)
+    for changed in (
+        retained,
+        raw + b' ',
+        raw.replace(b'"regression-pin"', b'"reference"', 1),
+        raw.replace(b'"tol_abs"', b'"unexpected_tolerance"', 1),
+    ):
+        with pytest.raises(AssertionError, match='every reviewed source byte'):
+            retained_pin_bytes(project_id, changed)
+    other = next(seed for seed in sorted(RETAKEN_SEEDS) if seed != project_id)
+    with pytest.raises(AssertionError, match='every reviewed source byte'):
+        retained_pin_bytes(other, raw)
+    path.write_bytes(retained)
+
+
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
 def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
@@ -150,14 +157,16 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         assert path.is_file() and not path.is_symlink(), (
             ' seed files must be materialized regular files'
         )
+        # b761fdf6 -> 90e17741 changes exact regression pins, preserving old checks.
+        # The catalogue rework replaces these four pins when it merges.
+        restore_retaken_pin(project_id, name, path)
         adaptation = public_metadata.get((live_directory / name).relative_to(ROOT).as_posix())
         if adaptation and name != 'project/analysis/analysis.edi':
             assert adaptation['before_blob'] == expected[name], (
                 'the metadata adaptation must retain its independently inventoried upstream blob'
             )
-            assert blob_id(path) == pinned_seed_blob(project_id, name, adaptation['after_blob']), (
-                'The public copy must equal the complete pinned metadata adaptation '
-                'or re-taken pin'
+            assert blob_id(path) == adaptation['after_blob'], (
+                'the public copy must equal the complete pinned metadata-only adaptation'
             )
             continue
         if name == 'project/analysis/analysis.edi':
@@ -241,18 +250,14 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                 'only the declared Co Biso or NCAF follower flags may alter a seed structure'
             )
             continue
-        raw = retained_seed_bytes(
-            name,
-            original_tokens(path.read_bytes()),
-            pinned_seed_blob(project_id, name, expected[name]),
-        )
-        assert content_id(raw) == pinned_seed_blob(project_id, name, expected[name]), (
-            'Seed bytes retain source or re-taken blob ids and regression-pin kinds '
-            'after the validated excluded-cell convention reversal'
+        raw = retained_seed_bytes(name, original_tokens(path.read_bytes()), expected[name])
+        assert content_id(raw) == expected[name], (
+            'Seed bytes retain source blob ids and regression-pin kinds after the validated '
+            'excluded-cell convention reversal'
         )
 
 
-@pytest.mark.parametrize('project_id', sorted(RETAKEN_EXPECTED_BLOBS))
+@pytest.mark.parametrize('project_id', sorted(RETAKEN_SEEDS))
 @pytest.mark.parametrize('defect', ['value', 'kind', 'tolerance', 'input', 'extra', 'missing'])
 def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
     project_id, defect, tmp_path, monkeypatch
@@ -291,7 +296,8 @@ def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
     else:
         expected_file.unlink()
     with pytest.raises(
-        AssertionError, match=r'pinned|blob ids|source tree|regular files|archived source'
+        AssertionError,
+        match=r'pinned|blob ids|source tree|regular files|archived source|reviewed source byte',
     ):
         test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
             project_id, tmp_path / 'negative'

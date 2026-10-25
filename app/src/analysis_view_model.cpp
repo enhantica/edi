@@ -311,6 +311,15 @@ void AnalysisViewModel::setChiSquareTolerance(double tolerance) {
     setLastError(editor_.apply_setting(edi::Edit::chi_square_tolerance(project, tolerance)));
 }
 
+void AnalysisViewModel::setRefineLsThresholdSigma(double sigma) {
+    const std::optional<double> value = qIsNaN(sigma) ? std::nullopt : std::optional<double>(sigma);
+    if (value == project_.refine_ls_threshold_sigma) {
+        return;
+    }
+    edi::Project& project = project_;
+    setLastError(editor_.apply_setting(edi::Edit::refine_ls_threshold_sigma(project, value)));
+}
+
 void AnalysisViewModel::setLastError(const QString& error) {
     if (error != last_error_) {
         last_error_ = error;
@@ -367,6 +376,12 @@ void AnalysisViewModel::sync() {
         if (had != hasChiSquareTolerance()) {
             emit hasChiSquareToleranceChanged();
         }
+    }
+    const double cutoff = project_.refine_ls_threshold_sigma.value_or(qQNaN());
+    if (qIsNaN(cutoff) != qIsNaN(refine_ls_threshold_sigma_) ||
+        (!qIsNaN(cutoff) && cutoff != refine_ls_threshold_sigma_)) {
+        refine_ls_threshold_sigma_ = cutoff;
+        emit refineLsThresholdSigmaChanged();
     }
     joint_weights_->sync();
     sequential_fit_->sync();

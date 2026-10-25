@@ -74,6 +74,8 @@ QtObject {
         preferences.scanStackedHeight = 2;
         preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
+        preferences.singleCrystalQuantity = "f_squared";
+        preferences.chartHighlightSelected = true;
     }
 
     property Settings settings: Settings {
@@ -137,11 +139,20 @@ QtObject {
     property bool scanStackedReversed: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
     property bool chartIncludedOnly: false
+    // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
+    property string singleCrystalQuantity: "f_squared"
+    // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
+    // fades the others to chartFadedOpacity; off, all are drawn alike and only the selection's label marks it (the
+    // owner, 2026-10-24).
+    property bool chartHighlightSelected: true
+    readonly property real chartFadedOpacity: 0.3
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Charts"
         property alias includedOnly: preferences.chartIncludedOnly
+        property alias singleCrystalQuantity: preferences.singleCrystalQuantity
+        property alias highlightSelected: preferences.chartHighlightSelected
     }
 
     property Settings analysisSettings: Settings {

@@ -84,11 +84,15 @@ Column {
                 iconColor: AppColors.structure(row.colorIndex)
                 toolTip: qsTr("Calculated pattern color")
             }
-            // The structure, picked from the project's structures as the aliases table picks a parameter.
+            // The structure, picked from the project's structures as the aliases table picks a parameter. A link to a
+            // structure the project does not hold (an experiment loaded from another project) shows that name in red
+            // until another is picked; nothing is calculated for the experiment meanwhile.
             Item {
                 property int horizontalAlignment: Text.AlignLeft
                 height: parent.height
                 SearchableComboBox {
+                    readonly property bool missing: group.rows !== null && group.rows.structureNames.indexOf(row.structureId) < 0
+
                     width: Math.min(parent.width, implicitWidth)
                     x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     inTable: true
@@ -99,7 +103,8 @@ Column {
                     model: group.rows ? group.rows.structureNames : []
                     currentIndex: group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1
                     displayText: row.structureId
-                    ToolTip.text: row.structureId
+                    foregroundColor: missing ? EaStyle.Colors.red : _foregroundColor()
+                    ToolTip.text: missing ? qsTr("The project holds no structure '%1'; pick one of its structures").arg(row.structureId) : row.structureId
                     onActivated: index => {
                         group.rows.setStructureId(row.index, group.rows.structureNames[index]);
                         currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);

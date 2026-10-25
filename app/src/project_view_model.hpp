@@ -11,6 +11,7 @@
 #include <QTimer>
 #include <QString>
 #include <QUrl>
+#include <QtQml/qqmllist.h>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <map>
@@ -179,6 +180,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
     // A scan's stacked patterns and 2D map (edi ADR-0041).
     Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
+    // A project of several single crystals and nothing else: its experiments, in order, for the Stacked chart; empty
+    // otherwise.
+    Q_PROPERTY(QQmlListProperty<edi_app::ExperimentViewModel> singleCrystalExperiments READ
+                   singleCrystalExperimentList NOTIFY experimentModelsChanged)
     // The Correlations tab: the last fit's parameter correlations for the shown experiment.
     Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -251,6 +256,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
     ScanViewModel* scanViews() const { return scan_views_; }
+    QList<ExperimentViewModel*> singleCrystalExperiments() const;
+    QQmlListProperty<ExperimentViewModel> singleCrystalExperimentList();
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
@@ -370,6 +377,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    QString apply_unread(const edi::Edit& change) override;
     QString value_refusal(const edi::Parameter& parameter) const override;
     QString free_refusal() const override;
     QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
@@ -395,6 +403,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
+    void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
     void refused(const QString& message);

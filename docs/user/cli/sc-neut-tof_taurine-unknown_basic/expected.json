@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40",
+    "artifact": "../../../../tests/fixtures/single_crystal/fitting/fullprof/sc-neut-tof_taurine-unknown_basic/taurine.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "comparable_parameters": true,
+  "quantities": {
+    "n_free": {
+      "value": 1,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 171,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "param.scale.value": {
+      "value": 2.6886642,
+      "kind": "reference",
+      "tol_abs": 0.025837642
+    },
+    "reduced_chi_square": {
+      "value": 24.41891246915446,
+      "kind": "reference",
+      "tol_abs": 0.06,
+      "tol_rel": 0.002
+    }
+  }
+}

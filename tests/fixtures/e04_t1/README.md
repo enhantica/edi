@@ -230,3 +230,15 @@ slots; absent declarations have exact fixed-zero defaults. Input hashes,
 original profile witnesses and all other saved values remain intact. The scoped
 update refuses a changed experiment/display-witness population. No app output
 supplies a number.
+
+
+The single-crystal input adaptation uses `adapt_single_crystal_inputs.py`. It
+matches every original file pin of the eight existing single-crystal projects to
+`f0fc35eb`, captures current input text with the visible source parsers, and merges
+only those project/display witnesses. Registry order and every powder witness are
+retained. This records typed extinction fields and SENJU experiment names, including
+the six-bank taurine input; it is an input/UI projection, not a new scientific
+correctness reference. The Pr2NiO4 basic experiment is separately bounded:
+`deb6c159` (Becker-Coppens with fixed zero radius and mosaicity) becomes `f46766cc`
+(explicit none), with all other experiment bytes identical. No app or engine is
+used to produce these expectations.

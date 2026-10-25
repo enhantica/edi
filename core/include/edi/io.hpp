@@ -223,6 +223,10 @@ double parse_edi_double(const std::string& text, const std::string& where);
 // std::invalid_argument. The factory and the public type setter route every supported
 // selection through this, so a mutated model always matches what both loaders accept.
 void apply_absorption_family(AbsorptionBase& absorption, const std::string& token);
+// A single crystal's extinction switched to `token`: the items of that type kept, a missing one
+// started at 0 (a missing distribution Gaussian), the rest removed; an unknown type throws
+// std::invalid_argument. The loader, the app's selector and the Python `type` setter share it.
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token);
 
 // Undo the last fit (diffraction-lib `undo_fit`, the single-level pre-fit snapshot). Restores each
 // parameter carrying persisted start state to its start_value/start_uncertainty, clears the snapshot,
@@ -249,10 +253,11 @@ void copy_fit_result(Project& to, const Project& from);
 void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
-// A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
-double correlation_value(const FitParameterCorrelation& row);
+// `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
+// crysta's list, the one both loaders refuse from.
+std::string single_crystal_forbidden_tag(const std::string& tag);
 // ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
-// names and the coefficient in crysta's shortest round-trip text, `file` naming the scan file (empty for a single fit).
+// names and the coefficient, `file` naming the scan file (empty for a single fit).
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
 // ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
 // (I7) and, for the template file, the saved rows made from its table (I6), the other files' read rows moving to their
@@ -328,6 +333,11 @@ struct PlainDataLoad {
     std::size_t duplicates = 0;
     std::size_t reordered = 0;
     std::size_t derived = 0;
+    // A FullProf reflection file holding several datasets (its code column): `experiment` takes the first and these
+    // the rest, one experiment each named `<name>_<code>`; empty otherwise.
+    std::vector<BraggPdExperiment> more;
+    std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
+    std::vector<std::size_t> skipped_lines;  // a plain reflection file's lines that are not reflections
 };
 /// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
 /// a Windows reserved device name).

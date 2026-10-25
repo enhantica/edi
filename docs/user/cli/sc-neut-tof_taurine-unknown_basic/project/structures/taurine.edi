@@ -1,0 +1,38 @@
+data_taurine
+
+_edi.schema_version 3
+
+_cell.length_a 5.272901
+_cell.length_b 11.656488
+_cell.length_c 7.838297
+_cell.angle_alpha 90
+_cell.angle_beta 94.010994
+_cell.angle_gamma 90
+
+_space_group.name_h_m "P 21/c"
+_space_group.coord_system_code b1
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+S1 S 0.19448 0.35173 0.3473 e 1 Biso 1.37018
+O1 O 0.31207 0.23951 0.35143 e 1 Biso 2.68011
+O2 O -0.05909 0.33563 0.29636 e 1 Biso 3.50515
+O3 O 0.22105 0.41215 0.50573 e 1 Biso 1.83513
+N1 N 0.2634 0.62808 0.33048 e 1 Biso 2.07364
+H1 H 0.12861 0.58669 0.41769 e 1 Biso 3.31527
+H2 H 0.18953 0.71385 0.31124 e 1 Biso 4.46988
+H3 H 0.4397 0.62023 0.34592 e 1 Biso 4.34151
+C1 C 0.34384 0.44116 0.20155 e 1 Biso 1.73667
+H11 H 0.55246 0.43345 0.24304 e 1 Biso 3.32279
+H12 H 0.32537 0.3897 0.08264 e 1 Biso 3.05746
+C2 C 0.20029 0.55716 0.18272 e 1 Biso 1.66017
+H21 H 0.2765 0.60004 0.07688 e 1 Biso 2.15403
+H22 H -0.00383 0.54767 0.15762 e 1 Biso 4.71303
