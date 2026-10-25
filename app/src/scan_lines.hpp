@@ -4,16 +4,17 @@
 
 #include <QColor>
 #include <QQuickItem>
+#include <QRectF>
 #include <QtQml/qqmlregistration.h>
 #include <vector>
 
 namespace edi_app {
 
-/// The Stacked view's pattern lines on the GPU (edi ADR-0041): each pattern one scene-graph node of quads, one quad per
-/// segment of its reduced trace, which a shader places at the pattern's row and height and draws antialiased at the
-/// line width. A new trace or x range rebuilds a line's vertices; a new row, height, y range, colour or width changes
-/// only what the shader is given. The lines are drawn in the order given, a later one over an earlier one. Qt Quick's
-/// software renderer does not draw them.
+/// The Stacked view's pattern lines on the GPU (edi ADR-0041): the patterns drawn as scene-graph nodes of quads, one quad
+/// per segment of a pattern's reduced trace, 64 patterns to a node, which a shader places at each pattern's row and
+/// height and draws antialiased at the line width. New traces rebuild the vertices; a new row, height, y range, colour or
+/// width changes only what the shader is given. The lines are drawn in the order given, a later one over an earlier one,
+/// over the bands (filled rectangles: the excluded regions' tint). Qt Quick's software renderer does not draw them.
 class ScanLines : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
@@ -24,11 +25,11 @@ class ScanLines : public QQuickItem {
     Q_PROPERTY(double lineWidth READ lineWidth WRITE setLineWidth NOTIFY lineWidthChanged)
 
    public:
-    /// One pattern's trace: x in item pixels, v its intensity scaled to [0, 1], a NaN on either side of a break.
+    /// One pattern's trace: x in item pixels, v a value the style scales, a NaN on either side of a break.
     struct Trace {
         std::vector<float> x, v;
     };
-    /// Where and how a trace is drawn: its baseline and the height v = 1 rises to, on the vertical axis, and its colour.
+    /// Where and how a trace is drawn: up from `row` by `lift` times v, on the vertical axis, and its colour.
     struct Style {
         double row = 0.0, lift = 1.0;
         QColor colour;
@@ -41,6 +42,8 @@ class ScanLines : public QQuickItem {
     /// Replaces every style, trace for trace.
     void setStyles(std::vector<Style> styles);
     const std::vector<Style>& styles() const { return styles_; }
+    /// Replaces the bands, in item pixels, all in one colour.
+    void setBands(std::vector<QRectF> bands, const QColor& colour);
 
     double yMin() const { return y_min_; }
     double yMax() const { return y_max_; }
@@ -53,6 +56,8 @@ class ScanLines : public QQuickItem {
     void yMinChanged();
     void yMaxChanged();
     void lineWidthChanged();
+    /// The lines were drawn again. Emitted on the render thread.
+    void rendered();
 
    protected:
     QSGNode* updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) override;
@@ -60,9 +65,12 @@ class ScanLines : public QQuickItem {
    private:
     std::vector<Trace> traces_;
     std::vector<Style> styles_;
+    std::vector<QRectF> bands_;
+    QColor band_colour_;
     double y_min_ = 0.0, y_max_ = 1.0;
     double line_width_ = 2.0;
     bool traces_changed_ = true;
+    bool bands_changed_ = true;
 };
 
 }  // namespace edi_app
