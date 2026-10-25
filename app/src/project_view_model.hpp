@@ -363,6 +363,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Every pattern, display catches up, with no pattern chart shown (the Stacked or the Map view): the file is
+    // presented by becoming the current dataset, counted once a frame is synchronised with it.
+    void followScanSelection(const std::string& file, std::uint64_t token);
+    // No dataset read is in flight or waits to be applied.
+    bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -381,6 +386,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
+    // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
+    // shown as its row gives it (scanEnded waits for this).
+    void scanCaughtUp();
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
@@ -595,6 +603,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
     std::uint64_t follow_generation_ = 0;
     bool follow_issuing_ = false;  // the followed file's own view request is being made
+    bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; the render thread clears it at the next synchronisation.
     std::atomic<bool> render_armed_{false};

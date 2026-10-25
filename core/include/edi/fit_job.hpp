@@ -96,6 +96,9 @@ class FitJob {
     // second at most, so a window that does not draw cannot stall the scan, and never in the single-thread build,
     // whose scan runs on the thread that would draw.
     void wait_for_patterns(bool on);
+    // Whether a followed scan sends every file's pattern as it is fitted, never waiting for one to be shown ("every
+    // pattern, display catches up", edi ADR-0029): the owner draws them in order at its own pace.
+    void send_every_pattern(bool on);
     // From `start` until `finished` has run.
     bool running() const noexcept;
     // The running fit's job on the worker, or 0.

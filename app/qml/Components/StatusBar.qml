@@ -169,7 +169,7 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [outOfDate, progress]) {
+            for (const extra of [outOfDate, showing, progress]) {
                 if (extra.visible) {
                     width += extra.width;
                     shown += 1;
@@ -288,6 +288,17 @@ EaElements.StatusBar {
             font.pixelSize: EaStyle.Sizes.fontPixelSize
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
+        }
+        // Every pattern, display catches up: the patterns drawn of those the scan has sent, while some wait.
+        Text {
+            id: showing
+            objectName: "statusBar.fit.showing"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: bar.fit !== null && bar.fit.scanBehind
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            color: EaStyle.Colors.themeForeground
+            text: bar.fit !== null ? qsTr("Showing %1 of %2").arg(bar.fit.scanPatternUpdates).arg(bar.fit.scanReceived) : ""
         }
         // Last, at the far right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
