@@ -976,6 +976,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                "type:length_a"};
         steps_.push_back({"perf-slider-lbco-1-before-fit", lbco + QStringList{"timed-slider:30"}});
         steps_.push_back({"perf-slider-lbco-2-after-fit", {"fitting.start", "wait-fit", "choose:OK", "timed-slider:30"}});
+        // Note 45 says "after the fits": four more, five in all, from where the slider left the model each time.
+        QStringList fits;
+        for (int fit = 0; fit < 4; ++fit) {
+            fits << "fitting.start" << "wait-fit" << "choose:OK";
+        }
+        steps_.push_back({"perf-slider-lbco-3-after-five-fits", fits + QStringList{"timed-slider:30"}});
     }
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
