@@ -11,6 +11,7 @@
 #include <filesystem>
 
 #include "app_info.hpp"
+#include "web_files.hpp"
 #include "edi/io.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
@@ -113,9 +114,18 @@ Session::Session(QObject* parent)
     : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
+    // What a crash left in the temporary directory (edi ADR-0052).
+    edi::remove_stale_archive_directories();
 }
 
-Session::~Session() = default;
+Session::~Session() { releaseTemporaryFolder(); }
+
+void Session::releaseTemporaryFolder() {
+    if (!temporary_folder_.isEmpty()) {
+        edi::remove_archive_directory(temporary_folder_.toStdString());
+        temporary_folder_.clear();
+    }
+}
 
 bool Session::openProject(const QUrl& location) {
     if (openProjectAt(location)) {
@@ -149,7 +159,20 @@ bool Session::openProjectAt(const QUrl& location) {
         if (!open(source, {})) {
             return false;
         }
-        setOpenedArchive(given.fileName());
+        temporary_folder_ = QString::fromStdString(project_->project().scan_data_root);
+        // The archive is the project's location and Save rewrites it, unless it cannot be written back: a read-only
+        // file or folder, or the browser's uploaded copy (owner, 2026-10-25).
+        const QFileInfo folder(given.absolutePath());
+        if (!WebFiles::available() && given.isWritable() && folder.isWritable()) {
+            project_->workIn(QString::fromStdString(project_->project().scan_data_root));
+            archive_location_ = given.absoluteFilePath();
+            emit projectLocationChanged();
+            emit needsSaveAsChanged();
+            emit locationTextChanged();
+            emit projectDirectoryUsed(archive_location_);
+        } else {
+            setOpenedArchive(given.fileName());
+        }
         return true;
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
@@ -168,7 +191,9 @@ bool Session::openProjectAt(const QUrl& location) {
             return false;
         }
         read_only_copy_ = true;
+        read_only_source_ = folder.absoluteFilePath();
         emit needsSaveAsChanged();
+        emit locationTextChanged();
         emit projectDirectoryUsed(folder.absoluteFilePath());
         return true;
     }
@@ -219,6 +244,27 @@ QString Session::projectLocation() const {
     return location;
 }
 
+QString Session::locationText() const {
+    if (project_ == nullptr) {
+        return {};
+    }
+    if (!archive_location_.isEmpty()) {
+        return archive_location_;
+    }
+    if (!opened_example_.isEmpty()) {
+        return tr("Not saved yet: example %1").arg(examples_->titleOf(opened_example_));
+    }
+    if (!opened_archive_.isEmpty()) {
+        return WebFiles::available() ? tr("Not saved yet: uploaded %1").arg(opened_archive_)
+                                     : tr("Not saved yet: opened from %1").arg(opened_archive_);
+    }
+    if (read_only_copy_) {
+        return tr("Not saved yet: a copy of %1").arg(read_only_source_);
+    }
+    // The browser holds a chosen folder in its memory: its name, never the memory's path.
+    return WebFiles::available() ? QFileInfo(project_->path()).fileName() : project_->path();
+}
+
 bool Session::needsSaveAs() const {
     return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
 }
@@ -259,8 +305,10 @@ bool Session::saveAs(const QUrl& directory) {
     if (!saveInto(directory.toLocalFile())) {
         return false;
     }
+    releaseTemporaryFolder();
     emit projectLocationChanged();
     emit needsSaveAsChanged();
+    emit locationTextChanged();
     emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
     return true;
 }
@@ -306,11 +354,15 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
         return false;
     }
     if (!saveInto(folder)) {
+        edi::remove_archive_directory(folder.toStdString());
         return false;
     }
+    releaseTemporaryFolder();
+    temporary_folder_ = folder;
     archive_location_ = where;
     emit projectLocationChanged();
     emit needsSaveAsChanged();
+    emit locationTextChanged();
     try {
         edi::write_project_archive(folder.toStdString(), where.toStdString());
     } catch (const std::exception& refusal) {
@@ -322,15 +374,26 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
 }
 
 bool Session::saveCopy(const QString& target, bool zip) {
-    // The project as it stands, written elsewhere; it keeps its own location and values.
+    // What a Save writes (round, adopt, recalculate, write), done on a copy of the project: the open project keeps its
+    // own location and values.
     try {
-        const edi::Project& model = project_->project();
+        edi::Project copy = project_->project();
+        const auto write = [&copy](const std::string& folder) {
+            edi::save_project(copy, folder);
+            edi::adopt_saved_project(copy, folder);
+        };
         if (zip) {
             const std::string folder = edi::fresh_archive_directory("copy");
-            edi::save_project(model, folder);
-            edi::write_project_archive(folder, target.toStdString());
+            try {
+                write(folder);
+                edi::write_project_archive(folder, target.toStdString());
+            } catch (...) {
+                edi::remove_archive_directory(folder);
+                throw;
+            }
+            edi::remove_archive_directory(folder);
         } else {
-            edi::save_project(model, target.toStdString());
+            write(target.toStdString());
         }
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
@@ -507,11 +570,13 @@ void Session::setOpenedArchive(const QString& name) {
     if (name != opened_archive_) {
         opened_archive_ = name;
         emit openedArchiveChanged();
+        emit locationTextChanged();
     }
 }
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
     read_only_copy_ = false;
+    read_only_source_.clear();
     archive_location_.clear();
     setOpenedArchive({});
     // Every piece of the session's state — the project, its load warnings, the example it came from,
@@ -544,13 +609,19 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     }
     emit projectChanged();
     emit projectLocationChanged();
+    emit locationTextChanged();
     emit needsSaveAsChanged();
+    // The replaced project's temporary folder goes with it, once it is gone.
+    const QString previous_folder = std::exchange(temporary_folder_, QString());
     if (previous != nullptr) {
         previous->deleteLater();
         // Free the replaced project's view-models, and the page items the views released for them,
         // now rather than at the next event-loop turn: projects opened back to back (a script, a
         // test) must hold one project's pages, not every one opened so far.
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+    if (!previous_folder.isEmpty()) {
+        edi::remove_archive_directory(previous_folder.toStdString());
     }
 }
 

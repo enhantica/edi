@@ -82,6 +82,9 @@ class Session : public QObject {
     Q_PROPERTY(QString openedExample READ openedExample NOTIFY openedExampleChanged)
     // The .zip the open project was unpacked from, by file name, until it is saved somewhere (edi ADR-0052).
     Q_PROPERTY(QString openedArchive READ openedArchive NOTIFY openedArchiveChanged)
+    // Where the project is, as the Project page shows it (edi ADR-0052): its folder or .zip, or, when it has none of
+    // its own yet, what it came from ("Not saved yet: …"); never an internal temporary path.
+    Q_PROPERTY(QString locationText READ locationText NOTIFY locationTextChanged)
     // Where the open project is, as the Description tab shows it: its directory, for an example the working
     // copy a save writes (edi ADR-0017 §9). The demo shows the working copy's temporary root as
     // "<temporary>", so its images do not change with the run's directory.
@@ -101,6 +104,7 @@ class Session : public QObject {
     WarningListModel* loadWarnings() const { return warnings_; }
     QString openedExample() const { return opened_example_; }
     QString openedArchive() const { return opened_archive_; }
+    QString locationText() const;
     QString projectLocation() const;
     bool needsSaveAs() const;
 
@@ -144,6 +148,7 @@ class Session : public QObject {
     void hasProjectChanged();
     void openedExampleChanged();
     void openedArchiveChanged();
+    void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
     void lastErrorChanged();
@@ -174,6 +179,11 @@ class Session : public QObject {
     QString opened_archive_;
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
     QString archive_location_;
+    // The read-only folder a temporary working copy was made from.
+    QString read_only_source_;
+    // The temporary folder the project works in (an unpacked archive), removed when it is no longer the project's.
+    QString temporary_folder_;
+    void releaseTemporaryFolder();
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
