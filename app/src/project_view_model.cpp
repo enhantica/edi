@@ -1443,6 +1443,22 @@ void ProjectViewModel::startViewRead() {
     const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
     // A chart on d draws the shown dataset's d-spacing capture too.
     const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
+#ifndef __EMSCRIPTEN__
+    // A file a followed scan has just fitted, its pattern sent with it, is read here, about a millisecond: the file is
+    // applied in this event, with the current dataset it moves, so one frame draws both (edi ADR-0029). The browser
+    // reads its files off the page's thread (edi ADR-0030).
+    if (follow_frame_ && follow_frame_->first == index && !shown) {
+        DatasetView view;
+        view.values = std::move(values);
+        try {
+            view.data = edi::read_scan_dataset(directory, file, mode);
+        } catch (const std::exception& refusal) {
+            view.error = QString::fromUtf8(refusal.what());
+        }
+        applyDatasetView(request, index, std::move(view));
+        return;
+    }
+#endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
@@ -1882,21 +1898,14 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // The pattern is drawn by the first frame synchronised after it was applied: the GUI thread waits during a
-        // synchronisation, so none can be under way while it is armed here, and a frame already rendering when the
-        // dataset was applied never counts. Both signals come on the render thread; the receipt goes to this one.
-        render_sync_connection_ = connect(
+        // The pattern is taken for drawing by the first frame synchronised after it was applied: the GUI thread waits
+        // during a synchronisation, so none can be under way while it is armed here. The render thread renders that
+        // frame before it synchronises another, so the pattern is drawn, and the next file can be applied while the
+        // render thread draws this one. The signal comes on the render thread; the receipt goes to this one.
+        render_connection_ = connect(
             window, &QQuickWindow::afterSynchronizing, this,
             [this] {
-                if (render_armed_.load()) {
-                    render_synced_.store(true);
-                }
-            },
-            Qt::DirectConnection);
-        render_connection_ = connect(
-            window, &QQuickWindow::frameSwapped, this,
-            [this] {
-                if (render_synced_.load() && render_armed_.exchange(false)) {
+                if (render_armed_.exchange(false)) {
                     QMetaObject::invokeMethod(
                         this,
                         [this] {
@@ -1911,7 +1920,6 @@ void ProjectViewModel::awaitRender() {
             Qt::DirectConnection);
     }
     render_swaps_ = 1;
-    render_synced_.store(false);
     render_armed_.store(true);
     render_wait_.start(kRenderWaitMs);
     window->update();
