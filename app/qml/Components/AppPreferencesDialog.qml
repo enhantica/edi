@@ -293,6 +293,18 @@ AppDialog {
                 onActivated: index => Preferences.scanMapColours = choices[index]
                 ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
             }
+            RowLabel {
+                text: qsTr("When a curve is hidden") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["keep", "fit"]
+
+                objectName: "preferences.hiddenRange"
+                model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
+                onActivated: index => Preferences.chartHiddenRange = choices[index]
+                ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
+            }
 
             RowLabel {
                 text: qsTr("Sidebar") + ":"

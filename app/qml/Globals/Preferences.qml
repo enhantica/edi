@@ -81,6 +81,7 @@ QtObject {
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHighlightSelected = true;
+        preferences.chartHiddenRange = "keep";
     }
 
     property Settings settings: Settings {
@@ -154,6 +155,9 @@ QtObject {
     // owner, 2026-10-24).
     property bool chartHighlightSelected: true
     readonly property real chartFadedOpacity: 0.3
+    // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
+    // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
+    property string chartHiddenRange: "keep"
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -161,6 +165,7 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
         property alias highlightSelected: preferences.chartHighlightSelected
+        property alias hiddenRange: preferences.chartHiddenRange
     }
 
     property Settings analysisSettings: Settings {

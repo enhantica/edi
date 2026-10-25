@@ -374,6 +374,14 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
     experiment_ = experiment;
+    // Hidden curves belong to the project they were hidden in: another project's experiment shows every curve.
+    if (experiment_ && experiment_->parent() != hidden_project_) {
+        hidden_project_ = experiment_->parent();
+        if (!hidden_.isEmpty()) {
+            hidden_.clear();
+            emit hiddenSeriesChanged();
+        }
+    }
     if (experiment_) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
@@ -616,7 +624,53 @@ edi::PatternView PatternChartController::view() const {
     view.structure_curves = structure_curves_;
     view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
     view.included_only = included_only_;
+    if (hidden_fits_range_) {
+        for (const QString& key : hidden_) {
+            view.uncounted.push_back(key.toStdString());
+            // A structure's entry is its ticks; its curve goes with them.
+            if (key.startsWith(QLatin1String("bragg/"))) {
+                view.uncounted.push_back("structure/" + key.mid(6).toStdString());
+            }
+        }
+    }
     return view;
+}
+
+bool PatternChartController::hiddenId(const std::string& id) const {
+    if (hidden_.isEmpty()) {
+        return false;
+    }
+    const QString key = QString::fromStdString(id);
+    return hidden_.contains(key) ||
+           (key.startsWith(QLatin1String("structure/")) && hidden_.contains(QLatin1String("bragg/") + key.mid(10)));
+}
+
+void PatternChartController::toggleSeries(const QString& key) {
+    if (hidden_.contains(key)) {
+        hidden_.removeAll(key);
+    } else {
+        hidden_.append(key);
+    }
+    emit hiddenSeriesChanged();
+    if (hidden_fits_range_) {
+        // The y range fitted once to the curves still shown.
+        stopAnimation();
+        y_min_.reset();
+        y_max_.reset();
+        held_range_.reset();
+        emit viewRangesChanged();
+    }
+    invalidate();
+}
+
+void PatternChartController::setHiddenFitsRange(bool on) {
+    if (on != hidden_fits_range_) {
+        hidden_fits_range_ = on;
+        emit hiddenFitsRangeChanged();
+        if (!hidden_.isEmpty()) {
+            invalidate();
+        }
+    }
 }
 
 void PatternChartController::refresh() {
@@ -650,6 +704,16 @@ void PatternChartController::refresh() {
         }
         if (experiment_ && active_) {
             experiment_->notePresented();
+        }
+    }
+    // A hidden curve is presented with no points: nothing is drawn of it and the pointer reads none of its values, while
+    // the range keeps or leaves out its values as `hiddenFitsRange` says.
+    for (edi::PatternSeries& series : shown_.series) {
+        if (hiddenId(series.id)) {
+            series.points.clear();
+            series.rows.clear();
+            series.bar_low.clear();
+            series.bar_high.clear();
         }
     }
 
@@ -688,6 +752,8 @@ void PatternChartController::refresh() {
                        : dashed ? QStringLiteral("dash")
                                 : QStringLiteral("line"),
                        bragg, width, texts, colours});
+        legend.back().key = QString::fromStdString(series.id);
+        legend.back().hidden = hidden_.contains(legend.back().key);
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {

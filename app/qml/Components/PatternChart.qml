@@ -323,6 +323,8 @@ Item {
         structureColourScheme: Preferences.structureColours
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
+        // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
+        hiddenFitsRange: Preferences.chartHiddenRange === "fit"
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
         includedOnly: !chart.report && Preferences.chartIncludedOnly
@@ -905,11 +907,15 @@ Item {
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         objectName: "chart.legend"
+        // Over the pointer's area, so a click on an entry hides its curve.
+        z: 1
         colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend
+        toggles: !chart.report
+        onToggled: key => controller.toggleSeries(key)
     }
 
     // The pointer over the main plot area: a box zoom or a pan by dragging, a zoom about the pointer by the
