@@ -191,9 +191,9 @@ try {
       await page.mouse.move(point.x,point.y);await page.mouse.down();await frame();await page.mouse.up();await frame();
       if(/^(Start|Project|Structure|Experiment|Analysis|Report)$/.test(item.node.name?.value||'')||/(Examples|Recent projects|Get started)$/.test(item.node.name?.value||''))await settle();
     };
-    const geometry=async(name)=>{
+    const geometry=async(name,timeout=45000)=>{
       console.log(mode,scenario,'geometry',name);
-      await page.waitForFunction(name=>{try{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}},name);
+      await page.waitForFunction(name=>{try{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}},name,{timeout});
       return evaluate(name=>window.ediControlGeometry(name),name);
     };
     const location=async regex=>{
@@ -261,7 +261,7 @@ try {
       catch(error){if(/no visible item/.test(error.message))return true;throw error;}
     },name,{timeout:5000});
     const warning=async(privateStorage=false)=>{
-      await geometry(observation.warningText);
+      await geometry(observation.warningText,5000);
       const text=await native(observation.warningText),icon=await native(observation.warningIcon);
       assert(text.visible,'The first Save into browser storage must show the warning dialog before later short notices');
       assertBrowserWarning(text.text,icon,privateStorage);
@@ -373,7 +373,11 @@ try {
       await click(/^Save current state of the project$/,'button');
       await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
       await frame();
-      try{await warning(true);}catch(error){storageErrors.push(error.message);}
+      let saveWarning;
+      try{saveWarning=await warning(true);}catch(error){
+        saveWarning={missing:error.message,errorPopup:await native(observation.error)};
+        storageErrors.push('First failed Save must show the storage warning with Save-as; observed '+JSON.stringify(saveWarning));
+      }
       await page.keyboard.press('Escape');await frame();
       await location(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
       const actualLocation=await control(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
@@ -413,7 +417,7 @@ try {
       // Cancellation proves that even a refused download cannot have been reported as finished.
       await evaluate(()=>window.__downloadBoundary.cancel());await frame();
       assert.equal(events.downloads,0,'Cancelling permission must not create a finished download');
-      receipts[scenario]={held,beforeStorage,errorBefore,errorAfter,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
+      receipts[scenario]={held,beforeStorage,saveWarning,errorBefore,errorAfter,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
       assert.deepEqual(errors,[],'Save-as from an example must bypass failing storage and report only an unconfirmed download request without original-file guidance');
       console.log(mode,scenario,'PASS');continue;
     }
