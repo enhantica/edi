@@ -26,3 +26,16 @@ No timing value has been invented or banked here. The pending comparisons are:
 324 datasets, repeated pan/zoom and data-redraw medians (redraw under 100 ms);
 162 datasets, Every pattern / Adaptive fit ratio at most 1.05; LBCO slider-step
 cost before and after fitting within the baseline's measured noise.
+
+Redraw and fit comparisons require the observed graphics API and renderer in
+`backend` (`api`, `renderer`). `backend_comparisons` requires a llvmpipe OpenGL
+row as well as any hardware rows; every row keeps its own redraw and fit bound.
+Software and hardware timings are never pooled. The arithmetic tests use
+synthetic samples and make no performance claim. Live samples and their backend
+identity still come from the measured app, with the same machine and project
+for each comparison. GPU measurements need a GPU host.
+
+Adaptive remains a separate choice in the real Analysis Settings selector.
+The native actor selects it after Every pattern and follows the saved 162-file
+scan, checking live coalescing, the ADR-0029 half-second interval, completion of
+all files and restoration of the final dataset.

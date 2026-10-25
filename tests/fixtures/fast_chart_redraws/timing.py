@@ -11,16 +11,50 @@ def measured_median(samples):
     return median(values)
 
 
-def redraw_comparison(before, after):
+def backend_identity(backend):
+    """Keep the observed graphics API and renderer together in every timing row."""
+    api, renderer = backend.get('api'), backend.get('renderer')
+    if not all(isinstance(value, str) and value.strip() for value in (api, renderer)):
+        raise ValueError('Timing evidence needs the observed graphics API and renderer')
+    software = 'llvmpipe' in renderer.lower()
+    if software and api.lower() != 'opengl':
+        raise ValueError('The no-GPU timing case must use llvmpipe OpenGL')
+    return {'api': api, 'renderer': renderer, 'llvmpipe': software}
+
+
+def redraw_comparison(before, after, *, backend):
     """Return the measured medians and the packet's absolute redraw result, in ms."""
     old, new = measured_median(before), measured_median(after)
-    return {'before_ms': old, 'after_ms': new, 'under_100_ms': new < 100}
+    return {
+        'backend': backend_identity(backend),
+        'before_ms': old,
+        'after_ms': new,
+        'under_100_ms': new < 100,
+    }
 
 
-def fit_comparison(every_pattern, adaptive):
+def fit_comparison(every_pattern, adaptive, *, backend):
     """Compare the paired project's two real app update modes on the same machine."""
     ratio = measured_median(every_pattern) / measured_median(adaptive)
-    return {'ratio': ratio, 'within_five_percent': ratio <= 1.05}
+    return {
+        'backend': backend_identity(backend),
+        'ratio': ratio,
+        'within_five_percent': ratio <= 1.05,
+    }
+
+
+def backend_comparisons(rows):
+    """Require software OpenGL alongside any available hardware measurements."""
+    results = []
+    for row in rows:
+        backend = row['backend']
+        results.append({
+            'redraw': redraw_comparison(row['before_ms'], row['after_ms'], backend=backend),
+            'fit': fit_comparison(row['every_pattern_ms'], row['adaptive_ms'], backend=backend),
+        })
+    if not any(row['redraw']['backend']['llvmpipe'] for row in results):
+        raise ValueError('Timing gates require a measured llvmpipe OpenGL row')
+    return results
 
 
 def slider_comparison(before_fit, after_fit, baseline_noise_ms):
