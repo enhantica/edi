@@ -212,6 +212,8 @@ try {
       exampleId, row:await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`),
       list:await evaluate('window.ediControlGeometry("examples.list")'),
     }, null, 2));
+    const row = await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`);
+    assert(row && row.visible && row.enabled, `Example precondition: requested bundled row exists and is actionable: ${exampleId}`);
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
@@ -369,8 +371,8 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
-  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish-5bank_start-5' : 'pd-neut-cwl_lbco-hrpt_start-4';
+  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish/i : /lbco.*hrpt/i;
+  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt';
   await openExampleRow(exampleId, exampleName);
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
@@ -710,8 +712,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
-    await openExampleRow('pd-neut-cwl_cosio-d20_start-1', /cosio.*d20.*start[- ]?1/i);
-    await waitName('cosio_d20_s1');
+    await openExampleRow('pd-neut-cwl_cosio-d20', /cosio.*d20/i);
+    await waitName('pd-neut-cwl_cosio-d20');
     await settleRenderedPage();
     const replacementBefore=await snapshot();
     assert.notEqual(replacementBefore.name,'routing_b','the replacement control must actually replace the old live project');

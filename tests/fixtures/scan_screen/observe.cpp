@@ -1,6 +1,10 @@
 #include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
+#include <QDirIterator>
+#include <QTemporaryDir>
+#include <QUrl>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -240,7 +244,21 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         },
         Qt::DirectConnection);
     QTimer::singleShot(500, window, [=, &engine] {
-        if (!session->openExample("pd-neut-cwl_cosio-d20_scan-162f")) {
+        static QTemporaryDir fixture;
+        const QString source = QStringLiteral(":/test-fixtures/scan-screen");
+        QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
+        bool copied = fixture.isValid();
+        while (copied && files.hasNext()) {
+            const QString from = files.next();
+            const QString to = fixture.path() + from.mid(source.size());
+            copied = QDir().mkpath(QFileInfo(to).absolutePath()) && QFile::copy(from, to);
+        }
+        if (!copied || !QFile::exists(fixture.filePath("project.edi"))) {
+            (*result)["error"] = "Scan fixture precondition: the retained 162-file project must be extracted";
+            publish(*result);
+            return;
+        }
+        if (!session->openProject(QUrl::fromLocalFile(fixture.path()))) {
             (*result)["error"] = session->lastError();
             publish(*result);
             return;

@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -64,7 +65,7 @@ TestCase {
         Globals.Vars.showToolTips = savedTooltips;
     }
     function open() {
-        verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The independently named scientific example opens");
+        verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The independently named scientific example opens");
     }
     function pane(page, tier) {
         Ui.click(test, Probe, appWindow, "appBar.tab." + page);
@@ -349,14 +350,14 @@ TestCase {
         appWindow.requestActivate();
         search.forceActiveFocus();
         tryCompare(search, "activeFocus", true, 2000, "The actual example search receives keyboard focus");
-        verify(SettingsProof.type(search, "cosio-d20_start-1"), "The actual example search receives its independently named input");
+        verify(SettingsProof.type(search, "cosio-d20 single"), "The actual example search receives its independently named input");
         const table = named(group, "examples.list");
         tryCompare(table, "count", 1, 2000, "The actual search isolates the independently named olivine example");
         const row = table.itemAtIndex(0);
         verify(row !== null, "The example description is inspected in its rendered row");
         const text = actualText(row);
         const identity = text.find(item => item.text.includes("Co₂SiO₄") && item.text.includes("D20 @ ILL"));
-        const detail = text.find(item => item.text.includes("Starting model 1"));
+        const detail = text.find(item => item.text.includes("Olivine · Coordinates, displacements and oxygen occupancies"));
         verify(identity !== undefined && detail !== undefined, "The example shows the independent sample, facility and starting-model identities");
         compare(identity.color, Style.Colors.themeForeground, "The example identity uses the app foreground for its complete chemical formula");
         compare(detail.color, Style.Colors.themeForegroundMinor, "The example detail remains secondary to its scientific identity");

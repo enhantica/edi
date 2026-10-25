@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -44,7 +45,7 @@ Item {
         when: windowShown
         property var pages: ({})
         function initTestCase() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "Shared quantities use the real three-temperature scan");
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "Shared quantities use the real three-temperature scan");
             tryCompare(Session.project, "calculating", false, 10000, "The shared-axis project finishes its real calculation");
             pages = {
                 structure: structureFactory.createObject(surface),

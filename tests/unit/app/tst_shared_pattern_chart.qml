@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import "RenderedTable.js" as Render
@@ -54,7 +55,7 @@ Item {
             Session.closeProject();
         }
         function openExample() {
-            verify(Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"), "The shared-view vehicle is the committed two-experiment BEER project");
+            verify(Examples.fixture(Session, "pd-neut-tof_ferrite-austenite-beer_joint"), "The shared-view vehicle is the committed two-experiment BEER project");
             tryCompare(Session.project, "calculating", false, 10000, "The actual project calculation completes before chart interaction");
             compare(Session.project.experiments.count, 2, "The selector witness has two distinct experiments");
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtTest
+import "ExampleProjects.js" as Examples
 import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
@@ -71,7 +72,7 @@ Item {
             Session.closeProject();
         }
         function test_experiment_fit_column_retains_icon_and_word_tooltip() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The supplied experiment opens for its fit status column");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The supplied experiment opens for its fit status column");
             const group = createTemporaryObject(experimentsComponent, surface, {
                 project: Session.project
             });
@@ -99,7 +100,7 @@ Item {
             Boundary.check(test, table, next, surface);
         }
         function test_template_marker_follows_its_filename() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), Session.lastError);
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), Session.lastError);
             const group = createTemporaryObject(experimentsComponent, surface, {
                 project: Session.project
             });
@@ -183,7 +184,7 @@ Item {
             compare(cell.horizontalAlignment, Text.AlignLeft, "A long number clips its end while retaining its beginning");
         }
         function test_analysis_filter_units_heading_and_free_colour() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), Session.lastError);
             const group = createTemporaryObject(parametersComponent, surface, {
                 project: Session.project
             });

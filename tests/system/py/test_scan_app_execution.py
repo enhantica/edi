@@ -186,7 +186,7 @@ def transition_observations(harness, root, observed):
     observed['joint'] = harness.invoke('joint', copy_project(FULL, root / 'joint'))
     observed['singleReopened'] = harness.invoke('inventory', Path(str(single) + '-saved'))
     observed['bundle'] = harness.invoke(
-        'bundle', 'pd-neut-cwl_cosio-d20_scan-162f', root / 'saved-bundle'
+        'bundle', 'pd-neut-cwl_cosio-d20_scan', root / 'saved-bundle'
     )
     readonly = copy_project(FULL, root / 'readonly', iterations=1)
     paths = list(readonly.rglob('*'))
@@ -604,14 +604,16 @@ def test_single_fit_persists_template_tag_and_selection(execution):
 
 def test_bundle_scan_uses_temporary_copy_and_save_as_retains_results(execution):
     bundle = execution['bundle']
-    assert bundle.get('opened'), 'Temporary working copy: the bundled 162-file example must open'
+    assert bundle.get('opened'), (
+        'Temporary working copy: the bundled 155-file catalogue example must open'
+    )
     assert bundle['needsSaveAs'], (
         'Temporary working copy: an opened bundled project must require Save As'
     )
     assert not bundle['path'].startswith(':/') and '/docs/user/' not in bundle['path'], (
         'Temporary working copy: the worker writes into the extracted writable project'
     )
-    assert bundle['run']['entered'] and bundle['run']['completed'] == 162, (
+    assert bundle['run']['entered'] and bundle['run']['completed'] == 155, (
         'Temporary working copy: the actual bundled scan must finish on the worker'
     )
     assert bundle['beforeSave'], (

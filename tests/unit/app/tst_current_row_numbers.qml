@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
@@ -50,7 +51,7 @@ Item {
         }
         function test_current_number(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The row-number check opens a real project");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The row-number check opens a real project");
             verify(Session.project.duplicateStructure(), "The selected-row check needs distinct structure rows");
             verify(Session.project.duplicateExperiment(), "The selected-row check needs distinct experiment rows");
             const factory = data.kind === "experiments" ? experiments : data.kind === "structures" ? structures : data.kind === "adps" ? adps : parameters;

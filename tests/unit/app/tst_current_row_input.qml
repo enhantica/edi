@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -170,7 +171,7 @@ Item {
         }
         function prepare(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "Real input uses a loaded scientific project");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "Real input uses a loaded scientific project");
             const project = Session.project, structure = project.currentStructure, experiment = project.currentExperiment;
             if (data.table === "structures.list" || data.table === "linkedStructure.list")
                 verify(project.duplicateStructure(), "Selection has distinct real structure identities");

@@ -4,6 +4,7 @@ import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtCore
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as EaStyle
@@ -207,7 +208,7 @@ Item {
             verify(!texts.includes("Colour scheme"), "The opened preferences.tab.projects keeps Colour scheme on Appearance; visible text " + JSON.stringify(texts));
         }
         function test_scheme_and_library_defaults_persist_without_changing_an_open_project() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "A real project supplies the modified-state control");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "A real project supplies the modified-state control");
             const modified = Session.project.modified;
             verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes independent Structures/Patterns choices and the declared library default");
             Approved.setSchemes(Preferences, "ediContrast");
@@ -295,7 +296,7 @@ Item {
             tryCompare(control, "currentIndex", index, 1000, "Actual pointer input selects the declared setting token");
         }
         function test_analysis_log_axis_and_scan_updates_are_page_settings_without_model_edits() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "The declared scan opens for Analysis view settings");
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "The declared scan opens for Analysis view settings");
             const original = Session.project.analysis.text.text;
             const modified = Session.project.modified;
             Preferences.scanPatternUpdates = 0;
@@ -325,7 +326,7 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             compare(restored.axis, "log", "A fresh engine reads QSettings PatternChart/yScale after selecting the chart y-axis index 2; actual token " + restored.axis);
         }
         function patternPage(name) {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real pattern project supplies both chart and Settings controls");
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "A real pattern project supplies both chart and Settings controls");
             const factory = name === "analysis" ? analysisFactory : experimentFactory;
             const page = createTemporaryObject(factory, surface, {
                 width: 1200,
@@ -513,7 +514,7 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             verify(!restored.error, "A fresh production Preferences singleton carries the old new-project rule");
             compare(restored.rule, "iucr_99", "The old two-digit default carries to Projects without silently resetting it");
             compare(SettingsProof.value(location, "Projects", "newProjectSuRule"), "iucr_99", "The migrated default belongs to Projects in the new store");
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "An existing project's own uncertainty rule supplies the independence control");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "An existing project's own uncertainty rule supplies the independence control");
             const rule = Session.project.suRule;
             const modified = Session.project.modified;
             Preferences.newProjectSuRule = "iucr_99";
