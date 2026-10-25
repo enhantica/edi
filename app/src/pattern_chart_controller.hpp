@@ -396,6 +396,17 @@ class PatternChartController : public QObject {
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;
+    // The fitted main y range last shown, and what it was fitted for: while a parameter is adjusted and nothing else
+    // changed, the range holds and only grows (the owner, 2026-10-25).
+    struct HeldRange {
+        const void* experiment = nullptr;
+        const void* measured = nullptr;
+        std::string axis;
+        int scale = -1;
+        double x_min = 0.0, x_max = 0.0;
+        double low = 0.0, high = 0.0;
+    };
+    std::optional<HeldRange> held_range_;
     double residual_min_ = -1.0, residual_max_ = 1.0, bragg_height_ = 0.0;
     double x_tick_ = 0.0, x_anchor_ = 0.0, y_tick_ = 0.0, y_anchor_ = 0.0, residual_tick_ = 0.0;
     int bragg_rows_ = 0, revision_ = 0;

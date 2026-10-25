@@ -411,6 +411,32 @@ AppDialog {
                 }
             }
 
+            // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that
+            // means no GPU.
+            RowLabel {
+                text: qsTr("Graphics") + ":"
+            }
+            EaElements.Label {
+                objectName: "preferences.graphics"
+                width: dialog.controlWidth
+                topPadding: dialog.lineOffset
+                wrapMode: Text.Wrap
+                text: !RenderingInfo.detected ? qsTr("Not detected yet") : (RenderingInfo.renderer !== "" ? RenderingInfo.api + ", " + RenderingInfo.renderer : RenderingInfo.api) + " · " + (RenderingInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
+            }
+
+            // How the Stacked view draws its lines: on the GPU, or painted, which is faster without one; Automatic takes
+            // the graphics above. Saved per machine.
+            RowLabel {
+                text: qsTr("Scan views") + ":"
+            }
+            RowBox {
+                objectName: "preferences.scanRenderer"
+                readonly property var values: ["auto", "gpu", "software"]
+                model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
+                currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
+                onActivated: index => Preferences.scanRenderer = values[index]
+            }
+
             // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
             RowLabel {
                 text: qsTr("Diagnostics") + ":"

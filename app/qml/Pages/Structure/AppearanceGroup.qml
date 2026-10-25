@@ -18,7 +18,12 @@ EaElements.GroupBox {
     property StructureViewOptions options: null
     property StructureViewController controller: null
 
+    readonly property string openKey: "Extras:appearance"
+
     objectName: "group.appearance"
+    // Open as left, or open when it is the first group shown, as every sidebar group (SideBarGroups).
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     title: qsTr("Appearance")
     icon: "palette"
     last: SideBarGroups.isLast(group)

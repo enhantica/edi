@@ -244,6 +244,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         // says so until the newest request publishes. A refused edit never gets here.
         for (ExperimentViewModel* experiment : experiment_models_) {
             experiment->markPatternStale();
+            // A parameter adjusted, not a scan dataset shown: the pattern charts hold their y range.
+            experiment->setAdjusting(!applying_view_);
         }
         // A structure whose geometry the edit changed shows its last published frame, reported as not current,
         // until the newest request publishes.
@@ -258,6 +260,14 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     hooks.calculated = [this](std::uint64_t /*generation*/) { emit calculationFinished(); };
     preview_ = std::make_unique<edi::LivePreview>(*project_, *worker_, std::move(hooks));
     fit_ = new FitViewModel(*project_, *worker_, *this, this);
+    // A fit's patterns and its end are not a parameter being adjusted: the charts fit their y range again.
+    connect(fit_, &FitViewModel::runningChanged, this, [this] {
+        if (fit_->running()) {
+            for (ExperimentViewModel* experiment : experiment_models_) {
+                experiment->setAdjusting(false);
+            }
+        }
+    });
     // A fit is the newest undoable change once it ends with a result (finished, cancelled or stopped
     // early), as is a fit start state the loaded project already holds; its undo is one level, so a
     // second fit in a row is the same entry.
@@ -1443,6 +1453,22 @@ void ProjectViewModel::startViewRead() {
     const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
     // A chart on d draws the shown dataset's d-spacing capture too.
     const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
+#ifndef __EMSCRIPTEN__
+    // A file a followed scan has just fitted, its pattern sent with it, is read here, about a millisecond: the file is
+    // applied in this event, with the current dataset it moves, so one frame draws both (edi ADR-0029). The browser
+    // reads its files off the page's thread (edi ADR-0030).
+    if (follow_frame_ && follow_frame_->first == index && !shown) {
+        DatasetView view;
+        view.values = std::move(values);
+        try {
+            view.data = edi::read_scan_dataset(directory, file, mode);
+        } catch (const std::exception& refusal) {
+            view.error = QString::fromUtf8(refusal.what());
+        }
+        applyDatasetView(request, index, std::move(view));
+        return;
+    }
+#endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
@@ -1882,25 +1908,29 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // Swaps can be reported on the render thread; the count is kept on this one. The first swap may be a frame
-        // already under way when the dataset was applied, so one more is asked for and the second one counts.
+        // The pattern is taken for drawing by the first frame synchronised after it was applied: the GUI thread waits
+        // during a synchronisation, so none can be under way while it is armed here. The render thread renders that
+        // frame before it synchronises another, so the pattern is drawn, and the next file can be applied while the
+        // render thread draws this one. The signal comes on the render thread; the receipt goes to this one.
         render_connection_ = connect(
-            window, &QQuickWindow::frameSwapped, this,
-            [this, window] {
-                if (render_swaps_ <= 0) {
-                    return;
-                }
-                if (!presentedFollowed()) {
-                    followRendered(false);  // hidden, or another pattern replaced it, before it was drawn
-                } else if (--render_swaps_ == 0) {
-                    followRendered(true);
-                } else {
-                    window->update();
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                if (render_armed_.exchange(false)) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this] {
+                            if (render_swaps_ > 0) {
+                                // Hidden, or another pattern replaced it, before it was drawn: not drawn.
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
                 }
             },
-            Qt::QueuedConnection);
+            Qt::DirectConnection);
     }
-    render_swaps_ = 2;
+    render_swaps_ = 1;
+    render_armed_.store(true);
     render_wait_.start(kRenderWaitMs);
     window->update();
 }
@@ -1916,6 +1946,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_token_ = 0;
     follow_generation_ = 0;
     render_swaps_ = -1;
+    render_armed_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
