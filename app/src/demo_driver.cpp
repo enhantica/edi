@@ -748,6 +748,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
     // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU, to compare
+    // the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only lines-`), at any
+    // QT_SCALE_FACTOR with EDI_DEMO_ANY_RATIO set.
+    if (only.startsWith(QLatin1String("lines-"))) {
+        steps_.push_back({"lines-1-pattern", {"resize:1280x960", "theme:light", "preference:scanRenderer=gpu",
+                                              "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.analysis", basic,
+                                              "mainArea.analysis.tab.fitting"}});
+        steps_.push_back({"lines-2-stacked", {"preference:scanStackedSize=100", "mainArea.analysis.tab.stacked",
+                                              "wait-scan:stacked"}});
+    }
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
                                                             + open_example("pd-neut-cwl_cosio-d20_scan-162f")
