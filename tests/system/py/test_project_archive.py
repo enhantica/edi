@@ -105,18 +105,28 @@ def test_python_opens_each_project_route_and_preserves_model_values(tmp_path, ca
                 'Archive opening preserves every independently loaded cell value exactly'
             )
     if route == 'zip':
-        with pytest.raises((ValueError, RuntimeError), match=r'(?i)save|folder|directory'):
-            loaded.save()
+        # The owner reversed the former first-Save-as rule: Save now writes the opened ZIP.
+        before = archive.read_bytes()
+        loaded.metadata.name = 'zip-python-save'
+        loaded.save()
+        assert archive.read_bytes() != before, 'Saving an edit rewrites the same opened ZIP'
+        assert edi.Project.load(archive).name == 'zip-python-save', (
+            'Reopening the same ZIP preserves the Python edit written by ordinary Save'
+        )
+        with zipfile.ZipFile(archive) as written:
+            assert (
+                written.read('reports/opaque.html') == inventory(folder)['reports/opaque.html']
+            ), 'Ordinary ZIP write-back retains every independently authored report byte'
         destination = tmp_path / 'kept'
         loaded.save_as(destination)
-        assert loaded.metadata.path == str(destination), (
+        assert Path(loaded.metadata.path) == destination, (
             'First Save as establishes the project folder'
         )
         assert (destination / 'reports/opaque.html').read_bytes() == inventory(folder)[
             'reports/opaque.html'
         ], 'Saving an archive-opened project retains its carried report bytes'
         loaded.save()
-        assert edi.Project.load(destination).name == expected.name, (
+        assert edi.Project.load(destination).name == 'zip-python-save', (
             'Later Save writes the established project folder'
         )
 

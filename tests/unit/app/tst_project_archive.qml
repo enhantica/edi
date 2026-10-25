@@ -1,5 +1,8 @@
 import QtQuick
 import QtTest
+import QtQuick.Controls
+import "UiInteraction.js" as Ui
+import "RenderedTable.js" as Render
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -8,9 +11,90 @@ TestCase {
     id: test
     name: "ProjectArchive"
     when: windowShown
+    property var app
+    Component {
+        id: appFactory
+        Main {}
+    }
+    function application() {
+        app = appFactory.createObject(null, {
+            width: Math.min(1280, SettingsProof.screen().width),
+            height: Math.min(720, SettingsProof.screen().height - 60),
+            visible: true
+        });
+        verify(app !== null, "Project file actions use the actual application window");
+        app.requestActivate();
+        tryCompare(app, "active", true, 2000, "The project action window receives real input");
+        if (Ui.control(Probe, app, "home.start"))
+            clickControl("home.start");
+        clickControl("appBar.tab.project");
+        clickControl("sideBar.tab.basic");
+        return app;
+    }
+    function clickControl(name) {
+        let item;
+        tryVerify(() => {
+            item = Ui.control(Probe, app, name);
+            return item !== null && item.enabled && Ui.clickPoint(item) !== null && !Ui.moving(app.contentItem);
+        }, 4000, "The actual project action is enabled in its settled viewport: " + name);
+        verify(waitForPolish(item), "The actual project action finishes layout before pointer input");
+        app.update();
+        verify(waitForRendering(app.contentItem), "The actual application draws before project input");
+        tryVerify(() => {
+            item = Ui.control(Probe, app, name);
+            return item !== null && item.enabled && Ui.clickPoint(item) !== null && !Ui.moving(app.contentItem);
+        }, 4000, "The rebuilt page retains an exposed action at the actual input frame: " + name);
+        const point = Ui.clickPoint(item);
+        mouseClick(item, point.x, point.y);
+        app.update();
+        verify(waitForRendering(app.contentItem), "Project pointer input reaches a real application frame");
+        if (name.includes(".tab."))
+            tryCompare(item, "checked", true, 2000, "Real project input selects the requested tab");
+        tryVerify(() => !Ui.moving(app.contentItem), 2000, "The selected project viewport finishes moving");
+        return item;
+    }
     readonly property var cases: ["sc-neut-tof_taurine_fit", "pd-neut-cwl_cosio-d20_scan-3f", "sc-neut-cwl_tb2ti2o7-heidi_basic"]
     function cleanup() {
+        if (app) {
+            app.close();
+            app.destroy();
+        }
+        app = null;
         Session.closeProject();
+    }
+    function test_save_dialog_layout() {
+        application();
+        canonicalProject(cases[2]);
+        clickControl("project.saveAs");
+        const dialog = findChild(app, "saveAs.choice");
+        verify(dialog !== null, "Save as geometry is observed on the real application dialog");
+        tryCompare(dialog, "opened", true, 2000, "Save as geometry is measured after the real dialog opens");
+        const folder = findChild(dialog.contentItem, "saveAs.folder"), zip = findChild(dialog.contentItem, "saveAs.zip"), copy = findChild(dialog.contentItem, "saveAs.copy");
+        verify(folder && zip && copy, "The compact dialog exposes its actual format radios and separate copy checkbox");
+        const folderEnd = folder.mapToItem(dialog.contentItem, 0, folder.height).y;
+        const zipTop = zip.mapToItem(dialog.contentItem, 0, 0).y;
+        const zipEnd = zip.mapToItem(dialog.contentItem, 0, zip.height).y;
+        const copyTop = copy.mapToItem(dialog.contentItem, 0, 0).y;
+        verify(zipTop >= folderEnd && copyTop - zipEnd > zipTop - folderEnd, "Folder and Zip archive form a tighter group than the separated Save a copy choice");
+        const content = Math.max(folder.implicitWidth, zip.implicitWidth, copy.implicitWidth);
+        verify(dialog.contentWidth <= Math.ceil(content), "The Save as content width fits its widest actual choice instead of a fixed message width");
+        dialog.close();
+    }
+    function test_project_actions() {
+        application();
+        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "The Project page action inventory starts with a real open project");
+        let group;
+        tryVerify(() => {
+            group = Ui.control(Probe, app, "group.getStarted");
+            return group !== null;
+        }, 4000, "The working project exposes its actual Get started group");
+        const actions = Render.descendants(group).filter(item => item.objectName.startsWith("project.") && typeof item.text === "string");
+        const visible = actions.filter(item => item.visible);
+        compare(visible.filter(item => /^Open project[.\u2026]/.test(item.text)).length, 1, "The Project page has one Open project action for records and ZIP archives");
+        compare(visible.filter(item => /^Save project as[.\u2026]/.test(item.text)).length, 1, "The Project page has one Save project as action");
+        compare(visible.filter(item => item.enabled).map(item => item.objectName).sort().join(","), ["project.create", "project.open", "project.saveAs"].sort().join(","), "Create, Open and Save as are the only working Get started actions");
+        const url = visible.find(item => item.objectName === "project.openUrl");
+        verify(url !== undefined && !url.enabled, "Open from URL stays present and disabled");
     }
     function test_open_data() {
         let rows = [];
@@ -24,22 +108,38 @@ TestCase {
         return rows;
     }
     function test_open(data) {
+        if (data.route === "zip")
+            application();
         const folder = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + data.projectName + "/project"));
         verify(Session.openProject(folder), "The folder route loads the independently committed project");
         const expected = Session.project.name;
         const cell = Session.project.currentStructure.cell.lengthA.value;
         Session.closeProject();
-        const input = data.route === "zip" ? Probe.repoUrl("tests/fixtures/project_archive/" + data.projectName + ".zip") : data.route === "record" ? folder.toString() + "/project.edi" : folder;
+        const input = data.route === "zip" ? SettingsProof.copyProjectArchive(Probe.repoUrl("tests/fixtures/project_archive/" + data.projectName + ".zip")) : data.route === "record" ? folder.toString() + "/project.edi" : folder;
         verify(Session.openProject(input), "The app opens folders, project records and interoperable ZIP archives: " + Session.lastError);
         compare(Session.project.name, expected, "Every app open route retains the project identity");
         compare(Session.project.currentStructure.cell.lengthA.value, cell, "Archive opening retains the independently loaded cell value exactly");
         if (data.route === "zip") {
-            verify(!Session.save(), "An archive-opened project requires its first persistent Save destination");
-            const destination = SettingsProof.emptyDirectory();
-            verify(Session.saveAs(destination), "First Save as materializes the archive project in a chosen folder");
-            verify(!Session.project.modified && !Session.project.canUndo, "Save leaves the adopted model clean and adds no Undo step");
-            compare(SettingsProof.text(destination, "reports/opaque.html"), "<p>Independently authored report</p>\n", "Archive Save keeps the carried report bytes");
-            verify(Session.save(), "Later Save uses the established project folder");
+            compare(Session.projectLocation, SettingsProof.localPath(input), "An opened ZIP keeps that same ZIP as its persistent location");
+            verify(!Session.needsSaveAs, "A writable opened ZIP supports ordinary Save without asking for a new destination");
+            const first = SettingsProof.projectArchiveBytes(input);
+            Session.project.name = "zip-open-edited";
+            clickControl("appBar.button.save");
+            compare(Session.lastError, "", "The actual Save button writes the opened ZIP without a refusal");
+            const choice = findChild(app, "saveAs.choice");
+            verify(choice !== null && !choice.visible, "Ordinary Save of a writable opened ZIP does not ask for a new destination");
+            const archive = SettingsProof.projectArchiveBytes(input);
+            verify(archive !== first, "Saving an edit actually replaces the same opened ZIP bytes");
+            verify(!Session.project.modified && !Session.project.canUndo, "ZIP Save leaves the adopted model clean without an Undo step");
+            evidence({
+                kind: "opened-rewrite",
+                original: SettingsProof.projectFolderBytes(Session.projectDirectoryUrl(Session.project.path)),
+                archive,
+                name: "zip-open-edited"
+            });
+            Session.closeProject();
+            verify(Session.openProject(input), "The same rewritten ZIP is immediately readable");
+            compare(Session.project.name, "zip-open-edited", "Reopening the same ZIP retains the saved edit exactly");
         }
     }
     function test_escape() {
@@ -70,5 +170,212 @@ TestCase {
         verify(Session.openProject(destination), "A project saved during opening is immediately readable");
         tryCompare(Session.project, "calculating", false, 15000, "Reopened results settle before exact comparison");
         compare(JSON.stringify(Probe.rows(Session.project.currentExperiment.pattern)), before, "Pending Save writes the exact rounded-model pattern that a reopen calculates");
+    }
+    function routeInput(projectName, route) {
+        const folder = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + projectName + "/project"));
+        return route === "zip" ? Probe.repoUrl("tests/fixtures/project_archive/" + projectName + ".zip") : route === "record" ? folder.toString() + "/project.edi" : folder;
+    }
+    function test_open_dialog_data() {
+        const rows = [];
+        for (const projectName of cases)
+            for (const route of ["record", "zip"])
+                rows.push({
+                    tag: projectName + "-" + route,
+                    projectName,
+                    route
+                });
+        return rows;
+    }
+    function test_open_dialog(data) {
+        application();
+        const input = routeInput(data.projectName, data.route);
+        clickControl("project.open");
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false);
+            return dialogs.length === 1;
+        }, 2000, "One Open project action opens one actual system file dialog");
+        const facts = SettingsProof.projectDialogFacts(dialogs[0]);
+        verify(facts.systemFile, "Open uses Qt's system FileDialog");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, false), "The actual Open dialog accepts the selected record or ZIP");
+        verify(Session.hasProject && Session.lastError === "", "The unified Open action loads the selected project");
+        const metadata = SettingsProof.text(Probe.repoUrl("docs/user/cli/" + data.projectName + "/project"), "project.edi");
+        const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
+        compare(Session.project.name, name, "Unified Open retains the input project's declared name");
+    }
+    function test_drop_data() {
+        const rows = [];
+        for (const projectName of cases)
+            for (const route of ["folder", "record", "zip"])
+                rows.push({
+                    tag: projectName + "-" + route,
+                    projectName,
+                    route
+                });
+        return rows;
+    }
+    function test_drop(data) {
+        application();
+        const input = routeInput(data.projectName, data.route);
+        verify(SettingsProof.dropProject(app, input), "The real window accepts a URL drag and drop for folders, records and ZIPs");
+        verify(Session.hasProject && Session.lastError === "", "Dropping a project opens it through the actual application");
+        const name = Session.project.name;
+        const cell = Session.project.currentStructure.cell.lengthA.value;
+        Session.closeProject();
+        verify(Session.openProject(input), "The dropped project's same input remains readable");
+        compare(Session.project.name, name, "Drag and drop preserves exactly the same project identity as Open");
+        compare(Session.project.currentStructure.cell.lengthA.value, cell, "Drag and drop preserves the exact independently loaded model value");
+    }
+    function saveChoice(zip, copy, target) {
+        clickControl("project.saveAs");
+        const dialog = findChild(app, "saveAs.choice");
+        verify(dialog !== null, "Save as first opens the application format-and-copy dialog");
+        tryCompare(dialog, "opened", true, 2000, "The application Save as choice finishes opening");
+        const folder = findChild(dialog.contentItem, "saveAs.folder"), archive = findChild(dialog.contentItem, "saveAs.zip"), checkbox = findChild(dialog.contentItem, "saveAs.copy");
+        verify(folder && archive && checkbox, "Save as exposes Folder, Zip archive and Save a copy choices");
+        verify(folder.checked && !archive.checked && !checkbox.checked, "Each Save as starts in Folder mode without Save a copy");
+        const format = zip ? archive : folder;
+        if (!format.checked) {
+            verify(waitForPolish(format), "The chosen Save as format is laid out before input");
+            mouseClick(format, format.width / 2, format.height / 2);
+        }
+        if (copy)
+            mouseClick(checkbox, checkbox.width / 2, checkbox.height / 2);
+        compare(format.checked, true, "Real input selects the required Save as format");
+        compare(checkbox.checked, copy, "Real input selects whether Save as keeps the current location");
+        const accept = dialog.standardButton(Dialog.Ok);
+        verify(accept && accept.enabled, "The format choice has an actual enabled confirmation button");
+        mouseClick(accept, accept.width / 2, accept.height / 2);
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, !zip);
+            return dialogs.length === 1;
+        }, 2000, "Confirming Save as opens exactly one system destination dialog");
+        const facts = SettingsProof.projectDialogFacts(dialogs[0]);
+        verify(zip ? facts.systemFile : facts.systemFolder, "Save as uses the selected format's actual Qt system dialog: " + JSON.stringify(facts));
+        verify(zip ? /^Save$/i.test(facts.acceptLabel) : /^(Save|Choose)$/i.test(facts.acceptLabel), "Saving accepts a file with Save and a folder with Save or Choose");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], target, !zip), "The system dialog supplies the chosen persistent destination");
+        compare(Session.lastError, "", "The selected Save as operation completes without a refusal");
+    }
+    function canonicalProject(projectName) {
+        const source = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + projectName + "/project"));
+        verify(SettingsProof.write(source, "reports/opaque.html", "<p>Independent carried report</p>\n"), "The cross-surface archive fixture contains an independent report");
+        verify(Session.openProject(source), "The save operation starts on the independently committed real project");
+        const folder = SettingsProof.emptyDirectory();
+        verify(Session.saveAs(folder), "A canonical saved folder supplies the independent archive member bytes");
+        return folder;
+    }
+    function evidence(value) {
+        console.log("PROJECT_ARCHIVE_EVIDENCE " + JSON.stringify(value));
+    }
+    function compareFolder(actual, expected) {
+        compare(Object.keys(actual).sort().join("\n"), Object.keys(expected).sort().join("\n"), "A folder copy retains exactly the source member names");
+        for (const name of Object.keys(expected))
+            compare(actual[name], expected[name], "A folder copy retains the exact independently saved member bytes: " + name);
+    }
+    function test_save_copy_data() {
+        const rows = [];
+        for (const projectName of cases)
+            for (const zip of [false, true])
+                rows.push({
+                    tag: projectName + (zip ? "-zip" : "-folder"),
+                    projectName,
+                    zip
+                });
+        return rows;
+    }
+    function test_save_copy(data) {
+        application();
+        const folder = canonicalProject(data.projectName);
+        const original = SettingsProof.projectFolderBytes(folder), location = Session.projectLocation, path = Session.project.path;
+        const destination = data.zip ? SettingsProof.childUrl(SettingsProof.emptyDirectory(), "copy.zip") : SettingsProof.emptyDirectory();
+        saveChoice(data.zip, true, destination);
+        compare(Session.projectLocation, location, "Save a copy leaves the current persistent location unchanged");
+        compare(Session.project.path, path, "Save a copy leaves the open project's working location unchanged");
+        compareFolder(SettingsProof.projectFolderBytes(folder), original);
+        if (data.zip) {
+            const archive = SettingsProof.projectArchiveBytes(destination);
+            verify(archive.length > 0, "Save a copy as Zip archive writes a real nonempty archive");
+            evidence({
+                kind: "copy",
+                original,
+                archive
+            });
+        } else {
+            compareFolder(SettingsProof.projectFolderBytes(destination), original);
+        }
+    }
+    function test_save_zip_data() {
+        return cases.map(projectName => ({
+                    tag: projectName,
+                    projectName
+                }));
+    }
+    function test_save_zip(data) {
+        application();
+        canonicalProject(data.projectName);
+        const archive = SettingsProof.childUrl(SettingsProof.emptyDirectory(), "current.zip");
+        saveChoice(true, false, archive);
+        compare(Session.projectLocation, SettingsProof.localPath(archive), "Save as Zip archive makes the chosen ZIP the current persistent location");
+        verify(!Session.needsSaveAs, "A ZIP-saved project has a persistent destination for its next Save");
+        const first = SettingsProof.projectArchiveBytes(archive);
+        verify(first.length > 0, "Save as Zip archive publishes its first real archive");
+        Session.project.name = "zip-next-save";
+        verify(Session.project.modified, "The next ZIP Save exercises a real model edit");
+        verify(Session.save(), "The next Save rewrites the current ZIP successfully");
+        const second = SettingsProof.projectArchiveBytes(archive);
+        verify(second.length > 0 && second !== first, "The next Save actually replaces the ZIP bytes");
+        compare(Session.projectLocation, SettingsProof.localPath(archive), "Repeated Save keeps the same ZIP location");
+        const folder = Session.project.path;
+        evidence({
+            kind: "rewrite",
+            original: SettingsProof.projectFolderBytes(Session.projectDirectoryUrl(folder)),
+            archive: second,
+            name: "zip-next-save"
+        });
+        Session.closeProject();
+        verify(Session.openProject(archive), "The rewritten ZIP reopens through the ordinary application route");
+        compare(Session.project.name, "zip-next-save", "The rewritten ZIP contains the edited scientific project's current state");
+    }
+    function test_save_unwritable_data() {
+        return [
+            {
+                tag: "read-only-zip",
+                example: false
+            },
+            {
+                tag: "bundled-example",
+                example: true
+            }
+        ];
+    }
+    function test_save_unwritable(data) {
+        application();
+        let input;
+        if (data.example) {
+            verify(Session.openExample(cases[0]), "The no-write-back route opens a real bundled example");
+        } else {
+            input = SettingsProof.copyProjectArchive(Probe.repoUrl("tests/fixtures/project_archive/" + cases[0] + ".zip"), true);
+            verify(input.toString().length > 0 && !SettingsProof.archiveLocationWritable(input), "The read-only ZIP fixture prevents both file writes and replacement through its parent directory");
+            verify(Session.openProject(input), "The no-write-back route opens the actual read-only ZIP");
+        }
+        const before = data.example ? "" : SettingsProof.projectArchiveBytes(input);
+        Session.project.name = "needs-new-location";
+        verify(Session.needsSaveAs, "A bundled example or genuinely read-only ZIP requires a new destination");
+        clickControl("appBar.button.save");
+        const dialog = findChild(app, "saveAs.choice");
+        verify(dialog !== null, "Ordinary Save routes an unwritable source to the actual Save as dialog");
+        tryCompare(dialog, "opened", true, 2000, "Ordinary Save asks for a format and destination instead of a write error");
+        if (!data.example)
+            compare(SettingsProof.projectArchiveBytes(input), before, "Asking for another destination leaves every read-only input ZIP byte intact");
+        dialog.close();
+    }
+    function test_save_folder_choice() {
+        application();
+        canonicalProject(cases[2]);
+        const destination = SettingsProof.emptyDirectory();
+        saveChoice(false, false, destination);
+        compare(Session.projectLocation, SettingsProof.localPath(destination), "Folder Save as makes the selected folder the persistent project location");
+        verify(!Session.needsSaveAs, "A folder chosen with Choose or Save supports ordinary later Saves");
     }
 }
