@@ -71,7 +71,7 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbar.height + belowToolbar
+    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
     readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
@@ -422,49 +422,52 @@ Item {
     // How far the plot areas' right border is from the chart's edge: the block selector row above ends there too.
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
-    // The toolbar line, centred under the block selector row (the owner, 2026-10-11): the y scale, linear, square
-    // root or log, and the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner, 2026-10-05), then
-    // the buttons, a toolbar group's spacing apart.
-    Row {
-        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
+    // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
+    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the y
+    // scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner,
+    // 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
+    ToolbarLines {
+        id: toolbarLines
+
+        x: 0
         y: chart.topMargin
+        width: chart.width
+        height: implicitHeight
         visible: !chart.report
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        centre: mainView.x + mainView.plotArea.x + mainView.plotArea.width / 2
+        leftEdge: chart.toolbarLeft
+        rightEdge: chart.width - chart.toolbarRightInset
 
-        Row {
-            spacing: AppSizes.toolbarSpacing
-
-            ToolbarComboBox {
-                objectName: "chart.toolbar.yscale"
-                toolTip: qsTr("Y scale")
-                model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-                // The closed box names its axis (owner, 2026-10-05).
-                closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
-                shownIndex: controller.yScale
-                onActivated: index => {
-                    if (chart.settingsPage === "pattern")
-                        Preferences.patternYScale = chart.scaleTokens[index];
-                    else
-                        controller.yScale = index;
-                }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.yscale"
+            toolTip: qsTr("Y scale")
+            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            // The closed box names its axis (owner, 2026-10-05).
+            closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
+            shownIndex: controller.yScale
+            onActivated: index => {
+                if (chart.settingsPage === "pattern")
+                    Preferences.patternYScale = chart.scaleTokens[index];
+                else
+                    controller.yScale = index;
             }
-            ToolbarComboBox {
-                objectName: "chart.toolbar.xaxis"
-                // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
-                // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
-                // (the owner, 2026-10-22).
-                enabled: chart.experiment !== null && controller.dAvailable
-                toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-                readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")]
-                model: entries
-                closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
-                shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
-                onActivated: index => {
-                    if (chart.axisProject)
-                        chart.axisProject.patternDSpacing = index === 1;
-                    else
-                        controller.dSpacing = index === 1;
-                }
+        }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.xaxis"
+            // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
+            // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
+            // (the owner, 2026-10-22).
+            enabled: chart.experiment !== null && controller.dAvailable
+            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+            readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")]
+            model: entries
+            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
+            onActivated: index => {
+                if (chart.axisProject)
+                    chart.axisProject.patternDSpacing = index === 1;
+                else
+                    controller.dSpacing = index === 1;
             }
         }
         // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes

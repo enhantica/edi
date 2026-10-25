@@ -653,159 +653,111 @@ Item {
         color: chart.colors.chartLabels
         text: chart.scan ? chart.scan.xTitle : ""
     }
-    // The toolbar line, centred above the plot as the pattern chart's (the owner, 2026-10-22): the axes' types, then the
-    // colours, then the zoom, always on here, and the reset. x is the project's axis, shared with the pattern chart; y
-    // places the rows by the extracted value or by file index, shared with the Evolution tab's x; z, the intensity
-    // scale, is the pattern chart's y scale. The colours are each view's own app setting.
-    Item {
+    // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
+    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the axes'
+    // types (x is the project's axis, shared with the pattern chart; y places the rows by the extracted value or by file
+    // index, shared with the Evolution tab's x; z, the intensity scale, is the pattern chart's y scale), the Stacked
+    // offset and height, and the Map's colours. The buttons: the colours' reversal, the Map's smooth edges, the included
+    // range, the highlight, the zoom, always on here, and the reset.
+    ToolbarLines {
         id: scanToolbar
 
-        readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
-        readonly property real available: chart.width - 2 * chart.sideMargin
-        // The plot's centre, which each line is centred on.
-        readonly property real centre: view.x + view.plotArea.x + view.plotArea.width / 2
-        // The boxes that show, then the colours and the buttons, each a group: what is laid out, and every width it
-        // depends on.
-        readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([colours, buttons])
-        readonly property string measure: available + ":" + centre + ":" + units.map(unit => unit.width).join(",")
-
-        // As many as fit on a line, each group a group's spacing after the one before, each line centred above the plot
-        // as the pattern chart's is (the owner, 2026-10-22) and kept inside the chart on its own, so a wide first line
-        // pushed to the chart's edge leaves the next line centred.
-        function layout() {
-            const lines = [];
-            let line = null;
-            for (const unit of units) {
-                const gap = line === null ? 0 : unit === colours || unit === buttons ? spacing : AppSizes.toolbarSpacing;
-                if (line === null || line.width + gap + unit.width > available) {
-                    line = {
-                        "units": [unit],
-                        "width": unit.width,
-                        "gaps": [0]
-                    };
-                    lines.push(line);
-                } else {
-                    line.units.push(unit);
-                    line.gaps.push(gap);
-                    line.width += gap + unit.width;
-                }
-            }
-            let top = 0;
-            for (const each of lines) {
-                let left = Math.round(Math.max(chart.sideMargin, Math.min(chart.width - chart.sideMargin - each.width, centre - each.width / 2)));
-                for (let i = 0; i < each.units.length; ++i) {
-                    left += each.gaps[i];
-                    each.units[i].x = left;
-                    each.units[i].y = top;
-                    left += each.units[i].width;
-                }
-                top += AppSizes.toolbarControlSize + AppSizes.toolbarSpacing;
-            }
-            height = Math.max(0, top - AppSizes.toolbarSpacing);
-        }
-
         objectName: "scanView." + chart.mode + ".toolbar"
-        // Across the chart: each line places itself (layout).
+        // Across the chart, each line centred on the plot and kept inside the chart.
         x: 0
         width: chart.width
         y: chart.toolbarTop
-        height: AppSizes.toolbarControlSize
-        onMeasureChanged: Qt.callLater(layout)
-        Component.onCompleted: layout()
+        height: implicitHeight
+        centre: view.x + view.plotArea.x + view.plotArea.width / 2
+        leftEdge: chart.sideMargin
+        rightEdge: chart.width - chart.sideMargin
 
-        Item {
-            id: selectors
-
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.xaxis"
-                // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
-                enabled: chart.scan !== null && chart.scan.dAvailable
-                toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-                // A joint fit whose experiments share no native axis has d only.
-                readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
-                readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
-                model: entries
-                closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
-                shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
-                onActivated: index => {
-                    if (chart.project && nativeOffered)
-                        chart.project.patternDSpacing = index === 1;
-                }
-            }
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.rows"
-                // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
-                // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
-                readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
-                readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
-                // Open with one entry too, so it shows how the rows are placed.
-                toolTip: qsTr("Y axis: the rows' places")
-                readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
-                model: entries
-                closedTexts: entries.map(text => qsTr("y: %1").arg(text))
-                shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
-                onActivated: index => {
-                    if (chart.project && chart.project.evolution)
-                        chart.project.evolution.xMode = hasValue ? index : 1;
-                }
-            }
-            // How far each stacked pattern's baseline sits above the one below it, in tenths of a pattern's own height:
-            // 0 % puts every baseline on one line, 100 % starts each where the one below it ends (the owner,
-            // 2026-10-24).
-            ToolbarComboBox {
-                readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-                objectName: "scanView.stacked.toolbar.offset"
-                visible: chart.mode === "stacked"
-                toolTip: qsTr("How far each pattern starts above the one below it, in its own height")
-                model: entries.map(percent => qsTr("%1 %").arg(percent))
-                closedTexts: entries.map(percent => qsTr("offset: %1 %").arg(percent))
-                shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedOffset))
-                onActivated: index => Preferences.scanStackedOffset = entries[index]
-            }
-            // How tall each stacked pattern is: Fit, which fills the plot with the whole stack, or a share of the plot's
-            // height; a stack taller than the plot is reached with the zoom (the owner, 2026-10-24).
-            ToolbarComboBox {
-                readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-                objectName: "scanView.stacked.toolbar.height"
-                visible: chart.mode === "stacked"
-                toolTip: qsTr("How tall each pattern is: Fit, or a share of the plot's height")
-                model: entries.map(percent => percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent))
-                closedTexts: entries.map(percent => qsTr("height: %1").arg(percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent)))
-                shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedSize))
-                onActivated: index => Preferences.scanStackedSize = entries[index]
-            }
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.yscale"
-                readonly property var tokens: ["linear", "sqrt", "log"]
-                readonly property string axis: "z"
-                toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
-                readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-                model: entries
-                closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
-                shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
-                onActivated: index => Preferences.patternYScale = tokens[index]
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.xaxis"
+            // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
+            enabled: chart.scan !== null && chart.scan.dAvailable
+            toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+            // A joint fit whose experiments share no native axis has d only.
+            readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
+            readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
+            model: entries
+            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
+            onActivated: index => {
+                if (chart.project && nativeOffered)
+                    chart.project.patternDSpacing = index === 1;
             }
         }
-        // The colours, a group of their own (the owner, 2026-10-22): on the Map its colour map and the reverse button;
-        // on Stacked, whose colours are chosen in Preferences, the reverse button alone. Each view's reversal is kept
-        // with its colour setting.
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.rows"
+            // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
+            // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
+            readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
+            readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
+            // Open with one entry too, so it shows how the rows are placed.
+            toolTip: qsTr("Y axis: the rows' places")
+            readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
+            model: entries
+            closedTexts: entries.map(text => qsTr("y: %1").arg(text))
+            shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
+            onActivated: index => {
+                if (chart.project && chart.project.evolution)
+                    chart.project.evolution.xMode = hasValue ? index : 1;
+            }
+        }
+        // How far each stacked pattern's baseline sits above the one below it, in tenths of a pattern's own height:
+        // 0 % puts every baseline on one line, 100 % starts each where the one below it ends (the owner,
+        // 2026-10-24).
+        ToolbarComboBox {
+            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+            objectName: "scanView.stacked.toolbar.offset"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("How far each pattern starts above the one below it, in its own height")
+            model: entries.map(percent => qsTr("%1 %").arg(percent))
+            closedTexts: entries.map(percent => qsTr("offset: %1 %").arg(percent))
+            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedOffset))
+            onActivated: index => Preferences.scanStackedOffset = entries[index]
+        }
+        // How tall each stacked pattern is: Fit, which fills the plot with the whole stack, or a share of the plot's
+        // height; a stack taller than the plot is reached with the zoom (the owner, 2026-10-24).
+        ToolbarComboBox {
+            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+            objectName: "scanView.stacked.toolbar.height"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("How tall each pattern is: Fit, or a share of the plot's height")
+            model: entries.map(percent => percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent))
+            closedTexts: entries.map(percent => qsTr("height: %1").arg(percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent)))
+            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedSize))
+            onActivated: index => Preferences.scanStackedSize = entries[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.yscale"
+            readonly property var tokens: ["linear", "sqrt", "log"]
+            readonly property string axis: "z"
+            toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
+            readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            model: entries
+            closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
+            shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
+            onActivated: index => Preferences.patternYScale = tokens[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView.map.toolbar.colourMap"
+            visible: chart.mode === "map"
+            toolTip: qsTr("The map's colours")
+            readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
+            model: entries
+            closedTexts: entries
+            shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
+            onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
+        }
         Row {
-            id: colours
+            id: buttons
 
             spacing: AppSizes.toolbarSpacing
 
-            ToolbarComboBox {
-                objectName: "scanView.map.toolbar.colourMap"
-                visible: chart.mode === "map"
-                toolTip: qsTr("The map's colours")
-                readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
-                model: entries
-                closedTexts: entries
-                shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
-                onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
-            }
             ChartToolButton {
                 readonly property bool reversed: chart.mode === "map" ? Preferences.scanMapReversed : Preferences.scanStackedReversed
 
@@ -820,12 +772,6 @@ Item {
                         Preferences.scanStackedReversed = !Preferences.scanStackedReversed;
                 }
             }
-        }
-        Row {
-            id: buttons
-
-            spacing: AppSizes.toolbarSpacing
-
             ChartToolButton {
                 objectName: "scanView.map.toolbar.smooth"
                 visible: chart.mode === "map"
@@ -872,7 +818,7 @@ Item {
     Column {
         anchors.right: parent.right
         anchors.rightMargin: chart.sideMargin
-        y: chart.toolbarTop + AppSizes.toolbarControlSize + chart.em * 0.2
+        y: chart.toolbarTop + scanToolbar.height + chart.em * 0.2
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
 
         EaElements.Label {
