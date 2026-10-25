@@ -81,6 +81,7 @@ WorkflowPage {
             readonly property bool shown: page.current && SwipeView.isCurrentItem
 
             ScanViewChart {
+                id: stackedChart
                 anchors.fill: parent
                 visible: !page.singleCrystals
                 project: page.project
@@ -88,6 +89,7 @@ WorkflowPage {
                 shown: stackedTab.shown && !page.singleCrystals
             }
             SingleCrystalChart {
+                id: stackedCrystals
                 objectName: "singleCrystal.stacked"
                 anchors.fill: parent
                 visible: page.singleCrystals
@@ -97,6 +99,7 @@ WorkflowPage {
             }
         },
         ScanViewChart {
+            id: mapChart
             project: page.project
             mode: "map"
             shown: page.current && SwipeView.isCurrentItem
@@ -142,7 +145,8 @@ WorkflowPage {
     }
     // One block selector in the main view's tab bar (edi ADR-0017 §7).
     blockSelectorShown: true
-    blockSelectorRightInset: chartView.toolbarRightInset
+    // The row ends where the shown chart's toolbar does, so the two share one centre.
+    blockSelectorRightInset: stackedTab.shown ? (page.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset) : mapChart.shown ? mapChart.toolbarRightInset : chartView.toolbarRightInset
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"

@@ -37,6 +37,8 @@ Item {
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
+    // Where the toolbar and the block selector row above it end, from the chart's right edge.
+    readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
@@ -654,21 +656,20 @@ Item {
         text: chart.scan ? chart.scan.xTitle : ""
     }
     // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
-    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the axes'
-    // types (x is the project's axis, shared with the pattern chart; y places the rows by the extracted value or by file
-    // index, shared with the Evolution tab's x; z, the intensity scale, is the pattern chart's y scale), the Stacked
-    // offset and height, and the Map's colours. The buttons: the colours' reversal, the Map's smooth edges, the included
-    // range, the highlight, the zoom, always on here, and the reset.
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the axes' types (x is the project's axis, shared with the pattern chart; y places the rows by the
+    // extracted value or by file index, shared with the Evolution tab's x; z, the intensity scale, is the pattern
+    // chart's y scale), the Stacked offset and height, and the Map's colours. The buttons: the colours' reversal, the
+    // Map's smooth edges, the included range, the highlight, the zoom, always on here, and the reset.
     ToolbarLines {
         id: scanToolbar
 
         objectName: "scanView." + chart.mode + ".toolbar"
-        // Across the chart, each line centred on the plot and kept inside the chart.
+        // Across the chart, each line centred between its side margins, where the block selector row is.
         x: 0
         width: chart.width
         y: chart.toolbarTop
         height: implicitHeight
-        centre: view.x + view.plotArea.x + view.plotArea.width / 2
         leftEdge: chart.sideMargin
         rightEdge: chart.width - chart.sideMargin
 
