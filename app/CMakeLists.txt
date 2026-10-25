@@ -71,6 +71,7 @@ qt_add_qml_module(edi_app_module
         src/evolution_view_model.hpp src/evolution_view_model.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp
         src/scan_layer.hpp src/scan_layer.cpp
+        src/scan_lines.hpp src/scan_lines.cpp
         src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
@@ -203,6 +204,8 @@ qt_add_qml_module(edi_app_module
     RESOURCES
         resources/logo/App.svg
 )
+# The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
+qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
@@ -319,6 +322,12 @@ qt_add_resources(edi_app_chart_bench "edi_chart_bench" PREFIX "/edi/bench" BASE 
 target_include_directories(edi_app_chart_bench PRIVATE ${PROJECT_SOURCE_DIR}/tests/fixtures)
 target_link_libraries(edi_app_chart_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
 set_target_properties(edi_app_chart_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+
+# The scan views' renderer benchmark (edi ADR-0041): test tooling, never part of the host.
+qt_add_executable(edi_app_scan_bench tools/scan_bench.cpp)
+qt_add_resources(edi_app_scan_bench "edi_scan_bench" PREFIX "/edi/bench" BASE tools FILES tools/ScanBench.qml)
+target_link_libraries(edi_app_scan_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
+set_target_properties(edi_app_scan_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 
 # The page-image comparator: test tooling, QtGui only, never part of the host.
 qt_add_executable(edi_app_ui_compare tools/ui_compare.cpp)
