@@ -126,12 +126,10 @@ class Session : public QObject {
     // when the project must be saved as.
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QUrl& directory);
-    // Write the open project's folder, as last saved and with its reports, as one .zip at `archive` (a `file:` URL),
-    // the archive every surface writes (edi ADR-0052). A project with no folder yet is written to a temporary one
-    // first. False, with `lastError` saying why, when it cannot be written.
-    Q_INVOKABLE bool exportProject(const QUrl& archive);
-    // The open project's folder, or the temporary one it was unpacked or exported into, for the browser's download.
-    Q_INVOKABLE QString exportFolder();
+    // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
+    // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
+    // there as it stands and stays where it is: a copy. False, with `lastError` saying why, when it cannot be written.
+    Q_INVOKABLE bool saveProjectAs(const QUrl& target, bool zip, bool copy);
     Q_INVOKABLE void clearError();
     /// Whether a saved project directory is present on disk.
     Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
@@ -163,6 +161,8 @@ class Session : public QObject {
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
+    bool saveInto(const QString& folder);
+    bool saveCopy(const QString& target, bool zip);
 
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
@@ -172,6 +172,8 @@ class Session : public QObject {
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     QString opened_archive_;
+    // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
+    QString archive_location_;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
