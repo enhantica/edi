@@ -122,6 +122,7 @@ POLYNOMIAL_CASES = [
     'corpus:background-cecoal/project',
     'corpus:background-lab6/project',
     'corpus:background-pearl/project',
+    'corpus:lam7o3-p021/project',
     'repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project',
     'repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project',
     'repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project',
@@ -150,7 +151,13 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert additions.isdisjoint(BASELINE['cases']), (
         '/ no old byte witness is replaced by a post-feature pin'
     )
-    assert set(NEW_FIXED_POINTS) == {
+    catalogue = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    current_cases = {'repo:docs/user/cli/' + row['id'] + '/project' for row in catalogue}
+    assert set(NEW_FIXED_POINTS) == current_cases | {
+        'repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project',
+        'repo:docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project',
         'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
         'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
         'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
@@ -530,16 +537,11 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     assert case in inputs, ' every new declared project needs its serialization witness'
     before = REFERENCE.hashes(inputs[case])
     if case in NEW_FIXED_POINTS:
-        retained = (
-            restored_source(inputs[case], tmp_path)
-            if case == 'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project'
-            else inputs[case]
-        )
-        require_current_input(case, retained)
+        require_current_input(case, inputs[case])
     first = tmp_path / 'first'
     second = tmp_path / 'second'
-    once = REFERENCE.observe(inputs[case], first)
-    twice = REFERENCE.observe(first, second)
+    once = REFERENCE.observe(inputs[case], first, retain_files=True)
+    twice = REFERENCE.observe(first, second, retain_files=True)
     assert once == twice, (
         ' canonical serialization must reach a byte-exact fixed point on the second save'
     )

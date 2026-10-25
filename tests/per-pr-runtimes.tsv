@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-24T10:28:14Z
+# measured_utc = 2026-10-25T02:17:56Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 14973 banked, 0 stale row(s) dropped)
-# Collected tests: 16751; with a reported duration: 9643
+# Recorded from: measured test run (51 node(s) measured once, 14979 banked, 0 stale row(s) dropped)
+# Collected tests: 16802; with a reported duration: 9687
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16751
+# inventory_python = 16802
 # inventory_cpp = 393
-# inventory_measured = 14979
+# inventory_measured = 15030
 # inventory_unmeasured = 2165
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -7812,6 +7812,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_background_estimate_series_cl
 0.000	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_cli_oracle_has_exact_joint_layout_and_metrics
 3.090	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer
 0.400	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+0.000	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_current_tail_record_retains_the_fullprof_reference_bounds
 0.840	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_stateless_api_remains_the_default
 0.050	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_v1_rejects_a_deliberately_transposed_index
 0.960	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_classic_numeric_corpus_and_comma_counterfactual_are_deterministic
@@ -9786,17 +9787,40 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::te
 0.720	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:beer-ferrite-austenite/project]
 0.100	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:constraint-covariance/project]
 0.690	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:lab6-echidna-fcj/project]
+0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:lam7o3-p021/project]
 0.190	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[corpus:yap-spodi-3k/project]
+0.180	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_cosio-d20/project]
 0.450	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project0]
 0.460	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project1]
+0.800	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_hs-hrpt/project]
+0.260	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project]
 0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project]
+0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lbco-hrpt/project]
+0.130	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lbco_simulation/project]
+0.290	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_lmo-echidna/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_y2o3-spodi/project]
 0.200	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project]
 0.180	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-cwl_yap-spodi_3k/project]
+0.260	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris/project]
 0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project]
+0.250	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl/project]
 0.230	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project]
+0.680	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project]
 0.910	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project]
+0.240	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_lbco-si-mcstas/project]
+1.040	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_ncaf-wish/project]
+0.270	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_si-sepd/project]
+0.130	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-tof_si_simulation/project]
+0.380	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project]
+0.210	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_lam7o3-p021/project]
+1.090	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_latp-bm01_scan/project]
 0.590	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project]
 0.410	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_lif_single/project]
+0.130	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_nacl_simulation/project]
+0.440	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_pbso4-lab/project]
 0.440	tests/system/py/test_c34_t28_saved_bytes.py::test_c13_t6_new_projects_have_a_second_save_fixed_point[repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project]
 0.480	tests/system/py/test_c34_t28_saved_bytes.py::test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input
 0.140	tests/system/py/test_c34_t28_saved_bytes.py::test_extended_lif_input_cannot_escape_its_complete_byte_witness[data]
@@ -10048,10 +10072,32 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_de
 0.050	tests/system/py/test_ci_cadence.py::test_acquisition_children_preserve_proven_ownership_and_release[standalone-token-True-crysta-src.sh]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[pull_request]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[push]
+0.000	tests/system/py/test_ci_cadence.py::test_catalogue_task_additions_cannot_replace_or_reorder_existing_work
 0.070	tests/system/py/test_ci_cadence.py::test_deferred_scale_assertions_and_regular_small_scan_are_preserved
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[axis-absent-zero]
 0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[axis-nonfirst]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[axis-zero-absent]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-0]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-10]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-11]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-12]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-13]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-14]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-15]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-16]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-17]
+0.150	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-18]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-19]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-1]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-20]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-2]
+0.150	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-3]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-4]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-5]
+0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-6]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-7]
+0.150	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-8]
+0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-9]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
@@ -11135,6 +11181,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-asymmetry]
 0.000	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[experiment-fields]
 0.001	tests/system/py/test_cwl_live_parameter_count.py::test_live_value_publication_preserves_parameter_population[second-structure]
+0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[copied-path]
+0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[duplicate]
+0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[extra]
+0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[ordinary]
+0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[wrong-backend]
 0.870	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]

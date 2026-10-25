@@ -21,3 +21,5 @@ The scan rows claim only their single template fit.
 
 Bérar-Baldinozzi uses FullProf Npr=5 for the mixing-eta model, with its signed
 coefficient map. This is distinct from diffraction-lib's TCH-based BeBa model.
+
+The source metadata now names BM01 at ESRF. Both start and fit exports reproduce every committed FullProf control and observation-data byte. The source metadata digest alone is rebound; external outputs are unchanged.

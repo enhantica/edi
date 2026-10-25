@@ -7134,7 +7134,7 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd-xray-cwl_latp_scan-4f",
-        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL",
+        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF",
         "_metadata.description": "3 phases · 4 of the 73 synchrotron patterns · Linked displacement parameters",
         "_metadata.authors": ".",
         "_metadata.created": "22 Oct 2026 09:50:09",
@@ -7142,7 +7142,7 @@ var frozen = {
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "BM01",
-        "_metadata.facility": "SNBL",
+        "_metadata.facility": "ESRF",
         "_su_format.rule": "iucr_19"
       },
       "analysis": {
@@ -7350,7 +7350,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "4402d50f2799ef9c8371d0551cae4731ab16d8ae566e05fbecc33c7c820a429c",
+        "project.edi": "5fa4c3449e3d89acd72272a86f3fd043e24ee4fe92cc6d9dcf95d9c1344e0902",
         "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
         "structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
         "structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
@@ -11018,7 +11018,7 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd-xray-cwl_latp-bm01_scan",
-        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL",
+        "_metadata.title": "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF",
         "_metadata.description": "3 phases · 73 synchrotron patterns · Linked displacement parameters",
         "_metadata.authors": ".",
         "_metadata.created": "22 Oct 2026 09:50:09",
@@ -11026,7 +11026,7 @@ var frozen = {
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "BM01",
-        "_metadata.facility": "SNBL",
+        "_metadata.facility": "ESRF",
         "_su_format.rule": "iucr_19"
       },
       "analysis": {
@@ -11924,7 +11924,7 @@ var frozen = {
       ],
       "loaderWarning": "",
       "files": {
-        "project.edi": "bba48295f833c50bfaeb3c27ee82c6c653f987976678c97b41bf9c7e6a44d71e",
+        "project.edi": "82efe3c81670c76bddd479db7f913da03a3bfa0d3096b790d910ea3495302810",
         "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
         "structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
         "structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
