@@ -748,6 +748,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
     // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    // Every page at the supported minimum (AppSizes.minimumAppWidth × minimumAppHeight), its sidebar scrolled to its
+    // last inputs, to check every control can be reached. Run only when asked (`--demo-only minimum-`).
+    if (only.startsWith(QLatin1String("minimum-"))) {
+        steps_.push_back({"minimum-1-home", {"resize:1024x640", "theme:light", "appBar.tab.home"}});
+        steps_.push_back({"minimum-2-project", {"open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", "appBar.tab.project", basic}});
+        steps_.push_back({"minimum-3-structure", {"appBar.tab.structure", basic}});
+        steps_.push_back({"minimum-4-structure-space-group", {"expand:group.space_group", "reveal:spaceGroup.crystalSystem"}});
+        steps_.push_back({"minimum-5-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"minimum-6-experiment-background", {"expand:group.background", "reveal:background.type"}});
+        steps_.push_back({"minimum-7-analysis", {"appBar.tab.analysis", basic}});
+        steps_.push_back({"minimum-8-report", {"appBar.tab.report"}});
+    }
     // A click on the Pattern chart's legend hides the measured curve, keeping the y range; with the range fitted to the
     // visible curves, showing it and hiding it again fits the range each time (the owner, 2026-10-25). Run only when
     // asked (`--demo-only legendhide-`).
