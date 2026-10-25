@@ -1,6 +1,6 @@
 # Chart redraw acceptance
 
-The placement oracle is ADR-0041's relative stack rule: a trace's height H is
+The placement oracle is the independent relative stack rule: a trace's height H is
 P / (1 + (N - 1) * offset) in Fit mode, otherwise P * heightPercent / 100.
 Baseline i is i * H * offset. The QML actor observes the Stacked layer's rowOf and peakOf in the
 unzoomed zero-to-one axis coordinates, then captures the production chart
