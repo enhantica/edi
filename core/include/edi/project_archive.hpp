@@ -42,7 +42,15 @@ std::string unpack_project_archive(std::string_view bytes, const std::string& ta
 bool is_project_archive(const std::string& path);
 
 // A new, empty directory under the system's temporary directory for an unpacked archive; `kind`
-// starts its name.
+// starts its name, which also carries this process's id. Each one this process makes is removed
+// when the process ends normally.
 std::string fresh_archive_directory(const std::string& kind);
+
+// Remove the temporary directory fresh_archive_directory made that holds `path` (an unpacked
+// project may sit in its one top folder); nothing for any other path.
+void remove_archive_directory(const std::string& path);
+
+// Remove the temporary directories whose process is no longer running: what a crash left behind.
+void remove_stale_archive_directories();
 
 }  // namespace edi
