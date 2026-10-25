@@ -25,7 +25,7 @@ not the project being read (relay `knowledge/analysis/e04-t23-opening-measuremen
 1. **One folder.** A project is its folder (`project.edi`, `structures/`, `experiments/`, `analysis/`, `reports/`) on
    every surface.
 
-2. **The archive.** A project archive is a `.zip` of the folder with each member named relative to it, deflated and
+1. **The archive.** A project archive is a `.zip` of the folder with each member named relative to it, deflated and
    carrying its file's time. Build and cache files are left out: any name starting with `.`, `build` and `__pycache__`
    folders, `*.pyc` and a save's `*.edi-staged` files. The core writes it (`project_archive_bytes`,
    `write_project_archive`) with miniz, compiled into the core. Reading accepts `project.edi` at the archive's top or
@@ -33,31 +33,36 @@ not the project being read (relay `knowledge/analysis/e04-t23-opening-measuremen
    written: an absolute name, a drive, a backslash or a `..` component refuses the whole archive; a link is not
    unpacked.
 
-3. **Opening.** `load_project` takes a folder, a `project.edi` (its folder) or a `.zip`. An archive unpacks into a new
+1. **Opening.** `load_project` takes a folder, a `project.edi` (its folder) or a `.zip`. An archive unpacks into a new
    temporary folder; the project then has no folder of its own (`path` empty) and reads its data from the unpacked one,
    so its first Save asks where to keep it (Python's `save` refuses, `save_as` sets it; the apps open Save as), and
    later saves go there. The unpacked folder's other files, its reports among them, are carried into the saved one.
-   The CLI's `fit` and `calc` take a `.zip` too; they write back only into `--output DIR`, never into the archive.
+   The CLI's `fit` and `calc` take a `.zip` too; they write back only into `--output DIR`, never into the archive. The
+   desktop app has one *Open project…*: the system's file dialog takes a `project.edi` or a `.zip`, and a folder, a
+   `project.edi` or a `.zip` dropped on the window opens too (owner, 2026-10-25).
 
-4. **Export.** The Project page's *Export project*, `edi export <project> -o <file>.zip` and `Project.export_zip(path)`
-   write the project's folder as last saved, as one archive. A project opened from an archive exports the unpacked
-   folder; a project with no folder yet is written to a temporary one first. The web app downloads the same bytes.
+1. **Save as, and export.** The desktop app has one *Save project as…* (owner, 2026-10-25). A small dialog first asks
+   for the format, a folder or a zip archive, and whether to save a copy, keeping the project where it is; then the
+   system's dialog asks where (a folder accepts with *Choose*, a `.zip` with *Save*). A project saved as a zip keeps
+   the archive as its location: it works in a folder of its own and every later Save rewrites the archive from it. A
+   copy is the project as it stands, written there, its values and location unchanged. `edi export <project> -o <file>.zip` and `Project.export_zip(path)` write the project's folder as last saved, as one archive; a project
+   opened from an archive exports the unpacked folder, one with no folder yet a temporary save of it.
 
-5. **The save sequence.** Every surface writes through crysta's writer (`save_project`), then calls
+1. **The save sequence.** Every surface writes through crysta's writer (`save_project`), then calls
    `adopt_saved_project`: the open project takes the values a reopen reads, and, when they changed and the project held
    a calculation, it is calculated from them and written again. The file, the open project and a reopened project then
    agree, the calculated pattern and R factors included. In the app this is not an edit: the project stays unmodified
    with nothing to undo.
 
-6. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, the
+1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, the
    shown page first and the others once it is ready; a page on its way shows *Opening this page…*. Opening another
    project meanwhile drops the pages being built, and the replaced project's worker is gone with it, so nothing of the
    first reaches the second. A Save while pages or the first calculation are pending runs the save sequence of
    decision 5 on the model, unaffected.
 
-7. **The web app.** It reads and writes archives through the core. It keeps zip download (Save) and folder or archive
-   upload (Open) in every browser; in Chrome and Edge, where the File System Access API exists, a picked folder is
-   written in place by later saves (pending).
+1. **The web app.** It reads and writes archives through the core. It keeps zip download (Save and Save as) and
+   folder or archive upload (Open) in every browser; in Chrome and Edge, where the File System Access API exists, a
+   picked folder is written in place by later saves (pending).
 
 ## Consequences
 
@@ -68,9 +73,10 @@ not the project being read (relay `knowledge/analysis/e04-t23-opening-measuremen
 
 ## Alternatives considered
 
-| Alternative | Verdict (why rejected / deferred) |
-|---|---|
-| Keep Qt's private zip classes in the web app | Rejected: the core, the command line and Python cannot use them, and two archive implementations drift. |
-| zlib with a hand-written zip container | Rejected: more code to own than miniz, which brings both. |
-| Archives with one top folder, as the web app wrote them | Rejected for writing: members relative to the folder are what Python's `zipfile` and other tools produce from it; both layouts are still read. |
-| Save the open project's unsaved changes into an export | Rejected: export writes the project as saved, as the folder does; Save first to include changes. |
+| Alternative                                                                        | Verdict (why rejected / deferred)                                                                                                                            |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Keep Qt's private zip classes in the web app                                       | Rejected: the core, the command line and Python cannot use them, and two archive implementations drift.                                                      |
+| zlib with a hand-written zip container                                             | Rejected: more code to own than miniz, which brings both.                                                                                                    |
+| Archives with one top folder, as the web app wrote them                            | Rejected for writing: members relative to the folder are what Python's `zipfile` and other tools produce from it; both layouts are still read.               |
+| Separate *Open a project folder*, *Export project* buttons beside Open and Save as | Rejected by the owner (2026-10-25): six buttons whose differences are unclear; one Open and one Save as, with a format and a copy choice, do both jobs.      |
+| Save the open project's unsaved changes into an export                             | Rejected for the command line and Python: export writes the project as saved, as the folder does. In the app, *Save a copy* writes the project as it stands. |
