@@ -97,6 +97,22 @@ EaComponents.ApplicationWindow {
     component WorkflowTab: EaElements.AppBarTabButton {
         id: tab
 
+        // The tab's page: while it is being built in the background the tab stays disabled and says so (edi ADR-0052).
+        property Loader page: null
+        property bool pageWanted: false
+        readonly property bool preparing: page !== null && pageWanted && Session.hasProject && page.status !== Loader.Ready
+
+        BusyIndicator {
+            objectName: tab.objectName + ".preparing"
+            running: tab.preparing
+            visible: running
+            width: tab.font.pixelSize * 1.1
+            height: width
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: tab.font.pixelSize * 0.2
+        }
+
         // The base binds the width to the name's width in its current weight; this is the wider of the two.
         width: implicitWidth
         implicitWidth: Math.ceil(Math.max(plainName.advanceWidth, boldName.advanceWidth) + font.pixelSize * 1.5)
@@ -126,15 +142,21 @@ EaComponents.ApplicationWindow {
             ToolTip.text: qsTr("Home page")
         },
         WorkflowTab {
+            id: projectTab
             objectName: "appBar.tab.project"
-            enabled: AppState.projectPageEnabled
+            page: projectLoader
+            pageWanted: AppState.projectPageEnabled
+            enabled: AppState.projectPageEnabled && !preparing
             fontIcon: "archive"
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
         WorkflowTab {
+            id: structureTab
             objectName: "appBar.tab.structure"
-            enabled: AppState.structurePageEnabled
+            page: structureLoader
+            pageWanted: AppState.structurePageEnabled
+            enabled: AppState.structurePageEnabled && !preparing
             fontIcon: "layer-group"
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
@@ -142,41 +164,51 @@ EaComponents.ApplicationWindow {
         WorkflowTab {
             id: experimentTab
             objectName: "appBar.tab.experiment"
-            enabled: AppState.experimentPageEnabled
+            page: experimentLoader
+            pageWanted: AppState.experimentPageReached
+            enabled: AppState.experimentPageEnabled && !preparing
             fontIcon: "microscope"
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
         WorkflowTab {
+            id: analysisTab
             objectName: "appBar.tab.analysis"
-            enabled: AppState.analysisPageEnabled
+            page: analysisLoader
+            pageWanted: AppState.analysisPageReached
+            enabled: AppState.analysisPageEnabled && !preparing
             fontIcon: "calculator"
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
         WorkflowTab {
+            id: reportTab
             objectName: "appBar.tab.report"
-            enabled: AppState.reportPageEnabled
+            page: reportLoader
+            pageWanted: AppState.reportPageReached
+            enabled: AppState.reportPageEnabled && !preparing
             fontIcon: "clipboard-list"
             text: qsTr("Report")
             ToolTip.text: qsTr("Report of the work done")
         }
     ]
 
-    // edi ADR-0052: an opened project shows at once and its pages follow. Each page is built afresh for each project,
-    // in the background (asynchronous loaders), the shown page first and the others once it is ready; a page on its
-    // way says so. The pages let go of a project before it is replaced, so opening another one meanwhile drops what
-    // was being built for the first.
+    // edi ADR-0052: an opened project shows at once and its pages follow. Each page is built afresh for each project, in
+    // the background (asynchronous loaders, in time slices between frames), one after another in the order Project,
+    // Structure, Experiment, Analysis, Report; each tab is enabled once its page is ready. The pages let go of a project
+    // before it is replaced, so opening another one meanwhile drops what was being built for the first.
     property bool pagesStarted: true
     readonly property var pageLoaders: [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader]
-    readonly property bool shownPageReady: pageLoaders.every(loader => !loader.SwipeView.isCurrentItem || loader.status === Loader.Ready)
     function pageTurn(loader) {
-        return pagesStarted && (loader.SwipeView.isCurrentItem || shownPageReady);
+        return pagesStarted && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
     }
     Connections {
         target: Session
         function onProjectAboutToChange() {
             window.pagesStarted = false;
+            // A page past Project is rebuilt later; its tab is disabled meanwhile, so the window shows Project.
+            if (window.appBarCentralTabs.currentIndex > 1)
+                window.appBarCentralTabs.setCurrentIndex(1);
         }
         function onProjectChanged() {
             pagesStart.restart();
@@ -188,12 +220,34 @@ EaComponents.ApplicationWindow {
         onTriggered: window.pagesStarted = true
     }
 
-    component PagePending: EmptyStateLabel {
-        required property Loader loader
-        anchors.centerIn: parent
-        width: parent.width * 0.8
-        visible: Session.hasProject && loader.status !== Loader.Ready
-        text: qsTr("Opening this page…")
+    // A disabled tab takes no hover, so the preparing tabs' tooltip comes from here, over the whole tab bar.
+    Item {
+        id: tabBarOverlay
+
+        parent: window.appBarCentralTabs
+        anchors.fill: parent
+        z: 10
+
+        HoverHandler {
+            id: tabBarHover
+        }
+        readonly property WorkflowTab preparingTab: {
+            if (!tabBarHover.hovered)
+                return null;
+            for (const tab of [projectTab, structureTab, experimentTab, analysisTab, reportTab]) {
+                const point = tab.mapFromItem(tabBarOverlay, tabBarHover.point.position.x, tabBarHover.point.position.y);
+                if (tab.preparing && tab.contains(point))
+                    return tab;
+            }
+            return null;
+        }
+
+        ToolTip {
+            objectName: "appBar.preparingToolTip"
+            parent: tabBarOverlay.preparingTab !== null ? tabBarOverlay.preparingTab : tabBarOverlay
+            visible: tabBarOverlay.preparingTab !== null
+            text: tabBarOverlay.preparingTab !== null ? qsTr("Preparing the %1 page…").arg(tabBarOverlay.preparingTab.text) : ""
+        }
     }
 
     contentArea: [
@@ -201,76 +255,61 @@ EaComponents.ApplicationWindow {
         Loader {
             id: projectLoader
 
-            active: AppState.projectPageEnabled && window.pageTurn(projectLoader)
+            readonly property bool wanted: AppState.projectPageEnabled
+            active: wanted && window.pageTurn(projectLoader)
             asynchronous: true
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
                 }
             }
-
-            PagePending {
-                loader: projectLoader
-            }
         },
         Loader {
             id: structureLoader
 
-            active: AppState.structurePageEnabled && window.pageTurn(structureLoader)
+            readonly property bool wanted: AppState.structurePageEnabled
+            active: wanted && window.pageTurn(structureLoader)
             asynchronous: true
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
                 }
             }
-
-            PagePending {
-                loader: structureLoader
-            }
         },
         Loader {
             id: experimentLoader
 
-            active: AppState.experimentPageReached && window.pageTurn(experimentLoader)
+            readonly property bool wanted: AppState.experimentPageReached
+            active: wanted && window.pageTurn(experimentLoader)
             asynchronous: true
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
                 }
             }
-
-            PagePending {
-                loader: experimentLoader
-            }
         },
         Loader {
             id: analysisLoader
 
-            active: AppState.analysisPageReached && window.pageTurn(analysisLoader)
+            readonly property bool wanted: AppState.analysisPageReached
+            active: wanted && window.pageTurn(analysisLoader)
             asynchronous: true
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
                 }
             }
-
-            PagePending {
-                loader: analysisLoader
-            }
         },
         Loader {
             id: reportLoader
 
-            active: AppState.reportPageReached && window.pageTurn(reportLoader)
+            readonly property bool wanted: AppState.reportPageReached
+            active: wanted && window.pageTurn(reportLoader)
             asynchronous: true
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
                 }
-            }
-
-            PagePending {
-                loader: reportLoader
             }
         }
     ]
@@ -358,12 +397,14 @@ EaComponents.ApplicationWindow {
             }
             EaElements.RadioButton {
                 objectName: "saveAs.folder"
+                verticalPadding: 0
                 text: qsTr("Folder")
                 checked: !saveAsChoice.zip
                 onClicked: saveAsChoice.zip = false
             }
             EaElements.RadioButton {
                 objectName: "saveAs.zip"
+                verticalPadding: 0
                 text: qsTr("Zip archive")
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
