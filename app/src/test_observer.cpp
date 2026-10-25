@@ -41,6 +41,7 @@
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
 #include "measured_layer.hpp"
+#include "pattern_chart_controller.hpp"
 #include "pattern_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
@@ -145,7 +146,8 @@ QStringList choices(QObject* object) {
 void publish(const QJsonObject& result) {
     QFile file(setting("SCAN_SCREEN_OUTPUT", "scan-screen.json"));
     if (file.open(QIODevice::WriteOnly)) file.write(QJsonDocument(result).toJson(QJsonDocument::Compact));
-    QCoreApplication::quit();
+    // exit(), not quit(): quit() first closes the window, which asks about a fitted project's unsaved changes.
+    QCoreApplication::exit(0);
 }
 
 // The pattern-update choice for a mode: every, second, adaptive or end.
@@ -330,6 +332,10 @@ void drive(ScreenObservation& o) {
             when_ready(
                 o, [&o] { return analysis_extras(o) != nullptr; },
                 [&o] {
+                    // The measured data as markers, whose points the frames record: the default band draws neither
+                    // markers nor a line (the owner, 2026-10-22). The charts only, not the user's preference.
+                    for (auto* controller : o.window->findChildren<PatternChartController*>())
+                        controller->setMeasuredStyle(QStringLiteral("points"));
                     press(analysis_extras(o));
                     when_ready(o, [&o] { return pattern_updates_shown(o); }, [&o] { configure(o); },
                                "The Analysis page's Extras did not show the pattern updates");
