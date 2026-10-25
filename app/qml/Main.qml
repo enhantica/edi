@@ -324,22 +324,16 @@ EaComponents.ApplicationWindow {
         }
         if (!Session.save())
             saveError.open();
-        else if (WebFiles.available)
-            WebFiles.downloadProject(Session.project.path);
     }
-    // In the browser (edi ADR-0023) a project saves into the page's memory under its name and goes to the
-    // user as a .zip download: no folder on the user's disk is reachable from the page.
+    // In the browser (edi ADR-0052 §9) Save as writes onto the disk: where the browser can write it, into a folder or
+    // a .zip the user picks, as on the desktop; elsewhere as a .zip download.
     function saveProjectAs() {
         if (Session.project === null)
             return;
-        if (!WebFiles.available) {
-            saveAsChoice.open();
-            return;
-        }
-        if (Session.saveAs(WebFiles.saveLocation(Session.project.name)))
-            WebFiles.downloadProject(Session.project.path);
+        if (WebFiles.available && !WebStorage.diskAccess)
+            Session.downloadWebProject();
         else
-            saveError.open();
+            saveAsChoice.open();
     }
 
     // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
@@ -405,6 +399,7 @@ EaComponents.ApplicationWindow {
         }
         onDiscarded: {
             close();
+            Session.discardKeptChanges();
             action();
         }
 
@@ -432,7 +427,14 @@ EaComponents.ApplicationWindow {
             zip = false;
             copy = false;
         }
-        onAccepted: zip ? saveZip.open() : saveFolder.open()
+        onAccepted: {
+            if (WebFiles.available)
+                Session.saveWebProjectAs(zip ? "zip" : "folder", copy);
+            else if (zip)
+                saveZip.open();
+            else
+                saveFolder.open();
+        }
 
         Column {
             id: saveAsChoiceColumn
@@ -513,6 +515,53 @@ EaComponents.ApplicationWindow {
         function onFailed(request, message) {
             webFilesError.message = message;
             webFilesError.open();
+        }
+    }
+    // The web app's saves (edi ADR-0052 §9): where the project went, and what a failed write says.
+    Connections {
+        target: Session
+        function onWebSaved(kind) {
+            if (kind === "browser")
+                webNotice.show(qsTr("Saved in this browser only. Use Save project as… to keep a copy on your disk: the browser may clear what it keeps."));
+        }
+        function onWebDownloaded(name) {
+            webNotice.show(qsTr("Downloaded %1 to the browser's downloads folder. To replace the original file, have the browser ask where to save downloads and choose that file.").arg(name));
+        }
+        function onWebSaveFailed(message) {
+            webFilesError.message = message;
+            webFilesError.open();
+        }
+    }
+    // A short notice at the foot of the window, gone after a few seconds or on a click.
+    Popup {
+        id: webNotice
+        objectName: "webNotice"
+        property string text
+        function show(message) {
+            text = message;
+            open();
+            webNoticeTimer.restart();
+        }
+        parent: Overlay.overlay
+        x: Math.round((parent.width - width) / 2)
+        y: parent.height - height - EaStyle.Sizes.fontPixelSize * 3
+        width: Math.min(parent.width - EaStyle.Sizes.fontPixelSize * 4, EaStyle.Sizes.fontPixelSize * 40)
+        padding: EaStyle.Sizes.fontPixelSize
+        closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+        background: Rectangle {
+            color: EaStyle.Colors.dialogBackground
+            border.color: EaStyle.Colors.appBarBorder
+            radius: 2
+        }
+        contentItem: EaElements.Label {
+            objectName: "webNotice.text"
+            wrapMode: Text.Wrap
+            text: webNotice.text
+        }
+        Timer {
+            id: webNoticeTimer
+            interval: 8000
+            onTriggered: webNotice.close()
         }
     }
     AppDialog {
