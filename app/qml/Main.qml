@@ -62,7 +62,7 @@ EaComponents.ApplicationWindow {
             fontIcon: "backspace"
             ToolTip.text: qsTr("Reset to initial state without project, model and data")
             Accessible.name: ToolTip.text
-            onClicked: AppState.reset()
+            onClicked: AppState.afterChanges(() => AppState.reset())
         }
     ]
 
@@ -101,17 +101,6 @@ EaComponents.ApplicationWindow {
         property Loader page: null
         property bool pageWanted: false
         readonly property bool preparing: page !== null && pageWanted && Session.hasProject && page.status !== Loader.Ready
-
-        BusyIndicator {
-            objectName: tab.objectName + ".preparing"
-            running: tab.preparing
-            visible: running
-            width: tab.font.pixelSize * 1.1
-            height: width
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: tab.font.pixelSize * 0.2
-        }
 
         // The base binds the width to the name's width in its current weight; this is the wider of the two.
         width: implicitWidth
@@ -199,6 +188,9 @@ EaComponents.ApplicationWindow {
     // before it is replaced, so opening another one meanwhile drops what was being built for the first.
     property bool pagesStarted: true
     readonly property var pageLoaders: [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader]
+    // The opening's progress, which the status bar shows until every page is built.
+    readonly property int pagesWanted: Session.hasProject ? pageLoaders.filter(loader => loader.wanted).length : 0
+    readonly property int pagesBuilt: Session.hasProject ? pageLoaders.filter(loader => loader.wanted && loader.status === Loader.Ready).length : 0
     function pageTurn(loader) {
         return pagesStarted && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
     }
@@ -246,7 +238,7 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.preparingToolTip"
             parent: tabBarOverlay.preparingTab !== null ? tabBarOverlay.preparingTab : tabBarOverlay
             visible: tabBarOverlay.preparingTab !== null
-            text: tabBarOverlay.preparingTab !== null ? qsTr("Preparing the %1 page…").arg(tabBarOverlay.preparingTab.text) : ""
+            text: qsTr("Preparing this page…")
         }
     }
 
@@ -314,7 +306,10 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    statusBar: StatusBar {}
+    statusBar: StatusBar {
+        pagesBuilt: window.pagesBuilt
+        pagesWanted: window.pagesWanted
+    }
 
     AppPreferencesDialog {}
 
@@ -370,6 +365,57 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
+    // project's temporary folder goes with it.
+    property bool quitting: false
+    onClosing: close => {
+        if (!quitting && Session.project !== null && Session.project.modified) {
+            close.accepted = false;
+            AppState.afterChanges(() => {
+                window.quitting = true;
+                window.close();
+            });
+        }
+    }
+    Connections {
+        target: AppState
+        function onChangesQuestion(action) {
+            unsavedChanges.action = action;
+            unsavedChanges.open();
+        }
+    }
+    AppDialog {
+        id: unsavedChanges
+        objectName: "unsavedChanges"
+        property var action: null
+        title: qsTr("Save the changes?")
+        standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: unsavedText.implicitHeight
+        // Save writes in place; a project with nowhere to write yet opens Save as, and the action waits for the user to
+        // ask again.
+        onAccepted: {
+            if (Session.needsSaveAs) {
+                window.saveProjectAs();
+            } else if (Session.save()) {
+                action();
+            } else {
+                saveError.open();
+            }
+        }
+        onDiscarded: {
+            close();
+            action();
+        }
+
+        EaElements.Label {
+            id: unsavedText
+            width: unsavedChanges.contentWidth
+            wrapMode: Text.Wrap
+            text: qsTr("%1 has changes that are not saved.").arg(Session.project !== null ? Session.project.name : "")
+        }
+    }
+
     // Save as (edi ADR-0052): first the format and whether to keep working where the project is (a copy), then the
     // system's dialog for the folder or the .zip.
     AppDialog {
@@ -379,7 +425,8 @@ EaComponents.ApplicationWindow {
         property bool copy: false
         title: qsTr("Save project as")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
+        // As wide as its content (the owner, 2026-10-25).
+        contentWidth: saveAsChoiceColumn.implicitWidth
         contentHeight: saveAsChoiceColumn.implicitHeight
         onAboutToShow: {
             zip = false;
@@ -389,12 +436,12 @@ EaComponents.ApplicationWindow {
 
         Column {
             id: saveAsChoiceColumn
-            width: saveAsChoice.contentWidth
-            spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
             EaElements.Label {
                 text: qsTr("Format")
+                bottomPadding: EaStyle.Sizes.fontPixelSize * 0.25
             }
+            // Folder and Zip archive: one group, rows at the usual spacing.
             EaElements.RadioButton {
                 objectName: "saveAs.folder"
                 verticalPadding: 0
@@ -409,11 +456,18 @@ EaComponents.ApplicationWindow {
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
             }
+            // Set apart from the format.
+            Item {
+                width: 1
+                height: EaStyle.Sizes.fontPixelSize
+            }
             EaElements.CheckBox {
                 objectName: "saveAs.copy"
-                text: qsTr("Save a copy (keep working where the project is)")
+                text: qsTr("Save a copy")
                 checked: saveAsChoice.copy
                 onToggled: saveAsChoice.copy = checked
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Write the project there and keep working where it is")
             }
         }
     }
@@ -447,7 +501,8 @@ EaComponents.ApplicationWindow {
         onDropped: drop => {
             if (drop.hasUrls && drop.urls.length > 0) {
                 drop.accept();
-                Session.openProject(drop.urls[0]);
+                const url = drop.urls[0];
+                AppState.afterChanges(() => Session.openProject(url));
             }
         }
     }

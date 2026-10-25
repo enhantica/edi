@@ -2460,6 +2460,13 @@ void ProjectViewModel::setModified(bool modified) {
     }
 }
 
+void ProjectViewModel::workIn(const QString& folder) {
+    project_->path = folder.toStdString();
+    project_->metadata.path = project_->path;
+    project_->scan_data_root.clear();
+    emit pathChanged();
+}
+
 QString ProjectViewModel::saveTo(const QString& directory) {
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {

@@ -54,7 +54,7 @@ EaElements.GroupBox {
                     onClicked: {
                         row.activated();
                         if (row.available)
-                            Session.openProject(Session.projectDirectoryUrl(row.path));
+                            AppState.afterChanges(() => Session.openProject(Session.projectDirectoryUrl(row.path)));
                     }
                 }
                 EaComponents.ListViewLabel {
