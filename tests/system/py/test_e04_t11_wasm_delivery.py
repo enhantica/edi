@@ -142,6 +142,39 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
         'wasm/native fit parity must retain the declared relative tolerance'
     )
 
+    catalogue = json.loads((FIXTURE / 'catalogue-native.json').read_text())
+    assert set(catalogue) == {'lbco', 'ncaf'}, (
+        'Browser catalogue parity: each live fitting vehicle has its own native input pin'
+    )
+    for case, record in catalogue.items():
+        project = ROOT / record['project']
+        digest = hashlib.sha256()
+        for path in sorted(project.rglob('*')):
+            if path.is_file():
+                digest.update(path.relative_to(project).as_posix().encode() + b'\0')
+                digest.update(path.read_bytes())
+        assert digest.hexdigest() == record['project_sha256'], (
+            'Browser catalogue parity: every native regression pin binds its current input bytes'
+        )
+        assert record['reference'].startswith('Native CLI parity regression pin;'), (
+            'Browser catalogue parity: native output is labelled as a regression pin'
+        )
+        fields = dict(
+            line.split('=', 1)
+            for line in (FIXTURE / f'catalogue-{case}-native-report.txt').read_text().splitlines()
+            if '=' in line
+        )
+        assert fields['status'] == record['status'] == 'done' and fields['converged'] == 'true', (
+            'Browser catalogue parity: native captures complete the same converged fit contract'
+        )
+        assert all(float(fields[key]) == value for key, value in record['parameters'].items()), (
+            'Browser catalogue parity: parameter pins come from the retained native transcript'
+        )
+        assert all(
+            float(fields[key]) == record[key]
+            for key in ('iterations', 'rwp', 'reduced_chi_square')
+        ), 'Browser catalogue parity: saved-fit metrics and iterations match the native transcript'
+
 
 def test_toolchain_tasks_declare_reproducible_pins():
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())

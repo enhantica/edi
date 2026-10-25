@@ -107,3 +107,11 @@ including a mutant that switches Structure to a multiple-file request. Those gat
 QML receiver for request identity, terminal cancellation and initiating-project ownership. These checks
 complement the real browser cases; neither source patterns nor unchanged empty-project labels alone
 prove an asynchronous upload transition. Navigation requires the requested native tab to become selected.
+
+The browser catalogue routes use separate `catalogue-native.json` pins captured by
+`generate_catalogue.py` from `pd-neut-cwl_lbco-hrpt` and `pd-neut-tof_ncaf-wish`.
+These are native CLI parity regression pins, bound to their complete input bytes and
+retained transcripts. They do not replace an external physics reference. The original
+`native.json`, transcript and start-model numerical backend controls remain unchanged.
+The browser retains its original chi-square and Rwp comparison bounds; its exact
+iteration pin now belongs to the selected catalogue input.

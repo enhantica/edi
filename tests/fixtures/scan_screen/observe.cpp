@@ -251,7 +251,8 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         while (copied && files.hasNext()) {
             const QString from = files.next();
             const QString to = fixture.path() + from.mid(source.size());
-            copied = QDir().mkpath(QFileInfo(to).absolutePath()) && QFile::copy(from, to);
+            copied = QDir().mkpath(QFileInfo(to).absolutePath()) && QFile::copy(from, to)
+                     && QFile::setPermissions(to, QFile::ReadOwner | QFile::WriteOwner);
         }
         if (!copied || !QFile::exists(fixture.filePath("project.edi"))) {
             (*result)["error"] = "Scan fixture precondition: the retained 162-file project must be extracted";

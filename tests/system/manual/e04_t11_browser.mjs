@@ -472,13 +472,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const saved = await saveArchive();
   const before = inspectArchive(saved);
   assertSavedProject(before.name, fitCase);
-  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
+  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/catalogue-native.json', import.meta.url)))[fitCase];
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
     'the saved project must contain a successful performed fit, not only the unfitted example');
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
-  const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
-  const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
+  const referenceChi = nativeOracle.reduced_chi_square;
+  const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
   assertNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
     project:before.name, chi, referenceChi, chiTolerance,
@@ -489,8 +489,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     'The successful saved fit must confirm the progress hook\'s actual final iteration');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
-    assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
-      'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
+    assert(iterations === nativeOracle.iterations && Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
+      'the five-bank browser fit must retain the catalogue native parity regression pins for iterations and Rwp');
   }
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons
