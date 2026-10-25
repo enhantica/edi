@@ -36,6 +36,10 @@ namespace edi::detail {
 void read_report_item(std::string_view item, const std::string& value, Project& project);
 // `_correlation_chart.threshold`, `_pattern_chart.x_axis` and a `_report_file.format`, checked.
 double read_correlation_threshold(const std::string& value);
+// A single crystal's `_reflns.threshold_sigma`/`_refine_ls.threshold_sigma` (`tag`) and `_reflns.threshold_basis`,
+// checked by crysta's rules (edi ADR-0050).
+double read_threshold_sigma(const std::string& value, const char* tag);
+std::string read_threshold_basis(const std::string& value);
 std::string read_pattern_x_axis(const std::string& value);
 std::string read_report_file_format(const std::string& value);
 

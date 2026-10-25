@@ -25,7 +25,16 @@ class ChartLegendModel : public QAbstractListModel {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
    public:
-    enum Role { LabelRole = Qt::UserRole + 1, ColorRole, MarkRole, BraggRole, MarkWidthRole, LabelTextsRole, LabelColorsRole };
+    enum Role {
+        LabelRole = Qt::UserRole + 1,
+        ColorRole,
+        MarkRole,
+        BraggRole,
+        MarkWidthRole,
+        LabelTextsRole,
+        LabelColorsRole,
+        SelectedRole
+    };
     struct Entry {
         QString label;
         QColor color;
@@ -33,6 +42,8 @@ class ChartLegendModel : public QAbstractListModel {
         bool bragg = false;
         double markWidth = 0.0;
         QStringList labelTexts, labelColors;
+        // The selected dataset's entry, shown bold in the accent colour.
+        bool selected = false;
         friend bool operator==(const Entry&, const Entry&) = default;
     };
 
@@ -50,6 +61,18 @@ class ChartLegendModel : public QAbstractListModel {
 
    private:
     QList<Entry> entries_;
+};
+
+// A legend whose rows its chart sets itself (the single-crystal charts, which have no controller): one row per label,
+// a 3-pixel line in the colour of the same index (a colour name), and the row at `selected` shown bold in the accent
+// colour (-1 for none).
+class ListedLegendModel : public ChartLegendModel {
+    Q_OBJECT
+    QML_ELEMENT
+
+   public:
+    explicit ListedLegendModel(QObject* parent = nullptr) : ChartLegendModel(parent) {}
+    Q_INVOKABLE void setRows(const QStringList& labels, const QStringList& colors, int selected);
 };
 
 // A chart's excluded regions inside its view (edi ADR-0021 §4): one row per band. Roles `xMin` and `xMax`,

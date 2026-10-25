@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
 
+#include <cmath>
+
 #include <QVariantMap>
 #include <QtNumeric>
 #include <algorithm>
@@ -9,6 +11,7 @@
 
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
+#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
@@ -181,6 +184,221 @@ void ReflectionListModel::sync() {
         }
     }
     setTableRows(rows);
+}
+
+namespace {
+
+// Equal for a change signal: NaN equals NaN, so a value still not calculated is no change.
+bool same(double a, double b) { return a == b || (std::isnan(a) && std::isnan(b)); }
+bool same(const QList<double>& a, const QList<double>& b) {
+    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](double x, double y) { return same(x, y); });
+}
+template <typename T>
+bool same(const T& a, const T& b) {
+    return a == b;
+}
+
+// The reflection table's columns, in the order the delegates read them.
+const QStringList kSingleCrystalReflectionRoles{"h",        "k",        "l",          "dSpacing", "sinThetaOverLambda",
+                                                "intensityMeas", "intensityMeasSu", "intensityCalc", "residual",
+                                                "wavelength", "fitUse"};
+}  // namespace
+
+SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
+                                                           const edi::Project& project, QObject* parent)
+    : RowTableModel(kSingleCrystalReflectionRoles, parent),
+      experiment_(experiment),
+      project_(project) {
+    sync();
+}
+
+void SingleCrystalReflectionModel::sortBy(const QString& role) {
+    if (!kSingleCrystalReflectionRoles.contains(role)) {
+        return;
+    }
+    const bool ascending = role == sort_role_ ? !sort_ascending_ : true;
+    if (ascending != sort_ascending_) {
+        sort_ascending_ = ascending;
+        emit sortAscendingChanged();
+    }
+    if (role != sort_role_) {
+        sort_role_ = role;
+        emit sortRoleChanged();
+    }
+    publish();
+}
+
+void SingleCrystalReflectionModel::publish() {
+    QList<Row> rows = file_rows_;
+    const qsizetype column = kSingleCrystalReflectionRoles.indexOf(sort_role_);
+    if (column >= 0) {
+        const bool ascending = sort_ascending_;
+        std::stable_sort(rows.begin(), rows.end(), [column, ascending](const Row& a, const Row& b) {
+            const double x = a.values.at(column).toDouble();
+            const double y = b.values.at(column).toDouble();
+            if (std::isnan(x) || std::isnan(y)) {
+                return !std::isnan(x) && std::isnan(y);
+            }
+            return ascending ? x < y : y < x;
+        });
+    }
+    setTableRows(rows);
+}
+
+void SingleCrystalReflectionModel::sync() {
+    frame_.reset();
+    refresh();
+}
+
+void SingleCrystalReflectionModel::showFrame(std::shared_ptr<const std::vector<double>> calculated) {
+    frame_ = std::move(calculated);
+    refresh();
+}
+
+void SingleCrystalReflectionModel::refresh() {
+    QList<Row> rows;
+    QList<double> calculated;
+    QList<double> measured;
+    QList<double> su;
+    QList<bool> used;
+    // The fit's cutoff (`_refine_ls.threshold_sigma`): a reflection is fitted when F² > n su(F²), as crysta selects
+    // them; every one without a cutoff.
+    const std::optional<double> cutoff = project_.refine_ls_threshold_sigma;
+    double low = qInf();
+    double high = -qInf();
+    bool shown = false;
+    if (const auto& reflections = experiment_.reflections; reflections.has_value() && reflections->rectangular()) {
+        // A fit's frame shows its own F²calc; the rest of the computed columns are the model's, as they were.
+        const std::vector<double>& calc = frame_ ? *frame_ : reflections->intensity_calc.values();
+        const bool current = calc.size() == reflections->size() && (frame_ || experiment_.computed_current());
+        for (std::size_t i = 0; i < reflections->size(); ++i) {
+            const double meas = reflections->intensity_meas[i];
+            const double sigma = reflections->intensity_meas_su[i];
+            const double value = current ? calc[i] : qQNaN();
+            const double residual = current && sigma > 0.0 ? (meas - value) / sigma : qQNaN();
+            const auto column = [current, i](const edi::ComputedColumn<double>& values) {
+                return current && i < values.size() ? values[i] : qQNaN();
+            };
+            const bool fitted = !cutoff.has_value() || meas > *cutoff * sigma;
+            used.append(fitted);
+            rows.append({reinterpret_cast<const void*>(i + 1),
+                         {reflections->index_h[i], reflections->index_k[i], reflections->index_l[i],
+                          column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
+                          value, residual,
+                          i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN(),
+                          fitted ? 1.0 : 0.0}});
+            calculated.append(value);
+            measured.append(meas);
+            su.append(sigma);
+            for (const double end : {meas - sigma, meas + sigma, value}) {
+                if (std::isfinite(end)) {
+                    low = std::min(low, end);
+                    high = std::max(high, end);
+                }
+            }
+        }
+        shown = current;
+    }
+    file_rows_ = rows;
+    publish();
+    if (!(high > low)) {
+        low = 0.0;
+        high = 1.0;
+    }
+    // The F view, by the Xtal ADDREF convention (as cctbx's f_sq_as_f_xtal_3_7): F = √F² for F² > 0 and 0 otherwise,
+    // so a weak or negative reflection stays on the chart, and σ(F) = σ(F²) / (F + √(F² + σ(F²))), which is
+    // σ(F²) / 2F for a strong reflection and √σ(F²) at F = 0 rather than growing without bound.
+    QList<double> calculated_f;
+    QList<double> measured_f;
+    QList<double> measured_f_su;
+    double high_f = 0.0;
+    for (qsizetype i = 0; i < measured.size(); ++i) {
+        const double calc_f = std::isfinite(calculated[i]) ? std::sqrt(std::max(calculated[i], 0.0)) : qQNaN();
+        const double meas_f = std::isfinite(measured[i]) ? std::sqrt(std::max(measured[i], 0.0)) : qQNaN();
+        const double su_f = std::isfinite(meas_f) && su[i] > 0.0 ? su[i] / (meas_f + std::sqrt(meas_f * meas_f + su[i]))
+                                                                 : qQNaN();
+        calculated_f.append(calc_f);
+        measured_f.append(meas_f);
+        measured_f_su.append(su_f);
+        for (const double end : {meas_f + su_f, calc_f}) {
+            if (std::isfinite(end)) {
+                high_f = std::max(high_f, end);
+            }
+        }
+    }
+    double wavelength_low = qQNaN();
+    double wavelength_high = qQNaN();
+    if (const auto& reflections = experiment_.reflections; reflections.has_value()) {
+        for (const double wavelength : reflections->wavelength.get()) {
+            if (std::isfinite(wavelength)) {
+                wavelength_low = std::isnan(wavelength_low) ? wavelength : std::min(wavelength_low, wavelength);
+                wavelength_high = std::isnan(wavelength_high) ? wavelength : std::max(wavelength_high, wavelength);
+            }
+        }
+    }
+    // Each property notifies only when it changed, NaN equal to NaN; the chart then redraws once.
+    const double pad = (high - low) * 0.05;
+    bool changed = false;
+    const auto update = [this, &changed](auto& member, const auto& value, void (SingleCrystalReflectionModel::*signal)()) {
+        if (!same(member, value)) {
+            member = value;
+            changed = true;
+            emit(this->*signal)();
+        }
+    };
+    update(calculated_f_, calculated_f, &SingleCrystalReflectionModel::calculatedFChanged);
+    update(measured_f_, measured_f, &SingleCrystalReflectionModel::measuredFChanged);
+    update(measured_f_su_, measured_f_su, &SingleCrystalReflectionModel::measuredFSuChanged);
+    update(low_f_, 0.0, &SingleCrystalReflectionModel::lowFChanged);
+    update(high_f_, high_f > 0.0 ? high_f * 1.05 : 1.0, &SingleCrystalReflectionModel::highFChanged);
+    update(calculated_, calculated, &SingleCrystalReflectionModel::calculatedChanged);
+    update(measured_, measured, &SingleCrystalReflectionModel::measuredChanged);
+    update(measured_su_, su, &SingleCrystalReflectionModel::measuredSuChanged);
+    update(used_, used, &SingleCrystalReflectionModel::usedChanged);
+    update(fit_cutoff_, cutoff.value_or(qQNaN()), &SingleCrystalReflectionModel::fitCutoffChanged);
+    update(low_, std::min(0.0, low - pad), &SingleCrystalReflectionModel::lowChanged);
+    update(high_, high + pad, &SingleCrystalReflectionModel::highChanged);
+    update(calculated_shown_, shown, &SingleCrystalReflectionModel::calculatedShownChanged);
+    update(wavelength_low_, wavelength_low, &SingleCrystalReflectionModel::wavelengthLowChanged);
+    update(wavelength_high_, wavelength_high, &SingleCrystalReflectionModel::wavelengthHighChanged);
+    if (changed) {
+        emit pointsChanged();
+    }
+}
+
+QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
+    const auto& reflections = experiment_.reflections;
+    if (!reflections.has_value() || !reflections->rectangular() || row < 0 ||
+        static_cast<std::size_t>(row) >= reflections->size()) {
+        return {};
+    }
+    const auto at = static_cast<qsizetype>(row);
+    const double meas = squared ? measured_.value(at, qQNaN()) : measured_f_.value(at, qQNaN());
+    const double su = squared ? measured_su_.value(at, qQNaN()) : measured_f_su_.value(at, qQNaN());
+    const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
+    const QString quantity = squared ? QStringLiteral("F²") : QStringLiteral("F");
+    QStringList lines{QStringLiteral("%1 %2 %3")
+                          .arg(reflections->index_h[at])
+                          .arg(reflections->index_k[at])
+                          .arg(reflections->index_l[at])};
+    // The measured value and its su as the tables write them; the calculated value to the same last digit.
+    int decimals = 6;
+    if (std::isfinite(meas) && std::isfinite(su) && su > 0.0) {
+        const edi::SuText text = edi::su_text(meas, su, project_.su_rule);
+        const auto dot = text.value.find('.');
+        decimals = dot == std::string::npos ? 0 : static_cast<int>(text.value.size() - dot - 1);
+        lines.append(QStringLiteral("%1 meas: %2 ± %3")
+                         .arg(quantity, QString::fromStdString(text.value), QString::fromStdString(text.su)));
+    } else if (std::isfinite(meas)) {
+        lines.append(QStringLiteral("%1 meas: %2").arg(quantity, QString::number(meas, 'f', decimals)));
+    }
+    if (std::isfinite(calc)) {
+        lines.append(QStringLiteral("%1 calc: %2").arg(quantity, QString::number(calc, 'f', decimals)));
+    }
+    if (at < used_.size() && !used_.at(at)) {
+        lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.").arg(fit_cutoff_));
+    }
+    return lines.join(QStringLiteral("<br>"));
 }
 
 void ExcludedRegionListModel::sync() {

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40",
+    "artifact": "prnio.out",
+    "provenance": "../../README.md"
+  },
+  "comparable_parameters": true,
+  "quantities": {
+    "n_free": {
+      "value": 1,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 198,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "param.scale.value": {
+      "value": 4.0089931,
+      "kind": "reference",
+      "tol_abs": 0.013561062
+    },
+    "reduced_chi_square": {
+      "value": 10.804375232556993,
+      "kind": "reference",
+      "tol_abs": 0.06,
+      "tol_rel": 0.002
+    }
+  }
+}
