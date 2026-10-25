@@ -515,7 +515,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only tables-`).
     if (only.startsWith(QLatin1String("tables-"))) {
         steps_.push_back({"tables-1-structure-light",
-                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{"appBar.tab.structure", basic, "group.atom_site_aniso"}});
         steps_.push_back({"tables-2-structure-dark", {"theme:dark"}});
         steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
@@ -527,7 +527,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("curves-"))) {
         const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"curves-1-analysis-light",
-                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
         steps_.push_back({"curves-2-analysis-zoomed", {"drag:chart.pointer:0.74,0.05,0.80,0.95"}});
         steps_.push_back({"curves-3-analysis-dark", {"theme:dark"}});
@@ -539,7 +539,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("onechart-"))) {
         const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"onechart-1-analysis-zoomed",
-                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer_joint")
+                          QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
         steps_.push_back({"onechart-2-experiment", {experiment}});
         steps_.push_back({"onechart-3-structure-pattern", {"appBar.tab.structure", "mainArea.structure.tab.pattern"}});
@@ -591,11 +591,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
         steps_.push_back({"retest-10-ncaf-off", {curves}});
     }
-    // The owner's sequential fit: cosio's 162 patterns fitted with each structure's curve on (the default) and zoomed,
+    // The owner's sequential fit: cosio's 155 patterns fitted with each structure's curve on (the default) and zoomed,
     // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
     if (only.startsWith(QLatin1String("seqfit-"))) {
         steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
                                                                 "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
                                                                 "wait-files:30", "capture-now"}});
@@ -609,7 +609,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                              QStringLiteral("appBar.tab.experiment"), basic, "chart.toolbar.legend"}});
         steps_.push_back({"legend-2-dark", {"theme:dark"}});
     }
-    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 162 patterns, in both themes, before a fit and
+    // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 155 patterns, in both themes, before a fit and
     // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
     // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
     // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
@@ -617,7 +617,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                            + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                            + open_example("pd-neut-cwl_cosio-d20_scan")
                                                             + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
@@ -659,7 +659,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // line and points; then the band zoomed in. Run only when asked (`--demo-only mstyle-`).
     if (only.startsWith(QLatin1String("mstyle-"))) {
         steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                     + open_example("pd-neut-cwl_lbco-hrpt_start-2")
+                                                     + open_example("pd-neut-cwl_lbco-hrpt")
                                                      + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:band"}});
         steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:line"}});
         steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:points"}});
@@ -677,7 +677,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("colours-"))) {
         steps_.push_back({"colours-1-experiment-stacked-light",
                           QStringList{"resize:1280x960", "theme:light"} + start
-                              + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                              + open_example("pd-neut-cwl_cosio-d20_scan")
                               + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
                                             "mainArea.experiment.tab.stacked"}});
         steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
@@ -688,21 +688,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"colours-5-dark", {"theme:dark"}});
         steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
     }
-    // A three-dataset scan's Stacked view, its scan-value axis labelled only over the rows (the owner, 2026-10-22), in
+    // The three-dataset test scan's Stacked view, its scan-value axis labelled only over the rows (the owner, 2026-10-22), in
     // both themes. Run only when asked (`--demo-only stackrange-`).
     if (only.startsWith(QLatin1String("stackrange-"))) {
         steps_.push_back({"stackrange-1-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                    + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                                                    + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                                                     + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"stackrange-2-dark", {"theme:dark"}});
         steps_.push_back({"stackrange-3-map-dark", {"mainArea.analysis.tab.map"}});
     }
-    // The scan views' rows labelled by scan value, by file and, thinned, on cosio's 162 patterns; the Map's scale with a
+    // The scan views' rows labelled by scan value, by file and, thinned, on cosio's 155 patterns; the Map's scale with a
     // tick per dataset by scan value, its bands labelled by file; a zoom bringing labels back; the three-dataset scan
     // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
     if (only.startsWith(QLatin1String("rowlabels-"))) {
         steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
         steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
@@ -718,7 +718,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:temperature (K)"}});
         steps_.push_back({"rowlabels-08-map-value-dark", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"rowlabels-09-three-stacked-light",
-                          QStringList{"theme:light"} + open_example("pd-neut-cwl_cosio-d20_scan-3f")
+                          QStringList{"theme:light"} + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                               + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-10-three-map-dark", {"theme:dark", "mainArea.analysis.tab.map"}});
         steps_.push_back({"rowlabels-11-joint-stacked-datablock-light",
@@ -745,7 +745,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                     "Purples (ColorBrewer)", "YlOrRd (ColorBrewer)", "gouldian (CET-L20)", "CET-L08",
                                     "CET-L06", "CET-L17", "CET-L18"};
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
