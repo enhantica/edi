@@ -169,18 +169,20 @@ try {
     } while(Date.now()<deadline);
     throw Error('The real dialog must expose its declared native control '+objectName);
   };
-  let lastDialogTarget;
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
     if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
       const target=regex.test('Folder')?'open.folder':'saveAs.zip';
-      lastDialogTarget=target;
+      await settleRenderedPage();
       const point=await waitNative(target);
+      console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
       for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
       return;
     }
     if(regex.source==='^OK$') {
-      // Accept the declared dialog default; pointer focus does not define a Tab count.
+      // The default shortcut activates only after the dialog's entry transition.
+      await settleRenderedPage();
+      console.log(`browser ${mode}: accept real dialog with default Enter`);
       for(const type of ['keyDown','keyUp'])
         await send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await frame();return;
@@ -391,10 +393,10 @@ try {
     // A completed event from the first save cannot satisfy the second save.
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
+    download.catch(()=>{});
     await click(/^Save project as/);
     // The app's format choice precedes the browser download, including the fallback.
     await click(/^Zip archive$/,'radio');
-    lastDialogTarget='saveAs.copy';
     await click(/^OK$/,'button');
     return join(output, (await download).guid);
   };
