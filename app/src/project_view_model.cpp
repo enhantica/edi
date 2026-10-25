@@ -244,8 +244,6 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         // says so until the newest request publishes. A refused edit never gets here.
         for (ExperimentViewModel* experiment : experiment_models_) {
             experiment->markPatternStale();
-            // A parameter adjusted, not a scan dataset shown: the pattern charts hold their y range.
-            experiment->setAdjusting(!applying_view_);
         }
         // A structure whose geometry the edit changed shows its last published frame, reported as not current,
         // until the newest request publishes.
@@ -263,9 +261,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     // A fit's patterns and its end are not a parameter being adjusted: the charts fit their y range again.
     connect(fit_, &FitViewModel::runningChanged, this, [this] {
         if (fit_->running()) {
-            for (ExperimentViewModel* experiment : experiment_models_) {
-                experiment->setAdjusting(false);
-            }
+            setAdjusting(false);
         }
     });
     // A fit is the newest undoable change once it ends with a result (finished, cancelled or stopped
@@ -1993,6 +1989,17 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
     showScanResults();
     // The shown dataset as the rows on disk now give it.
     viewDataset(std::max(0, current_dataset_), true);
+}
+
+void ProjectViewModel::setAdjusting(bool adjusting) {
+    if (adjusting == adjusting_) {
+        return;
+    }
+    adjusting_ = adjusting;
+    for (ExperimentViewModel* experiment : experiment_models_) {
+        experiment->setAdjusting(adjusting);
+    }
+    emit adjustingChanged();
 }
 
 void ProjectViewModel::noteAddedExperiments(std::size_t before) {
