@@ -79,6 +79,7 @@ nav:
           - dev/adrs/0047-element-colours-readable-in-2d.md
           - dev/adrs/0049-single-crystal-experiments.md
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
+          - dev/adrs/0052-project-folders-archives-and-opening.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -162,6 +163,7 @@ nav:
           - user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md
+          - user/guides/open-save-and-export.md
       - Tutorials:
           - user/tutorials/index.md
           - user/tutorials/refine-cosio-d20-tscan.ipynb

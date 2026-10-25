@@ -41,7 +41,18 @@ EXTENSION = json.loads(
 )
 
 RELATIONS = json.loads((ROOT / 'tests/fixtures/constraint_expressions/byte-pins.json').read_text())
-NEW_FIXED_POINTS = BASELINE.get('post_feature_fixed_points', {})
+INPUT_TRANSITIONS = json.loads(
+    (ROOT / 'tests/fixtures/project_save/input-transitions.json').read_text()
+)
+NEW_FIXED_POINTS = {
+    **BASELINE.get('post_feature_fixed_points', {}),
+    **{case: row['after'] for case, row in INPUT_TRANSITIONS['cases'].items()},
+}
+ADDED_FIXED_POINTS = {
+    'corpus:lam7o3-p021/project',
+    'corpus:single-crystal-joint-larson/project',
+    'corpus:single-crystal-senju-taurine-converged/project',
+}
 SINGLE_CRYSTAL_FIXED_POINTS = {
     'repo:docs/user/cli/sc-neut-tof_taurine-unknown_basic/project',
     'corpus:single-crystal-page-cwl-tbti-isotropic-extinction/project',
@@ -169,13 +180,17 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert additions.isdisjoint(BASELINE['cases']), (
         '/ no old byte witness is replaced by a post-feature pin'
     )
-    assert set(NEW_FIXED_POINTS) == {
-        'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
-        'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
-        'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
-    } | SINGLE_CRYSTAL_FIXED_POINTS | {'corpus:multiphase-scales/project'}, (
-        'every declared extended or new X-ray input retains its separate complete byte witness'
-    )
+    assert (
+        set(NEW_FIXED_POINTS)
+        == {
+            'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
+            'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
+            'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
+        }
+        | SINGLE_CRYSTAL_FIXED_POINTS
+        | {'corpus:multiphase-scales/project'}
+        | ADDED_FIXED_POINTS
+    ), 'every declared extended or new X-ray input retains its separate complete byte witness'
     assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
         'a new project invariant cannot replace any old serialization oracle'
     )
@@ -504,6 +519,14 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
 
 
 def require_current_input(case, source):
+    if case in INPUT_TRANSITIONS['cases']:
+        row = INPUT_TRANSITIONS['cases'][case]
+        assert INPUT_TRANSITIONS['claim'].startswith('REGRESSION PIN:'), (
+            'Recorded project input hashes are labelled regression pins, never correctness oracles'
+        )
+        assert row['before'] == BASELINE['post_feature_fixed_points'].get(case), (
+            'A current-input adaptation retains the complete historical byte witness unchanged'
+        )
     assert REFERENCE.hashes(source) == NEW_FIXED_POINTS[case]['input_sha256'], (
         'the current fixed-point witness retains the complete independently recorded input bytes'
     )

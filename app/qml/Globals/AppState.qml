@@ -75,6 +75,15 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
+    // dealt with: at once when there are none, else after the window asks to save or discard them.
+    signal changesQuestion(var action)
+    function afterChanges(action) {
+        if (Session.project !== null && Session.project.modified)
+            changesQuestion(action);
+        else
+            action();
+    }
     // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
     signal evolutionRequested
 

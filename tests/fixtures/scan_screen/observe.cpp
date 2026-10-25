@@ -157,7 +157,6 @@ void scan_screen_settings(QQmlApplicationEngine& engine) {
 void scan_screen_install(QQmlApplicationEngine& engine) {
     auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
-    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     auto* clock = new QElapsedTimer;
     clock->start();
     observation_clock = clock;
@@ -196,7 +195,9 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
             if (!layer || !calc || !layer->isVisible() || calc->points().isEmpty() ||
                 layer->points().isEmpty())
                 return;
-            auto* model = project->currentExperiment()->pattern();
+            auto* displayed = qvariant_cast<edi_app::ExperimentViewModel*>(layer->parent()->property("experiment"));
+            if (!displayed) return;
+            auto* model = displayed->pattern();
             QList<double> measured;
             for (int role :
                  {edi_app::PatternModel::XRole, edi_app::PatternModel::IntensityMeasRole,
@@ -215,8 +216,8 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
                 drawn.append(QJsonArray{point.x(), point.y()});
             *latest = {{"ms", static_cast<double>(clock->elapsed())},
                        {"running", project->fit()->running()},
-                       {"patternGeneration", static_cast<qint64>(project->currentExperiment()->patternGeneration())},
-                       {"presentedGeneration", static_cast<qint64>(project->currentExperiment()->presentedGeneration())},
+                       {"patternGeneration", static_cast<qint64>(displayed->patternGeneration())},
+                       {"presentedGeneration", static_cast<qint64>(displayed->presentedGeneration())},
                        {"modelMeasured", hash_values(measured)},
                        {"drawnMeasured", hash_points(layer->points())},
                        {"drawnPoints", drawn},
@@ -227,9 +228,7 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     QObject::connect(
         window, &QQuickWindow::frameSwapped, window,
         [=] {
-            if (latest->isEmpty() || !result->contains("readyGeneration") ||
-                latest->value("patternGeneration").toInteger() < result->value("readyGeneration").toInteger())
-                return;
+            if (latest->isEmpty()) return;
             const QString key = latest->value("drawnMeasured").toString() +
                                 latest->value("drawnCalculated").toString() +
                                 (latest->value("running").toBool() ? "running" : "stopped") +
@@ -314,15 +313,16 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         timer->setInterval(25);
         QObject::connect(timer, &QTimer::timeout, window, [=] {
             auto* project = session->project();
-            if (!project->pendingRefusal().isEmpty() || project->calculating() ||
-                project->currentExperiment()->pattern()->stale())
-                return;
-            if (!result->contains("readyGeneration")) {
-                (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+            auto* pattern_tab = window->findChild<QObject*>("mainArea.analysis.tab.fitting");
+            if (pattern_tab && pattern_tab->property("enabled").toBool() &&
+                !pattern_tab->property("checked").toBool()) {
+                press(pattern_tab);
                 window->update();
                 return;
             }
-            if (result->value("frames").toArray().isEmpty()) return;
+            if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
+                result->value("frames").toArray().isEmpty())
+                return;
             timer->stop();
             (*result)["started"] = true;
             QObject::connect(project->fit(), &edi_app::FitViewModel::runningChanged, window, [=] {
