@@ -58,8 +58,8 @@ capability cases.
 
 ## Stacked placement and selectors
 
-The placement contract is the relative rule in ADR-0041 §4, independent of
-which renderer draws the lines. The Stacked toolbar controls are
+The placement contract extends the Stacked view in ADR-0041 with the relative
+offset and height choices, independent of which renderer draws the lines. The Stacked toolbar controls are
 `scanView.stacked.toolbar.offset` and `scanView.stacked.toolbar.height`.
 Offset offers 0 through 100 percent in steps of ten, relative to one pattern's
 own height. Height offers Fit, then 10 through 100 percent of the plot height.

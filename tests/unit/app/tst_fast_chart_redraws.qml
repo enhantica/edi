@@ -194,20 +194,22 @@ Item {
             for (let percent = 0; percent <= 100; percent += 10) {
                 choose(offset, percent + "%");
                 choose(height, "Fit");
-                const low = axes.axisY.min, range = axes.axisY.max - low;
-                const expectedHeight = range / (1 + (data.n - 1) * percent / 100);
+                closeEnough(axes.axisY.min, 0, "The unzoomed Stacked axis starts at zero plot share");
+                closeEnough(axes.axisY.max, 1, "The unzoomed Stacked axis ends at one plot share");
+                const expectedHeight = 1 / (1 + (data.n - 1) * percent / 100);
                 for (let i = 0; i < data.n; ++i) {
-                    closeEnough(chart.scan.rowOf(i), low + i * expectedHeight * percent / 100, "Stack baselines obey the closed-form relative offset");
-                    closeEnough(layer.peakOf(i) - chart.scan.rowOf(i), expectedHeight, "Each independently equal triangle has exactly the Fit height");
+                    closeEnough(layer.rowOf(i), i * expectedHeight * percent / 100, "Stack baselines obey the closed-form relative offset");
+                    closeEnough(layer.peakOf(i) - layer.rowOf(i), expectedHeight, "Each independently equal triangle has exactly the Fit height");
                     if (percent === 100 && i > 0)
-                        verify(layer.peakOf(i - 1) <= chart.scan.rowOf(i) + 0.00001, "At full offset adjacent traces have no vertical overlap");
+                        verify(layer.peakOf(i - 1) <= layer.rowOf(i) + 0.00001, "At full offset adjacent traces have no vertical overlap");
                 }
                 closeEnough(layer.peakOf(data.n - 1), axes.axisY.max, "Fit places the whole stack's top exactly at the plot top");
                 for (let fixed = 10; fixed <= 100; fixed += 10) {
                     choose(height, fixed + "%");
-                    const span = axes.axisY.max - axes.axisY.min;
-                    for (const i of [0, data.n - 1])
-                        closeEnough(layer.peakOf(i) - chart.scan.rowOf(i), span * fixed / 100, "A fixed relative height is a fraction of the visible plot height");
+                    for (const i of [0, data.n - 1]) {
+                        closeEnough(layer.rowOf(i), i * fixed / 100 * percent / 100, "A fixed height retains the independent relative baseline spacing");
+                        closeEnough(layer.peakOf(i) - layer.rowOf(i), fixed / 100, "A fixed relative height is a fraction of the unzoomed plot height");
+                    }
                 }
             }
         }
@@ -270,7 +272,7 @@ Item {
                 const hex = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1];
                 const expected = [1, 3, 5].map(start => parseInt(hex.substr(start, 2), 16) / 255);
                 const x = (30 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
-                const peak = layer.peakOf(1), base = chart.scan.rowOf(1), value = base + (peak - base) * 2 / 3;
+                const peak = layer.peakOf(1), base = layer.rowOf(1), value = base + (peak - base) * 2 / 3;
                 const y = (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 const overlap = grabImage(layer);
                 let error = Infinity;
@@ -290,7 +292,7 @@ Item {
             const bold = Render.texts(label).find(item => item.font.bold);
             verify(bold !== undefined, "With highlight off the selected dataset retains its bold row label");
             const pointer = named("pointer");
-            const row = chart.scan.rowOf(2);
+            const row = data.mode === "map" ? chart.scan.rowOf(2) : layer.rowOf(2);
             const y = (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseClick(pointer, pointer.width * .3, Math.max(1, Math.min(pointer.height - 1, y - 1)));
             tryCompare(Session.project, "currentExperimentIndex", 2, 1000, "Actual plot input selects the dataset at its independently observed row");
