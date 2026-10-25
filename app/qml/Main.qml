@@ -460,10 +460,9 @@ EaComponents.ApplicationWindow {
                 implicitWidth: saveAsFolder.implicitWidth
                 implicitHeight: saveAsFolder.implicitHeight
 
-                EaElements.RadioButton {
+                ChoiceRadioButton {
                     id: saveAsFolder
                     objectName: "saveAs.folder"
-                    verticalPadding: AppSizes.choiceRowPadding
                     enabled: saveAsChoice.diskWritable
                     text: qsTr("Folder")
                     checked: !saveAsChoice.zip
@@ -478,9 +477,8 @@ EaComponents.ApplicationWindow {
                     visible: text !== "" && saveAsFolderHover.hovered && EaGlobals.Vars.showToolTips
                 }
             }
-            EaElements.RadioButton {
+            ChoiceRadioButton {
                 objectName: "saveAs.zip"
-                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Zip archive")
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
@@ -617,8 +615,10 @@ EaComponents.ApplicationWindow {
             id: browserSavedRow
             spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
+            // Centred on the text, however many lines it wraps to (owner, 2026-10-25).
             EaElements.Label {
                 objectName: "webStorageWarning.icon"
+                anchors.verticalCenter: parent.verticalCenter
                 font.family: EaStyle.Fonts.iconsFamily
                 color: EaStyle.Colors.orange
                 text: "exclamation-triangle"
@@ -627,7 +627,9 @@ EaComponents.ApplicationWindow {
                 objectName: "webStorageWarning.text"
                 width: browserSaved.contentWidth - x
                 wrapMode: Text.Wrap
-                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use Save project as… to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use Save project as… to keep it on your disk.")
+                // The way out in bold (owner, 2026-10-25).
+                textFormat: Text.StyledText
+                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use <b>Save project as…</b> to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use <b>Save project as…</b> to keep it on your disk.")
             }
         }
     }

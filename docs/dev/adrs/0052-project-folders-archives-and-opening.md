@@ -40,9 +40,12 @@ not the project being read (measured with the app's software renderer, as on the
    the project to that folder, leaving the archive as it was. The command line is the exception: its `fit` and `calc`
    take a `.zip` too but write back only into `--output DIR`, since an input is never a command's output. Save opens Save project as only where writing back is
    impossible: a bundled example, an archive in a read-only place, or the browser's uploaded copy. The unpacked
-   folder's other files, its reports among them, are carried into every save. The desktop app has one *Open project…*:
-   the system's file dialog takes a `project.edi` or a `.zip`, and a folder, a `project.edi` or a `.zip` dropped on the
-   window opens too (owner, 2026-10-25).
+   folder's other files, its reports among them, are carried into every save. There is one *Open project…*, the same on the
+   desktop and in every browser (owner, 2026-10-25): a small dialog asks for a Folder or a Zip archive, then the
+   matching chooser opens, a folder chooser for the project folder or a file chooser for a `.zip` (a chooser picks
+   files or a folder, never both). No platform picks a `project.edi` file. A folder, a `project.edi` or a `.zip`
+   dropped on the desktop window opens too. In this dialog and in Save project as, a choice the platform cannot do is
+   disabled whole, its circle and its text, with no hover or press feedback, and its tooltip says why.
 
 1. **Where the project is.** The Project page's Location is the project's folder or `.zip`, never an internal
    temporary path. A project with none of its own yet says what it came from: *Not saved yet: example \<title>*, *Not
@@ -90,9 +93,7 @@ not the project being read (measured with the app's software renderer, as on the
    file to learn whether the browser keeps anything for it: where it does not (a private window may not; Safari
    answers *UnknownError*), Location reads that the project is only in this tab, Save saves nothing and says so in the
    same dialog, and nothing touches that storage again; a write that fails later does the same, in plain words. In
-   Chrome and Edge, where the File System Access API exists, Open takes a folder, a `project.edi` (whose folder the
-   user then picks too, the chooser starting there; a second click when the browser asks for one) or a `.zip` on the
-   disk, which stays the project's place: Save writes it back, the files a save removed from the folder are removed
+   Chrome and Edge, where the File System Access API exists, Open takes a folder or a `.zip` on the disk, which stays the project's place: Save writes it back, the files a save removed from the folder are removed
    there too, and an archive is rewritten whole. Save project as… always opens edi's own dialog. In Chrome and Edge it
    is the desktop's: a folder or a `.zip` the user picks becomes the place (or, with *Save a copy*, only receives
    one), the chooser starting where the project is and suggesting its name. In Firefox and Safari, Folder is shown
@@ -100,7 +101,7 @@ not the project being read (measured with the app's software renderer, as on the
    of the project, as a Save writes it, to the browser as a `.zip` named as the project came, leaving the project and
    the browser's storage as they are. The browser decides where downloads go, so replacing the original file goes
    through its own save dialog, which the notice says only for a project opened from a file. Open asks first for a
-   folder or a file, then the browser's own chooser. Each place has a record in the browser's IndexedDB (kind, name,
+   folder or a `.zip`, then the browser's own chooser. Each place has a record in the browser's IndexedDB (kind, name,
    and the disk's handle), which Recent projects lists; a project's unsaved state is kept beside it three seconds
    after its last edit, so after a reload or a closed tab Recent projects offers *Continue where you left off* with
    those changes, until a Save or a discard drops them. The page writes the browser's storage from a worker with

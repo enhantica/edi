@@ -37,8 +37,9 @@ EaElements.GroupBox {
             objectName: "project.open"
             fontIcon: "upload"
             text: qsTr("Open project…")
-            // In the browser a folder or a .zip is chosen through the browser (edi ADR-0052 §9): which, first.
-            onClicked: AppState.afterChanges(() => WebFiles.available ? openChoice.open() : openProjectDialog.open())
+            // A folder or a .zip, first, on every platform: a chooser picks files or a folder, never both (edi
+            // ADR-0052 §3).
+            onClicked: AppState.afterChanges(() => openChoice.open())
         }
 
         EaElements.SideBarButton {
@@ -80,8 +81,10 @@ EaElements.GroupBox {
         }
     }
 
-    // The browser's Open (edi ADR-0052 §9): a project folder or a .zip, then the browser's own chooser. Chrome and Edge
-    // open it on the disk, where Save writes it back; other browsers copy it into the browser's storage.
+    // Open project (edi ADR-0052 §3, §9; owner, 2026-10-25): the same small dialog on every platform, Folder or Zip
+    // archive, then the matching chooser: a folder chooser for the project folder holding project.edi, or a file
+    // chooser for a .zip. In the browser the browser's own chooser: Chrome and Edge open it on the disk, where Save
+    // writes it back; other browsers copy it into the browser's storage.
     AppDialog {
         id: openChoice
         objectName: "open.choice"
@@ -92,63 +95,45 @@ EaElements.GroupBox {
         contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
-        onAccepted: Session.openWebProject(zip ? "file" : "folder")
+        onAccepted: {
+            if (WebFiles.available)
+                Session.openWebProject(zip ? "file" : "folder");
+            else if (zip)
+                openZipDialog.open();
+            else
+                openFolderDialog.open();
+        }
 
         Column {
             id: openChoiceColumn
 
-            EaElements.RadioButton {
+            ChoiceRadioButton {
                 objectName: "open.folder"
-                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Folder")
                 checked: !openChoice.zip
                 onClicked: openChoice.zip = false
             }
-            EaElements.RadioButton {
+            ChoiceRadioButton {
                 objectName: "open.zip"
-                verticalPadding: AppSizes.choiceRowPadding
-                // Chrome and Edge open a project.edi too, from its folder on the disk.
-                text: WebStorage.diskAccess ? qsTr("project.edi or zip archive") : qsTr("Zip archive")
+                text: qsTr("Zip archive")
                 checked: openChoice.zip
                 onClicked: openChoice.zip = true
             }
         }
     }
 
-    // A project.edi picked in Chrome or Edge opens its folder, which the browser lets the page use only once the user
-    // picks it too, with a click of its own.
-    Connections {
-        target: Session
-        function onWebFolderNeeded(name) {
-            recordFolder.name = name;
-            recordFolder.open();
-        }
+    // The system's choosers. On the next turn the opened project replaces this page, dialogs and all
+    // (AppState.afterChanges).
+    FolderDialog {
+        id: openFolderDialog
+        title: qsTr("Open an edi project folder")
+        acceptLabel: qsTr("Open")
+        onAccepted: Qt.callLater(Session.openProject, selectedFolder)
     }
-    AppDialog {
-        id: recordFolder
-        objectName: "open.recordFolder"
-        property string name
-        parent: Overlay.overlay
-        title: qsTr("Open project")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: recordFolderText.implicitHeight
-        onAccepted: Session.openWebRecordFolder()
-
-        EaElements.Label {
-            id: recordFolderText
-            width: recordFolder.contentWidth
-            wrapMode: Text.Wrap
-            text: qsTr("To open %1, choose the folder that holds it.").arg(recordFolder.name)
-        }
-    }
-
-    // The system's file dialog: a project.edi opens its folder, a .zip is unpacked (edi ADR-0052).
     FileDialog {
-        id: openProjectDialog
-        title: qsTr("Open an edi project")
-        nameFilters: [qsTr("edi projects (project.edi *.zip)")]
-        // On the next turn: the opened project replaces this page, dialog and all (AppState.afterChanges).
+        id: openZipDialog
+        title: qsTr("Open an edi project archive")
+        nameFilters: [qsTr("edi project archives (*.zip)")]
         onAccepted: Qt.callLater(Session.openProject, selectedFile)
     }
 }

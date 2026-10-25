@@ -5,8 +5,8 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
 
 ## In the desktop app
 
-- **Open project…** opens a `project.edi` (its folder opens) or a `.zip`. You can also drop a project folder, a
-  `project.edi` or a `.zip` onto the window.
+- **Open project…** asks whether to open a project **Folder** or a **Zip archive**, then lets you choose it. You can
+  also drop a project folder, a `project.edi` or a `.zip` onto the window.
 - A project opened from a `.zip` works from a temporary unpacked copy, and **Save** writes the `.zip` again. If the
   `.zip` sits somewhere you cannot write, or the project is a bundled example, **Save** asks where to keep it instead.
   Its reports come along.
@@ -19,10 +19,9 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
 
 ## In the web app
 
-- **Open project…** asks whether to open a project folder or a file, then your browser asks which.
+- **Open project…** asks whether to open a project **Folder** or a **Zip archive**, then your browser asks which.
 - In **Chrome and Edge** the project stays where it is on your computer: **Save** writes the folder or the `.zip` back.
-  A `project.edi` opens its folder: the browser asks you to pick that folder too. **Save project as…** asks for a
-  folder or a `.zip` on your computer, as the desktop app does.
+  **Save project as…** asks for a folder or a `.zip` on your computer, as the desktop app does.
 - In **Firefox and Safari**, and for an example or a new project in any browser, the project is kept in your browser
   and its Location reads *In this browser only*. **Save** writes it there; the first time, edi reminds you that the
   browser may clear it. **Save project as…** can only save a copy as a `.zip`: the browser downloads it with the name
