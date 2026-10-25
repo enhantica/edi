@@ -231,13 +231,14 @@ original profile witnesses and all other saved values remain intact. The scoped
 update refuses a changed experiment/display-witness population. No app output
 supplies a number.
 
-Catalogue changes use `generate.py --catalogue` and `generate_display.py --catalogue`.
-They read the independent selection fixture and committed project text. They add
-new cases and refresh selected cases plus the rebuilt four-pattern LATP fixture;
-other frozen project, category and display witnesses are retained. The app host
-opens the selected cases through catalogue rows, while verification fixtures keep
-their direct directory-opening checks. Synthetic simulation grids are derived
-from the declared range and step without calling a calculation engine.
-Scan axis samples keep the ASCII input precision. Report-cell expectations use
-the independent IUCr rounding reference and crystallographic equality of tied
-cell lengths; the raw model values and physical bounds remain separate.
+
+The single-crystal input adaptation uses `adapt_single_crystal_inputs.py`. It
+matches every original file pin of the eight existing single-crystal projects to
+`f0fc35eb`, captures current input text with the visible source parsers, and merges
+only those project/display witnesses. Registry order and every powder witness are
+retained. This records typed extinction fields and SENJU experiment names, including
+the six-bank taurine input; it is an input/UI projection, not a new scientific
+correctness reference. The Pr2NiO4 basic experiment is separately bounded:
+`deb6c159` (Becker-Coppens with fixed zero radius and mosaicity) becomes `f46766cc`
+(explicit none), with all other experiment bytes identical. No app or engine is
+used to produce these expectations.

@@ -135,7 +135,6 @@ bool ReportViewModel::build() const {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
     }
     judged_.reset();
-    cif_digest_.reset();
     edi::ReportModel next;
     try {
         options_ = edi::effective_report_options(project, choices);
@@ -302,18 +301,6 @@ const edi::ReportModel& ReportViewModel::judged() const {
     return *judged_;
 }
 
-const std::string& ReportViewModel::cifDigest() const {
-    ensureBuilt();
-    if (!cif_digest_) {
-        try {
-            cif_digest_ = edi::fnv1a64(edi::cif_report_text(reportInput()));
-        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no CIF report: judged out of date
-            cif_digest_ = std::string();
-        }
-    }
-    return *cif_digest_;
-}
-
 QString ReportViewModel::fileStem() const {
     ensureBuilt();
     return QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
@@ -334,10 +321,8 @@ QList<SavedReport> ReportViewModel::savedReports() const {
             // The digest of what the format's writer would write now, the HTML with the libraries the project embeds.
             const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
             static const edi::ReportLibraries kOnline;
-            const std::string digest = format == "cif" ? cifDigest()
-                                                       : edi::report_digest(judged(), format,
-                                                                            embedded != nullptr ? *embedded : kOnline);
-            if (digest != file->digest.value()) {
+            if (edi::report_digest(judged(), format, embedded != nullptr ? *embedded : kOnline) !=
+                file->digest.value()) {
                 state = QStringLiteral("out of date");
             }
         }
@@ -424,10 +409,6 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
         }
         if (!failed && writes("pdf")) {
             failed = !write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(judged(), "pdf"));
-        }
-        if (!failed && writes("cif")) {
-            const std::string text = edi::cif_report_text(reportInput());
-            failed = !write("cif", QByteArray::fromStdString(text), edi::fnv1a64(text));
         }
     } catch (const std::exception& error) {
         emit saveFailed(QString::fromUtf8(error.what()));

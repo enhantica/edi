@@ -31,6 +31,9 @@ QtObject {
     // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
+    // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
+    // one and painted without (GraphicsInfo), "gpu" or "software" whatever was detected.
+    property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
@@ -56,6 +59,7 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
+        preferences.scanRenderer = "auto";
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
@@ -75,6 +79,7 @@ QtObject {
         preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
+        preferences.chartHighlightSelected = true;
     }
 
     property Settings settings: Settings {
@@ -140,12 +145,18 @@ QtObject {
     property bool chartIncludedOnly: false
     // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
     property string singleCrystalQuantity: "f_squared"
+    // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
+    // fades the others to chartFadedOpacity; off, all are drawn alike and only the selection's label marks it (the
+    // owner, 2026-10-24).
+    property bool chartHighlightSelected: true
+    readonly property real chartFadedOpacity: 0.3
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Charts"
         property alias includedOnly: preferences.chartIncludedOnly
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
+        property alias highlightSelected: preferences.chartHighlightSelected
     }
 
     property Settings analysisSettings: Settings {
@@ -174,6 +185,7 @@ QtObject {
         property alias mapReversed: preferences.scanMapReversed
         property alias stackedHeight: preferences.scanStackedHeight
         property alias stackedReversed: preferences.scanStackedReversed
+        property alias renderer: preferences.scanRenderer
     }
 
     property Binding fitPatternUpdates: Binding {
@@ -220,6 +232,13 @@ QtObject {
     onChartIncludedOnlyChanged: {
         chartSettings.setValue("includedOnly", chartIncludedOnly);
         chartSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: the renderer choice is read by the next start, which may follow at once.
+    onScanRendererChanged: {
+        scanViewSettings.setValue("renderer", scanRenderer);
+        scanViewSettings.sync();
         ApplicationInfo.storeSettings();
     }
 

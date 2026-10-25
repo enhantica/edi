@@ -42,31 +42,6 @@ const ReportLibraries& html_libraries(const ReportOptions& options, const Report
     return options.embed_libraries ? libraries : kOnline;
 }
 
-// `row` as the project's row of its name: the old one replaced, else appended.
-void record_row(Project& project, ReportFile row) {
-    std::size_t at = 0;
-    for (const auto& file : project.report_files) {
-        if (file->name.value() == row.name.value()) {
-            break;
-        }
-        ++at;
-    }
-    if (at < project.report_files.size()) {
-        project.report_files.replace_at(at, std::make_shared<ReportFile>(std::move(row)));
-    } else {
-        project.report_files.push_back(std::move(row));
-    }
-}
-
-// The digest of the CIF report the project makes now; empty when crysta cannot make one.
-std::string cif_digest(const Project& project) {
-    try {
-        return fnv1a64(cif_report_text(project));
-    } catch (const std::invalid_argument&) {
-        return {};
-    }
-}
-
 }  // namespace
 
 ReportOptions report_file_options(ReportOptions options) {
@@ -129,20 +104,18 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         row.saved = iso_utc(std::time(nullptr));
         row.project_last_modified = iso_utc_from_star(project.metadata.last_modified);
         row.digest = report_digest(judged ? *judged : model, "html", used);
-        record_row(project, std::move(row));
-    }
-    if (project.report_cif.value_or(false)) {
-        const std::string name = (model.name.empty() ? std::string("report") : model.name) + ".cif";
-        const std::string text = cif_report_text(project);
-        write_report_file(project.path, name, text);
-        result.written.push_back((reports / name).string());
-        ReportFile row;
-        row.name = name;
-        row.format = std::string("cif");
-        row.saved = iso_utc(std::time(nullptr));
-        row.project_last_modified = iso_utc_from_star(project.metadata.last_modified);
-        row.digest = fnv1a64(text);
-        record_row(project, std::move(row));
+        std::size_t at = 0;
+        for (const auto& file : project.report_files) {
+            if (file->name.value() == name) {
+                break;
+            }
+            ++at;
+        }
+        if (at < project.report_files.size()) {
+            project.report_files.replace_at(at, std::make_shared<ReportFile>(std::move(row)));
+        } else {
+            project.report_files.push_back(std::move(row));
+        }
     }
     try {
         save_report_settings(project, project.path);
@@ -165,10 +138,8 @@ std::vector<ReportFileState> report_file_states(const Project& project, const Re
         ReportFileState state{file->name.value(), file->format.value(), "current"};
         if (!fs::is_regular_file(reports / state.name)) {
             state.state = "missing";
-        } else if ((state.format == "cif"
-                        ? cif_digest(project)
-                        : report_digest(model, state.format,
-                                        state.format == "html" ? html_libraries(options, libraries) : ReportLibraries{})) !=
+        } else if (report_digest(model, state.format, state.format == "html" ? html_libraries(options, libraries)
+                                                                           : ReportLibraries{}) !=
                    file->digest.value()) {
             state.state = "out of date";
         }

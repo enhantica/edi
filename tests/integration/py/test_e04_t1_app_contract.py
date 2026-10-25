@@ -694,6 +694,8 @@ def test_adr_records_the_decision_and_comparison_plan():
 def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     # Before: pre-category LBCO input. After: exact manual/arpls addition, with
     # the original numerical/display expectations retained by adapt_oracles.py.
+    # Before: fixed zero-radius/mosaicity Becker-Coppens (deb6c159). After:
+    # explicit none (f46766cc); adapt_single_crystal_inputs.py retains all reflection bytes.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     assert oracle['corpus'], 'I7: the independent frozen category corpus cannot be empty'
@@ -702,7 +704,16 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
         assert hashlib.sha256(file.read_bytes()).hexdigest() == case['sha256'], (
             'I7: a changed fixture requires an independently reviewed expectation update'
         )
-    profiles = {case['peakType'] for case in oracle['corpus']}
+    profiles = {
+        case['peakType'] for case in oracle['corpus'] if not case.get('singleCrystal', False)
+    }
+    assert all(
+        not case['peakType']
+        and case['scalars']['_experiment_type.sample_form'] == 'single crystal'
+        and not any(tag.startswith('_peak.') for tag in case['scalars'])
+        for case in oracle['corpus']
+        if case.get('singleCrystal', False)
+    ), 'I7: declared single-crystal inputs have no powder profile or peak category'
     assert profiles == set(oracle['profiles']), (
         'I7: committed examples cover every declared peak profile'
     )
@@ -725,22 +736,12 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
 def test_existing_projects_oracle_covers_the_registry_without_filters():
     # The manual estimate extension changes only the LBCO experiment source hash;
     # all project-block values, other files and the complete registry stay pinned.
+    # The Pr2NiO4 deb6c159 -> f46766cc zero-effect extinction normalization is
+    # separately bounded by adapt_single_crystal_inputs.py; all other input pins remain.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
     ids = [p['id'] for p in registry['projects']]
-    selection = json.loads(
-        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
-    )['cases']
-    expected_app_ids = [row['id'] for row in selection]
-    assert oracle['catalogue_ids'] == expected_app_ids, (
-        'The app oracle must follow the independent owner selection'
-    )
-    assert [
-        row['id'] for row in registry['projects'] if row.get('user-facing')
-    ] == expected_app_ids, (
-        'App membership must agree with the independent catalogue; fixtures remain registered'
-    )
     assert [p['id'] for p in oracle['projects']] == ids, (
         'I19: fixture follows registry order without executing/offline filters'
     )

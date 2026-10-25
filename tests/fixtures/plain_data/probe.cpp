@@ -119,7 +119,7 @@ QJsonArray correlation_pairs(const edi::Project& project) {
         result.append(
             QJsonObject{{"i", QString::fromStdString(pair->parameter_unique_name_i.value())},
                         {"j", QString::fromStdString(pair->parameter_unique_name_j.value())},
-                        {"coefficient", QString::fromStdString(pair->correlation.value())},
+                        {"coefficient", pair->correlation.get()},
                         {"file", QString::fromStdString(pair->file_path.value())}});
     return result;
 }
@@ -255,7 +255,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
                 first ? name : target_structure.name.value() + ".cell.length_b";
             pair.parameter_unique_name_j =
                 first ? target_structure.name.value() + ".cell.length_b" : name;
-            pair.correlation = "-0.625";
+            pair.correlation = -0.625;
             if (scan) pair.file_path = "02.xy";
             core.fit_result.correlations.push_back(pair);
         }
@@ -371,7 +371,7 @@ QJsonObject loaded_cache_lifecycle(const QString& fixture, const QString& work) 
     project.fit_result.success = true;
     auto owner = std::make_shared<std::array<edi::FitParameterCorrelation, 2>>();
     const char* right[] = {"bank.background.ramp.coef", "bank.background.curve.coef"};
-    const char* coefficients[] = {"0.50", "-0.25"};
+    const double coefficients[] = {.50, -.25};
     for (std::size_t i = 0; i < owner->size(); ++i) {
         auto& row = owner->at(i);
         row.id = i == 0 ? "keptA" : "keptB";
@@ -392,8 +392,8 @@ QJsonObject loaded_cache_lifecycle(const QString& fixture, const QString& work) 
         throw std::runtime_error("the loaded dataset must expose its actual persisted row handle");
     // ItemVec's const read gives a shared handle to a mutable native row; no const-cast.
     const auto shown = view.scanTemplate()->fit_result.correlations[0];
-    owner->at(0).correlation = "-0.875";
-    shown->correlation = "-0.875";
+    owner->at(0).correlation = -0.875;
+    shown->correlation = -0.875;
     view.setCurrentExperimentIndex(0);
     view.setCurrentExperimentIndex(1);
     settle_projection(view);
@@ -447,7 +447,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             stale.source_kind = "deterministic";
             stale.parameter_unique_name_i = "bank.background.base.coef";
             stale.parameter_unique_name_j = "bank.background.ramp.coef";
-            stale.correlation = "-0.125";
+            stale.correlation = -0.125;
             stale.file_path = "01.xy";
             core.fit_result.correlations.push_back(stale);
         }
@@ -511,7 +511,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
         // An independently assigned stale matrix makes replacement observable even
         // when Single and the preceding scan fit the same design matrix.
         for (const auto& pair : core.fit_result.correlations)
-            if (pair->file_path.value() == "02.xy") pair->correlation = "-0.125";
+            if (pair->file_path.value() == "02.xy") pair->correlation = -0.125;
         edi::save_project(core, input.string());
     }
     edi_app::Session session;
@@ -574,7 +574,7 @@ QJsonObject loaded_correlation_save(const QString& fixture, const QString& work,
         pair.parameter_unique_name_i = "bank.background." + terms[index] + ".coef";
         pair.parameter_unique_name_j =
             "bank.background." + terms[(index + 1) % terms.size()] + ".coef";
-        pair.correlation = "-0.250000";
+        pair.correlation = -0.250000;
         pair.file_path = dataset;
         core.fit_result.correlations.push_back(pair);
     }

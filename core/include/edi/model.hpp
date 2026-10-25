@@ -3527,6 +3527,13 @@ struct ReflnDataBase {
     ComputedColumn<double> intensity_calc;
 
     std::size_t size() const noexcept { return intensity_meas.size(); }
+    // Whether every measured column has one value per reflection (the wavelengths none or one each). A reader that
+    // indexes the columns together asks this first; a calculation refuses columns that are not.
+    bool rectangular() const noexcept {
+        const std::size_t n = size();
+        return index_h.size() == n && index_k.size() == n && index_l.size() == n && intensity_meas_su.size() == n &&
+               (wavelength.size() == 0 || wavelength.size() == n);
+    }
     void clear_computed() noexcept {
         d_spacing.clear();
         sin_theta_over_lambda.clear();
@@ -3827,6 +3834,11 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<std::string> background_estimate_in_peaks;
     std::optional<std::string> background_estimate_use_model;
     std::optional<int> background_estimate_max_terms;
+    // A single crystal's observed-reflection threshold (`_reflns`, edi ADR-0050): the multiple n of the su and the
+    // basis (`intensity` or `amplitude`), each absent until set (absent: I > 2u(I)). It decides which reflections the
+    // reported R factors and counts are taken over, never which a fit uses.
+    std::optional<double> reflns_threshold_sigma;
+    std::optional<std::string> reflns_threshold_basis;
     // In auto mode, a digest of what the points came from (the included measured pattern and the settings; 1 when
     // the next calculation estimates) and one of the points as auto was chosen, loaded or last estimated; 0 in
     // manual mode. Saved as `_background_estimate.inputs_digest` and `.points_digest` (ADR-0040).
@@ -4085,15 +4097,15 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // One pair of the fit's free parameters and their correlation coefficient, diffraction-lib's
 // `_fit_parameter_correlation` row: its id, how it was computed (`deterministic`: from the covariance), the
 // two unique names (`<datablock>.<category>[.<entry>].<name>`) in the fit's column order (i before j) and the
-// coefficient, in [-1, 1], as the text it was read with, so a loaded loop saves back byte for byte (a computed
-// one is crysta's shortest form; correlation_value reads it). A scan's row also names the file whose fit it came
-// from (`file_path`, the results.csv key); a single or joint fit's leaves it empty.
+// coefficient, in [-1, 1], as a number: text is made only when saving and read only when loading. A scan's row
+// also names the file whose fit it came from (`file_path`, the results.csv key); a single or joint fit's leaves it
+// empty.
 struct FitParameterCorrelation {
     ItemKey id;
     detail::WrittenText source_kind;
     detail::WrittenText parameter_unique_name_i;
     detail::WrittenText parameter_unique_name_j;
-    detail::WrittenText correlation;
+    detail::Written<double> correlation{0.0};
     detail::WrittenText file_path;
 };
 
@@ -4291,6 +4303,8 @@ std::vector<std::string> take_engine_warnings();
 // A single crystal's extinction types and mosaic distributions, crysta's tables in their order.
 std::vector<std::string> extinction_type_tokens();
 std::vector<std::string> mosaic_distribution_tokens();
+// The observed threshold's bases (`intensity`, `amplitude`).
+std::vector<std::string> reflns_threshold_basis_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -4776,6 +4790,9 @@ class Project : public detail::ProjectAnchor {
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
+    // A single-crystal fit's cutoff (`_refine_ls.threshold_sigma`, edi ADR-0050): only reflections with
+    // F² > n su(F²) are fitted; absent, every one is.
+    std::optional<double> refine_ls_threshold_sigma;
     // The directory this project was loaded from / last saved to:
     // `save()` writes here and fails closed when empty; load and save_as set it.
     std::string path;
@@ -4784,6 +4801,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
+    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
+    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;
@@ -5267,6 +5287,16 @@ struct BackgroundCategory {
 };
 static_assert(detail::one_entry_per_column(BackgroundCategory::columns, BackgroundCategory::items));
 
+// A single crystal's observed-reflection threshold.
+struct ReflnsCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_reflns";
+    static constexpr auto columns =
+        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis};
+    static constexpr std::array items{"threshold_sigma", "threshold_basis"};
+};
+static_assert(detail::one_entry_per_column(ReflnsCategory::columns, ReflnsCategory::items));
+
 struct DataSourceCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_data_source";
@@ -5337,6 +5367,15 @@ struct CorrelationChartCategory {
     static constexpr std::array items{"threshold"};
 };
 static_assert(detail::one_entry_per_column(CorrelationChartCategory::columns, CorrelationChartCategory::items));
+
+// A single-crystal fit's reflection cutoff.
+struct RefineLsCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_refine_ls";
+    static constexpr auto columns = std::tuple{&Project::refine_ls_threshold_sigma};
+    static constexpr std::array items{"threshold_sigma"};
+};
+static_assert(detail::one_entry_per_column(RefineLsCategory::columns, RefineLsCategory::items));
 
 struct PatternChartCategory {
     using Owner = Project;

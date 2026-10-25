@@ -153,10 +153,10 @@ TestCase {
             parameter.value = value;
             tryVerify(() => Math.abs(slider.from - (value - .05)) < 1e-10 && Math.abs(slider.to - (value + .05)) < 1e-10,
                       2000, "lattice slider endpoints follow the current value plus or minus 0.05 A");
-            compare(Number(ordered[0].text), Number(slider.from.toFixed(4)),
-                    "notes 9/14: left box displays the minimum at the dictionary cell-length precision");
-            compare(Number(ordered[1].text), Number(slider.to.toFixed(4)),
-                    "notes 9/14: right box displays the maximum at the dictionary cell-length precision");
+            compare(Number(ordered[0].text), Number(slider.from.toPrecision(3)),
+                    "notes 9/14: left box displays the minimum at reference precision");
+            compare(Number(ordered[1].text), Number(slider.to.toPrecision(3)),
+                    "notes 9/14: right box displays the maximum at reference precision");
             compare(parameter.value, value, "note 14: rounded slider labels preserve the selected stored value");
         });
     }
@@ -187,8 +187,7 @@ TestCase {
         verify(field !== null, "note 14: production parameter field is exposed");
         const value = 1.2866603586797143;
         field.item.value = value;
-        // Before: three significant digits (1.29). Now: the cell dictionary fixed-four format.
-        tryCompare(field, "text", "1.2867", 2000, "The cell display uses its dictionary fixed-four format");
+        tryCompare(field, "text", "1.29", 2000, "note 14: default display uses the reference three significant digits");
         verify(field.text.length < String(value).length, "note 14: display rounds the long fractional value");
         compare(field.item.value, value, "note 14: displaying a rounded value preserves stored precision");
         field.forceActiveFocus();

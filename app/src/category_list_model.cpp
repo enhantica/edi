@@ -38,6 +38,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("refln"), {T::Extras, "list"}},
         {QStringLiteral("minimizer"), {T::Extras, "level-down-alt"}},
         {QStringLiteral("fitting_mode"), {T::Extras, "sliders-h"}},
+        {QStringLiteral("refine_ls"), {T::Extras, "cut"}},
         {QStringLiteral("alias"), {T::Extras, "tag"}},
         {QStringLiteral("constraint"), {T::Extras, "equals"}},
         {QStringLiteral("joint_fit"), {T::Extras, "link"}},

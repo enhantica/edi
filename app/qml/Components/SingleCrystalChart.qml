@@ -15,7 +15,9 @@ import edi.app
 // pointer, a right click or the reset button shows every reflection again. A report figure draws the report model's
 // `single_crystal` as it is, in F², with its reliability above the plot and no toolbar or pointer. Given several
 // experiments (`stackedExperiments`, the Stacked tab of a project of single crystals) it draws all of them on the one
-// chart, each in its experiment's colour, with the legend shown at first.
+// chart, each in its experiment's colour, with the legend shown at first. There the selected experiment is drawn on top
+// and the others faded while the app's "Highlight the selected dataset" setting is on; off, all are drawn alike and the
+// legend marks the selected one. A click on a point selects its experiment (the owner, 2026-10-24).
 Item {
     id: chart
 
@@ -24,6 +26,10 @@ Item {
     property ExperimentViewModel experiment: null
     property list<ExperimentViewModel> stackedExperiments: []
     readonly property bool stacked: stackedExperiments.length > 0
+    // The project whose selected experiment the Stacked chart shows and sets; its experiments are the stacked ones.
+    property ProjectViewModel project: null
+    readonly property int selectedIndex: stacked && project ? project.currentExperimentIndex : -1
+    readonly property bool highlight: stacked && Preferences.chartHighlightSelected && selectedIndex >= 0
     readonly property SingleCrystalReflectionModel reflections: !stacked && experiment ? experiment.singleCrystalReflections : null
     // Every shown reflection model: the stacked experiments' or the one experiment's.
     readonly property list<SingleCrystalReflectionModel> models: {
@@ -42,6 +48,8 @@ Item {
     // The report's input (edi ADR-0036): an experiment's `single_crystal` from the report model's JSON.
     property var reportData: null
     readonly property bool reportMode: reportData !== null
+    // How faint the reflections the fit leaves out are drawn.
+    readonly property real leftOutOpacity: 0.3
     readonly property bool calculated: {
         if (reportMode)
             return reportData.calc.length > 0;
@@ -99,13 +107,11 @@ Item {
         return highs.length > 0 ? Math.max(...highs) : 1;
     }
     // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
-    function legendRows() {
+    // Sets the legend: the experiments shown, each in its colour, and the selected one marked when the chart does not
+    // highlight it.
+    function updateLegend() {
         const named = chart.stacked ? chart.stackedExperiments : chart.experiment ? [chart.experiment] : [];
-        return named.map((shown, index) => ({
-                    "label": shown ? shown.name : "",
-                    "color": chart.stacked ? AppColors.experiment(index, chart.colors.isDarkPalette) : AppColors.experiment(0, chart.colors.isDarkPalette),
-                    "mark": "line"
-                }));
+        legendRows.setRows(named.map(shown => shown ? shown.name : ""), named.map((shown, index) => String(AppColors.experiment(chart.stacked ? index : 0, chart.colors.isDarkPalette))), chart.stacked && !Preferences.chartHighlightSelected ? chart.selectedIndex : -1);
     }
     ListedLegendModel {
         id: legendRows
@@ -124,11 +130,42 @@ Item {
         return (scaled < 1.5 ? 1 : scaled < 3.5 ? 2 : scaled < 7.5 ? 5 : 10) * power;
     }
 
+    // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
+    // a report's points are all used.
+    function part(x, y, su, used, want) {
+        const out = [[], [], []];
+        for (let i = 0; i < x.length; ++i) {
+            if ((used && i < used.length ? used[i] : true) === want) {
+                out[0].push(x[i]);
+                out[1].push(y[i]);
+                out[2].push(su[i]);
+            }
+        }
+        return out;
+    }
+    // Draws a model's points on `usedLayer` and the ones its fit leaves out, dimmed, on `leftOutLayer`.
+    function drawModel(model, usedLayer, leftOutLayer) {
+        if (!model || !chart.shown || !model.calculatedShown) {
+            usedLayer.setPoints([], [], []);
+            leftOutLayer.setPoints([], [], []);
+            return;
+        }
+        const x = chart.squared ? model.calculated : model.calculatedF;
+        const y = chart.squared ? model.measured : model.measuredF;
+        const su = chart.squared ? model.measuredSu : model.measuredFSu;
+        const used = part(x, y, su, model.used, true);
+        const left = part(x, y, su, model.used, false);
+        usedLayer.setPoints(used[0], used[1], used[2]);
+        leftOutLayer.setPoints(left[0], left[1], left[2]);
+    }
+
+    // Each Stacked layer draws its experiment again.
+    signal redrawStacked
+
     function redraw() {
-        legendRows.setRows(chart.legendRows());
+        chart.updateLegend();
         if (chart.stacked) {
-            for (let i = 0; i < stackedLayers.count; ++i)
-                stackedLayers.itemAt(i).redraw();
+            chart.redrawStacked();
             return;
         }
         if (chart.reportMode) {
@@ -136,17 +173,13 @@ Item {
                 layer.setPoints(chart.reportData.calc, chart.reportData.meas, chart.reportData.su);
             else
                 layer.setPoints([], [], []);
+            leftOutLayer.setPoints([], [], []);
             return;
         }
         if (!chart.reflections || !chart.shown)
             return;
         // Points only once F²calc is calculated: a reflection is placed by it.
-        if (chart.reflections.calculatedShown && chart.squared)
-            layer.setPoints(chart.reflections.calculated, chart.reflections.measured, chart.reflections.measuredSu);
-        else if (chart.reflections.calculatedShown)
-            layer.setPoints(chart.reflections.calculatedF, chart.reflections.measuredF, chart.reflections.measuredFSu);
-        else
-            layer.setPoints([], [], []);
+        chart.drawModel(chart.reflections, layer, leftOutLayer);
     }
 
     // The y = x line across whatever both axes show.
@@ -171,6 +204,13 @@ Item {
     onReflectionsChanged: redraw()
     onReportDataChanged: redraw()
     onStackedExperimentsChanged: redraw()
+    onSelectedIndexChanged: chart.updateLegend()
+    Connections {
+        target: Preferences
+        function onChartHighlightSelectedChanged() {
+            chart.updateLegend();
+        }
+    }
     Connections {
         target: chart.reflections
         function onPointsChanged() {
@@ -235,6 +275,16 @@ Item {
             pointerMode: Preferences.patternPointerMode
             onPointerModeChanged: Preferences.patternPointerMode = pointerMode
             onResetClicked: chart.zoom = []
+        }
+        // On the Stacked chart: the selected experiment on top and the others faded, or all alike. One app setting for
+        // every chart of several datasets.
+        ChartToolButton {
+            objectName: "singleCrystal.toolbar.highlight"
+            visible: chart.stacked
+            fontIcon: "highlighter"
+            toolTip: qsTr("Highlight the selected dataset")
+            checked: Preferences.chartHighlightSelected
+            onClicked: Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected
         }
         // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
         // remembered settings again whenever another chart changes them.
@@ -310,7 +360,8 @@ Item {
         function hide() {
             hoverText.text = "";
         }
-        function read(px, py) {
+        // The reflection nearest the pointer, within about an em: its model's place and its row; null when none.
+        function nearest(px, py) {
             const span = axisX.max - axisX.min;
             let best = -1, bestDistance = chart.em * chart.em, bestModel = -1, xs = [], ys = [];
             for (let m = 0; m < chart.models.length; ++m) {
@@ -332,14 +383,24 @@ Item {
                     }
                 }
             }
-            if (best < 0) {
+            return best < 0 ? null : {
+                "model": bestModel,
+                "row": best,
+                "x": xs[best],
+                "y": ys[best]
+            };
+        }
+        function read(px, py) {
+            const hit = nearest(px, py);
+            if (hit === null) {
                 hide();
                 return;
             }
-            const text = chart.models[bestModel].hoverText(best, chart.squared);
-            hoverText.text = chart.stacked ? "<b>" + chart.stackedExperiments[bestModel].name + "</b><br>" + text : text;
-            const atX = plot.x + (xs[best] - axisX.min) / span * plot.width;
-            const atY = plot.y + (1 - (ys[best] - axisY.min) / (axisY.max - axisY.min)) * plot.height;
+            const span = axisX.max - axisX.min;
+            const text = chart.models[hit.model].hoverText(hit.row, chart.squared);
+            hoverText.text = chart.stacked ? "<b>" + chart.stackedExperiments[hit.model].name + "</b><br>" + text : text;
+            const atX = plot.x + (hit.x - axisX.min) / span * plot.width;
+            const atY = plot.y + (1 - (hit.y - axisY.min) / (axisY.max - axisY.min)) * plot.height;
             x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
             y = atY - height - chart.em * 0.5 >= 0 ? atY - height - chart.em * 0.5 : atY + chart.em;
         }
@@ -443,16 +504,14 @@ Item {
                 readonly property SingleCrystalReflectionModel model: modelData ? modelData.singleCrystalReflections : null
 
                 function redraw() {
-                    if (!model || !chart.shown || !model.calculatedShown)
-                        setPoints([], [], []);
-                    else if (chart.squared)
-                        setPoints(model.calculated, model.measured, model.measuredSu);
-                    else
-                        setPoints(model.calculatedF, model.measuredF, model.measuredFSu);
+                    chart.drawModel(model, stackedLayer, stackedLeftOut);
                 }
 
                 objectName: "singleCrystal.points." + index
                 anchors.fill: parent
+                // The selected experiment on top and every other faded, while highlighting.
+                z: chart.highlight && index === chart.selectedIndex ? 1 : 0
+                opacity: chart.highlight && index !== chart.selectedIndex ? Preferences.chartFadedOpacity : 1
                 color: AppColors.experiment(index, chart.colors.isDarkPalette)
                 markerSize: 5
                 xMin: axisX.min
@@ -467,6 +526,26 @@ Item {
                         stackedLayer.redraw();
                     }
                 }
+                Connections {
+                    target: chart
+                    function onRedrawStacked() {
+                        stackedLayer.redraw();
+                    }
+                }
+                // The reflections this experiment's fit leaves out, dimmed.
+                MeasuredLayer {
+                    id: stackedLeftOut
+
+                    objectName: "singleCrystal.leftOut." + stackedLayer.index
+                    anchors.fill: parent
+                    opacity: chart.leftOutOpacity
+                    color: stackedLayer.color
+                    markerSize: 5
+                    xMin: axisX.min
+                    xMax: axisX.max
+                    yMin: axisY.min
+                    yMax: axisY.max
+                }
             }
         }
         MeasuredLayer {
@@ -476,6 +555,21 @@ Item {
             visible: !chart.stacked
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            markerSize: 5
+            xMin: axisX.min
+            xMax: axisX.max
+            yMin: axisY.min
+            yMax: axisY.max
+        }
+        // The reflections the fit leaves out (its cutoff), dimmed; the hover says why.
+        MeasuredLayer {
+            id: leftOutLayer
+
+            objectName: "singleCrystal.leftOut"
+            visible: !chart.stacked
+            anchors.fill: parent
+            opacity: chart.leftOutOpacity
+            color: layer.color
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
@@ -534,6 +628,13 @@ Item {
             onReleased: mouse => {
                 if (mouse.button === Qt.RightButton) {
                     chart.zoom = [];
+                    return;
+                }
+                // A click on the Stacked chart (not a drag) selects the experiment of the reflection under it.
+                if (chart.stacked && chart.project && Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3) {
+                    const hit = hoverLabel.nearest(mouse.x, mouse.y);
+                    if (hit !== null)
+                        chart.project.currentExperimentIndex = hit.model;
                     return;
                 }
                 if (Preferences.patternPointerMode !== "zoom" || Math.abs(mouse.x - pressX) < chart.em * 0.3 || Math.abs(mouse.y - pressY) < chart.em * 0.3)

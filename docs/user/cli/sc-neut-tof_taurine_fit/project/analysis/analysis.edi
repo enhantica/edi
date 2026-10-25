@@ -2,6 +2,8 @@ _edi.schema_version 3
 
 _fitting_mode.type joint
 
+_refine_ls.threshold_sigma 3
+
 loop_
 _joint_fit.experiment_id
 _joint_fit.weight
@@ -15,40 +17,40 @@ senju_6 1
 loop_
 _alias.id
 _alias.parameter_unique_name
-senju_1_coefficient_11 senju_1.extinction.coefficient_11
-senju_1_coefficient_22 senju_1.extinction.coefficient_22
-senju_1_coefficient_33 senju_1.extinction.coefficient_33
-senju_2_coefficient_11 senju_2.extinction.coefficient_11
-senju_2_coefficient_22 senju_2.extinction.coefficient_22
-senju_2_coefficient_33 senju_2.extinction.coefficient_33
-senju_3_coefficient_11 senju_3.extinction.coefficient_11
-senju_3_coefficient_22 senju_3.extinction.coefficient_22
-senju_3_coefficient_33 senju_3.extinction.coefficient_33
-senju_4_coefficient_11 senju_4.extinction.coefficient_11
-senju_4_coefficient_22 senju_4.extinction.coefficient_22
-senju_4_coefficient_33 senju_4.extinction.coefficient_33
-senju_5_coefficient_11 senju_5.extinction.coefficient_11
-senju_5_coefficient_22 senju_5.extinction.coefficient_22
-senju_5_coefficient_33 senju_5.extinction.coefficient_33
-senju_6_coefficient_11 senju_6.extinction.coefficient_11
-senju_6_coefficient_22 senju_6.extinction.coefficient_22
-senju_6_coefficient_33 senju_6.extinction.coefficient_33
+x11_1 senju_1.extinction.coefficient_11
+x22_1 senju_1.extinction.coefficient_22
+x33_1 senju_1.extinction.coefficient_33
+x11_2 senju_2.extinction.coefficient_11
+x22_2 senju_2.extinction.coefficient_22
+x33_2 senju_2.extinction.coefficient_33
+x11_3 senju_3.extinction.coefficient_11
+x22_3 senju_3.extinction.coefficient_22
+x33_3 senju_3.extinction.coefficient_33
+x11_4 senju_4.extinction.coefficient_11
+x22_4 senju_4.extinction.coefficient_22
+x33_4 senju_4.extinction.coefficient_33
+x11_5 senju_5.extinction.coefficient_11
+x22_5 senju_5.extinction.coefficient_22
+x33_5 senju_5.extinction.coefficient_33
+x11_6 senju_6.extinction.coefficient_11
+x22_6 senju_6.extinction.coefficient_22
+x33_6 senju_6.extinction.coefficient_33
 
 loop_
 _constraint.id
 _constraint.expression
-senju_2_coefficient_11 "senju_2_coefficient_11 = senju_1_coefficient_11"
-senju_2_coefficient_22 "senju_2_coefficient_22 = senju_1_coefficient_22"
-senju_2_coefficient_33 "senju_2_coefficient_33 = senju_1_coefficient_33"
-senju_3_coefficient_11 "senju_3_coefficient_11 = senju_1_coefficient_11"
-senju_3_coefficient_22 "senju_3_coefficient_22 = senju_1_coefficient_22"
-senju_3_coefficient_33 "senju_3_coefficient_33 = senju_1_coefficient_33"
-senju_4_coefficient_11 "senju_4_coefficient_11 = senju_1_coefficient_11"
-senju_4_coefficient_22 "senju_4_coefficient_22 = senju_1_coefficient_22"
-senju_4_coefficient_33 "senju_4_coefficient_33 = senju_1_coefficient_33"
-senju_5_coefficient_11 "senju_5_coefficient_11 = senju_1_coefficient_11"
-senju_5_coefficient_22 "senju_5_coefficient_22 = senju_1_coefficient_22"
-senju_5_coefficient_33 "senju_5_coefficient_33 = senju_1_coefficient_33"
-senju_6_coefficient_11 "senju_6_coefficient_11 = senju_1_coefficient_11"
-senju_6_coefficient_22 "senju_6_coefficient_22 = senju_1_coefficient_22"
-senju_6_coefficient_33 "senju_6_coefficient_33 = senju_1_coefficient_33"
+x11_2 "x11_2 = x11_1"
+x22_2 "x22_2 = x22_1"
+x33_2 "x33_2 = x33_1"
+x11_3 "x11_3 = x11_1"
+x22_3 "x22_3 = x22_1"
+x33_3 "x33_3 = x33_1"
+x11_4 "x11_4 = x11_1"
+x22_4 "x22_4 = x22_1"
+x33_4 "x33_4 = x33_1"
+x11_5 "x11_5 = x11_1"
+x22_5 "x22_5 = x22_1"
+x33_5 "x33_5 = x33_1"
+x11_6 "x11_6 = x11_1"
+x22_6 "x22_6 = x22_1"
+x33_6 "x33_6 = x33_1"

@@ -3,8 +3,6 @@
 # the crysta corpus authority; tools/testing/fit_policy.py validates both before admitting a fit.
 schema: 1
 sites:
-  - file: tests/system/py/test_catalogue_descent.py
-    case: lam7o3-p021
   - file: tests/system/py/test_c11_t43_sequential_surfaces.py
     case: cosio-d20-scan-3f
   - file: tests/system/py/test_c11_t43_rejection_classes.py
@@ -215,3 +213,9 @@ sites:
 
   - file: tests/integration/py/test_single_crystal_reader_fit.py
     case: single-crystal-cwl-pr2nio4-basic
+
+  - file: tests/system/py/test_single_crystal_edges.py
+    case: single-crystal-joint-larson
+
+  - file: tests/system/py/test_single_crystal_taurine_converged.py
+    case: single-crystal-senju-taurine-converged

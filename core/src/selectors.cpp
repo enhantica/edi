@@ -206,6 +206,19 @@ std::vector<std::string> extinction_type_labels() {
     return labels;
 }
 
+std::vector<std::string> extinction_type_choice_labels() {
+    std::vector<std::string> labels = extinction_type_labels();
+    const std::vector<std::string> tokens = extinction_type_tokens();
+    for (std::size_t index = 0; index < tokens.size(); ++index) {
+        if (tokens[index].starts_with("becker-coppens-")) {
+            labels[index] += " (analytical)";
+        } else if (tokens[index].starts_with("larson-")) {
+            labels[index] += " (empirical)";
+        }
+    }
+    return labels;
+}
+
 std::vector<std::string> mosaic_distribution_labels() {
     std::vector<std::string> labels;
     for (const std::string& token : mosaic_distribution_tokens()) {
@@ -219,6 +232,14 @@ void select_extinction(ExperimentBase& experiment, const std::string& token) {
         throw std::invalid_argument("extinction belongs to a single crystal");
     }
     apply_extinction_type(experiment.extinction, token);
+}
+
+std::vector<std::string> reflns_threshold_basis_labels() {
+    std::vector<std::string> labels;
+    for (const std::string& token : reflns_threshold_basis_tokens()) {
+        labels.push_back(token == "amplitude" ? "F" : "I");
+    }
+    return labels;
 }
 
 void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token) {

@@ -21,8 +21,8 @@ struct ReportSaveResult {
     bool pdf_left = false;
 };
 
-/// Each ticked format but the PDF (the app's) written into `<project.path>/reports/` as `<short name>.html` or
-/// `<short name>.cif`, each then its row (the name's row replaced), then `reports/report.edi` alone. A file is written beside its old one and renamed
+/// Each ticked format but the PDF (the app's) written into `<project.path>/reports/` as `<short name>.html`, then its
+/// row (the name's row replaced), then `reports/report.edi` alone. A file is written beside its old one and renamed
 /// over it, so a failed write leaves the old file; the project's rows change only when `reports/report.edi` is
 /// written. `overrides` replace the stored options for this run and are not saved; `libraries` are the vendored ones,
 /// used when the HTML embeds them. Throws std::invalid_argument for a project with no folder and std::runtime_error

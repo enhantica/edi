@@ -11,8 +11,8 @@ import edi.app
 
 // Saving the report, the sidebar's top group (edi ADR-0036 §7): one row per format, its box and its report's path, the
 // interactive HTML with whether it embeds plotly.js and three.js (online by default) on its own row under it, then the
-// static PDF (A4, the preview's figures as images) and the CIF report (every item under its official CIF name); one
-// Save report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
+// static PDF (A4, the preview's figures as images) and the CIF report (disabled until its writer exists); one Save
+// report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
 // downloads them, one file or one zip).
 EaElements.GroupBox {
     id: group
@@ -175,11 +175,10 @@ EaElements.GroupBox {
                 leftPadding: 0
                 objectName: "report.writesCif"
                 width: group.boxWidth
-                enabled: group.report !== null
+                enabled: false
                 text: qsTr("CIF")
                 checked: group.report ? group.report.writesCif : false
-                onToggled: group.report.writesCif = checked
-                ToolTip.text: qsTr("Save the report as a CIF, every item under its official CIF name")
+                ToolTip.text: qsTr("The CIF report is not available yet")
             }
             ReportPath {
                 format: "cif"
@@ -191,7 +190,7 @@ EaElements.GroupBox {
         EaElements.SideBarButton {
             objectName: "report.save"
             wide: true
-            enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf || group.report.writesCif)
+            enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf)
             fontIcon: "download"
             text: qsTr("Save report")
             ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")

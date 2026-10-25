@@ -614,11 +614,7 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        // A CIF file is read through crysta's CIF names, a `.edi` block as it is.
-        const std::string path = file.toLocalFile().toStdString();
-        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
-        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
-                                                            : edi::load_structure_edi_file(path)),
+        error = apply(edi::Edit::add_structure(project, edi::load_structure_edi_file(file.toLocalFile().toStdString())),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -1886,25 +1882,37 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // Swaps can be reported on the render thread; the count is kept on this one. The first swap may be a frame
-        // already under way when the dataset was applied, so one more is asked for and the second one counts.
-        render_connection_ = connect(
-            window, &QQuickWindow::frameSwapped, this,
-            [this, window] {
-                if (render_swaps_ <= 0) {
-                    return;
-                }
-                if (!presentedFollowed()) {
-                    followRendered(false);  // hidden, or another pattern replaced it, before it was drawn
-                } else if (--render_swaps_ == 0) {
-                    followRendered(true);
-                } else {
-                    window->update();
+        // The pattern is drawn by the first frame synchronised after it was applied: the GUI thread waits during a
+        // synchronisation, so none can be under way while it is armed here, and a frame already rendering when the
+        // dataset was applied never counts. Both signals come on the render thread; the receipt goes to this one.
+        render_sync_connection_ = connect(
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                if (render_armed_.load()) {
+                    render_synced_.store(true);
                 }
             },
-            Qt::QueuedConnection);
+            Qt::DirectConnection);
+        render_connection_ = connect(
+            window, &QQuickWindow::frameSwapped, this,
+            [this] {
+                if (render_synced_.load() && render_armed_.exchange(false)) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this] {
+                            if (render_swaps_ > 0) {
+                                // Hidden, or another pattern replaced it, before it was drawn: not drawn.
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
+                }
+            },
+            Qt::DirectConnection);
     }
-    render_swaps_ = 2;
+    render_swaps_ = 1;
+    render_synced_.store(false);
+    render_armed_.store(true);
     render_wait_.start(kRenderWaitMs);
     window->update();
 }
@@ -1920,6 +1928,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_token_ = 0;
     follow_generation_ = 0;
     render_swaps_ = -1;
+    render_armed_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
@@ -2027,6 +2036,17 @@ QList<ExperimentViewModel*> ProjectViewModel::singleCrystalExperiments() const {
                          return model->sampleForm() == ExperimentViewModel::SingleCrystal;
                      });
     return all ? experiment_models_ : QList<ExperimentViewModel*>{};
+}
+
+QQmlListProperty<ExperimentViewModel> ProjectViewModel::singleCrystalExperimentList() {
+    // Read-only, from the rule above at every read.
+    return {this, nullptr,
+            [](QQmlListProperty<ExperimentViewModel>* list) -> qsizetype {
+                return static_cast<ProjectViewModel*>(list->object)->singleCrystalExperiments().size();
+            },
+            [](QQmlListProperty<ExperimentViewModel>* list, qsizetype index) -> ExperimentViewModel* {
+                return static_cast<ProjectViewModel*>(list->object)->singleCrystalExperiments().value(index);
+            }};
 }
 
 void ProjectViewModel::removeExperiment(int index) {
@@ -2150,6 +2170,33 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
     const QString refusal = apply(change, false);
     applying_setting_ = false;
     return refusal;
+}
+
+QString ProjectViewModel::apply_unread(const edi::Edit& change) {
+    // A scan's template follows an experiment edit as `apply` makes it.
+    if (scan_template_) {
+        return apply(change, false);
+    }
+    if (fit_ != nullptr && fit_->running()) {
+        const QString message = tr("The project cannot be edited while a fit is running");
+        setLastError(message);
+        return message;
+    }
+    if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        setLastError(pending);
+        return pending;
+    }
+    try {
+        preview_->apply_setting(change);
+    } catch (const std::exception& refusal) {
+        const QString message = QString::fromUtf8(refusal.what());
+        setLastError(message);
+        return message;
+    }
+    setLastError({});
+    setModified(true);
+    publish(false);
+    return {};
 }
 
 QString ProjectViewModel::value_refusal(const edi::Parameter& parameter) const {
@@ -2420,10 +2467,20 @@ void ProjectViewModel::syncUndo() {
 }
 
 void ProjectViewModel::setModified(bool modified) {
+    if (modified) {
+        emit edited();
+    }
     if (modified != modified_) {
         modified_ = modified;
         emit modifiedChanged();
     }
+}
+
+void ProjectViewModel::workIn(const QString& folder) {
+    project_->path = folder.toStdString();
+    project_->metadata.path = project_->path;
+    project_->scan_data_root.clear();
+    emit pathChanged();
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {
@@ -2452,9 +2509,10 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         project_->scan_data_root = scan_template_->scan_data_root;
     }
     // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
-    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
+    // with nothing to undo.
     try {
-        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
+        if (edi::adopt_saved_project(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
             if (scan_template_) {
                 scan_template_->refresh_calculated_pattern();
             } else {

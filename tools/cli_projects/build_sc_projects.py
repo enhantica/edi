@@ -428,12 +428,33 @@ TAURINE_FULLPROF_SITES = [
     ),
 ]
 TAURINE_SCALES = ['2.762()', '3.829()', '3.211()', '2.809()', '2.739()', '2.936()']
+# The example starts away from FullProf's values (the owner, 2026-10-24): every beta 0, four
+# coordinates moved by 0.005 and the extinction 0, all still free.
+TAURINE_MOVED = {
+    ('S1', 0): '0.20800()',
+    ('O1', 1): '0.23701()',
+    ('N1', 2): '0.33658()',
+    ('C1', 0): '0.33574()',
+}
+TAURINE_START_SITES = [
+    (
+        sid,
+        typ,
+        *(TAURINE_MOVED.get((sid, axis), value) for axis, value in enumerate((x, y, z))),
+        wyckoff,
+        occ,
+        adp_type,
+        adp_iso,
+        tuple('0()' for _ in beta),
+    )
+    for sid, typ, x, y, z, wyckoff, occ, adp_type, adp_iso, beta in TAURINE_FULLPROF_SITES
+]
 # Its Shelx-like anisotropic extinction (Ext-Model 4): Ext1-Ext3 free, Ext4-Ext6 0 and fixed.
 TAURINE_EXTINCTION = {
     'type': 'larson-anisotropic',
-    'coefficient_11': '0.07352()',
-    'coefficient_22': '0.01329()',
-    'coefficient_33': '0.007952()',
+    'coefficient_11': '0()',
+    'coefficient_22': '0()',
+    'coefficient_33': '0()',
     'coefficient_12': '0',
     'coefficient_13': '0',
     'coefficient_23': '0',
@@ -522,11 +543,13 @@ FIT_PROJECTS = {
         'purpose': 'refinement',
         'space_group': ('P 21/c', 'b1'),
         'cell': ('5.272901', '11.656495', '7.838298', '90', '94.010994', '90'),
-        'sites': TAURINE_FULLPROF_SITES,
+        'sites': TAURINE_START_SITES,
         'scale': None,
         # FullProf's model 4, Ext1-Ext3 free; one crystal, so experiments 2-6 take experiment 1's.
         'extinction': TAURINE_EXTINCTION,
         'shared_extinction': ('coefficient_11', 'coefficient_22', 'coefficient_33'),
+        # FullProf fits only reflections with F² > 3 su(F²) (taurine.pcr's Rmub 3.0).
+        'fit_cutoff': 3,
         'tof': True,
     },
     'sc-neut-cwl_tb2ti2o7-heidi': {
@@ -677,8 +700,9 @@ CASES = {
             'wavelength.'
         ),
         'start': (
-            "The project starts from FullProf's own values: its positions and beta tensors, one "
-            'scale per dataset and its anisotropic Larson extinction, every one free.'
+            "The project starts away from FullProf's fit: every beta tensor 0, four coordinates "
+            "moved by 0.005, FullProf's scales and the anisotropic Larson extinction 0, every one "
+            'free.'
         ),
         'model': (
             "{lib}'s verification page `sc-neut-tof_taurine_basic` (FullProf `taurine.pcr`): "
@@ -691,21 +715,46 @@ CASES = {
             'unchanged (h, k, l, F², su, wavelength).'
         ),
         'start_detail': (
-            "FullProf's positions and beta tensors, its scales Sc1-Sc6 and its extinction model 4 "
-            '(anisotropic Larson) with x11, x22 and x33 as FullProf left them, x12, x13 and x23 0 '
-            "and fixed. Experiments 2-6 take experiment 1's extinction through constraints. Free: "
+            "FullProf's positions with S1 x, O1 y, N1 z and C1 x moved by 0.005 (S1 x 0.20800 for "
+            '0.20300, O1 y 0.23701 for 0.24201, N1 z 0.33658 for 0.33158, C1 x 0.33574 for '
+            '0.34074), every beta tensor 0, its scales Sc1-Sc6 and its extinction model 4 '
+            '(anisotropic Larson) with x11, x22 and x33 0, x12, x13 and x23 0 and fixed. '
+            "Experiments 2-6 take experiment 1's extinction through constraints. Free: "
             'every position and beta, the six scales and the three extinction terms (135 '
-            'parameters).'
+            'parameters). As FullProf (Rmub 3.0), the fit uses only reflections with '
+            'F² > 3 su(F²).'
         ),
         'differences': [
             (
                 'FullProf leaves the reflections it marks forbidden out; they have no su here and '
                 'are not in the project.'
             ),
+            (
+                "FullProf multiplies each s.u. by its parameter's codeword coefficient (its "
+                'manual, eq. 3.7), and this .pcr codes the six scales and the three extinction '
+                'terms with 0.20, so FullProf prints their s.u. at a fifth: x11 0.000760 against '
+                "edi's 0.0036. With the 0.20 undone the s.u. agree: edi's are 1.00 to 1.02 times "
+                "FullProf's for the scales, 0.94 to 0.96 for the extinction, 1.04 to 1.10 for the"
+                ' positions and 1.02 to 1.08 for the betas.'
+            ),
+            (
+                'FullProf prints χ² 30.1; its own reflection list gives sum((F²obs - F²calc)/su)²'
+                ' = 24676 over the 947 reflections, which is 30.39 over N - P = 812 as edi and '
+                "FullProf's manual (eq. 3.8) define it. Started from FullProf's values, edi finds"
+                ' 30.41 there and goes on in 4 iterations to 30.27, the minimum it reaches from '
+                "this example's start: FullProf applies its scale and extinction shifts at 0.20 "
+                'too (the same codewords) and stops just above the minimum.'
+            ),
         ],
         'result': (
-            'From this start edi converges in 10 iterations to reduced χ² 50.42 over the 1540 '
-            'reflections, with x11 0.0752(57), x22 0.0144(23) and x33 0.0139(25).'
+            'From this start edi converges in 8 iterations to reduced χ² 30.27, wR(F²) 12.2 %, '
+            'over the same 947 reflections FullProf fits (FullProf, converged at its cycle 52 '
+            'with Eps 0.01: χ² 30.1, RF2w 12.2 %). Every one of the 135 parameters is within 0.6 '
+            "of edi's s.u. of FullProf's value (positions within 0.41, betas 0.38, scales 0.58, "
+            'extinction 0.44): x11 0.0584(36), x22 0.0139(15) and x33 0.0076(15) against '
+            "FullProf's 0.0568(38), 0.0135(16) and 0.0071(15) with its 0.20 undone, and scales "
+            "2.80(6), 3.87(9), 3.25(6), 2.84(7), 2.78(6) and 2.97(6) against FullProf's 2.78, "
+            '3.85, 3.23, 2.83, 2.74 and 2.96.'
         ),
     },
 }
@@ -738,12 +787,26 @@ SINGLE_RADIUS = (
 
 
 def shared_extinction(runs: list[str], items: tuple[str, ...]) -> str:
-    """The aliases and constraints that give every experiment the first one's extinction items."""
+    """The aliases and constraints that give every experiment the first one's extinction items.
+
+    An alias is FullProf's short name with the experiment's number, x11_2 for the second
+    experiment's coefficient_11, and a constraint's id is its left-hand alias.
+    """
     if not items or len(runs) < 2:
         return ''
-    aliases = [f'{run}_{item} {run}.extinction.{item}' for run in runs for item in items]
+
+    def alias(number: int, item: str) -> str:
+        return f'{item.replace("coefficient_", "x")}_{number}'
+
+    aliases = [
+        f'{alias(number, item)} {run}.extinction.{item}'
+        for number, run in enumerate(runs, 1)
+        for item in items
+    ]
     constraints = [
-        f'{run}_{item} "{run}_{item} = {runs[0]}_{item}"' for run in runs[1:] for item in items
+        f'{alias(number, item)} "{alias(number, item)} = {alias(1, item)}"'
+        for number in range(2, len(runs) + 1)
+        for item in items
     ]
     return (
         '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
@@ -968,7 +1031,12 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
     (project / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n\n'
         f'_fitting_mode.type {"joint" if len(runs) > 1 else "single"}\n\n'
-        'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
+        + (
+            f'_refine_ls.threshold_sigma {spec["fit_cutoff"]}\n\n'
+            if spec.get('fit_cutoff') is not None
+            else ''
+        )
+        + 'loop_\n_joint_fit.experiment_id\n_joint_fit.weight\n'
         + ''.join(f'{run} 1\n' for run, _, _ in runs)
         + (SINGLE_RADIUS.format(experiment=experiment) if spec.get('single_radius') else '')
         + shared_extinction([run for run, _, _ in runs], spec.get('shared_extinction', ())),

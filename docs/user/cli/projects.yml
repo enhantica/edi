@@ -1,13 +1,10 @@
 # The CLI project registry: every project under docs/user/cli/<id>/ and whether it is in the EXECUTING
 # set — the set CI and `pixi run verify` run through `python -m edi` and compare against the project's
 # expected.json (tools/checks/cli_projects.py). A C33 feature task `add`s a project here or `extend`s
-# one. Project ids are <technique>_<sample>[-<instrument>][_<variant>], lowercase, each part kebab-case,
-# with a variant only when it tells the user something (simulation, scan); the project's _metadata.name
-# is the id. Older test fixtures keep their three-part ids.
+# one. Project ids are <technique>_<sample>[-<instrument>]_<variant>, lowercase, each part kebab-case;
+# a project reproducing a diffraction-lib page keeps its stem lowercased.
 # `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
 # (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
-# `user-facing` set to `true`: one of the example catalogue's cases, listed in the app's examples in registry
-# order; every other project is a test fixture.
 schema: 1
 projects:
   - id: pd-neut-cwl_cosio-d20_start-1
@@ -79,72 +76,6 @@ projects:
     executing: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
-  - id: pd-neut-cwl_lab6-11b-echidna_basic
-    executing: false
-  - id: pd-neut-tof_diamond-dream_mcstas
-    executing: false
-  # The example catalogue: its user-facing cases in the order the app lists them, simplest first:
-  # calculations, constant-wavelength neutron, time-of-flight neutron, X-ray, joint, scans.
-  - id: pd-neut-cwl_lbco_simulation
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_si_simulation
-    executing: false
-    user-facing: true
-  - id: pd-xray-cwl_nacl_simulation
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_lbco-hrpt
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_hs-hrpt
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_cosio-d20
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_lmo-echidna
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_y2o3-spodi
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_yalo3-al2o3-spodi
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_si-sepd
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_cecoal-polaris
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_ceo2-pearl
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_lbco-si-mcstas
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_ncaf-wish
-    executing: false
-    user-facing: true
-  - id: pd-neut-tof_ferrite-austenite-beer
-    executing: false
-    user-facing: true
-  - id: pd-xray-cwl_pbso4-lab
-    executing: false
-    user-facing: true
-  - id: pd-xray-cwl_lam7o3-p021
-    executing: false
-    user-facing: true
-  - id: pd-neut-xray-cwl_pbso4-d1a-lab
-    executing: false
-    user-facing: true
-  - id: pd-neut-cwl_cosio-d20_scan
-    executing: false
-    user-facing: true
-  - id: pd-xray-cwl_latp-bm01_scan
-    executing: false
-    user-facing: true
   - id: sc-neut-cwl_pr2nio4-5c2_basic
     executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_basic
@@ -153,15 +84,11 @@ projects:
     executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
     executing: true
-  - id: sc-neut-tof_taurine-unknown_basic
-    executing: true
-  # Single crystal (dev integration of C16-T1; the owner chose a group after the scans).
   - id: sc-neut-cwl_tb2ti2o7-heidi_fit
     executing: false
-    user-facing: true
   - id: sc-neut-cwl_pr2nio4-5c2_fit
     executing: false
-    user-facing: true
+  - id: sc-neut-tof_taurine-unknown_basic
+    executing: true
   - id: sc-neut-tof_taurine_fit
     executing: false
-    user-facing: true

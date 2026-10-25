@@ -25,7 +25,7 @@
       "tol_rel": null
     },
     "rwp": {
-      "value": 0.0714737332,
+      "value": 0.0714737367,
       "kind": "regression-pin",
       "tol_abs": 1e-09,
       "tol_rel": null

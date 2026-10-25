@@ -266,7 +266,6 @@
     "app/qml/Components/PatternChart.qml",
     "app/qml/Components/ScanViewChart.qml",
     "app/qml/Components/SingleCrystalTable.qml",
-    "app/qml/Components/ScanViewChart.qml",
     "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/src/demo_driver.cpp",

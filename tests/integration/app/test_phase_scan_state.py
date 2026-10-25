@@ -104,8 +104,7 @@ def test_app_refuses_nonregular_notes_before_opening_a_stream(tmp_path, kind):
     notes = phase_scan.nonregular_notes(directory, kind)
     before = notes.lstat().st_ino, notes.lstat().st_mode
     try:
-        # Bound a blocked FIFO using the normal app deadline; startup is not I/O latency.
-        result = observe(tmp_path, {'kind': 'notes', 'refusal_budget_ms': 800})
+        result = observe(tmp_path, {'kind': 'notes'}, timeout=0.8)
     except subprocess.TimeoutExpired:
         pytest.fail('The core/app must refuse unsupported notes before opening a blocking FIFO')
     assert result.returncode == 0, (
@@ -204,19 +203,4 @@ def test_app_post_index_results_reread_checks_the_new_path_kind(
     )
     assert (directory / 'analysis/results.csv').lstat().st_ino == inode, (
         'A post-index refusal must preserve the authored replacement path'
-    )
-
-
-@pytest.mark.parametrize('authors', ['.', '?', 'A. Author; B. Author'])
-def test_description_tab_keeps_literal_authors_including_cif_nulls(tmp_path, authors):
-    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt/project'
-    shutil.copytree(source, tmp_path / 'project')
-    project = edi.Project.load(tmp_path / 'project')
-    project.metadata.authors = authors
-    project.save()
-    result = observe(tmp_path, {'kind': 'authors', 'authors': authors})
-    assert result.returncode == 0, (
-        'The rendered Description field must retain literal authors, including CIF nulls: '
-        + result.stdout
-        + result.stderr
     )

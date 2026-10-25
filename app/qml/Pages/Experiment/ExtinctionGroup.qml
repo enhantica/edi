@@ -6,7 +6,8 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // `extinction`: a single crystal's extinction type, then that type's fields (edi ADR-0049): none, the mosaic
-// distribution and spread for type I, the domain radius for type II, all three for mixed.
+// distribution and spread for type I, the domain radius for type II, all three for mixed, Larson's coefficient or its
+// six-term tensor.
 Column {
     id: group
 
@@ -38,9 +39,9 @@ Column {
         fields: group.experiment ? group.experiment.extinction : null
         prefix: "extinction"
 
-        // The type's two or three fields on one line, at equal widths; a lone field (Larson's coefficient) as wide as the
-        // type selector above it (the owner, 2026-10-23).
-        maxColumns: fieldCount > 1 ? 3 : 2
+        // The type's fields on one line, at equal widths, anisotropic Larson's six coefficients too; a lone field
+        // (Larson's coefficient) as wide as the type selector above it (the owner, 2026-10-23 and 2026-10-24).
+        maxColumns: fieldCount > 1 ? Math.max(3, fieldCount) : 2
         fillRows: fieldCount > 1
     }
 }

@@ -352,6 +352,10 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // On the GPU as detected or chosen (edi ADR-0041); never on Qt Quick's software backend, which cannot draw
+            // the lines' shader.
+            gpu: GraphicsInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && GraphicsInfo.detected && !GraphicsInfo.software))
+            Component.onCompleted: GraphicsInfo.observe(Window.window)
         }
         // The plot's border, under the shown dataset's rectangle, so that rectangle's outer line shows at the plot's
         // edges too.
@@ -463,16 +467,18 @@ Item {
 
     // The rows labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22): the
     // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
-    // dataset's colour, at its row's height. The widest label sets the room left for them.
+    // dataset's colour, at its row's height. The widest label sets the room left for them, measured once after the
+    // labels' widths change (a binding over every label ran again for each label that changed).
     readonly property real rowLabelGap: Math.round(em * 0.4)
-    readonly property real rowLabelsRoom: {
+    property real rowLabelsRoom: 0
+    function measureRowLabels() {
         let widest = 0;
         for (let i = 0; i < rowLabelRepeater.count; ++i) {
             const label = rowLabelRepeater.itemAt(i);
             if (label)
                 widest = Math.max(widest, label.width);
         }
-        return Math.ceil(widest);
+        rowLabelsRoom = Math.ceil(widest);
     }
     // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
     // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit.
@@ -518,28 +524,31 @@ Item {
     Repeater {
         id: rowLabelRepeater
 
-        model: chart.rowLabels && chart.scan !== null ? chart.scan.rowTexts : []
+        // One label per dataset, kept while the rows are placed again: only its text, place and colour follow.
+        model: chart.rowLabels && chart.scan !== null ? chart.scan.count : 0
+        onCountChanged: Qt.callLater(chart.measureRowLabels)
         delegate: IconLine {
-            required property string modelData
             required property int index
+            readonly property string rowText: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
             readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
-            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own.
-            // The colour choice and the theme are read here, so the label follows them.
-            readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
+            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
+            // read here, so the label follows the colour choice and the theme.
+            readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
 
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
             height: AppSizes.legendRowHeight
+            // The icon takes the text's colour, so a new colour changes no piece of the line.
             textColor: colour
             segments: [
                 {
-                    "icon": "microscope",
-                    "color": colour
+                    "icon": "microscope"
                 },
                 {
-                    "text": modelData
+                    "text": rowText
                 }
             ]
+            onWidthChanged: Qt.callLater(chart.measureRowLabels)
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
             // On Stacked a label stands on its curve's baseline, its bottom at the row (the owner, 2026-10-22); on the
             // Map it is centred on its band.
@@ -562,8 +571,8 @@ Item {
             y: plot.y + Math.max(0, Math.min(plot.height - 1, Math.floor((axisY.max - at) / (axisY.max - axisY.min) * plot.height)))
             width: Math.round(chart.em * 0.4)
             height: 1
-            // The colour choice and the theme are read here, so the tick follows them.
-            color: [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : "transparent"
+            // The colours' revision is read here, so the tick follows the colour choice and the theme.
+            color: layer.coloursRevision >= 0 ? layer.colourOf(index) : "transparent"
         }
     }
 

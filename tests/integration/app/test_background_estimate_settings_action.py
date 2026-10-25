@@ -64,25 +64,35 @@ def persisted_provenance(project, expected):
 def settings_actor():
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Saved-settings acceptance requires the built production Qt host'
-    result = subprocess.run(
-        [
-            str(runner),
-            '-input',
-            str(ROOT / 'tests/unit/app/tst_background_estimate_settings.qml'),
-            'BackgroundEstimateSettings::test_saved_auto_project_matches_reference',
-            'BackgroundEstimateSettings::test_main_choice_and_extra_overrides_are_real_saved_controls',
-            'BackgroundEstimateSettings::test_blank_defaults_and_derived_hint_survive_save_reload',
-            'BackgroundEstimateSettings::test_point_keyboard_edit_sets_manual',
-            '-o',
-            '-,txt',
-        ],
-        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
-        capture_output=True,
-        text=True,
-        timeout=25,
-        check=False,
+    cases = [
+        'test_saved_auto_project_matches_reference:auto-derived',
+        'test_saved_auto_project_matches_reference:auto-overrides',
+        'test_main_choice_and_extra_overrides_are_real_saved_controls',
+        'test_blank_defaults_and_derived_hint_survive_save_reload',
+        'test_point_keyboard_edit_sets_manual',
+    ]
+    runs = [
+        subprocess.run(
+            [
+                str(runner),
+                '-input',
+                str(ROOT / 'tests/unit/app/tst_background_estimate_settings.qml'),
+                'BackgroundEstimateSettings::' + case,
+                '-o',
+                '-,txt',
+            ],
+            env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
+            capture_output=True,
+            text=True,
+            timeout=25,
+            check=False,
+        )
+        for case in cases
+    ]
+    return (
+        next((run.returncode for run in runs if run.returncode), 0),
+        ''.join(run.stdout + run.stderr for run in runs),
     )
-    return result.returncode, result.stdout + result.stderr
 
 
 @pytest.mark.parametrize('case', ['auto-derived', 'auto-overrides'])

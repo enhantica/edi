@@ -126,3 +126,50 @@ PCR, SUM and OUT remain alongside the earlier anisotropic Pr and Tb references.
 The Tb example's Becker-Coppens extinction still differs from the original
 FullProf example reference; no parameter uncertainty or tolerance is enlarged
 to claim those model optima are equivalent.
+
+## Extinction and reflection contract update
+
+The owner's 2026-10-23 contract replaces `model/radius/mosaicity` with
+`type/mosaic_distribution/domain_radius/mosaic_spread` and a crystal-radius
+descriptor in mm. New experiments select None. The stored spread is plain g in
+rad^-1: the imported reference number is multiplied once by pi/10800*10000.
+The sphere parity inputs tie crystal_radius = domain_radius/1000; their
+independent numerical targets and tolerances are unchanged. The expected CLI
+path `param.radius.value` becomes `param.domain_radius.value`.
+
+Plain files of every extension except .int skip unparsed physical lines and
+ignore later columns; .int retains FullProf's format and skips zero-su rows.
+`multidataset.int` is an authored format witness with interleaved dataset flags
+in column six, wavelength in seven and distinct angle values in eight.
+`mixed.hkl` has two valid observations and four skipped lines.
+
+Larson's neutron intensity factor and the single-occurrence tensor cross terms
+come from ILL's Mag2Pol manual section 3.3:
+https://www.ill.eu/documents/2169/Mag2Pol_manual.pdf (version 8.0, accessed
+2026-10-24). The cited version 5.1.3 was absent from this checkout's physics
+literature tree. The anisotropic metric denominator is 4(sin(theta)/lambda)^2.
+The isotropic amplitude factor in SHELXL EXTI is squared for intensity.
+Xtal ADDREF's sigma(F) uses the clipped F amplitude in both denominator terms:
+https://xtal.sourceforge.net/man/addref-desc.html .
+
+Crysta’s `tests/fixtures/single_crystal/generate_joint_larson.py` builds exact one-atom observations for a shared
+coefficient and independent scales, without importing either product.
+
+The app's mixed-radius Tb fitting exercise uses the independent Crysta engine
+reference appended by `generate_app_engine_fit.py` to `example-fits.json`.
+The old FullProf entry is retained: its extinction model differs from the new
+3 mm crystal-path exercise. Pr keeps its anisotropic FullProf reference.
+
+After rebuilding historical page-fit fixtures, run `migrate_extinction_inputs.py`
+to apply the new input names, units and path equality. This leaves independent
+expected numbers and tolerance budgets unchanged.
+
+The app's Pr reference is now `pr2nio4_none`, from
+`generate_pr_none_fit.py`: FullProf 8.40, twenty-three independent fitted
+parameters, fixed occupancies, independent Od x/y coordinates and extinction
+None. The older Pr entry frees occupancy relations, ties Od x/y and fits an
+empirical extinction coefficient; it is retained as historical evidence.
+The matched PCR and all outputs are in `example_fits/pr2nio4_none`; the JSON
+records their hashes, the binary hash and the command. FullProf's occupancy
+normalisation is retained (Pr/O1/O2/Oi factors 2, Ni 1, Od 8 relative to the
+app's per-site occupancy); the global scale factor is 64.

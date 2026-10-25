@@ -15,20 +15,31 @@ ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
 
 
+def lexical_mask(text, *, strings=False):
+    # Match whole tokens in source order, so // and /* inside a quoted URL
+    # stay in the string. Blanking keeps original offsets and newlines.
+    pattern = (
+        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`"
+    )
+
+    def mask(match):
+        token = match.group()
+        if strings or token.startswith(('//', '/*')):
+            return ''.join('\n' if char == '\n' else ' ' for char in token)
+        return token
+
+    return re.sub(pattern, mask, text, flags=re.DOTALL)
+
+
 def source(path):
-    return re.sub(r'//[^\n]*|/\*.*?\*/', '', (APP / path).read_text(), flags=re.DOTALL)
+    return lexical_mask((APP / path).read_text())
 
 
 def spans(text):
     # Mask complete lexical tokens before balancing: quoted braces and comment
     # apostrophes are not QML delimiters. Preserve offsets for caller slices.
-    masked = re.sub(
-        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
-        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`",
-        lambda match: ' ' * len(match.group()),
-        text,
-        flags=re.DOTALL,
-    )
+    masked = lexical_mask(text, strings=True)
     stack, found = [], []
     for position, character in enumerate(masked):
         if character == '{':
@@ -48,26 +59,40 @@ def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
         'while retaining real nested objects'
     )
 
+    for comment in ("// owner's } quote\n", "/* owner's } ' quote */"):
+        source = 'Item { ' + comment + ' Child { value: 3 } }'
+        assert block(source, 'Item {') == source, (
+            'QML observers must ignore line and block comment apostrophes when balancing objects'
+        )
+    decoy = '// delegate: IconLine { fake }\ndelegate: IconLine { height: 7 }'
+    assert block(decoy, 'delegate: IconLine {') == 'delegate: IconLine { height: 7 }', (
+        'QML observers must locate the real declaration rather than a commented marker'
+    )
+    with pytest.raises(AssertionError, match='claimed operation'):
+        block('// delegate: IconLine { height: 7 }', 'delegate: IconLine {')
+    literal = 'Item {\n property string url: "https://host/a/*path*/"\n}'
+    assert property_value(literal, 'url') == '"https://host/a/*path*/"', (
+        'QML observers must preserve comment-like bytes inside quoted property values'
+    )
+    array = 'Item {\n model: [1, /* ] owner\'s " quote */ 2]\n}'
+    assert re.sub(r'\s+', '', property_value(array, 'model')) == '[1,2]', (
+        'QML observers must ignore commented brackets when balancing array properties'
+    )
+    with pytest.raises(pytest.fail.Exception, match='observed block must close'):
+        block('Item { Child { value: 3 }', 'Item {')
+
 
 def block(text, marker):
-    assert marker in text, (
+    masked = lexical_mask(text, strings=True)
+    assert marker in masked, (
         'Scan wiring: the claimed operation must exist in its effective component: ' + marker
     )
-    start = text.index(marker)
-    opening = text.index('{', start)
+    start = masked.index(marker)
+    opening = masked.index('{', start)
     depth = 0
-    quote = ''
-    escaped = False
-    for position in range(opening, len(text)):
-        character = text[position]
-        if quote:
-            if character == quote and not escaped:
-                quote = ''
-            escaped = character == '\\' and not escaped
-        elif character in '"\'`':
-            quote = character
-            escaped = False
-        elif character == '{':
+    for position in range(opening, len(masked)):
+        character = masked[position]
+        if character == '{':
             depth += 1
         elif character == '}':
             depth -= 1
@@ -112,6 +137,7 @@ def continued_expression(text, start):
 
 
 def property_value(text, name):
+    text = lexical_mask(text)
     opening = text.find('{')
     nested = [(a, b) for a, b in spans(text) if a > opening]
     pattern = (
@@ -126,17 +152,13 @@ def property_value(text, name):
         if text[start] == '{':
             return block(text[start:], '{')
         if text[start] == '[':
-            depth, quote = 0, ''
-            for end in range(start, len(text)):
-                c = text[end]
-                if quote:
-                    if c == quote and text[end - 1] != '\\':
-                        quote = ''
-                elif c in '"\'`':
-                    quote = c
-                elif c == '[':
+            depth = 0
+            masked = lexical_mask(text, strings=True)
+            for end in range(start, len(masked)):
+                character = masked[end]
+                if character == '[':
                     depth += 1
-                elif c == ']':
+                elif character == ']':
                     depth -= 1
                     if depth == 0:
                         return text[start : end + 1]

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <limits>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -60,6 +61,8 @@ class ScanViewModel : public QObject {
     // Each dataset's label for its row, by the order shown: its scan value with its unit, its file's name, or its
     // datablock's name.
     Q_PROPERTY(QStringList rowTexts READ rowTexts NOTIFY rowTextsChanged)
+    // Bumped when rowTexts changes: what a label reads rowText by, so it is evaluated only then.
+    Q_PROPERTY(int rowTextsRevision READ rowTextsRevision NOTIFY rowTextsChanged)
     // Whether the rows sit at their scan values (else in order, by file or datablock, one equal band each).
     Q_PROPERTY(bool rowsByValue READ rowsByValue NOTIFY rowsByValueChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
@@ -113,6 +116,7 @@ class ScanViewModel : public QObject {
     QString rowTitle() const { return row_title_; }
     QString orderName() const { return joint_ ? tr("datablock") : tr("file"); }
     QStringList rowTexts() const { return row_texts_; }
+    int rowTextsRevision() const { return row_texts_revision_; }
     bool rowsByValue() const { return rows_by_value_; }
     double xMin() const { return axis_min_; }
     double xMax() const { return axis_max_; }
@@ -134,6 +138,10 @@ class ScanViewModel : public QObject {
     QString error() const { return error_; }
     QString rowNote() const { return row_note_; }
 
+    // A dataset's label for its row (rowTexts' entry), empty when there is none.
+    Q_INVOKABLE QString rowText(int dataset) const {
+        return dataset >= 0 && dataset < row_texts_.size() ? row_texts_.at(dataset) : QString();
+    }
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.
@@ -148,6 +156,9 @@ class ScanViewModel : public QObject {
         std::vector<double> x, intensity, shown;
         std::vector<std::pair<double, double>> excluded, excluded_shown;  // native, and on the axis shown
         std::vector<double> d;                                            // a joint fit's experiment's own d column
+        // Changes whenever the points or their place on the axis shown change: a view's cached reduction of the
+        // pattern holds while it is the same.
+        std::uint64_t generation = 0;
     };
     const std::vector<Pattern>& patterns() const { return patterns_; }
     // Whether `x`, on the axis shown, falls in one of the pattern's excluded regions.
@@ -203,7 +214,7 @@ class ScanViewModel : public QObject {
     void placeRows();
     void placeAxis();
     // One dataset's x and excluded ranges on the axis shown.
-    void placePattern(Pattern& pattern) const;
+    void placePattern(Pattern& pattern);
     // The axis shown's range over every dataset read.
     void placeRange();
     bool readConversion(const edi::Project* project);
@@ -227,12 +238,14 @@ class ScanViewModel : public QObject {
     std::vector<double> values_;  // each dataset's first extracted value, NaN when it has none
     std::vector<QString> value_texts_;  // the same as the file writes it
     QStringList row_texts_;
+    int row_texts_revision_ = 0;
     std::vector<double> rows_;
     std::vector<edi::ScanRowSpan> spans_;
     std::size_t next_ = 0;  // the next dataset to read
     int loaded_ = 0;
     int failed_ = 0;
     int revision_ = 0;
+    std::uint64_t pattern_generation_ = 0;  // the last Pattern::generation given
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;
     QString value_problem_;  // the first dataset with no value to place its row by

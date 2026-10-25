@@ -6,7 +6,6 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <locale>
 #include <memory>
 #include <mutex>
@@ -54,12 +53,6 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
-#if __has_include("crysta/cif_report.hpp")
-#include "crysta/cif_report.hpp"
-#endif
-#if __has_include("crysta/dictionary_items.hpp")
-#include "crysta/dictionary_items.hpp"
-#endif
 #if __has_include("crysta/report_settings.hpp")
 #include "crysta/report_settings.hpp"
 #endif
@@ -1458,7 +1451,8 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         const bool split = codes.size() > 1;
         load.points = file.index_h.size();
         load.experiment.reflections = rows_of(split ? std::optional<std::int32_t>(codes.front()) : std::nullopt);
-        load.experiment.calculation_only = false;
+        // Measured once it holds a reflection, as crysta's setter has it.
+        load.experiment.calculation_only = load.experiment.reflections->size() == 0;
         if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
             load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
         }
@@ -2162,6 +2156,7 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
         cproject.report_files.push_back(row);
     }
     cproject.correlation_threshold = model.correlation_threshold;
+    cproject.refine_ls_threshold_sigma = model.refine_ls_threshold_sigma;
     cproject.pattern_x_axis = model.pattern_x_axis;
 }
 #endif
@@ -2216,14 +2211,12 @@ std::string report_settings_text(const Project& model) {
 #endif
 }
 
-namespace {
-
-// The engine project a save writes, handed to `use`. Edi does not write — it asks crysta to. Build
-// the full engine project from the model through the one conversion choke point (completed cell,
-// start-carrying parameters), fill the persistence-only fields the calculation conversion never
-// needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
-// cannot move, so it is lent rather than returned.
-void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
+void save_project_via_crysta(const Project& model, const std::string& directory) {
+    // Edi does not write — it asks crysta to. Build the full engine project from the model
+    // through the one conversion choke point (completed cell, start-carrying parameters),
+    // fill the persistence-only fields the calculation conversion never needed, stamp the
+    // loader-grade identity with crysta's own exported stamp, and hand crysta::save_project
+    // the write (staging, atomic publish and fail-closed validation are its own).
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2307,7 +2300,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
             copy.source_kind = row->source_kind.value();
             copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
             copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-            copy.correlation = row->correlation.value();
+            copy.correlation = row->correlation.get();
             copy.file_path = row->file_path.value();
         }
         to.correlations.assign(rows);
@@ -2322,7 +2315,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // the declared data_dir stays inside it; with an empty path it can do neither, so an edi save
     // silently dropped the scan inputs and the results, and the containment rule never ran on the
     // edi save path at all.
-    cproject.path = model.path;
+    // A project opened from an archive has no directory of its own: its files are carried from the folder it was
+    // unpacked into (edi ADR-0052), its reports among them.
+    cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
     // The project identity rides the delegated save. Copy the persisted metadata fields
@@ -2473,32 +2468,12 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
             geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
     }
-    use(cproject);
-}
-
-}  // namespace
-
-void save_project_via_crysta(const Project& model, const std::string& directory) {
-    // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
-    with_saved_project(model, [&directory](crysta::Project& project) {
-        try {
-            crysta::save_project(project, directory);
-        } catch (const std::exception& error) {
-            raise_coded(error);
-            throw;
-        }
-    });
-}
-
-std::string cif_report_text(const Project& model) {
-#if __has_include("crysta/cif_report.hpp")  // drop the guard when the pin moves
-    std::string text;
-    with_saved_project(model, [&text](crysta::Project& project) { text = crysta::cif_report(project); });
-    return text;
-#else
-    (void)model;
-    throw std::invalid_argument("the CIF report needs a newer crysta");
-#endif
+    try {
+        crysta::save_project(cproject, directory);
+    } catch (const std::exception& error) {
+        raise_coded(error);
+        throw;
+    }
 }
 
 namespace detail {
@@ -2527,34 +2502,6 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
-}
-
-// The older spellings are crysta's dictionary's; against an SDK without them every name is current.
-std::string current_edi_name(const std::string& tag) {
-#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    const crysta::DictionaryItem* item = crysta::find_dictionary_item_by_edi_name(tag);
-    if (item == nullptr) {
-        return tag;
-    }
-    const auto same = [&tag](const std::string& alias) {
-        return std::ranges::equal(alias, tag, [](char a, char b) {
-            return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-        });
-    };
-    return std::ranges::any_of(item->edi_aliases, same) ? item->edi_tag : tag;
-#else
-    return tag;
-#endif
-}
-
-// The CIF import is crysta's; against an SDK without it a text is read as `.edi`.
-std::optional<std::string> structure_edi_from_cif(const std::string& text) {
-#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    return crysta::structure_edi_from_cif(text);
-#else
-    static_cast<void>(text);
-    return std::nullopt;
-#endif
 }
 
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
@@ -2586,6 +2533,11 @@ double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
 std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
 std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
 #endif
+
+double read_threshold_sigma(const std::string& value, const char* tag) {
+    return crysta::read_threshold_sigma(value, tag);
+}
+std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
@@ -3006,12 +2958,48 @@ void require_polarization_family(const ExperimentBase& e) {
     }
 }
 
+// A single crystal's measured reflections as crysta reads them.
+crysta::ReflectionFile reflection_file(const ExperimentBase& e) {
+    crysta::ReflectionFile rows;
+    rows.index_h = e.reflections->index_h;
+    rows.index_k = e.reflections->index_k;
+    rows.index_l = e.reflections->index_l;
+    rows.intensity = e.reflections->intensity_meas;
+    rows.sigma = e.reflections->intensity_meas_su;
+    rows.wavelength = e.reflections->wavelength;
+    return rows;
+}
+
+crysta::BeamModeEnum single_crystal_kind(const ExperimentBase& e) {
+    return e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? crysta::BeamModeEnum::ConstantWavelength
+                                                                         : crysta::BeamModeEnum::TimeOfFlight;
+}
+
+// Why crysta refuses the first single crystal's reflection table (a column without one value per reflection), or
+// empty. A calculation asks it before anything is cleared, so a refused table leaves every computed column as it
+// was.
+std::string reflection_refusal(const Project& project) {
+    for (const auto& bank_item : project.experiments) {
+        const ExperimentBase& bank = *bank_item;
+        if (!bank.reflections) {
+            continue;
+        }
+        crysta::BraggPdExperiment scratch = crysta::single_crystal_experiment(single_crystal_kind(bank));
+        scratch.name = bank.name;
+        try {
+            crysta::set_measured_reflections(scratch, reflection_file(bank));
+        } catch (const std::invalid_argument& error) {
+            return error.what();
+        }
+    }
+    return {};
+}
+
 // A single crystal crosses as crysta's single-crystal form: its wavelength (constant wavelength),
 // extinction, linked structures and measured reflections.
 crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     const bool cw = e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(
-        cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(single_crystal_kind(e));
     built.name = e.name;
     built.beam_mode = crossed(crysta::TokenField::BeamMode, built,
                               e.experiment_type.beam_mode ? token(*e.experiment_type.beam_mode) : std::string());
@@ -3033,6 +3021,8 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built, e.extinction.type.value_or("none"));
     built.extinction_model = crossed(crysta::TokenField::ExtinctionModel, built,
                                      e.extinction.mosaic_distribution.value_or("gaussian"));
+    built.reflns_threshold_sigma = e.reflns_threshold_sigma;
+    built.reflns_threshold_basis = e.reflns_threshold_basis;
     if (e.extinction.domain_radius) {
         built.extinction[0] = param(*e.extinction.domain_radius, crysta::CORRECTION, "domain_radius");
     }
@@ -3062,14 +3052,7 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                            link->enabled.get());
     }
     built.linked_structures.assign(links);
-    crysta::ReflectionFile rows;
-    rows.index_h = e.reflections->index_h;
-    rows.index_k = e.reflections->index_k;
-    rows.index_l = e.reflections->index_l;
-    rows.intensity = e.reflections->intensity_meas;
-    rows.sigma = e.reflections->intensity_meas_su;
-    rows.wavelength = e.reflections->wavelength;
-    crysta::set_measured_reflections(built, rows);
+    crysta::set_measured_reflections(built, reflection_file(e));
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
 }
 
@@ -3402,6 +3385,11 @@ bool ExperimentBase::computed_current() const {
 }
 
 void Project::calculate() {
+    // A single crystal's reflection table is admitted before anything is touched: a refused one leaves every
+    // computed column and the geometry as they were.
+    if (const std::string why = detail::reflection_refusal(*this); !why.empty()) {
+        throw std::invalid_argument(why);
+    }
     refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // The reference shape (diffraction-lib Analysis.calculate): no arguments — every input is
     // read from the model (grid = the data node's engaged axis, bank angle and
@@ -3547,7 +3535,7 @@ std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
         copy.id = row->id.value();
         copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
         copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-        copy.correlation = row->correlation.value();
+        copy.correlation = row->correlation.get();
         copy.file_path = row->file_path.value();
     }
     converted.project->fit_result.correlations.assign(rows);
@@ -3670,10 +3658,16 @@ void complete_relations(Project& project) {
     if (project.structures.empty()) {
         return;
     }
-    // crysta completes a converted copy, so a refusal leaves this model as it was.
-    RelationProject converted = relation_project(project);
-    copy_dependents(*converted.project, project, Completion::Values);
-    mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+    // crysta completes a converted copy, so a refusal leaves this model as it was; one with codes
+    // (a non-finite value, a value outside a physical domain) keeps them.
+    try {
+        RelationProject converted = relation_project(project);
+        copy_dependents(*converted.project, project, Completion::Values);
+        mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+    } catch (const std::exception& error) {
+        raise_coded(error);
+        throw;
+    }
 }
 
 bool apply_relations(Project& project) {
@@ -3763,6 +3757,32 @@ std::vector<std::string> extinction_type_tokens() {
 
 std::vector<std::string> mosaic_distribution_tokens() {
     return crysta::file_tokens(crysta::TokenField::ExtinctionModel, crysta::BeamModeEnum::ConstantWavelength);
+}
+
+std::vector<std::string> reflns_threshold_basis_tokens() { return {"intensity", "amplitude"}; }
+
+void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
+    experiment.reflns_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_reflns.threshold_sigma"))
+              : std::nullopt;
+}
+
+void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis) {
+    experiment.reflns_threshold_basis =
+        basis ? std::optional<std::string>(crysta::read_threshold_basis(*basis)) : std::nullopt;
+}
+
+void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma) {
+    project.refine_ls_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_refine_ls.threshold_sigma"))
+              : std::nullopt;
+}
+
+std::string reflns_threshold_expression(const ExperimentBase& experiment) {
+    crysta::BraggPdExperiment crystal = crysta::single_crystal_experiment(crysta::BeamModeEnum::ConstantWavelength);
+    crystal.reflns_threshold_sigma = experiment.reflns_threshold_sigma;
+    crystal.reflns_threshold_basis = experiment.reflns_threshold_basis;
+    return crysta::threshold_expression(crystal);
 }
 
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
@@ -3966,6 +3986,12 @@ CalculationResult calculate(WorkSnapshot& snapshot, const work::CancelToken& tok
         result.cancelled = true;
         return result;
     }
+    // A refused reflection table changes nothing: publish keeps what is shown.
+    if (std::string why = detail::reflection_refusal(snapshot.project); !why.empty()) {
+        result.refusal = std::move(why);
+        result.kept = true;
+        return result;
+    }
     std::string refusal;
     try {
         snapshot.project.calculate();
@@ -4075,7 +4101,13 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
     const std::size_t banks = live.experiments.size();
     const std::size_t structures = live.structures.size();
     // --- preflight: nothing the result depends on was written since the snapshot -----------------
-    if (result.cancelled || !unchanged_since(live, stamps) || result.geometry.size() != structures) {
+    if (result.cancelled || !unchanged_since(live, stamps)) {
+        return PublishOutcome::Superseded;
+    }
+    if (result.kept) {  // refused before anything was calculated: nothing to write
+        return PublishOutcome::Published;
+    }
+    if (result.geometry.size() != structures) {
         return PublishOutcome::Superseded;
     }
     const bool refused = !result.refusal.empty();
@@ -4558,6 +4590,8 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
     record.correlations.assign(std::move(kept));
 }
 
+std::string single_crystal_forbidden_tag(const std::string& tag) { return crysta::single_crystal_forbidden_tag(tag); }
+
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {
     std::vector<FitParameterCorrelation> rows;
     if (!table.names || !table.values) {
@@ -4573,7 +4607,7 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
             row.source_kind = std::string("deterministic");
             row.parameter_unique_name_i = names[i];
             row.parameter_unique_name_j = names[j];
-            row.correlation = crysta::correlation_text(values[rows.size() - 1]);
+            row.correlation = values[rows.size() - 1];
             row.file_path = file;
         }
     }
@@ -4852,6 +4886,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             return outcome;
         };
         if (single_crystal) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
             crysta::SingleCrystalResidual provider(project, std::move(free));
             return finish(provider);
         }
@@ -5644,6 +5679,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             return outcome;
         };
         if (single_crystals) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
             std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
             crysta::SingleCrystalResidual provider(project, std::move(free));
             return finish(provider);

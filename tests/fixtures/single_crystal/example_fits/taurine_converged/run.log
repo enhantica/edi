@@ -1,0 +1,931 @@
+banner fp2k taurine NCY200 Eps0.01 2026-10-24T12:20:11Z
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:24/10/2026  Time => 14:20:11.539
+ => Reading control file *.PCR ... taurine
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =taurine):
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       1
+    => Global user-weigthed Chi2 (Bragg contrib.):   34.10
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   14.27
+    =>    RF2w-factor :   12.98
+    =>    RF  -factor :   9.538
+    =>    Chi2(Intens):   33.99
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -188.82 abs> 1
+  
+    ===================>>> CYCLE:       2
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       2
+    => Global user-weigthed Chi2 (Bragg contrib.):   33.28
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   14.19
+    =>    RF2w-factor :   12.83
+    =>    RF  -factor :   9.516
+    =>    Chi2(Intens):   33.19
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -170.73 abs> 1
+  
+    ===================>>> CYCLE:       3
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       3
+    => Global user-weigthed Chi2 (Bragg contrib.):   32.62
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   14.11
+    =>    RF2w-factor :   12.71
+    =>    RF  -factor :   9.497
+    =>    Chi2(Intens):   32.56
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -154.15 abs> 1
+  
+    ===================>>> CYCLE:       4
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       4
+    => Global user-weigthed Chi2 (Bragg contrib.):   32.10
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   14.05
+    =>    RF2w-factor :   12.61
+    =>    RF  -factor :   9.482
+    =>    Chi2(Intens):   32.05
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -139.05 abs> 1
+  
+    ===================>>> CYCLE:       5
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       5
+    => Global user-weigthed Chi2 (Bragg contrib.):   31.69
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.99
+    =>    RF2w-factor :   12.53
+    =>    RF  -factor :   9.469
+    =>    Chi2(Intens):   31.65
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -125.34 abs> 1
+  
+    ===================>>> CYCLE:       6
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       6
+    => Global user-weigthed Chi2 (Bragg contrib.):   31.36
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.95
+    =>    RF2w-factor :   12.47
+    =>    RF  -factor :   9.459
+    =>    Chi2(Intens):   31.33
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -112.91 abs> 1
+  
+    ===================>>> CYCLE:       7
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       7
+    => Global user-weigthed Chi2 (Bragg contrib.):   31.10
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.90
+    =>    RF2w-factor :   12.42
+    =>    RF  -factor :   9.450
+    =>    Chi2(Intens):   31.08
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)= -101.68 abs> 1
+  
+    ===================>>> CYCLE:       8
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       8
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.89
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.87
+    =>    RF2w-factor :   12.37
+    =>    RF  -factor :   9.443
+    =>    Chi2(Intens):   30.88
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -91.54 abs> 1
+  
+    ===================>>> CYCLE:       9
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       9
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.72
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.85
+    =>    RF2w-factor :   12.34
+    =>    RF  -factor :   9.438
+    =>    Chi2(Intens):   30.71
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -82.39 abs> 1
+  
+    ===================>>> CYCLE:      10
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      10
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.59
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.82
+    =>    RF2w-factor :   12.32
+    =>    RF  -factor :   9.433
+    =>    Chi2(Intens):   30.58
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -74.15 abs> 1
+  
+    ===================>>> CYCLE:      11
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      11
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.49
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.80
+    =>    RF2w-factor :   12.29
+    =>    RF  -factor :   9.429
+    =>    Chi2(Intens):   30.48
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -66.74 abs> 1
+  
+    ===================>>> CYCLE:      12
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      12
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.40
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.78
+    =>    RF2w-factor :   12.28
+    =>    RF  -factor :   9.425
+    =>    Chi2(Intens):   30.40
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -60.07 abs> 1
+  
+    ===================>>> CYCLE:      13
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      13
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.33
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.77
+    =>    RF2w-factor :   12.26
+    =>    RF  -factor :   9.422
+    =>    Chi2(Intens):   30.33
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -54.06 abs> 1
+  
+    ===================>>> CYCLE:      14
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      14
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.28
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.75
+    =>    RF2w-factor :   12.25
+    =>    RF  -factor :   9.420
+    =>    Chi2(Intens):   30.27
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -48.66 abs> 1
+  
+    ===================>>> CYCLE:      15
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      15
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.23
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.74
+    =>    RF2w-factor :   12.24
+    =>    RF  -factor :   9.417
+    =>    Chi2(Intens):   30.23
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -43.80 abs> 1
+  
+    ===================>>> CYCLE:      16
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      16
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.20
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.73
+    =>    RF2w-factor :   12.24
+    =>    RF  -factor :   9.415
+    =>    Chi2(Intens):   30.20
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -39.43 abs> 1
+  
+    ===================>>> CYCLE:      17
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      17
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.17
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.72
+    =>    RF2w-factor :   12.23
+    =>    RF  -factor :   9.414
+    =>    Chi2(Intens):   30.17
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -35.50 abs> 1
+  
+    ===================>>> CYCLE:      18
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      18
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.15
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.71
+    =>    RF2w-factor :   12.23
+    =>    RF  -factor :   9.412
+    =>    Chi2(Intens):   30.15
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -31.97 abs> 1
+  
+    ===================>>> CYCLE:      19
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      19
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.13
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.70
+    =>    RF2w-factor :   12.22
+    =>    RF  -factor :   9.411
+    =>    Chi2(Intens):   30.13
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -28.79 abs> 1
+  
+    ===================>>> CYCLE:      20
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      20
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.12
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.70
+    =>    RF2w-factor :   12.22
+    =>    RF  -factor :   9.410
+    =>    Chi2(Intens):   30.11
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -25.93 abs> 1
+  
+    ===================>>> CYCLE:      21
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      21
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.10
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.69
+    =>    RF2w-factor :   12.22
+    =>    RF  -factor :   9.409
+    =>    Chi2(Intens):   30.10
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -23.35 abs> 1
+  
+    ===================>>> CYCLE:      22
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      22
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.09
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.68
+    =>    RF2w-factor :   12.22
+    =>    RF  -factor :   9.408
+    =>    Chi2(Intens):   30.09
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -21.03 abs> 1
+  
+    ===================>>> CYCLE:      23
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      23
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.09
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.68
+    =>    RF2w-factor :   12.22
+    =>    RF  -factor :   9.407
+    =>    Chi2(Intens):   30.09
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -18.95 abs> 1
+  
+    ===================>>> CYCLE:      24
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      24
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.08
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.67
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.406
+    =>    Chi2(Intens):   30.08
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -17.07 abs> 1
+  
+    ===================>>> CYCLE:      25
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      25
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.08
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.67
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.406
+    =>    Chi2(Intens):   30.08
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -15.38 abs> 1
+  
+    ===================>>> CYCLE:      26
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      26
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.07
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.67
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.405
+    =>    Chi2(Intens):   30.07
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -13.86 abs> 1
+  
+    ===================>>> CYCLE:      27
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      27
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.07
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.405
+    =>    Chi2(Intens):   30.07
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -12.48 abs> 1
+  
+    ===================>>> CYCLE:      28
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      28
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.07
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.404
+    =>    Chi2(Intens):   30.07
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -11.25 abs> 1
+  
+    ===================>>> CYCLE:      29
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      29
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.404
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=  -10.14 abs> 1
+  
+    ===================>>> CYCLE:      30
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      30
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.404
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -9.14 abs> 1
+  
+    ===================>>> CYCLE:      31
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      31
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.404
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -8.24 abs> 1
+  
+    ===================>>> CYCLE:      32
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      32
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.66
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -7.42 abs> 1
+  
+    ===================>>> CYCLE:      33
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      33
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -6.69 abs> 1
+  
+    ===================>>> CYCLE:      34
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      34
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -6.03 abs> 1
+  
+    ===================>>> CYCLE:      35
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      35
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -5.44 abs> 1
+  
+    ===================>>> CYCLE:      36
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      36
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -4.90 abs> 1
+  
+    ===================>>> CYCLE:      37
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      37
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -4.42 abs> 1
+  
+    ===================>>> CYCLE:      38
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      38
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -3.98 abs> 1
+  
+    ===================>>> CYCLE:      39
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      39
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.403
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -3.59 abs> 1
+  
+    ===================>>> CYCLE:      40
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      40
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -3.24 abs> 1
+  
+    ===================>>> CYCLE:      41
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      41
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -2.92 abs> 1
+  
+    ===================>>> CYCLE:      42
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      42
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -2.63 abs> 1
+  
+    ===================>>> CYCLE:      43
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      43
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -2.37 abs> 1
+  
+    ===================>>> CYCLE:      44
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      44
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -2.14 abs> 1
+  
+    ===================>>> CYCLE:      45
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      45
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.93 abs> 1
+  
+    ===================>>> CYCLE:      46
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      46
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.74 abs> 1
+  
+    ===================>>> CYCLE:      47
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      47
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.56 abs> 1
+  
+    ===================>>> CYCLE:      48
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      48
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.41 abs> 1
+  
+    ===================>>> CYCLE:      49
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      49
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.27 abs> 1
+  
+    ===================>>> CYCLE:      50
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      50
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.15 abs> 1
+  
+    ===================>>> CYCLE:      51
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      51
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.65
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Ext1)/(eps*Sigma)=   -1.03 abs> 1
+  
+    ===================>>> CYCLE:      52
+  
+ => Control file *.pcr: taurine
+ => Pattern:   1  taurine
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      52
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.64
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.      52
+    => Global user-weigthed Chi2 (Bragg contrib.):   30.06
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   13.64
+    =>    RF2w-factor :   12.21
+    =>    RF  -factor :   9.402
+    =>    Chi2(Intens):   30.06
+    =>  N_eff Reflect.:     947 and    3.000     * sigma < Int
+ => Normal end, final calculations and writing...
+  
+  
+ =>               CPU Time:     1.523 seconds
+ =>                             0.025 minutes
+  
+ => END   Date:24/10/2026  Time => 14:20:13.057
+  
+ => Data Files :
+ =>             - taurine
+ => PCR  File  : taurine
+ => Do you want to continue (<cr>=N)? 
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/3658006/fd/0
+Image              PC                Routine            Line        Source             
+fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
+fp2k               000000000068C8CB  Unknown               Unknown  Unknown
+fp2k               0000000000405B3D  Unknown               Unknown  Unknown
+libc.so.6          00007F3CC28B1D90  Unknown               Unknown  Unknown
+libc.so.6          00007F3CC28B1E40  __libc_start_main     Unknown  Unknown
+fp2k               0000000000405A55  Unknown               Unknown  Unknown
+         (s:same, a:another problem): 

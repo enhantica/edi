@@ -31,9 +31,28 @@ def screens(tmp_path_factory):
     return Observations(observe)
 
 
+# Separate module fixtures account for setup and isolate an unavailable host.
+@pytest.fixture(scope='module')
+def desktop_screen_capture(screens):
+    return screens['desktop']
+
+
+@pytest.fixture(scope='module')
+def browser_screen_capture(screens):
+    return screens['browser']
+
+
+@pytest.fixture(autouse=True)
+def prepare_screen_capture(request):
+    backend = request.node.callspec.params['backend']
+    request.getfixturevalue(backend + '_screen_capture')
+
+
 def shown(item):
     names = {measured_hash(path): path.name for path in files(FULL)}
-    template = columns_hash(template_measured(FULL / 'experiments/d20.edi'))
+    template_columns = template_measured(FULL / 'experiments/d20.edi')
+    template = columns_hash(template_columns)
+    pending_template = columns_hash(measured(files(FULL)[0])[: len(template_columns)])
     records = []
     last = None
     raw = {path.name: {x: y for x, y, _ in measured(path)} for path in files(FULL)}
@@ -41,16 +60,29 @@ def shown(item):
     initial_series = (initial.get('drawnMeasured'), initial.get('drawnCalculated'))
     for frame in item['frames']:
         identity = names.get(frame['modelMeasured'])
-        assert identity or frame['modelMeasured'] == template, (
+        assert (
+            identity
+            or frame['modelMeasured'] == template
+            or (
+                frame is initial
+                and not frame['running']
+                and frame['modelMeasured'] == pending_template
+                and frame['drawnPoints'] == [[x, y] for x, y, _ in template_columns]
+            )
+        ), (
             'Scan chart: every synchronized model must identify independently saved '
-            'measured columns'
+            'measured columns, including the exact initial lazy-read transition'
         )
         if identity:
             assert frame['drawnPoints'] and all(
                 raw[identity].get(round(x, 4)) == y for x, y in frame['drawnPoints']
             ), (
                 'Scan chart: the measured points actually synchronized to the screen '
-                'must belong to the independently identified file'
+                'must belong to the independently identified file; '
+                f'file={identity}, model={frame["modelMeasured"]}, '
+                f'pattern_generation={frame.get("patternGeneration")}, '
+                f'presented_generation={frame.get("presentedGeneration")}, '
+                f'first_points={frame["drawnPoints"][:3]}'
             )
         if (frame['drawnMeasured'], frame['drawnCalculated']) == initial_series:
             assert frame['modelMeasured'] == initial['modelMeasured'], (

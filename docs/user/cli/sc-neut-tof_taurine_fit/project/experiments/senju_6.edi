@@ -11,9 +11,9 @@ _scattering_source.neutron_scattering_length sears1992
 _calculator.type crysta
 
 _extinction.type larson-anisotropic
-_extinction.coefficient_11 0.07352
-_extinction.coefficient_22 0.01329
-_extinction.coefficient_33 0.007952
+_extinction.coefficient_11 0
+_extinction.coefficient_22 0
+_extinction.coefficient_33 0
 _extinction.coefficient_12 0
 _extinction.coefficient_13 0
 _extinction.coefficient_23 0
