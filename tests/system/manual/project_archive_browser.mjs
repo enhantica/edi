@@ -96,17 +96,27 @@ try {
       assert.equal(result.status,0,'The exported project is independently readable with Python zipfile');
       return JSON.parse(result.stdout);
     };
-    const exported = async () => {
-      const completed=page.waitForEvent('download'); await click(/^Export project/);
-      const path=join(output,capability+'-export.zip'); await (await completed).saveAs(path);
+    const saveAs = async (zip, copy, name) => {
+      await click(/^Save project as/);
+      await control(/^Save project as$/);
+      await click(zip ? /^Zip archive$/ : /^Folder$/, 'radio');
+      if (copy) await click(/^Save a copy/, 'checkbox');
+      const completed = zip ? page.waitForEvent('download') : null;
+      await click(/^OK$/, 'button');
+      if (!zip) return null;
+      const path = join(output, name);
+      await (await completed).saveAs(path);
       return inspect(path);
     };
+    const savedCopy = async () => saveAs(true, true, capability+'-copy.zip');
+    const chooser=page.waitForEvent('filechooser');
+    await click(/^Open project(?:…|\.\.\.)?$/);
+    await (await chooser).setFiles(fixture);
+    await control(/^Analysis$/,'tab');
     if (capability === 'folder') {
       await page.evaluate(() => window.__projectFolderReady.then(()=>true));
-      await click(/^Open an existing project/);
-      await control(/^Analysis$/,'tab');
       await rename('archive-folder-first');
-      await click(/^Save project$/);
+      await saveAs(false, false);
       const readFolder = () => page.evaluate(async () => {
         const result={};
         const walk=async (folder,prefix='')=>{for await(const [name,handle] of folder.entries()) {
@@ -123,7 +133,7 @@ try {
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
       await rename('archive-folder-second');
-      await click(/^Save project$/);
+      await click(/^Save current state of the project$/, 'button');
       await page.waitForFunction(async () => {
         const root=await window.__projectFolderReady;
         return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>text.includes('archive-folder-second'));
@@ -131,22 +141,15 @@ try {
       const second=await readFolder();
       assert.equal(await page.evaluate(()=>window.__projectFolderPickCount),picks,'Later Save overwrites the picked folder without another picker');
       assert.notEqual(second['project.edi'],first['project.edi'],'A later Save really overwrites the picked folder with the edited model');
-      const archive=await exported();
-      assert.deepEqual(archive,second,'The app export contains exactly the picked folder member names and bytes');
+      const archive=await savedCopy();
+      assert.deepEqual(archive,second,'Save a copy as ZIP contains exactly the picked folder member names and bytes');
       receipts.folder={first,second,picks,archive};
     } else {
-      const chooser=page.waitForEvent('filechooser'); await click(/^Open an existing project/);
-      await (await chooser).setFiles(fixture);
-      await control(/^Analysis$/,'tab');
-      const download=page.waitForEvent('download'); await click(/^Save project as/);
-      const saved=await download, path=join(output, 'fallback.zip'); await saved.saveAs(path);
-      const inspected=spawnSync('python',['-c','import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))',path],{encoding:'utf8'});
-      assert.equal(inspected.status,0,'The fallback download is a standard readable ZIP');
-      const members=JSON.parse(inspected.stdout);
+      const members=await saveAs(true, false, 'fallback.zip');
       assert.equal(members['reports/opaque.html'],initial['reports/opaque.html'],'Fallback ZIP Save retains exact report bytes');
       assert(members['project.edi'],'Fallback ZIP Save contains the project record');
-      const archive=await exported();
-      assert.deepEqual(archive,members,'Fallback Export contains exactly the previously saved project members and report bytes');
+      const archive=await savedCopy();
+      assert.deepEqual(archive,members,'Save a copy as ZIP retains exactly the previously saved project members and report bytes');
       receipts.fallback={members,archive};
     }
     await page.screenshot({path:join(output,capability+'.png')});
