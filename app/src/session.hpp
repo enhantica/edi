@@ -14,6 +14,7 @@
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "web_storage.hpp"
 
 namespace edi_app {
 
@@ -136,18 +137,25 @@ class Session : public QObject {
     // there as it stands and stays where it is: a copy. False, with `lastError` saying why, when it cannot be written.
     Q_INVOKABLE bool saveProjectAs(const QUrl& target, bool zip, bool copy);
     Q_INVOKABLE void clearError();
+    // Where Save project as starts, with the name filled in (owner, 2026-10-25): the project's own folder or .zip
+    // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
+    // the user's documents.
+    Q_INVOKABLE QUrl suggestedSaveTarget(bool zip) const;
 
     // The web app (edi ADR-0052 §9). Every project there has a place: the browser's own storage, or in Chrome and Edge
     // a folder or a .zip on the disk; Save writes into it, never a download.
     // Asks for a project "folder" or "zip" and opens it: from the disk where the browser can write it back, else as a
     // copy kept in the browser.
     Q_INVOKABLE void openWebProject(const QString& kind);
+    // The folder of the project.edi just picked, asked for after webFolderNeeded.
+    Q_INVOKABLE void openWebRecordFolder();
     // Reopens a stored place, or the unsaved state kept for it (`recovery`).
     Q_INVOKABLE void openStoredProject(const QString& key, bool recovery);
     // Save as onto the disk, where the browser can write it: a "folder" or a "zip" the user picks becomes the
     // project's place, or with `copy` only receives a copy.
     Q_INVOKABLE void saveWebProjectAs(const QString& kind, bool copy);
-    // Save as where the browser cannot write the disk: saves into the browser's storage and downloads a .zip.
+    // Save as where the browser cannot write the disk: a copy of the project, as saved, handed to the browser as a
+    // .zip; the project and the browser's storage are left as they are.
     Q_INVOKABLE void downloadWebProject();
     // The unsaved state kept for the open project is no longer wanted (its changes were discarded).
     Q_INVOKABLE void discardKeptChanges();
@@ -173,7 +181,12 @@ class Session : public QObject {
     void loadFailed(const QString& message);
     // The web app wrote the project into its place (`kind`: "browser", "folder" or "zip"), or downloaded it as `name`.
     void webSaved(const QString& kind);
-    void webDownloaded(const QString& name);
+    // `fromFile`: the project came from a file the user may want to replace.
+    void webDownloaded(const QString& name, bool fromFile);
+    // A project.edi was picked in the browser: its folder must be picked too, with a click of its own.
+    void webFolderNeeded(const QString& name);
+    // Save found that the browser keeps nothing for the app (a private window may not): nothing was saved.
+    void webStorageUnavailable();
     // A write to the project's place, or a download, failed: why.
     void webSaveFailed(const QString& message);
 
@@ -219,12 +232,20 @@ class Session : public QObject {
     WebPlace web_place_;
     // The open project's place is the browser's own storage until a Save as onto the disk.
     void setWebPlace(const WebPlace& place);
+    // The answer to a browser chooser that copied a project into `root` in memory: opens it there.
+    WebStorage::Answer webOpenAnswer(const QString& root);
     // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
     bool openWebCopy(const QString& path, const WebPlace& place);
     // Writes the saved project folder into its place; `announce` says so when it is written (webSaved).
     void writeWebPlace(bool announce = true);
     // The name a .zip of the project is offered under: the place's own name, or the project's.
     QString downloadName() const;
+    // Whether the project's place is the browser's own storage (not a folder or .zip on the disk).
+    bool webPlaceInBrowser() const;
+    // Saves the project into the memory folder it works in (one is made for a new project).
+    bool saveInMemory();
+    // The open project was uploaded from a file or folder on the disk.
+    bool web_from_file_ = false;
     // Keeps the open project's unsaved state in the browser, a few seconds after its last edit.
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
