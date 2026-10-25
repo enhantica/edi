@@ -832,6 +832,9 @@ EaComponents.ApplicationWindow {
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
     Component.onCompleted: {
+        // What Qt draws with, read in the first frame: reported at startup, shown in Develop, and it chooses how the
+        // Stacked view draws (edi ADR-0041).
+        RenderingInfo.observe(window);
         restoreGeometry();
         Qt.callLater(() => {
             Preferences.apply();

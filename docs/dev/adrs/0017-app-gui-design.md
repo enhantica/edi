@@ -111,13 +111,14 @@ The decisions it rests on, unchanged here:
   | `fit_parameter` | **Fit start values** (was *Fit start state*) | ✓ | `history` |
 
   The block lists keep theirs: `Structures (N)` (`layer-group`) and `Experiments (N)` (`microscope`).
-- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: every category. **The
-  exceptions are Get started** on Project → Main, which starts open, as the first thing a new user needs (the
-  owner, 2026-09-29), **and the block lists** (Structures, Experiments), open at the start (owner, 2026-10-05). Idea 10 (the top group of Basic and Extras open by
-  default) is **withdrawn**, and with it the block lists' reopening for each new project. The base's
-  auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot fold — the shared
-  block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's groups — are not
-  affected. The demo opens each group its capture shows with a click.
+- **The first group of every tab starts unfolded, every other folded** (the owner, 2026-10-25, replacing
+  "all foldable groups start folded" of 2026-09-29): on every page and every sidebar tab (Main, Extra, Settings and
+  the rest), the first group the tab shows is open while nothing is remembered for it, and a group the user has
+  opened or folded keeps that state, by one rule (`SideBarGroups.isOpen`) every foldable group asks. Get started on
+  Project → Main and the block lists (Structures, Experiments) stay open at the start (owner, 2026-09-29,
+  2026-10-05). The base's auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot
+  fold — the shared block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's
+  groups — are not affected. The demo opens each group its capture shows with a click.
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
   (`presentation_order` in `app/src/category_list_model.cpp`; presentation only — the Analysis table and the
   files keep the core's order): on Experiment → Basic **Background is shown directly above Instrument**
@@ -569,7 +570,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   platform's software renderer skips, so a look is checked on a capture from an OpenGL platform (the UI test's).
 - **Ranges and ticks.** Tick labels are round values. A fitted main y range is what is presented and a tenth of
   its span beyond each end (easydiffractionbeta's rule), with about five round ticks inside it; the x axis has about
-  five. A range the user chose keeps its bounds and takes round ticks inside them.
+  five. A range the user chose keeps its bounds and takes round ticks inside them. **While a parameter is adjusted**
+  (a slider, a spin box or a typed value; the owner, 2026-10-25), a fitted main range holds while the calculated
+  curve stays inside it and grows only when the curve leaves it, so moving a slider does not lay the axis, the grid
+  and every series out again on each step; another experiment, dataset, axis, scale or x range, a fit and a reset
+  fit the range again.
 - **The residual's range.** The residual pane is linear on every scale (ADR-0021 §5), its range centred on 0, with
   three ticks: 0 and the greatest round value inside the range, on either side. **On the linear scale it has the
   main pane's scale:** one intensity unit is as high in it as in the main pane, so its half range is half the main

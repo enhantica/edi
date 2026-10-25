@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <QQuickWindow>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -66,7 +67,21 @@ bool column_excluded(const ScanViewModel::Pattern& pattern, bool included_only, 
 
 }  // namespace
 
-ScanLayer::ScanLayer(QQuickItem* parent) : QQuickPaintedItem(parent) { setAntialiasing(true); }
+ScanLayer::ScanLayer(QQuickItem* parent)
+    : QQuickPaintedItem(parent), lines_(new ScanLines(this)), top_(new ScanLines(lines_)) {
+    setAntialiasing(true);
+    lines_->setVisible(false);
+    top_->setVisible(false);
+    // Rendered on the render thread, while the GUI thread waits: the count is atomic and its signal goes to the GUI
+    // thread.
+    connect(
+        lines_, &ScanLines::rendered, this,
+        [this] {
+            ++redraws_;
+            QMetaObject::invokeMethod(this, &ScanLayer::redrawCountChanged, Qt::QueuedConnection);
+        },
+        Qt::DirectConnection);
+}
 
 void ScanLayer::setModel(ScanViewModel* model) {
     if (model == model_) {
@@ -79,36 +94,103 @@ void ScanLayer::setModel(ScanViewModel* model) {
     if (model_) {
         connect(model_, &ScanViewModel::revisionChanged, this, [this] {
             measure();
-            update();
+            place();
+            recolour();
+            redraw();
         });
     }
     measure();
+    place();
+    recolour();
     emit modelChanged();
-    update();
+    redraw();
 }
 
-void ScanLayer::setMode(const QString& mode) { assign(mode_, mode, &ScanLayer::modeChanged); }
+void ScanLayer::setMode(const QString& mode) {
+    assign(mode_, mode, &ScanLayer::modeChanged);
+    lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+    update();  // the painted image clears when the lines move to the GPU
+}
 void ScanLayer::setXMin(double value) { assign(x_min_, value, &ScanLayer::xMinChanged); }
 void ScanLayer::setXMax(double value) { assign(x_max_, value, &ScanLayer::xMaxChanged); }
 void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
 void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
-void ScanLayer::setColourScheme(const QString& scheme) { assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged); }
+void ScanLayer::setColourScheme(const QString& scheme) {
+    assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged);
+    recolour();
+}
 void ScanLayer::setColourMap(const QString& map) { assign(colour_map_, map, &ScanLayer::colourMapChanged); }
-void ScanLayer::setBackground(const QColor& colour) { assign(background_, colour, &ScanLayer::backgroundChanged); }
+void ScanLayer::setBackground(const QColor& colour) {
+    assign(background_, colour, &ScanLayer::backgroundChanged);
+    recolour();
+}
 void ScanLayer::setSmoothRows(bool smooth) { assign(smooth_rows_, smooth, &ScanLayer::smoothRowsChanged); }
 void ScanLayer::setReversed(bool reversed) { assign(reversed_, reversed, &ScanLayer::reversedChanged); }
 void ScanLayer::setStackedReversed(bool reversed) {
     assign(stacked_reversed_, reversed, &ScanLayer::stackedReversedChanged);
+    recolour();
 }
-void ScanLayer::setDark(bool dark) { assign(dark_, dark, &ScanLayer::darkChanged); }
-void ScanLayer::setCurrent(int dataset) { assign(current_, dataset, &ScanLayer::currentChanged); }
+void ScanLayer::setDark(bool dark) {
+    assign(dark_, dark, &ScanLayer::darkChanged);
+    recolour();
+}
 void ScanLayer::setIncludedOnly(bool on) { assign(included_only_, on, &ScanLayer::includedOnlyChanged); }
+
+// The shown dataset is drawn again only while it is highlighted.
+void ScanLayer::setCurrent(int dataset) {
+    if (dataset != current_) {
+        current_ = dataset;
+        emit currentChanged();
+        if (highlight_) {
+            redraw();
+        }
+    }
+}
+
+void ScanLayer::setHighlight(bool on) { assign(highlight_, on, &ScanLayer::highlightChanged); }
+void ScanLayer::setFaded(double opacity) { assign(faded_, std::clamp(opacity, 0.0, 1.0), &ScanLayer::fadedChanged); }
+
+int ScanLayer::highlighted() const {
+    return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
+}
+
+void ScanLayer::setGpu(bool on) {
+    assign(gpu_, on, &ScanLayer::gpuChanged);
+    lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+    update();  // the painted image clears when the lines move to the GPU
+}
+
+void ScanLayer::setOffset(double offset) {
+    assign(offset_, std::clamp(offset, 0.0, 1.0), &ScanLayer::offsetChanged);
+    place();
+}
+
+void ScanLayer::setHeightShare(double share) {
+    assign(height_share_, std::clamp(share, 0.0, 1.0), &ScanLayer::heightShareChanged);
+    place();
+}
 
 void ScanLayer::setScale(const QString& scale) {
     if (scale != scale_) {
         scale_ = scale;
         measure();
         emit scaleChanged();
+        redraw();
+    }
+}
+
+void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
+    QQuickPaintedItem::geometryChange(next, previous);
+    lines_->setSize(next.size());
+    top_->setSize(next.size());  // a child of the lines, over them at the same place
+    redraw();
+}
+
+void ScanLayer::redraw() {
+    polish();
+    if (!lines_on_gpu()) {
         update();
     }
 }
@@ -116,16 +198,23 @@ void ScanLayer::setScale(const QString& scale) {
 // Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread.
 void ScanLayer::measure() {
     double low = std::numeric_limits<double>::infinity(), high = -low;
+    lows_.clear();
+    highs_.clear();
     if (model_) {
         const edi::YScale scale = scale_of(scale_);
         for (const ScanViewModel::Pattern& pattern : model_->patterns()) {
+            double own_low = std::numeric_limits<double>::infinity(), own_high = -own_low;
             for (const double value : pattern.intensity) {
                 const double shown = edi::to_display(value, scale);
                 if (std::isfinite(shown)) {
-                    low = std::min(low, shown);
-                    high = std::max(high, shown);
+                    own_low = std::min(own_low, shown);
+                    own_high = std::max(own_high, shown);
                 }
             }
+            lows_.push_back(own_low);
+            highs_.push_back(own_high);
+            low = std::min(low, own_low);
+            high = std::max(high, own_high);
         }
     }
     if (!(high > low)) {
@@ -140,6 +229,229 @@ void ScanLayer::measure() {
         display_max_ = high;
         emit displayMaxChanged();
     }
+}
+
+// The stacked baselines (edi ADR-0041 §4): the datasets in the order of their rows, the i-th at i × H × offset, H the
+// chosen share of the plot or the Fit height, H (1 + (N - 1) offset) = 1, which fills the plot exactly.
+void ScanLayer::place() {
+    const std::vector<double> rows = model_ ? model_->rows() : std::vector<double>{};
+    std::vector<std::size_t> order;
+    for (std::size_t d = 0; d < rows.size(); ++d) {
+        if (std::isfinite(rows[d])) {
+            order.push_back(d);
+        }
+    }
+    std::stable_sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] < rows[b]; });
+    const double count = static_cast<double>(order.size());
+    pattern_height_ = height_share_ > 0.0 ? height_share_ : 1.0 / (1.0 + std::max(0.0, count - 1.0) * offset_);
+    baselines_.assign(rows.size(), std::numeric_limits<double>::quiet_NaN());
+    for (std::size_t i = 0; i < order.size(); ++i) {
+        baselines_[order[i]] = static_cast<double>(i) * pattern_height_ * offset_;
+    }
+    emit placementChanged();
+    redraw();
+}
+
+double ScanLayer::rowOf(int dataset) const {
+    if (mode_ == QLatin1String("map")) {
+        return model_ ? model_->rowOf(dataset) : std::numeric_limits<double>::quiet_NaN();
+    }
+    return dataset >= 0 && static_cast<std::size_t>(dataset) < baselines_.size()
+               ? baselines_[static_cast<std::size_t>(dataset)]
+               : std::numeric_limits<double>::quiet_NaN();
+}
+
+int ScanLayer::datasetNear(double x, double y) const {
+    if (!model_) {
+        return -1;
+    }
+    if (mode_ == QLatin1String("map")) {
+        return model_->datasetAt(y);
+    }
+    // The stacked line passing nearest to (x, y): what each dataset's line covers within a pixel either side of x, its
+    // points there and its segments crossing there, read where they cross.
+    const double column = (x - x_min_) / (x_max_ - x_min_) * width();
+    const double from = column - 1.0, to = column + 1.0;
+    int nearest = -1;
+    double best = std::numeric_limits<double>::infinity();
+    for (std::size_t d = 0; d < reductions_.size() && d < baselines_.size(); ++d) {
+        const Reduction& reduction = reductions_[d];
+        double low = std::numeric_limits<double>::infinity(), high = -low;
+        const auto take = [&low, &high](double v) {
+            low = std::min(low, v);
+            high = std::max(high, v);
+        };
+        for (std::size_t k = 0; k < reduction.x.size(); ++k) {
+            const double xa = reduction.x[k], va = reduction.v[k];
+            if (!std::isfinite(xa) || !std::isfinite(va)) {
+                continue;
+            }
+            if (xa >= from && xa <= to) {
+                take(va);
+            }
+            if (k + 1 == reduction.x.size()) {
+                continue;
+            }
+            const double xb = reduction.x[k + 1], vb = reduction.v[k + 1];
+            if (!std::isfinite(xb) || !std::isfinite(vb) || xb == xa) {
+                continue;
+            }
+            for (const double at : {from, to}) {
+                if (at > std::min(xa, xb) && at < std::max(xa, xb)) {
+                    take(va + (vb - va) * (at - xa) / (xb - xa));
+                }
+            }
+        }
+        if (!std::isfinite(low)) {
+            continue;
+        }
+        const double y_low = stackedY(d, low), y_high = stackedY(d, high);
+        const double distance = y < y_low ? y_low - y : y > y_high ? y - y_high : 0.0;
+        if (std::isfinite(distance) && distance < best) {
+            best = distance;
+            nearest = static_cast<int>(d);
+        }
+    }
+    return nearest;
+}
+
+double ScanLayer::stackedY(std::size_t dataset, double value) const {
+    if (dataset >= baselines_.size() || dataset >= lows_.size()) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    const double span = highs_[dataset] - lows_[dataset];
+    return baselines_[dataset] + (span > 0.0 ? (value - lows_[dataset]) / span : 0.0) * pattern_height_;
+}
+
+ScanLayer::ReductionKey ScanLayer::reductionKey() const {
+    return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width()))), included_only_,
+            static_cast<int>(scale_of(scale_))};
+}
+
+// Each dataset's reduction for the range shown at the plot's pixel columns, made again only for a dataset whose points
+// changed, or for every dataset when what they all depend on changed.
+void ScanLayer::reduce() {
+    if (!model_) {
+        reductions_.clear();
+        return;
+    }
+    const std::vector<ScanViewModel::Pattern>& patterns = model_->patterns();
+    const ReductionKey key = reductionKey();
+    if (!(key == reduced_for_) || reduced_mode_ != mode_) {
+        reductions_.clear();
+        reduced_for_ = key;
+        reduced_mode_ = mode_;
+    }
+    reductions_.resize(patterns.size());
+    const edi::YScale scale = scale_of(scale_);
+    const auto columns = static_cast<std::size_t>(key.columns);
+    const double column_width = (x_max_ - x_min_) / static_cast<double>(columns);
+    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    int built = 0;
+    for (std::size_t d = 0; d < patterns.size(); ++d) {
+        const ScanViewModel::Pattern& pattern = patterns[d];
+        Reduction& reduction = reductions_[d];
+        if (reduction.generation == pattern.generation && reduction.generation != 0) {
+            continue;
+        }
+        const bool had = !reduction.x.empty() || !reduction.v.empty();
+        reduction = Reduction{pattern.generation, {}, {}};
+        if (pattern.x.empty() || !(x_max_ > x_min_)) {
+            reduction_changes_ += had ? 1 : 0;
+            continue;
+        }
+        ++built;
+        const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+        if (mode_ == QLatin1String("map")) {
+            const std::vector<float> values = edi::scan_pixel_values(drawn.x, drawn.intensity, x_min_, x_max_, columns);
+            reduction.v.resize(values.size());
+            for (std::size_t c = 0; c < values.size(); ++c) {
+                const double centre = x_min_ + (static_cast<double>(c) + 0.5) * column_width;
+                reduction.v[c] = column_excluded(pattern, included_only_, centre, column_width)
+                                     ? kNaN
+                                     : static_cast<float>(edi::to_display(values[c], scale));
+            }
+            continue;
+        }
+        // Each column a vertical stroke from its lowest to its highest value, joined column to column, so a narrow
+        // peak stays at its height whatever the width; a column reaching into an excluded region is a break, as the
+        // map's pixels are.
+        const edi::ScanTrace trace = edi::scan_trace(drawn.x, drawn.intensity, x_min_, x_max_, columns);
+        reduction.x.reserve(2 * trace.x.size());
+        reduction.v.reserve(2 * trace.x.size());
+        const auto add = [&reduction](double x, double v) {
+            reduction.x.push_back(static_cast<float>(x));
+            reduction.v.push_back(static_cast<float>(v));
+        };
+        for (std::size_t k = 0; k < trace.x.size(); ++k) {
+            const double low = edi::to_display(trace.low[k], scale), high = edi::to_display(trace.high[k], scale);
+            const double x = (trace.x[k] - x_min_) / (x_max_ - x_min_) * width();
+            if (!std::isfinite(trace.x[k]) || column_excluded(pattern, included_only_, trace.x[k], column_width) ||
+                !std::isfinite(low) || !std::isfinite(high)) {
+                add(kNaN, kNaN);
+                continue;
+            }
+            add(x, low);
+            if (high != low) {
+                add(x, high);
+            }
+        }
+    }
+    if (built > 0) {
+        trace_builds_ += built;
+        reduction_changes_ += built;
+        emit traceBuildCountChanged();
+    }
+}
+
+void ScanLayer::recolour() {
+    const int count = model_ ? model_->count() : 0;
+    const QString key = QStringLiteral("%1|%2|%3|%4|%5")
+                            .arg(colour_scheme_, background_.name())
+                            .arg(dark_)
+                            .arg(stacked_reversed_)
+                            .arg(count);
+    if (key == coloured_for_) {
+        return;
+    }
+    coloured_for_ = key;
+    colours_.assign(static_cast<std::size_t>(count), QColor());
+    // A scheme's colours (ADR-0038), or a colour map's, a dataset at its place along the scan between a tenth and nine
+    // tenths of the map, whose ends can be as dark or as light as a background.
+    const std::string choice = colour_scheme_.toStdString();
+    const std::vector<std::string>& maps = edi::scan_colour_map_names();
+    const bool map = std::find(maps.begin(), maps.end(), choice) != maps.end();
+    const std::vector<edi::ScanMapColour> table =
+        map ? edi::scan_colour_table(choice, background_.name().toStdString(), dark_) : std::vector<edi::ScanMapColour>{};
+    const auto size = static_cast<std::size_t>(count);
+    for (std::size_t dataset = 0; dataset < size; ++dataset) {
+        // Reversed, the last dataset takes the first colour.
+        const std::size_t place = stacked_reversed_ ? size - 1 - dataset : dataset;
+        if (!map) {
+            colours_[dataset] = QColor(QString::fromStdString(
+                edi::pattern_colour(edi::colour_scheme_or_default(choice), place, size, dark_)));
+            continue;
+        }
+        const double at = size > 1 ? static_cast<double>(place) / static_cast<double>(size - 1) : 1.0;
+        const edi::ScanMapColour c = edi::scan_table_colour(table, 0.1 + 0.8 * at);
+        colours_[dataset] = QColor(c.r, c.g, c.b);
+    }
+    ++colours_revision_;
+    emit coloursRevisionChanged();
+    redraw();
+}
+
+QColor ScanLayer::colourOf(int dataset) const {
+    if (dataset < 0 || static_cast<std::size_t>(dataset) >= colours_.size()) {
+        return {};
+    }
+    return colours_[static_cast<std::size_t>(dataset)];
+}
+
+QColor ScanLayer::mapColour(double t) const {
+    const edi::ScanMapColour colour = edi::scan_table_colour(
+        edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_), t);
+    return QColor(colour.r, colour.g, colour.b, colour.a);
 }
 
 double ScanLayer::peakOf(int dataset) const {
@@ -178,97 +490,191 @@ double ScanLayer::peakOf(int dataset) const {
             }
         }
     }
-    const double span = display_max_ - display_min_;
-    if (!std::isfinite(high) || !(span > 0.0)) {
+    if (!std::isfinite(high)) {
         return kNaN;
     }
-    return model_->rows()[static_cast<std::size_t>(dataset)] + (high - display_min_) / span * model_->stackHeight();
+    return stackedY(static_cast<std::size_t>(dataset), high);
 }
 
-QColor ScanLayer::colourOf(int dataset) const {
-    // A scheme's colours (ADR-0038), or a colour map's, a dataset at its place along the scan between a tenth and nine
-    // tenths of the map, whose ends can be as dark or as light as a background.
-    const std::size_t count = model_ ? model_->patterns().size() : 0;
-    if (dataset < 0 || static_cast<std::size_t>(dataset) >= count) {
-        return {};
-    }
-    const std::string choice = colour_scheme_.toStdString();
-    const std::vector<std::string>& maps = edi::scan_colour_map_names();
-    // Reversed, the last dataset takes the first colour.
-    const std::size_t place_index = stacked_reversed_ ? count - 1 - static_cast<std::size_t>(dataset) : static_cast<std::size_t>(dataset);
-    if (std::find(maps.begin(), maps.end(), choice) == maps.end()) {
-        return QColor(QString::fromStdString(
-            edi::pattern_colour(edi::colour_scheme_or_default(choice), place_index, count, dark_)));
-    }
-    const double place = count > 1 ? static_cast<double>(place_index) / static_cast<double>(count - 1) : 1.0;
-    const edi::ScanMapColour c = edi::scan_table_colour(
-        edi::scan_colour_table(choice, background_.name().toStdString(), dark_), 0.1 + 0.8 * place);
-    return QColor(c.r, c.g, c.b);
-}
+namespace {
 
-QColor ScanLayer::mapColour(double t) const {
-    const edi::ScanMapColour colour = edi::scan_table_colour(
-        edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_), t);
-    return QColor(colour.r, colour.g, colour.b, colour.a);
-}
-
-void ScanLayer::paint(QPainter* painter) {
-    if (!model_ || !(x_max_ > x_min_) || !(y_max_ > y_min_) || width() <= 0.0 || height() <= 0.0) {
-        return;
-    }
-    const std::vector<ScanViewModel::Pattern>& patterns = model_->patterns();
-    const std::vector<double>& rows = model_->rows();
-    const std::vector<edi::ScanRowSpan>& spans = model_->spans();
-    const edi::YScale scale = scale_of(scale_);
-    const double span = display_max_ - display_min_;
-    const auto px = [this](double x) { return (x - x_min_) / (x_max_ - x_min_) * width(); };
-    const auto py = [this](double y) { return (y_max_ - y) / (y_max_ - y_min_) * height(); };
-    const std::size_t count = std::min({patterns.size(), rows.size(), spans.size()});
-    // The plot's own pixel columns: what each dataset is reduced to for the range shown.
-    const int pixel_columns = std::max(1, static_cast<int>(std::ceil(width())));
-    const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
-
-    // The excluded ranges (edi ADR-0021 §4), each over its dataset's row, on whole pixels so that two rows' bands meet
-    // without a line between them; a scan's datasets share the template's ranges, so its bands run the plot's height.
-    const auto excluded = [&](const QColor& colour) {
-        const auto band = [&](double a, double b, int top, int bottom) {
-            const int left = std::clamp(static_cast<int>(std::lround(px(std::min(a, b)))), 0, pixel_columns);
-            const int right = std::clamp(static_cast<int>(std::lround(px(std::max(a, b)))), 0, pixel_columns);
-            if (right > left && bottom > top) {
-                painter->fillRect(QRect(left, top, right - left, bottom - top), colour);
-            }
-        };
-        if (!model_->joint()) {
-            for (std::size_t d = 0; d < count; ++d) {
-                if (!patterns[d].x.empty()) {
-                    for (const auto& [a, b] : patterns[d].excluded_shown) {
-                        band(a, b, 0, pixel_rows);
-                    }
-                    return;
-                }
-            }
-            return;
+// The order the stacked lines are drawn in: from the top row down, so a lower pattern is drawn over the ones it rises
+// into. Rows not placed yet are left out.
+std::vector<std::size_t> top_down(const std::vector<double>& rows, std::size_t count) {
+    std::vector<std::size_t> order;
+    for (std::size_t d = 0; d < count && d < rows.size(); ++d) {
+        if (std::isfinite(rows[d])) {
+            order.push_back(d);
         }
-        for (std::size_t d = 0; d < count; ++d) {
-            const int top = std::clamp(static_cast<int>(std::lround(py(spans[d].high))), 0, pixel_rows);
-            const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[d].low))), 0, pixel_rows);
-            for (const auto& [a, b] : patterns[d].excluded_shown) {
-                band(a, b, top, bottom);
-            }
-        }
-    };
+    }
+    std::sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] > rows[b]; });
+    return order;
+}
 
-    // The pattern chart's tint of an excluded region (edi::pattern_style_table's `excluded`).
+// As wide as the pattern chart's measured line, 2 px (the owner, 2026-10-22), narrowing toward 1 px where
+// neighbouring rows are closer than six pixels, so the lines of a dense scan never merge.
+double line_width(const std::vector<double>& rows, const std::vector<std::size_t>& order, double y_span, double height) {
+    double step_px = std::numeric_limits<double>::infinity();
+    for (std::size_t k = 1; k < order.size(); ++k) {
+        const double gap = std::abs(rows[order[k - 1]] - rows[order[k]]) / y_span * height;
+        if (gap > 0.0) {
+            step_px = std::min(step_px, gap);
+        }
+    }
+    return std::clamp(step_px / 3.0, 1.0, 2.0);
+}
+
+// The pattern chart's tint of an excluded region (edi::pattern_style_table's `excluded`).
+QColor excluded_tint(bool dark) {
     QColor tint;
     for (const edi::SeriesStyle& style : edi::pattern_style_table()) {
         if (style.key == "excluded") {
-            tint = QColor(QString::fromStdString(dark_ ? style.dark : style.light));
+            tint = QColor(QString::fromStdString(dark ? style.dark : style.light));
             tint.setAlphaF(static_cast<float>(style.opacity));
         }
     }
+    return tint;
+}
+
+// The excluded ranges (edi ADR-0021 §4), each over its dataset's row, on whole pixels so that two rows' bands meet
+// without a line between them; a scan's datasets share the template's ranges, so its bands run the plot's height.
+std::vector<QRect> excluded_bands(const ScanViewModel& model, double x_min, double x_max, double y_min, double y_max,
+                                  int columns, int pixel_rows) {
+    const std::vector<ScanViewModel::Pattern>& patterns = model.patterns();
+    const std::vector<edi::ScanRowSpan>& spans = model.spans();
+    const std::size_t count = std::min({patterns.size(), model.rows().size(), spans.size()});
+    const auto px = [&](double x) { return (x - x_min) / (x_max - x_min) * columns; };
+    const auto py = [&](double y) { return (y_max - y) / (y_max - y_min) * pixel_rows; };
+    std::vector<QRect> bands;
+    const auto band = [&](double a, double b, int top, int bottom) {
+        const int left = std::clamp(static_cast<int>(std::lround(px(std::min(a, b)))), 0, columns);
+        const int right = std::clamp(static_cast<int>(std::lround(px(std::max(a, b)))), 0, columns);
+        if (right > left && bottom > top) {
+            bands.emplace_back(left, top, right - left, bottom - top);
+        }
+    };
+    if (!model.joint()) {
+        for (std::size_t d = 0; d < count; ++d) {
+            if (!patterns[d].x.empty()) {
+                for (const auto& [a, b] : patterns[d].excluded_shown) {
+                    band(a, b, 0, pixel_rows);
+                }
+                break;
+            }
+        }
+        return bands;
+    }
+    for (std::size_t d = 0; d < count; ++d) {
+        const int top = std::clamp(static_cast<int>(std::lround(py(spans[d].high))), 0, pixel_rows);
+        const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[d].low))), 0, pixel_rows);
+        for (const auto& [a, b] : patterns[d].excluded_shown) {
+            band(a, b, top, bottom);
+        }
+    }
+    return bands;
+}
+
+}  // namespace
+
+void ScanLayer::updatePolish() {
+    reduce();
+    lines_->setObjectName(objectName() + QStringLiteral(".gpuLines"));
+    lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+    if (lines_on_gpu() && model_) {
+        feedLines();
+    }
+}
+
+// The stacked lines to the GPU: the reductions again only when one changed or the drawing order did; every frame the
+// rows, the height and the colours, which the shader takes as they are, and the excluded bands.
+void ScanLayer::feedLines() {
+    const std::vector<std::size_t> order = top_down(baselines_, std::min(reductions_.size(), model_->patterns().size()));
+    if (reduction_changes_ != lines_fed_builds_ || order != lines_order_) {
+        std::vector<ScanLines::Trace> traces;
+        traces.reserve(order.size());
+        for (const std::size_t d : order) {
+            traces.push_back({reductions_[d].x, reductions_[d].v});
+        }
+        lines_->setTraces(std::move(traces));
+        lines_fed_builds_ = reduction_changes_;
+        lines_order_ = order;
+    }
+    // A value v reaches H (v - low) / (high - low) above its baseline: the shader's row and lift, folded.
+    // Highlighted, the shown dataset is drawn by the line over the others, which are faded.
+    const int top = highlighted();
+    const auto style_of = [this, top](std::size_t d) {
+        const double span = highs_[d] - lows_[d];
+        const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
+        QColor colour = colourOf(static_cast<int>(d));
+        if (top >= 0) {
+            colour.setAlphaF(static_cast<float>(static_cast<int>(d) == top ? 0.0 : faded_));
+        }
+        return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
+    };
+    std::vector<ScanLines::Style> styles;
+    styles.reserve(order.size());
+    for (const std::size_t d : order) {
+        styles.push_back(style_of(d));
+    }
+    lines_->setStyles(std::move(styles));
+    const double line_px = y_max_ > y_min_ ? line_width(baselines_, order, y_max_ - y_min_, height()) : 1.0;
+    for (ScanLines* item : {lines_, top_}) {
+        item->setYMin(y_min_);
+        item->setYMax(y_max_);
+        item->setLineWidth(line_px);
+    }
+    top_->setVisible(top >= 0);
+    if (top >= 0) {
+        if (top != top_dataset_ || top_fed_builds_ != reduction_changes_) {
+            const Reduction& reduction = reductions_[static_cast<std::size_t>(top)];
+            top_->setTraces({{reduction.x, reduction.v}});
+            top_dataset_ = top;
+            top_fed_builds_ = reduction_changes_;
+        }
+        ScanLines::Style style = style_of(static_cast<std::size_t>(top));
+        style.colour.setAlphaF(1.0F);
+        top_->setStyles({style});
+    }
+    std::vector<QRectF> bands;
+    if (x_max_ > x_min_ && y_max_ > y_min_) {
+        const int columns = std::max(1, static_cast<int>(std::ceil(width())));
+        const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
+        for (const QRect& band : excluded_bands(*model_, x_min_, x_max_, y_min_, y_max_, columns, pixel_rows)) {
+            bands.emplace_back(band);
+        }
+    }
+    lines_->setBands(std::move(bands), excluded_tint(dark_));
+}
+
+QSGNode* ScanLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) {
+    QSGNode* node = QQuickPaintedItem::updatePaintNode(old, data);
+    if (!lines_on_gpu()) {
+        ++redraws_;
+        QMetaObject::invokeMethod(this, &ScanLayer::redrawCountChanged, Qt::QueuedConnection);
+    }
+    return node;
+}
+
+void ScanLayer::paint(QPainter* painter) {
+    if (!model_ || lines_on_gpu() || !(x_max_ > x_min_) || !(y_max_ > y_min_) || width() <= 0.0 || height() <= 0.0) {
+        return;
+    }
+    const std::vector<double>& rows = model_->rows();
+    const std::vector<edi::ScanRowSpan>& spans = model_->spans();
+    const double span = display_max_ - display_min_;
+    const auto py = [this](double y) { return (y_max_ - y) / (y_max_ - y_min_) * height(); };
+    const std::size_t count = std::min({reductions_.size(), rows.size(), spans.size()});
+    const int pixel_columns = std::max(1, static_cast<int>(std::ceil(width())));
+    const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
+    const auto excluded = [&](const QColor& colour) {
+        for (const QRect& band : excluded_bands(*model_, x_min_, x_max_, y_min_, y_max_, pixel_columns, pixel_rows)) {
+            painter->fillRect(band, colour);
+        }
+    };
+    const QColor tint = excluded_tint(dark_);
 
     if (mode_ == QLatin1String("map")) {
-        // The datasets read, in row order, each as its pixel columns' values on the y scale.
         // Every placed row, a dataset not read (or not readable) included: its band stays empty, and no neighbour
         // blends into it.
         std::vector<std::size_t> order;
@@ -281,19 +687,12 @@ void ScanLayer::paint(QPainter* painter) {
         if (order.empty()) {
             return;
         }
-        std::vector<std::vector<float>> values(order.size());
+        // The datasets in row order, each as its pixel columns' values on the y scale, empty when not read.
+        const std::vector<float> none(static_cast<std::size_t>(pixel_columns), std::numeric_limits<float>::quiet_NaN());
+        std::vector<const std::vector<float>*> values(order.size());
         for (std::size_t i = 0; i < order.size(); ++i) {
-            const ScanViewModel::Pattern& pattern = patterns[order[i]];
-            const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
-            values[i] = edi::scan_pixel_values(drawn.x, drawn.intensity, x_min_, x_max_,
-                                               static_cast<std::size_t>(pixel_columns));
-            const double width = (x_max_ - x_min_) / static_cast<double>(pixel_columns);
-            for (std::size_t c = 0; c < values[i].size(); ++c) {
-                const double centre = x_min_ + (static_cast<double>(c) + 0.5) * width;
-                values[i][c] = column_excluded(pattern, included_only_, centre, width)
-                                   ? std::numeric_limits<float>::quiet_NaN()
-                                   : static_cast<float>(edi::to_display(values[i][c], scale));
-            }
+            const std::vector<float>& own = reductions_[order[i]].v;
+            values[i] = own.size() == none.size() ? &own : &none;
         }
         std::vector<edi::ScanMapColour> table =
             edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_);
@@ -313,7 +712,7 @@ void ScanLayer::paint(QPainter* painter) {
         for (std::size_t i = 0; i < order.size(); ++i) {
             lows[i] = spans[order[i]].low;
         }
-        const auto height = [&](std::size_t i) { return spans[order[i]].high - spans[order[i]].low; };
+        const auto band_height = [&](std::size_t i) { return spans[order[i]].high - spans[order[i]].low; };
         for (int j = 0; j < pixel_rows; ++j) {
             const double y = y_max_ - (static_cast<double>(j) + 0.5) / static_cast<double>(pixel_rows) * (y_max_ - y_min_);
             if (y < low_edge || y > high_edge) {
@@ -326,20 +725,23 @@ void ScanLayer::paint(QPainter* painter) {
             // so the zone is chosen by the band y lies in, not by the rows around y: a wide band's zone reaches past a
             // narrow neighbour's row.
             std::size_t neighbour = band;
-            if (band > 0 && y < spans[order[band]].low + height(band) / 4.0) {
+            if (band > 0 && y < spans[order[band]].low + band_height(band) / 4.0) {
                 neighbour = band - 1;
-            } else if (band + 1 < order.size() && y > spans[order[band]].high - height(band) / 4.0) {
+            } else if (band + 1 < order.size() && y > spans[order[band]].high - band_height(band) / 4.0) {
                 neighbour = band + 1;
             }
             const std::size_t lower = std::min(band, neighbour), upper = std::max(band, neighbour);
-            const double below = height(lower) / 4.0, above = height(upper) / 4.0;
+            const double below = band_height(lower) / 4.0, above = band_height(upper) / 4.0;
             const double edge_y = spans[order[lower]].high;
             const double edge = lower == upper || !(below + above > 0.0)
                                     ? 0.0
                                     : std::clamp((y - (edge_y - below)) / (below + above), 0.0, 1.0);
-            const std::vector<float>& own = values[band];
-            const std::vector<float>& a = values[lower];
-            const std::vector<float>& b = values[upper];
+            const std::vector<float>& own = *values[band];
+            const std::vector<float>& a = *values[lower];
+            const std::vector<float>& b = *values[upper];
+            // Highlighted, every row's band but the shown dataset's is blended toward the background.
+            const bool faded = highlighted() >= 0 && order[band] != static_cast<std::size_t>(highlighted());
+            const double keep = faded ? faded_ : 1.0;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const auto at = static_cast<std::size_t>(i);
@@ -353,7 +755,10 @@ void ScanLayer::paint(QPainter* painter) {
                                          ? own[at]
                                          : va + (vb - va) * edge;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
-                line[i] = qRgba(colour.r, colour.g, colour.b, colour.a);
+                const auto mix = [keep](int c, int b) { return static_cast<int>(std::lround(b + (c - b) * keep)); };
+                line[i] = keep < 1.0 && colour.a > 0 ? qRgba(mix(colour.r, background_.red()), mix(colour.g, background_.green()),
+                                                             mix(colour.b, background_.blue()), colour.a)
+                                                       : qRgba(colour.r, colour.g, colour.b, colour.a);
             }
         }
         painter->drawImage(QRectF(0, 0, static_cast<double>(pixel_columns), static_cast<double>(pixel_rows)), image);
@@ -365,51 +770,41 @@ void ScanLayer::paint(QPainter* painter) {
         return;
     }
 
-    // Stacked: the excluded bands under the patterns, as on the pattern chart.
+    // Stacked, painted: the excluded bands under the patterns, as on the pattern chart; then each dataset's reduced
+    // trace, from the top row down.
     excluded(tint);
-    // Each dataset over the range shown at the plot's pixel columns: the measured points joined while they are no
-    // more than the columns, else each column a vertical stroke from its lowest to its highest value, joined column to
-    // column, so a narrow peak stays at its height whatever the width.
-    const double lift = model_->stackHeight();
-    // The patterns' colours, as their row labels take them (colourOf).
-    const auto colour_of = [this](std::size_t d) { return colourOf(static_cast<int>(d)); };
-    const auto draw = [&](std::size_t d, qreal width_px) {
-        const ScanViewModel::Pattern& pattern = patterns[d];
-        if (pattern.x.empty()) {
-            return;
+    const std::vector<std::size_t> order = top_down(baselines_, std::min(count, baselines_.size()));
+    const qreal width_px = line_width(baselines_, order, y_max_ - y_min_, height());
+    // Highlighted, the shown dataset is drawn last, over the others, which are faded.
+    const int top = highlighted();
+    std::vector<std::size_t> drawn = order;
+    if (top >= 0) {
+        std::erase(drawn, static_cast<std::size_t>(top));
+        if (std::isfinite(baselines_[static_cast<std::size_t>(top)])) {
+            drawn.push_back(static_cast<std::size_t>(top));
         }
-        const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
-        edi::ScanTrace trace = edi::scan_trace(drawn.x, drawn.intensity, x_min_, x_max_,
-                                               static_cast<std::size_t>(pixel_columns));
-        // A reduced trace's column that reaches into an excluded region is a break, as the map's pixels are.
-        const double width = (x_max_ - x_min_) / static_cast<double>(pixel_columns);
-        for (double& x : trace.x) {
-            if (std::isfinite(x) && column_excluded(pattern, included_only_, x, width)) {
-                x = std::numeric_limits<double>::quiet_NaN();
-            }
-        }
+    }
+    for (const std::size_t d : drawn) {
+        const Reduction& reduction = reductions_[d];
         QPainterPath path;
         bool drawing = false;
-        for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double low = edi::to_display(trace.low[k], scale), high = edi::to_display(trace.high[k], scale);
-            const double x = px(trace.x[k]);
-            if (!std::isfinite(low) || !std::isfinite(high) || !std::isfinite(x)) {
+        for (std::size_t k = 0; k < reduction.x.size(); ++k) {
+            const double x = reduction.x[k];
+            const double y = py(stackedY(d, reduction.v[k]));
+            if (!std::isfinite(x) || !std::isfinite(y)) {
                 drawing = false;
-                continue;
-            }
-            const double y_low = py(rows[d] + (low - display_min_) / span * lift);
-            const double y_high = py(rows[d] + (high - display_min_) / span * lift);
-            if (drawing) {
-                path.lineTo(x, y_low);
+            } else if (drawing) {
+                path.lineTo(x, y);
             } else {
-                path.moveTo(x, y_low);
+                path.moveTo(x, y);
                 drawing = true;
             }
-            if (y_high != y_low) {
-                path.lineTo(x, y_high);
-            }
         }
-        QPen pen(colour_of(d));
+        QColor colour = colourOf(static_cast<int>(d));
+        if (top >= 0 && static_cast<int>(d) != top) {
+            colour.setAlphaF(static_cast<float>(faded_));
+        }
+        QPen pen(colour);
         pen.setWidthF(width_px);
         pen.setCosmetic(true);
         // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
@@ -417,26 +812,6 @@ void ScanLayer::paint(QPainter* painter) {
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
         painter->drawPath(path);
-    };
-    // From the top row down, so a lower pattern is drawn over the ones it rises into.
-    std::vector<std::size_t> order(count);
-    for (std::size_t d = 0; d < count; ++d) {
-        order[d] = d;
-    }
-    std::sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] > rows[b]; });
-    // As wide as the pattern chart's measured line, 2 px (the owner, 2026-10-22), narrowing toward 1 px where
-    // neighbouring rows are closer than six pixels, so the lines of a dense scan never merge. The shown dataset is
-    // marked by the selected-pattern line, not by a wider curve.
-    double step_px = std::numeric_limits<double>::infinity();
-    for (std::size_t k = 1; k < order.size(); ++k) {
-        const double gap = std::abs(py(rows[order[k - 1]]) - py(rows[order[k]]));
-        if (gap > 0.0) {
-            step_px = std::min(step_px, gap);
-        }
-    }
-    const qreal width_px = std::clamp(step_px / 3.0, 1.0, 2.0);
-    for (const std::size_t d : order) {
-        draw(d, width_px);
     }
 }
 

@@ -383,6 +383,9 @@ void ScanViewModel::placeRows() {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }
     }
+    if (texts != row_texts_) {
+        ++row_texts_revision_;
+    }
     publish(row_texts_, texts, &ScanViewModel::rowTextsChanged);
     emit orderNameChanged();
     double low = 0.0, high = 1.0;
@@ -400,11 +403,6 @@ void ScanViewModel::placeRows() {
     }
     publish(row_lowest_, lowest, &ScanViewModel::rowLowestChanged);
     publish(row_highest_, highest, &ScanViewModel::rowHighestChanged);
-    // Four rows' height, times the chosen scale: how far up the stacked view draws a pattern's highest point above
-    // its row.
-    publish(stack_height_,
-            4.0 * stack_scale_ * (high - low) / std::max<double>(1.0, static_cast<double>(patterns_.size())),
-            &ScanViewModel::stackHeightChanged);
 }
 
 // The project's current d column against its own axis, finite pairs only, what a scan's d-spacing is read from, and the
@@ -462,17 +460,6 @@ void ScanViewModel::setIncludedOnly(bool on) {
     }
 }
 
-void ScanViewModel::setStackScale(int scale) {
-    const int bounded = std::clamp(scale, 1, 5);
-    if (bounded != stack_scale_) {
-        stack_scale_ = bounded;
-        emit stackScaleChanged();
-        placeRows();
-        ++revision_;
-        emit revisionChanged();
-    }
-}
-
 void ScanViewModel::setRowsByIndex(bool on) {
     if (on != rows_by_index_) {
         rows_by_index_ = on;
@@ -486,7 +473,8 @@ void ScanViewModel::setRowsByIndex(bool on) {
 // One dataset on the axis shown: its own x, or d read off a joint fit's experiment's own d column or a scan's template
 // conversion, linear between the conversion's rows; a point beyond the conversion has no d. Its excluded ranges follow,
 // their ends clamped to the conversion's.
-void ScanViewModel::placePattern(Pattern& pattern) const {
+void ScanViewModel::placePattern(Pattern& pattern) {
+    pattern.generation = ++pattern_generation_;
     pattern.excluded_shown.clear();
     // Experiments on different native axes have no x to share until d is given: nothing is placed.
     if (!d_shown_ && !native_shared_) {

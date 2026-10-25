@@ -251,10 +251,24 @@ bool FitJob::start(const Project* scan_template) {
             std::optional<std::pair<std::string, FitFrame>> file_frame;
             FileFittedCallback on_file_fitted;
             if (self->hooks.file_frame && outcome->scan) {
-                on_file_fitted = [&self, &file_frame](const std::string& file,
-                                                      const std::function<PatternSource()>& pattern) {
-                    if (!self->following.load(std::memory_order_acquire) ||
-                        !self->frame_wanted.load(std::memory_order_acquire)) {
+                on_file_fitted = [&self, &file_frame, &token](const std::string& file,
+                                                              const std::function<PatternSource()>& pattern) {
+                    if (!self->following.load(std::memory_order_acquire)) {
+                        return;
+                    }
+#if !EDI_WORKER_OWNER_THREAD
+                    if (self->wait_patterns.load(std::memory_order_acquire)) {
+                        // Every pattern: this file was fitted while the last one was drawn; its pattern waits here
+                        // until the last one is shown, or a second (edi ADR-0029).
+                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                        std::unique_lock lock(self->shown_mutex);
+                        while (!self->frame_wanted.load(std::memory_order_acquire) && !token.cancelled() &&
+                               std::chrono::steady_clock::now() < deadline) {
+                            self->shown.wait_for(lock, std::chrono::milliseconds(20));
+                        }
+                    }
+#endif
+                    if (!self->frame_wanted.load(std::memory_order_acquire)) {
                         return;
                     }
                     try {
@@ -264,8 +278,7 @@ bool FitJob::start(const Project* scan_template) {
                     }
                 };
             }
-            const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame,
-                                                           &token](const ScanFileRecord& record) {
+            const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame](const ScanFileRecord& record) {
                 if (const auto observe = worker_file_observer.load(std::memory_order_acquire)) {
                     observe(record.file_name);
                 }
@@ -281,17 +294,6 @@ bool FitJob::start(const Project* scan_template) {
                             self->hooks.file_frame(file, frame);
                         }
                     });
-#if !EDI_WORKER_OWNER_THREAD
-                    if (self->wait_patterns.load(std::memory_order_acquire)) {
-                        // Every pattern: the next file starts once this one is shown, or after a second.
-                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-                        std::unique_lock lock(self->shown_mutex);
-                        while (!self->frame_wanted.load(std::memory_order_acquire) && !token.cancelled() &&
-                               std::chrono::steady_clock::now() < deadline) {
-                            self->shown.wait_for(lock, std::chrono::milliseconds(20));
-                        }
-                    }
-#endif
                 }
                 file_frame.reset();
             };

@@ -1,0 +1,170 @@
+machine	platform	renderer	method	workload	measure	n	median_ms	p95_ms	status
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-324	first	1	2567.48	2567.48	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-324	update	5	2283.03	2529.31	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-324	zoom	5	1795.84	2401.63	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-324	restyle	5	1405.98	1719.85	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-324	first	1	2419.29	2419.29	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-324	update	5	2115.38	2339.60	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-324	zoom	5	1836.09	2153.06	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-324	restyle	5	1742.53	1893.59	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-324	first	1	5887.90	5887.90	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-324	update	2	5908.55	5908.55	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-324	zoom	3	3334.78	5537.55	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-324	restyle	5	1343.05	1622.09	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-324	first	1	2212.61	2212.61	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-324	update	1	6545.38	6545.38	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-324	zoom	5	1958.00	2362.36	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-324	restyle	5	1765.96	2015.07	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-324	first	1	2529.39	2529.39	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-324	update	0	-1.00	-1.00	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-324	zoom	5	1950.52	2538.33	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-324	restyle	5	1749.22	1855.41	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-324	first	1	2453.57	2453.57	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-324	update	4	2724.19	2826.32	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-324	zoom	5	1877.44	2292.97	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-324	restyle	5	1670.82	2040.74	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-324	first	1	7604.84	7604.84	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-324	update	2	7235.83	7235.83	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-324	zoom	2	6765.35	6765.35	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-324	restyle	4	2926.14	3068.26	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-324	first	1	560.06	560.06	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-324	update	5	508.35	534.63	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-324	zoom	5	251.97	466.42	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-324	restyle	5	268.43	311.32	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-324	first	1	141.68	141.68	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-324	update	5	133.92	140.10	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-324	zoom	5	89.50	120.83	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-324	restyle	5	88.97	100.15	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-1000	first	0	-1.00	-1.00	skipped (update 2283 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-1000	first	0	-1.00	-1.00	skipped (update 2115 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-1000	first	0	-1.00	-1.00	skipped (update 5909 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-1000	first	0	-1.00	-1.00	skipped (update 6545 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-1000	first	1	17670.58	17670.58	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-1000	update	0	-1.00	-1.00	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-1000	zoom	1	11454.77	11454.77	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-1000	restyle	2	10019.38	10019.38	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-1000	first	0	-1.00	-1.00	skipped (update 2724 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-1000	first	0	-1.00	-1.00	skipped (update 7236 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-1000	first	1	1989.95	1989.95	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-1000	update	5	2101.34	2303.82	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-1000	zoom	5	1147.80	2366.90	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-1000	restyle	5	973.75	1015.50	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-1000	first	1	344.15	344.15	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-1000	update	5	337.71	370.94	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-1000	zoom	5	256.97	367.58	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-1000	restyle	5	204.45	217.85	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	stacked-3000	first	0	-1.00	-1.00	skipped (update 2283 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	stacked-3000	first	0	-1.00	-1.00	skipped (update 2115 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	stacked-3000	first	0	-1.00	-1.00	skipped (update 5909 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	stacked-3000	first	0	-1.00	-1.00	skipped (update 6545 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	stacked-3000	first	0	-1.00	-1.00	skipped (zoom 11455 ms at stacked-1000)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	stacked-3000	first	0	-1.00	-1.00	skipped (update 2724 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	stacked-3000	first	0	-1.00	-1.00	skipped (update 7236 ms at stacked-324)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	scanlines	stacked-3000	first	0	-1.00	-1.00	skipped (update 2101 ms at stacked-1000)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-3000	first	1	968.72	968.72	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-3000	update	5	986.29	1053.51	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-3000	zoom	5	704.10	1006.02	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	painter	stacked-3000	restyle	5	564.80	580.23	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-10000	first	1	232.60	232.60	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-10000	update	5	185.25	207.27	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-10000	zoom	5	129.29	222.78	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-10000	restyle	5	119.05	133.52	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-10000	first	1	225.08	225.08	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-10000	update	5	228.79	242.63	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-10000	zoom	5	121.44	246.03	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-10000	restyle	5	112.99	122.62	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-10000	first	1	214.40	214.40	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-10000	update	5	201.08	218.05	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-10000	zoom	5	119.32	229.28	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-10000	restyle	5	117.06	131.37	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-10000	first	1	205.67	205.67	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-10000	update	5	187.74	191.93	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-10000	zoom	5	102.64	186.18	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-10000	restyle	5	104.50	104.96	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-10000	first	1	212.70	212.70	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-10000	update	5	204.91	214.13	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-10000	zoom	5	107.64	188.92	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-10000	restyle	5	101.21	105.03	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-10000	first	1	193.56	193.56	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-10000	update	5	187.45	193.81	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-10000	zoom	5	98.69	170.09	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-10000	restyle	5	89.27	107.19	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-10000	first	1	208.21	208.21	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-10000	update	5	329.05	354.00	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-10000	zoom	5	144.08	293.59	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-10000	restyle	5	129.18	132.64	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-100000	first	1	2293.62	2293.62	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-100000	update	5	2030.30	2071.24	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-100000	zoom	5	1039.47	1916.26	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-100000	restyle	5	1031.07	1136.66	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-100000	first	1	2377.05	2377.05	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-100000	update	5	1742.20	1883.82	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-100000	zoom	5	928.30	1760.52	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-100000	restyle	5	838.23	923.43	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-100000	first	1	1926.29	1926.29	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-100000	update	5	2181.41	2636.10	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-100000	zoom	5	1034.41	1780.53	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-100000	restyle	5	853.54	1256.14	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-100000	first	1	2081.14	2081.14	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-100000	update	5	2042.69	2250.02	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-100000	zoom	5	1320.45	2003.43	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-100000	restyle	5	858.32	1262.95	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-100000	first	1	1909.00	1909.00	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-100000	update	5	1779.14	1897.71	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-100000	zoom	5	804.76	1553.94	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-100000	restyle	5	775.37	785.89	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-100000	first	1	1588.96	1588.96	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-100000	update	5	1584.12	1797.08	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-100000	zoom	5	799.70	1550.88	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-100000	restyle	5	794.34	852.48	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-100000	first	1	2083.58	2083.58	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-100000	update	5	1877.84	1920.81	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-100000	zoom	5	1076.17	1860.85	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-100000	restyle	5	931.76	1037.34	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	single-1000000	first	0	-1.00	-1.00	skipped (update 2030 ms at single-100000)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-1000000	first	1	9479.21	9479.21	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-1000000	update	2	6313.21	6313.21	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-1000000	zoom	2	5617.88	5617.88	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	single-1000000	restyle	2	6446.89	6446.89	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	single-1000000	first	0	-1.00	-1.00	skipped (update 2181 ms at single-100000)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	single-1000000	first	0	-1.00	-1.00	skipped (update 2043 ms at single-100000)
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-1000000	first	1	7140.89	7140.89	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-1000000	update	2	8707.29	8707.29	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-1000000	zoom	2	6209.42	6209.42	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	single-1000000	restyle	2	7403.55	7403.55	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-1000000	first	1	9846.48	9846.48	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-1000000	update	2	8192.75	8192.75	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-1000000	zoom	2	6781.71	6781.71	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	single-1000000	restyle	2	7465.75	7465.75	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-1000000	first	1	15061.44	15061.44	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-1000000	update	1	13002.90	13002.90	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-1000000	zoom	2	12732.48	12732.48	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	single-1000000	restyle	2	8755.20	8755.20	budget
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	pattern	first	1	433.92	433.92	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	pattern	update	5	466.37	535.45	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	pattern	zoom	5	249.63	466.77	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace	pattern	restyle	5	247.63	263.65	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	pattern	first	1	513.67	513.67	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	pattern	update	5	419.74	439.47	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	pattern	zoom	5	247.11	403.59	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-list	pattern	restyle	5	223.61	230.21	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	pattern	first	1	526.44	526.44	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	pattern	update	5	484.35	494.65	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	pattern	zoom	5	292.00	505.67	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-append-point	pattern	restyle	5	260.99	281.44	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	pattern	first	1	481.66	481.66	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	pattern	update	5	436.25	451.53	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	pattern	zoom	5	215.18	411.61	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	cpp-replace-index	pattern	restyle	5	205.62	224.61	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	pattern	first	1	447.17	447.17	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	pattern	update	5	449.28	587.53	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	pattern	zoom	5	205.96	370.53	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	model-mapper	pattern	restyle	5	203.43	219.38	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	pattern	first	1	344.24	344.24	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	pattern	update	5	352.92	385.13	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	pattern	zoom	5	214.89	391.14	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-replace	pattern	restyle	5	205.79	215.19	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	pattern	first	1	500.30	500.30	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	pattern	update	5	497.53	510.06	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	pattern	zoom	5	244.00	461.59	ok
+linux-vm	xcb	OpenGL llvmpipe (LLVM 23.1.1, 256 bits)	qml-append	pattern	restyle	5	164.17	175.36	ok

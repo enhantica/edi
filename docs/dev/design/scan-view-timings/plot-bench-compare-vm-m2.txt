@@ -1,0 +1,182 @@
+a: linux-vm (OpenGL llvmpipe (LLVM 23.1.1, 256 bits))
+b: owner-m2 (Metal)
+
+method             workload        measure  a ms                                       b ms    b / a
+cpp-replace        stacked-324     first    2567.5                                     absent
+cpp-replace        stacked-324     update   2283.0                                     absent
+cpp-replace        stacked-324     zoom     1795.8                                     absent
+cpp-replace        stacked-324     restyle  1406.0                                     absent
+cpp-append-list    stacked-324     first    2419.3                                     absent
+cpp-append-list    stacked-324     update   2115.4                                     absent
+cpp-append-list    stacked-324     zoom     1836.1                                     absent
+cpp-append-list    stacked-324     restyle  1742.5                                     absent
+cpp-append-point   stacked-324     first    5887.9                                     absent
+cpp-append-point   stacked-324     update   5908.6 (budget, n=2)                       absent
+cpp-append-point   stacked-324     zoom     3334.8 (budget, n=3)                       absent
+cpp-append-point   stacked-324     restyle  1343.0                                     absent
+cpp-replace-index  stacked-324     first    2212.6                                     absent
+cpp-replace-index  stacked-324     update   6545.4 (budget, n=1)                       absent
+cpp-replace-index  stacked-324     zoom     1958.0                                     absent
+cpp-replace-index  stacked-324     restyle  1766.0                                     absent
+model-mapper       stacked-324     first    2529.4                                     absent
+model-mapper       stacked-324     update   budget                                     absent
+model-mapper       stacked-324     zoom     1950.5                                     absent
+model-mapper       stacked-324     restyle  1749.2                                     absent
+qml-replace        stacked-324     first    2453.6                                     absent
+qml-replace        stacked-324     update   2724.2 (budget, n=4)                       absent
+qml-replace        stacked-324     zoom     1877.4                                     absent
+qml-replace        stacked-324     restyle  1670.8                                     absent
+qml-append         stacked-324     first    7604.8                                     absent
+qml-append         stacked-324     update   7235.8 (budget, n=2)                       absent
+qml-append         stacked-324     zoom     6765.4 (budget, n=2)                       absent
+qml-append         stacked-324     restyle  2926.1 (budget, n=4)                       absent
+scanlines          stacked-324     first    560.1                                      absent
+scanlines          stacked-324     update   508.4                                      absent
+scanlines          stacked-324     zoom     252.0                                      absent
+scanlines          stacked-324     restyle  268.4                                      absent
+painter            stacked-324     first    141.7                                      absent
+painter            stacked-324     update   133.9                                      absent
+painter            stacked-324     zoom     89.5                                       absent
+painter            stacked-324     restyle  89.0                                       absent
+cpp-replace        stacked-1000    first    skipped (update 2283 ms at stacked-324)    absent
+cpp-append-list    stacked-1000    first    skipped (update 2115 ms at stacked-324)    absent
+cpp-append-point   stacked-1000    first    skipped (update 5909 ms at stacked-324)    absent
+cpp-replace-index  stacked-1000    first    skipped (update 6545 ms at stacked-324)    absent
+model-mapper       stacked-1000    first    17670.6                                    absent
+model-mapper       stacked-1000    update   budget                                     absent
+model-mapper       stacked-1000    zoom     11454.8 (budget, n=1)                      absent
+model-mapper       stacked-1000    restyle  10019.4 (budget, n=2)                      absent
+qml-replace        stacked-1000    first    skipped (update 2724 ms at stacked-324)    absent
+qml-append         stacked-1000    first    skipped (update 7236 ms at stacked-324)    absent
+scanlines          stacked-1000    first    1990.0                                     absent
+scanlines          stacked-1000    update   2101.3                                     absent
+scanlines          stacked-1000    zoom     1147.8                                     absent
+scanlines          stacked-1000    restyle  973.8                                      absent
+painter            stacked-1000    first    344.1                                      absent
+painter            stacked-1000    update   337.7                                      absent
+painter            stacked-1000    zoom     257.0                                      absent
+painter            stacked-1000    restyle  204.4                                      absent
+cpp-replace        stacked-3000    first    skipped (update 2283 ms at stacked-324)    absent
+cpp-append-list    stacked-3000    first    skipped (update 2115 ms at stacked-324)    absent
+cpp-append-point   stacked-3000    first    skipped (update 5909 ms at stacked-324)    absent
+cpp-replace-index  stacked-3000    first    skipped (update 6545 ms at stacked-324)    absent
+model-mapper       stacked-3000    first    skipped (zoom 11455 ms at stacked-1000)    absent
+qml-replace        stacked-3000    first    skipped (update 2724 ms at stacked-324)    absent
+qml-append         stacked-3000    first    skipped (update 7236 ms at stacked-324)    absent
+scanlines          stacked-3000    first    skipped (update 2101 ms at stacked-1000)   absent
+painter            stacked-3000    first    968.7                                      absent
+painter            stacked-3000    update   986.3                                      absent
+painter            stacked-3000    zoom     704.1                                      absent
+painter            stacked-3000    restyle  564.8                                      absent
+cpp-replace        single-10000    first    232.6                                      49.3    0.21
+cpp-replace        single-10000    update   185.2                                      44.1    0.24
+cpp-replace        single-10000    zoom     129.3                                      20.5    0.16
+cpp-replace        single-10000    restyle  119.0                                      19.8    0.17
+cpp-append-list    single-10000    first    225.1                                      45.1    0.20
+cpp-append-list    single-10000    update   228.8                                      38.0    0.17
+cpp-append-list    single-10000    zoom     121.4                                      19.7    0.16
+cpp-append-list    single-10000    restyle  113.0                                      19.4    0.17
+cpp-append-point   single-10000    first    214.4                                      44.5    0.21
+cpp-append-point   single-10000    update   201.1                                      38.2    0.19
+cpp-append-point   single-10000    zoom     119.3                                      25.3    0.21
+cpp-append-point   single-10000    restyle  117.1                                      19.0    0.16
+cpp-replace-index  single-10000    first    205.7                                      42.5    0.21
+cpp-replace-index  single-10000    update   187.7                                      39.9    0.21
+cpp-replace-index  single-10000    zoom     102.6                                      26.3    0.26
+cpp-replace-index  single-10000    restyle  104.5                                      19.8    0.19
+model-mapper       single-10000    first    212.7                                      45.0    0.21
+model-mapper       single-10000    update   204.9                                      42.0    0.20
+model-mapper       single-10000    zoom     107.6                                      19.4    0.18
+model-mapper       single-10000    restyle  101.2                                      18.9    0.19
+qml-replace        single-10000    first    193.6                                      37.2    0.19
+qml-replace        single-10000    update   187.4                                      36.7    0.20
+qml-replace        single-10000    zoom     98.7                                       25.2    0.26
+qml-replace        single-10000    restyle  89.3                                       19.4    0.22
+qml-append         single-10000    first    208.2                                      49.7    0.24
+qml-append         single-10000    update   329.1                                      46.9    0.14
+qml-append         single-10000    zoom     144.1                                      25.1    0.17
+qml-append         single-10000    restyle  129.2                                      19.6    0.15
+cpp-replace        single-100000   first    2293.6                                     319.0   0.14
+cpp-replace        single-100000   update   2030.3                                     267.9   0.13
+cpp-replace        single-100000   zoom     1039.5                                     158.8   0.15
+cpp-replace        single-100000   restyle  1031.1                                     152.3   0.15
+cpp-append-list    single-100000   first    2377.1                                     303.0   0.13
+cpp-append-list    single-100000   update   1742.2                                     273.2   0.16
+cpp-append-list    single-100000   zoom     928.3                                      174.4   0.19
+cpp-append-list    single-100000   restyle  838.2                                      152.1   0.18
+cpp-append-point   single-100000   first    1926.3                                     316.1   0.16
+cpp-append-point   single-100000   update   2181.4                                     294.7   0.14
+cpp-append-point   single-100000   zoom     1034.4                                     180.7   0.17
+cpp-append-point   single-100000   restyle  853.5                                      152.8   0.18
+cpp-replace-index  single-100000   first    2081.1                                     304.7   0.15
+cpp-replace-index  single-100000   update   2042.7                                     294.2   0.14
+cpp-replace-index  single-100000   zoom     1320.5                                     168.2   0.13
+cpp-replace-index  single-100000   restyle  858.3                                      153.8   0.18
+model-mapper       single-100000   first    1909.0                                     305.9   0.16
+model-mapper       single-100000   update   1779.1                                     331.1   0.19
+model-mapper       single-100000   zoom     804.8                                      173.8   0.22
+model-mapper       single-100000   restyle  775.4                                      150.9   0.19
+qml-replace        single-100000   first    1589.0                                     293.0   0.18
+qml-replace        single-100000   update   1584.1                                     275.0   0.17
+qml-replace        single-100000   zoom     799.7                                      175.1   0.22
+qml-replace        single-100000   restyle  794.3                                      151.2   0.19
+qml-append         single-100000   first    2083.6                                     405.4   0.19
+qml-append         single-100000   update   1877.8                                     387.7   0.21
+qml-append         single-100000   zoom     1076.2                                     226.4   0.21
+qml-append         single-100000   restyle  931.8                                      153.4   0.16
+cpp-replace        single-1000000  first    skipped (update 2030 ms at single-100000)  1122.1
+cpp-append-list    single-1000000  first    9479.2                                     1137.4  0.12
+cpp-append-list    single-1000000  update   6313.2 (budget, n=2)                       1084.9  0.17
+cpp-append-list    single-1000000  zoom     5617.9 (budget, n=2)                       970.0   0.17
+cpp-append-list    single-1000000  restyle  6446.9 (budget, n=2)                       932.3   0.14
+cpp-append-point   single-1000000  first    skipped (update 2181 ms at single-100000)  1337.1
+cpp-replace-index  single-1000000  first    skipped (update 2043 ms at single-100000)  1069.7
+model-mapper       single-1000000  first    7140.9                                     1145.1  0.16
+model-mapper       single-1000000  update   8707.3 (budget, n=2)                       1695.9  0.19
+model-mapper       single-1000000  zoom     6209.4 (budget, n=2)                       1055.3  0.17
+model-mapper       single-1000000  restyle  7403.6 (budget, n=2)                       936.8   0.13
+qml-replace        single-1000000  first    9846.5                                     1087.9  0.11
+qml-replace        single-1000000  update   8192.8 (budget, n=2)                       1079.1  0.13
+qml-replace        single-1000000  zoom     6781.7 (budget, n=2)                       1001.7  0.15
+qml-replace        single-1000000  restyle  7465.8 (budget, n=2)                       927.9   0.12
+qml-append         single-1000000  first    15061.4                                    2426.7  0.16
+qml-append         single-1000000  update   13002.9 (budget, n=1)                      2057.6  0.16
+qml-append         single-1000000  zoom     12732.5 (budget, n=2)                      1701.9  0.13
+qml-append         single-1000000  restyle  8755.2 (budget, n=2)                       945.0   0.11
+cpp-replace        pattern         first    433.9                                      99.6    0.23
+cpp-replace        pattern         update   466.4                                      89.8    0.19
+cpp-replace        pattern         zoom     249.6                                      84.3    0.34
+cpp-replace        pattern         restyle  247.6                                      35.7    0.14
+cpp-append-list    pattern         first    513.7                                      90.4    0.18
+cpp-append-list    pattern         update   419.7                                      84.8    0.20
+cpp-append-list    pattern         zoom     247.1                                      39.3    0.16
+cpp-append-list    pattern         restyle  223.6                                      36.8    0.16
+cpp-append-point   pattern         first    526.4                                      98.5    0.19
+cpp-append-point   pattern         update   484.4                                      96.5    0.20
+cpp-append-point   pattern         zoom     292.0                                      41.2    0.14
+cpp-append-point   pattern         restyle  261.0                                      34.7    0.13
+cpp-replace-index  pattern         first    481.7                                      91.6    0.19
+cpp-replace-index  pattern         update   436.2                                      96.8    0.22
+cpp-replace-index  pattern         zoom     215.2                                      39.1    0.18
+cpp-replace-index  pattern         restyle  205.6                                      35.5    0.17
+model-mapper       pattern         first    447.2                                      89.7    0.20
+model-mapper       pattern         update   449.3                                      113.1   0.25
+model-mapper       pattern         zoom     206.0                                      38.0    0.18
+model-mapper       pattern         restyle  203.4                                      35.0    0.17
+qml-replace        pattern         first    344.2                                      89.3    0.26
+qml-replace        pattern         update   352.9                                      84.8    0.24
+qml-replace        pattern         zoom     214.9                                      35.9    0.17
+qml-replace        pattern         restyle  205.8                                      34.8    0.17
+qml-append         pattern         first    500.3                                      122.1   0.24
+qml-append         pattern         update   497.5                                      118.9   0.24
+qml-append         pattern         zoom     244.0                                      51.2    0.21
+qml-append         pattern         restyle  164.2                                      35.0    0.21
+cpp-replace        single-1000000  update   absent                                     1117.5
+cpp-replace        single-1000000  zoom     absent                                     957.6
+cpp-replace        single-1000000  restyle  absent                                     917.9
+cpp-append-point   single-1000000  update   absent                                     1345.6
+cpp-append-point   single-1000000  zoom     absent                                     1169.4
+cpp-append-point   single-1000000  restyle  absent                                     917.6
+cpp-replace-index  single-1000000  update   absent                                     1333.5
+cpp-replace-index  single-1000000  zoom     absent                                     1055.3
+cpp-replace-index  single-1000000  restyle  absent                                     923.5

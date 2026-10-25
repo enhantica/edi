@@ -16,7 +16,7 @@ EaElements.GroupBox {
     readonly property string openKey: "Settings:patternUpdates"
 
     objectName: "group.patternUpdates"
-    collapsed: !SideBarGroups.isOpen(openKey)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     title: qsTr("Pattern updates during a scan")

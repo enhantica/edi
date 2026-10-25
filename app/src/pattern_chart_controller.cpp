@@ -757,6 +757,25 @@ void PatternChartController::refresh() {
         y_step = round_step(y_low, y_high);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     }
+    // While a parameter is adjusted (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
+    // inside it and grows only when the curve leaves it; another experiment, dataset, axis, scale or x range, a fit,
+    // and a reset fit it again.
+    if (fitted && !animating_ && !report_) {
+        const edi::PatternSource* source = experiment_ ? &experiment_->patternSource(axis()) : nullptr;
+        HeldRange now{experiment_, source != nullptr ? source->meas.get() : nullptr, presented_x_, y_scale_, x_low,
+                      x_high, y_low, y_high};
+        if (held_range_ && experiment_ && experiment_->adjusting() && held_range_->experiment == now.experiment &&
+            held_range_->measured == now.measured && held_range_->axis == now.axis && held_range_->scale == now.scale &&
+            held_range_->x_min == now.x_min && held_range_->x_max == now.x_max) {
+            now.low = y_low = std::min(y_low, held_range_->low);
+            now.high = y_high = std::max(y_high, held_range_->high);
+            y_step = y_scale_ == Log10 ? std::max(1.0, std::ceil((y_high - y_low) / kTicks)) : round_step(y_low, y_high);
+            y_anchor = y_scale_ == Log10 ? y_low : std::ceil(y_low / y_step) * y_step;
+        }
+        held_range_ = now;
+    } else if (!fitted) {
+        held_range_.reset();
+    }
     const double x_step = round_step(x_low, x_high);
     publish(shown_x_min_, x_low, &PatternChartController::xMinChanged);
     publish(shown_x_max_, x_high, &PatternChartController::xMaxChanged);
@@ -963,7 +982,10 @@ void PatternChartController::panBy(double dx) {
     invalidate();
 }
 
-void PatternChartController::reset() { animateTo(std::nullopt, std::nullopt, std::nullopt, std::nullopt); }
+void PatternChartController::reset() {
+    held_range_.reset();
+    animateTo(std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+}
 
 QString PatternChartController::hoverAt(double x, double y, int pane, double height) const {
     const auto found = nearest(x, y, pane, height, std::numeric_limits<double>::infinity());
