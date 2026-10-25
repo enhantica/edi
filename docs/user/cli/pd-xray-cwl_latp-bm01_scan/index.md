@@ -1,14 +1,14 @@
 ---
 title: "Sequential fit: LATP, BM01"
 description: >-
-  Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at SNBL, one after another, with linked displacement parameters.
+  Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF, one after another, with linked displacement parameters.
 ---
 
 # Sequential fit: LATP, BM01
 
-Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at SNBL, one after another, with linked displacement parameters.
+Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF, one after another, with linked displacement parameters.
 
-The app lists it as **LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL**.
+The app lists it as **LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF**.
 
 ## Three ways to run it
 

@@ -56,4 +56,4 @@ lists each one with what it waits for.
 | tutorial | what it shows |
 | --- | --- |
 | [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
-| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan.ipynb) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL |
+| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan.ipynb) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF |

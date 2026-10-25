@@ -2,7 +2,7 @@
 # %% [markdown]
 # # Sequential fit: LATP, BM01
 #
-# Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at SNBL,
+# Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
 # one after another, with linked displacement parameters.
 #
 # The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`: the files the command line fits

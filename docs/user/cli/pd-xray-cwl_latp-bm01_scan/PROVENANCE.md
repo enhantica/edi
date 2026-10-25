@@ -1,13 +1,13 @@
 # pd-xray-cwl_latp-bm01_scan — provenance
 
-The owner's LATP project: 73 constant-wavelength synchrotron X-ray patterns (λ = 0.69687 Å) measured on BM01 at SNBL,
+The owner's LATP project: 73 constant-wavelength synchrotron X-ray patterns (λ = 0.69687 Å) measured on BM01 at ESRF,
 fitted in sequence with three phases, Li1.3Al0.3Ti1.7(PO4)3 (R-3c) and two AlPO4 phases (C222₁ and P6₃mc). The owner
 made it in edi's app and gave it to edi for its examples on 2026-10-22.
 
 ## Sources
 
 - **Data and model:** the 73 patterns (`experiments/bm01_scan/*.dat`) and the edi project fitted to them, measured on
-  BM01 at SNBL and provided by the project owner with the project; licence not recorded.
+  BM01 at ESRF and provided by the project owner with the project; licence not recorded.
 
 ## What changed from the owner's project
 
@@ -15,7 +15,7 @@ Naming, session state and the template dataset; every free flag, constraint, exc
 the owner left it, and every parameter value is one of his fitted values.
 
 - `project.edi`: the name, title and description follow the other examples (`pd_xray_cwl_latp_bm01_scan_73f`,
-  "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL"), with the instrument BM01, the facility SNBL and the
+  "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF"), with the instrument BM01, the facility ESRF and the
   example tags. The creation and modification dates and the uncertainty format are kept.
 - `analysis/analysis.edi`: the last fit's results (`_fit_result`, `_fit_result_bank`, `_fit_result_phase`), its start
   values (`_fit_parameter`) and its correlations are removed; the fitting mode, aliases, constraints and scan settings

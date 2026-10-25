@@ -66,6 +66,6 @@ differently and why.
 | example | app title | tutorial |
 | --- | --- | --- |
 | [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan/index.md) | Co₂SiO₄ [Pnma] · D20 @ ILL | [pd-neut-cwl_cosio-d20_scan](../tutorials/pd-neut-cwl_cosio-d20_scan.ipynb) |
-| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan/index.md) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL | [pd-xray-cwl_latp-bm01_scan](../tutorials/pd-xray-cwl_latp-bm01_scan.ipynb) |
+| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan/index.md) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF | [pd-xray-cwl_latp-bm01_scan](../tutorials/pd-xray-cwl_latp-bm01_scan.ipynb) |
 
 The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.
