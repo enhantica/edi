@@ -77,7 +77,11 @@ TestCase {
         const copyTop = copy.mapToItem(dialog.contentItem, 0, 0).y;
         verify(zipTop >= folderEnd && copyTop - zipEnd > zipTop - folderEnd, "Folder and Zip archive form a tighter group than the separated Save a copy choice");
         const content = Math.max(folder.implicitWidth, zip.implicitWidth, copy.implicitWidth);
-        verify(dialog.contentWidth <= Math.ceil(content), "The Save as content width fits its widest actual choice instead of a fixed message width");
+        const halfWidth = Math.round(AppSizes.messagesDialogContentWidth / 2);
+        const expectedWidth = Math.max(content, halfWidth);
+        verify(Math.abs(dialog.contentWidth - expectedWidth) <= 1, "Save as fits its widest choice with the recorded floor of about half the normal message width");
+        verify(dialog.leftPadding > 0 && dialog.rightPadding > 0, "The compact format dialog retains the app's usual side margins");
+        compare(dialog.width, dialog.contentWidth + dialog.leftPadding + dialog.rightPadding, "Dialog margins surround the compact content without clipping a choice");
         dialog.close();
     }
     function test_project_actions() {
@@ -337,7 +341,7 @@ TestCase {
         application();
         const input = routeInput(data.projectName, data.route);
         verify(SettingsProof.dropProject(app, input), "The real window accepts a URL drag and drop for folders, records and ZIPs");
-        verify(Session.hasProject && Session.lastError === "", "Dropping a project opens it through the actual application");
+        tryVerify(() => Session.hasProject && Session.lastError === "", 4000, "The accepted drop opens the actual project after its queued signal handler returns");
         const name = Session.project.name;
         const cell = Session.project.currentStructure.cell.lengthA.value;
         Session.closeProject();
@@ -367,13 +371,13 @@ TestCase {
         mouseClick(accept, accept.width / 2, accept.height / 2);
         let dialogs;
         tryVerify(() => {
-            dialogs = SettingsProof.projectFileDialogs(app, !zip);
+            dialogs = SettingsProof.projectFileDialogs(app, false);
             return dialogs.length === 1;
         }, 2000, "Confirming Save as opens exactly one system destination dialog");
         const facts = SettingsProof.projectDialogFacts(dialogs[0]);
-        verify(zip ? facts.systemFile : facts.systemFolder, "Save as uses the selected format's actual Qt system dialog: " + JSON.stringify(facts));
-        verify(zip ? /^Save$/i.test(facts.acceptLabel) : /^(Save|Choose)$/i.test(facts.acceptLabel), "Saving accepts a file with Save and a folder with Save or Choose");
-        verify(SettingsProof.chooseProjectLocation(dialogs[0], target, !zip), "The system dialog supplies the chosen persistent destination");
+        verify(facts.systemFile, "Both ZIP and new-folder destinations use the actual save FileDialog so the name can be entered: " + JSON.stringify(facts));
+        verify(/^Save$/i.test(facts.acceptLabel), "Both destination formats confirm the entered name with Save");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], target, false), "The system dialog supplies the chosen persistent destination");
         compare(Session.lastError, "", "The selected Save as operation completes without a refusal");
     }
     function canonicalProject(projectName) {
