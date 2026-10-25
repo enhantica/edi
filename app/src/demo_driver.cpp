@@ -758,15 +758,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"legendhide-2-shown", {"preference:chartHiddenRange=fit", "chart.legend.toggle"}});
         steps_.push_back({"legendhide-3-fit", {"chart.legend.toggle"}});
     }
-    // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU, to compare
-    // the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only lines-`), at any
-    // QT_SCALE_FACTOR with EDI_DEMO_ANY_RATIO set.
+    // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU and then by
+    // the painter, to compare the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only
+    // lines-`), at any QT_SCALE_FACTOR with EDI_DEMO_ANY_RATIO set.
     if (only.startsWith(QLatin1String("lines-"))) {
         steps_.push_back({"lines-1-pattern", {"resize:1280x960", "theme:light", "preference:scanRenderer=gpu",
                                               "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.analysis", basic,
                                               "mainArea.analysis.tab.fitting"}});
         steps_.push_back({"lines-2-stacked", {"preference:scanStackedSize=100", "mainArea.analysis.tab.stacked",
                                               "wait-scan:stacked"}});
+        // The same drawn by the painter, as a machine without a GPU draws it.
+        steps_.push_back({"lines-3-stacked-painter", {"preference:scanRenderer=software", "wait-scan:stacked"}});
     }
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
@@ -979,6 +981,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                   << "timed-frames:" + mode + ":data:10";
         }
         steps_.push_back({"perf-views-324f", views});
+        // A data change alone on the Stacked view, to profile it.
+        steps_.push_back({"perf-data-324f", {"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
+                                             "mainArea.analysis.tab.stacked", "wait-scan:stacked",
+                                             "timed-frames:stacked:data:10"}});
         // The same with the Stacked lines on the GPU, chosen as a user chooses it in Develop.
         views.insert(1, QStringLiteral("preference:scanRenderer=gpu"));
         steps_.push_back({"perf-gpu-views-324f", views});
