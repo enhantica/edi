@@ -533,7 +533,8 @@ Item {
         onCountChanged: Qt.callLater(chart.measureRowLabels)
         delegate: IconLine {
             required property int index
-            readonly property string rowText: chart.shown && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
+            // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
+            readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
             readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
             // read here, so the label follows the colour choice and the theme.
