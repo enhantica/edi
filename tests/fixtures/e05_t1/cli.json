@@ -40739,8 +40739,8 @@
       "classification": "CLI wiring regression pin, not an independent physics oracle"
     },
     {
-      "id": "sc-neut-cwl_pr2nio4-5c2_fit",
-      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "id": "sc-neut-cwl_pr2nio4-5c2",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project",
       "mode": "single",
       "minimizer": "crysta (ladder)",
       "inputs_sha256": {
@@ -41881,8 +41881,8 @@
       "classification": "CLI wiring regression pin, not an independent physics oracle"
     },
     {
-      "id": "sc-neut-cwl_tb2ti2o7-heidi_fit",
-      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "id": "sc-neut-cwl_tb2ti2o7-heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project",
       "mode": "single",
       "minimizer": "crysta (ladder)",
       "inputs_sha256": {
@@ -43234,8 +43234,8 @@
       "classification": "CLI wiring regression pin, not an independent physics oracle"
     },
     {
-      "id": "sc-neut-tof_taurine_fit",
-      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "id": "sc-neut-tof_taurine-senju",
+      "path": "docs/user/cli/sc-neut-tof_taurine-senju/project",
       "mode": "single",
       "minimizer": "crysta (ladder)",
       "inputs_sha256": {
@@ -43828,5 +43828,11 @@
       "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
       "classification": "CLI wiring regression pin, not an independent physics oracle"
     }
-  ]
+  ],
+  "catalogue_identity_aliases": {
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
+  },
+  "catalogue_identity_scope": "Identity/path aliases only. Numerical records and inputs_sha256 retain their original historical capture provenance; no fit or numerical reference was retaken."
 }

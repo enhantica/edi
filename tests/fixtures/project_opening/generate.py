@@ -11,7 +11,7 @@ FOLDER = Path(__file__).resolve().parent
 ROUTES = {'folder': 'folder', 'edi': 'project.edi', 'zip': 'zip', 'example': 'example'}
 
 
-def generate(source):
+def generate(source, measured_project='sc-neut-tof_taurine-senju'):
     raw = source.read_bytes()
     records = {route: {'cold': {}, 'warm': {}} for route in ROUTES.values()}
     for row in csv.reader(raw.decode().splitlines(), delimiter='\t'):
@@ -40,7 +40,8 @@ def generate(source):
         'current app performance must be measured separately.',
         'machine': 'visa-prod-2224',
         'display': 'Xwayland on headless Weston; Mesa llvmpipe; 1280x768',
-        'project': 'sc-neut-tof_taurine_fit',
+        'project': measured_project,
+        'current_project': 'sc-neut-tof_taurine-senju',
         'measurement_date': '2026-10-25',
         'source': 'https://github.com/enhantica/relay/blob/main/knowledge/analysis/e04-t23-opening-measurement.md',
         'raw_sha256': hashlib.sha256(raw).hexdigest(),
@@ -53,4 +54,6 @@ def generate(source):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('measurement', type=Path)
-    generate(parser.parse_args().measurement)
+    parser.add_argument('--measured-project', default='sc-neut-tof_taurine-senju')
+    args = parser.parse_args()
+    generate(args.measurement, args.measured_project)

@@ -20,12 +20,6 @@ TUTORIALS = ROOT / 'docs/user/tutorials'
 FIXTURE = ROOT / 'tests/fixtures/example_catalogue'
 SELECTION = json.loads((FIXTURE / 'catalogue-selection.json').read_text())['cases']
 SELECTED = [row['id'] for row in SELECTION]
-# The corrected October 25 decision admits exactly these pending catalogue cases.
-APP_ONLY = [
-    'sc-neut-cwl_tb2ti2o7-heidi_fit',
-    'sc-neut-cwl_pr2nio4-5c2_fit',
-    'sc-neut-tof_taurine_fit',
-]
 RETAINED = json.loads((FIXTURE / 'retained-projects.json').read_text())['projects']
 
 
@@ -39,13 +33,13 @@ def selected(root=ROOT):
 
 def app_cases(root=ROOT):
     declared = [row['id'] for row in registry(root) if 'app-only' in row]
-    assert declared == APP_ONLY, (
-        'The declared app-only list contains exactly the three decided single-crystal ids in order'
+    assert not declared, (
+        'Every user example now has its catalogue form; app-only entries are retired'
     )
     assert selected(root) == SELECTED, (
         'App-only entries must leave the independent catalogue membership and order intact'
     )
-    return SELECTED + declared
+    return SELECTED
 
 
 def page_cases(path):
@@ -54,7 +48,7 @@ def page_cases(path):
     for link in links:
         for part in link.split('/'):
             candidate = re.sub(r'\.(?:py|ipynb|md)$', '', part)
-            if candidate.startswith('pd-') and candidate not in cases:
+            if candidate.startswith(('pd-', 'sc-')) and candidate not in cases:
                 cases.append(candidate)
     return cases
 
@@ -83,8 +77,7 @@ def test_selected_cases_and_order_match_the_independent_owner_selection(surface)
         actual = page_cases((CLI if surface == 'cli-page' else TUTORIALS) / 'index.md')
     expected = app_cases() if surface == 'metadata' else SELECTED
     assert actual == expected, (
-        'Every catalogue retains owner order; the app also retains '
-        'exactly its declared app-only list'
+        'Every catalogue and the app retain the same owner-selected cases in order'
     )
 
 

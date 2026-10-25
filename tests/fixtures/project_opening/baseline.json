@@ -1,5 +1,6 @@
 {
   "claim": "Measured baseline and targets; current app performance must be measured separately.",
+  "current_project": "sc-neut-tof_taurine-senju",
   "display": "Xwayland on headless Weston; Mesa llvmpipe; 1280x768",
   "machine": "visa-prod-2224",
   "measurement_date": "2026-10-25",
