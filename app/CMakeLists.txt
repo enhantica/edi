@@ -72,7 +72,7 @@ qt_add_qml_module(edi_app_module
         src/scan_view_model.hpp src/scan_view_model.cpp
         src/scan_layer.hpp src/scan_layer.cpp
         src/scan_lines.hpp src/scan_lines.cpp
-        src/graphics_info.hpp src/graphics_info.cpp
+        src/rendering_info.hpp src/rendering_info.cpp
         src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
@@ -118,7 +118,6 @@ qt_add_qml_module(edi_app_module
         qml/Components/SingleCrystalTable.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
-        qml/Components/SelectedPatternBox.qml
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
@@ -130,6 +129,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/TextCell.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
+        qml/Components/ToolbarLines.qml
         qml/Components/ValueField.qml
         qml/Components/WarningToolTip.qml
         qml/Components/WarningsDialog.qml

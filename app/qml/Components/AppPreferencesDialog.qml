@@ -421,7 +421,7 @@ AppDialog {
                 width: dialog.controlWidth
                 topPadding: dialog.lineOffset
                 wrapMode: Text.Wrap
-                text: !GraphicsInfo.detected ? qsTr("Not detected yet") : (GraphicsInfo.renderer !== "" ? GraphicsInfo.api + ", " + GraphicsInfo.renderer : GraphicsInfo.api) + " · " + (GraphicsInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
+                text: !RenderingInfo.detected ? qsTr("Not detected yet") : (RenderingInfo.renderer !== "" ? RenderingInfo.api + ", " + RenderingInfo.renderer : RenderingInfo.api) + " · " + (RenderingInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
             }
 
             // How the Stacked view draws its lines: on the GPU, or painted, which is faster without one; Automatic takes

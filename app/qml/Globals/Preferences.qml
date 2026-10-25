@@ -32,7 +32,7 @@ QtObject {
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
-    // one and painted without (GraphicsInfo), "gpu" or "software" whatever was detected.
+    // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
     property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
@@ -75,7 +75,8 @@ QtObject {
         preferences.scanMapColours = "ramp:ediNatural";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
-        preferences.scanStackedHeight = 2;
+        preferences.scanStackedOffset = 10;
+        preferences.scanStackedSize = 0;
         preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
@@ -137,8 +138,11 @@ QtObject {
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
     property bool scanMapReversed: false
-    // How high a Stacked pattern rises, in multiples of four rows, 1 to 5 (the owner, 2026-10-22).
-    property int scanStackedHeight: 2
+    // The Stacked patterns' placing (edi ADR-0041 §4; the owner, 2026-10-24): each baseline's offset above the one
+    // below it, in percent of a pattern's own height (0 to 100 by 10), and each pattern's height, in percent of the
+    // plot's (10 to 100 by 10), 0 for Fit, which fills the plot with the whole stack.
+    property int scanStackedOffset: 10
+    property int scanStackedSize: 0
     // The Stacked colours reversed, last dataset first (the owner, 2026-10-22).
     property bool scanStackedReversed: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
@@ -183,7 +187,8 @@ QtObject {
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
-        property alias stackedHeight: preferences.scanStackedHeight
+        property alias stackedOffset: preferences.scanStackedOffset
+        property alias stackedSize: preferences.scanStackedSize
         property alias stackedReversed: preferences.scanStackedReversed
         property alias renderer: preferences.scanRenderer
     }
