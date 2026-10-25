@@ -122,7 +122,14 @@ Item {
             open("stacked");
             const layer = named("layer");
             verify(ChartBackendProof.gpu(layer), "The real chart capture runs on an actual GPU rendering API");
-            verify(!ChartBackendProof.painted(layer), "The Stacked line renderer retires the CPU-painted item on the actual view");
+            ChartBackendProof.watch(layer);
+            settled(layer);
+            tryVerify(() => ChartBackendProof.facts(layer).api !== undefined, 1000, "The default-renderer witness reads Qt's actual backend after a completed frame");
+            const observed = ChartBackendProof.facts(layer);
+            if (observed.api === "OpenGL")
+                verify(observed.renderer.length > 0, "The default-renderer witness reads Qt's actual OpenGL renderer");
+            const software = /llvmpipe|softpipe|swiftshader|software rasterizer|microsoft basic render/i.test(observed.renderer);
+            compare(ChartBackendProof.painted(layer), software, "The Stacked default uses the software painter without a GPU and the GPU line item on hardware");
         }
         function test_adaptive_is_retained() {
             Preferences.resetToDefaults();

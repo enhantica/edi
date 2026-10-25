@@ -33,13 +33,28 @@ def redraw_comparison(before, after, *, backend):
     }
 
 
-def fit_comparison(every_pattern, adaptive, *, backend):
+def fit_comparison(every_pattern, adaptive, *, backend, tab):
     """Compare the paired project's two real app update modes on the same machine."""
+    if tab not in {'pattern', 'stacked'}:
+        raise ValueError('Fit timings must name the Pattern or Stacked tab')
     ratio = measured_median(every_pattern) / measured_median(adaptive)
     return {
         'backend': backend_identity(backend),
+        'tab': tab,
         'ratio': ratio,
         'within_five_percent': ratio <= 1.05,
+    }
+
+
+def fit_tab_comparisons(fits, *, backend):
+    """Keep both real chart tabs in the per-backend five-percent comparison."""
+    if set(fits) != {'pattern', 'stacked'}:
+        raise ValueError('Fit timing gates require both Pattern and Stacked tabs')
+    return {
+        tab: fit_comparison(
+            samples['every_pattern_ms'], samples['adaptive_ms'], backend=backend, tab=tab
+        )
+        for tab, samples in fits.items()
     }
 
 
@@ -50,7 +65,7 @@ def backend_comparisons(rows):
         backend = row['backend']
         results.append({
             'redraw': redraw_comparison(row['before_ms'], row['after_ms'], backend=backend),
-            'fit': fit_comparison(row['every_pattern_ms'], row['adaptive_ms'], backend=backend),
+            'fit': fit_tab_comparisons(row['fits'], backend=backend),
         })
     if not any(row['redraw']['backend']['llvmpipe'] for row in results):
         raise ValueError('Timing gates require a measured llvmpipe OpenGL row')
