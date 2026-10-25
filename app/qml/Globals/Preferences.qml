@@ -32,7 +32,7 @@ QtObject {
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
-    // one and painted without (GraphicsInfo), "gpu" or "software" whatever was detected.
+    // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
     property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.

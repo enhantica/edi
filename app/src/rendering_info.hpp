@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#ifndef EDI_APP_GRAPHICS_INFO_HPP
-#define EDI_APP_GRAPHICS_INFO_HPP
+#ifndef EDI_APP_RENDERING_INFO_HPP
+#define EDI_APP_RENDERING_INFO_HPP
 
 #include <QObject>
 #include <QPointer>
@@ -10,11 +10,12 @@
 
 namespace edi_app {
 
-/// What Qt Quick draws with (edi ADR-0041): the graphics API and, on OpenGL, the renderer, read in the first frame a
+/// What Qt Quick draws with (edi ADR-0041), named apart from Qt Quick's own attached GraphicsInfo, which the
+/// structure view reads: the graphics API and, on OpenGL, the renderer, read in the first frame a
 /// window renders. A software renderer (Mesa's llvmpipe and its kin, Qt Quick's own software backend) means no GPU, and
 /// the Stacked view then paints its lines rather than drawing them on the GPU. The first detection is written once to
 /// stderr, without Qt's debug logging.
-class GraphicsInfo : public QObject {
+class RenderingInfo : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
@@ -27,7 +28,7 @@ class GraphicsInfo : public QObject {
     Q_PROPERTY(bool software READ software NOTIFY detectedChanged)
 
    public:
-    explicit GraphicsInfo(QObject* parent = nullptr);
+    explicit RenderingInfo(QObject* parent = nullptr);
 
     bool detected() const { return detected_; }
     QString api() const { return api_; }
@@ -54,4 +55,4 @@ class GraphicsInfo : public QObject {
 
 }  // namespace edi_app
 
-#endif  // EDI_APP_GRAPHICS_INFO_HPP
+#endif  // EDI_APP_RENDERING_INFO_HPP

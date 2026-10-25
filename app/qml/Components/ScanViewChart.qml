@@ -357,8 +357,8 @@ Item {
             heightShare: Preferences.scanStackedSize / 100
             // On the GPU as detected or chosen (edi ADR-0041); never on Qt Quick's software backend, which cannot draw
             // the lines' shader.
-            gpu: GraphicsInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && GraphicsInfo.detected && !GraphicsInfo.software))
-            Component.onCompleted: GraphicsInfo.observe(Window.window)
+            gpu: RenderingInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && RenderingInfo.detected && !RenderingInfo.software))
+            Component.onCompleted: RenderingInfo.observe(Window.window)
         }
         // The plot's border, under the shown dataset's rectangle, so that rectangle's outer line shows at the plot's
         // edges too.
