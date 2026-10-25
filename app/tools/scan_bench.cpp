@@ -7,7 +7,8 @@
 // change to the swap of the first frame whose scene synchronisation followed it: the first population; a new x range
 // (a zoom or pan step, every trace reduced again); a restyle (every line's colour); and a new stacking offset (every
 // line moved, its trace kept). It prints one table, saves the last frame and reports the reduction's own cost. Test
-// tooling, never part of the host.
+// tooling, never part of the host. It stops at once when its window is not drawn, and after three changes in a row
+// draw no frame; it reports each phase on stderr.
 #include <QColor>
 #include <QDir>
 #include <QElapsedTimer>
@@ -28,6 +29,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <cstdarg>
 #include <cstdio>
 #include <functional>
 #include <string>
@@ -43,7 +45,13 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 namespace {
 
 constexpr int kRepeats = 30;
-constexpr int kTimeoutMs = 10000;
+// The first population may take seconds (Qt Graphs without a GPU); every later change waits three times as long as it
+// took, and at least a second. A window the system does not draw (covered or minimised) shows within a few seconds:
+// the run stops when it is not drawn before timing starts, or after three changes in a row draw no frame.
+constexpr int kFirstTimeoutMs = 10000;
+constexpr int kVisibleTimeoutMs = 2000;
+constexpr int kMinChangeTimeoutMs = 1000;
+constexpr int kMaxMisses = 3;
 
 struct Dataset {
     std::vector<double> x, intensity;
@@ -81,8 +89,19 @@ Stats stats(std::vector<double> samples) {
     return s;
 }
 
-// The milliseconds from `change` to the swap of the first frame synchronised after it, or -1.
-double frame_after(QQuickWindow& window, const std::function<void()>& change) {
+// One line of the run's log on stderr, written at once.
+void log(const char* format, ...) {
+    std::va_list args;
+    va_start(args, format);
+    std::fputs("scan_bench: ", stderr);
+    std::vfprintf(stderr, format, args);
+    std::fputc('\n', stderr);
+    std::fflush(stderr);
+    va_end(args);
+}
+
+// The milliseconds from `change` to the swap of the first frame synchronised after it, or -1 after `timeout_ms`.
+double frame_after(QQuickWindow& window, const std::function<void()>& change, int timeout_ms) {
     std::atomic<bool> synced{false};
     std::atomic<qint64> swapped{-1};
     QElapsedTimer clock;
@@ -101,7 +120,7 @@ double frame_after(QQuickWindow& window, const std::function<void()>& change) {
     QTimer guard;
     guard.setSingleShot(true);
     QObject::connect(&guard, &QTimer::timeout, &loop, &QEventLoop::quit);
-    guard.start(kTimeoutMs);
+    guard.start(timeout_ms);
     clock.start();
     change();
     loop.exec();
@@ -174,7 +193,7 @@ int main(int argc, char** argv) {
     const std::vector<Dataset> scan = read_scan(directory);
     const qint64 read_ms = read_clock.elapsed();
     if (scan.empty()) {
-        std::fprintf(stderr, "scan_bench: no .dat files in %s\n", qPrintable(directory));
+        log("no .dat files in %s", qPrintable(directory));
         return 1;
     }
     double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
@@ -191,6 +210,7 @@ int main(int argc, char** argv) {
         }
     }
     const auto patterns = static_cast<int>(scan.size());
+    log("read %d files, %zu points, in %lld ms", patterns, points, static_cast<long long>(read_ms));
 
     QQuickView view;
     edi_app::configure_engine(*view.engine());
@@ -332,48 +352,82 @@ int main(int argc, char** argv) {
         axis_y->setRange(-1.0, static_cast<double>(patterns) + lift);
     };
 
-    const double first = frame_after(view, [&] {
-        reduce(lo, hi);
-        set_range(lo, hi);
-        fill();
-    });
+    // The window must be drawn before anything is timed.
+    QElapsedTimer waited;
+    waited.start();
+    while (!view.isExposed() && waited.elapsed() < kVisibleTimeoutMs) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+    if (!view.isExposed() || frame_after(view, [&] { view.update(); }, kVisibleTimeoutMs) < 0.0) {
+        log("the window is not being drawn (keep it visible and uncovered)");
+        return 2;
+    }
+    log("window exposed and drawn; candidate %s, %d columns, %.1f px lines", qPrintable(candidate), columns, line_width);
+    const double first = frame_after(
+        view,
+        [&] {
+            reduce(lo, hi);
+            set_range(lo, hi);
+            fill();
+        },
+        kFirstTimeoutMs);
+    const int timeout_ms = std::max(kMinChangeTimeoutMs, static_cast<int>(std::ceil(3.0 * first)));
+    if (first < 0.0) {
+        log("first population: missed (no frame in %d ms)", kFirstTimeoutMs);
+    } else {
+        log("first population: %.2f ms", first);
+    }
     idle(500);
     std::vector<double> range_ms, reduce_samples, restyle_ms, offset_ms;
-    for (int i = 0; i < kRepeats; ++i) {
-        const double inset = i % 2 == 0 ? 0.01 * (hi - lo) : 0.0;
-        range_ms.push_back(frame_after(view, [&] {
-            reduce(lo + inset, hi - inset);
-            set_range(lo + inset, hi - inset);
-            fill();
-        }));
-        reduce_samples.push_back(reduce_ms);
-        idle(50);
-    }
-    for (int i = 0; i < kRepeats; ++i) {
-        restyle_ms.push_back(frame_after(view, [&] {
-            colour_all(i % 2 == 0 ? 0.9F : 0.6F);
-            if (candidate_b) {
-                set_styles(styles());
-            }
-            for (std::size_t d = 0; d < series.size(); ++d) {
-                series[d]->setColor(colours[d]);
-            }
-        }));
-        idle(50);
-    }
-    for (int i = 0; i < kRepeats; ++i) {
-        offset_ms.push_back(frame_after(view, [&] {
-            lift = i % 2 == 0 ? 4.0 : 8.0;
-            if (candidate_b) {
-                set_styles(styles());
+    // Each kind of change kRepeats times; the run stops after kMaxMisses changes in a row draw no frame.
+    int misses = first < 0.0 ? kMaxMisses : 0;
+    const auto phase = [&](const char* name, std::vector<double>& samples, const std::function<void(int)>& change) {
+        if (misses >= kMaxMisses) {
+            return;
+        }
+        log("%s: %d changes, each waiting at most %d ms", name, kRepeats, timeout_ms);
+        for (int i = 0; i < kRepeats && misses < kMaxMisses; ++i) {
+            const double ms = frame_after(view, [&] { change(i); }, timeout_ms);
+            samples.push_back(ms);
+            misses = ms < 0.0 ? misses + 1 : 0;
+            if (ms < 0.0) {
+                log("%s %d/%d: missed", name, i + 1, kRepeats);
             } else {
-                fill();
+                log("%s %d/%d: %.2f ms", name, i + 1, kRepeats, ms);
             }
-        }));
-        idle(50);
-    }
+            idle(50);
+        }
+        if (misses >= kMaxMisses) {
+            log("%d %s changes in a row drew no frame; stopping", kMaxMisses, name);
+        }
+    };
+    phase("x range", range_ms, [&](int i) {
+        const double inset = i % 2 == 0 ? 0.01 * (hi - lo) : 0.0;
+        reduce(lo + inset, hi - inset);
+        set_range(lo + inset, hi - inset);
+        fill();
+        reduce_samples.push_back(reduce_ms);
+    });
+    phase("restyle", restyle_ms, [&](int i) {
+        colour_all(i % 2 == 0 ? 0.9F : 0.6F);
+        if (candidate_b) {
+            set_styles(styles());
+        }
+        for (std::size_t d = 0; d < series.size(); ++d) {
+            series[d]->setColor(colours[d]);
+        }
+    });
+    phase("offset", offset_ms, [&](int i) {
+        lift = i % 2 == 0 ? 4.0 : 8.0;
+        if (candidate_b) {
+            set_styles(styles());
+        } else {
+            fill();
+        }
+    });
     if (!frame_path.isEmpty()) {
-        view.grabWindow().save(frame_path);
+        log(view.grabWindow().save(frame_path) ? "frame saved to %s" : "could not save the frame to %s",
+            qPrintable(frame_path));
     }
     const Stats range = stats(range_ms), reduced = stats(reduce_samples), restyle = stats(restyle_ms),
                 offset = stats(offset_ms);
@@ -385,5 +439,5 @@ int main(int argc, char** argv) {
                 drawn_points, columns, first, range.median, range.p95, reduced.median, restyle.median, restyle.p95,
                 offset.median, offset.p95, range.missing + restyle.missing + offset.missing,
                 qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms), line_width);
-    return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 ? 0 : 1;
+    return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 && misses < kMaxMisses ? 0 : 1;
 }
