@@ -350,6 +350,10 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // The row labels' choice (shownLabels): only while the view is shown and labels its rows; a label's text item is
+            // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
+            labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0
+            labelGap: Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height))
             // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
             // datasets (the owner, 2026-10-24).
             highlight: Preferences.chartHighlightSelected
@@ -496,48 +500,9 @@ Item {
         font.styleName: "Bold"
         font.pixelSize: chart.em
     }
-    // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
-    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. A view
-    // not shown chooses none: a followed scan moves the shown dataset with every file.
-    readonly property var shownRowLabels: {
-        const shown = [];
-        const texts = chart.shown && rowLabels && scan !== null ? scan.rowTexts : [];
-        if (texts.length === 0 || scan.revision < 0 || !(layer.patternHeight > 0) || !(axisY.max > axisY.min) || plot.height <= 0)
-            return shown;
-        // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
-        // the label is given.
-        const gap = Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height));
-        const placed = [];
-        for (let i = 0; i < texts.length; ++i) {
-            const at = layer.rowOf(i);
-            shown.push(false);
-            if (!isNaN(at) && at >= axisY.min && at <= axisY.max)
-                placed.push({
-                    "index": i,
-                    "px": (axisY.max - at) / (axisY.max - axisY.min) * plot.height
-                });
-        }
-        placed.sort((a, b) => a.px - b.px);
-        // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
-        let stride = 1;
-        const apart = k => {
-            for (let n = k; n < placed.length; n += k)
-                if (placed[n].px - placed[n - k].px < gap)
-                    return false;
-            return true;
-        };
-        while (stride < placed.length && !apart(stride))
-            ++stride;
-        const current = project ? project.currentExperimentIndex : -1;
-        const currentPlace = placed.find(row => row.index === current);
-        for (let n = 0; n < placed.length; n += stride) {
-            if (!currentPlace || Math.abs(placed[n].px - currentPlace.px) >= gap || placed[n].index === current)
-                shown[placed[n].index] = true;
-        }
-        if (currentPlace)
-            shown[current] = true;
-        return shown;
-    }
+    // Which labels show (ScanLayer.shownLabels): all while they fit, else an evenly spread share with the shown dataset
+    // always among them. A view not shown chooses none: a followed scan moves the shown dataset with every file.
+    readonly property var shownRowLabels: layer.shownLabels
     Repeater {
         id: rowLabelRepeater
 
@@ -600,23 +565,17 @@ Item {
     }
 
     // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
-    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour. Kept between the plot's top and bottom
-    // border rows, so a row a fraction of a pixel above the axis's end is not drawn below the x axis line.
-    Repeater {
-        model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
-        delegate: Rectangle {
-            required property int index
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
-
-            objectName: "scanView." + chart.mode + ".rowTick." + index
-            visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
-            x: plot.x + plot.width + 1
-            y: plot.y + Math.max(0, Math.min(plot.height - 1, Math.floor((axisY.max - at) / (axisY.max - axisY.min) * plot.height)))
-            width: Math.round(chart.em * 0.4)
-            height: 1
-            // The colours' revision is read here, so the tick follows the colour choice and the theme.
-            color: layer.coloursRevision >= 0 ? layer.colourOf(index) : "transparent"
-        }
+    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour, all drawn by one item (ScanRowTicks).
+    ScanRowTicks {
+        objectName: "scanView." + chart.mode + ".rowTicks"
+        visible: chart.hasData
+        scanLayer: layer
+        x: plot.x + plot.width + 1
+        y: plot.y
+        width: tickWidth
+        height: plot.height
+        plotHeight: plot.height
+        tickWidth: Math.round(chart.em * 0.4)
     }
 
     // The map's colour bar: the colour map from bottom to top, labelled at its ends with the intensities they stand for.

@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QQuickWindow>
+#include <QSGRectangleNode>
 #include <QThreadPool>
 #include <QtConcurrent/QtConcurrentMap>
 #include <algorithm>
@@ -84,6 +85,91 @@ ScanLayer::ScanLayer(QQuickItem* parent)
             QMetaObject::invokeMethod(this, &ScanLayer::redrawCountChanged, Qt::QueuedConnection);
         },
         Qt::DirectConnection);
+    // The labels shown follow the rows, the axis range, the plot's height and the current dataset.
+    for (const auto changed : {&ScanLayer::placementChanged, &ScanLayer::yMinChanged, &ScanLayer::yMaxChanged,
+                               &ScanLayer::currentChanged, &ScanLayer::modeChanged, &ScanLayer::modelChanged}) {
+        connect(this, changed, this, &ScanLayer::labelsMoved);
+    }
+    connect(this, &QQuickItem::heightChanged, this, &ScanLayer::labelsMoved);
+}
+
+void ScanLayer::labelsMoved() {
+    // Made again now, and announced only when the choice changed: a selection that leaves every label where it was
+    // re-binds no label.
+    shown_labels_stale_ = true;
+    const QVariantList before = shown_labels_;
+    if (shownLabels() != before) {
+        emit shownLabelsChanged();
+    }
+}
+
+void ScanLayer::setLabelled(bool labelled) {
+    if (labelled != labelled_) {
+        labelled_ = labelled;
+        emit labelledChanged();
+        labelsMoved();
+    }
+}
+
+void ScanLayer::setLabelGap(double gap) {
+    if (gap != label_gap_) {
+        label_gap_ = gap;
+        emit labelGapChanged();
+        labelsMoved();
+    }
+}
+
+QVariantList ScanLayer::shownLabels() const {
+    if (!shown_labels_stale_) {
+        return shown_labels_;
+    }
+    shown_labels_stale_ = false;
+    shown_labels_.clear();
+    const int count = model_ ? model_->count() : 0;
+    if (!labelled_ || count == 0 || !(pattern_height_ > 0.0) || !(y_max_ > y_min_) || height() <= 0.0) {
+        return shown_labels_;
+    }
+    // Each row inside the axis range at its pixel row from the top, top first.
+    struct Placed {
+        int index;
+        double px;
+    };
+    std::vector<Placed> placed;
+    std::vector<bool> shown(static_cast<std::size_t>(count), false);
+    for (int i = 0; i < count; ++i) {
+        const double at = rowOf(i);
+        if (std::isfinite(at) && at >= y_min_ && at <= y_max_) {
+            placed.push_back({i, (y_max_ - at) / (y_max_ - y_min_) * height()});
+        }
+    }
+    std::stable_sort(placed.begin(), placed.end(), [](const Placed& a, const Placed& b) { return a.px < b.px; });
+    // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
+    const auto apart = [&placed, this](std::size_t k) {
+        for (std::size_t n = k; n < placed.size(); n += k) {
+            if (placed[n].px - placed[n - k].px < label_gap_) {
+                return false;
+            }
+        }
+        return true;
+    };
+    std::size_t stride = 1;
+    while (stride < placed.size() && !apart(stride)) {
+        ++stride;
+    }
+    const auto current = std::find_if(placed.begin(), placed.end(), [this](const Placed& row) { return row.index == current_; });
+    for (std::size_t n = 0; n < placed.size(); n += stride) {
+        if (current == placed.end() || std::abs(placed[n].px - current->px) >= label_gap_ || placed[n].index == current_) {
+            shown[static_cast<std::size_t>(placed[n].index)] = true;
+        }
+    }
+    if (current != placed.end()) {
+        shown[static_cast<std::size_t>(current_)] = true;
+    }
+    shown_labels_.reserve(count);
+    for (const bool row : shown) {
+        shown_labels_.append(row);
+    }
+    return shown_labels_;
 }
 
 void ScanLayer::setModel(ScanViewModel* model) {
@@ -901,6 +987,68 @@ void ScanLayer::paint(QPainter* painter) {
                            images[static_cast<std::size_t>(t)], QRectF(0, first, device_width, last - first));
     }
     painter->restore();
+}
+
+ScanRowTicks::ScanRowTicks(QQuickItem* parent) : QQuickItem(parent) { setFlag(ItemHasContents, true); }
+
+void ScanRowTicks::setScanLayer(ScanLayer* layer) {
+    if (layer == layer_) {
+        return;
+    }
+    if (layer_) {
+        disconnect(layer_, nullptr, this, nullptr);
+    }
+    layer_ = layer;
+    if (layer_) {
+        for (const auto changed : {&ScanLayer::placementChanged, &ScanLayer::yMinChanged, &ScanLayer::yMaxChanged,
+                                   &ScanLayer::coloursRevisionChanged, &ScanLayer::modelChanged, &ScanLayer::modeChanged}) {
+            connect(layer_, changed, this, [this] { update(); });
+        }
+    }
+    emit scanLayerChanged();
+    update();
+}
+
+void ScanRowTicks::setTickWidth(double width) {
+    if (width != tick_width_) {
+        tick_width_ = width;
+        emit tickWidthChanged();
+        update();
+    }
+}
+
+void ScanRowTicks::setPlotHeight(double height) {
+    if (height != plot_height_) {
+        plot_height_ = height;
+        emit plotHeightChanged();
+        update();
+    }
+}
+
+QSGNode* ScanRowTicks::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/) {
+    auto* root = old != nullptr ? old : new QSGNode;
+    while (QSGNode* child = root->firstChild()) {
+        root->removeChildNode(child);
+        delete child;
+    }
+    const ScanViewModel* model = layer_ ? layer_->model() : nullptr;
+    const double low = layer_ ? layer_->property("yMin").toDouble() : 0.0;
+    const double high = layer_ ? layer_->property("yMax").toDouble() : 0.0;
+    if (model == nullptr || window() == nullptr || !(high > low) || plot_height_ < 1.0) {
+        return root;
+    }
+    for (int d = 0; d < model->count(); ++d) {
+        const double at = layer_->rowOf(d);
+        if (!std::isfinite(at) || at < low || at > high) {
+            continue;
+        }
+        const double row = std::clamp(std::floor((high - at) / (high - low) * plot_height_), 0.0, plot_height_ - 1.0);
+        QSGRectangleNode* tick = window()->createRectangleNode();
+        tick->setRect(QRectF(0.0, row, tick_width_, 1.0));
+        tick->setColor(layer_->colourOf(d));
+        root->appendChildNode(tick);
+    }
+    return root;
 }
 
 ScanColourBar::ScanColourBar(QQuickItem* parent) : QQuickPaintedItem(parent) {}
