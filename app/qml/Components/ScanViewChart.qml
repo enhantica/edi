@@ -470,6 +470,9 @@ Item {
     readonly property real rowLabelGap: Math.round(em * 0.4)
     property real rowLabelsRoom: 0
     function measureRowLabels() {
+        // A view not shown keeps the room it had: its labels are blank until it shows again.
+        if (!chart.shown)
+            return;
         let widest = 0;
         for (let i = 0; i < rowLabelRepeater.count; ++i) {
             const label = rowLabelRepeater.itemAt(i);
@@ -523,13 +526,14 @@ Item {
     Repeater {
         id: rowLabelRepeater
 
-        // One label per dataset, kept while the rows are placed again: only its text, place and colour follow.
-        model: chart.rowLabels && chart.scan !== null ? chart.scan.count : 0
+        // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
+        // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
+        model: chart.scan !== null ? chart.scan.count : 0
         onCountChanged: Qt.callLater(chart.measureRowLabels)
         delegate: IconLine {
             required property int index
-            readonly property string rowText: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
+            readonly property string rowText: chart.shown && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
+            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
             // read here, so the label follows the colour choice and the theme.
             readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
