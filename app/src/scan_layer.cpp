@@ -67,9 +67,11 @@ bool column_excluded(const ScanViewModel::Pattern& pattern, bool included_only, 
 
 }  // namespace
 
-ScanLayer::ScanLayer(QQuickItem* parent) : QQuickPaintedItem(parent), lines_(new ScanLines(this)) {
+ScanLayer::ScanLayer(QQuickItem* parent)
+    : QQuickPaintedItem(parent), lines_(new ScanLines(this)), top_(new ScanLines(this)) {
     setAntialiasing(true);
     lines_->setVisible(false);
+    top_->setVisible(false);
     // Rendered on the render thread, while the GUI thread waits: the count is atomic and its signal goes to the GUI
     // thread.
     connect(
@@ -107,6 +109,7 @@ void ScanLayer::setModel(ScanViewModel* model) {
 void ScanLayer::setMode(const QString& mode) {
     assign(mode_, mode, &ScanLayer::modeChanged);
     lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
     update();  // the painted image clears when the lines move to the GPU
 }
 void ScanLayer::setXMin(double value) { assign(x_min_, value, &ScanLayer::xMinChanged); }
@@ -134,17 +137,28 @@ void ScanLayer::setDark(bool dark) {
 }
 void ScanLayer::setIncludedOnly(bool on) { assign(included_only_, on, &ScanLayer::includedOnlyChanged); }
 
-// The shown dataset is marked by the chart, not drawn here: nothing is drawn again.
+// The shown dataset is drawn again only while it is highlighted.
 void ScanLayer::setCurrent(int dataset) {
     if (dataset != current_) {
         current_ = dataset;
         emit currentChanged();
+        if (highlight_) {
+            redraw();
+        }
     }
+}
+
+void ScanLayer::setHighlight(bool on) { assign(highlight_, on, &ScanLayer::highlightChanged); }
+void ScanLayer::setFaded(double opacity) { assign(faded_, std::clamp(opacity, 0.0, 1.0), &ScanLayer::fadedChanged); }
+
+int ScanLayer::highlighted() const {
+    return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
 }
 
 void ScanLayer::setGpu(bool on) {
     assign(gpu_, on, &ScanLayer::gpuChanged);
     lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
     update();  // the painted image clears when the lines move to the GPU
 }
 
@@ -170,6 +184,7 @@ void ScanLayer::setScale(const QString& scale) {
 void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
     QQuickPaintedItem::geometryChange(next, previous);
     lines_->setSize(next.size());
+    top_->setSize(next.size());
     redraw();
 }
 
@@ -544,6 +559,7 @@ void ScanLayer::updatePolish() {
     reduce();
     lines_->setObjectName(objectName() + QStringLiteral(".gpuLines"));
     lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
     if (lines_on_gpu() && model_) {
         feedLines();
     }
@@ -564,17 +580,41 @@ void ScanLayer::feedLines() {
         lines_order_ = order;
     }
     // A value v reaches H (v - low) / (high - low) above its baseline: the shader's row and lift, folded.
+    // Highlighted, the shown dataset is drawn by the line over the others, which are faded.
+    const int top = highlighted();
+    const auto style_of = [this, top](std::size_t d) {
+        const double span = highs_[d] - lows_[d];
+        const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
+        QColor colour = colourOf(static_cast<int>(d));
+        if (top >= 0) {
+            colour.setAlphaF(static_cast<float>(static_cast<int>(d) == top ? 0.0 : faded_));
+        }
+        return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
+    };
     std::vector<ScanLines::Style> styles;
     styles.reserve(order.size());
     for (const std::size_t d : order) {
-        const double span = highs_[d] - lows_[d];
-        const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
-        styles.push_back({baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colourOf(static_cast<int>(d))});
+        styles.push_back(style_of(d));
     }
     lines_->setStyles(std::move(styles));
-    lines_->setYMin(y_min_);
-    lines_->setYMax(y_max_);
-    lines_->setLineWidth(y_max_ > y_min_ ? line_width(baselines_, order, y_max_ - y_min_, height()) : 1.0);
+    const double line_px = y_max_ > y_min_ ? line_width(baselines_, order, y_max_ - y_min_, height()) : 1.0;
+    for (ScanLines* item : {lines_, top_}) {
+        item->setYMin(y_min_);
+        item->setYMax(y_max_);
+        item->setLineWidth(line_px);
+    }
+    top_->setVisible(top >= 0);
+    if (top >= 0) {
+        if (top != top_dataset_ || top_fed_builds_ != reduction_changes_) {
+            const Reduction& reduction = reductions_[static_cast<std::size_t>(top)];
+            top_->setTraces({{reduction.x, reduction.v}});
+            top_dataset_ = top;
+            top_fed_builds_ = reduction_changes_;
+        }
+        ScanLines::Style style = style_of(static_cast<std::size_t>(top));
+        style.colour.setAlphaF(1.0F);
+        top_->setStyles({style});
+    }
     std::vector<QRectF> bands;
     if (x_max_ > x_min_ && y_max_ > y_min_) {
         const int columns = std::max(1, static_cast<int>(std::ceil(width())));
@@ -678,6 +718,9 @@ void ScanLayer::paint(QPainter* painter) {
             const std::vector<float>& own = *values[band];
             const std::vector<float>& a = *values[lower];
             const std::vector<float>& b = *values[upper];
+            // Highlighted, every row's band but the shown dataset's is blended toward the background.
+            const bool faded = highlighted() >= 0 && order[band] != static_cast<std::size_t>(highlighted());
+            const double keep = faded ? faded_ : 1.0;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const auto at = static_cast<std::size_t>(i);
@@ -691,7 +734,10 @@ void ScanLayer::paint(QPainter* painter) {
                                          ? own[at]
                                          : va + (vb - va) * edge;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
-                line[i] = qRgba(colour.r, colour.g, colour.b, colour.a);
+                const auto mix = [keep](int c, int b) { return static_cast<int>(std::lround(b + (c - b) * keep)); };
+                line[i] = keep < 1.0 && colour.a > 0 ? qRgba(mix(colour.r, background_.red()), mix(colour.g, background_.green()),
+                                                             mix(colour.b, background_.blue()), colour.a)
+                                                       : qRgba(colour.r, colour.g, colour.b, colour.a);
             }
         }
         painter->drawImage(QRectF(0, 0, static_cast<double>(pixel_columns), static_cast<double>(pixel_rows)), image);
@@ -708,7 +754,16 @@ void ScanLayer::paint(QPainter* painter) {
     excluded(tint);
     const std::vector<std::size_t> order = top_down(baselines_, std::min(count, baselines_.size()));
     const qreal width_px = line_width(baselines_, order, y_max_ - y_min_, height());
-    for (const std::size_t d : order) {
+    // Highlighted, the shown dataset is drawn last, over the others, which are faded.
+    const int top = highlighted();
+    std::vector<std::size_t> drawn = order;
+    if (top >= 0) {
+        std::erase(drawn, static_cast<std::size_t>(top));
+        if (std::isfinite(baselines_[static_cast<std::size_t>(top)])) {
+            drawn.push_back(static_cast<std::size_t>(top));
+        }
+    }
+    for (const std::size_t d : drawn) {
         const Reduction& reduction = reductions_[d];
         QPainterPath path;
         bool drawing = false;
@@ -724,7 +779,11 @@ void ScanLayer::paint(QPainter* painter) {
                 drawing = true;
             }
         }
-        QPen pen(colourOf(static_cast<int>(d)));
+        QColor colour = colourOf(static_cast<int>(d));
+        if (top >= 0 && static_cast<int>(d) != top) {
+            colour.setAlphaF(static_cast<float>(faded_));
+        }
+        QPen pen(colour);
         pen.setWidthF(width_px);
         pen.setCosmetic(true);
         // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.

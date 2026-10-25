@@ -52,8 +52,11 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // Only the included range: the points inside an excluded region are not drawn, which leaves its tint as a gap.
     Q_PROPERTY(bool includedOnly MEMBER included_only_ WRITE setIncludedOnly NOTIFY includedOnlyChanged)
-    // The shown dataset. The drawing does not depend on it.
+    // The shown dataset: with `highlight`, drawn on top in its colour while every other is faded to `faded` (on the
+    // map, every other row's band blended toward the background); without, the drawing does not depend on it.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
+    Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
+    Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
     // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
@@ -95,6 +98,8 @@ class ScanLayer : public QQuickPaintedItem {
     void setCurrent(int dataset);
     void setIncludedOnly(bool on);
     void setGpu(bool on);
+    void setHighlight(bool on);
+    void setFaded(double opacity);
     void setOffset(double offset);
     void setHeightShare(double share);
     double patternHeight() const { return pattern_height_; }
@@ -137,6 +142,8 @@ class ScanLayer : public QQuickPaintedItem {
     void currentChanged();
     void includedOnlyChanged();
     void gpuChanged();
+    void highlightChanged();
+    void fadedChanged();
     void offsetChanged();
     void heightShareChanged();
     void placementChanged();
@@ -201,6 +208,8 @@ class ScanLayer : public QQuickPaintedItem {
     int current_ = -1;
     bool included_only_ = false;
     bool gpu_ = false;
+    bool highlight_ = false;
+    double faded_ = 0.3;
     double offset_ = 0.1, height_share_ = 0.0;
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
@@ -217,8 +226,13 @@ class ScanLayer : public QQuickPaintedItem {
     std::vector<QColor> colours_;
     QString coloured_for_;
     int colours_revision_ = 0;
-    // The GPU lines, and the reductions and order they were last given.
+    // Whether the drawing marks a dataset: highlighting and one shown.
+    int highlighted() const;
+    // The GPU lines, the highlighted one's line drawn over them, and the reductions and order they were last given.
     ScanLines* lines_ = nullptr;
+    ScanLines* top_ = nullptr;
+    int top_dataset_ = -1;
+    int top_fed_builds_ = -1;
     int lines_fed_builds_ = -1;
     int reduction_changes_ = 0;  // bumped whenever any dataset's reduction changes
     std::vector<std::size_t> lines_order_;
