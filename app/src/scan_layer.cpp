@@ -816,11 +816,12 @@ void ScanLayer::paint(QPainter* painter) {
         if (top >= 0 && static_cast<int>(d) != top) {
             colour = fadedColour(colour);
         }
-        // The width in item pixels, as the pattern chart's lines, whatever the screen's device pixel ratio; joins round,
-        // so a peak keeps its tip.
+        // The width in item pixels, as the pattern chart's lines, whatever the screen's device pixel ratio: a cosmetic pen
+        // (Qt's fast stroker) as wide in device pixels as the line is in item pixels times the ratio. Joins round, so a
+        // peak keeps its tip.
         QPen pen(colour);
-        pen.setWidthF(width_px);
-        pen.setCosmetic(false);
+        pen.setWidthF(width_px * painter->device()->devicePixelRatioF());
+        pen.setCosmetic(true);
         // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
         pen.setCapStyle(Qt::FlatCap);
         pen.setJoinStyle(Qt::RoundJoin);
