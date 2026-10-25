@@ -5,17 +5,18 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
 
 ## In the desktop app
 
-- **Open an existing project** opens a `project.edi` (its folder opens) or a `.zip`. **Open a project folder…** opens the
-  folder itself.
+- **Open project…** opens a `project.edi` (its folder opens) or a `.zip`. You can also drop a project folder, a
+  `project.edi` or a `.zip` onto the window.
 - A project opened from a `.zip` is unpacked into a temporary folder. It counts as unsaved: the first **Save** asks
   where to keep it, and later saves go there. Its reports come along.
-- **Export project…** writes the project's folder, as last saved and with its reports, as one `.zip`. Build and cache
-  files are left out.
+- **Save project as…** asks first for the format, **Folder** or **Zip archive**, and whether to **Save a copy**, then
+  where. A project saved as a zip archive keeps that `.zip` as its location, and later saves rewrite it. A copy is
+  written as the project stands now, and you keep working where you were.
 
 ## In the web app
 
-- **Open an existing project** takes a project folder or a `.zip` from your computer.
-- **Save** downloads the project as a `.zip`; **Export project…** downloads the same archive.
+- **Open project…** takes a project folder or a `.zip` from your computer.
+- **Save** and **Save project as…** download the project as a `.zip`.
 
 ## On the command line
 
