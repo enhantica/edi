@@ -101,7 +101,7 @@ EaElements.GroupBox {
         parent: Overlay.overlay
         title: qsTr("Open project")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
+        contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
         onAccepted: Session.openWebProject(zip ? "zip" : "folder")
@@ -111,12 +111,14 @@ EaElements.GroupBox {
 
             EaElements.RadioButton {
                 objectName: "open.folder"
+                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Folder")
                 checked: !openChoice.zip
                 onClicked: openChoice.zip = false
             }
             EaElements.RadioButton {
                 objectName: "open.zip"
+                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Zip archive")
                 checked: openChoice.zip
                 onClicked: openChoice.zip = true

@@ -385,8 +385,9 @@ EaComponents.ApplicationWindow {
         property var action: null
         title: qsTr("Save the changes?")
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: unsavedText.implicitHeight
+        // As wide as its line (owner, 2026-10-25).
+        contentWidth: unsavedRow.implicitWidth
+        contentHeight: unsavedRow.implicitHeight
         // Save writes in place; a project with nowhere to write yet opens Save as, and the action waits for the user to
         // ask again.
         onAccepted: {
@@ -404,13 +405,23 @@ EaComponents.ApplicationWindow {
             action();
         }
 
-        // The project's name in bold (owner, 2026-10-25).
-        EaElements.Label {
-            id: unsavedText
-            width: unsavedChanges.contentWidth
-            wrapMode: Text.Wrap
-            textFormat: Text.StyledText
-            text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
+        // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
+        Row {
+            id: unsavedRow
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                color: EaStyle.Colors.orange
+                text: "exclamation-triangle"
+            }
+            EaElements.Label {
+                id: unsavedText
+                anchors.verticalCenter: parent.verticalCenter
+                textFormat: Text.StyledText
+                text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
+            }
         }
     }
 
@@ -423,8 +434,8 @@ EaComponents.ApplicationWindow {
         property bool copy: false
         title: qsTr("Save project as")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        // The app's usual dialog width, as "Save the changes?" (owner, 2026-10-25).
-        contentWidth: AppSizes.messagesDialogContentWidth
+        // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
+        contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: saveAsChoiceColumn.implicitHeight
         onAboutToShow: {
             zip = false;
@@ -442,15 +453,17 @@ EaComponents.ApplicationWindow {
         Column {
             id: saveAsChoiceColumn
 
-            // Folder and Zip archive: one group at the app's usual row spacing, no heading (owner, 2026-10-25).
+            // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
             EaElements.RadioButton {
                 objectName: "saveAs.folder"
+                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Folder")
                 checked: !saveAsChoice.zip
                 onClicked: saveAsChoice.zip = false
             }
             EaElements.RadioButton {
                 objectName: "saveAs.zip"
+                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Zip archive")
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
