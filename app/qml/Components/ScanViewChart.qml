@@ -354,6 +354,7 @@ Item {
             // datasets (the owner, 2026-10-24).
             highlight: Preferences.chartHighlightSelected
             faded: Preferences.chartFadedOpacity
+            busy: chart.project !== null && chart.project.fit !== null && chart.project.fit.running
             // The stacked patterns' offset and height, app settings in percent (Fit: 0).
             offset: Preferences.scanStackedOffset / 100
             heightShare: Preferences.scanStackedSize / 100

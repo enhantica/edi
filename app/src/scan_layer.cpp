@@ -7,9 +7,12 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QQuickWindow>
+#include <QThreadPool>
+#include <QtConcurrent/QtConcurrentMap>
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numeric>
 
 #include "edi/palette.hpp"
 #include "edi/presentation.hpp"
@@ -150,6 +153,13 @@ void ScanLayer::setCurrent(int dataset) {
 
 void ScanLayer::setHighlight(bool on) { assign(highlight_, on, &ScanLayer::highlightChanged); }
 void ScanLayer::setFaded(double opacity) { assign(faded_, std::clamp(opacity, 0.0, 1.0), &ScanLayer::fadedChanged); }
+
+void ScanLayer::setBusy(bool busy) {
+    if (busy != busy_) {
+        busy_ = busy;
+        emit busyChanged();
+    }
+}
 
 int ScanLayer::highlighted() const {
     return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
@@ -796,9 +806,17 @@ void ScanLayer::paint(QPainter* painter) {
             drawn.push_back(static_cast<std::size_t>(top));
         }
     }
+    // Each dataset's line, its colour and its extent down the plot, in item pixels.
+    struct Line {
+        QPainterPath path;
+        QColor colour;
+        double top = 0.0, bottom = 0.0;
+    };
+    std::vector<Line> lines;
+    lines.reserve(drawn.size());
     for (const std::size_t d : drawn) {
         const Reduction& reduction = reductions_[d];
-        QPainterPath path;
+        Line line;
         bool drawing = false;
         for (std::size_t k = 0; k < reduction.x.size(); ++k) {
             const double x = reduction.x[k];
@@ -806,29 +824,83 @@ void ScanLayer::paint(QPainter* painter) {
             if (!std::isfinite(x) || !std::isfinite(y)) {
                 drawing = false;
             } else if (drawing) {
-                path.lineTo(x, y);
+                line.path.lineTo(x, y);
             } else {
-                path.moveTo(x, y);
+                line.path.moveTo(x, y);
                 drawing = true;
             }
         }
-        QColor colour = colourOf(static_cast<int>(d));
-        if (top >= 0 && static_cast<int>(d) != top) {
-            colour = fadedColour(colour);
+        if (line.path.isEmpty()) {
+            continue;
         }
-        // The width in item pixels, as the pattern chart's lines, whatever the screen's device pixel ratio: a cosmetic pen
-        // (Qt's fast stroker) as wide in device pixels as the line is in item pixels times the ratio. Joins round, so a
-        // peak keeps its tip.
-        QPen pen(colour);
-        pen.setWidthF(width_px * painter->device()->devicePixelRatioF());
-        pen.setCosmetic(true);
-        // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
-        pen.setCapStyle(Qt::FlatCap);
-        pen.setJoinStyle(Qt::RoundJoin);
-        painter->setPen(pen);
-        painter->setBrush(Qt::NoBrush);
-        painter->drawPath(path);
+        const QRectF bounds = line.path.boundingRect();
+        line.top = bounds.top() - width_px;
+        line.bottom = bounds.bottom() + width_px;
+        line.colour = colourOf(static_cast<int>(d));
+        if (top >= 0 && static_cast<int>(d) != top) {
+            line.colour = fadedColour(line.colour);
+        }
+        lines.push_back(std::move(line));
     }
+    // Stroked in horizontal tiles, one per thread: every core, one while a fit runs; EDI_SCAN_PAINT_THREADS sets the
+    // count to compare the drawings (never set in use). Each thread strokes, in order, the lines that cross its tile into
+    // an image of the whole plot clipped to the tile; Qt's strokers place a line by the image, not by the clip, so each
+    // pixel is drawn exactly as one image of the whole plot would draw it, whatever the number of tiles. The width in
+    // item pixels, as the pattern chart's lines, whatever the device pixel ratio: a cosmetic pen (Qt's fast stroker) as
+    // wide in device pixels as the line is in item pixels times the ratio. Joins round, so a peak keeps its tip; ends
+    // stop at their points, as a square cap would reach half the width past a break and fill a one-pixel gap.
+    const qreal ratio = painter->device()->devicePixelRatioF();
+    const int device_width = std::max(1, static_cast<int>(std::ceil(width() * ratio)));
+    const int device_height = std::max(1, static_cast<int>(std::ceil(height() * ratio)));
+    const int forced = qEnvironmentVariableIntValue("EDI_SCAN_PAINT_THREADS");
+    const int threads = forced > 0 ? forced : busy_ ? 1 : QThreadPool::globalInstance()->maxThreadCount();
+    const int tiles = std::clamp(threads, 1, std::max(1, device_height / 16));
+    const bool smooth = painter->testRenderHint(QPainter::Antialiasing);
+    std::vector<QImage> images(static_cast<std::size_t>(tiles));
+    std::vector<int> firsts(static_cast<std::size_t>(tiles) + 1);
+    for (int t = 0; t <= tiles; ++t) {
+        firsts[static_cast<std::size_t>(t)] = static_cast<int>(static_cast<long long>(device_height) * t / tiles);
+    }
+    std::vector<int> indices(static_cast<std::size_t>(tiles));
+    std::iota(indices.begin(), indices.end(), 0);
+    QThreadPool pool;
+    pool.setMaxThreadCount(tiles);
+    QtConcurrent::blockingMap(&pool, indices, [&](int t) {
+        const int first = firsts[static_cast<std::size_t>(t)], last = firsts[static_cast<std::size_t>(t) + 1];
+        QImage& image = images[static_cast<std::size_t>(t)];
+        image = QImage(device_width, device_height, QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(ratio);
+        QPainter tile(&image);
+        tile.setCompositionMode(QPainter::CompositionMode_Source);
+        tile.fillRect(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio), Qt::transparent);
+        tile.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        tile.setRenderHint(QPainter::Antialiasing, smooth);
+        tile.setClipRect(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio));
+        const double from = first / ratio, to = last / ratio;
+        for (const Line& line : lines) {
+            if (line.bottom < from || line.top > to) {
+                continue;
+            }
+            QPen pen(line.colour);
+            pen.setWidthF(width_px * ratio);
+            pen.setCosmetic(true);
+            pen.setCapStyle(Qt::FlatCap);
+            pen.setJoinStyle(Qt::RoundJoin);
+            tile.setPen(pen);
+            tile.setBrush(Qt::NoBrush);
+            tile.drawPath(line.path);
+        }
+    });
+    // Each tile copied pixel for pixel: no smoothing or antialiasing at a tile's edge, which may fall inside an item pixel.
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+    for (int t = 0; t < tiles; ++t) {
+        const int first = firsts[static_cast<std::size_t>(t)], last = firsts[static_cast<std::size_t>(t) + 1];
+        painter->drawImage(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio),
+                           images[static_cast<std::size_t>(t)], QRectF(0, first, device_width, last - first));
+    }
+    painter->restore();
 }
 
 ScanColourBar::ScanColourBar(QQuickItem* parent) : QQuickPaintedItem(parent) {}

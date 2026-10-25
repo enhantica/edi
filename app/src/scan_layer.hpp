@@ -57,6 +57,8 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
+    // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
+    Q_PROPERTY(bool busy MEMBER busy_ WRITE setBusy NOTIFY busyChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
     // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
@@ -100,6 +102,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setGpu(bool on);
     void setHighlight(bool on);
     void setFaded(double opacity);
+    void setBusy(bool busy);
     void setOffset(double offset);
     void setHeightShare(double share);
     double patternHeight() const { return pattern_height_; }
@@ -146,6 +149,7 @@ class ScanLayer : public QQuickPaintedItem {
     void gpuChanged();
     void highlightChanged();
     void fadedChanged();
+    void busyChanged();
     void offsetChanged();
     void heightShareChanged();
     void placementChanged();
@@ -212,6 +216,7 @@ class ScanLayer : public QQuickPaintedItem {
     bool gpu_ = false;
     bool highlight_ = false;
     double faded_ = 0.3;
+    bool busy_ = false;
     double offset_ = 0.1, height_share_ = 0.0;
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
