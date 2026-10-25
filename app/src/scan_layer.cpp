@@ -324,12 +324,15 @@ double ScanLayer::stackedY(std::size_t dataset, double value) const {
 }
 
 ScanLayer::ReductionKey ScanLayer::reductionKey() const {
-    return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width()))), included_only_,
+    // The Stacked lines at the screen's device pixels, so a high-DPI screen gets its full resolution; the Map's pixel
+    // columns are the item's own.
+    const double ratio = mode_ == QLatin1String("map") || window() == nullptr ? 1.0 : window()->effectiveDevicePixelRatio();
+    return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width() * ratio))), included_only_,
             static_cast<int>(scale_of(scale_))};
 }
 
-// Each dataset's reduction for the range shown at the plot's pixel columns, made again only for a dataset whose points
-// changed, or for every dataset when what they all depend on changed.
+// Each dataset's reduction for the range shown at the plot's pixel columns (device pixels for the Stacked lines), made
+// again only for a dataset whose points changed, or for every dataset when what they all depend on changed.
 void ScanLayer::reduce() {
     if (!model_) {
         reductions_.clear();
@@ -373,28 +376,25 @@ void ScanLayer::reduce() {
             }
             continue;
         }
-        // Each column a vertical stroke from its lowest to its highest value, joined column to column, so a narrow
-        // peak stays at its height whatever the width; a column reaching into an excluded region is a break, as the
-        // map's pixels are.
-        const edi::ScanTrace trace = edi::scan_trace(drawn.x, drawn.intensity, x_min_, x_max_, columns);
-        reduction.x.reserve(2 * trace.x.size());
-        reduction.v.reserve(2 * trace.x.size());
+        // The line through the points as it looks at the device pixels, so a narrow peak stays at its height whatever
+        // the width and the line is as smooth as the pattern chart's (edi::scan_polyline); a point in an excluded
+        // region is a break, as the map's pixels are.
+        const edi::ScanTrace trace = edi::scan_polyline(drawn.x, drawn.intensity, x_min_, x_max_, columns);
+        reduction.x.reserve(trace.x.size());
+        reduction.v.reserve(trace.x.size());
         const auto add = [&reduction](double x, double v) {
             reduction.x.push_back(static_cast<float>(x));
             reduction.v.push_back(static_cast<float>(v));
         };
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double low = edi::to_display(trace.low[k], scale), high = edi::to_display(trace.high[k], scale);
+            const double v = edi::to_display(trace.low[k], scale);
             const double x = (trace.x[k] - x_min_) / (x_max_ - x_min_) * width();
             if (!std::isfinite(trace.x[k]) || column_excluded(pattern, included_only_, trace.x[k], column_width) ||
-                !std::isfinite(low) || !std::isfinite(high)) {
+                !std::isfinite(v)) {
                 add(kNaN, kNaN);
                 continue;
             }
-            add(x, low);
-            if (high != low) {
-                add(x, high);
-            }
+            add(x, v);
         }
     }
     if (built > 0) {
@@ -439,6 +439,16 @@ void ScanLayer::recolour() {
     ++colours_revision_;
     emit coloursRevisionChanged();
     redraw();
+}
+
+QColor ScanLayer::fadedColour(const QColor& colour) const {
+    // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
+    // stays one even colour, as the pattern chart's opaque lines do.
+    const double keep = faded_;
+    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
+    return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
+                            static_cast<float>(mix(colour.greenF(), background_.greenF())),
+                            static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
 }
 
 QColor ScanLayer::colourOf(int dataset) const {
@@ -607,8 +617,10 @@ void ScanLayer::feedLines() {
         const double span = highs_[d] - lows_[d];
         const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
         QColor colour = colourOf(static_cast<int>(d));
-        if (top >= 0) {
-            colour.setAlphaF(static_cast<float>(static_cast<int>(d) == top ? 0.0 : faded_));
+        if (top >= 0 && static_cast<int>(d) == top) {
+            colour.setAlphaF(0.0F);  // drawn by the line over the others
+        } else if (top >= 0) {
+            colour = fadedColour(colour);
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -802,13 +814,16 @@ void ScanLayer::paint(QPainter* painter) {
         }
         QColor colour = colourOf(static_cast<int>(d));
         if (top >= 0 && static_cast<int>(d) != top) {
-            colour.setAlphaF(static_cast<float>(faded_));
+            colour = fadedColour(colour);
         }
+        // The width in item pixels, as the pattern chart's lines, whatever the screen's device pixel ratio; joins round,
+        // so a peak keeps its tip.
         QPen pen(colour);
         pen.setWidthF(width_px);
-        pen.setCosmetic(true);
+        pen.setCosmetic(false);
         // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
         pen.setCapStyle(Qt::FlatCap);
+        pen.setJoinStyle(Qt::RoundJoin);
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
         painter->drawPath(path);
