@@ -3,6 +3,7 @@ import QtQuick
 import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -52,7 +53,7 @@ Item {
             Globals.Vars.appBarCurrentIndex = savedPage;
         }
         function test_unfitted_evolution_has_every_free_parameter_and_no_axes() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "The committed three-file scan opens without fitting");
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "The committed three-file scan opens without fitting");
             compare(Session.project.evolution.parameters.count, 39, "The unfitted cosio evolution selector lists all 39 free parameters");
             compare(Session.project.evolution.count, 0, "No evolution point is fabricated before a dataset is fitted");
             const chart = createTemporaryObject(evolutionFactory, surface, {
@@ -102,7 +103,7 @@ Item {
         }
 
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");
             Globals.Vars.appBarCurrentIndex = 4;
             verify(SettingsProof.publishScanSummary(Session.project), "Hand-declared scan counts reach the actual FitViewModel summary consumer");
             const bar = createTemporaryObject(statusFactory, surface);

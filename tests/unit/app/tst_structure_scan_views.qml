@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -106,7 +107,7 @@ Item {
         function openAnalysis() {
             if (!appWindow)
                 openWindow();
-            verify(Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"), "The Analysis actor uses the two-structure BEER project");
+            verify(Examples.fixture(Session, "pd-neut-tof_ferrite-austenite-beer_joint"), "The Analysis actor uses the two-structure BEER project");
             tryCompare(Session.project, "calculating", false, 10000, "The real two-structure calculation completes");
             compare(Session.project.structures.count, 2, "The BEER vehicle retains both independently named structures");
             showPage("analysis");

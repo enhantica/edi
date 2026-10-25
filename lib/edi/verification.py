@@ -28,9 +28,12 @@ import yaml
 import edi
 
 # A FullProf ``Prf=2`` IGOR profile row has columns TOF, Iobs, Icalc, Diff under a
-# ``BEGIN``/``END`` block; the calculated intensity is column 2 (Icalc).
+# ``BEGIN``/``END`` block; the calculated intensity is column 2 (Icalc). Each column is 12
+# characters wide, and a large value can fill its column and touch the next one.
 _IGOR_ICALC_COLUMN = 2
 _IGOR_MIN_COLUMNS = 3
+_IGOR_FIELD_WIDTH = 12
+_IGOR_FIELDS = 4
 
 # A FullProf ``.prf`` tab-separated (Prf=-3) profile data row has exactly these columns:
 # 2Theta/TOF, Yobs, Ycal, Yobs-Ycal, Backg. Reflection-marker rows carry a trailing ``(h k l)``
@@ -138,6 +141,7 @@ def _parse_igor_profile(lines: list[str]) -> tuple[list[float], list[float]]:
     x_values: list[float] = []
     icalc: list[float] = []
     started = False
+    width = _IGOR_FIELD_WIDTH * _IGOR_FIELDS
     for line in lines:
         text = line.strip()
         if text == 'BEGIN':
@@ -145,7 +149,14 @@ def _parse_igor_profile(lines: list[str]) -> tuple[list[float], list[float]]:
             continue
         if text == 'END':
             break
-        fields = text.split()
+        row_text = line.rstrip('\r\n')
+        if len(row_text) >= width and not row_text[width:].strip():
+            fields = [
+                row_text[index : index + _IGOR_FIELD_WIDTH]
+                for index in range(0, width, _IGOR_FIELD_WIDTH)
+            ]
+        else:
+            fields = text.split()
         if not started or len(fields) < _IGOR_MIN_COLUMNS:
             continue
         try:

@@ -1,0 +1,27 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/pd-neut-cwl_lbco_simulation/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+    "experiments/hrpt.edi": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a",
+    "project.edi": "c4a32320129dd599fa16240792760b0099a38556a917d73fc049b9e5bf9f4509",
+    "structures/lbco.edi": "c4cd9712556b9d39513b186e86d5c87a04455111c0e34ca064875e36ba5eabff"
+  },
+  "banks": [
+    "hrpt"
+  ],
+  "scope": "calculation",
+  "staging": "none",
+  "cycles": 1,
+  "artifacts_sha256": {
+    "start.dat": "9e42610f5a1aa7a9e6f9d355d76f3b644689089f4eb21fd0e646e894a4eedb5f",
+    "start.log": "17f324bf2b3d382e94192dd3d276e62cb919a349bf23631453e9160b25671052",
+    "start.new": "f82d8ff582b8e63e39eab81ab99a9e3de53b76bdef01076db89cc45c0c31fed1",
+    "start.out": "785c5b8b9da1df18b307234fefb6e9b76b540f6c352f117968ec4983cdada4b3",
+    "start.pcr": "37f282fefdfc3d256ce43873ffb3413da407d80f92921eda69083a7fb1662a9f",
+    "start.prf": "5afad3064bc88d8ebbd1d6a553232f58af8c743a097174a888b3a627e8ccf0c3",
+    "start.sum": "c0b13dc6707b5b722061d7858ac196ce820adda1a90b9f3f21544e2bbd5f6a31"
+  }
+}

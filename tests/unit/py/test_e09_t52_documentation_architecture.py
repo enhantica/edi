@@ -195,6 +195,7 @@ def test_e09_t52_edi_documentation_and_fixture_contract() -> None:
         'knowledge/verification/fullprof/',
         'knowledge/verification/cryspy/',
         'knowledge/fitting/fullprof/',
+        'knowledge/comparison/',
     )
     stale_knowledge = sorted(
         path

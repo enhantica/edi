@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 
 export function assertSavedProject(name, fitCase) {
-  const names = {lbco:'lbco_hrpt_s4', ncaf:'ncaf_wish_5bank_s5'};
+  const names = {lbco:'pd-neut-cwl_lbco-hrpt', ncaf:'pd-neut-tof_ncaf-wish'};
   assert(Object.hasOwn(names, fitCase), 'Saved browser project must have a declared independent reference');
   assert.equal(name, names[fitCase],
     'The actual saved browser project must match the chosen committed native reference');

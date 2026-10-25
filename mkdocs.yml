@@ -77,6 +77,7 @@ nav:
           - dev/adrs/0045-fit-results-tables-and-agreement-factors.md
           - dev/adrs/0046-analysis-sidebar-scan-controls-and-filters.md
           - dev/adrs/0047-element-colours-readable-in-2d.md
+          - dev/adrs/0048-one-example-catalogue.md
           - dev/adrs/0049-single-crystal-experiments.md
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/template.md
@@ -120,55 +121,57 @@ nav:
   - User:
       - user/index.md
       - user/features.md
-      - CLI projects:
+      - Examples:
           - user/cli/index.md
-          - user/cli/pd-neut-cwl_cosio-d20_start-1/index.md
-          - user/cli/pd-neut-cwl_cosio-d20_start-4/index.md
-          - user/cli/pd-neut-cwl_cosio-d20_scan-3f/index.md
-          - user/cli/pd-neut-cwl_cosio-d20_scan-162f/index.md
-          - user/cli/pd-neut-cwl_cosio-d20_scan-324f/index.md
-          - user/cli/pd-neut-cwl_lbco-hrpt_start-2/index.md
-          - user/cli/pd-neut-cwl_lbco-hrpt_start-4/index.md
-          - user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/index.md
-          - user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/index.md
-          - user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/index.md
-          - user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/index.md
-          - user/cli/pd-neut-tof_diamond-dream_basic/index.md
-          - user/cli/pd-neut-tof_si-sepd_start-2/index.md
-          - user/cli/pd-neut-tof_ferrite-austenite-beer_joint/index.md
-          - user/cli/pd-neut-tof_si-sepd_start-5/index.md
-          - user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md
-          - user/cli/pd-neut-cwl_pbso4_beba-asymmetry/index.md
-          - user/cli/pd-neut-cwl_yap-spodi_3k/index.md
-          - user/cli/pd-neut-tof_fe_pseudo-voigt/index.md
-          - user/cli/pd-neut-tof_cecoal-polaris_chebyshev/index.md
-          - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md
-          - user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md
-          - user/cli/pd-xray-cwl_lif_single/index.md
-          - user/cli/pd-xray-cwl_pbso4-lab_round-robin/index.md
-          - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
-          - user/cli/pd-xray-cwl_latp_scan-4f/index.md
-          - user/cli/sc-neut-cwl_pr2nio4-5c2_basic/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md
-          - user/cli/sc-neut-tof_taurine-unknown_basic/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/index.md
-          - user/cli/sc-neut-cwl_pr2nio4-5c2_fit/index.md
-          - user/cli/sc-neut-tof_taurine_fit/index.md
+          - user/cli/pd-neut-cwl_lbco_simulation/index.md
+          - user/cli/pd-neut-tof_si_simulation/index.md
+          - user/cli/pd-xray-cwl_nacl_simulation/index.md
+          - user/cli/pd-neut-cwl_lbco-hrpt/index.md
+          - user/cli/pd-neut-cwl_hs-hrpt/index.md
+          - user/cli/pd-neut-cwl_cosio-d20/index.md
+          - user/cli/pd-neut-cwl_lmo-echidna/index.md
+          - user/cli/pd-neut-cwl_y2o3-spodi/index.md
+          - user/cli/pd-neut-cwl_yalo3-al2o3-spodi/index.md
+          - user/cli/pd-neut-tof_si-sepd/index.md
+          - user/cli/pd-neut-tof_cecoal-polaris/index.md
+          - user/cli/pd-neut-tof_ceo2-pearl/index.md
+          - user/cli/pd-neut-tof_lbco-si-mcstas/index.md
+          - user/cli/pd-neut-tof_ncaf-wish/index.md
+          - user/cli/pd-neut-tof_ferrite-austenite-beer/index.md
+          - user/cli/pd-xray-cwl_pbso4-lab/index.md
+          - user/cli/pd-xray-cwl_lam7o3-p021/index.md
+          - user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_scan/index.md
+          - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/sequential-fitting-in-the-app.md
           - user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md
+          - user/guides/fit-quality.md
       - Tutorials:
           - user/tutorials/index.md
-          - user/tutorials/refine-cosio-d20-tscan.ipynb
-          - user/tutorials/refine-lbco-hrpt-from-data.ipynb
-          - user/tutorials/refine-ncaf-wish.ipynb
-          - user/tutorials/refine-si-sepd.ipynb
-          - user/tutorials/simulate-si-tof.ipynb
+          - user/tutorials/pd-neut-cwl_lbco_simulation.ipynb
+          - user/tutorials/pd-neut-tof_si_simulation.ipynb
+          - user/tutorials/pd-xray-cwl_nacl_simulation.ipynb
+          - user/tutorials/pd-neut-cwl_lbco-hrpt.ipynb
+          - user/tutorials/pd-neut-cwl_hs-hrpt.ipynb
+          - user/tutorials/pd-neut-cwl_cosio-d20.ipynb
+          - user/tutorials/pd-neut-cwl_lmo-echidna.ipynb
+          - user/tutorials/pd-neut-cwl_y2o3-spodi.ipynb
+          - user/tutorials/pd-neut-cwl_yalo3-al2o3-spodi.ipynb
+          - user/tutorials/pd-neut-tof_si-sepd.ipynb
+          - user/tutorials/pd-neut-tof_cecoal-polaris.ipynb
+          - user/tutorials/pd-neut-tof_ceo2-pearl.ipynb
+          - user/tutorials/pd-neut-tof_lbco-si-mcstas.ipynb
+          - user/tutorials/pd-neut-tof_ncaf-wish.ipynb
+          - user/tutorials/pd-neut-tof_ferrite-austenite-beer.ipynb
+          - user/tutorials/pd-xray-cwl_pbso4-lab.ipynb
+          - user/tutorials/pd-xray-cwl_lam7o3-p021.ipynb
+          - user/tutorials/pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
+          - user/tutorials/pd-neut-cwl_cosio-d20_scan.ipynb
+          - user/tutorials/pd-xray-cwl_latp-bm01_scan.ipynb
 
 # The verification notebook PAGES live in the docs tree; their FullProf reference DATA stays
 # at knowledge/verification/fullprof beside the tests that read it. Jupytext .py sources
@@ -179,7 +182,9 @@ exclude_docs: |
   *.py
   /user/cli/*/project/
   /user/cli/*/PROVENANCE.md
+  /user/cli/*/README.md
   /user/cli/*/fullprof/
+  /user/cli/*/data/
 
 # Defining `plugins` drops the implicit default, so `search` is restated explicitly.
 # mkdocs-jupyter renders the Verification notebooks PRE-EXECUTED (the CI docs job runs
