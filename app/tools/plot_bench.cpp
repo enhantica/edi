@@ -491,6 +491,8 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
             }
         }
     }
+    // A route whose call does not reach Qt Graphs fails the cell, rather than timing frames that draw nothing.
+    bool route_failed = false;
     const auto feed_one = [&](std::size_t curve, std::size_t which, const QList<QPointF>& points) {
         QXYSeries* series = feeds[curve][which];
         if (route == "cpp-replace") {
@@ -513,10 +515,11 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
             }
         } else if (route == "model-mapper") {
             model_of[curve][which]->setPoints(points);
-        } else if (route == "qml-replace") {
-            QMetaObject::invokeMethod(root, "replaceFromQml", Q_ARG(QXYSeries*, series), Q_ARG(QList<QPointF>, points));
-        } else if (route == "qml-append") {
-            QMetaObject::invokeMethod(root, "appendFromQml", Q_ARG(QXYSeries*, series), Q_ARG(QList<QPointF>, points));
+        } else if (route == "qml-replace" || route == "qml-append") {
+            const char* function = route == "qml-replace" ? "replaceFromQml" : "appendFromQml";
+            route_failed |= !QMetaObject::invokeMethod(
+                root, function, Q_ARG(QVariant, QVariant::fromValue(static_cast<QObject*>(series))),
+                Q_ARG(QVariant, QVariant::fromValue(points)));
         }
     };
     const auto show = [&](const Shown& shown) {
@@ -568,6 +571,11 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
     const std::string cell = route + " on " + work.name;
     log("%s: first draw", cell.c_str());
     const double first = frame_after(view, [&] { show(work.data); }, kFirstTimeoutMs);
+    if (route_failed) {
+        log("%s: the route's call failed; skipping the cell", cell.c_str());
+        rows.push_back(summarise(route, work.name, "first", {}, "route failed"));
+        return rows;
+    }
     if (first < 0.0) {
         log("%s: no first frame in %d ms; skipping its other measures", cell.c_str(), kFirstTimeoutMs);
         rows.push_back(summarise(route, work.name, "first", {}, "no frame"));

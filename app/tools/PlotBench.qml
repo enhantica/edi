@@ -39,11 +39,12 @@ Item {
         root.owners = owners;
     }
 
-    // The QML routes: the points handed to JavaScript, then one replace, or one append per point.
-    function replaceFromQml(series: XYSeries, points: list<point>) {
+    // The QML routes: the points handed to JavaScript, then one replace, or one append per point. Untyped, so C++ hands
+    // both as variants.
+    function replaceFromQml(series, points) {
         series.replace(points);
     }
-    function appendFromQml(series: XYSeries, points: list<point>) {
+    function appendFromQml(series, points) {
         series.clear();
         for (let i = 0; i < points.length; ++i)
             series.append(points[i].x, points[i].y);
