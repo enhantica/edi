@@ -383,6 +383,9 @@ void ScanViewModel::placeRows() {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }
     }
+    if (texts != row_texts_) {
+        ++row_texts_revision_;
+    }
     publish(row_texts_, texts, &ScanViewModel::rowTextsChanged);
     emit orderNameChanged();
     double low = 0.0, high = 1.0;
@@ -486,7 +489,8 @@ void ScanViewModel::setRowsByIndex(bool on) {
 // One dataset on the axis shown: its own x, or d read off a joint fit's experiment's own d column or a scan's template
 // conversion, linear between the conversion's rows; a point beyond the conversion has no d. Its excluded ranges follow,
 // their ends clamped to the conversion's.
-void ScanViewModel::placePattern(Pattern& pattern) const {
+void ScanViewModel::placePattern(Pattern& pattern) {
+    pattern.generation = ++pattern_generation_;
     pattern.excluded_shown.clear();
     // Experiments on different native axes have no x to share until d is given: nothing is placed.
     if (!d_shown_ && !native_shared_) {

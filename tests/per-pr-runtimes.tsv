@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T04:09:10Z
+# measured_utc = 2026-10-25T18:16:46Z
 #
-# Recorded from: measured test run (9 node(s) measured once, 15134 banked, 0 stale row(s) dropped)
-# Collected tests: 16794; with a reported duration: 9851
-# Module-scoped fixture costs recorded: 73
+# Recorded from: measured test run (42 node(s) measured once, 15253 banked, 0 stale row(s) dropped)
+# Collected tests: 16901; with a reported duration: 9907
+# Module-scoped fixture costs recorded: 76
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16838
+# inventory_python = 16901
 # inventory_cpp = 393
-# inventory_measured = 15233
-# inventory_unmeasured = 1998
+# inventory_measured = 15271
+# inventory_unmeasured = 2023
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -5706,6 +5706,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.p
 0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_bkg-tof]
 0.020	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-cw]
 0.030	tests/integration/py/test_excluded_serialization.py::test_old_zero_on_an_excluded_row_is_refused[intensity_calc-tof]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_a_fast_tab_cannot_hide_the_other_tabs_overhead[pattern]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_a_fast_tab_cannot_hide_the_other_tabs_overhead[stacked]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_keeps_its_own_targets_and_identity
+0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_requires_both_fit_tabs[pattern]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_requires_both_fit_tabs[stacked]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_frozen_baseline_regression_pin_keeps_pattern_and_stacked_separate
+0.000	tests/integration/py/test_fast_chart_timing.py::test_hardware_numbers_cannot_replace_the_no_gpu_row
+0.000	tests/integration/py/test_fast_chart_timing.py::test_non_opengl_backend_has_no_opengl_renderer_to_report
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-adaptive_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-after_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples1-adaptive_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples1-after_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples2-adaptive_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples2-after_ms]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_software_row_cannot_omit_either_timing_gate
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend0]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend1]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend2]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend3]
 0.020	tests/integration/py/test_fit_tables_reference.py::test_ncaf_bank_one_retains_the_external_brief_values
 0.080	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[All datasets]
 0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_1_10]
@@ -12450,6 +12469,44 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_sch
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-light]
 1.390	tests/system/py/test_excluded_examples.py::test_committed_examples_do_not_claim_excluded_zero_calculations
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
+0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:map]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:stacked]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_desktop_minimum]
+0.004	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_gpu_backend]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:map]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:stacked]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:analysis]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:home]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:project]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:report]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placeholder_boundary_and_state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:1]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:324]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:3]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-map-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-map-420]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-map-740]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-pattern-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-pattern-420]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-pattern-740]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-stacked-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-stacked-420]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:analysis-stacked-740]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-map-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-map-420]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-map-740]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-pattern-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-pattern-420]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-pattern-740]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-1200]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-420]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-740]
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_selection_rectangle_is_retired
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
@@ -13398,6 +13455,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
+0.006	tests/system/py/test_rendering_setup.py::test_actual_qt_renderer_reference_is_available
+0.000	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_default_uses_detected_renderer]
+0.000	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_develop_reports_detection]
+1.790	tests/system/py/test_rendering_setup.py::test_normal_app_reports_its_actual_rendering_setup_at_startup
+0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[gpu]
+0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[software]
 0.003	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
 0.000	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[never-rendered]
 0.030	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[linked-root-saved]
@@ -17318,12 +17381,15 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 86.934	tests/system/py/test_element_contrast.py
+# module-cost: 482.204	tests/system/py/test_fast_chart_fit_timing.py
+# module-cost: 240.796	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 29.634	tests/system/py/test_rendering_setup.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py
