@@ -2,7 +2,8 @@
 // The plotting benchmark (edi ADR-0041): every way this Qt Graphs version can be fed, and edi's own ScanLines item
 // and a QPainter item as references, timed on the two charts that draw the most. "stacked-N" is N line patterns, the
 // 324-file scan's patterns repeated (324, 1000, 3000), each reduced at the plot's pixel columns as the Stacked view
-// reduces them; "pattern" is the LATP synchrotron pattern calculated with its three structures and two more (the
+// reduces them; "single-N" is one band of N points (10 000, 100 000, 1 000 000), the LATP measurement ± its s.u.
+// interpolated to N points and fed whole, as one big curve of the Pattern chart in band mode; "pattern" is the LATP synchrotron pattern calculated with its three structures and two more (the
 // first two at half their intensity), as the Pattern chart shows it in band mode: the measured band, a filled profile
 // per structure, the total and the background, the residual band and the reflection ticks.
 //
@@ -10,10 +11,11 @@
 // frame synchronised after it: the first draw; a data update as a fit makes one (every curve replaced); a zoom (the
 // middle half of x, every curve fed again for it, as the charts present a zoomed range); and a restyle (every curve's
 // colour). A cell stops a measure after kRepeats changes, after kBudgetMs of them, or after kMaxMisses changes in a row
-// draw no frame. It logs every change on stderr, prints one table on stdout and writes it as a TSV named after the
+// draw no frame; a route whose call fails stops its cell at once. A route slower than kHopelessMs per change on one size
+// of a workload is skipped on its larger sizes. It logs every change on stderr, prints one table on stdout and writes it as a TSV named after the
 // machine and its renderer. Test tooling, never part of the host.
 //
-//   edi_app_plot_bench [--out <file.tsv>] [--only <method>] [--workloads <name,...>]
+//   edi_app_plot_bench [--out <file.tsv>] [--routes <route,...>] [--workloads <name,...>]
 #include <QAbstractTableModel>
 #include <QColor>
 #include <QDir>
@@ -45,6 +47,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -61,8 +64,9 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
 
-constexpr int kRepeats = 10;
-constexpr qint64 kBudgetMs = 20000;
+constexpr int kRepeats = 5;
+constexpr qint64 kBudgetMs = 10000;
+constexpr double kHopelessMs = 2000.0;
 constexpr int kFirstTimeoutMs = 60000;
 constexpr int kVisibleTimeoutMs = 2000;
 constexpr int kMinChangeTimeoutMs = 1000;
@@ -97,6 +101,8 @@ struct Shown {
 // A workload's three states: the data, the data as a fit changes it, and the data zoomed to the middle half of x.
 struct Workload {
     std::string name;
+    std::string family;  // its sizes' common name: a route hopeless at one size is skipped at the larger ones
+    std::size_t size = 0;
     Shown data, updated, zoomed;
     bool lines = false;  // only lines: the ScanLines and QPainter references draw it too
     std::size_t points = 0;
@@ -215,6 +221,43 @@ edi::PatternSource pattern_source(const edi::PatternSource& captured, double fac
         source.phases.push_back(std::move(extra));
     }
     return source;
+}
+
+// One band of `count` points: the LATP measurement ± its s.u., interpolated to `count` points over its range (or the
+// points of that grid inside `range`), scaled by `factor` (a data update), on [0, 1] in y.
+Shown single(const edi::PatternSource& source, std::size_t count, double factor,
+             std::optional<std::pair<double, double>> range) {
+    const std::vector<double>& x = *source.x;
+    const std::vector<double>& meas = *source.meas;
+    const std::vector<double>& su = *source.su;
+    double top = 0.0;
+    for (std::size_t i = 0; i < meas.size(); ++i) {
+        top = std::max(top, meas[i] + su[i]);
+    }
+    Shown shown;
+    shown.x_min = range ? range->first : x.front();
+    shown.x_max = range ? range->second : x.back();
+    shown.y_min = 0.0;
+    shown.y_max = 1.0;
+    Curve band;
+    band.area = true;
+    std::size_t j = 1;
+    for (std::size_t i = 0; i < count; ++i) {
+        const double at = x.front() + (x.back() - x.front()) * static_cast<double>(i) / static_cast<double>(count - 1);
+        if (at < shown.x_min || at > shown.x_max) {
+            continue;
+        }
+        while (j + 1 < x.size() && x[j] < at) {
+            ++j;
+        }
+        const double share = std::clamp((at - x[j - 1]) / (x[j] - x[j - 1]), 0.0, 1.0);
+        const double m = (meas[j - 1] + share * (meas[j] - meas[j - 1])) * factor / top;
+        const double e = (su[j - 1] + share * (su[j] - su[j - 1])) / top;
+        band.upper.append(QPointF(at, m + e));
+        band.lower.append(QPointF(at, m - e));
+    }
+    shown.curves.push_back(std::move(band));
+    return shown;
 }
 
 // The presentation as curves on one plot: the main pane above the residual pane above the reflection ticks, each
@@ -419,7 +462,7 @@ Row summarise(const std::string& method, const std::string& workload, const std:
     row.n = static_cast<int>(samples.size());
     if (!samples.empty()) {
         row.median = samples[samples.size() / 2];
-        row.p95 = samples[static_cast<std::size_t>(0.95 * static_cast<double>(samples.size() - 1))];
+        row.p95 = samples[static_cast<std::size_t>(std::ceil(0.95 * static_cast<double>(samples.size() - 1)))];
     }
     return row;
 }
@@ -535,9 +578,9 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
             painted->y_max = shown.y_max;
             painted->update();
         } else {
-            for (std::size_t c = 0; c < shown.curves.size() && c < feeds.size(); ++c) {
+            for (std::size_t c = 0; c < shown.curves.size() && c < feeds.size() && !route_failed; ++c) {
                 feed_one(c, 0, shown.curves[c].upper);
-                if (shown.curves[c].area && feeds[c].size() > 1) {
+                if (shown.curves[c].area && feeds[c].size() > 1 && !route_failed) {
                     feed_one(c, 1, shown.curves[c].lower);
                 }
             }
@@ -595,6 +638,11 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
             took.start();
             const double ms = frame_after(view, [&] { change(i); }, timeout_ms);
             spent += took.elapsed();
+            if (route_failed) {
+                log("%s: the route's call failed; stopping the cell", cell.c_str());
+                status = "route failed";
+                break;
+            }
             samples.push_back(ms);
             misses = ms < 0.0 ? misses + 1 : 0;
             if (ms < 0.0) {
@@ -617,8 +665,12 @@ std::vector<Row> run_cell(const Method& method, const Workload& work, double wid
         rows.push_back(summarise(route, work.name, name, samples, status));
     };
     measure("update", [&](int i) { show(i % 2 == 0 ? work.updated : work.data); });
-    measure("zoom", [&](int i) { show(i % 2 == 0 ? work.zoomed : work.data); });
-    measure("restyle", restyle);
+    if (!route_failed) {
+        measure("zoom", [&](int i) { show(i % 2 == 0 ? work.zoomed : work.data); });
+    }
+    if (!route_failed) {
+        measure("restyle", restyle);
+    }
     return rows;
 }
 
@@ -682,7 +734,7 @@ int main(int argc, char** argv) {
         const qsizetype at = arguments.indexOf(QString::fromLatin1(name));
         return at >= 0 && at + 1 < arguments.size() ? arguments.at(at + 1) : QString();
     };
-    const QString only = option("--only");
+    const QStringList routes = option("--routes").split(QLatin1Char(','), Qt::SkipEmptyParts);
     const QStringList wanted = option("--workloads").split(QLatin1Char(','), Qt::SkipEmptyParts);
 
     // The window must be drawn before anything is timed, and its plot gives the pixel columns.
@@ -726,6 +778,8 @@ int main(int argc, char** argv) {
     for (const std::size_t count : {std::size_t{324}, std::size_t{1000}, std::size_t{3000}}) {
         Workload work;
         work.name = "stacked-" + std::to_string(count);
+        work.family = "stacked";
+        work.size = count;
         if (!wanted.isEmpty() && !wanted.contains(QString::fromStdString(work.name))) {
             continue;
         }
@@ -739,14 +793,35 @@ int main(int argc, char** argv) {
         log("%s: %zu curves, %zu points", work.name.c_str(), work.data.curves.size(), work.points);
         workloads.push_back(std::move(work));
     }
-    if (wanted.isEmpty() || wanted.contains(QStringLiteral("pattern"))) {
-        making.restart();
-        edi::Project project = edi::load_project(kPattern);
-        project.calculate();
-        const edi::PatternSource captured = edi::capture_pattern(project, 0);
+    const auto is_wanted = [&](const std::string& name) {
+        return wanted.isEmpty() || wanted.contains(QString::fromStdString(name));
+    };
+    making.restart();
+    edi::Project project = edi::load_project(kPattern);
+    project.calculate();
+    const edi::PatternSource captured = edi::capture_pattern(project, 0);
+    log("calculated the LATP pattern in %lld ms", static_cast<long long>(making.elapsed()));
+    for (const std::size_t count : {std::size_t{10000}, std::size_t{100000}, std::size_t{1000000}}) {
+        Workload work;
+        work.name = "single-" + std::to_string(count);
+        work.family = "single";
+        work.size = count;
+        if (!is_wanted(work.name)) {
+            continue;
+        }
+        work.data = single(captured, count, 1.0, std::nullopt);
+        work.updated = single(captured, count, 0.98, std::nullopt);
+        const double lo = work.data.x_min, hi = work.data.x_max;
+        work.zoomed = single(captured, count, 1.0, std::pair{lo + (hi - lo) / 4.0, hi - (hi - lo) / 4.0});
+        work.points = 2 * count;
+        log("%s: one band of %zu points", work.name.c_str(), count);
+        workloads.push_back(std::move(work));
+    }
+    if (is_wanted("pattern")) {
         const edi::PatternSource data = pattern_source(captured, 1.0), updated = pattern_source(captured, 0.98);
         Workload work;
         work.name = "pattern";
+        work.family = "pattern";
         work.data = pattern_shown(data, columns, std::nullopt, std::nullopt);
         work.updated = pattern_shown(updated, columns, std::nullopt, std::nullopt);
         const double lo = work.data.x_min, hi = work.data.x_max;
@@ -761,15 +836,42 @@ int main(int argc, char** argv) {
         workloads.push_back(std::move(work));
     }
 
-    std::vector<Row> rows;
+    // The cells, and the longest they can take before the skips below shorten it.
+    std::vector<std::pair<const Method*, const Workload*>> cells;
     for (const Workload& work : workloads) {
         for (const Method& method : methods()) {
-            if ((!only.isEmpty() && only != QLatin1String(method.name)) || (!method.qt_graphs && !work.lines)) {
-                continue;
+            if ((routes.isEmpty() || routes.contains(QLatin1String(method.name))) && (method.qt_graphs || work.lines)) {
+                cells.emplace_back(&method, &work);
             }
-            for (Row& row : run_cell(method, work, 1.0)) {
-                rows.push_back(std::move(row));
+        }
+    }
+    const double bound_min = static_cast<double>(cells.size()) *
+                             (kFirstTimeoutMs + 3.0 * static_cast<double>(kBudgetMs)) / 60000.0;
+    log("%zu cells (a route on a workload), %d changes per measure; at most %.0f minutes, much less as slow routes are "
+        "skipped",
+        cells.size(), kRepeats, bound_min);
+    std::vector<Row> rows;
+    // Per route and workload family, why the larger sizes are skipped.
+    std::map<std::pair<std::string, std::string>, std::string> hopeless;
+    std::size_t done = 0;
+    for (const auto& [method, work] : cells) {
+        ++done;
+        const auto key = std::pair{std::string(method->name), work->family};
+        if (const auto found = hopeless.find(key); found != hopeless.end()) {
+            log("[%zu/%zu] %s on %s: skipped (%s)", done, cells.size(), method->name, work->name.c_str(),
+                found->second.c_str());
+            rows.push_back(summarise(method->name, work->name, "first", {}, "skipped (" + found->second + ")"));
+            continue;
+        }
+        log("[%zu/%zu] %s on %s", done, cells.size(), method->name, work->name.c_str());
+        for (Row& row : run_cell(*method, *work, 1.0)) {
+            const bool change = row.measure != "first";
+            if (row.status == "no frame" || (change && row.median > kHopelessMs)) {
+                const std::string what =
+                    row.status == "no frame" ? "drew no frame" : std::to_string(std::lround(row.median)) + " ms";
+                hopeless.emplace(key, row.measure + " " + what + " at " + work->name);
             }
+            rows.push_back(std::move(row));
         }
     }
 
