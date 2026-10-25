@@ -3914,7 +3914,7 @@ NB_MODULE(_edi, m) {
             [](const std::filesystem::path& directory) {
                 // crysta's coded warnings reach Python as warnings led by the code; the loader's
                 // own notes keep their stderr line.
-                return edi::load_project(directory.string(), [](const std::string& message) {
+                edi::Project project = edi::load_project(directory.string(), [](const std::string& message) {
                     if (message.rfind("crysta.", 0) == 0) {
                         if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                             throw nb::python_error();
@@ -3923,6 +3923,14 @@ NB_MODULE(_edi, m) {
                     }
                     std::cerr << "Warning: " << message << "\n";
                 });
+                // A project opened from a .zip works in the folder it was unpacked into, and save() rewrites the
+                // archive from it (edi ADR-0052): the archive is its location.
+                if (edi::is_project_archive(directory.string())) {
+                    project.path = project.scan_data_root;
+                    project.scan_data_root.clear();
+                    project.archive = std::filesystem::absolute(directory).string();
+                }
+                return project;
             },
             "directory"_a,
             "Load a COMPLETE declarative .edi project directory (structures/, experiments/, "
@@ -4035,10 +4043,12 @@ NB_MODULE(_edi, m) {
                 save_project_advancing_last_modified(self, directory.string());
                 self.path = directory.string();
                 self.metadata.path = directory.string();
+                self.archive.clear();
             },
             "directory"_a,
             "Write the project out as a .edi project directory and remember it (inverse of "
-            "load). The project then holds the values its files hold, as a reopen reads them.")
+            "load). The project then holds the values its files hold, as a reopen reads them. A project "
+            "opened from a .zip is in that folder from now on, and its archive is left as it was.")
         .def(
             "_background_estimates_due",
             [](const edi::Project& self) { return edi::background_estimates_due(self); },
@@ -4086,6 +4096,8 @@ NB_MODULE(_edi, m) {
                 }
                 self.path = directory.string();
                 self.metadata.path = self.path;
+                // A dry run writes nothing back: an archive the project came from is not its output.
+                self.archive.clear();
             },
             "directory"_a,
             "Internal: route this project's fit outputs into `directory` and read scan data in "
@@ -4099,6 +4111,7 @@ NB_MODULE(_edi, m) {
                 self.path = directory.string();
                 self.metadata.path = directory.string();
                 self.scan_data_root.clear();
+                self.archive.clear();
             },
             "directory"_a, "Internal: save_as without narration (the CLI's --output).")
         .def(
@@ -4129,6 +4142,9 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 save_project_advancing_last_modified(self, self.path);
+                if (!self.archive.empty()) {
+                    edi::write_project_archive(self.path, self.archive);
+                }
             },
             "Internal: write the project back silently (the machine channel's save).")
         .def(
@@ -4140,12 +4156,28 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + self.path + "'");
+                    "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.
                 save_project_advancing_last_modified(self, self.path);
+                // A project opened from a .zip: the archive is rewritten from the folder it works in (edi ADR-0052).
+                if (!self.archive.empty()) {
+                    edi::write_project_archive(self.path, self.archive);
+                }
             },
-            "Write the project back into its own directory (the one it was loaded from or last "
-            "saved to). The project then holds the values its files hold, as a reopen reads them.")
+            "Write the project back to where it is: the directory it was loaded from or last saved to, or the "
+            ".zip it was loaded from, rewritten whole. The project then holds the values its files hold, as a "
+            "reopen reads them.")
+        .def_prop_ro(
+            "location",
+            [](const edi::Project& self) -> nb::object {
+                const std::string& where = self.archive.empty() ? self.path : self.archive;
+                if (where.empty()) {
+                    return nb::none();
+                }
+                return nb::cast(std::filesystem::path(where));
+            },
+            "Where save() writes, as a Path: the project's directory, or the .zip it was loaded from (edi "
+            "ADR-0052); None for a project never loaded or saved.")
         .def(
             "calculate",
             [](edi::Project& self) {
