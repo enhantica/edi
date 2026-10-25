@@ -72,10 +72,6 @@ class ScanViewModel : public QObject {
     // The lowest and the highest row itself (not its extent): the range of scan values the rows stand for.
     Q_PROPERTY(double rowLowest READ rowLowest NOTIFY rowLowestChanged)
     Q_PROPERTY(double rowHighest READ rowHighest NOTIFY rowHighestChanged)
-    // How many times the default rise a stacked pattern takes (the owner, 2026-10-22: 1 to 5, an app setting).
-    Q_PROPERTY(int stackScale READ stackScale WRITE setStackScale NOTIFY stackScaleChanged)
-    // How far up the stacked view draws a pattern's highest point above its row: four rows' height, times stackScale.
-    Q_PROPERTY(double stackHeight READ stackHeight NOTIFY stackHeightChanged)
     // A joint fit's experiments rather than a scan's datasets: rows by place, each labelled with its experiment's name.
     Q_PROPERTY(bool joint READ joint NOTIFY jointChanged)
     // Whether every dataset has the same native axis (2θ or TOF): a joint fit of a 2θ and a TOF experiment does not,
@@ -126,15 +122,12 @@ class ScanViewModel : public QObject {
     bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
     bool includedOnly() const { return included_only_; }
-    int stackScale() const { return stack_scale_; }
-    void setStackScale(int scale);
     void setIncludedOnly(bool on);
     void setRowsByIndex(bool on);
     double rowMin() const { return row_min_; }
     double rowMax() const { return row_max_; }
     double rowLowest() const { return row_lowest_; }
     double rowHighest() const { return row_highest_; }
-    double stackHeight() const { return stack_height_; }
     QString error() const { return error_; }
     QString rowNote() const { return row_note_; }
 
@@ -180,7 +173,6 @@ class ScanViewModel : public QObject {
     void dAvailableChanged();
     void rowsByIndexChanged();
     void includedOnlyChanged();
-    void stackScaleChanged();
     void rowTitleChanged();
     void orderNameChanged();
     void rowTextsChanged();
@@ -191,7 +183,6 @@ class ScanViewModel : public QObject {
     void rowMaxChanged();
     void rowLowestChanged();
     void rowHighestChanged();
-    void stackHeightChanged();
     void errorChanged();
     void rowNoteChanged();
     void jointChanged();
@@ -249,11 +240,10 @@ class ScanViewModel : public QObject {
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;
     QString value_problem_;  // the first dataset with no value to place its row by
-    double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0, stack_height_ = 0.0;
+    double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
-    int stack_scale_ = 1;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's
