@@ -202,3 +202,67 @@ popup background, not inferred from a requested x/y value. The text must name
 the independently targeted dataset. Its actual background and visible text
 use the app's shared tooltip background, foreground and font; the border and
 shadow token must also match. These observations cover both Stacked and Map.
+
+The centre witness waits for stable mapped positions and sizes of the selector,
+chart and controls across successive event-loop samples. One completed frame
+does not prove that the selector’s resize animation has finished. Seq 19 found
+that the previous one-frame witness read a moving selector; the settled witness
+retains the one-logical-pixel tolerance.
+
+
+## Stacked line quality against Pattern
+
+The reference is the actual Pattern chart's Qt Graphs measured-line rendering,
+not the retired painter or an existing capture. A paired capture loads the same
+independent dense polyline into Pattern and Stacked: a sharp triangular peak and
+a narrow peak whose feet straddle device-pixel columns. More than 4096 samples
+exercise reduction, rather than a sparse path that can bypass it. The matrix is
+DPR 1 and 2, each with effective GPU and software Stacked drawing. The approved
+measured palette assignment remains the colour reference.
+
+Both actual plots have equal physical grids and equal data ranges. Only their
+line subtrees are captured over white, at opacity 0.3, exposing overlapping joins.
+The tolerances are engineering allowances for different antialiasing kernels:
+
+- Integrated stroke coverage and seven local cross-sections differ by at most
+  15 percent from Pattern; the local checks also reject uneven thickness.
+- Absolute coverage error, after a half-physical-pixel smoothing kernel, is at
+  most 12 percent of Pattern's integrated coverage. No logical-pixel rescaling
+  or registration is allowed, including at DPR 2.
+- Every reference core pixel has candidate ink within one physical pixel; the
+  same rule applies inside a five-logical-pixel disk at the sharp vertex. This
+  permits antialiasing edge placement, not a missing segment or vertex notch.
+- Maximum opacity at the vertex exceeds Pattern's maximum there by at most
+  0.08. Comparing maxima within the vertex area avoids treating different edge
+  coverage as doubled alpha.
+
+The receipt retains both PNGs, actual Qt API/renderer, input and reference point
+counts, all metric values, and eight elapsed frame-delivery samples for each
+path. These elapsed samples include event delivery and the test's frame wait;
+they are not isolated GPU timings or quiet-machine performance claims.
+Controlled thinning, a gap, excessive alpha and a physical displacement of the
+actual Pattern reference must each fail the comparator; identity must pass.
+
+## Legend visibility and range preference
+
+Experiment and Analysis Pattern and single-crystal charts use the actual
+`chart.legend` or `singleCrystal.legend`. Every `chart.legend.entry` has a curve
+`key`, `hidden` state and drawn name and symbol. Clicking either part toggles the
+corresponding rendered curve, not just the legend metadata. Powder series have
+no drawable points while hidden; single-crystal reflection layers become
+invisible. Both name and symbol paint the chart's disabled foreground colour.
+A real hover uses the shared app tooltip and says exactly `Click to hide` or
+`Click to show`.
+
+`preferences.hiddenRange` offers `Keep the y range` (default, stored `keep`) and
+`Fit the range to visible curves` (stored `fit`), backed by
+`Preferences.chartHiddenRange` in machine settings. The former keeps both axis
+endpoints on hide and show; a later reset still counts hidden curves. The latter
+fits the visible data once on hide or show, and a later reset continues to leave
+hidden curves out. Showing everything restores the full-data fitted range.
+Visibility remains independent per chart across navigation in the running app
+and resets when another project opens.
+
+Before the amended owner record, the legend rule would have required an
+unchanged range for every click. The gates now separate the default keep rule
+from visible-only fits and test both actual preference choices and persistence.
