@@ -34,7 +34,7 @@ TestCase {
         compare(Session.project.name, expected, "Every app open route retains the project identity");
         compare(Session.project.currentStructure.cell.lengthA.value, cell, "Archive opening retains the independently loaded cell value exactly");
         if (data.route === "zip") {
-            verify(Session.project.modified, "An archive-opened project asks for its first persistent Save destination");
+            verify(!Session.save(), "An archive-opened project requires its first persistent Save destination");
             const destination = SettingsProof.emptyDirectory();
             verify(Session.saveAs(destination), "First Save as materializes the archive project in a chosen folder");
             verify(!Session.project.modified && !Session.project.canUndo, "Save leaves the adopted model clean and adds no Undo step");

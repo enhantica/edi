@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T12:54:39Z
+# measured_utc = 2026-10-25T13:09:55Z
 #
-# Recorded from: measured test run (59 node(s) measured once, 15159 banked, 0 stale row(s) dropped)
-# Collected tests: 16884; with a reported duration: 9887
+# Recorded from: measured test run (3 node(s) measured once, 15188 banked, 0 stale row(s) dropped)
+# Collected tests: 16884; with a reported duration: 9886
 # Module-scoped fixture costs recorded: 73
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 16884
 # inventory_cpp = 393
-# inventory_measured = 15191
-# inventory_unmeasured = 2086
+# inventory_measured = 15190
+# inventory_unmeasured = 2087
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -6148,7 +6148,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::te
 0.000	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[explicit-empty]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[Co"Si" <b>&amp;</b></script><script>alert(1)</script>\u2028\u2029]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[\U0001d6c2 & "quotes" and 'apostrophe']
-0.010	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
 0.090	tests/integration/py/test_report_iucr_persistence.py::test_authors_roundtrip_keeps_utf8_and_semicolon_separator
 0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_19]
 0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_99]
@@ -6386,7 +6386,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py:
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_check_uses_digest_and_file_existence_instead_of_save_timestamps[missing]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_cli_check_ignores_legacy_options_and_has_no_rows_for_an_absent_report_file
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_failed_report_write_keeps_the_previous_row_and_every_unticked_file
-0.730	tests/integration/py/test_report_save_workflow.py::test_report_saved_after_project_save_stays_current_after_reopening[cli]
+0.650	tests/integration/py/test_report_save_workflow.py::test_report_saved_after_project_save_stays_current_after_reopening[cli]
 0.560	tests/integration/py/test_report_save_workflow.py::test_report_saved_after_project_save_stays_current_after_reopening[python]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_save_as_copied_actual_html_stays_current_and_destination_edits_do_not_stale_source
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_save_workflow.py::test_save_report_writes_only_ticked_formats_and_replaces_rows_by_name[cli]

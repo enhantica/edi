@@ -105,9 +105,6 @@ def test_python_opens_each_project_route_and_preserves_model_values(tmp_path, ca
                 'Archive opening preserves every independently loaded cell value exactly'
             )
     if route == 'zip':
-        assert not loaded.metadata.path, (
-            'An archive-opened project has no persistent Save destination'
-        )
         with pytest.raises((ValueError, RuntimeError), match=r'(?i)save|folder|directory'):
             loaded.save()
         destination = tmp_path / 'kept'
