@@ -21,19 +21,45 @@ def passed(status, output, case):
 
 
 @pytest.fixture(scope='module')
-def observed_qt():
+def renderer_states(request, tmp_path_factory):
     status, output = actor('test_qt_reference')
     passed(status, output, 'test_qt_reference')
-    return qt_reference(output)
+    selected = [
+        item.callspec.params
+        for item in request.session.items
+        if item.module is request.module and hasattr(item, 'callspec')
+    ]
+    cases = {entry['case'] for entry in selected if 'case' in entry}
+    choices = {entry['choice'] for entry in selected if 'choice' in entry}
+    result = {
+        'qt': qt_reference(output),
+        'cases': {case: actor(case) for case in sorted(cases)},
+        'overrides': {},
+    }
+    root = tmp_path_factory.mktemp('renderer-machines')
+    for choice in sorted(choices):
+        store = root / choice / 'EasyScience/EasyDiffraction.ini'
+        store.parent.mkdir(parents=True)
+        env = dict(
+            os.environ, EDI_RENDER_ACCEPTANCE_STORE=str(store), EDI_RENDER_ACCEPTANCE_CHOICE=choice
+        )
+        captures = []
+        for phase in ('write', 'read'):
+            env['EDI_RENDER_ACCEPTANCE_PHASE'] = phase
+            captures.append(actor('test_override_roundtrip', env=env))
+        result['overrides'][choice] = store, captures
+    return result
 
 
-def test_actual_qt_renderer_reference_is_available(observed_qt):
+def test_actual_qt_renderer_reference_is_available(renderer_states):
+    observed_qt = renderer_states['qt']
     assert observed_qt['api'] != 'Unknown', 'The independent renderer reference must name a Qt API'
     if observed_qt['api'] == 'OpenGL':
         assert observed_qt['renderer'], 'OpenGL must expose its actual GL_RENDERER string'
 
 
-def test_normal_app_reports_its_actual_rendering_setup_at_startup(observed_qt, tmp_path):
+def test_normal_app_reports_its_actual_rendering_setup_at_startup(renderer_states, tmp_path):
+    observed_qt = renderer_states['qt']
     env = dict(os.environ)
     env.pop('QSG_INFO', None)
     env.pop('QT_LOGGING_RULES', None)
@@ -61,21 +87,15 @@ def test_normal_app_reports_its_actual_rendering_setup_at_startup(observed_qt, t
 @pytest.mark.parametrize(
     'case', ['test_develop_reports_detection', 'test_default_uses_detected_renderer']
 )
-def test_detected_rendering_setup_in_the_app(case):
-    status, output = actor(case)
+def test_detected_rendering_setup_in_the_app(renderer_states, case):
+    status, output = renderer_states['cases'][case]
     passed(status, output, case)
 
 
 @pytest.mark.parametrize('choice', ['software', 'gpu'])
-def test_user_override_controls_the_renderer_after_a_complete_restart(choice, tmp_path):
-    store = tmp_path / 'machine/EasyScience/EasyDiffraction.ini'
-    store.parent.mkdir(parents=True)
-    env = dict(
-        os.environ, EDI_RENDER_ACCEPTANCE_STORE=str(store), EDI_RENDER_ACCEPTANCE_CHOICE=choice
-    )
-    for phase in ('write', 'read'):
-        env['EDI_RENDER_ACCEPTANCE_PHASE'] = phase
-        status, output = actor('test_override_roundtrip', env=env)
+def test_user_override_controls_the_renderer_after_a_complete_restart(renderer_states, choice):
+    store, captures = renderer_states['overrides'][choice]
+    for status, output in captures:
         passed(status, output, 'test_override_roundtrip')
     assert store.is_file(), (
         'The renderer override must survive through the actual machine settings file'
