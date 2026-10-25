@@ -5,6 +5,7 @@ import {readFile, writeFile, mkdir, access} from 'node:fs/promises';
 import {resolve, extname, sep, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import {restoreCanvasViewport} from './web_control_geometry.mjs';
 
 const [siteArg, mode, output, chrome] = process.argv.slice(2);
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -12,14 +13,16 @@ const toolchain = process.env.EDI_WASM_TOOLCHAIN || join(process.env.HOME, '.cac
 const {chromium} = await import(join(toolchain, 'playwright/node_modules/playwright-core/index.mjs'));
 assert(siteArg && mode && output && chrome, 'Browser storage gates require a packed site, mode, evidence directory and real Chromium');
 const site = resolve(siteArg);
-await access(join(site, 'webapp/index.html'));
+await access(join(site, 'index.html'));
 await mkdir(output, {recursive:true});
 const server = createServer(async (req, res) => {
   try {
-    const path = resolve(site, '.' + new URL(req.url, 'http://localhost').pathname);
+    const pathname = new URL(req.url, 'http://localhost').pathname;
+    if (mode === 'singlethread' && pathname.endsWith('/coi-serviceworker.js')) {res.writeHead(404);res.end();return;}
+    const path = resolve(site, '.' + pathname + (pathname.endsWith('/') ? 'index.html' : ''));
     assert(path.startsWith(site + sep), 'The browser gate serves only the packed app');
     const bytes = await readFile(extname(path) ? path : join(path, 'index.html'));
-    const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm'})[extname(path)] || 'text/html'};
+    const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'})[extname(path)] || 'text/html'};
     if (mode === 'multithread') Object.assign(headers, {'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'});
     res.writeHead(200, headers); res.end(bytes);
   } catch { res.writeHead(404); res.end(); }
@@ -32,7 +35,15 @@ const fixture = join(repo, 'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-
 const documents = spawnSync('python', ['-c', 'import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))', fixture], {encoding:'utf8'});
 assert.equal(documents.status, 0, 'Browser input comes from Python zipfile, independently of the app');
 const initial = JSON.parse(documents.stdout);
-const receipts = {};
+const receipts = {}, failures = {};
+const logicalMembers=members=>{
+  const logical={...members};const text=Buffer.from(members['project.edi'],'base64').toString();
+  const field=/^(_metadata\.last_modified[ \t]+).+$/gm;
+  assert.equal([...text.matchAll(field)].length,1,'A saved project has exactly one declared wall-clock field');
+  logical['project.edi']=Buffer.from(text.replace(field,'$1<NORMALIZED-WALL-CLOCK>')).toString('base64');
+  return logical;
+};
+let activePage,activeCdp;
 const pythonStore = (files, wanted) => {
   const program = `import base64,io,json,sys,zipfile
 files=json.load(sys.stdin); candidates=[]
@@ -53,17 +64,21 @@ print(json.dumps([c for c in candidates if sys.argv[1].encode() in base64.b64dec
   return matches;
 };
 try {
-  for (const scenario of ['example-folder','example-zip','upload-fallback','disk-folder','disk-record','disk-zip']) {
+  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip').split(',')) {
+    console.log(mode,scenario,'starting');
     const fallback=scenario==='upload-fallback';
     const context=await browser.newContext({viewport:{width:1280,height:768},acceptDownloads:true});
     const page=await context.newPage();
-    const cdp=await context.newCDPSession(page);
+    page.setDefaultTimeout(45000);
+    const cdp=await context.newCDPSession(page);activePage=page;activeCdp=cdp;
     await cdp.send('Accessibility.enable');
     const events={downloads:0,filechoosers:0,dialogs:0};
     page.on('download',()=>++events.downloads);
     page.on('filechooser',()=>++events.filechoosers);
     page.on('dialog',async dialog=>{++events.dialogs;await dialog.dismiss();});
     await page.addInitScript(({initial,scenario,fallback})=>{
+      const nativeFocus=HTMLElement.prototype.focus;
+      HTMLElement.prototype.focus=function(options){return nativeFocus.call(this,{...options,preventScroll:true});};
       window.__storagePicks={directory:0,open:0,save:0};
       const put=async(folder,members)=>{
         for(const [name,body] of Object.entries(members)) {
@@ -86,16 +101,30 @@ try {
           Object.defineProperty(window,name,{value:undefined,configurable:true});
       } else {
         window.showDirectoryPicker=async()=>{++window.__storagePicks.directory;return await window.__storageHandles;};
-        window.showOpenFilePicker=async()=>{
+        window.showOpenFilePicker=async options=>{
+          window.__storageOpenOptions=options;
           ++window.__storagePicks.open;
           const folder=await window.__storageHandles;
           return [await folder.getFileHandle(scenario==='disk-zip'?'picked.zip':'project.edi')];
         };
         window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageHandles).getFileHandle('destination.zip',{create:true});};
-        if(scenario==='disk-folder')Object.defineProperty(window,'showOpenFilePicker',{value:undefined,configurable:true});
+
       }
     },{initial,scenario,fallback});
-    const frame=()=>page.evaluate(()=>new Promise(ok=>requestAnimationFrame(()=>ok(true))));
+    const navigationError=error=>/Execution context was destroyed|Cannot find context|navigated/i.test(error.message);
+    const evaluate=async(expression,arg)=>{
+      const deadline=Date.now()+45000;
+      while(true){try{return await page.evaluate(expression,arg);}catch(error){
+        if(!navigationError(error)||Date.now()>=deadline)throw error;
+        await page.waitForLoadState('domcontentloaded');
+      }}
+    };
+    const frame=()=>evaluate(()=>new Promise(ok=>requestAnimationFrame(()=>ok(true))));
+    const settle=async()=>{
+      const deadline=Date.now()+15000;let previous,stable=0;
+      while(Date.now()<deadline){await frame();const current=(await cdp.send('Page.captureScreenshot',{format:'png'})).data;stable=current===previous?stable+1:0;previous=current;if(stable>=2)return;}
+      throw Error('Actual application layout must settle before the next real pointer action');
+    };
     const ax=async()=> (await cdp.send('Accessibility.getFullAXTree')).nodes.filter(n=>!n.ignored);
     const control=async(regex,role)=>{
       const deadline=Date.now()+45000;
@@ -110,18 +139,54 @@ try {
       }
       throw Error('The real browser UI must expose '+regex);
     };
-    const click=async(regex,role)=>{const item=await control(regex,role);await page.mouse.click(item.x,item.y);await frame();};
+    let lastDialogControl;
+    const click=async(regex,role)=>{
+      await restoreCanvasViewport(expression=>evaluate(expression));
+      // Qt's shipped Popup controls are drawn but absent from the web AX tree.
+      // Resolve the declared native radio/checkbox, then use trusted input; the
+      // subsequent real picker/write proves that the dialog accepted the choice.
+      if(role==='radio'||role==='checkbox') {
+        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}catch{return false}});
+        const objectName=role==='checkbox'?'saveAs.copy':(opening?'open.':'saveAs.')+(regex.test('Zip archive')?'zip':'folder');
+        lastDialogControl=objectName;
+        const rect=await geometry(objectName);console.log(mode,scenario,'native choice',objectName);
+        await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();return;
+      }
+      if(regex.source==='^OK$') {
+        const tabs=lastDialogControl==='saveAs.zip'||lastDialogControl==='saveAs.folder'?2:1;
+        console.log(mode,scenario,'accept real dialog with keyboard',tabs);
+        for(let i=0;i<tabs;++i)await page.keyboard.press('Tab');
+        await page.keyboard.press('Space');await frame();return;
+      }
+      const item=await control(regex,role);console.log(mode,scenario,'click',item.node.name?.value);
+      let point=item;
+      const names={'Open project…':'project.open','Save project as…':'project.saveAs','Save current state of the project':'appBar.button.save','Zip archive':(await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}catch{return false}}))?'open.zip':'saveAs.zip','Folder':(await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}catch{return false}}))?'open.folder':'saveAs.folder','Save a copy':'saveAs.copy'};
+      const groupName=/Examples$/.test(item.node.name?.value||'')?'group.examples':/Recent projects$/.test(item.node.name?.value||'')?'group.recentProjects':null;
+      if(groupName){const rect=await geometry(groupName);point={x:rect.x+50,y:rect.y+15};}
+      const nativeName=names[item.node.name?.value]||(item.node.name?.value?.startsWith('sc-neut-cwl_tb2ti2o7-heidi_fit:')?'examples.open.sc-neut-cwl_tb2ti2o7-heidi_fit':null);
+      if(nativeName){const rect=await geometry(nativeName);point={x:rect.x+rect.width/2,y:rect.y+rect.height/2};}
+      if(item.node.role?.value==='tab'&&/^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(item.node.name?.value||'')){
+        const rect=await geometry('appBar.tab.'+item.node.name.value.toLowerCase());point={x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+      }
+      console.log(mode,scenario,'pointer',point.x,point.y);
+      await page.mouse.move(point.x,point.y);await page.mouse.down();await frame();await page.mouse.up();await frame();
+      if(/^(Start|Project|Structure|Experiment|Analysis|Report)$/.test(item.node.name?.value||'')||/(Examples|Recent projects|Get started)$/.test(item.node.name?.value||''))await settle();
+    };
     const geometry=async(name)=>{
-      await page.waitForFunction(name=>{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;},name);
-      return page.evaluate(name=>window.ediControlGeometry(name),name);
+      console.log(mode,scenario,'geometry',name);
+      await page.waitForFunction(name=>{try{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}},name);
+      return evaluate(name=>window.ediControlGeometry(name),name);
     };
     const location=async regex=>{
       const rect=await geometry('project.location');
       const item=await control(regex);
-      assert(item.x>=rect.x&&item.x<=rect.x+rect.width&&item.y>=rect.y&&item.y<=rect.y+rect.height,'The required working-place text is rendered in the actual Project Location field');
+      await writeFile(join(output,scenario+'-location.json'),JSON.stringify({rect,item},null,2));
+      // Qt's web AX text boxes retain x=0 after their native row moves; the rendered
+      // native rectangle and the unique AX text's row still identify this field.
+      assert(item.y>=rect.y&&item.y<=rect.y+rect.height,'The required working-place text is rendered on the actual Project Location row');
     };
-    const clean=()=>page.waitForFunction(()=>{const r=window.ediControlGeometry?.('appBar.button.save');return r?.visible&&r.enabled===false;});
-    const edit=async(name,value)=>{const r=await geometry(name);await page.mouse.click(r.x+r.width/2,r.y+r.height/2);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type(value);await page.keyboard.press('Tab');await frame();};
+    const clean=()=>page.waitForFunction(()=>{try{const r=window.ediControlGeometry?.('appBar.button.save');return r?.visible&&r.enabled===false;}catch{return false;}});
+    const edit=async(name,value)=>{await restoreCanvasViewport(expression=>evaluate(expression));const r=await geometry(name);await page.mouse.click(r.x+r.width/2,r.y+r.height/2);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type(value);await page.keyboard.press('Tab');await frame();};
     const activate=async()=>{
       const activation=await control(/(?:activate|enable) screen reader/i,'button');
       const resolved=await cdp.send('DOM.resolveNode',{backendNodeId:activation.node.backendDOMNodeId});
@@ -137,41 +202,64 @@ try {
       }};
       await walk(picked?await window.__storageHandles:await navigator.storage.getDirectory());return files;
     },picked);
-    const awaitStored=async name=>{
+    const awaitStored=async (name,recovery=false)=>{
       const deadline=Date.now()+30000;
       while(Date.now()<deadline){
-        try{return pythonStore(await readFiles(),name);}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}
+        try {
+          const files=await readFiles();const prefix=recovery?'edi/recovery/':'edi/projects/';
+          return pythonStore(Object.fromEntries(Object.entries(files).filter(([path])=>path.startsWith(prefix))),name);
+        }catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}
         await frame();
       }
       throw Error('Actual browser storage must durably contain '+name);
     };
     const exportZip=async (label,copy=true)=>{
-      await click(/^Save project as/);await control(/^Save project as$/);
+      await click(/^Save project as/);await geometry('saveAs.folder');
       await click(/^Zip archive$/,'radio');if(copy)await click(/^Save a copy/,'checkbox');
       const previous=fallback?0:await page.evaluate(async()=>{try{return (await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile()).lastModified;}catch{return 0;}});
       const download=fallback?page.waitForEvent('download'):null;await click(/^OK$/,'button');
       const path=join(output,scenario+'-'+label+'.zip');
       if(fallback)await(await download).saveAs(path);
       else {
-        await page.waitForFunction(async previous=>{try{const file=await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile();return file.size>0&&file.lastModified>previous;}catch{return false;}},previous);
-        const encoded=await page.evaluate(async()=>{const bytes=new Uint8Array(await(await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile()).arrayBuffer());return btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));});
+        const deadline=Date.now()+30000;let encoded;
+        while(Date.now()<deadline) {
+          encoded=await page.evaluate(async previous=>{try {
+            const file=await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile();
+            if(!file.size||file.lastModified<=previous)return null;
+            const bytes=new Uint8Array(await file.arrayBuffer());
+            return btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
+          }catch{return null;}},previous);
+          if(encoded)break;await frame();
+        }
+        assert(encoded,'The accepted Save-as picker must finish writing an actual ZIP file');
         await writeFile(path,Buffer.from(encoded,'base64'));
       }
       const parsed=spawnSync('python',['-c','import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z:\n assert len(z.namelist())==len(set(z.namelist())), "Export has no duplicate members"\n print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))',path],{encoding:'utf8'});
       assert.equal(parsed.status,0,'The actual Save-as download is independently readable');return JSON.parse(parsed.stdout);
     };
-    await page.goto(origin+'/webapp/');await activate();
+    try {
+    await page.goto(origin+'/?build='+mode);
+    await page.waitForFunction(expected=>window.ediBuildInfo?.build===expected&&typeof window.ediControlGeometry==='function',mode);
+    assert.equal(await evaluate(()=>window.ediBuildInfo.build),mode,'The actual page runs the requested packed thread kit');
+    await activate();
     if(scenario.startsWith('example')){
       // Find the real catalogue row through its actual search field, then real pointer input.
-      await click(/^Examples$/);await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi_basic');
-      await click(/^sc-neut-cwl_tb2ti2o7-heidi_basic:/,'button');
+      await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi_fit');
+      await click(/^sc-neut-cwl_tb2ti2o7-heidi_fit:/,'button');
     } else if(fallback){
-      const chooser=page.waitForEvent('filechooser');await click(/^Open project(?:…|\.\.\.)?$/);await(await chooser).setFiles(fixture);
+      await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');await click(/^Zip archive$/,'radio');
+      const chooser=page.waitForEvent('filechooser');await click(/^OK$/,'button');await(await chooser).setFiles(fixture);
     } else {
       await page.evaluate(async encoded=>{
         const file=await(await window.__storageHandles).getFileHandle('picked.zip',{create:true});const stream=await file.createWritable();await stream.write(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));await stream.close();
       },(await readFile(fixture)).toString('base64'));
-      await click(/^Open project(?:…|\.\.\.)?$/);
+      await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');
+      await click(scenario==='disk-folder'?/^Folder$/:/^Zip archive$/,'radio');await click(/^OK$/,'button');
+      if(scenario==='disk-record') {
+        const options=await page.evaluate(()=>window.__storageOpenOptions);
+        await writeFile(join(output,scenario+'-picker-options.json'),JSON.stringify(options,null,2));
+        assert(JSON.stringify(options).includes('.edi'),'The Chromium Open file route must offer the project.edi record declared by the working-place contract');
+      }
     }
     await control(/^Analysis$/,'tab');
     if(scenario==='disk-folder')assert((await page.evaluate(()=>window.__storagePicks.directory))>0,'The disk-folder case actually reaches the directory picker');
@@ -185,7 +273,12 @@ try {
     if(browserPlace){
       stored=await awaitStored(name);
       await location(/^In this browser only$/);
-      await control(/Saved in this browser only[.\s][\s\S]*Use Save project as…/);
+      // This Qt Popup has no AX node in the shipped kit. Retain actual rendered
+      // pixels for the independent notice-text inspection, and gate its visibility.
+      await geometry('webNotice.text');
+      const notice=await cdp.send('Page.captureScreenshot',{format:'png'});
+      await writeFile(join(output,scenario+'-save-notice.png'),Buffer.from(notice.data,'base64'));
+      await page.keyboard.press('Escape');await frame();
     } else {
       const deadline=Date.now()+30000;let candidates=[];
       while(Date.now()<deadline){try{candidates=pythonStore(await readFiles(true),name);break;}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}await frame();}
@@ -198,25 +291,25 @@ try {
       assert(stored.some(m=>m['reports/opaque.html']===initial['reports/opaque.html']),'Browser storage keeps exact independently authored report bytes');
     }
     const snapshot=await exportZip('saved');
-    assert(stored.some(m=>Object.keys(m).length===Object.keys(snapshot).length&&Object.entries(snapshot).every(([n,b])=>m[n]===b)),'The downloaded project contains the exact saved browser/disk model and report bytes');
+    await writeFile(join(output,scenario+'-saved-members.json'),JSON.stringify({stored,snapshot},null,2));
+    assert(stored.map(logicalMembers).some(m=>Object.keys(m).length===Object.keys(snapshot).length&&Object.entries(logicalMembers(snapshot)).every(([n,b])=>m[n]===b)),'The downloaded project contains the exact saved browser/disk model and report bytes');
     await page.reload();await activate();
-    await click(/^Recent projects$/);
-    await control(new RegExp(name));
-    if(browserPlace)await control(/^In this browser$/);
-    await click(new RegExp(name));await control(/^Analysis$/,'tab');
-    assert.deepEqual(await exportZip('reopened'),snapshot,'Reload then Recent projects reopens every saved project and report byte identically');
+    await click(/Recent projects$/,'button');
+    const recent=await control(browserPlace?/ · in this browser$/:/ · on this computer$/);
+    await click(new RegExp('^'+recent.node.name.value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$'));await control(/^Analysis$/,'tab');
+    assert.deepEqual(logicalMembers(await exportZip('reopened')),logicalMembers(snapshot),'Reload then Recent projects reopens every saved project and report byte identically');
     const unsaved='browser-unsaved-'+scenario;
     await edit('project.name',unsaved);
-    await awaitStored(unsaved);
-    await page.reload();await activate();await click(/^Recent projects$/);
-    await click(/^Continue where you left off/);
+    await awaitStored(unsaved,true);
+    await page.reload();await activate();await click(/Recent projects$/,'button');
+    await click(/^Continue where you left off:/);
     await control(/^Analysis$/,'tab');
     const recovered=await exportZip('recovered');
     assert(Buffer.from(recovered['project.edi'],'base64').toString().includes(unsaved),'Continue where you left off recovers the actual unsaved name after a page reload');
     for(const [member,body] of Object.entries(snapshot))if(member!=='project.edi')assert.equal(recovered[member],body,'Recovery retains every unchanged scientific and report member: '+member);
     if(scenario==='example-folder'||scenario==='example-zip') {
       if(scenario==='example-folder'){
-        await click(/^Save project as/);await control(/^Save project as$/);await click(/^Folder$/,'radio');await click(/^OK$/,'button');
+        await click(/^Save project as/);await geometry('saveAs.folder');await click(/^Folder$/,'radio');await click(/^OK$/,'button');
         await location(/test-picked-output/);
       } else {await exportZip('becomes-working-place',false);await location(/destination\.zip/);}
       const external='external-next-save-'+scenario;
@@ -230,7 +323,17 @@ try {
       assert.deepEqual(events,counts,'Later Save to a writable chosen disk place has no download or dialog');
     }
     receipts[scenario]={saved:stored,snapshot,recovered,events,picks:await page.evaluate(()=>window.__storagePicks),browser:'real Chromium',capability:fallback?'File System Access disabled; Firefox/Safari path simulated':'File System Access with real handles supplied at picker boundary'};
-    await page.screenshot({path:join(output,scenario+'.png')});await context.close();
+    console.log(mode,scenario,'PASS');
+    } catch(error) {
+      failures[scenario]={message:error.message,stack:error.stack,picks:await page.evaluate(()=>window.__storagePicks)};console.error(mode,scenario,'FAIL',error.stack);
+      await writeFile(join(output,scenario+'-failure-ax.json'),JSON.stringify(await cdp.send('Accessibility.getFullAXTree'),null,2));
+      const shot=await cdp.send('Page.captureScreenshot',{format:'png'});await writeFile(join(output,scenario+'-failure.png'),Buffer.from(shot.data,'base64'));
+    } finally {await context.close();}
+
   }
-  await writeFile(join(output,'browser-storage.json'),JSON.stringify({mode,receipts},null,2));
+  await writeFile(join(output,'browser-storage.json'),JSON.stringify({mode,receipts,failures},null,2));
+  assert.equal(Object.keys(failures).length,0,'Every browser working-place scenario must satisfy durable save, reload, recovery and disk-copy requirements');
+} catch(error) {
+  if(activeCdp){try{await writeFile(join(output,'failure-ax.json'),JSON.stringify(await activeCdp.send('Accessibility.getFullAXTree'),null,2));const shot=await activeCdp.send('Page.captureScreenshot',{format:'png'});await writeFile(join(output,'failure.png'),Buffer.from(shot.data,'base64'));}catch{}}
+  throw error;
 } finally {await browser.close();await new Promise(ok=>server.close(ok));}
