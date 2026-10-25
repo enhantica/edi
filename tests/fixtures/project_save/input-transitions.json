@@ -191,6 +191,25 @@
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
     },
+    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+          "experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
+          "project.edi": "d6f0eceae9afdae4b8dd2569c5450a383d36bdcfb6ec6c83ab56c440fa67b57b",
+          "structures/pr2nio4.edi": "a37a18c113ba4738af270329671dfbed3992098d997d59deff3cd92f6bc016d6"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+          "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
+          "project.edi": "7fd7ed14f9c50f3963e1a5769bc203ba309d39a31b10b593c9779d6b4f5166a8",
+          "structures/pr2nio4.edi": "27b55ca7cad6af444695d7e2881bae2d9ad454c42a92155ea10c4f35384a592f"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
     "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project": {
       "after": {
         "input_sha256": {
@@ -210,21 +229,21 @@
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
     },
-    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project": {
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project": {
       "after": {
         "input_sha256": {
-          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
-          "experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
-          "project.edi": "8181659185c939ef06cbbcc0d4be0760fbd636ac7c54c8f86e90a07f10bf8b0b",
-          "structures/pr2nio4.edi": "a37a18c113ba4738af270329671dfbed3992098d997d59deff3cd92f6bc016d6"
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
+          "project.edi": "40e0e4326cb334009d65754838d2e0811d31b9317d8c2f2ad014b196245903d8",
+          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
         }
       },
       "before": {
         "input_sha256": {
-          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
-          "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
-          "project.edi": "7fd7ed14f9c50f3963e1a5769bc203ba309d39a31b10b593c9779d6b4f5166a8",
-          "structures/pr2nio4.edi": "27b55ca7cad6af444695d7e2881bae2d9ad454c42a92155ea10c4f35384a592f"
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
+          "project.edi": "4b152423748086ce80404e9daf3b2a99faeb755878f58d9423e19f4e90eb0cbc",
+          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
         },
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
@@ -267,25 +286,6 @@
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
     },
-    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project": {
-      "after": {
-        "input_sha256": {
-          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
-          "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
-          "project.edi": "4b152423748086ce80404e9daf3b2a99faeb755878f58d9423e19f4e90eb0cbc",
-          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
-        }
-      },
-      "before": {
-        "input_sha256": {
-          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
-          "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
-          "project.edi": "4b152423748086ce80404e9daf3b2a99faeb755878f58d9423e19f4e90eb0cbc",
-          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
-        },
-        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
-      }
-    },
     "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
       "after": {
         "input_sha256": {
@@ -301,6 +301,30 @@
           "experiments/heidi.edi": "fa8996ae08f0230c5053f58d5660d2aa8039b18a0ec8cc9a3215d67e87a0d62f",
           "project.edi": "0bea558c21b6db4aacadf945be5236b48b02cde7c2950309894134fbf784ee84",
           "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-tof_taurine-senju/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
+          "experiments/senju_1.edi": "39035cc5318112ac8ff5546a3341bac766e0269a651ebfd092ec560d13a8f82d",
+          "experiments/senju_2.edi": "b6fcf89cf5387af7d0a9168ecd13e81710c3b66213aba0b05b9456c0a11cd119",
+          "experiments/senju_3.edi": "50c444b6ccc03e01907c24055d44bab891f3a6f32824c8732ff11c6bdfa3bcf3",
+          "experiments/senju_4.edi": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77",
+          "experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
+          "experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
+          "project.edi": "507f44f5f4f5528b998aa45700b73589e3ebcaec4c785e962bec5e28a0b33021",
+          "structures/taurine.edi": "6c8f4067c2be3cecc08a60d72f7bbac4f0fa8c899112e82ec49eeb1e3ed7e372"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
+          "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
+          "project.edi": "f70488fb481a49930fe8e0e97419991a7e331ad397d10a5bf40abc5e133f3ffe",
+          "structures/taurine.edi": "f914da36d8e5553f5475e3e381e7cb6d0bd51b55ce56bf4bf98800b09a75e129"
         },
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
@@ -323,31 +347,12 @@
         },
         "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
       }
-    },
-    "repo:docs/user/cli/sc-neut-tof_taurine_fit/project": {
-      "after": {
-        "input_sha256": {
-          "analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
-          "experiments/senju_1.edi": "39035cc5318112ac8ff5546a3341bac766e0269a651ebfd092ec560d13a8f82d",
-          "experiments/senju_2.edi": "b6fcf89cf5387af7d0a9168ecd13e81710c3b66213aba0b05b9456c0a11cd119",
-          "experiments/senju_3.edi": "50c444b6ccc03e01907c24055d44bab891f3a6f32824c8732ff11c6bdfa3bcf3",
-          "experiments/senju_4.edi": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77",
-          "experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
-          "experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
-          "project.edi": "6c8f1aa8db1f136f24914cb6ddcbab01de0254d4a5f2ab41b10300cadfb9b094",
-          "structures/taurine.edi": "6c8f4067c2be3cecc08a60d72f7bbac4f0fa8c899112e82ec49eeb1e3ed7e372"
-        }
-      },
-      "before": {
-        "input_sha256": {
-          "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
-          "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
-          "project.edi": "f70488fb481a49930fe8e0e97419991a7e331ad397d10a5bf40abc5e133f3ffe",
-          "structures/taurine.edi": "f914da36d8e5553f5475e3e381e7cb6d0bd51b55ce56bf4bf98800b09a75e129"
-        },
-        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
-      }
     }
+  },
+  "catalogue_identity_aliases": {
+    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
   },
   "claim": "REGRESSION PIN: committed input bytes, with the historical witness retained; second-save equality is the serialization invariant."
 }

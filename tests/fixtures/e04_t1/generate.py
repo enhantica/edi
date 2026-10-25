@@ -22,11 +22,6 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
-APP_ONLY = (
-    'sc-neut-cwl_tb2ti2o7-heidi_fit',
-    'sc-neut-cwl_pr2nio4-5c2_fit',
-    'sc-neut-tof_taurine_fit',
-)
 REFERENCE = ROOT / 'tests/fixtures/report_units/iucr_reference.py'
 SPEC = importlib.util.spec_from_file_location('display_rounding_reference', REFERENCE)
 IUCR = importlib.util.module_from_spec(SPEC)
@@ -279,8 +274,9 @@ def report_cell(file):
 
 def app_only_ids(registry):
     identities = [row['id'] for row in registry if row.get('app-only')]
-    if identities != list(APP_ONLY):
-        raise ValueError('App-only examples must be exactly the declared single-crystal list')
+    if identities:
+        message = 'Every user example now has its catalogue form; app-only rows are retired'
+        raise ValueError(message)
     return identities
 
 

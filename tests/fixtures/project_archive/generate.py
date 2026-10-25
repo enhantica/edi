@@ -1,11 +1,12 @@
 """Build interoperable ZIP inputs with Python's standard archive writer."""
 
+import argparse
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = (
-    'sc-neut-tof_taurine_fit',
+    'sc-neut-tof_taurine-senju',
     'pd-neut-cwl_cosio-d20_scan-3f',
     'sc-neut-cwl_tb2ti2o7-heidi_basic',
 )
@@ -17,8 +18,8 @@ def put(archive, name, body):
     archive.writestr(info, body)
 
 
-def main():
-    for case in CASES:
+def main(cases=CASES):
+    for case in cases:
         source = ROOT / 'docs/user/cli' / case / 'project'
         with ZipFile(Path(__file__).parent / (case + '.zip'), 'w', ZIP_DEFLATED) as archive:
             for path in sorted(source.rglob('*')):
@@ -31,4 +32,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--case', action='append', choices=CASES)
+    args = parser.parse_args()
+    main(args.case or CASES)
