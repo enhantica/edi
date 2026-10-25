@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <QDebug>
 #include <QAnimationDriver>
 #include <QElapsedTimer>
 #include <QPdfWriter>
@@ -38,6 +39,7 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QTextStream>
+#include <QTextLayout>
 #include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
@@ -82,6 +84,35 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
+    // Public Qt text layout, using the rendered label's own font and available width.
+    // The QML gate checks its line count against the actual label before reading line text.
+    Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
+        QVariantList result;
+        if (label == nullptr || !label->property("font").canConvert<QFont>()) {
+            return result;
+        }
+        const QString text = label->property("text").toString();
+        QTextLayout layout(text, label->property("font").value<QFont>());
+        QTextOption option;
+        option.setWrapMode(word && anywhere ? QTextOption::WrapAtWordBoundaryOrAnywhere
+                           : word ? QTextOption::WordWrap
+                           : anywhere ? QTextOption::WrapAnywhere : QTextOption::NoWrap);
+        option.setUseDesignMetrics(true);
+        layout.setTextOption(option);
+        layout.beginLayout();
+        for (;;) {
+            QTextLine line = layout.createLine();
+            if (!line.isValid()) {
+                break;
+            }
+            line.setLineWidth(label->property("width").toDouble() - label->property("leftPadding").toDouble()
+                              - label->property("rightPadding").toDouble());
+            result.append(QVariantMap{{QStringLiteral("text"), text.mid(line.textStart(), line.textLength()).trimmed()},
+                                      {QStringLiteral("width"), line.naturalTextWidth()}});
+        }
+        layout.endLayout();
+        return result;
+    }
     using QObject::QObject;
     bool webAvailable() const { return true; }
     QString webExportError() const { return web_export_error_; }
@@ -120,6 +151,27 @@ public:
         object->setParent(parent);
         QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         if (auto* item = qobject_cast<QQuickItem*>(object)) item->setParentItem(parent);
+        return object;
+    }
+    Q_INVOKABLE QObject* tooltipPlatformMain(QQuickItem* context, bool web, bool disk) const {
+        auto* engine = context ? qmlEngine(context) : nullptr;
+        if (!engine) return nullptr;
+        const QUrl origin("qrc:/qt/qml/edi/app/qml/Main.qml");
+        QFile file(":/qt/qml/edi/app/qml/Main.qml");
+        if (!file.open(QIODevice::ReadOnly)) return nullptr;
+        auto source = file.readAll();
+        // Availability operands alone select the real dialog's platform branches.
+        source.replace("WebFiles.available", web ? "true" : "false");
+        source.replace("WebStorage.diskAccess", disk ? "true" : "false");
+        QQmlComponent component(engine);
+        component.setData(source, origin);
+        auto* object = component.createWithInitialProperties({{"visible", true}, {"width", 1280}, {"height", 720}}, engine->rootContext());
+        if (!object) {
+            for (const auto& error : component.errors()) qWarning().noquote() << error.toString();
+            return nullptr;
+        }
+        object->setParent(context);
+        QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         return object;
     }
     Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {

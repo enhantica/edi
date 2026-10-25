@@ -178,7 +178,7 @@ TestCase {
     function test_open_dialog_data() {
         const rows = [];
         for (const projectName of cases)
-            for (const route of ["record", "zip"])
+            for (const route of ["folder", "zip"])
                 rows.push({
                     tag: projectName + "-" + route,
                     projectName,
@@ -186,19 +186,30 @@ TestCase {
                 });
         return rows;
     }
+    function chooseOpenFormat(zip) {
+        const choice = findChild(app, "open.choice");
+        verify(choice !== null, "Open first presents the same app format dialog on every platform");
+        tryCompare(choice, "opened", true, 2000, "The Open format dialog is actually open before its system chooser");
+        const format = findChild(choice.contentItem, zip ? "open.zip" : "open.folder");
+        verify(format && format.enabled, "The selected Open format is supported on this platform");
+        mouseClick(format, format.width / 2, format.height / 2);
+        const ok = choice.standardButton(Dialog.Ok);
+        mouseClick(ok, ok.width / 2, ok.height / 2);
+    }
     function test_open_dialog(data) {
         application();
         const input = routeInput(data.projectName, data.route);
         clickControl("project.open");
+        chooseOpenFormat(data.route === "zip");
         let dialogs;
         tryVerify(() => {
-            dialogs = SettingsProof.projectFileDialogs(app, false);
+            dialogs = SettingsProof.projectFileDialogs(app, data.route === "folder");
             return dialogs.length === 1;
         }, 2000, "One Open project action opens one actual system file dialog");
         const facts = SettingsProof.projectDialogFacts(dialogs[0]);
-        verify(facts.systemFile, "Open uses Qt's system FileDialog");
-        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, false), "The actual Open dialog accepts the selected record or ZIP");
-        verify(Session.hasProject && Session.lastError === "", "The unified Open action loads the selected project");
+        verify(data.route === "folder" ? !facts.systemFile : facts.systemFile, "Open uses the matching folder or ZIP system chooser");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, data.route === "folder"), "The actual Open dialog accepts the selected folder or ZIP");
+        tryVerify(() => Session.hasProject && Session.lastError === "", 4000, "The deferred Open handler loads the selected project after its signal returns");
         const metadata = SettingsProof.text(Probe.repoUrl("docs/user/cli/" + data.projectName + "/project"), "project.edi");
         const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
         compare(Session.project.name, name, "Unified Open retains the input project's declared name");
@@ -228,6 +239,7 @@ TestCase {
         }
         if (data.route === "open") {
             clickControl("project.open");
+            chooseOpenFormat(true);
             let dialogs;
             tryVerify(() => {
                 dialogs = SettingsProof.projectFileDialogs(app, false);
@@ -256,6 +268,59 @@ TestCase {
         verify(choice !== null, "The project remains interactive after the opening signal handler returns");
         tryCompare(choice, "opened", true, 2000, "A second real action works after ZIP opening");
         choice.close();
+    }
+    function test_save_chooser_defaults_data() {
+        const rows = [];
+        for (const input of ["folder", "zip"])
+            for (const zip of [false, true])
+                for (const copy of [false, true])
+                    rows.push({
+                        tag: input + "-" + (zip ? "zip" : "folder") + (copy ? "-copy" : "-move"),
+                        input,
+                        zip,
+                        copy
+                    });
+        return rows;
+    }
+    function test_save_chooser_defaults(data) {
+        application();
+        const input = data.input === "zip" ? SettingsProof.copyProjectArchive(Probe.repoUrl("tests/fixtures/project_archive/browser-saved-project.zip")) : SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
+        verify(Session.openProject(input), "Chooser defaults start at an actual project location");
+        tryCompare(Session.project, "calculating", false, 15000, "Chooser defaults are inspected on a usable project");
+        Session.project.name = "Named choice alpha 19";
+        const source = SettingsProof.localPath(input);
+        const directory = data.input === "zip" ? source.substring(0, source.lastIndexOf("/")) : source;
+        clickControl("project.saveAs");
+        const choice = findChild(app, "saveAs.choice");
+        verify(choice !== null, "The real Save-as format dialog precedes its chooser");
+        tryCompare(choice, "opened", true, 2000, "The real Save-as dialog opens before format selection");
+        const format = findChild(choice.contentItem, data.zip ? "saveAs.zip" : "saveAs.folder");
+        const copy = findChild(choice.contentItem, "saveAs.copy");
+        verify(format && copy, "The requested format and copy choices are actual controls");
+        if (!format.checked)
+            mouseClick(format, format.width / 2, format.height / 2);
+        if (copy.checked !== data.copy)
+            mouseClick(copy, copy.width / 2, copy.height / 2);
+        const ok = choice.standardButton(Dialog.Ok);
+        mouseClick(ok, ok.width / 2, ok.height / 2);
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true));
+            return dialogs.length === 1;
+        }, 2000, "The chosen Save-as route opens exactly one real native chooser");
+        const dialog = dialogs[0];
+        const selected = typeof dialog.selectedFile !== "undefined" ? dialog.selectedFile : dialog.selectedFolder;
+        const expectedName = Session.project.name + (data.zip ? ".zip" : "");
+        const target = SettingsProof.localPath(selected);
+        const facts = {
+            name: target.substring(target.lastIndexOf("/") + 1),
+            expectedName,
+            folder: SettingsProof.localPath(dialog.currentFolder),
+            expectedFolder: directory
+        };
+        console.log("SAVE_CHOOSER_DEFAULTS " + JSON.stringify(facts));
+        verify(facts.name === expectedName && facts.folder === directory, "Every native chooser receives the project name and its current folder: " + JSON.stringify(facts));
+        dialog.close();
     }
     function test_drop_data() {
         const rows = [];
