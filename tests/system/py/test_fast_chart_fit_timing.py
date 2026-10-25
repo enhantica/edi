@@ -1,4 +1,4 @@
-"""Gate each chart tab's actual Every pattern versus Adaptive scan overhead."""
+"""Gate each chart tab's actual catch-up versus Adaptive scan overhead."""
 
 import os
 
@@ -21,6 +21,6 @@ def test_every_pattern_overhead_on_each_actual_chart_tab(fit_timings, tab):
         'A fit timing verdict must retain its actual visible chart tab'
     )
     assert comparison['within_five_percent'], (
-        'Every pattern must take at most five percent longer than Adaptive per tab and backend: '
+        'Display catches up must stay within five percent of Adaptive on each tab/backend: '
         + str(comparison)
     )

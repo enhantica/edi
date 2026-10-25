@@ -38,14 +38,15 @@ def redraw_comparison(before, after, *, backend):
     }
 
 
-def fit_comparison(every_pattern, adaptive, *, backend, tab):
+def fit_comparison(display_catches_up, adaptive, *, backend, tab):
     """Compare the paired project's two real app update modes on the same machine."""
     if tab not in {'pattern', 'stacked'}:
         raise ValueError('Fit timings must name the Pattern or Stacked tab')
-    ratio = measured_median(every_pattern) / measured_median(adaptive)
+    ratio = measured_median(display_catches_up) / measured_median(adaptive)
     return {
         'backend': backend_identity(backend),
         'tab': tab,
+        'mode': 'display_catches_up',
         'ratio': ratio,
         'within_five_percent': ratio <= 1.05,
     }
@@ -55,12 +56,21 @@ def fit_tab_comparisons(fits, *, backend):
     """Keep both real chart tabs in the per-backend five-percent comparison."""
     if set(fits) != {'pattern', 'stacked'}:
         raise ValueError('Fit timing gates require both Pattern and Stacked tabs')
-    return {
-        tab: fit_comparison(
-            samples['every_pattern_ms'], samples['adaptive_ms'], backend=backend, tab=tab
+    results = {}
+    required = {'display_catches_up_ms', 'fit_waits_for_display_ms', 'adaptive_ms'}
+    for tab, samples in fits.items():
+        if set(samples) != required:
+            raise ValueError(
+                'Fit timings must distinguish display catches up and fit waits for the display'
+            )
+        result = fit_comparison(
+            samples['display_catches_up_ms'], samples['adaptive_ms'], backend=backend, tab=tab
         )
-        for tab, samples in fits.items()
-    }
+        result['fit_waits_ratio'] = measured_median(
+            samples['fit_waits_for_display_ms']
+        ) / measured_median(samples['adaptive_ms'])
+        results[tab] = result
+    return results
 
 
 def backend_comparisons(rows):

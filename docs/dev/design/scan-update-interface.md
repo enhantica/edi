@@ -14,8 +14,14 @@ The old saved Every-pattern setting is the integer zero in
 `Preferences.scanPatternUpdates`. Reading it in a fresh application engine
 must select **fit waits for the display**. The two Every-pattern choices must
 remain separately selectable through the actual `analysis.patternUpdates`
-control and reach the actual fit worker. Adaptive remains independently
-selectable after either one.
+control and reach the actual fit worker. The menu position is independent of
+the stored identifier: catch-up follows fit-waits while old identifiers keep
+their meanings. Adaptive remains independently
+selectable after either one. The fresh-engine migration read instantiates only
+a settings object. An earlier orphan PatternUpdatesGroup had no visual parent
+and could disturb focus and layout. The adapted gate returns to the active
+production window, reopens Analysis Settings, unfolds its group, finds the
+visible selector and waits for each popup transition before the next choice.
 
 Fit waits retains the existing behaviour: each fitted file is drawn before the
 worker proceeds. Display catches up permits fitting to finish while drawing
@@ -55,21 +61,31 @@ can be used. Software OpenGL and hardware results remain separate.
 
 ## Parameter edits and the Pattern y range
 
-While a parameter is adjusted, the actual Pattern chart's `chart.axis.y`
-keeps both endpoints if the newly calculated curve lies inside them. If a
-curve leaves either boundary, only widening is permitted: the new range must
-contain the curve without shrinking the opposite edge. Selecting another
-dataset or opening another model recomputes a fitted range. The user's zoom
-reset and fit-end behaviour retain their existing meaning.
+The owner amended the earlier holding rule: **only a pressed slider holds the
+range**. While dragging, `chart.axis.y` keeps both endpoints when the calculated
+curve stays inside. A curve leaving a boundary widens the range without
+shrinking the opposite edge. Slider release fits once to the current measured
+and calculated curves, allowing shrinkage. A typed commit and a discrete
+parameter step also fit immediately, rather than retaining a previous envelope.
+Another model or dataset, fit end and the existing zoom reset retain their
+behaviour.
 
-The range gate edits a real background intensity through the production
-parameter field in a private saved project. It observes actual
-`chart.series.calc` points and `chart.axis.y` endpoints after calculation and
-rendering. Deliberate upper and lower excursions exercise widening; interior
-edits and a parameter round trip exercise holding. User reset, switching a
-saved bank, and opening another model exercise independent reset paths.
-Expected holding comes from the previous visible range, not another copy of
-the controller's range algorithm.
+Before the amendment the gate typed background values and required their
+range to hold. That expectation is retired. The adapted gate gives the real
+experiment scale an independently excessive value, selects it in the actual
+Analysis parameter group, and holds the real slider with pointer input.
+It drags down inside the range, widens above it, then drags down again. Release
+must shrink the range. The actual Qt axis endpoint signals count the commit;
+each endpoint may change at most once, with an actual upper-endpoint change
+for the deliberately shrinking release.
+
+The gate reads actual `chart.series.calc` and `chart.measured` points, checks
+containment, and compares the committed range with the existing fit-to-data
+zoom reset at the same values. A typed round trip and a discrete value commit
+exercise immediate refitting. Dataset and model replacements separately
+exercise recomputation after an expanded range. `ProjectViewModel.adjusting`
+is observed to prove that the pointer-held phase reaches the production
+adjustment state. No second copy of the controller's range algorithm is used.
 
 ## First group in each sidebar tab
 
@@ -86,3 +102,10 @@ fresh default, folds it through actual header input, leaves the page, returns
 to that tab and checks the remembered fold. The older gate that required every
 group to start folded now expects the first group open while retaining its
 separator checks and the other groups' previous default.
+
+
+Native captures retain one checked executable snapshot for the pytest run,
+with its SHA-256 recorded in the log. A concurrent build may relink the
+original path; later captures continue using the same retained artifact.
+The fixture refuses a copy that straddles a relink, and cleans up its own
+snapshots. Unit controls exercise both races.

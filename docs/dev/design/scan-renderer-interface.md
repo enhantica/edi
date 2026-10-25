@@ -178,3 +178,27 @@ Every-pattern choices, the catch-up timing bound, stable parameter y ranges
 and first-group sidebar defaults. The rendering-detection singleton is now
 named `RenderingInfo`; its earlier name `GraphicsInfo` shadowed Qt Quick's
 attached graphics API type used by the Structure view.
+
+
+## Toolbar centre and plot hover placement
+
+Every toolbar line on Experiment and Analysis Pattern, Stacked and Map shares
+the horizontal centre of the visible `mainArea.blocks` dataset selector line.
+The reference is the entire selector row, including its navigation buttons,
+not the plot area offset by axis or row labels. The gate previously compared
+with the plot centre. It now maps both lines into common chart coordinates
+and checks each row within one logical pixel. Historical numeric case tags
+now select an actual wide, middle or supported-minimum application width;
+the gate no longer detaches a narrow chart beneath an unchanged wider selector.
+Wrapping and whole-control containment remain checked. If the comboboxes'
+combined width exceeds the available row, multiple combobox rows are required
+above the button row.
+
+The named `scanView.<mode>.hover` tooltip follows the actual pointer inside
+the plot. Its complete background stays inside the plot at interior and edge
+positions, its nearest edge lies within two standard font sizes of the pointer,
+and it intersects no toolbar control. Geometry is observed on the rendered
+popup background, not inferred from a requested x/y value. The text must name
+the independently targeted dataset. Its actual background and visible text
+use the app's shared tooltip background, foreground and font; the border and
+shadow token must also match. These observations cover both Stacked and Map.
