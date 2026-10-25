@@ -750,18 +750,6 @@ void Session::openWebProject(const QString& kind) {
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
 }
 
-void Session::openWebRecordFolder() {
-    QString root;
-    try {
-        root = QString::fromStdString(edi::fresh_archive_directory("web"));
-    } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));
-        emit loadFailed(last_error_);
-        return;
-    }
-    WebStorage::instance()->pickRecordFolder(root, webOpenAnswer(root));
-}
-
 WebStorage::Answer Session::webOpenAnswer(const QString& root) {
     // A project opened meanwhile is not replaced by the one that arrives late.
     const QPointer<ProjectViewModel> before = project_;
@@ -769,11 +757,6 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root) {
         if (before != project_ || !answer.value(QStringLiteral("ok")).toBool()) {
             QDir(root).removeRecursively();
             if (before != project_ || answer.value(QStringLiteral("cancelled")).toBool()) {
-                return;
-            }
-            // A project.edi needs its folder, picked with a click of its own.
-            if (answer.value(QStringLiteral("needsFolder")).toBool()) {
-                emit webFolderNeeded(answer.value(QStringLiteral("name")).toString());
                 return;
             }
             setLastError(answer.value(QStringLiteral("message")).toString());

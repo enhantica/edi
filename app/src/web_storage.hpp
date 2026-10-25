@@ -49,14 +49,10 @@ class WebStorage : public QObject {
     void markUnusable();
     QVariantMap place(const QString& key) const;
 
-    // Asks the user for a project to open, a "folder" or a "file" (a .zip, or with disk access a project.edi too), and
-    // copies it into `root` in memory: a folder's files
+    // Asks the user for a project to open, a "folder" or a "file" (a .zip), and copies it into `root` in memory: a folder's files
     // under root/<its name>, an archive as root/<its name>. With disk access the answer's `key` names the new place on
     // the disk; without it the copy is the browser's (kind "browser", no key yet).
     void pickOpen(const QString& kind, const QString& root, Answer answer);
-    // A project.edi picked with disk access opens its folder, which the user picks too, starting there. When the
-    // browser wants a new click for that second chooser, pickOpen answers `needsFolder`, and this asks for it.
-    void pickRecordFolder(const QString& root, Answer answer);
     // Asks the user where on the disk to save, a "folder" or a "zip" named `suggested`, starting where the place
     // `startKey` is. The answer's `key` names the new place, recorded once it is first written.
     void pickSave(const QString& kind, const QString& suggested, const QString& startKey, Answer answer);
