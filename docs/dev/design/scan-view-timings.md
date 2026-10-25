@@ -114,3 +114,30 @@ of it. "No frame": after a colour change alone, Qt Graphs drew no frame within 1
   slower. At 324 rows in about 600 pixels the view draws 1 px lines (ADR-0041 §4), so without a GPU the painter is
   today's fastest path, at about 125 ms.
 - None meets 100 ms without a GPU yet.
+
+## The renderers compared, with a GPU
+
+The same benchmark on an Apple M2 (macOS, Metal through Qt Quick, a Retina screen: the plot 2 000 device pixels wide,
+so no pattern is reduced), run by the owner on 2026-10-25, one run each
+([rows](scan-view-timings/renderers-gpu.tsv)), in milliseconds:
+
+| Candidate | Width | First | x range | Restyle | Offset |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| a, Qt Graphs | 2 px | 1 008 | 492 | no frame | 495 |
+| b, ScanLines | 1 px | 147 | 16.7 | 8.2 | 8.2 |
+| p, QPainter | 1 px | 72 | 66.5 | 66.5 | 66.4 |
+
+ScanLines meets the target with a GPU, at about one frame of a 120 Hz screen for a restyle or an offset, four to eight
+times faster than the painter. A second run reported by the owner gave b 26.5 ms for the first population (the first
+run's 147 ms held one-time start-up) and the same changes.
+
+## Why Qt Graphs is slow here
+
+Timed in one run of candidate a without a GPU, each change split by Qt's render loop timing: our side of a change, the
+324 traces reduced and handed over with one `replace()` per series, takes a median 7.5 ms (at most 29 ms); Qt Graphs then
+takes a median 1 355 ms preparing the frame on the GUI thread (its polish), 193 ms rendering it and 501 ms in llvmpipe
+before the swap. So the time is Qt Graphs' handling of 324 series, not the feeding.
+
+A colour change alone does not make Qt Graphs draw (6.11): `setColor` schedules no frame, so the restyles drew nothing
+in the runs above. The benchmark now emits the series' `update()` signal after the colour, and a restyle then draws in
+about 2 s without a GPU, as the other changes do.

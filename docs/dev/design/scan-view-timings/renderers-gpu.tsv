@@ -1,0 +1,4 @@
+source	candidate	patterns	points_read	points_drawn	columns	first_ms	range_median_ms	range_p95_ms	reduce_median_ms	restyle_median_ms	restyle_p95_ms	offset_median_ms	offset_p95_ms	missing	platform	read_ms	width_px
+owner's M2 (Apple M2, macOS, cocoa), 2026-10-25	a	324	488592	488592	2000	1008.30	491.62	513.73	2.75	-1.00	-1.00	495.14	611.51	30	cocoa	203	2.0
+owner's M2 (Apple M2, macOS, cocoa), 2026-10-25	b	324	488592	488592	2000	147.14	16.66	21.89	2.81	8.24	8.36	8.23	8.29	0	cocoa	214	1.0
+owner's M2 (Apple M2, macOS, cocoa), 2026-10-25	p	324	488592	488592	2000	72.32	66.53	68.26	2.85	66.50	67.77	66.42	68.05	0	cocoa	164	1.0
