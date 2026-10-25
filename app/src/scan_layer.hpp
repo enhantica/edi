@@ -228,7 +228,8 @@ class ScanLayer : public QQuickPaintedItem {
     int colours_revision_ = 0;
     // Whether the drawing marks a dataset: highlighting and one shown.
     int highlighted() const;
-    // The GPU lines, the highlighted one's line drawn over them, and the reductions and order they were last given.
+    // The GPU lines, the highlighted one's line drawn over them (their child, so hiding the lines hides it), and the
+    // reductions and order they were last given.
     ScanLines* lines_ = nullptr;
     ScanLines* top_ = nullptr;
     int top_dataset_ = -1;

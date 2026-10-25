@@ -68,7 +68,7 @@ bool column_excluded(const ScanViewModel::Pattern& pattern, bool included_only, 
 }  // namespace
 
 ScanLayer::ScanLayer(QQuickItem* parent)
-    : QQuickPaintedItem(parent), lines_(new ScanLines(this)), top_(new ScanLines(this)) {
+    : QQuickPaintedItem(parent), lines_(new ScanLines(this)), top_(new ScanLines(lines_)) {
     setAntialiasing(true);
     lines_->setVisible(false);
     top_->setVisible(false);
@@ -184,7 +184,7 @@ void ScanLayer::setScale(const QString& scale) {
 void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
     QQuickPaintedItem::geometryChange(next, previous);
     lines_->setSize(next.size());
-    top_->setSize(next.size());
+    top_->setSize(next.size());  // a child of the lines, over them at the same place
     redraw();
 }
 
@@ -268,17 +268,38 @@ int ScanLayer::datasetNear(double x, double y) const {
     if (mode_ == QLatin1String("map")) {
         return model_->datasetAt(y);
     }
-    // The stacked line passing nearest to (x, y): each dataset's reduced trace within a pixel either side of x.
+    // The stacked line passing nearest to (x, y): what each dataset's line covers within a pixel either side of x, its
+    // points there and its segments crossing there, read where they cross.
     const double column = (x - x_min_) / (x_max_ - x_min_) * width();
+    const double from = column - 1.0, to = column + 1.0;
     int nearest = -1;
     double best = std::numeric_limits<double>::infinity();
     for (std::size_t d = 0; d < reductions_.size() && d < baselines_.size(); ++d) {
         const Reduction& reduction = reductions_[d];
         double low = std::numeric_limits<double>::infinity(), high = -low;
+        const auto take = [&low, &high](double v) {
+            low = std::min(low, v);
+            high = std::max(high, v);
+        };
         for (std::size_t k = 0; k < reduction.x.size(); ++k) {
-            if (std::abs(reduction.x[k] - column) <= 1.0 && std::isfinite(reduction.v[k])) {
-                low = std::min(low, static_cast<double>(reduction.v[k]));
-                high = std::max(high, static_cast<double>(reduction.v[k]));
+            const double xa = reduction.x[k], va = reduction.v[k];
+            if (!std::isfinite(xa) || !std::isfinite(va)) {
+                continue;
+            }
+            if (xa >= from && xa <= to) {
+                take(va);
+            }
+            if (k + 1 == reduction.x.size()) {
+                continue;
+            }
+            const double xb = reduction.x[k + 1], vb = reduction.v[k + 1];
+            if (!std::isfinite(xb) || !std::isfinite(vb) || xb == xa) {
+                continue;
+            }
+            for (const double at : {from, to}) {
+                if (at > std::min(xa, xb) && at < std::max(xa, xb)) {
+                    take(va + (vb - va) * (at - xa) / (xb - xa));
+                }
             }
         }
         if (!std::isfinite(low)) {
