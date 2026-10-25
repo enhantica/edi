@@ -39,8 +39,8 @@ python -m edi fit path/to/project/project.edi          # a project.edi opens its
 python -m edi export path/to/project -o project.zip
 ```
 
-`fit` and `calc` take a folder, a `project.edi` or a `.zip`. A `.zip` is never changed: without `--output` nothing is
-written back.
+`fit` and `calc` take a folder, a `project.edi` or a `.zip`. A command never changes the `.zip` it was given: without
+`--output` nothing is written back.
 
 ## In Python
 
@@ -48,7 +48,9 @@ written back.
 import edi
 
 project = edi.Project.load('project.zip')   # or the folder, or its project.edi
-project.save_as('kept-project')             # a project from a .zip has no folder until this
+project.location                            # the .zip's path: where save() writes
+project.save()                              # rewrites project.zip
+project.save_as('kept-project')             # the project is in this folder from now on
 project.export_zip('handed-on.zip')
 ```
 
