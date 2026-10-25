@@ -54,3 +54,50 @@ then starts another host with the same private settings file. Each host opens
 a scan before checking the active path. The current VM replay exercises
 software **OpenGL**, not Qt Quick's Software backend; those are different
 capability cases.
+
+
+## Stacked placement and selectors
+
+The placement contract is the relative rule in ADR-0041 §4, independent of
+which renderer draws the lines. The Stacked toolbar controls are
+`scanView.stacked.toolbar.offset` and `scanView.stacked.toolbar.height`.
+Offset offers 0 through 100 percent in steps of ten, relative to one pattern's
+own height. Height offers Fit, then 10 through 100 percent of the plot height.
+The defaults are 10 percent offset and Fit. `Preferences.scanStackedOffset`
+and `Preferences.scanStackedSize` keep these percentages; size zero means Fit.
+The layer receives fractions through `offset` and `heightShare`.
+
+Placement belongs to `scanView.stacked.layer`: `rowOf(dataset)` returns its
+Stacked baseline, `peakOf(dataset)` its highest displayed line value, and
+`patternHeight` the chosen height. These values use the Stacked vertical axis
+coordinate system, with the unzoomed plot running from zero to one. They are
+plot shares, not pixels or scan metadata values. Zoom and pan change the
+visible axis interval without redefining the placement. The model's
+`chart.scan.rowOf(dataset)` remains the scan-value coordinate used by Map;
+for example a temperature row is not a Stacked baseline.
+
+For N patterns in ascending row order, let i be the zero-based row rank and
+let o be the offset percentage divided by 100. Fit chooses height
+H = 1 / (1 + (N - 1) × o); a fixed h percent chooses H = h / 100.
+The baseline is i × H × o. A pattern whose displayed maximum reaches its
+normalisation maximum peaks at baseline + H. The independently generated
+triangles used by the gate have that property. At zero offset every baseline
+coincides; at full offset adjacent triangles touch without overlapping.
+Fit puts the final peak at one. A fixed-height stack may extend beyond one;
+existing zoom and pan reach those values without changing H.
+
+The earlier gate compared the model's scan-value rows against Stacked
+baselines. The adapted gate reads both baseline and peak from the layer and
+compares them with the independent formulas in these axis coordinates. It
+checks the unzoomed zero-to-one interval rather than deriving the placement
+scale from whichever interval happens to be visible. The same layer baseline
+is used when locating the Stacked highlight and pointer witnesses; Map keeps
+its scan-value rows.
+
+For each requested choice the gate searches the combobox model by exact text
+equality after removing whitespace and ignoring case, then activates the
+matching index and waits for layout and rendering. It does not assume a
+particular index or use a suffix match: `0 %` and `100 %` remain distinct.
+The closed display may include `offset:` or `height:`; those prefixes do not
+change the model entries used for selection. This selector activation is a
+placement check; it does not claim a pointer-driven dropdown interaction.
