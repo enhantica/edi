@@ -28,7 +28,7 @@ QtObject {
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
     // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
     property int engineThreads: 0
-    // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
+    // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
@@ -244,6 +244,13 @@ QtObject {
     onScanRendererChanged: {
         scanViewSettings.setValue("renderer", scanRenderer);
         scanViewSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
+    onScanPatternUpdatesChanged: {
+        analysisSettings.setValue("scanPatternUpdates", scanPatternUpdates);
+        analysisSettings.sync();
         ApplicationInfo.storeSettings();
     }
 

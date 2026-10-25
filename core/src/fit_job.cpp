@@ -143,6 +143,8 @@ struct FitJob::State {
     // A followed scan waits after each file until its pattern is shown (`wait_for_patterns`); the worker sleeps
     // on `shown`, which `frame_shown` signals.
     std::atomic<bool> wait_patterns{false};
+    // A followed scan sends every file's pattern and never waits (`send_every_pattern`).
+    std::atomic<bool> every_pattern{false};
     std::mutex shown_mutex;
     std::condition_variable shown;
 
@@ -256,6 +258,14 @@ bool FitJob::start(const Project* scan_template) {
                     if (!self->following.load(std::memory_order_acquire)) {
                         return;
                     }
+                    if (self->every_pattern.load(std::memory_order_acquire)) {
+                        try {
+                            file_frame.emplace(file, FitFrame{pattern()});
+                        } catch (const std::exception&) {
+                            file_frame.reset();
+                        }
+                        return;
+                    }
 #if !EDI_WORKER_OWNER_THREAD
                     if (self->wait_patterns.load(std::memory_order_acquire)) {
                         // Every pattern: this file was fitted while the last one was drawn; its pattern waits here
@@ -336,6 +346,8 @@ void FitJob::frame_shown() {
 void FitJob::follow(bool on) { state_->following.store(on, std::memory_order_release); }
 
 void FitJob::wait_for_patterns(bool on) { state_->wait_patterns.store(on, std::memory_order_release); }
+
+void FitJob::send_every_pattern(bool on) { state_->every_pattern.store(on, std::memory_order_release); }
 
 bool FitJob::running() const noexcept { return state_->ticket != 0; }
 

@@ -1513,8 +1513,10 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
-    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs.
-    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && fit_->scanning() && !view.frame) {
+    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs or its patterns
+    // are drawn after it.
+    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && (fit_->scanning() || fit_->catchingUp()) &&
+        !view.frame) {
         view.frame = std::move(follow_frame_->second);
     }
     follow_frame_.reset();
@@ -1563,7 +1565,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     }
     // A followed scan may have marked newer files while this one was read: the current dataset stays the newest
     // finished one, and only the pattern shown is this file's (edi ADR-0029).
-    if (fit_ == nullptr || !fit_->following()) {
+    if (fit_ == nullptr || !(fit_->following() || fit_->catchingUp())) {
         current_dataset_ = index;
     }
     projected_dataset_ = index;
@@ -1844,6 +1846,24 @@ void ProjectViewModel::followScanFrame(const std::string& file, const edi::FitFr
     }
 }
 
+void ProjectViewModel::followScanSelection(const std::string& file, std::uint64_t token) {
+    const int index = scan_ && scan_session_ != nullptr ? scan_session_->place(file) : -1;
+    if (index < 0) {
+        if (fit_ != nullptr) {
+            fit_->followRendered(token, file, false);
+        }
+        return;
+    }
+    handFollowed(index, file, token);
+    follow_selection_ = true;
+    if (index != current_dataset_) {
+        current_dataset_ = index;
+        syncDataset(index);
+        emit currentExperimentIndexChanged();
+    }
+    awaitRender();
+}
+
 namespace {
 
 constexpr int kRenderWaitMs = 2000;
@@ -1874,6 +1894,7 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
     follow_file_ = file;
     follow_token_ = token;
     follow_generation_ = 0;
+    follow_selection_ = false;
     const ExperimentViewModel* experiment = currentExperiment();
     follow_before_ = experiment != nullptr ? experiment->patternGeneration() : 0;
     render_swaps_ = -1;
@@ -1881,6 +1902,10 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
 }
 
 bool ProjectViewModel::presentedFollowed() const {
+    // Presented as the current dataset: it still is.
+    if (follow_selection_) {
+        return current_dataset_ == follow_index_;
+    }
     // The model still holds the followed dataset, and a shown chart has drawn its pattern (the one its application
     // set, or a later calculation of the same dataset).
     const ExperimentViewModel* experiment = currentExperiment();
@@ -1941,6 +1966,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_index_ = -1;
     follow_token_ = 0;
     follow_generation_ = 0;
+    follow_selection_ = false;
     render_swaps_ = -1;
     render_armed_.store(false);
     render_wait_.stop();
@@ -1987,8 +2013,10 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
         return;
     }
     showScanResults();
-    // The shown dataset as the rows on disk now give it.
-    viewDataset(std::max(0, current_dataset_), true);
+    // The shown dataset as the rows on disk now give it, once a display catching up has drawn every pattern.
+    if (!fit_->catchingUp()) {
+        viewDataset(std::max(0, current_dataset_), true);
+    }
 }
 
 void ProjectViewModel::setAdjusting(bool adjusting) {
@@ -2000,6 +2028,15 @@ void ProjectViewModel::setAdjusting(bool adjusting) {
         experiment->setAdjusting(adjusting);
     }
     emit adjustingChanged();
+}
+
+void ProjectViewModel::scanCaughtUp() {
+    // The last pattern drawn was the newest dataset's, its row read as it was applied: nothing to show again.
+    if (scan_session_ == nullptr || !scan_session_->index().error.empty() ||
+        (projected_dataset_ == current_dataset_ && view_applied_ == view_request_)) {
+        return;
+    }
+    viewDataset(std::max(0, current_dataset_), true);
 }
 
 void ProjectViewModel::noteAddedExperiments(std::size_t before) {

@@ -25,8 +25,9 @@ EaElements.GroupBox {
     EaElements.ComboBox {
         objectName: "analysis.patternUpdates"
         width: EaStyle.Sizes.sideBarContentWidth
-        // The order is FitViewModel.patternUpdates's.
-        model: [qsTr("Every pattern"), qsTr("About once a second"), qsTr("Adaptive"), qsTr("Only at the end")]
+        // The order is FitViewModel.patternUpdates's, so a saved 0, the earlier "Every pattern", is "fit waits", and the
+        // newer choice comes last.
+        model: [qsTr("Every pattern, fit waits for the display"), qsTr("About once a second"), qsTr("Adaptive"), qsTr("Only at the end"), qsTr("Every pattern, display catches up")]
         currentIndex: Preferences.scanPatternUpdates
         onActivated: index => Preferences.scanPatternUpdates = index
     }
