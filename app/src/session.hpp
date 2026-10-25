@@ -136,6 +136,8 @@ class Session : public QObject {
     Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
 
    signals:
+    // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
+    void projectAboutToChange();
     void projectChanged();
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
