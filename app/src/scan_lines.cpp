@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "scan_lines.hpp"
 
+#include <QQuickWindow>
 #include <QSGGeometry>
 #include <QSGGeometryNode>
 #include <QSGMaterial>
 #include <QSGMaterialShader>
+#include <QSGRectangleNode>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -145,6 +147,15 @@ void ScanLines::setStyles(std::vector<Style> styles) {
     update();
 }
 
+void ScanLines::setBands(std::vector<QRectF> bands, const QColor& colour) {
+    if (bands != bands_ || colour != band_colour_) {
+        bands_ = std::move(bands);
+        band_colour_ = colour;
+        bands_changed_ = true;
+        update();
+    }
+}
+
 void ScanLines::setYMin(double value) {
     if (value != y_min_) {
         y_min_ = value;
@@ -170,19 +181,38 @@ void ScanLines::setLineWidth(double width) {
 }
 
 QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/) {
-    auto* root = old != nullptr ? old : new QSGNode;
+    // The root's first child holds the bands; the groups of lines follow it.
+    auto* root = old;
+    if (root == nullptr) {
+        root = new QSGNode;
+        root->appendChildNode(new QSGNode);
+    }
+    QSGNode* bands = root->firstChild();
+    if (bands_changed_ && window() != nullptr) {
+        while (QSGNode* child = bands->firstChild()) {
+            bands->removeChildNode(child);
+            delete child;
+        }
+        for (const QRectF& band : bands_) {
+            QSGRectangleNode* node = window()->createRectangleNode();
+            node->setRect(band);
+            node->setColor(band_colour_);
+            bands->appendChildNode(node);
+        }
+        bands_changed_ = false;
+    }
     const std::size_t lines = std::min(traces_.size(), styles_.size());
     const std::size_t groups = (lines + kGroup - 1) / kGroup;
-    const bool rebuild = traces_changed_ || static_cast<std::size_t>(root->childCount()) != groups;
+    const bool rebuild = traces_changed_ || static_cast<std::size_t>(root->childCount() - 1) != groups;
     if (rebuild) {
-        while (QSGNode* child = root->firstChild()) {
+        while (QSGNode* child = bands->nextSibling()) {
             root->removeChildNode(child);
             delete child;
         }
     }
     const double span = y_max_ - y_min_;
     const double h = height();
-    QSGNode* child = root->firstChild();
+    QSGNode* child = bands->nextSibling();
     for (std::size_t g = 0; g < groups; ++g) {
         const std::size_t first = g * kGroup, count = std::min(kGroup, lines - first);
         auto* node = static_cast<QSGGeometryNode*>(child);
@@ -209,6 +239,7 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
         child = node->nextSibling();
     }
     traces_changed_ = false;
+    emit rendered();
     return root;
 }
 

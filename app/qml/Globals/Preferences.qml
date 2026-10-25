@@ -31,6 +31,9 @@ QtObject {
     // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
+    // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
+    // one and painted without (GraphicsInfo), "gpu" or "software" whatever was detected.
+    property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
@@ -56,6 +59,7 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
+        preferences.scanRenderer = "auto";
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
@@ -181,6 +185,7 @@ QtObject {
         property alias mapReversed: preferences.scanMapReversed
         property alias stackedHeight: preferences.scanStackedHeight
         property alias stackedReversed: preferences.scanStackedReversed
+        property alias renderer: preferences.scanRenderer
     }
 
     property Binding fitPatternUpdates: Binding {
@@ -227,6 +232,13 @@ QtObject {
     onChartIncludedOnlyChanged: {
         chartSettings.setValue("includedOnly", chartIncludedOnly);
         chartSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: the renderer choice is read by the next start, which may follow at once.
+    onScanRendererChanged: {
+        scanViewSettings.setValue("renderer", scanRenderer);
+        scanViewSettings.sync();
         ApplicationInfo.storeSettings();
     }
 
