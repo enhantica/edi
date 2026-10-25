@@ -1,6 +1,5 @@
-"""Run both chart tabs through the app's real sequential-fit timing route."""
+"""Time both chart tabs and both Every pattern choices through the real UI."""
 
-import csv
 import json
 import os
 from pathlib import Path
@@ -8,34 +7,44 @@ from pathlib import Path
 from tests.fixtures.fast_chart_redraws.rendering import ROOT, actor, capture, qt_reference
 from tests.fixtures.fast_chart_redraws.timing import fit_tab_comparisons
 
+LABELS = {
+    'catchup': 'Every pattern, display catches up',
+    'wait': 'Every pattern, fit waits for the display',
+    'adaptive': 'Adaptive',
+}
 
-def run_sample(destination, scenario, backend):
+
+def run_sample(destination, mode, tab, backend):
     destination.mkdir(parents=True, exist_ok=False)
     command = [
-        Path(os.environ.get('EDI_APP_BINARY', ROOT / 'build/app/app/edi_app')),
-        '--demo',
-        destination,
-        '--demo-only',
-        scenario,
+        Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests')),
+        '-input',
+        ROOT / 'tests/system/app/ScanUpdates.qml',
+        '-o',
+        '-,txt',
+        'ScanUpdates::test_timing:' + tab + '-' + mode,
     ]
-    status, log = capture(command, env=dict(os.environ, QSG_INFO='1'), timeout=180)
+    status, log = capture(command, timeout=150)
     if status != 0:
-        raise RuntimeError('The real sequential-fit timing route must finish: ' + log)
-    if backend['api'].lower() not in log.lower() or (
-        backend['api'] == 'OpenGL' and backend['renderer'] not in log
-    ):
-        raise ValueError('Every fit timing must identify the observed Qt backend: ' + log)
-    with (destination / 'timings.tsv').open() as stream:
-        rows = list(csv.reader(stream, delimiter='\t'))
-    selected = [row for row in rows if len(row) == 3 and row[:2] == [scenario, 'fit']]
-    if len(selected) != 1:
-        raise ValueError('Each timed app invocation must produce its requested tab and mode')
-    return {
-        'command': list(map(str, command)),
-        'backend': backend,
-        'timings': rows,
-        'milliseconds': float(selected[0][2]),
-    }
+        raise RuntimeError('The real sequential-fit timing actor must finish: ' + log)
+    observed = qt_reference(log)
+    if observed != backend:
+        raise ValueError('Every fit timing must retain the independently observed Qt backend')
+    receipts = [
+        json.loads(line.split('FIT_TIMING ', 1)[1])
+        for line in log.splitlines()
+        if 'FIT_TIMING ' in line
+    ]
+    if len(receipts) != 1:
+        raise ValueError('Each fit timing needs exactly one completed real UI receipt')
+    receipt = receipts[0]
+    if receipt['selection'] != LABELS[mode] or receipt['tab'] != tab or receipt['fitted'] != 162:
+        raise ValueError(
+            'The timed fit must use the requested actual UI choice, tab and complete scan'
+        )
+    sample = {'command': list(map(str, command)), 'backend': observed, **receipt}
+    (destination / 'sample.json').write_text(json.dumps(sample, indent=2) + '\n')
+    return sample
 
 
 def measure_fit_tabs(directory, repetitions=3):
@@ -47,18 +56,31 @@ def measure_fit_tabs(directory, repetitions=3):
             'Fit timing requires the independent Qt renderer observation: ' + output
         )
     backend = qt_reference(output)
-    fits = {tab: {'every_pattern_ms': [], 'adaptive_ms': []} for tab in ('pattern', 'stacked')}
+    fits = {
+        tab: {'display_catches_up_ms': [], 'fit_waits_for_display_ms': [], 'adaptive_ms': []}
+        for tab in ('pattern', 'stacked')
+    }
+    fields = {
+        'catchup': 'display_catches_up_ms',
+        'wait': 'fit_waits_for_display_ms',
+        'adaptive': 'adaptive_ms',
+    }
     receipts = []
     for repeat in range(repetitions):
         for tab in fits:
-            modes = ('every', 'adaptive') if repeat % 2 == 0 else ('adaptive', 'every')
+            modes = (
+                ('catchup', 'wait', 'adaptive')
+                if repeat % 2 == 0
+                else ('adaptive', 'wait', 'catchup')
+            )
             for mode in modes:
-                scenario = f'perf-fit-{mode}-{tab}'
-                sample = run_sample(directory / f'{scenario}-{repeat}', scenario, backend)
-                field = 'every_pattern_ms' if mode == 'every' else 'adaptive_ms'
-                fits[tab][field].append(sample['milliseconds'])
+                sample = run_sample(directory / f'{tab}-{mode}-{repeat}', mode, tab, backend)
+                fits[tab][fields[mode]].append(sample['milliseconds'])
                 receipts.append(sample)
-                print('Fit timing complete: ' + scenario + ' repeat ' + str(repeat), flush=True)
+                print(
+                    'Fit timing complete: ' + tab + ' ' + mode + ' repeat ' + str(repeat),
+                    flush=True,
+                )
     result = {
         'backend': backend,
         'fits': fits,
