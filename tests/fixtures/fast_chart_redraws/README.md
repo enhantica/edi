@@ -63,7 +63,9 @@ The restart actor lives in the system tier and runs through that two-process
 harness, with an actual display and private settings, rather than the unit
 runner's offscreen all-files invocation.
 
-The old renderer gate required the painter's retirement on every host. The
-owner's rendering-detection decision changes that assertion: a fresh software
-OpenGL host uses the painter, while hardware uses the GPU line item. A future
-software successor needs the same observed path and drawing checks.
+The [scan renderer interface](../../../docs/dev/design/scan-renderer-interface.md)
+defines requested and effective choices, the loaded-scan observations, restart
+persistence and the difference between llvmpipe OpenGL and Qt Quick's Software
+backend. The gate previously inferred the path from the wrapper's superclass;
+it now observes the selected path and rendered contribution, allowing a painted
+wrapper to host the GPU line child.
