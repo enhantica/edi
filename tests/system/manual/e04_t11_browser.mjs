@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
-import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
+import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
@@ -486,8 +486,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const nativeProgress = await endFitProgress(evaluate);
   const progressAfter = await evaluate('window.ediFitProgress()');
   const finalIteration = Number(progressAfter.text.match(/\bit\s+(\d+)$/i)?.[1]);
+  // NCAF is the sustained frame-liveness vehicle. The catalogue LBCO fit can
+  // finish its remaining iterations within one frame; frame sampling cannot
+  // establish which individual callbacks that frame coalesced (record 0275560a4).
+  const frameLivenessRequired = fitCase === 'ncaf';
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify({accessibility:progress,
-    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs},null,2));
+    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs,
+    frameLivenessRequired,frameAdvancementObserved:advancesLiveFitProgress(nativeProgress,finalIteration)},null,2));
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
     advancesLiveFitProgress(states,final);
@@ -503,8 +508,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
     !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress,finalIteration),
-    'multithread fitting must publish a running control and advance live through intermediate iterations');
+  if (mode !== 'singlethread') {
+    assert(progress.some(value => fittingObservationKind(value) === 'control') &&
+      observesOrderedFitProgress(nativeProgress,finalIteration),
+      'Multithread fitting must expose its actual running control and ordered visible native counters');
+    if (frameLivenessRequired) assert(runningProgress(progress,nativeProgress,finalIteration),
+      'The sustained five-bank NCAF fit must advance live through intermediate frame samples');
+  }
   assert.equal(progressAfter.running,false,
     'The native fit must stop running when the actual successful results popup is displayed');
   await evaluate('window.__e04ProgressObserver.disconnect()');
