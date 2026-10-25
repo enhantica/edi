@@ -338,13 +338,13 @@ try {
       const storageErrors=[];
       if(scenario==='example-private-save'){
         await evaluate(()=>window.__downloadBoundary.deny());await frame();
-        await edit('project.name','private-save-edited');
-        await click(/^Save current state of the project$/,'button');
-        await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
-        await frame();
-        try{await warning(true);}catch(error){storageErrors.push(error.message);}
-        await page.keyboard.press('Escape');await frame();
       }
+      await edit('project.name','private-save-edited-'+scenario);
+      await click(/^Save current state of the project$/,'button');
+      await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
+      await frame();
+      try{await warning(true);}catch(error){storageErrors.push(error.message);}
+      await page.keyboard.press('Escape');await frame();
       await location(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
       const actualLocation=await control(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
       if(!/tab|memory/i.test(actualLocation.node.name?.value||''))storageErrors.push('Unavailable storage must use a plain-words in-memory Location, never In this browser only');
