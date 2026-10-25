@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T03:37:36Z
+# measured_utc = 2026-10-25T04:25:41Z
 #
 # Recorded from: measured test run (1 node(s) measured once, 15030 banked, 0 stale row(s) dropped)
-# Collected tests: 16803; with a reported duration: 9688
+# Collected tests: 16803; with a reported duration: 9689
 # Module-scoped fixture costs recorded: 72
 #
 # Breaches are decided PER TIER against the table
@@ -11714,7 +11714,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_doublet_fit_anchors.py::test_
 0.000	tests/system/py/test_e04_t10_latency.py::test_structure_metrics_extend_the_existing_ratchet
 0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[multithread]
 0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_each_build_has_browser_runtime_assets[singlethread]
-0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_native_fixture_is_bound_to_the_committed_nontrivial_project
+1.500	tests/system/py/test_e04_t11_wasm_delivery.py::test_native_fixture_is_bound_to_the_committed_nontrivial_project
 0.340	tests/system/py/test_e04_t11_wasm_delivery.py::test_public_webapp_packer_excludes_native_build_outputs
 0.000	tests/system/py/test_e04_t11_wasm_delivery.py::test_toolchain_tasks_declare_reproducible_pins
 0.020	tests/system/py/test_e04_t11_wasm_delivery.py::test_web_build_adr_explains_prior_host_threading_and_gpl

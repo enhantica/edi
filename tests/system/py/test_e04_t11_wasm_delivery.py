@@ -23,6 +23,7 @@ import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
+from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
@@ -174,6 +175,31 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
             float(fields[key]) == record[key]
             for key in ('iterations', 'rwp', 'reduced_chi_square')
         ), 'Browser catalogue parity: saved-fit metrics and iterations match the native transcript'
+
+        operands = json.loads(
+            (FIXTURE / 'catalogue_scientific' / f'{case}-native.json').read_text()
+        )
+        assert (
+            operands['project'] == record['project']
+            and operands['project_sha256'] == record['project_sha256']
+        ), 'Browser catalogue parity: complete saved operands bind the same selected input'
+        assert operands['reference'].startswith('Native CLI parity regression pin;'), (
+            'Browser catalogue parity: complete saved operands are labelled regression pins'
+        )
+        assert (
+            operands['relative_tolerance'] == 1e-9 and operands['absolute_tolerance'] == 1e-11
+        ), 'Browser catalogue parity: complete operands retain the original numerical bounds'
+
+        matrix = json.loads(
+            (FIXTURE / 'catalogue_scientific' / f'{case}-conditioning.json').read_text()
+        )
+        raw = FIXTURE / 'catalogue_scientific' / f'{case}-conditioning-raw.json'
+        assert hashlib.sha256(raw.read_bytes()).hexdigest() == matrix['raw_capture_sha256'], (
+            'Browser catalogue parity: the uncertainty proof binds its retained native matrix'
+        )
+        assert uncertainty_tolerances(operands['scientific'], matrix), (
+            'Browser catalogue parity: each saved uncertainty has its native conditioning bound'
+        )
 
 
 def test_toolchain_tasks_declare_reproducible_pins():

@@ -73,7 +73,7 @@ def bind_uncertainties(scientific, raw, covariance):
 def generate(case, raw_path, executable, sdk_manifest):
     raw = json.loads(raw_path.read_text())
     fixture = json.loads((HERE / f'{case}-native.json').read_text())
-    scalars = dict(fixture['scientific']['analysis/analysis.edi'])
+    scalars = dict(row for row in fixture['scientific']['analysis/analysis.edi'] if len(row) == 2)
     if (
         raw['n_data'] != int(scalars['_fit_result.n_data_points'])
         or raw['iterations'] != int(scalars['_fit_result.iterations'])
