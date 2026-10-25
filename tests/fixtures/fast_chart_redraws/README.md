@@ -24,16 +24,36 @@ not a second numeric constant. The undersize actor releases the native window's
 minimum constraint to exercise the same content-area predicate used by wasm.
 A browser run still needs to exercise the compiled wasm build separately.
 
-Timing actors and final thresholds follow the committed baseline measurement.
-No timing value has been invented or banked here. The pending comparisons are:
-324 datasets, repeated pan/zoom and data-redraw medians (redraw under 100 ms);
+Timing thresholds follow the committed acceptance policy, not a measured result.
+Gate 1's conductor decision of 2026-10-26 (hub record `19e74c0e8`, owner unanswered)
+keeps every GPU data, zoom, pan, restyle and select median strictly below 100 ms.
+On software rendering, data is at most 250 ms, zoom at most 115 ms, and pan,
+restyle and select each at most 100 ms, including equality. The workload remains
+324 datasets; no drawn pattern, label or tick is dropped to meet a time bound.
+The rendering and complete-work gates remain required alongside timings.
+The other pending comparisons remain:
 162 datasets, Every pattern, display catches up / Adaptive fit ratio at most 1.05; LBCO slider-step
 cost before and after fitting within the baseline's measured noise.
 
 Redraw and fit comparisons require the observed graphics API and renderer in
 `backend` (`api`, `renderer`). `backend_comparisons` requires a llvmpipe OpenGL
 row as well as any hardware rows; every row keeps its own redraw and fit bound.
-Software and hardware timings are never pooled. The arithmetic tests use
+Software and hardware timings are never pooled. `changes` must contain all five
+keys `data`, `zoom`, `pan`, `restyle` and `select`, each with repeated positive
+`before_ms` and `after_ms` samples. Every result names its `change`, `limit_ms`,
+`inclusive` convention and `within_limit` verdict. This replaces the former
+single strict `under_100_ms` redraw result. An absent operation is refused;
+a fast selection or pan cannot cover a slow data change.
+
+Every complete backend row also carries `conditions`: `quiet: true`, a positive
+integer `logical_cpus`, and either `load_average` (three finite nonnegative
+1/5/15-minute readings) or `cpu_busy_percent` (a finite value from 0 to 100 for
+hosts without POSIX load averages). The stated load and its units stay in the
+result. A quiet declaration and load fields do not themselves prove a quiet
+machine; actual performance acceptance still needs the quiet interval and its
+observed load, judged as required by the packet. Loaded development runs remain
+diagnostics. Missing, false or malformed conditions cannot produce a complete
+timing verdict. The arithmetic tests use
 synthetic samples and make no performance claim. Live samples and their backend
 identity still come from the measured app, with the same machine and project
 for each comparison. GPU measurements need a GPU host.
