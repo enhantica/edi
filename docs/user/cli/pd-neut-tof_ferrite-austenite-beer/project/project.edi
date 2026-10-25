@@ -1,0 +1,11 @@
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ferrite-austenite-beer
+_metadata.title "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS"
+_metadata.description "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
+_metadata.authors .
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "BEER"
+_metadata.facility "ESS"
+_metadata.polarisation "none"

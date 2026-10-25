@@ -12,12 +12,13 @@ CASES = {
     'structure_tab': ['test_structure_pattern_requires_experiment'],
     'identity': ['test_all_hosts_follow_one_shared_view'],
     'state': [
-        f'{case}:{page}'
-        for case in (
-            'test_view_change_follows_every_page',
-            'test_toolbar_toggles_follow_every_page',
-        )
+        f'test_view_change_follows_every_page:{page}'
         for page in ('experiment', 'analysis', 'structure')
+    ]
+    + [
+        f'test_toolbar_toggles_follow_every_page:{page}-{button}'
+        for page in ('experiment', 'analysis', 'structure')
+        for button in ('legend', 'hover', 'structureCurves', 'includedRange', 'pan', 'zoom')
     ],
     'hidden_work': ['test_hidden_pages_do_no_chart_work'],
 }
@@ -57,7 +58,7 @@ def shared_chart_receipts(request):
                     capture_output=True,
                     text=True,
                     check=False,
-                    # Toolbar cases visit every page for each toggle.
+                    # Each toolbar actor visits every page for one toggle.
                     timeout=120,
                 )
                 parts.append((result.returncode, result.stdout + result.stderr))

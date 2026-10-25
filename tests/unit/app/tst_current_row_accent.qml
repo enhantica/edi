@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls as Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -83,7 +84,7 @@ Item {
         function prepare(data) {
             themeKey = data.dark ? "dark" : "light";
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "An independent olivine example supplies real row models");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "An independent olivine example supplies real row models");
             verify(Session.project.duplicateStructure(), "The current-row witness supplies multiple structure rows");
             verify(Session.project.duplicateExperiment(), "The current-row witness supplies multiple experiment rows");
             const factory = data.kind === "experiments" ? experiments : data.kind === "structures" ? structures : parameters;

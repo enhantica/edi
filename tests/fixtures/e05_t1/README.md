@@ -1,7 +1,8 @@
 # CLI fit reference
 
 `generate.py` executes `python -m edi fit` on private copies of every registered
-single/joint CLI project. `cli.json`, `cli.hpp` and the full `.record` files freeze
+measured single/joint CLI project. Calculation-only simulations have no fit-result record;
+their separate calculation references cover them. `cli.json`, `cli.hpp` and the full `.record` files freeze
 that independent surface's fitted values, e.s.d.s, chi-square, status and iterations.
 The manifest names the producer and SDK heads and hashes each input. No app or
 FitJob result supplies an expectation. Elapsed times are provenance, never parity

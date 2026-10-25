@@ -1,0 +1,85 @@
+COMM pd-xray-cwl_lam7o3-p021
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+0 7 1 20 0 9 0 0 0 0 0 0 0 0 0 0 0 1 1
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+2 2 1 0 2 0 4 0 0 2 10 1 1 0 0 1 1
+! Lambda1 Lambda2 Ratio Bkpos Wdt Cthm muR AsyLim Rpolarz 2nd-muR for Pattern# 1
+0.207109 0.207109 0 8.497097533 60 0 0 180 0 0
+!NCY Eps R_at R_an R_pr R_gl
+1 0.1 0.2 0.2 0.2 0.2 0.0052581048 0.0105162 15.337892 0 0
+!2Theta/TOF/E(Kev) Background for Pattern# 1
+2.0033379 300 0
+2.297792 300 0
+2.7079241 300 0
+2.8761833 300 0
+2.9813454 300 0
+3.1180563 300 0
+3.7174802 300 0
+4.1381288 300 0
+4.2748394 300 0
+4.3905177 300 0
+4.5482607 300 0
+4.9268441 300 0
+5.1371684 300 0
+7.4086699 300 0
+8.0922232 300 0
+9.7748175 300 0
+10.910567 300 0
+12.498515 300 0
+14.70692 300 0
+14.990857 300 0
+! Excluded regions (LowT HighT) for Pattern# 1
+! Additional scattering factors for Pattern# 1
+la -0.4869736607 1.699110691 2
+ti -0.01291213033 0.03803912867 2
+cr -0.01107505999 0.05509244601 2
+mn -0.008998401325 0.06551326934 2
+fe -0.007993824991 0.07730617501 2
+co -0.005317166323 0.09057116301 2
+ni -0.005612589989 0.105552398 2
+cu -0.002335931321 0.122133633 2
+o -0.005355835333 0.0003720823335 2
+0 !Number of refined parameters
+! Zero Code SyCos Code SySin Code Lambda Code MORE -> Patt# 1
+0 0 0 0 0 0 0 0 0
+! Data for PHASE number: 1
+lam7o3
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More
+10 0 0 0 0 1 0 0 0 0 0 0 0 7 0
+P n m a <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+La LA 0.48 0.25 0 0.5 0.5 0 0 0 0
+0 0 0 0 0
+Ti TI 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Cr CR 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Mn MN 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Fe FE 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Co CO 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Ni NI 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+Cu CU 0 0 0 0.5 0.07143 0 0 0 0
+0 0 0 0 0
+O1 O 0.51 0.25 0.57 0.5 0.5 0 0 0 0
+0 0 0 0 0
+O2 O 0.22 0.03 0.27 0.5 1 0 0 0 0
+0 0 0 0 0
+! Profile Parameters for Pattern # 1 Phase lam7o3
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+5e-06 0 0 0 0 0 0
+0 0 0 0 0 0
+! U V W X Y GauSiz LorSiz Size-Model
+0.04 -0.01 0.001 0.1 0 0 0 0
+0 0 0 0 0 0 0
+! a b c alpha beta gamma
+5.5 7.7 5.5 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 Asy1 Asy2 Asy3 Asy4 S_L D_L
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+2.0033379 14.990857 1

@@ -67,6 +67,35 @@ def test_app_fixture_prepares_only_the_requested_host(owner, selection, tmp_path
             'an unavailable host must not leave a cached successful observation'
         )
     key = (kind, selected) if receipt else selected
+    if owner == 'screen':
+        assert (
+            all(
+                getattr(module, name)._fixture_function_marker.scope == 'module'
+                and not getattr(module, name)._fixture_function_marker.autouse
+                for name in ('desktop_screen_capture', 'browser_screen_capture')
+            )
+            and module.prepare_screen_capture._fixture_function_marker.scope == 'function'
+            and module.prepare_screen_capture._fixture_function_marker.autouse
+        ), 'Selected screen captures use module setup through automatic per-gate preparation'
+        prepared = []
+
+        def prepare(name):
+            prepared.append(name)
+            fixture = {
+                'desktop_screen_capture': module.desktop_screen_capture,
+                'browser_screen_capture': module.browser_screen_capture,
+            }[name]
+            return fixture.__wrapped__(observations)
+
+        module.prepare_screen_capture.__wrapped__(
+            SimpleNamespace(
+                node=SimpleNamespace(callspec=SimpleNamespace(params={'backend': selected})),
+                getfixturevalue=prepare,
+            )
+        )
+        assert prepared == [selected + '_screen_capture'] and key in observations, (
+            'Screen setup requests only its selected backend module fixture'
+        )
     first = observations[key]
     if receipt:
         assert first == (receipt_document, receipt_path), (

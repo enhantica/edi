@@ -286,8 +286,8 @@ jobs:
     # runs keep it.
     if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' }}
     environment: crysta-sdk
-    # The tests that drive the app run the one the app job built (edi-app-<platform>), so no system job
-    # compiles the app.
+    # The tests that drive the app run the app and its test runner the app job built (edi-app-<platform>), so no
+    # system job compiles them.
     needs: [changes, app]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -354,16 +354,18 @@ jobs:
       # The app job keeps each platform's app as soon as it is built. `needs.app.result` is one result for both
       # platforms, so it is not asked whether the build passed: whenever the app job ran, each part restores its own
       # platform's app, and a part whose app was never built fails here.
-      - name: Fetch the app the app job built
+      - name: Fetch the app and its test runner the app job built
         if: needs.app.result != 'skipped'
         uses: actions/cache/restore@v4
         with:
-          path: build/app/app/edi_app
+          path: |
+            build/app/app/edi_app
+            build/app/app/edi_app_tests
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
           fail-on-cache-miss: true
-      - name: Make the app executable
+      - name: Make them executable
         if: needs.app.result != 'skipped'
-        run: chmod +x build/app/app/edi_app
+        run: chmod +x build/app/app/edi_app build/app/app/edi_app_tests
       # The app loads Qt and its other libraries from the app environment, which this job does not
       # otherwise install.
       - name: Install the app's environment
@@ -714,12 +716,14 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Compiler cache statistics
         run: pixi run -e app ccache --show-stats
-      # The system jobs run this app rather than building their own. It goes through this run's cache, not an
-      # artifact: anyone can download a public repository's artifacts, and the app is a binary.
-      - name: Keep the app for the system jobs
+      # The system jobs run this app and its test runner rather than building their own. They go through this run's
+      # cache, not an artifact: anyone can download a public repository's artifacts, and these are binaries.
+      - name: Keep the app and its test runner for the system jobs
         uses: actions/cache/save@v4
         with:
-          path: build/app/app/edi_app
+          path: |
+            build/app/app/edi_app
+            build/app/app/edi_app_tests
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint

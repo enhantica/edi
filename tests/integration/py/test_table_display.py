@@ -98,8 +98,8 @@ def test_fullprof_comparison_projects_retain_verification_purpose(project):
         'FullProf comparison projects retain verification as their stored purpose'
     )
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
-    assert metadata['examples'][project]['values']['purpose'] == ['verification'], (
-        'The app catalogue preserves verification metadata so it can exclude that workflow'
+    assert project not in metadata['examples'], (
+        'Verification fixtures retain their stored purpose and stay outside the app catalogue'
     )
 
 

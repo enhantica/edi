@@ -1,0 +1,33 @@
+{
+  "program": "diffraction-lib",
+  "version": "0.21.1+dev3",
+  "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
+  "model_compatible": true,
+  "minimizer": "lmfit (leastsq)",
+  "n_free": 23,
+  "success": true,
+  "iterations": 342,
+  "fit_seconds": 263.2,
+  "banks": [
+    "sepd"
+  ],
+  "cells": {
+    "si": {
+      "a": [
+        5.432099733151926,
+        5.909119489505863e-05
+      ],
+      "b": [
+        5.432099733151926,
+        null
+      ],
+      "c": [
+        5.432099733151926,
+        null
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "sepd.csv": "92fa40669ef329839b781e7b18f5edbb5a6629fcba400747be60f7aafda2a118"
+  }
+}

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -119,7 +120,7 @@ TestCase {
         console.log("PARAMETER_LOOP_FILTERS " + kind + " groups=" + groups.length + " background=" + expectedCount + " variability=all,free,fixed ids=" + (numeric ? "numeric" : "named") + " chunk=" + chunk + " checked=" + visited);
     }
     function hot(kind, example, automatic) {
-        verify(Session.openExample(example), "The hot category control must load the actual published measured-data example: " + example);
+        verify(Examples.bundled(this, Session, example), "The hot category control must load the actual published measured-data example: " + example);
         tryVerify(() => !Session.project.calculating, 1000,
                   "The actual example calculation must settle before replacing background rows");
         Session.project.currentExperiment.backgroundEstimateMode = "manual";
@@ -165,12 +166,12 @@ TestCase {
         });
         console.log("PARAMETER_HOT_FILTER " + kind + " count=" + expected.length + " variability=all,free,fixed route=" + (automatic ? "auto" : "manual"));
     }
-    function test_hot_points() { hot("line-segment", "pd-neut-cwl_cosio-d20_start-1"); }
-    function test_hot_polynomial() { hot("polynomial", "pd-neut-tof_ceo2-pearl_polynomial"); }
-    function test_hot_chebyshev() { hot("chebyshev", "pd-neut-tof_cecoal-polaris_chebyshev"); }
-    function test_auto_points() { hot("line-segment", "pd-neut-cwl_cosio-d20_start-1", true); }
-    function test_auto_polynomial() { hot("polynomial", "pd-neut-tof_ceo2-pearl_polynomial", true); }
-    function test_auto_chebyshev() { hot("chebyshev", "pd-neut-tof_cecoal-polaris_chebyshev", true); }
+    function test_hot_points() { hot("line-segment", "pd-neut-cwl_cosio-d20"); }
+    function test_hot_polynomial() { hot("polynomial", "pd-neut-tof_ceo2-pearl"); }
+    function test_hot_chebyshev() { hot("chebyshev", "pd-neut-tof_cecoal-polaris"); }
+    function test_auto_points() { hot("line-segment", "pd-neut-cwl_cosio-d20", true); }
+    function test_auto_polynomial() { hot("polynomial", "pd-neut-tof_ceo2-pearl", true); }
+    function test_auto_chebyshev() { hot("chebyshev", "pd-neut-tof_cecoal-polaris", true); }
     function test_points_0() { exercise("line-segment", false, 0); }
     function test_points_1() { exercise("line-segment", false, 1); }
     function test_points_2() { exercise("line-segment", false, 2); }

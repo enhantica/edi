@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_lbco-hrpt/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 15.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.0721,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.La.adp_iso.value": {
+      "value": 0.54531419,
+      "kind": "reference",
+      "tol_abs": 0.05560615664,
+      "tol_rel": null
+    },
+    "param.Co.adp_iso.value": {
+      "value": 0.28785926,
+      "kind": "reference",
+      "tol_abs": 0.1115348565,
+      "tol_rel": null
+    },
+    "param.O.adp_iso.value": {
+      "value": 1.4059563,
+      "kind": "reference",
+      "tol_abs": 0.03205091242,
+      "tol_rel": null
+    },
+    "param.cell_length_a.value": {
+      "value": 3.8907845,
+      "kind": "reference",
+      "tol_abs": 7.625015336e-05,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 8.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 1.29684855,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

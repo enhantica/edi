@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-tof_ceo2-pearl/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 19.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.05299999999999999,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.Ce.adp_iso.value": {
+      "value": 0.30246478,
+      "kind": "reference",
+      "tol_abs": 0.02454817134,
+      "tol_rel": null
+    },
+    "param.O.adp_iso.value": {
+      "value": 0.49538437,
+      "kind": "reference",
+      "tol_abs": 0.0202810589,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 5.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 3.877255463,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

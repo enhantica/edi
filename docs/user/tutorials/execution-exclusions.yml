@@ -1,5 +1,5 @@
-# The tutorial execution-exclusion declaration: the ported tutorials are in the docs, execution-
-# disabled, with the exclusion declared and enumerated.
+# The tutorial execution-exclusion declaration: the example catalogue's tutorials (ADR-0048) are in
+# the docs, execution-disabled, with the exclusion declared and enumerated.
 #
 # Each entry names its unblocker, the work whose landing lets the tutorial execute; the list shrinks
 # to empty as that work lands. The declaration is a gate input, not prose:
@@ -10,13 +10,43 @@
 # A permanently-skipped notebook in a docs tree is a gate that cannot fail; this file exists so the
 # exclusion CAN fail, at the change set that should have retired it.
 excluded:
-  - notebook: refine-lbco-hrpt-from-data.ipynb
+  - notebook: pd-neut-cwl_lbco_simulation.ipynb
     unblocked_by: tutorial-runner
-  - notebook: refine-si-sepd.ipynb
+  - notebook: pd-neut-tof_si_simulation.ipynb
     unblocked_by: tutorial-runner
-  - notebook: refine-ncaf-wish.ipynb
+  - notebook: pd-xray-cwl_nacl_simulation.ipynb
     unblocked_by: tutorial-runner
-  - notebook: simulate-si-tof.ipynb
+  - notebook: pd-neut-cwl_lbco-hrpt.ipynb
     unblocked_by: tutorial-runner
-  - notebook: refine-cosio-d20-tscan.ipynb
+  - notebook: pd-neut-cwl_hs-hrpt.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_cosio-d20.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_lmo-echidna.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_y2o3-spodi.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_yalo3-al2o3-spodi.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_si-sepd.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_cecoal-polaris.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_ceo2-pearl.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_lbco-si-mcstas.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_ncaf-wish.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-tof_ferrite-austenite-beer.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-xray-cwl_pbso4-lab.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-xray-cwl_lam7o3-p021.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
+    unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_cosio-d20_scan.ipynb
+    unblocked_by: sequential-scan-tutorial
+  - notebook: pd-xray-cwl_latp-bm01_scan.ipynb
     unblocked_by: sequential-scan-tutorial

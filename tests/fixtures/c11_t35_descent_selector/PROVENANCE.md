@@ -19,3 +19,10 @@ in `tests/fixtures/c11_t62/repin-provenance.json`. Before/after: iterations 14 t
 chi-square 75.61907118 to 75.61970582, Rwp 0.1634551479 to 0.1634558338. Every other deterministic
 record byte remains unchanged. This adapts an exact historical record to the corrected engine;
 it makes no claim that this default fit reaches the independent reference basin.
+
+
+The current pinned engine's resume rule ends the ladder's
+resumed descent with no accepted step. Only `status=done` and `converged=true`
+change to `no_step` and `false`; every iteration, metric and diagnostic counter
+remains byte-identical. The independently captured compact engine record is
+`tests/fixtures/engine_fit_records/cosio-ladder.json`.

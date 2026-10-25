@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import "RenderedTable.js" as Render
@@ -54,7 +55,7 @@ Item {
             Session.closeProject();
         }
         function openExample() {
-            verify(Session.openExample("pd-neut-tof_ferrite-austenite-beer_joint"), "The shared-view vehicle is the committed two-experiment BEER project");
+            verify(Examples.fixture(Session, "pd-neut-tof_ferrite-austenite-beer_joint"), "The shared-view vehicle is the committed two-experiment BEER project");
             tryCompare(Session.project, "calculating", false, 10000, "The actual project calculation completes before chart interaction");
             compare(Session.project.experiments.count, 2, "The selector witness has two distinct experiments");
         }
@@ -241,18 +242,32 @@ Item {
             for (const destination of ["experiment", "analysis", "structure", data.origin])
                 sameState(shownChart(destination), expected);
         }
+        function toolbarNames() {
+            return ["legend", "hover", "structureCurves", "includedRange", "pan", "zoom"];
+        }
         function test_toolbar_toggles_follow_every_page_data() {
-            return test_view_change_follows_every_page_data();
+            const rows = [];
+            for (const row of test_view_change_follows_every_page_data())
+                for (const button of toolbarNames())
+                    rows.push({
+                        tag: row.origin + "-" + button,
+                        origin: row.origin,
+                        button
+                    });
+            return rows;
         }
         function test_toolbar_toggles_follow_every_page(data) {
             openExample();
             const chart = shownChart(data.origin);
             const buttons = Render.descendants(chart).filter(item => String(item.objectName).startsWith("chart.toolbar.") && typeof item.checked === "boolean" && item.visible && item.objectName !== "chart.toolbar.reset");
             verify(buttons.length >= 4, "The toggle witness includes the real legend, tooltip and pointer-mode controls");
-            for (const button of buttons) {
-                // The exclusive pointer-mode button already selected is not a changed-state witness.
-                if (["chart.toolbar.pan", "chart.toolbar.zoom"].includes(button.objectName) && button.checked)
-                    continue;
+            compare(buttons.map(button => button.objectName).sort().join(), toolbarNames().map(name => "chart.toolbar." + name).sort().join(), "Separate toolbar actors must cover every visible toggle exactly");
+            const target = named(chart, "chart.toolbar." + data.button);
+            if (["pan", "zoom"].includes(data.button) && target.checked) {
+                click(named(chart, "chart.toolbar." + (data.button === "pan" ? "zoom" : "pan")));
+                tryCompare(target, "checked", false, 1000, "The exclusive pointer control starts from a changed-state witness");
+            }
+            for (const button of buttons.filter(item => item === target)) {
                 const old = button.checked;
                 click(button);
                 tryCompare(button, "checked", !old, 1000, "The actual toolbar toggle changes before its cross-page comparison: " + button.objectName);
@@ -272,7 +287,10 @@ Item {
             });
             verify(signal.valid && measured.count > 0, "The positive observer reaches real measured data and Qt-series signals");
             const initial = measured.revision;
-            select(named(current, "chart.toolbar.yscale"), 1);
+            const scale = named(current, "chart.toolbar.yscale");
+            const next = scale.currentIndex === 1 ? 0 : 1;
+            console.log("DRAWING_UPLOAD_Y_SCALE " + scale.currentIndex + " -> " + next);
+            select(scale, next);
             tryVerify(() => measured.revision > initial && signal.count > 0, 1500, "Visible input reaches both independent drawing upload observers");
             signal.destroy();
             showPage("project", false);

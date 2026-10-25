@@ -98,7 +98,7 @@ Item {
         function receipt(frame) {
             const result = {};
             for (const key in frame)
-                result[key] = key === "signature" ? "observed, not a scientific golden" : frame[key];
+                result[key] = key === "signature" ? "observed, not a scientific golden" : key === "pixels" ? "captured frame" : frame[key];
             return result;
         }
         function snapshot() {
@@ -139,9 +139,20 @@ Item {
             const live = graph.seriesList.filter(series => series.visible && series.opacity > 0 && series.color.a > 0);
             const calculated = live.filter(series => series.objectName === "chart.series.calc");
             const areas = live.filter(series => String(series.objectName).startsWith("chart.series.structure.") && series.upperSeries !== undefined && series.lowerSeries !== undefined && series.upperSeries && series.lowerSeries && series.upperSeries.count > 0 && series.lowerSeries.count > 0);
-            const calculation = Drawing.calculatedPixels(image, box, points, line.color, initialPoints, chart.colors.chartBackground);
-            const fills = areas.map(area => Drawing.fillPixels(image, box, seriesPoints(area.lowerSeries), seriesPoints(area.upperSeries), area.color, area.opacity, chart.colors.chartBackground));
-            image.save("sequential-" + captureKind + "-" + (file || "initial") + ".png");
+            const pixels = {
+                image,
+                box,
+                points,
+                colour: line.color,
+                initial: initialPoints,
+                background: chart.colors.chartBackground,
+                areas: areas.map(area => ({
+                            lower: seriesPoints(area.lowerSeries),
+                            upper: seriesPoints(area.upperSeries),
+                            colour: area.color,
+                            opacity: area.opacity
+                        }))
+            };
             if (file !== fit.scanShownFile || wasRunning !== fit.running)
                 return null;
             const record = {
@@ -151,13 +162,20 @@ Item {
                 signature: JSON.stringify(points),
                 measuredWrong: measuredWrong,
                 calculatedCount: calculated.length,
-                calculation: calculation,
-                fills: fills
+                pixels: pixels
             };
-            console.info("SEQUENTIAL_FRAME", JSON.stringify(receipt(record)));
             if (initialPoints.length === 0)
                 initialPoints = points;
             return record;
+        }
+        function analyze(frame) {
+            // Analyze immutable captures after the worker runs; pixel scans must not delay handovers.
+            const p = frame.pixels;
+            frame.calculation = Drawing.calculatedPixels(p.image, p.box, p.points, p.colour, p.initial, p.background);
+            frame.fills = p.areas.map(area => Drawing.fillPixels(p.image, p.box, area.lower, area.upper, area.colour, area.opacity, p.background));
+            p.image.save("sequential-" + captureKind + "-" + (frame.file || "initial") + ".png");
+            console.info("SEQUENTIAL_FRAME", JSON.stringify(receipt(frame)));
+            return frame;
         }
         function test_pixel_observer_rejects_stale_and_empty_drawing() {
             const box = {
@@ -254,7 +272,11 @@ Item {
             captureKind = data.kind;
             setupScan();
             compare(Preferences.patternYScale, "linear", "The drawing witness uses the ordinary fresh linear axis, with no presentation transform ambiguity");
+            appWindow.update();
+            verify(waitForRendering(appWindow.contentItem), "The initial series completes its next scene-synchronized frame");
             const initial = snapshot();
+            if (initial !== null)
+                analyze(initial);
             verify(initial !== null && initial.calculation.pixels >= 40 && initial.calculation.offCurve === 0 && initial.measuredWrong === 0, "The pixel observer must positively see the initial real calculated curve at its current physical coordinates");
             const fit = Session.project.fit;
             Ui.click(test, Probe, appWindow, "fitting.start");
@@ -272,6 +294,7 @@ Item {
                     }
                 }
             }
+            captures.forEach(analyze);
             const running = captures.filter(item => item.running);
             console.info("SEQUENTIAL_CAPTURE", data.kind, JSON.stringify(captures.map(receipt)));
             verify(!fit.running && fit.scanFitted === 3 && fit.outcome === "success", "All three real scan files must finish with their ordinary scientific iteration limit");
