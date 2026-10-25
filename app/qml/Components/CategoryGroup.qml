@@ -29,7 +29,7 @@ EaElements.GroupBox {
     visible: shown
     // Folded at first, as every foldable group (the base's default), then as the user left it, also when the
     // page shows another block; the tab's last shown one has no bottom border (edi ADR-0017 §3; SideBarGroups).
-    collapsed: !SideBarGroups.isOpen(openKey)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     title: model.isLoop ? `${model.title} (${model.itemCount})` : model.title
