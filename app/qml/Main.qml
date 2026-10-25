@@ -234,10 +234,11 @@ EaComponents.ApplicationWindow {
             return null;
         }
 
-        ToolTip {
+        // The app's own tooltip, as every other one (owner, 2026-10-25).
+        EaElements.ToolTip {
             objectName: "appBar.preparingToolTip"
             parent: tabBarOverlay.preparingTab !== null ? tabBarOverlay.preparingTab : tabBarOverlay
-            visible: tabBarOverlay.preparingTab !== null
+            visible: tabBarOverlay.preparingTab !== null && EaGlobals.Vars.showToolTips
             text: qsTr("Preparing this page…")
         }
     }
@@ -403,11 +404,13 @@ EaComponents.ApplicationWindow {
             action();
         }
 
+        // The project's name in bold (owner, 2026-10-25).
         EaElements.Label {
             id: unsavedText
             width: unsavedChanges.contentWidth
             wrapMode: Text.Wrap
-            text: qsTr("%1 has changes that are not saved.").arg(Session.project !== null ? Session.project.name : "")
+            textFormat: Text.StyledText
+            text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
         }
     }
 
@@ -420,8 +423,8 @@ EaComponents.ApplicationWindow {
         property bool copy: false
         title: qsTr("Save project as")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        // As wide as its content (the owner, 2026-10-25).
-        contentWidth: saveAsChoiceColumn.implicitWidth
+        // The app's usual dialog width, as "Save the changes?" (owner, 2026-10-25).
+        contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: saveAsChoiceColumn.implicitHeight
         onAboutToShow: {
             zip = false;
@@ -439,21 +442,15 @@ EaComponents.ApplicationWindow {
         Column {
             id: saveAsChoiceColumn
 
-            EaElements.Label {
-                text: qsTr("Format")
-                bottomPadding: EaStyle.Sizes.fontPixelSize * 0.25
-            }
-            // Folder and Zip archive: one group, rows at the usual spacing.
+            // Folder and Zip archive: one group at the app's usual row spacing, no heading (owner, 2026-10-25).
             EaElements.RadioButton {
                 objectName: "saveAs.folder"
-                verticalPadding: 0
                 text: qsTr("Folder")
                 checked: !saveAsChoice.zip
                 onClicked: saveAsChoice.zip = false
             }
             EaElements.RadioButton {
                 objectName: "saveAs.zip"
-                verticalPadding: 0
                 text: qsTr("Zip archive")
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
