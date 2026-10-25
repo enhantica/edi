@@ -208,6 +208,9 @@ QString Session::projectLocation() const {
     if (project_ == nullptr) {
         return {};
     }
+    if (!archive_location_.isEmpty()) {
+        return archive_location_;
+    }
     QString location = project_->path();
     if (ApplicationInfo::demoIdentity() && !opened_example_.isEmpty() && extracted_ != nullptr && extracted_->isValid()
         && location.startsWith(extracted_->path())) {
@@ -227,10 +230,21 @@ bool Session::save() {
     }
     const QString error = project_->saveTo(project_->path());
     setLastError(error);
-    if (error.isEmpty()) {
-        emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
+    if (!error.isEmpty()) {
+        return false;
     }
-    return error.isEmpty();
+    if (!archive_location_.isEmpty()) {
+        try {
+            edi::write_project_archive(project_->path().toStdString(), archive_location_.toStdString());
+        } catch (const std::exception& refusal) {
+            setLastError(QString::fromUtf8(refusal.what()));
+            return false;
+        }
+        emit projectDirectoryUsed(archive_location_);
+        return true;
+    }
+    emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
+    return true;
 }
 
 bool Session::saveAs(const QUrl& directory) {
@@ -241,7 +255,18 @@ bool Session::saveAs(const QUrl& directory) {
         setLastError(QStringLiteral("cannot save to %1: only local directories (file: URLs)").arg(directory.toString()));
         return false;
     }
-    const QString error = project_->saveTo(directory.toLocalFile());
+    archive_location_.clear();
+    if (!saveInto(directory.toLocalFile())) {
+        return false;
+    }
+    emit projectLocationChanged();
+    emit needsSaveAsChanged();
+    emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
+    return true;
+}
+
+bool Session::saveInto(const QString& folder) {
+    const QString error = project_->saveTo(folder);
     setLastError(error);
     if (!error.isEmpty()) {
         return false;
@@ -254,44 +279,59 @@ bool Session::saveAs(const QUrl& directory) {
         opened_example_.clear();
         emit openedExampleChanged();
     }
-    emit projectLocationChanged();
-    emit needsSaveAsChanged();
-    emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
     return true;
 }
 
-QString Session::exportFolder() {
+bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
     if (project_ == nullptr) {
-        return {};
+        return false;
     }
-    const edi::Project& model = project_->project();
-    if (!model.path.empty()) {
-        return QString::fromStdString(model.path);
+    if (!target.isLocalFile()) {
+        setLastError(QStringLiteral("cannot save to %1: only local files and folders (file: URLs)").arg(target.toString()));
+        return false;
     }
-    if (!model.scan_data_root.empty()) {
-        return QString::fromStdString(model.scan_data_root);
+    const QString where = target.toLocalFile();
+    if (copy) {
+        return saveCopy(where, zip);
     }
+    if (!zip) {
+        return saveAs(target);
+    }
+    // A project saved as a .zip works in a folder of its own and every Save rewrites the archive from it.
+    QString folder;
     try {
-        const std::string folder = edi::fresh_archive_directory("export");
-        edi::save_project(model, folder);
-        return QString::fromStdString(folder);
+        folder = QString::fromStdString(edi::fresh_archive_directory("saved"));
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
-        return {};
+        return false;
     }
+    if (!saveInto(folder)) {
+        return false;
+    }
+    archive_location_ = where;
+    emit projectLocationChanged();
+    emit needsSaveAsChanged();
+    try {
+        edi::write_project_archive(folder.toStdString(), where.toStdString());
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    emit projectDirectoryUsed(where);
+    return true;
 }
 
-bool Session::exportProject(const QUrl& archive) {
-    if (!archive.isLocalFile()) {
-        setLastError(QStringLiteral("cannot export to %1: only local files (file: URLs)").arg(archive.toString()));
-        return false;
-    }
-    const QString folder = exportFolder();
-    if (folder.isEmpty()) {
-        return false;
-    }
+bool Session::saveCopy(const QString& target, bool zip) {
+    // The project as it stands, written elsewhere; it keeps its own location and values.
     try {
-        edi::write_project_archive(folder.toStdString(), archive.toLocalFile().toStdString());
+        const edi::Project& model = project_->project();
+        if (zip) {
+            const std::string folder = edi::fresh_archive_directory("copy");
+            edi::save_project(model, folder);
+            edi::write_project_archive(folder, target.toStdString());
+        } else {
+            edi::save_project(model, target.toStdString());
+        }
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
@@ -393,7 +433,8 @@ void Session::syncCalculationMessages() {
 }
 
 bool Session::projectDirectoryExists(const QString& path) const {
-    return !path.isEmpty() && QFileInfo(path).isDir();
+    // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
+    return !path.isEmpty() && (QFileInfo(path).isDir() || edi::is_project_archive(path.toStdString()));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {
@@ -471,6 +512,7 @@ void Session::setOpenedArchive(const QString& name) {
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
     read_only_copy_ = false;
+    archive_location_.clear();
     setOpenedArchive({});
     // Every piece of the session's state — the project, its load warnings, the example it came from,
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
