@@ -311,7 +311,8 @@ EaElements.StatusBar {
         }
     }
 
-    // The opening's progress, right-aligned where the fit area is, until every page is built.
+    // The opening's progress, right-aligned where the fit area is, until every page is built: in the app's font and
+    // only as wide as its text, so the items beside it keep their keys wherever they can.
     FitProgressBar {
         id: openingProgress
         objectName: "statusBar.opening"
@@ -320,10 +321,9 @@ EaElements.StatusBar {
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         visible: bar.opening
-        width: EaStyle.Sizes.fontPixelSize * 20
+        width: Math.ceil(openingProgress.textWidth + 2 * openingProgress.height)
         height: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
         fraction: bar.pagesWanted > 0 ? bar.pagesBuilt / bar.pagesWanted : 0
-        fontFamily: EaStyle.Fonts.ptMono.name
         text: qsTr("Opening project… %1 of %2 pages").arg(bar.pagesBuilt).arg(bar.pagesWanted)
     }
 
