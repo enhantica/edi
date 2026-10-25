@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonObject>
+#include <QStandardPaths>
 #include <QPointer>
 #include <QUuid>
 #include <algorithm>
@@ -135,6 +136,9 @@ Session::Session(QObject* parent)
     keep_timer_->setSingleShot(true);
     keep_timer_->setInterval(3000);
     connect(keep_timer_, &QTimer::timeout, this, &Session::keepChanges);
+    if (WebFiles::available()) {
+        connect(WebStorage::instance(), &WebStorage::usableChanged, this, &Session::locationTextChanged);
+    }
 }
 
 Session::~Session() { releaseTemporaryFolder(); }
@@ -267,10 +271,14 @@ QString Session::locationText() const {
     if (project_ == nullptr) {
         return {};
     }
-    // The web app (edi ADR-0052 §9): the disk's folder or .zip by its name, else the browser's own storage.
+    // The web app (edi ADR-0052 §9): the disk's folder or .zip by its name, else the browser's own storage, or the tab
+    // alone where the browser keeps nothing (a private window may not).
     if (WebFiles::available()) {
-        const bool disk = web_place_.kind == QStringLiteral("folder") || web_place_.kind == QStringLiteral("zip");
-        return disk ? web_place_.name : tr("In this browser only");
+        if (!webPlaceInBrowser()) {
+            return web_place_.name;
+        }
+        return WebStorage::instance()->usable() ? tr("In this browser only")
+                                                : tr("Only in this tab: this browser keeps nothing, use Save project as…");
     }
     if (!archive_location_.isEmpty()) {
         return archive_location_;
@@ -295,22 +303,13 @@ bool Session::needsSaveAs() const {
 
 bool Session::save() {
     if (project_ != nullptr && WebFiles::available()) {
-        // Saved in memory, where the project works, then written into its place. A project created in the browser
-        // has no folder yet: it gets one in memory.
-        QString folder = project_->path();
-        if (folder.isEmpty()) {
-            try {
-                folder = QString::fromStdString(edi::fresh_archive_directory("web")) + QLatin1Char('/')
-                         + folderNameFor(project_->name());
-            } catch (const std::exception& refusal) {
-                setLastError(QString::fromUtf8(refusal.what()));
-                return false;
-            }
-            web_copy_ = QFileInfo(folder).absolutePath();
+        // Where the browser keeps nothing, nothing is saved: the project stays unsaved and the window says why
+        // (owner, 2026-10-25).
+        if (webPlaceInBrowser() && !WebStorage::instance()->usable()) {
+            emit webStorageUnavailable();
+            return true;
         }
-        const QString error = project_->saveTo(folder);
-        setLastError(error);
-        if (!error.isEmpty()) {
+        if (!saveInMemory()) {
             return false;
         }
         writeWebPlace();
@@ -552,6 +551,28 @@ QUrl Session::projectDirectoryUrl(const QString& path) const {
 
 void Session::clearError() { setLastError({}); }
 
+QUrl Session::suggestedSaveTarget(bool zip) const {
+    if (project_ == nullptr) {
+        return {};
+    }
+    // A place of the user's own: the .zip the project saves to, or its folder; never a temporary copy.
+    QString place = archive_location_;
+    if (place.isEmpty() && opened_example_.isEmpty() && !read_only_copy_ && temporary_folder_.isEmpty()) {
+        place = project_->path();
+    }
+    if (place.isEmpty() && read_only_copy_) {
+        place = read_only_source_;
+    }
+    const QFileInfo info(place);
+    const QString folder = !place.isEmpty() ? info.absolutePath()
+                                            : QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QString name = !place.isEmpty() ? info.completeBaseName() : folderNameFor(project_->name());
+    if (!place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) != 0) {
+        name = info.fileName();  // a folder's whole name, dots and all
+    }
+    return QUrl::fromLocalFile(QDir(folder).filePath(zip ? name + QStringLiteral(".zip") : name));
+}
+
 bool Session::open(const QString& directory, const QString& example) {
     QStringList warnings;
     ProjectViewModel* opened = nullptr;
@@ -626,6 +647,7 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
     web_place_ = {};
+    web_from_file_ = false;
     if (project != nullptr && WebFiles::available()) {
         web_place_ = {newWebKey(), QStringLiteral("browser"), folderNameFor(project->name())};
         connect(project, &ProjectViewModel::edited, keep_timer_, qOverload<>(&QTimer::start));
@@ -725,15 +747,37 @@ void Session::openWebProject(const QString& kind) {
         emit loadFailed(last_error_);
         return;
     }
+    WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
+}
+
+void Session::openWebRecordFolder() {
+    QString root;
+    try {
+        root = QString::fromStdString(edi::fresh_archive_directory("web"));
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        emit loadFailed(last_error_);
+        return;
+    }
+    WebStorage::instance()->pickRecordFolder(root, webOpenAnswer(root));
+}
+
+WebStorage::Answer Session::webOpenAnswer(const QString& root) {
     // A project opened meanwhile is not replaced by the one that arrives late.
     const QPointer<ProjectViewModel> before = project_;
-    WebStorage::instance()->pickOpen(kind, root, [this, root, before](const QJsonObject& answer) {
+    return [this, root, before](const QJsonObject& answer) {
         if (before != project_ || !answer.value(QStringLiteral("ok")).toBool()) {
             QDir(root).removeRecursively();
-            if (before == project_ && !answer.value(QStringLiteral("cancelled")).toBool()) {
-                setLastError(answer.value(QStringLiteral("message")).toString());
-                emit loadFailed(last_error_);
+            if (before != project_ || answer.value(QStringLiteral("cancelled")).toBool()) {
+                return;
             }
+            // A project.edi needs its folder, picked with a click of its own.
+            if (answer.value(QStringLiteral("needsFolder")).toBool()) {
+                emit webFolderNeeded(answer.value(QStringLiteral("name")).toString());
+                return;
+            }
+            setLastError(answer.value(QStringLiteral("message")).toString());
+            emit loadFailed(last_error_);
             return;
         }
         const WebPlace place{answer.value(QStringLiteral("key")).toString(),
@@ -745,11 +789,12 @@ void Session::openWebProject(const QString& kind) {
             return;
         }
         web_copy_ = root;
-        // A project uploaded from the disk is kept in the browser at once (owner, 2026-10-25).
-        if (web_place_.kind == QStringLiteral("browser")) {
+        // A project uploaded from the disk is kept in the browser at once (owner, 2026-10-25), where it can be.
+        web_from_file_ = true;
+        if (web_place_.kind == QStringLiteral("browser") && WebStorage::instance()->usable()) {
             writeWebPlace(false);
         }
-    });
+    };
 }
 
 void Session::openStoredProject(const QString& key, bool recovery) {
@@ -787,13 +832,47 @@ void Session::openStoredProject(const QString& key, bool recovery) {
     });
 }
 
+bool Session::webPlaceInBrowser() const {
+    return web_place_.kind != QStringLiteral("folder") && web_place_.kind != QStringLiteral("zip");
+}
+
+bool Session::saveInMemory() {
+    // Saved in memory, where the project works. A project created in the browser has no folder yet: it gets one.
+    QString folder = project_->path();
+    if (folder.isEmpty()) {
+        try {
+            folder = QString::fromStdString(edi::fresh_archive_directory("web")) + QLatin1Char('/')
+                     + folderNameFor(project_->name());
+        } catch (const std::exception& refusal) {
+            setLastError(QString::fromUtf8(refusal.what()));
+            return false;
+        }
+        web_copy_ = QFileInfo(folder).absolutePath();
+    }
+    const QString error = project_->saveTo(folder);
+    setLastError(error);
+    return error.isEmpty();
+}
+
+
 void Session::writeWebPlace(bool announce) {
     keep_timer_->stop();
     const WebPlace place = web_place_;
     WebStorage::instance()->write(place.key, place.kind, place.name, project_->path(), false,
                                   [this, place, announce](const QJsonObject& answer) {
                                       if (!answer.value(QStringLiteral("ok")).toBool()) {
-                                          emit webSaveFailed(answer.value(QStringLiteral("message")).toString());
+                                          // The browser's own words ("UnknownError", "QuotaExceededError") say
+                                          // nothing to the user: the place is named instead.
+                                          if (place.kind == QStringLiteral("browser")) {
+                                              WebStorage::instance()->markUnusable();
+                                              emit webSaveFailed(
+                                                  tr("This browser would not keep the project: its storage is not "
+                                                     "available here (a private window, for example) or is full. Use "
+                                                     "Save project as… to download it."));
+                                          } else {
+                                              emit webSaveFailed(tr("The project could not be written to %1: %2")
+                                                                     .arg(place.name, answer.value(QStringLiteral("message")).toString()));
+                                          }
                                           return;
                                       }
                                       // Saved, the changes kept for a reload are no longer needed.
@@ -872,26 +951,34 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
 }
 
 void Session::downloadWebProject() {
-    if (project_ == nullptr || !save()) {
-        if (project_ != nullptr) {
-            emit webSaveFailed(last_error_);
-        }
+    if (project_ == nullptr) {
         return;
     }
+    // A copy, as a Save writes it, handed to the browser as a .zip: the project and the browser's storage are left as
+    // they are (owner, 2026-10-25).
     QByteArray archive;
+    std::string folder;
     try {
-        const std::string bytes = edi::project_archive_bytes(project_->path().toStdString());
+        folder = edi::fresh_archive_directory("download");
+        edi::Project copy = project_->project();
+        edi::save_project(copy, folder);
+        edi::adopt_saved_project(copy, folder);
+        const std::string bytes = edi::project_archive_bytes(folder);
         archive = QByteArray(bytes.data(), static_cast<qsizetype>(bytes.size()));
     } catch (const std::exception& refusal) {
+        if (!folder.empty()) {
+            edi::remove_archive_directory(folder);
+        }
         emit webSaveFailed(QString::fromUtf8(refusal.what()));
         return;
     }
+    edi::remove_archive_directory(folder);
     const QString name = downloadName();
     if (!WebFiles::download(archive, name)) {
         emit webSaveFailed(tr("The browser could not download %1").arg(name));
         return;
     }
-    emit webDownloaded(name);
+    emit webDownloaded(name, web_from_file_);
 }
 
 void Session::discardKeptChanges() {
@@ -902,7 +989,7 @@ void Session::discardKeptChanges() {
 }
 
 void Session::keepChanges() {
-    if (!WebFiles::available() || project_ == nullptr || !project_->modified()) {
+    if (!WebFiles::available() || project_ == nullptr || !project_->modified() || !WebStorage::instance()->usable()) {
         return;
     }
     // A running fit changes the project on every step: its state is kept once it stops changing.
