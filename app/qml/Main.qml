@@ -473,6 +473,7 @@ EaComponents.ApplicationWindow {
                     id: saveAsFolderHover
                 }
                 EaElements.ToolTip {
+                    Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
                     text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
                     visible: text !== "" && saveAsFolderHover.hovered && EaGlobals.Vars.showToolTips
                 }
@@ -594,7 +595,7 @@ EaComponents.ApplicationWindow {
     // keeps nothing, only in this tab. Save project as… is the way onto the disk.
     AppDialog {
         id: browserSaved
-        objectName: "browserSaved"
+        objectName: "webStorageWarning"
         property var warnedFor: null
         property bool kept: true
         parent: Overlay.overlay
@@ -602,7 +603,11 @@ EaComponents.ApplicationWindow {
         standardButtons: Dialog.Apply | Dialog.Ok
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: browserSavedRow.implicitHeight
-        Component.onCompleted: standardButton(Dialog.Apply).text = qsTr("Save project as…")
+        Component.onCompleted: {
+            standardButton(Dialog.Apply).text = qsTr("Save project as…");
+            standardButton(Dialog.Apply).objectName = "webStorageWarning.saveAs";
+            standardButton(Dialog.Ok).objectName = "webStorageWarning.ok";
+        }
         onApplied: {
             close();
             window.saveProjectAs();
@@ -613,12 +618,13 @@ EaComponents.ApplicationWindow {
             spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
             EaElements.Label {
+                objectName: "webStorageWarning.icon"
                 font.family: EaStyle.Fonts.iconsFamily
                 color: EaStyle.Colors.orange
                 text: "exclamation-triangle"
             }
             EaElements.Label {
-                objectName: "browserSaved.text"
+                objectName: "webStorageWarning.text"
                 width: browserSaved.contentWidth - x
                 wrapMode: Text.Wrap
                 text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use Save project as… to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use Save project as… to keep it on your disk.")
