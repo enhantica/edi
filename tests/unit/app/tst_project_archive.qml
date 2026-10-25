@@ -53,7 +53,7 @@ TestCase {
         tryVerify(() => !Ui.moving(app.contentItem), 2000, "The selected project viewport finishes moving");
         return item;
     }
-    readonly property var cases: ["sc-neut-tof_taurine_fit", "pd-neut-cwl_cosio-d20_scan-3f", "sc-neut-cwl_tb2ti2o7-heidi_basic"]
+    readonly property var cases: ["sc-neut-tof_taurine-senju", "pd-neut-cwl_cosio-d20_scan-3f", "sc-neut-cwl_tb2ti2o7-heidi_basic"]
     function cleanup() {
         if (app) {
             app.close();
@@ -151,7 +151,7 @@ TestCase {
         verify(Session.lastError.length > 0, "The rejected archive reports its containment error");
     }
     function test_cancel() {
-        verify(Session.openProject(Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine_fit/project")), "The first opening starts on the real taurine project");
+        verify(Session.openProject(Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine-senju/project")), "The first opening starts on the real taurine project");
         verify(Session.project.calculating, "Opening publishes a usable model while its first calculation is pending");
         const second = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
         verify(Session.openProject(second), "A second project replaces an opening project with work pending");
@@ -164,7 +164,7 @@ TestCase {
         verify(rows.length === 9 && rows[0].intensityMeas === 5.0484848484848488, "No taurine reflection result reaches the second project's measured pattern");
     }
     function test_save_pending() {
-        verify(Session.openProject(Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine_fit/project")), "Pending Save starts on the real taurine project");
+        verify(Session.openProject(Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine-senju/project")), "Pending Save starts on the real taurine project");
         verify(Session.project.calculating, "Save is exercised during actual pending opening work");
         const destination = SettingsProof.emptyDirectory();
         verify(Session.saveAs(destination), "Save waits for coherent rounded results before publishing");

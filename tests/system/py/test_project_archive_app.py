@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CASES = tuple(
     'test_open:' + case + '-' + route
     for case in (
-        'sc-neut-tof_taurine_fit',
+        'sc-neut-tof_taurine-senju',
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
@@ -27,7 +27,7 @@ CASES = tuple(
 CASES += tuple(
     'test_open_dialog:' + project + '-' + route
     for project in (
-        'sc-neut-tof_taurine_fit',
+        'sc-neut-tof_taurine-senju',
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
@@ -36,7 +36,7 @@ CASES += tuple(
 CASES += tuple(
     'test_drop:' + project + '-' + route
     for project in (
-        'sc-neut-tof_taurine_fit',
+        'sc-neut-tof_taurine-senju',
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
@@ -45,7 +45,7 @@ CASES += tuple(
 CASES += tuple(
     'test_save_copy:' + project + '-' + kind
     for project in (
-        'sc-neut-tof_taurine_fit',
+        'sc-neut-tof_taurine-senju',
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
@@ -54,7 +54,7 @@ CASES += tuple(
 CASES += tuple(
     'test_save_zip:' + project
     for project in (
-        'sc-neut-tof_taurine_fit',
+        'sc-neut-tof_taurine-senju',
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
@@ -166,7 +166,10 @@ def test_opening_measurement_declares_both_targets_for_every_real_route():
     ), 'Opening targets retain the complete independently recorded measurement rows'
     assert data['machine'] == 'visa-prod-2224', 'Opening targets name their measured machine'
     assert data['project'] == 'sc-neut-tof_taurine_fit', (
-        'Opening measurements use the real taurine project'
+        'The original opening baseline keeps the identity that was actually measured'
+    )
+    assert data['current_project'] == 'sc-neut-tof_taurine-senju', (
+        'Current opening actors use the renamed catalogue taurine project'
     )
     assert set(data['routes']) == {'folder', 'project.edi', 'zip', 'example'}, (
         'The baseline and targets cover every project opening route'

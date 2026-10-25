@@ -157,7 +157,7 @@ try {
       }
       throw Error('The real browser UI must expose '+regex);
     };
-    let selectedExample='sc-neut-cwl_tb2ti2o7-heidi_fit';
+    let selectedExample='sc-neut-cwl_tb2ti2o7-heidi';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
       // Qt's shipped Popup controls are drawn but absent from the web AX tree.
@@ -323,8 +323,8 @@ try {
     await activate();
     if(scenario.startsWith('example')){
       // Find the real catalogue row through its actual search field, then real pointer input.
-      await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi_fit');
-      await click(/^sc-neut-cwl_tb2ti2o7-heidi_fit:/,'button');
+      await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi');
+      await click(/^sc-neut-cwl_tb2ti2o7-heidi:/,'button');
     } else if(fallback){
       await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');await click(/^Zip archive$/,'radio');
       const chooser=page.waitForEvent('filechooser');chooser.catch(()=>{});await click(/^OK$/,'button');await(await chooser).setFiles(fixture);
@@ -444,9 +444,9 @@ try {
       assert.equal((await native(observation.warningText)).visible,false,'A later Save of the same project must use the short notice');
       await geometry(observation.notice);await page.keyboard.press('Escape');await frame();
       // Warning suppression belongs to the project, not the whole tab session.
-      selectedExample='sc-neut-tof_taurine_fit';
+      selectedExample='sc-neut-tof_taurine-senju';
       await click(/Examples$/,'button');await edit('examples.search',selectedExample);
-      await click(/^sc-neut-tof_taurine_fit:/,'button');await control(/^Analysis$/,'tab');
+      await click(/^sc-neut-tof_taurine-senju:/,'button');await control(/^Analysis$/,'tab');
       await edit('project.name','another-project-first-save');
       await click(/^Save current state of the project$/,'button');
       await awaitStored('another-project-first-save');await clean();
