@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T22:33:40Z
+# measured_utc = 2026-10-25T23:29:22Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 15325 banked, 2 stale row(s) dropped)
-# Collected tests: 16945; with a reported duration: 9914
+# Recorded from: measured test run (90 node(s) measured once, 15304 banked, 1 stale row(s) dropped)
+# Collected tests: 17012; with a reported duration: 9913
 # Module-scoped fixture costs recorded: 83
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16945
+# inventory_python = 17012
 # inventory_cpp = 393
-# inventory_measured = 15327
+# inventory_measured = 15394
 # inventory_unmeasured = 2011
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -5715,14 +5715,56 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.p
 0.000	tests/integration/py/test_fast_chart_timing.py::test_a_fast_tab_cannot_hide_the_other_tabs_overhead[stacked]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_both_every_pattern_choices_have_distinct_live_receipts[display_catches_up_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_both_every_pattern_choices_have_distinct_live_receipts[fit_waits_for_display_ms]
-0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_keeps_its_own_targets_and_identity
+0.000	tests/integration/py/test_fast_chart_timing.py::test_cpu_load_can_be_stated_without_a_posix_load_average
+0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_keeps_its_own_targets_and_identity[gpu]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_keeps_its_own_targets_and_identity[software]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_requires_both_fit_tabs[pattern]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_requires_both_fit_tabs[stacked]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_fast_operations_cannot_hide_one_slow_operation[data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_fast_operations_cannot_hide_one_slow_operation[pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_fast_operations_cannot_hide_one_slow_operation[restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_fast_operations_cannot_hide_one_slow_operation[select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_fast_operations_cannot_hide_one_slow_operation[zoom]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_fit_waits_is_reported_without_the_catchup_bound
 0.000	tests/integration/py/test_fast_chart_timing.py::test_frozen_baseline_regression_pin_keeps_pattern_and_stacked_separate
 0.000	tests/integration/py/test_fast_chart_timing.py::test_hardware_numbers_cannot_replace_the_no_gpu_row
 0.000	tests/integration/py/test_fast_chart_timing.py::test_legacy_every_pattern_samples_cannot_be_relabelled_as_catchup
 0.000	tests/integration/py/test_fast_chart_timing.py::test_non_opengl_backend_has_no_opengl_renderer_to_report
+0.000	tests/integration/py/test_fast_chart_timing.py::test_other_cpu_renderers_cannot_inherit_the_gpu_data_bound[OpenGL-Microsoft Basic Render Driver]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_other_cpu_renderers_cannot_inherit_the_gpu_data_bound[OpenGL-SwiftShader]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_other_cpu_renderers_cannot_inherit_the_gpu_data_bound[OpenGL-softpipe]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_other_cpu_renderers_cannot_inherit_the_gpu_data_bound[Software-]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_other_cpu_renderers_cannot_inherit_the_gpu_data_bound[Vulkan-lavapipe]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-gpu-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-gpu-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-gpu-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-gpu-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-gpu-zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-software-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-software-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-software-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-software-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[above-software-zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-gpu-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-gpu-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-gpu-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-gpu-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-gpu-zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-software-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-software-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-software-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-software-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[at-software-zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-gpu-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-gpu-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-gpu-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-gpu-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-gpu-zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-software-data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-software-pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-software-restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-software-select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_redraw_boundaries_follow_the_committed_operation_policy[below-software-zoom]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-adaptive_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-after_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples1-adaptive_ms]
@@ -5730,10 +5772,35 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.p
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples2-adaptive_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples2-after_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_row_cannot_omit_either_timing_gate
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_refuse_conflicting_load_units
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_refuse_invalid_cpu_busy_percent[-1]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_refuse_invalid_cpu_busy_percent[101]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_refuse_invalid_cpu_busy_percent[True]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_refuse_invalid_cpu_busy_percent[nan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_require_a_structured_record[None]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_require_a_structured_record[conditions1]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_conditions_require_a_structured_record[quiet]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend0]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend1]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend2]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_gates_refuse_missing_or_mislabelled_backend[backend3]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_results_keep_the_declared_measurement_conditions
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_cannot_omit_a_change[data]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_cannot_omit_a_change[pan]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_cannot_omit_a_change[restyle]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_cannot_omit_a_change[select]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_cannot_omit_a_change[zoom]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_row_refuses_an_unidentified_or_extra_change
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions0]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions1]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions2]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions3]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions4]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions5]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions6]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions7]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions8]
+0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions9]
 0.020	tests/integration/py/test_fit_tables_reference.py::test_ncaf_bank_one_retains_the_external_brief_values
 0.080	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[All datasets]
 0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_1_10]
