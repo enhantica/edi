@@ -17,14 +17,14 @@ import "../../fixtures/scan_views/oklab.js" as Oklab
 
 Rectangle {
     id: surface
-    width: 1200
-    height: 850
+    width: Math.min(1200, Screen.desktopAvailableWidth)
+    height: Math.min(850, Screen.desktopAvailableHeight)
     color: "white"
     Component {
         id: factory
         ScanViewChart {
-            width: 1100
-            height: 760
+            width: Math.min(1100, surface.Window.window.width)
+            height: Math.min(760, surface.Window.window.height)
             shown: false
         }
     }
@@ -50,6 +50,15 @@ Rectangle {
             AppPreferencesDialog {}
         }
         property var samples: JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/viridis.json")).samples
+        function logicalImage(item, image = grabImage(item)) {
+            verify(image.width > 0 && image.height > 0 && item.width > 0 && item.height > 0, "The rendered observer requires a nonempty image and logical item");
+            const sx = image.width / item.width, sy = image.height / item.height;
+            return {
+                width: item.width,
+                height: item.height,
+                pixel: (x, y) => image.pixel(Math.floor((x + 0.5) * sx), Math.floor((y + 0.5) * sy))
+            };
+        }
         function cleanup() {
             if (preferencesDialog) {
                 preferencesDialog.close();
@@ -122,7 +131,7 @@ Rectangle {
             return [top, bottom];
         }
         function outlinePixels(mode, index, dark, background) {
-            const layer = named("layer"), bounds = outlineGeometry(mode, index, [100, 250, 700], [0, 128, 255]), origin = layer.mapToItem(chart, 0, 0), frame = grabImage(chart);
+            const layer = named("layer"), bounds = outlineGeometry(mode, index, [100, 250, 700], [0, 128, 255]), origin = layer.mapToItem(chart, 0, 0), frame = logicalImage(chart);
             const core = dark ? 1 : 0, edge = 1 - core;
             function actual(x, y) {
                 return frame.pixel(Math.floor(origin.x + x), Math.floor(origin.y + y));
@@ -203,7 +212,7 @@ Rectangle {
             const scan = open("map");
             Preferences.patternYScale = "linear";
             ready(scan);
-            const layer = named("layer"), image = grabImage(chart);
+            const layer = named("layer"), image = logicalImage(chart);
             compare(scan.xMin, 10, "The analytic map reads its declared x minimum");
             fuzzyCompare(scan.xMax, 112.4, 1e-9, "The analytic map reads its declared x maximum");
             compare(layer.displayMin, 0, "The map normalization starts at the independent zero-intensity band");
@@ -255,6 +264,19 @@ Rectangle {
             return lower > 0 && lower <= upper && upper <= 1;
         }
         function test_antialiased_ink_observer() {
+            for (const [scale, x, y] of [[1, 3, 2], [1.5, 5, 3], [2, 7, 5]]) {
+                const image = logicalImage({
+                    width: 8,
+                    height: 6
+                }, {
+                    width: 8 * scale,
+                    height: 6 * scale,
+                    pixel: (px, py) => Qt.rgba(px / 255, py / 255, 0, 1)
+                });
+                compare(image.width, 8, "The capture exposes the logical width at each device scale");
+                compare(image.height, 6, "The capture exposes the logical height at each device scale");
+                compare(image.pixel(3, 2), Qt.rgba(x / 255, y / 255, 0, 1), "The observer samples the physical centre of a logical pixel at integral and fractional device scales");
+            }
             const olive = {
                 r: 189 / 255,
                 g: 223 / 255,
@@ -304,7 +326,7 @@ Rectangle {
                     Session.project.currentExperimentIndex = (index + 1) % 3;
                     verify(waitForRendering(chart), "The selected-row overlay moves away from each independent map-row sample");
                 }
-                const frame = grabImage(chart);
+                const frame = logicalImage(chart);
                 const coordinate = [100, 250, 700][index] + (data.mode === "stacked" ? [0, 128, 255][index] / 255 * scan.stackHeight : 0);
                 const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 const at = layer.mapToItem(chart, layer.width * 0.4, py);
@@ -418,7 +440,7 @@ Rectangle {
             verify(waitForRendering(chart), "The selected scan setting reaches an actual frame");
         }
         function plotDigest() {
-            const layer = named("layer"), frame = grabImage(chart), colours = [];
+            const layer = named("layer"), frame = logicalImage(chart), colours = [];
             for (let x = 1; x < 16; ++x)
                 for (let y = 1; y < Math.floor(layer.height); ++y) {
                     const at = layer.mapToItem(chart, layer.width * x / 16, y);
@@ -504,7 +526,7 @@ Rectangle {
             for (let choice = 0; choice < 5; ++choice) {
                 choose(selector, choice);
                 const expected = [String(pattern.colors.chartBackground), schemes[choice].palette[data.dark ? "dark" : "light"].measured[0]];
-                const layer = named("layer"), frame = grabImage(chart);
+                const layer = named("layer"), frame = logicalImage(chart);
                 for (const index of [0, 1]) {
                     const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : .5) / 7, layer.height * .2);
                     compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Every Map shade ramp starts at the Pattern plot background and ends at its independently approved main experiment colour");
@@ -542,7 +564,7 @@ Rectangle {
                 const index = choices.indexOf(scheme.id);
                 verify(index >= 0, "Every approved categorical Edi scheme remains offered for Stacked");
                 choose(selector, index);
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+                const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
                 const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark);
                 for (let row = 0; row < 3; ++row) {
                     const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
@@ -578,13 +600,18 @@ Rectangle {
         }
         function test_offered_maps_are_readable_in_both_themes_data() {
             const rows = [];
+            const count = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps.length;
             for (const mode of ["stacked", "map"])
                 for (const dark of [false, true])
-                    rows.push({
-                        tag: mode + (dark ? "-dark" : "-light"),
-                        mode,
-                        dark
-                    });
+                    for (let first = 0; first < count; first += 7)
+                        rows.push({
+                            tag: mode + (dark ? "-dark" : "-light") + "-part" + Math.floor(first / 7),
+                            mode,
+                            dark,
+                            first,
+                            last: Math.min(first + 7, count),
+                            count
+                        });
             return rows;
         }
         function test_offered_maps_are_readable_in_both_themes(data) {
@@ -605,9 +632,12 @@ Rectangle {
                 const reference = references[name];
                 verify(reference !== undefined && reference.license && reference.source, "Every offered map has an independent published source and bundling licence, without a fixed whitelist: " + name);
                 ++offered;
+                if (offered <= data.first || offered > data.last)
+                    continue;
                 choose(selector, index);
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+                const layer = named("layer"), axes = named("axes");
                 if (data.mode === "map") {
+                    const frame = logicalImage(chart);
                     for (const [band, place] of [[1, 32], [3, 96], [5, 192]]) {
                         const point = layer.mapToItem(chart, layer.width * (band + 0.5) / 7, layer.height * 0.2);
                         const pixel = frame.pixel(Math.round(point.x), Math.round(point.y));
@@ -617,6 +647,10 @@ Rectangle {
                     }
                 } else {
                     for (let row = 0; row < 3; ++row) {
+                        Session.project.currentExperimentIndex = (row + 1) % 3;
+                        surface.Window.window.update();
+                        verify(waitForRendering(chart), "The selection outline moves away before observing each published Stacked curve colour");
+                        const frame = logicalImage(chart);
                         const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
                         const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const point = layer.mapToItem(chart, layer.width * 0.4, py);
@@ -636,6 +670,7 @@ Rectangle {
                 verify(chart.colors.chartLabels !== chart.colors.chartBackground, "The map's axis and key labels remain visible against the theme background");
             }
             verify(offered > 1, "Both views offer multiple sourced maps beside the background ramps");
+            compare(offered, data.count, "Separate map actors cover the entire independent map inventory");
         }
         function test_map_reverse_and_key_data() {
             const cases = [];
@@ -683,11 +718,11 @@ Rectangle {
                     const scheme = ramp ? schemes.find(row => row.id === String(name).slice(5)) : null;
                     verify(ramp ? scheme !== undefined : reference[name] !== undefined && reference[name].license, "Every offered reversible map has an independent published table/licence or approved ramp operands");
                     choose(selector, choice);
-                    const frame = grabImage(chart);
+                    const frame = logicalImage(chart);
                     for (const [band, index] of [[1, 32], [3, 96], [5, 192]]) {
                         const place = requested ? 255 - index : index;
                         const expected = ramp ? Oklab.gradient(String(pattern.colors.chartBackground), scheme.palette[data.dark ? "dark" : "light"].measured[0], place / 255) : reference[name].colours[place];
-                        for (const [item, x, y] of [[layer, layer.width * (band + 0.5) / 7, layer.height * 0.2], [bar, bar.width / 2, bar.height * (1 - index / 255)]]) {
+                        for (const [item, x, y] of [[layer, layer.width * (band + 0.5) / 7, layer.height * 0.2], [bar, bar.width / 2, (bar.height - 1) * (1 - index / 255)]]) {
                             const at = item.mapToItem(chart, x, y), pixel = frame.pixel(Math.round(at.x), Math.round(at.y));
                             for (const [channel, offset] of [["r", 1], ["g", 3], ["b", 5]])
                                 verify(Math.abs(Math.round(pixel[channel] * 255) - parseInt(expected.slice(offset, offset + 2), 16)) <= 1, "Forward and reversed image and key use the same independent interior table sample: " + name);
@@ -706,7 +741,7 @@ Rectangle {
             const layer = named("layer"), axes = named("axes"), marker = named("current");
             marker.visible = false;
             verify(waitForRendering(chart), "Map interpolation samples exclude only the unrelated selection overlay");
-            const frame = grabImage(chart), strip = [];
+            const frame = logicalImage(chart), strip = [];
             for (let py = 2; py < layer.height - 2; ++py) {
                 const top = marker.mapToItem(layer, 0, 0).y;
                 if (Math.abs(py - top) <= 2 || Math.abs(py - top - marker.height) <= 2)
@@ -749,7 +784,7 @@ Rectangle {
             const marker = named("current");
             marker.visible = false;
             verify(waitForRendering(chart), "The independent band-colour observation has a completed frame without its selection overlay");
-            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
             const dy = (axes.axisY.max - axes.axisY.min) / layer.height;
             for (let row = 0; row < levels.length; ++row)
@@ -841,7 +876,7 @@ Rectangle {
             chart.setZoom([30, 60], data.near ? [95, 235] : [860, 1005]);
             named("current").visible = false;
             verify(waitForRendering(chart), "The highly uneven Map draws its zoomed edge without selection ink");
-            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const dy = (axes.axisY.max - axes.axisY.min) / layer.height;
             const colours = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
             const witnesses = data.near ? [100, 103, 107, 109, 110, 111, 130, 170, 210, 217.5, 225] : [870, 882.5, 900, 950, 989, 990, 991, 993, 997, 1000];
@@ -1112,7 +1147,7 @@ Rectangle {
                 verify(waitForRendering(chart), "The viewport change reaches the actual scan drawing");
             }
             zoom(30, 90);
-            const coarse = grabImage(chart);
+            const coarse = logicalImage(chart);
             const columns = Math.round(layer.width);
             for (let column = 3; column < columns - 3; column += 17) {
                 const left = axes.axisX.min + column / columns * (axes.axisX.max - axes.axisX.min);
@@ -1147,7 +1182,7 @@ Rectangle {
                 }
             }
             zoom(50, 50.4);
-            const frame = grabImage(chart);
+            const frame = logicalImage(chart);
             let checked = 0;
             for (let i = 1600; i <= 1616; ++i) {
                 const x = 10 + i / 40;
@@ -1222,7 +1257,7 @@ Rectangle {
             const opacity = marker.opacity;
             marker.opacity = 0;
             verify(waitForRendering(chart), "The indicator pixel observer captures the actual data underlay with only the prior indicator transparent");
-            const background = grabImage(chart);
+            const background = logicalImage(chart);
             marker.opacity = opacity;
             const vertical = data.mode === "evolution";
             const position = vertical ? (value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width : (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
@@ -1244,7 +1279,7 @@ Rectangle {
                 verify(["r", "g", "b"].every(c => Math.abs(strip.color[c] - colour) < 1e-9) && Math.abs(strip.color.a - (core ? 1 : .5)) <= 1 / 65535, "The actual core and half-transparent border use the exact owner colours for this theme" + "; strip=" + index + " expectedRGB=" + colour + " expectedAlpha=" + (core ? 1 : .5) + " readColour=" + strip.color + " readAlpha=" + strip.color.a);
                 for (const along of [.25, .5, .75]) {
                     const at = strip.mapToItem(chart, vertical ? strip.width / 2 : strip.width * along, vertical ? strip.height * along : strip.height / 2);
-                    const actual = grabImage(chart).pixel(Math.floor(at.x), Math.floor(at.y)), before = background.pixel(Math.floor(at.x), Math.floor(at.y));
+                    const actual = logicalImage(chart).pixel(Math.floor(at.x), Math.floor(at.y)), before = background.pixel(Math.floor(at.x), Math.floor(at.y));
                     verify(["r", "g", "b"].every(c => Math.abs(actual[c] - (core ? colour : (colour + before[c]) / 2)) <= 1 / 255), "Rendered indicator core and border pixels equal the exact themed alpha composite over the independent pre-selection frame" + "; strip=" + index + " x=" + Math.floor(at.x) + " y=" + Math.floor(at.y) + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => core ? colour : (colour + before[c]) / 2)) + " read=" + actual + " readAlpha=" + actual.a + " underlay=" + before);
                 }
             }
@@ -1321,11 +1356,11 @@ Rectangle {
                 const at = layer.mapToItem(chart, x, y);
                 return image.pixel(Math.floor(at.x), Math.floor(at.y));
             }
-            const full = grabImage(chart), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
+            const full = logicalImage(chart), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
             if (data.mode === "map")
                 verify(String(sample(full, x(36), y)) !== String(sample(full, x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
             activate(active, true);
-            const gap = grabImage(chart), blank = sample(gap, x(41), y - 6);
+            const gap = logicalImage(chart), blank = sample(gap, x(41), y - 6);
             verify(blank.a > 0, "On draws a visible tint in the otherwise empty excluded gap");
             if (data.mode === "stacked")
                 verify([-2, -1, 0, 1, 2].some(dy => ink(sample(full, x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(sample(full, x(42), y + dy))));
@@ -1442,7 +1477,7 @@ Rectangle {
                 verify(parent.segments.some(piece => piece.icon === "microscope"), "The joint row uses the prior experiment list's microscope icon");
                 compare(String(icons[0].color).toLowerCase(), expected[row], "The experiment icon and its name share the independent dataset colour");
                 verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= left.x, "The experiment icon precedes its name outside the axis");
-                const frame = grabImage(chart), inkColour = rgb(expected[row]);
+                const frame = logicalImage(chart), inkColour = rgb(expected[row]);
                 for (const item of [label, icons[0]]) {
                     const at = item.mapToItem(chart, 0, 0);
                     let painted = false;
@@ -1480,7 +1515,7 @@ Rectangle {
             tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 2.8) < 1e-5, 2000, "Both nontrivial TOF calibrations share the independently known physical d range" + "; expected=[0.8,2.8] observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText);
             Session.project.currentExperimentIndex = 0;
             verify(waitForRendering(chart), "The joint d view has a completed actual frame");
-            const frame = grabImage(chart), measured = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
+            const frame = logicalImage(chart), measured = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
             for (let row = 0; row < 2; ++row) {
                 const x = (1.8 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 const y = data.mode === "stacked" ? row + scan.stackHeight : row;
@@ -1700,7 +1735,7 @@ Rectangle {
             choosePreference("Stacked", refs[1].label);
             choosePreference("Map", "Plasma");
             compare(String(chart.stackedPalette), refs[1].id, "The Stacked colour preference controls its own lines independently of Structures and Patterns");
-            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const colours = Approved.colours(SettingsProof, refs[1].id, "measured", 3, data.dark);
             for (let row = 0; row < 3; ++row) {
                 const y = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
@@ -1841,7 +1876,7 @@ Rectangle {
             tryCompare(applicationWindow, "active", true, 2000, "Shared scan input reaches the active actual application window");
             const first = showSharedScan(data.origin, data.mode), scan = Session.project.scanViews;
             compare(scan.count, data.project === "scan" ? 3 : 2, "Before any fit the shared chart reads every independent measured dataset");
-            const captureLayer = named("layer"), capture = Ui.windowRoot(applicationWindow), firstPixels = grabImage(capture);
+            const captureLayer = named("layer"), capture = Ui.windowRoot(applicationWindow), firstPixels = logicalImage(capture);
             function firstPixel(x, y) {
                 const at = captureLayer.mapToItem(capture, x, y);
                 return firstPixels.pixel(Math.round(at.x), Math.round(at.y));
@@ -2116,7 +2151,7 @@ Rectangle {
             compare(candidates.length, indices.length, "Exactly one right-hand tick remains for every in-range dataset, even when labels are thinned");
             const leftTicks = Render.descendants(chart).filter(item => item.visible && /^scanView\..*\.rowTick\./.test(item.objectName)).filter(item => item.mapToItem(chart, 0, 0).x < origin.x);
             compare(leftTicks.length, 0, "Dataset ticks replace the former left-hand Map ticks");
-            const frame = grabImage(chart), matched = [];
+            const frame = logicalImage(chart), matched = [];
             for (const row of indices) {
                 const wanted = origin.y + (axes.axisY.max - row.value) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 const matches = candidates.filter(item => Math.abs(item.mapToItem(chart, 0, item.height / 2).y - wanted) <= 1);
@@ -2268,7 +2303,7 @@ Rectangle {
                 verify(waitForRendering(chart), "Each new height reaches the actual Stacked rendering");
                 compare(rows.map((_, i) => scan.rowOf(i)), rows, "Height changes leave every independent dataset row fixed");
                 checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediNatural", "measured", 3, false));
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart), expected = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false);
+                const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart), expected = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false);
                 const y = rows[1] + 128 / 255 * priorRise * factor;
                 const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                 let found = false;
@@ -2282,11 +2317,11 @@ Rectangle {
             marker.opacity = 0;
             surface.Window.window.update();
             verify(waitForRendering(chart), "The minimum-box witness captures the underlying data without the selected border");
-            const background = grabImage(chart);
+            const background = logicalImage(chart);
             marker.opacity = priorOpacity;
             surface.Window.window.update();
             verify(waitForRendering(chart), "The selected minimum box has a completed visible frame");
-            const frame = grabImage(chart), origin = marker.mapToItem(chart, 0, 0), ratio = frame.width / chart.width;
+            const frame = logicalImage(chart), origin = marker.mapToItem(chart, 0, 0), ratio = frame.width / chart.width;
             const core = dark ? 1 : 0, edge = 1 - core;
             function pixel(image, x, y) {
                 return image.pixel(Math.floor((origin.x + x) * ratio), Math.floor((origin.y + y) * ratio));
@@ -2400,7 +2435,7 @@ Rectangle {
                 verify(waitForRendering(chart), "The reverse input reaches actual pattern and dataset-tick pixels");
                 const expected = data.mode === "stacked" && reversed ? colours.slice().reverse() : colours;
                 checkDatasetTicks([100, 250, 700], expected);
-                const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+                const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
                 const y = 700 + (data.mode === "stacked" ? scan.stackHeight : 0);
                 const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                 const colour = data.mode === "stacked" ? expected[2] : reversed ? "#440154" : "#fde725";
@@ -2600,7 +2635,7 @@ Rectangle {
             const layer = named("layer"), marker = named("current"), pointer = named("pointer");
             marker.opacity = 0;
             verify(waitForRendering(chart), "The independent identity observer captures completed data pixels without the selection border");
-            const frame = grabImage(chart);
+            const frame = logicalImage(chart);
             const colours = chart.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", fixture.intensities.length, false).map(rgb) : fixture.intensities.map(level => {
                 const sample = samples.find(value => value.index === level);
                 return {
@@ -2671,7 +2706,7 @@ Rectangle {
                 mouseClick(toggle, toggle.width / 2, toggle.height / 2);
             named("current").opacity = 0;
             verify(waitForRendering(chart), "The failed-middle ownership witness captures the real Map without a selection overlay");
-            const layer = named("layer"), axes = named("axes"), frame = grabImage(chart);
+            const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             function pixel(x, y) {
                 const at = layer.mapToItem(chart, (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                 return frame.pixel(Math.floor(at.x), Math.floor(at.y));
@@ -2737,11 +2772,11 @@ Rectangle {
                 return image.pixel(Math.floor(at.x), Math.floor(at.y));
             }
             setIncluded(false);
-            const full = grabImage(chart);
+            const full = logicalImage(chart);
             const gapX = shown(data.kind === "subpixel" ? 14.125 : 15);
             const x = Math.floor((gapX - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width);
             setIncluded(true);
-            const included = grabImage(chart);
+            const included = logicalImage(chart);
             // Capture the chart and map the plot origin explicitly: a Qt item grab
             // uses the requested size but can retain the window's pixel origin.
             const blank = pixel(included, x, Math.floor(layer.height * .1));
@@ -2752,7 +2787,7 @@ Rectangle {
             }
             verify(offInk, "Full-range control retains real measured ink at the same excluded x column");
             setIncluded(false);
-            const restored = grabImage(chart);
+            const restored = logicalImage(chart);
             for (const y of [.2, .4, .6, .8])
                 compare(String(pixel(restored, x, Math.floor(layer.height * y))), String(pixel(full, x, Math.floor(layer.height * y))), "Switching back to full range restores the same measured drawing");
         }
