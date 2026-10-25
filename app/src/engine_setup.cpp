@@ -141,14 +141,15 @@ namespace edi_app {
 namespace {
 
 // The pages are built in the background after a project opens (edi ADR-0052): asynchronous loaders, incubated here in
-// slices of about 12 ms per turn of the event loop while any is pending, so input and drawing go on between slices. The
-// window's own controller incubates only around frames it draws, which left an idle window building its pages for
-// seconds.
+// slices of about 50 ms per turn of the event loop while any is pending, so input and drawing go on between slices and
+// an answer to the user never waits much longer than a tenth of a second. The window's own controller incubates only
+// around frames it draws, which left an idle window building its pages for seconds; 12 ms slices took about half as
+// long again as 50 ms ones.
 class PageIncubation : public QObject, public QQmlIncubationController {
    public:
     PageIncubation() {
         timer_.setInterval(0);
-        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(12); });
+        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
     }
 
    protected:
