@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 from tests.fixtures.app_environment.closure import dependencies
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
 from tests.fixtures.scan_app.build_probe import (
     fingerprint,
     fingerprint_headers,
@@ -27,6 +28,7 @@ def receipt(root, output, sdk, engine_source):
         raise RuntimeError(
             'The screen observer runs the normal app: build it with `pixi run -e app app-build`'
         )
+    executable = Path(native_arguments([executable])[0])
     fixture = Path(__file__).resolve().parent
     production = fingerprint(root)
     manifest = json.loads((sdk / 'share/crysta-sdk/manifest.json').read_text())
