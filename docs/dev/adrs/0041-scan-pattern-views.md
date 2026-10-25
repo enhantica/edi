@@ -124,12 +124,29 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    running scan moves it to each dataset as it is fitted, so the mark moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
    shows that dataset, here and on the Pattern tab.
 
+9. **Drawing** (the owner, 2026-10-25; the measurements are in
+   [scan view timings](../design/scan-view-timings.md)). The Stacked lines are drawn on the GPU by `ScanLines`, a
+   scene-graph item whose shader places each pattern's line at its row and height and draws it antialiased: 64
+   patterns to a node, one quad per segment of a reduced trace. A new row placing, height, colour or y range only
+   gives the shader new values. Without a GPU the lines are painted with `QPainter` instead, which is faster there:
+   a software OpenGL renderer such as Mesa's llvmpipe rasterises every quad on the CPU. The app reads what Qt draws
+   with in the first frame it renders (the graphics API and, on OpenGL, the renderer), writes it to stderr at startup
+   and shows it in Preferences, Develop, where the user can choose GPU or the painter instead of Automatic; the choice
+   is kept per machine. Qt Quick's own software backend cannot run the shader, so there the lines are always painted.
+   The Map stays one image of the plot's pixels, made again only when what it shows changes.
+   Each dataset's reduction (its trace, or the Map's pixel columns) is kept until its points, the x range, the plot's
+   width, the y scale or the included range change: a colour, a reversal or a row placing reduces nothing, and a
+   change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. The row
+   labels are kept while the rows are placed again: only a label's text, place and colour follow, and the room they
+   take is measured once after their widths change.
+
 ## Consequences
 
 - Each dataset costs 24 bytes per measured point in these views (x, intensity and x on the axis shown, in double
   precision): about 12 MB for 162 datasets of 3 000 points, 120 MB for 500 of 10 000.
-- Drawing reduces every dataset again, one pass over its points, so a redraw costs time in proportion to the scan's
-  points.
+- A new x range, plot width or y scale reduces every dataset again, one pass over its points; nothing else does.
+- With a GPU the Stacked view keeps its vertices on the GPU: about 2 million for the 324-file scan, 28 bytes each.
+- Without a GPU a painted redraw of the 324-file scan takes about 125 ms here, over the 100 ms a redraw should take.
 - The views show measured data only. Calculated patterns of a finished scan are not read back for them.
 - Both views draw from the same reads; opening the second costs nothing more.
 
@@ -137,7 +154,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
 
 | Alternative | Verdict |
 | --- | --- |
-| Each pattern as its own chart series | Rejected: hundreds of series made the chart slow. |
+| Each pattern as its own Qt Graphs series (measured 2026-10-25) | Rejected: Qt Graphs prepares every point of every series on the GUI thread for each frame. A change took about 0.5 s for 324 patterns and 3.8 s for 1 000 on an Apple M2, and about 2 s for 324 without a GPU. How the series are fed makes little difference: on the M2 a whole-list replace from C++ or from QML and an appended list are within 10 % of each other; appending point by point is up to twice as slow; a model mapper on hundreds of series drew no frame within its timeout. A colour change, which feeds no point, still costs most of an update. |
+| ScanLines everywhere | Rejected without a GPU: llvmpipe takes 240 to 480 ms per change for the 324-file scan at 1 px, the painter about 125 ms. |
+| The painter everywhere | Rejected with a GPU: on an M2 it takes 66 ms per change for 324 patterns and 187 ms for 1 000; ScanLines takes 8 to 36 ms. |
 | Keeping 1024 columns of the whole range per dataset | Replaced (the owner, 2026-10-22): a zoomed view showed the columns as steps, not the measured points. |
 | A rainbow (jet) colour map | Rejected: not perceptually uniform; it shows edges the data do not have and fails in grey. |
 | Rows at equal heights, labelled with the scan value | Rejected while every dataset has a value: unequal steps along the scan would read as equal. |
