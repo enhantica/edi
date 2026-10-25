@@ -1,0 +1,15 @@
+runs	run	start_utc	end_utc	exit	load_1min_start	load_1min_end
+baseline/perf-slider	1	2026-10-25T14:30:27Z	2026-10-25T14:30:56Z	0	11.20	10.91
+baseline/perf-slider	2	2026-10-25T14:30:56Z	2026-10-25T14:31:25Z	0	10.91	10.53
+baseline/perf-slider	3	2026-10-25T14:31:25Z	2026-10-25T14:31:53Z	0	10.53	9.99
+baseline-fit-r1/perf-fit-adaptive-pattern	1	2026-10-25T14:33:17Z	2026-10-25T14:33:54Z	0	11.75	11.13
+baseline-fit-r1/perf-fit-every-stacked	1	2026-10-25T14:33:55Z	2026-10-25T14:34:29Z	0	11.13	10.56
+baseline-fit-r1/perf-fit-adaptive-stacked	1	2026-10-25T14:34:30Z	2026-10-25T14:35:03Z	0	10.56	8.99
+baseline-fit-r2/perf-fit-every-pattern	1	2026-10-25T14:35:03Z	2026-10-25T14:36:12Z	0	8.99	6.16
+baseline-fit-r2/perf-fit-adaptive-pattern	1	2026-10-25T14:36:12Z	2026-10-25T14:36:46Z	0	6.16	6.70
+baseline-fit-r2/perf-fit-every-stacked	1	2026-10-25T14:36:46Z	2026-10-25T14:37:19Z	0	6.70	5.71
+baseline-fit-r2/perf-fit-adaptive-stacked	1	2026-10-25T14:37:19Z	2026-10-25T14:37:53Z	0	5.71	6.10
+baseline-fit-r3/perf-fit-every-pattern	1	2026-10-25T14:37:54Z	2026-10-25T14:39:02Z	0	6.10	4.21
+baseline-fit-r3/perf-fit-adaptive-pattern	1	2026-10-25T14:39:02Z	2026-10-25T14:39:45Z	0	4.21	18.29
+baseline-fit-r3/perf-fit-every-stacked	1	2026-10-25T14:39:45Z	2026-10-25T14:40:18Z	0	18.29	14.14
+baseline-fit-r3/perf-fit-adaptive-stacked	1	2026-10-25T14:40:18Z	2026-10-25T14:40:51Z	0	14.14	12.87
