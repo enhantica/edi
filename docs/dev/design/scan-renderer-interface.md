@@ -312,3 +312,32 @@ The two window-level cases are independently runnable through
 capture fixture lets the canonical runtime bank measure this scope without
 replacing the broader chart module's full recorded capture cost with a partial
 run. The six existing per-page minimum cases remain in the chart driver.
+
+
+## Timing limits by actual backend and change
+
+The hub's conductor decision of 2026-10-26 (`19e74c0e8`, owner unanswered after
+one heartbeat) amends gate 1 as follows. Medians use repeated real samples on the
+324-file scan, on a quiet machine with its load stated.
+
+| Change | GPU | Software rendering |
+| --- | --- | --- |
+| Data | below 100 ms | at most 250 ms |
+| Zoom | below 100 ms | at most 115 ms |
+| Pan | below 100 ms | at most 100 ms |
+| Restyle | below 100 ms | at most 100 ms |
+| Select | below 100 ms | at most 100 ms |
+
+The actual Qt API and observed CPU renderer identify the software case; an
+OpenGL API alone does not mean hardware rendering. Each backend and operation
+keeps its own samples and verdict, including the strict GPU and inclusive
+software boundary conventions. `tests/fixtures/fast_chart_redraws/README.md`
+names the complete row schema, including quiet confirmation and measured load.
+The former generic strict-under-100 result is retired; rows missing any of the
+five operations are refused. Fit-update bounds are unchanged by this amendment.
+
+Nothing drawn is dropped to obtain these times: the complete-rendering,
+placement, annotation, colour and line-quality requirements still apply. A
+numeric timing result is not evidence of rendering completeness, and synthetic
+arithmetic tests are not performance measurements. Loaded local diagnostics
+cannot establish the packet's quiet-machine performance acceptance.
