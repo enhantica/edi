@@ -162,9 +162,11 @@ try {
   };
   const waitNative = async objectName => {
     const deadline=Date.now()+45000;
-    do {try {return await controlPointer(evaluate,objectName);} catch(error) {
-      if (!/no visible item|no item is named|visible items/.test(error.message)) throw error;
-    } await frame();} while(Date.now()<deadline);
+    do {
+      const ready=await evaluate(`(() => {try {const r=window.ediControlGeometry(${JSON.stringify(objectName)});return r.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}})()`);
+      if(ready)return await controlPointer(evaluate,objectName);
+      await frame();
+    } while(Date.now()<deadline);
     throw Error('The real dialog must expose its declared native control '+objectName);
   };
   let lastDialogTarget;
@@ -178,7 +180,7 @@ try {
       return;
     }
     if(regex.source==='^OK$') {
-      const count=lastDialogTarget==='saveAs.zip'?2:1;
+      const count=lastDialogTarget==='saveAs.zip'||lastDialogTarget==='open.folder'?2:1;
       for(let i=0;i<count;++i) for(const type of ['keyDown','keyUp'])
         await send('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
       for(const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',{type,key:' ',code:'Space',windowsVirtualKeyCode:32});
@@ -391,9 +393,7 @@ try {
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     await click(/^Save project as/);
-    await waitNative('saveAs.zip');
-    await click(/^Zip archive$/, 'radio');
-    await click(/^OK$/, 'button');
+    // With disk APIs absent, Save as saves in this browser and directly downloads the ZIP.
     return join(output, (await download).guid);
   };
   const inspectArchive = archive => {
