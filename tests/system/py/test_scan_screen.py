@@ -50,7 +50,11 @@ def shown(item):
                 raw[identity].get(round(x, 4)) == y for x, y in frame['drawnPoints']
             ), (
                 'Scan chart: the measured points actually synchronized to the screen '
-                'must belong to the independently identified file'
+                'must belong to the independently identified file; '
+                f'file={identity}, model={frame["modelMeasured"]}, '
+                f'pattern_generation={frame.get("patternGeneration")}, '
+                f'presented_generation={frame.get("presentedGeneration")}, '
+                f'first_points={frame["drawnPoints"][:3]}'
             )
         if (frame['drawnMeasured'], frame['drawnCalculated']) == initial_series:
             assert frame['modelMeasured'] == initial['modelMeasured'], (
