@@ -68,27 +68,15 @@ EaElements.GroupBox {
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
         defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges).
         onAccepted: {
-            if (!Session.createProject(createDialog.projectName, createDialog.projectDescription, WebFiles.available ? "" : createDialog.projectLocation, Preferences.newProjectSuRule, createDialog.projectTitle, createDialog.projectAuthors, Preferences.newReportLibraries === "embedded"))
-                createError.open();
-        }
-    }
-
-    // A created project that could not be saved at its location stays open, unsaved; this says why.
-    AppDialog {
-        id: createError
-        objectName: "create.error"
-        parent: Overlay.overlay
-        title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: createErrorText.implicitHeight
-
-        EaElements.Label {
-            id: createErrorText
-            width: createError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
+            const name = createDialog.projectName, description = createDialog.projectDescription;
+            const location = WebFiles.available ? "" : createDialog.projectLocation;
+            const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
+            Qt.callLater(() => {
+                if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
+                    AppState.createFailed();
+            });
         }
     }
 
@@ -131,6 +119,7 @@ EaElements.GroupBox {
         id: openProjectDialog
         title: qsTr("Open an edi project")
         nameFilters: [qsTr("edi projects (project.edi *.zip)")]
-        onAccepted: Session.openProject(selectedFile)
+        // On the next turn: the opened project replaces this page, dialog and all (AppState.afterChanges).
+        onAccepted: Qt.callLater(Session.openProject, selectedFile)
     }
 }
