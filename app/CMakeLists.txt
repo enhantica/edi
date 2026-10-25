@@ -329,6 +329,13 @@ qt_add_resources(edi_app_scan_bench "edi_scan_bench" PREFIX "/edi/bench" BASE to
 target_link_libraries(edi_app_scan_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
 set_target_properties(edi_app_scan_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 
+# The plotting benchmark (edi ADR-0041): every way of feeding Qt Graphs on the Stacked and Pattern charts' workloads.
+# Test tooling, never part of the host.
+qt_add_executable(edi_app_plot_bench tools/plot_bench.cpp)
+qt_add_resources(edi_app_plot_bench "edi_plot_bench" PREFIX "/edi/bench" BASE tools FILES tools/PlotBench.qml)
+target_link_libraries(edi_app_plot_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
+set_target_properties(edi_app_plot_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+
 # The page-image comparator: test tooling, QtGui only, never part of the host.
 qt_add_executable(edi_app_ui_compare tools/ui_compare.cpp)
 target_link_libraries(edi_app_ui_compare PRIVATE Qt6::Gui)
