@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
@@ -26,6 +27,11 @@ Rectangle {
     property real minimumHeight: 0
     // Each row's height.
     property real rowHeight: AppSizes.legendRowHeight
+    // A click on a row hides its curve or shows it again (the owner, 2026-10-25, as plotly's legend): `toggled` gives
+    // the row's key, and a hidden row is drawn in the disabled colour. A legend without curves to hide leaves it off.
+    property bool toggles: false
+
+    signal toggled(string key)
 
     // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
     // title is, never by the line's gaps between pieces.
@@ -76,11 +82,18 @@ Rectangle {
                 required property list<string> labelTexts
                 required property list<string> labelColors
                 required property bool selected
+                required property string key
+                required property bool hidden
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
-                textColor: color
-                segments: bragg ? [legend.markPiece(mark, markWidth, color),
+                textColor: hidden ? legend.colors.themeForegroundDisabled : color
+                segments: hidden ? [legend.markPiece(mark, markWidth, legend.colors.themeForegroundDisabled),
+                    {
+                        "text": bragg ? qsTr("Bragg peaks") + " " + label : label,
+                        "color": legend.colors.themeForegroundDisabled
+                    }
+                ] : bragg ? [legend.markPiece(mark, markWidth, color),
                     {
                         "text": qsTr("Bragg peaks")
                     },
@@ -113,6 +126,20 @@ Rectangle {
                         "color": legend.colors.themeForeground
                     }
                 ]
+
+                MouseArea {
+                    objectName: "chart.legend.toggle"
+                    anchors.fill: parent
+                    enabled: legend.toggles
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: legend.toggled(entry.key)
+
+                    EaElements.ToolTip {
+                        visible: parent.containsMouse
+                        text: entry.hidden ? qsTr("Click to show") : qsTr("Click to hide")
+                    }
+                }
             }
         }
     }

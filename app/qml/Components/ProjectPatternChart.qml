@@ -62,6 +62,8 @@ Item {
         SingleCrystalChart {
             anchors.fill: parent
             experiment: holder.singleCrystal ? holder.experiment : null
+            // The project too: another one shows the curves its legend hid.
+            project: holder.axisProject
             shown: holder.shown && holder.singleCrystal
         }
     }

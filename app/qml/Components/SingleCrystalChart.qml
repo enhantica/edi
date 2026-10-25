@@ -41,6 +41,12 @@ Item {
                 out.push(shown.singleCrystalReflections);
         return out;
     }
+    // The experiments hidden by a click on their legend row (the owner, 2026-10-25), by name: kept while the app runs,
+    // cleared when another project opens. Their reflection models; and the models the range is fitted to, which
+    // leave the hidden ones out only when Preferences says hiding fits the range to the visible curves.
+    property list<string> hiddenRows: []
+    readonly property var hiddenModels: (stacked ? stackedExperiments : experiment ? [experiment] : []).filter(shown => shown && shown.singleCrystalReflections && hiddenRows.includes(shown.name)).map(shown => shown.singleCrystalReflections)
+    readonly property list<SingleCrystalReflectionModel> rangeModels: Preferences.chartHiddenRange === "fit" ? models.filter(model => !hiddenModels.includes(model)) : models
     // Bumped when any shown model's points change, so the bindings below read them again.
     property int revision: 0
     property FigureColors colors: FigureColors {}
@@ -96,14 +102,14 @@ Item {
         if (reportMode)
             return reportRange[0];
         void revision;
-        const lows = models.filter(model => model.calculatedShown).map(model => squared ? model.low : model.lowF).filter(isFinite);
+        const lows = rangeModels.filter(model => model.calculatedShown).map(model => squared ? model.low : model.lowF).filter(isFinite);
         return lows.length > 0 ? Math.min(...lows) : 0;
     }
     readonly property real fullHigh: {
         if (reportMode)
             return reportRange[1];
         void revision;
-        const highs = models.filter(model => model.calculatedShown).map(model => squared ? model.high : model.highF).filter(isFinite);
+        const highs = rangeModels.filter(model => model.calculatedShown).map(model => squared ? model.high : model.highF).filter(isFinite);
         return highs.length > 0 ? Math.max(...highs) : 1;
     }
     // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
@@ -111,7 +117,14 @@ Item {
     // highlight it.
     function updateLegend() {
         const named = chart.stacked ? chart.stackedExperiments : chart.experiment ? [chart.experiment] : [];
-        legendRows.setRows(named.map(shown => shown ? shown.name : ""), named.map((shown, index) => String(AppColors.experiment(chart.stacked ? index : 0, chart.colors.isDarkPalette))), chart.stacked && !Preferences.chartHighlightSelected ? chart.selectedIndex : -1);
+        legendRows.setRows(named.map(shown => shown ? shown.name : ""), named.map((shown, index) => String(AppColors.experiment(chart.stacked ? index : 0, chart.colors.isDarkPalette))), chart.stacked && !Preferences.chartHighlightSelected ? chart.selectedIndex : -1, chart.hiddenRows);
+    }
+    // Hides an experiment's reflections, or shows them again; with the range fitted to the visible ones, fits it once.
+    function toggleRow(key) {
+        chart.hiddenRows = chart.hiddenRows.includes(key) ? chart.hiddenRows.filter(row => row !== key) : chart.hiddenRows.concat([key]);
+        if (Preferences.chartHiddenRange === "fit")
+            chart.zoom = [];
+        chart.updateLegend();
     }
     ListedLegendModel {
         id: legendRows
@@ -205,6 +218,10 @@ Item {
     onReportDataChanged: redraw()
     onStackedExperimentsChanged: redraw()
     onSelectedIndexChanged: chart.updateLegend()
+    onProjectChanged: {
+        hiddenRows = [];
+        updateLegend();
+    }
     Connections {
         target: Preferences
         function onChartHighlightSelectedChanged() {
@@ -366,7 +383,7 @@ Item {
             let best = -1, bestDistance = chart.em * chart.em, bestModel = -1, xs = [], ys = [];
             for (let m = 0; m < chart.models.length; ++m) {
                 const model = chart.models[m];
-                if (!model.calculatedShown)
+                if (!model.calculatedShown || chart.hiddenModels.includes(model))
                     continue;
                 const mx = chart.squared ? model.calculated : model.calculatedF;
                 const my = chart.squared ? model.measured : model.measuredF;
@@ -431,6 +448,8 @@ Item {
         y: view.y + view.plotArea.y + chart.em
         visible: !chart.reportMode && buttons.legendShown && chart.models.length > 0
         entries: legendRows
+        toggles: !chart.reportMode
+        onToggled: key => chart.toggleRow(key)
     }
 
     EaElements.Label {
@@ -509,6 +528,7 @@ Item {
 
                 objectName: "singleCrystal.points." + index
                 anchors.fill: parent
+                visible: !(modelData && chart.hiddenRows.includes(modelData.name))
                 // The selected experiment on top and every other faded, while highlighting.
                 z: chart.highlight && index === chart.selectedIndex ? 1 : 0
                 opacity: chart.highlight && index !== chart.selectedIndex ? Preferences.chartFadedOpacity : 1
@@ -552,7 +572,7 @@ Item {
             id: layer
 
             objectName: "singleCrystal.points"
-            visible: !chart.stacked
+            visible: !chart.stacked && !(chart.experiment && chart.hiddenRows.includes(chart.experiment.name))
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
             markerSize: 5
@@ -566,7 +586,7 @@ Item {
             id: leftOutLayer
 
             objectName: "singleCrystal.leftOut"
-            visible: !chart.stacked
+            visible: layer.visible
             anchors.fill: parent
             opacity: chart.leftOutOpacity
             color: layer.color
