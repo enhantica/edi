@@ -101,3 +101,74 @@ particular index or use a suffix match: `0 %` and `100 %` remain distinct.
 The closed display may include `offset:` or `height:`; those prefixes do not
 change the model entries used for selection. This selector activation is a
 placement check; it does not claim a pointer-driven dropdown interaction.
+
+
+## Highlight ink and the selected row label
+
+Both views use `Preferences.chartHighlightSelected` and
+`Preferences.chartFadedOpacity` (0.3), exposed by the active layer as
+`highlight` and `faded`. The real button is
+`scanView.<mode>.toolbar.highlight`. Turning it off restores every dataset's
+full colour; turning it on keeps the selected dataset on top and fades the
+others. `SelectedPatternBox` and its runtime instance are retired.
+
+The ink observation captures the complete actor surface after rendering,
+before and after clicking that button. Sample points in
+`scanView.<mode>.layer` coordinates are mapped into that surface, then scaled
+to image pixels. Qt Test's item-sized window capture was previously treated
+as a layer-local image, so a toolbar and plot margin displaced the witnesses.
+The adapted observation maps the actual layer position explicitly. For the independent triangle with knots (10, 0),
+(40, 255), (80, 0), Stacked samples x = 30 at baseline plus two thirds of its
+height. Map samples x = 40 at each dataset's scan-value row. The gate searches
+a small vertical neighbourhood for actual colour different from
+`chart.colors.chartBackground`, then compares that same pixel with highlight
+on and off. The selected dataset keeps its full colour and the other two
+approach the shared fade fraction. A separate fully overlapping Stacked
+witness checks the selected middle dataset's approved palette colour on top.
+Preferences and layer flags alone do not prove visible ink.
+
+Previously the Stacked ink witness sampled each triangle's maximum at
+x = 40. Fit places the last maximum at the plot boundary, where clipping can
+remove its ink. The adapted witness uses the known interior line segment and mapped capture;
+its expected position still follows the independent triangle and the placement
+contract above. Pointer hover and clicking also target that interior segment,
+rather than a baseline at an unrelated x coordinate. The named tooltip
+`scanView.<mode>.hover` must name the targeted dataset, and clicking must select
+it.
+
+With highlight off, the selected label is the **visible**
+`scanView.<mode>.rowLabel.<dataset>` IconLine. The gate reads its nonempty
+`segments` text entry with `bold: true` and checks `textColor` against the theme
+accent. It also observes the corresponding visible text child: its family is
+the loaded PT Sans bold family, its style is `Bold`, and its actual colour
+reaches the theme accent. An inactive label with the same name is not the
+selection marker. On a Map using a numeric scan-value axis, the selected
+IconLine sits inside the plot's left edge even though ordinary row labels
+are absent.
+
+The label and its text must also have positive opacity. The earlier label witness required the text child's `font.bold` flag.
+IconLine selects its bold font through the loaded family and `styleName`, so
+that flag does not describe the chosen font face. The adapted witness checks
+the segment, visible font face and rendered text colour together; a bold
+segment alone is insufficient.
+
+## Structure view capability
+
+Structure availability follows Qt Quick 3D's supported graphics API, not the
+scan renderer preference or the presence of a physical GPU. On the real
+Structure page, `structure.view.view3d` must be a live, visible View3D when Qt
+reports OpenGL, Direct3D, Vulkan or Metal, and
+`structure.view.unavailable` must be hidden. Software OpenGL such as llvmpipe
+also supports this path. With Qt Quick's separate Software backend, the
+View3D must be absent and the unavailable message visible. The gate opens a
+private crystal project, waits for nonempty geometry and a rendered frame,
+and compares these observations with the native Qt API reference in separate
+processes for the two capability cases.
+
+The existing drawn Structure suite reaches real View3D picking and should
+fail if the 3D item disappears, but its `app-test-3d` route is manual. The
+ordinary rendering-setup gates previously visited startup, Preferences and
+scan plots, without visiting the Structure page. The system capability pair
+now exercises both the active 3D item and the fallback message directly.
+A software-OpenGL replay is correctness evidence for the supported API path;
+it is not a physical-GPU performance measurement or a browser replay.
