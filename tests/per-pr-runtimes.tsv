@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T13:09:55Z
+# measured_utc = 2026-10-25T13:22:52Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 15188 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 15190 banked, 0 stale row(s) dropped)
 # Collected tests: 16884; with a reported duration: 9886
 # Module-scoped fixture costs recorded: 73
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 16884
 # inventory_cpp = 393
-# inventory_measured = 15190
-# inventory_unmeasured = 2087
+# inventory_measured = 15191
+# inventory_unmeasured = 2086
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -13297,7 +13297,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive.py::test_pyth
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive.py::test_python_opens_each_project_route_and_preserves_model_values[zip-pd-neut-cwl_cosio-d20_scan-3f]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive.py::test_python_opens_each_project_route_and_preserves_model_values[zip-sc-neut-cwl_tb2ti2o7-heidi_basic]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive.py::test_python_opens_each_project_route_and_preserves_model_values[zip-sc-neut-tof_taurine_fit]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_opening_measurement_declares_both_targets_for_every_real_route
+0.000	tests/system/py/test_project_archive_app.py::test_opening_measurement_declares_both_targets_for_every_real_route
 1.180	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_cancel]
 0.770	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_escape]
 1.130	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:pd-neut-cwl_cosio-d20_scan-3f-folder]
