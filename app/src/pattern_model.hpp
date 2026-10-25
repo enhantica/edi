@@ -107,9 +107,6 @@ class PatternModel : public QAbstractListModel {
     AxisKind axis_kind_ = TwoTheta;
     QString calculation_error_;
     bool stale_ = true;
-    // The measured columns, read with the count: a load shows in the views with its calculation, never
-    // half-way (new values under the old row count while the chart still draws the old pattern).
-    std::vector<double> published_x_, published_meas_, published_meas_su_;
     std::vector<double> published_d_, published_bkg_, published_residual_;
     std::vector<std::string> published_status_;
     std::vector<double> published_calc_;  // the intensities the views were last told about

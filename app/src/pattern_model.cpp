@@ -61,9 +61,6 @@ PatternModel::PatternModel(const edi::ExperimentBase& experiment, QObject* paren
 void PatternModel::readAxis() {
     count_ = 0;
     x_min_ = x_max_ = 0.0;
-    published_x_.clear();
-    published_meas_.clear();
-    published_meas_su_.clear();
     if (!experiment_.data.has_value()) {
         calculation_error_ = QStringLiteral("the experiment has no data node: nothing to calculate over");
         return;
@@ -76,9 +73,6 @@ void PatternModel::readAxis() {
             x_max_ = *std::max_element(axis.begin(), axis.end());
         }
         axis_kind_ = experiment_.data->two_theta.has_value() ? TwoTheta : TimeOfFlight;
-        published_x_ = axis;
-        published_meas_ = experiment_.data->intensity_meas.get();
-        published_meas_su_ = experiment_.data->intensity_meas_su.get();
     } catch (const std::exception& refusal) {
         calculation_error_ = QString::fromUtf8(refusal.what());
     }
@@ -90,13 +84,14 @@ QVariant PatternModel::data(const QModelIndex& index, int role) const {
     if (!index.isValid() || index.row() >= count_ || !experiment_.data.has_value()) {
         return {};
     }
+    const edi::PdDataBase& data = *experiment_.data;
     const auto at = [row = static_cast<std::size_t>(index.row())](const std::vector<double>& values) -> QVariant {
         return row < values.size() ? QVariant(values[row]) : QVariant();
     };
     switch (role) {
-        case XRole: return at(published_x_);
-        case IntensityMeasRole: return at(published_meas_);
-        case IntensityMeasSuRole: return at(published_meas_su_);
+        case XRole: return at(data.axis());
+        case IntensityMeasRole: return at(data.intensity_meas);
+        case IntensityMeasSuRole: return at(data.intensity_meas_su);
         case IntensityCalcRole: return at(published_calc_);  // gated when published (calculated())
         case DSpacingRole: return at(published_d_);
         case IntensityBkgRole: return at(published_bkg_);
@@ -143,8 +138,6 @@ void PatternModel::calculated(const QString& error) {
     const int previous_count = count_;
     const double previous_min = x_min_, previous_max = x_max_;
     const AxisKind previous_kind = axis_kind_;
-    const std::vector<double> previous_x = published_x_, previous_meas = published_meas_,
-                              previous_meas_su = published_meas_su_;
     calculation_error_.clear();
     readAxis();  // names an axis problem itself; otherwise the recalculation's refusal applies
     if (calculation_error_.isEmpty()) {
@@ -184,20 +177,8 @@ void PatternModel::calculated(const QString& error) {
         beginResetModel();  // only when the data node itself changed (a load), never on an edit
         endResetModel();
         emit countChanged();
-    } else if (count_ > 0) {
-        // Another dataset of the same length (a scan's next file) changes the measured columns too.
-        const bool measured_changed = published_x_ != previous_x || published_meas_ != previous_meas ||
-                                      published_meas_su_ != previous_meas_su;
-        QList<int> roles;
-        if (measured_changed) {
-            roles = {XRole, IntensityMeasRole, IntensityMeasSuRole};
-        }
-        if (calc_changed || fields_changed) {
-            roles += {IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole, ComponentIntensitiesRole};
-        }
-        if (!roles.isEmpty()) {
-            emit dataChanged(index(0), index(count_ - 1), roles);
-        }
+    } else if (count_ > 0 && (calc_changed || fields_changed)) {
+        emit dataChanged(index(0), index(count_ - 1), {IntensityCalcRole, DSpacingRole, IntensityBkgRole, CalcStatusRole, ResidualRole, ComponentIntensitiesRole});
     }
     if (names_changed) {
         emit componentNamesChanged();
