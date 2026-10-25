@@ -15,8 +15,9 @@ import edi.app
 // next, with a colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract
 // rule's) or, without one, the file index; a joint fit's experiments are rows in the project's order, each named. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
 // patterns' palette or the map's colour map (the owner, 2026-10-22). The datasets are read in the background the first
-// time either view shows; a dataset that cannot be read is named above the plot. A line marks the shown dataset at all
-// times and follows it as a running scan moves on; a click on a row shows that dataset, here and on the Pattern tab.
+// time either view shows; a dataset that cannot be read is named above the plot. The shown dataset is highlighted (on
+// top, the others faded) or, with highlighting off, marked by its bold label, and follows a running scan as it moves
+// on; the pointer names the dataset it is over, and a click shows that dataset, here and on the Pattern tab.
 Item {
     id: chart
 
@@ -347,6 +348,10 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
+            // datasets (the owner, 2026-10-24).
+            highlight: Preferences.chartHighlightSelected
+            faded: Preferences.chartFadedOpacity
             // The stacked patterns' offset and height, app settings in percent (Fit: 0).
             offset: Preferences.scanStackedOffset / 100
             heightShare: Preferences.scanStackedSize / 100
@@ -363,46 +368,6 @@ Item {
             border.color: chart.colors.chartAxis
             border.width: 1
         }
-        // The shown dataset, at all times, marked by an open rectangle (the owner, 2026-10-22): on the map round its
-        // row's band, halfway to each neighbour; on the stacked view from its row up to its line's highest point in
-        // the range shown. It moves with the shown dataset, so with a followed scan as it runs, and with the rows when
-        // they are placed again (by scan value once every dataset is read), the range and the scale.
-        SelectedPatternBox {
-            readonly property int dataset: chart.project ? chart.project.currentExperimentIndex : -1
-            // What the edges are read from, so the box follows each of them.
-            readonly property var follows: [chart.scan ? chart.scan.revision : -1, layer.xMin, layer.xMax, layer.scale, layer.includedOnly, layer.displayMin, layer.displayMax]
-            readonly property real low: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowLowEdge(dataset) : layer.rowOf(dataset)) : NaN
-            readonly property real high: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowHighEdge(dataset) : layer.peakOf(dataset)) : NaN
-            readonly property real topPx: (axisY.max - high) / (axisY.max - axisY.min) * plot.height
-            readonly property real bottomPx: (axisY.max - low) / (axisY.max - axisY.min) * plot.height
-            // The stacked line sits inside its box: the border stands three pixels clear of its top and its row.
-            readonly property real clear: chart.mode === "map" ? 0 : 3
-            // Never thinner than its three lines either side and an empty inside (the owner, 2026-10-22): a thinner
-            // band, in a dense part of a scan, takes this height centred on the dataset's row, and a band the zoom
-            // leaves only a sliver of takes it centred on that sliver.
-            readonly property real minimum: 8
-            readonly property real rowPx: chart.scan ? (axisY.max - layer.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
-            readonly property real ownTop: Math.round(topPx) - clear
-            readonly property real ownBottom: Math.round(bottomPx) + clear
-            readonly property bool thin: ownBottom - ownTop < minimum
-            // What is left of the band inside the plot: the minimum applies to it, so a tall band zoomed down to a
-            // sliver at an edge keeps a readable box there too.
-            readonly property real shownTop: Math.max(0, ownTop)
-            readonly property real shownBottom: Math.min(plot.height, ownBottom)
-            readonly property bool small: shownBottom - shownTop < minimum
-            readonly property real centre: thin ? rowPx : (shownTop + shownBottom) / 2
-            // Only a dataset whose band reaches into the range shown is marked: one outside it is never drawn at an
-            // edge, where it would mark another row.
-            readonly property bool inView: !isNaN(low) && !isNaN(high) && Math.max(low, high) >= axisY.min && Math.min(low, high) <= axisY.max
-
-            objectName: "scanView." + chart.mode + ".current"
-            dark: chart.colors.isDarkPalette
-            visible: inView && height > 0
-            x: 0
-            y: small ? Math.max(0, Math.min(plot.height - minimum, Math.round(centre - minimum / 2))) : shownTop
-            width: plot.width
-            height: small ? Math.min(minimum, plot.height) : shownBottom - shownTop
-        }
         // The box a drag draws, which the view zooms to on release.
         Rectangle {
             id: zoomBox
@@ -418,10 +383,15 @@ Item {
         MouseArea {
             property point start
 
+            // The dataset under the pointer, named while it hovers (the owner, 2026-10-24); -1 for none.
+            property int hovered: -1
+
             objectName: "scanView." + chart.mode + ".pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
             cursorShape: Qt.CrossCursor
+            onExited: hovered = -1
             onPressed: mouse => {
                 if (mouse.button === Qt.RightButton)
                     return;
@@ -430,8 +400,10 @@ Item {
                 zoomBox.height = 0;
             }
             onPositionChanged: mouse => {
-                if (!(mouse.buttons & Qt.LeftButton))
+                if (!(mouse.buttons & Qt.LeftButton)) {
+                    hovered = chart.scan !== null ? layer.datasetNear(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min)) : -1;
                     return;
+                }
                 const x = Math.max(0, Math.min(width, mouse.x)), y = Math.max(0, Math.min(height, mouse.y));
                 zoomBox.x = Math.min(start.x, x);
                 zoomBox.y = Math.min(start.y, y);
@@ -459,6 +431,12 @@ Item {
                 const dataset = layer.datasetNear(atX(mouse.x / width), atY(mouse.y / height));
                 if (dataset >= 0)
                     chart.project.currentExperimentIndex = dataset;
+            }
+
+            EaElements.ToolTip {
+                objectName: "scanView." + chart.mode + ".hover"
+                visible: parent.hovered >= 0 && parent.containsMouse
+                text: parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(parent.hovered) : ""
             }
         }
     }
@@ -537,14 +515,17 @@ Item {
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
             height: AppSizes.legendRowHeight
+            // Not highlighting, the shown dataset's label is its mark: bold, in the accent colour.
+            readonly property bool marked: !Preferences.chartHighlightSelected && chart.project !== null && chart.project.currentExperimentIndex === index
             // The icon takes the text's colour, so a new colour changes no piece of the line.
-            textColor: colour
+            textColor: marked ? EaStyle.Colors.themeAccent : colour
             segments: [
                 {
                     "icon": "microscope"
                 },
                 {
-                    "text": rowText
+                    "text": rowText,
+                    "bold": marked
                 }
             ]
             onWidthChanged: Qt.callLater(chart.measureRowLabels)
@@ -553,6 +534,29 @@ Item {
             // Map it is centred on its band.
             y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - (chart.mode === "stacked" ? height : height / 2)
         }
+    }
+
+    // A map whose rows stand at their scan values keeps its numeric scale and labels no row; highlighting off, the shown
+    // dataset is still marked by its bold label (the owner, 2026-10-24), inside the plot's left edge at its row.
+    IconLine {
+        readonly property int dataset: chart.project !== null ? chart.project.currentExperimentIndex : -1
+        readonly property real at: dataset >= 0 && chart.scan !== null && chart.scan.revision >= 0 ? layer.rowOf(dataset) : NaN
+
+        objectName: "scanView." + chart.mode + ".rowLabel." + dataset
+        visible: !chart.rowLabels && chart.hasData && !Preferences.chartHighlightSelected && !isNaN(at) && at >= axisY.min && at <= axisY.max
+        height: AppSizes.legendRowHeight
+        textColor: EaStyle.Colors.themeAccent
+        segments: [
+            {
+                "icon": "microscope"
+            },
+            {
+                "text": dataset >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(dataset) : "",
+                "bold": true
+            }
+        ]
+        x: plot.x + chart.rowLabelGap
+        y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
     }
 
     // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
@@ -838,6 +842,15 @@ Item {
                 toolTip: qsTr("Show only the included range")
                 checked: Preferences.chartIncludedOnly
                 onClicked: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            }
+            // The shown dataset on top and the others faded, or all alike with its row label in bold: the one app
+            // setting single-crystal Stacked uses too.
+            ChartToolButton {
+                objectName: "scanView." + chart.mode + ".toolbar.highlight"
+                fontIcon: "highlighter"
+                toolTip: qsTr("Highlight the selected dataset")
+                checked: Preferences.chartHighlightSelected
+                onClicked: Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected
             }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
