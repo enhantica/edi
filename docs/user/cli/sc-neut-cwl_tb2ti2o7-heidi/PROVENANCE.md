@@ -18,4 +18,4 @@ Built by `tools/cli_projects/build_sc_projects.py`: Uani on every site from an i
 
 ## Result from this start (local diagnostic)
 
-From this start edi converges in 12 iterations to reduced χ² 1.33 over the 220 reflections (R(F²) 2.42 %), with the scale 5.899(35), the domain radius 3.0(18) μm and the mosaic spread 2732(93) rad⁻¹.
+From this start edi converges in 12 iterations to reduced χ² 1.33 over the 220 reflections (R(F²) 2.42 %), with the scale 5.899(35), the domain radius 3.0(18) μm and the mosaic spread 2732(93) rad⁻¹. FullProf 8.40 from the same start has no Becker-Coppens model and fits its own empirical extinction instead: 15 cycles to χ² 1.41, RF2w 2.98 %, the scale 6.00(4). The models differ, so its values are a comparison, not a reference.
