@@ -24,6 +24,8 @@ Item {
     // would set them high (the owner, 2026-10-13).
     readonly property real digitHeight: -metrics.tightBoundingRect("0").y
     readonly property real textBaseline: Math.round((height + digitHeight) / 2)
+    // The text's own width, for a bar sized to it.
+    readonly property real textWidth: metrics.advanceWidth(text)
 
     implicitHeight: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
 
