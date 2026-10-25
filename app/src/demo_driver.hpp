@@ -39,6 +39,7 @@ class DemoDriver : public QObject {
     //   choose:<text>            click the open popup's entry showing <text>
     //   load-experiments:<file>  load bundled .edi files through the view-model call the file
     //                            dialog's accept makes (the dialog itself is not driven)
+    //   preference:<name>=<value>   one of edi's Preferences, as its dialog sets it (a string value)
     //   theme:<light|dark|system>   the Preferences theme (the base's Colors.theme)
     //   platform:<light|dark>       the platform appearance "system" follows (AppState's seam; a
     //                               headless runner has none)

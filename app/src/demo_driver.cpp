@@ -958,6 +958,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                   << "timed-frames:" + mode + ":data:10";
         }
         steps_.push_back({"perf-views-324f", views});
+        // The same with the Stacked lines on the GPU, chosen as a user chooses it in Develop.
+        views.insert(1, QStringLiteral("preference:scanRenderer=gpu"));
+        steps_.push_back({"perf-gpu-views-324f", views});
         const QStringList updates{"resize:1280x800", scan, analysis, "sideBar.tab.settings", "expand:group.patternUpdates",
                                   "analysis.patternUpdates"};
         for (const auto& [name, choice] : {std::pair{"every", "Every pattern"}, std::pair{"adaptive", "Adaptive"}}) {
@@ -1165,6 +1168,18 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         return click_item(candidates.last());
+    }
+    if (action.startsWith(QLatin1String("preference:"))) {
+        // One of edi's Preferences, as its dialog sets it: preference:<name>=<value>, a string value.
+        const QString setting = action.mid(11);
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* preferences = engine == nullptr ? nullptr : engine->singletonInstance<QObject*>("edi.app", "Preferences");
+        if (preferences == nullptr || !setting.contains(QLatin1Char('=')) ||
+            !preferences->setProperty(qPrintable(setting.section(QLatin1Char('='), 0, 0)), setting.section(QLatin1Char('='), 1))) {
+            fail(QStringLiteral("step %1: cannot apply '%2'").arg(steps_[current_].image, action));
+            return false;
+        }
+        return true;
     }
     if (action.startsWith(QLatin1String("theme:")) || action.startsWith(QLatin1String("platform:"))) {
         // The base's theme values (Colors.Themes) and Qt's colour schemes (Qt::ColorScheme).

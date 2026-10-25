@@ -72,6 +72,7 @@ qt_add_qml_module(edi_app_module
         src/scan_view_model.hpp src/scan_view_model.cpp
         src/scan_layer.hpp src/scan_layer.cpp
         src/scan_lines.hpp src/scan_lines.cpp
+        src/graphics_info.hpp src/graphics_info.cpp
         src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
