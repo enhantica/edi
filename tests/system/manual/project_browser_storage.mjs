@@ -96,6 +96,7 @@ try {
         if(!(await disk.keys().next()).done)return disk;
         await put(disk,initial);return disk;
       })();
+      window.__storageExportHandles=navigator.storage.getDirectory().then(root=>root.getDirectoryHandle('test-picked-exports',{create:true}));
       if(fallback) {
         for(const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
           Object.defineProperty(window,name,{value:undefined,configurable:true});
@@ -107,7 +108,7 @@ try {
           const folder=await window.__storageHandles;
           return [await folder.getFileHandle(scenario==='disk-zip'?'picked.zip':'project.edi')];
         };
-        window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageHandles).getFileHandle('destination.zip',{create:true});};
+        window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageExportHandles).getFileHandle('destination.zip',{create:true});};
 
       }
     },{initial,scenario,fallback});
@@ -207,11 +208,12 @@ try {
       while(true){try{return await page.evaluate(async picked=>{
       const files={};
       const walk=async(folder,prefix='')=>{for await(const [name,handle] of folder.entries()){
-        if(!picked&&prefix===''&&name==='test-picked-output')continue;
+        if(!picked&&prefix===''&&['test-picked-output','test-picked-exports'].includes(name))continue;
         if(handle.kind==='directory')await walk(handle,prefix+name+'/');
         else{const bytes=new Uint8Array(await(await handle.getFile()).arrayBuffer());files[prefix+name]=btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));}
       }};
-      await walk(picked?await window.__storageHandles:await navigator.storage.getDirectory());return files;
+      if(picked){await walk(await window.__storageHandles,'selected-folder/');await walk(await window.__storageExportHandles,'selected-exports/');}
+      else await walk(await navigator.storage.getDirectory());return files;
     },picked);}catch(error){
         if(!/NotFoundError|NotReadableError/.test(error.message)||Date.now()>=deadline)throw error;
         await frame();
@@ -232,7 +234,7 @@ try {
       const download=fallback?page.waitForEvent('download'):null;download?.catch(()=>{});
       await click(/^Save project as/);
       if(!fallback){await geometry('saveAs.folder');await click(/^Zip archive$/,'radio');if(copy)await click(/^Save a copy/,'checkbox');}
-      const previous=fallback?0:await page.evaluate(async()=>{try{return (await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile()).lastModified;}catch{return 0;}});
+      const previous=fallback?0:await page.evaluate(async()=>{try{return (await(await(await window.__storageExportHandles).getFileHandle('destination.zip')).getFile()).lastModified;}catch{return 0;}});
       if(!fallback)await click(/^OK$/,'button');
       const path=join(output,scenario+'-'+label+'.zip');
       if(fallback)await(await download).saveAs(path);
@@ -240,7 +242,7 @@ try {
         const deadline=Date.now()+30000;let encoded;
         while(Date.now()<deadline) {
           encoded=await page.evaluate(async previous=>{try {
-            const file=await(await(await window.__storageHandles).getFileHandle('destination.zip')).getFile();
+            const file=await(await(await window.__storageExportHandles).getFileHandle('destination.zip')).getFile();
             if(!file.size||file.lastModified<=previous)return null;
             const bytes=new Uint8Array(await file.arrayBuffer());
             return btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
@@ -292,13 +294,14 @@ try {
       // This Qt Popup has no AX node in the shipped kit. Retain actual rendered
       // pixels for the independent notice-text inspection, and gate its visibility.
       await geometry('webNotice.text');
+      await settle();
       const notice=await cdp.send('Page.captureScreenshot',{format:'png'});
       await writeFile(join(output,scenario+'-save-notice.png'),Buffer.from(notice.data,'base64'));
       await page.keyboard.press('Escape');await frame();
     } else {
       const deadline=Date.now()+30000;let candidates=[];
       while(Date.now()<deadline){try{candidates=pythonStore(await readFiles(true),name);break;}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}await frame();}
-      assert(candidates.length>0,'Chromium ordinary Save writes the opened real file or folder in place');stored=candidates;await location(scenario==='disk-zip'?/picked\.zip/:/test-picked-output/);
+      assert(candidates.length>0,'Chromium ordinary Save writes the opened real file or folder in place');stored=candidates;await location(scenario==='disk-zip'?/^picked\.zip$/:/^test-picked-output$/);
     }
     await clean();
     assert.deepEqual(events,before,'Ordinary Save has no download, file chooser or browser dialog');
@@ -319,7 +322,9 @@ try {
       'Save-as retains the saved project record, complete member inventory and every carried report byte');
     await page.reload();await activate();
     await click(/Recent projects$/,'button');
-    const recent=await control(browserPlace?/ · in this browser$/:/ · on this computer$/);
+    const diskName=scenario==='disk-zip'?'picked.zip':'test-picked-output';
+    const diskLabel=new RegExp('^'+diskName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+' · on this computer$');
+    const recent=await control(browserPlace?/ · in this browser$/:diskLabel);
     await click(new RegExp('^'+recent.node.name.value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$'));await control(/^Analysis$/,'tab');
     assert.deepEqual(logicalMembers(await exportZip('reopened')),logicalMembers(snapshot),'Reload then Recent projects reopens every saved project and report byte identically');
     const unsaved='browser-unsaved-'+scenario;
@@ -334,8 +339,8 @@ try {
     if(scenario==='example-folder'||scenario==='example-zip') {
       if(scenario==='example-folder'){
         await click(/^Save project as/);await geometry('saveAs.folder');await click(/^Folder$/,'radio');await click(/^OK$/,'button');
-        await location(/test-picked-output/);
-      } else {await exportZip('becomes-working-place',false);await location(/destination\.zip/);}
+        await location(/^test-picked-output$/);
+      } else {await exportZip('becomes-working-place',false);await location(/^destination\.zip$/);}
       const external='external-next-save-'+scenario;
       await edit('project.name',external);
       const picks=await page.evaluate(()=>({...window.__storagePicks})),counts={...events};
