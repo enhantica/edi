@@ -15,6 +15,7 @@ SCOPES = [
     'experiment',
     'analysis',
     'report',
+    'preparing',
     'save-native',
     'save-web-disk',
     'save-web-fallback',
@@ -111,6 +112,10 @@ def test_every_live_tooltip_uses_the_app_delegate(scope, tooltip_receipts):
         assert census['hovered'] == census['sources'], (
             'Every discovered tooltip source must receive real hover input, or remain unqualified'
         )
-        assert census['sources'] == 0 or census['rendered'] > 0, (
-            'A nonempty tooltip source census must render actual tooltip delegates'
+        inactive = census.get('inactiveDescriptions', [])
+        assert not census['unrendered'] and census['rendered'] >= census['sources'] - len(
+            inactive
+        ), (
+            'Every discovered actual tooltip delegate must render before coverage is claimed; '
+            'metadata without a delegate is recorded separately'
         )
