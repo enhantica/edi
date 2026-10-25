@@ -1,6 +1,6 @@
 _edi.schema_version 3
 
-_metadata.name             sc_neut_tof_taurine_fit
+_metadata.name             sc-neut-tof_taurine-senju
 _metadata.title "Taurine [P2₁/c] · SENJU @ J-PARC"
 _metadata.description "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
 _metadata.created          "22 Oct 2026 18:00:00"

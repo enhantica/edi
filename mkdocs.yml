@@ -144,6 +144,9 @@ nav:
           - user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan/index.md
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi/index.md
+          - user/cli/sc-neut-cwl_pr2nio4-5c2/index.md
+          - user/cli/sc-neut-tof_taurine-senju/index.md
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/sequential-fitting-in-the-app.md
@@ -174,6 +177,9 @@ nav:
           - user/tutorials/pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
           - user/tutorials/pd-neut-cwl_cosio-d20_scan.ipynb
           - user/tutorials/pd-xray-cwl_latp-bm01_scan.ipynb
+          - user/tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb
+          - user/tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb
+          - user/tutorials/sc-neut-tof_taurine-senju.ipynb
 
 # The verification notebook PAGES live in the docs tree; their FullProf reference DATA stays
 # at knowledge/verification/fullprof beside the tests that read it. Jupytext .py sources
