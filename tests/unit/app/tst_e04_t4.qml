@@ -136,9 +136,11 @@ TestCase {
                 pane(page, tier);
                 const groups = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)));
                 verify(groups.length > 0, "ideas 10/11: active pane has observable groups");
+                const headers = Review.descendants(Ui.page(appWindow)).filter(item => typeof item.collapsed === "boolean" && item.titleArea && Ui.inPane(item.titleArea));
+                headers.sort((a, b) => a.titleArea.mapToItem(appWindow.contentItem, 0, 0).y - b.titleArea.mapToItem(appWindow.contentItem, 0, 0).y);
                 groups.forEach(item => {
                     if (item.collapsible)
-                        compare(item.collapsed, true, "idea 10 withdrawn: every foldable group starts folded");
+                        compare(item.collapsed, item !== headers[0], "The first group starts unfolded and subsequent foldable groups retain their closed default");
                 });
                 compare(groups[groups.length - 1].last, true, "idea 11: last visible group suppresses its bottom border");
                 groups.slice(0, -1).filter(item => item.collapsible).forEach(item => compare(item.last, false, "idea 11: preceding foldable categories retain their separators"));

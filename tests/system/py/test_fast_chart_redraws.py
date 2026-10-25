@@ -14,6 +14,7 @@ CASES = [
     'test_adaptive_is_retained',
     *[f'test_placement:{count}' for count in (1, 3, 324)],
     *[f'test_highlight:{mode}' for mode in ('stacked', 'map')],
+    *[f'test_hover_tooltip:{mode}' for mode in ('stacked', 'map')],
     *[
         f'test_toolbar:{page}-{mode}-{width}'
         for page in ('experiment', 'analysis')

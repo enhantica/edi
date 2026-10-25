@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <algorithm>
+#include <atomic>
+#include <QThread>
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QHash>
@@ -67,11 +70,16 @@ public:
         const auto api = item->window()->rendererInterface()->graphicsApi();
         return api != QSGRendererInterface::Unknown && api != QSGRendererInterface::Software;
     }
+    Q_INVOKABLE void setFrameDelay(unsigned milliseconds) {
+        frame_delay_.store(std::min(milliseconds, 500u), std::memory_order_relaxed);
+    }
     Q_INVOKABLE void watch(QQuickItem* item) {
         auto* window = item ? item->window() : nullptr;
         if (!window || window->property("chartAcceptanceWatched").toBool()) return;
         window->setProperty("chartAcceptanceWatched", true);
         connect(window, &QQuickWindow::beforeRendering, this, [this, window] {
+            const auto delay = frame_delay_.load(std::memory_order_relaxed);
+            if (delay) QThread::msleep(delay);
             const auto api = window->rendererInterface()->graphicsApi();
             const char* name = "Unknown";
             switch (api) {
@@ -130,6 +138,7 @@ private:
         }
         return ink;
     }
+    std::atomic_uint frame_delay_{0};
     mutable QMutex mutex_;
     QHash<QQuickWindow*, QVariantMap> facts_;
     QQmlEngine* engine_;

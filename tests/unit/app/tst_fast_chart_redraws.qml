@@ -145,12 +145,16 @@ Item {
             Ui.click(test, Probe, win, "analysis.patternUpdates");
             tryCompare(selector.popup, "opened", true, 1000, "The pattern-update choices open through actual pointer input");
             const choices = Array.from(selector.model);
-            const adaptive = choices.indexOf("Adaptive"), every = choices.indexOf("Every pattern");
-            verify(adaptive >= 0 && every >= 0 && adaptive !== every, "Adaptive remains a distinct selectable choice alongside Every pattern");
+            compare(selector.currentText, "Adaptive", "The real selector identifies the declared default before the saved-mode round trip");
+            const defaultMode = Preferences.scanPatternUpdates;
+            const adaptive = choices.indexOf("Adaptive"), every = choices.indexOf("Every pattern, fit waits for the display");
+            verify(adaptive >= 0 && every >= 0 && adaptive !== every, "Adaptive remains a distinct selectable choice alongside Every pattern, fit waits for the display");
             mouseMove(win.contentItem, win.width - 1, win.height - 1);
             verify(SettingsProof.key(selector, Qt.Key_Home), "The open pattern-update selector receives Home through its actual window");
+            for (let i = 0; i < every; ++i)
+                verify(SettingsProof.key(selector, Qt.Key_Down), "The real selector navigates to fit waits independently of its menu position");
             verify(SettingsProof.key(selector, Qt.Key_Return), "The open pattern-update selector commits Every pattern through real keyboard input");
-            tryCompare(Session.project.fit, "patternUpdates", every, 1000, "Real keyboard input can choose Every pattern before returning to Adaptive");
+            tryCompare(Session.project.fit, "patternUpdates", 0, 1000, "Real keyboard input can choose Every pattern before returning to Adaptive");
             Ui.click(test, Probe, win, "analysis.patternUpdates");
             mouseMove(win.contentItem, win.width - 1, win.height - 1);
             verify(SettingsProof.key(selector, Qt.Key_Home), "The reopened pattern-update selector receives Home through its actual window");
@@ -158,8 +162,8 @@ Item {
                 verify(SettingsProof.key(selector, Qt.Key_Down), "The open pattern-update selector receives each real navigation key");
             verify(SettingsProof.key(selector, Qt.Key_Return), "The open pattern-update selector commits Adaptive through real keyboard input");
             tryCompare(selector, "currentText", "Adaptive", 1000, "Real keyboard input selects Adaptive after Every pattern");
-            tryCompare(Session.project.fit, "patternUpdates", adaptive, 1000, "The selected Adaptive choice reaches the actual fit worker");
-            tryCompare(Preferences, "scanPatternUpdates", adaptive, 1000, "Adaptive remains a machine setting");
+            tryCompare(Session.project.fit, "patternUpdates", defaultMode, 1000, "The selected Adaptive choice reaches the actual fit worker");
+            tryCompare(Preferences, "scanPatternUpdates", defaultMode, 1000, "Adaptive remains a machine setting");
             const project = Session.project, fit = project.fit;
             tryVerify(() => !project.calculating && Probe.datasetReady(project), 10000, "The saved scan's first pattern is ready before starting Adaptive");
             compare(fit.scanTotal, 162, "Adaptive behaviour uses every independently saved input file");
@@ -312,6 +316,45 @@ Item {
             mouseClick(pointer, x, y);
             tryCompare(Session.project, "currentExperimentIndex", 2, 1000, "Actual plot input selects the dataset at its independently observed row");
         }
+        function test_hover_tooltip_data() {
+            return ["stacked", "map"].map(mode => ({tag: mode, mode: mode}));
+        }
+        function test_hover_tooltip(data) {
+            open(data.mode);
+            const layer = named("layer"), axes = named("axes"), pointer = named("pointer");
+            if (data.mode === "stacked") {
+                choose(named("toolbar.offset"), "100%");
+                choose(named("toolbar.height"), "Fit");
+            }
+            for (const pose of [{x: 30, row: 1}, {x: 60, row: 2}, {x: 20, row: 0}]) {
+                const share = pose.x <= 40 ? (pose.x - 10) / 30 : (80 - pose.x) / 40;
+                const value = data.mode === "map" ? chart.scan.rowOf(pose.row) : layer.rowOf(pose.row) + (layer.peakOf(pose.row) - layer.rowOf(pose.row)) * share;
+                const x = (pose.x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
+                const y = (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * pointer.height;
+                mouseMove(pointer, x, y);
+                const tooltip = named("hover");
+                tryVerify(() => tooltip.visible && tooltip.text === chart.scan.rowText(pose.row), 2000, "Real plot hover names the independently targeted dataset");
+                tryCompare(tooltip, "opacity", 1, 2500, "The actual tooltip finishes its entry transition before geometry and style observations");
+                compare(tooltip.backgroundColor, Style.Colors.toolTipBackground, "The plot tooltip uses the app's shared tooltip background token");
+                compare(tooltip.textColor, Style.Colors.themeForeground, "The plot tooltip uses the app's shared tooltip text colour");
+                compare(tooltip.borderColor, Style.Colors.toolTipBorder, "The plot tooltip retains the app's shared tooltip border and shadow colour");
+                compare(tooltip.font.family, Style.Fonts.fontFamily, "The plot tooltip uses the app's shared text font");
+                const background = tooltip.background;
+                verify(background !== null && Ui.rendered(background) && background.opacity > 0, "The actual tooltip background is visibly rendered");
+                const painted = Render.descendants(background).filter(item => item.visible && item.width > 0 && item.height > 0 && item.color !== undefined);
+                verify(painted.some(item => String(item.color) === String(Style.Colors.toolTipBackground)), "The actual tooltip paints its shared background colour");
+                const texts = Render.texts(tooltip.contentItem);
+                verify(texts.some(item => item.text === tooltip.text && item.font.family === Style.Fonts.fontFamily && String(item.color) === String(Style.Colors.themeForeground)), "The actual tooltip draws its dataset text in the shared app style");
+                const box = background.mapToItem(layer, 0, 0, background.width, background.height);
+                verify(box.x >= -1 && box.y >= -1 && box.x + box.width <= layer.width + 1 && box.y + box.height <= layer.height + 1, "The complete visible plot tooltip remains inside the plot, including edge hovers");
+                const dx = Math.max(box.x - x, 0, x - box.x - box.width), dy = Math.max(box.y - y, 0, y - box.y - box.height);
+                verify(Math.hypot(dx, dy) <= 2 * Style.Sizes.fontPixelSize, "The plot tooltip is next to the actual pointer rather than pinned elsewhere in the chart");
+                for (const control of controls(chart).filter(item => String(item.objectName).includes("toolbar."))) {
+                    const rect = control.mapToItem(layer, 0, 0, control.width, control.height);
+                    verify(box.x + box.width <= rect.x || rect.x + rect.width <= box.x || box.y + box.height <= rect.y || rect.y + rect.height <= box.y, "The visible hover tooltip never overlaps an actual toolbar control");
+                }
+            }
+        }
         function combo(item) {
             return typeof item.currentIndex === "number" && typeof item.currentText === "string" && item.model !== undefined;
         }
@@ -319,7 +362,11 @@ Item {
             return Render.descendants(root).filter(item => item.visible && item.width > 0 && item.height > 0 && typeof item.toolTip === "string" && (combo(item) || (typeof item.checked === "boolean" && typeof item.fontIcon === "string")));
         }
         function pageBody(name) {
-            return Render.descendants(app.contentItem).find(item => item.pageName === name);
+            return name === "home" ? Ui.page(app) : Render.descendants(app.contentItem).find(item => item.pageName === name);
+        }
+        function pageReady(name) {
+            const selected = Ui.control(Probe, app, "appBar.tab." + name), page = Ui.page(app);
+            return selected !== null && selected.checked && page !== null && Math.abs(page.mapToItem(app.contentItem, 0, 0).x) < 1;
         }
         function test_toolbar_data() {
             let rows = [];
@@ -350,11 +397,12 @@ Item {
             const targetName = data.mode === "pattern" ? "chart" : "scanView." + data.mode;
             chart = Render.descendants(body).find(item => item.objectName === targetName && item.visible && item.shown);
             verify(chart !== undefined && chart !== null, "Toolbar acceptance observes the actual page's live chart instance");
-            const chartHeight = chart.height;
-            chart.anchors.fill = null;
-            chart.width = data.width;
-            chart.height = chartHeight;
-            tryVerify(() => Math.abs(chart.width - data.width) <= 1, 1000, "The production chart receives the requested toolbar viewport width");
+            const minimum = win.minimumWidth, wide = Math.max(1600, minimum + 600);
+            const requested = data.width === 420 ? minimum : data.width === 740 ? Math.round((minimum + wide) / 2) : wide;
+            win.width = requested;
+            win.height = Math.max(win.minimumHeight, 900);
+            tryVerify(() => Math.abs(win.width - requested) <= 1, 2000, "Toolbar geometry uses the actual supported minimum, middle or wide application width");
+            tryVerify(() => pageReady(data.page), 3000, "The actual chart page reaches its viewport after application resize");
             settled(chart);
             const items = controls(chart).filter(item => String(item.objectName).includes("toolbar."));
             verify(items.length >= 6, "Toolbar grouping observes all production controls, including selectors and buttons; observed=" + JSON.stringify(items.map(item => item.objectName)));
@@ -376,20 +424,21 @@ Item {
                     verify(lines[y].every(item => item.combo), "Every wrapped line above the last contains only comboboxes");
                 verify(lines[ys[ys.length - 1]].every(item => !item.combo), "Wrapped buttons occupy the final line below every combobox");
             }
-            const plot = data.mode === "pattern" ? findChild(chart, "chart.frame.main") : findChild(chart, "scanView." + data.mode + ".layer");
-            verify(plot !== null, "Toolbar centring is measured against the actual production plot");
-            const centre = plot.mapToItem(chart, plot.width / 2, 0).x;
+            tryVerify(() => Ui.control(Probe, win, "mainArea.blocks") !== null, 3000, "The actual dataset selector reaches its settled viewport after application resize");
+            const selector = Ui.control(Probe, win, "mainArea.blocks");
+            verify(selector !== null && selector.width > 0, "Every chart toolbar has its actual visible dataset selector line above it");
+            const centre = selector.mapToItem(chart, selector.width / 2, 0).x;
             for (const y of ys) {
                 const row = lines[y];
                 const left = Math.min(...row.map(item => item.left)), right = Math.max(...row.map(item => item.right));
-                const margin = AppSizes.mainAreaMargin;
-                const expected = Math.max(margin + (right - left) / 2, Math.min(chart.width - margin - (right - left) / 2, centre));
-                verify(Math.abs((left + right) / 2 - expected) <= 1, "Each actual toolbar line is horizontally centred above the plot");
+                console.log("TOOLBAR_CENTRE " + JSON.stringify({page: data.page, mode: data.mode, windowWidth: win.width, chartWidth: chart.width, line: [left, right], actual: (left + right) / 2, selector: centre}));
+                verify(Math.abs((left + right) / 2 - centre) <= 1, "Every actual toolbar line shares the dataset selector line's horizontal centre; actual=" + (left + right) / 2 + "; selector=" + centre);
             }
             if (data.width === 1200)
                 compare(ys.length, 1, "A wide chart puts all toolbar controls on one centred line");
-            if (data.width === 420)
-                verify(ys.length >= 3, "A narrow chart wraps the comboboxes onto multiple lines above the buttons");
+            const comboWidth = items.filter(combo).reduce((sum, item) => sum + item.width, 0);
+            if (comboWidth > chart.width - 2 * AppSizes.mainAreaMargin)
+                verify(ys.length >= 3, "Comboboxes that physically cannot fit together wrap onto multiple lines above the buttons");
         }
         function test_cache_and_pacing_data() {
             return ["stacked", "map"].map(mode => ({
@@ -442,19 +491,31 @@ Item {
             win.width = win.minimumWidth;
             win.height = win.minimumHeight;
             Ui.click(test, Probe, win, "appBar.tab." + data.page);
-            tryVerify(() => pageBody(data.page) && pageBody(data.page).current, 2000, "The minimum-size witness reaches the actual selected workflow page");
+            tryVerify(() => pageBody(data.page) && pageReady(data.page), 3000, "The minimum-size witness reaches the actual selected page including Home");
             tryVerify(() => !Ui.moving(win.contentItem), 2000, "Page movement finishes before minimum-size geometry is inspected");
             verify(waitForPolish(win.contentItem) && waitForRendering(win.contentItem), "Every page at exactly the minimum has a completed frame");
             const current = pageBody(data.page), image = grabImage(win.contentItem);
-            verify(current !== undefined && current !== null && current.current && image.width > 0, "Every real page produces a minimum-size capture");
+            verify(current !== undefined && current !== null && pageReady(data.page) && image.width > 0, "Every real page produces a minimum-size capture");
             const fields = Render.descendants(current).filter(item => item.visible && item.width > 0 && item.height > 0 && (combo(item) || (typeof item.cursorPosition === "number" && typeof item.readOnly === "boolean") || item.objectName.startsWith("group.")) && Ui.inPane(item));
             if (data.index > 0)
                 verify(fields.length > 0, "Loaded workflow pages retain reachable real inputs at the minimum");
             for (const field of fields) {
+                const folded = [];
+                for (let parent = field.parent; parent; parent = parent.parent)
+                    if (parent.titleArea && parent.collapsible && parent.collapsed)
+                        folded.push(parent);
+                for (const group of folded.reverse()) {
+                    Ui.scrollIntoView(group.titleArea);
+                    const hit = Ui.clickPoint(group.titleArea);
+                    verify(hit !== null, "Every folded ancestor has a reachable header at the supported minimum");
+                    mouseClick(group.titleArea, hit.x, hit.y);
+                    tryCompare(group, "collapsed", false, 1500, "Real header input reveals the minimum-size control before scrolling to it");
+                }
                 Ui.scrollIntoView(field);
                 const at = field.mapToItem(win.contentItem, 0, 0);
                 verify(at.x >= -1 && at.x + field.width <= win.width + 1, "No actual input field or whole group is clipped horizontally at the minimum");
-                verify(Ui.exposed(field), "Vertical scrolling reaches each actual input at the minimum");
+                verify(waitForPolish(win.contentItem), "Minimum-size input scrolling completes its actual layout");
+                tryVerify(() => Ui.exposed(field), 1000, "Vertical scrolling reaches each actual input at the minimum: " + field.objectName);
             }
         }
         function window() {

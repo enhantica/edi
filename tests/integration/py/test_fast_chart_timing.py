@@ -9,6 +9,7 @@ from tests.fixtures.fast_chart_redraws.timing import (
     backend_comparisons,
     fit_comparison,
     fit_tab_comparisons,
+    measured_median,
     redraw_comparison,
 )
 
@@ -19,7 +20,11 @@ def row(renderer='llvmpipe (LLVM 20)', api='OpenGL'):
         'before_ms': [120, 110, 130],
         'after_ms': [98, 99, 100],
         'fits': {
-            tab: {'every_pattern_ms': [104, 105, 106], 'adaptive_ms': [99, 100, 101]}
+            tab: {
+                'display_catches_up_ms': [104, 105, 106],
+                'fit_waits_for_display_ms': [180, 190, 200],
+                'adaptive_ms': [99, 100, 101],
+            }
             for tab in ('pattern', 'stacked')
         },
     }
@@ -44,7 +49,7 @@ def test_non_opengl_backend_has_no_opengl_renderer_to_report():
 def test_each_backend_keeps_its_own_targets_and_identity():
     software = row()
     software['after_ms'] = [99, 100, 101]
-    software['fits']['pattern']['every_pattern_ms'] = [105, 106, 107]
+    software['fits']['pattern']['display_catches_up_ms'] = [105, 106, 107]
     results = backend_comparisons([row('Apple M2', 'Metal'), software])
     assert [item['redraw']['under_100_ms'] for item in results] == [True, False], (
         'The strict redraw bound applies independently to software and hardware renderers'
@@ -109,12 +114,12 @@ def test_each_backend_requires_both_fit_tabs(tab):
 @pytest.mark.parametrize('tab', ['pattern', 'stacked'])
 def test_a_fast_tab_cannot_hide_the_other_tabs_overhead(tab):
     measured = row()
-    measured['fits'][tab]['every_pattern_ms'] = [130, 140, 150]
+    measured['fits'][tab]['display_catches_up_ms'] = [130, 140, 150]
     comparisons = backend_comparisons([measured])[0]['fit']
     for name, comparison in comparisons.items():
         assert comparison['tab'] == name, 'Each fit result must keep the actual tab identity'
         assert comparison['within_five_percent'] == (name != tab), (
-            'Every pattern must meet its ratio on each tab without pooling fast and slow tabs'
+            'Display catches up must meet its ratio on each tab without pooling fast and slow tabs'
         )
 
 
@@ -130,13 +135,42 @@ def test_frozen_baseline_regression_pin_keeps_pattern_and_stacked_separate():
                 for mode, field in (('every', 'every_pattern_ms'), ('adaptive', 'adaptive_ms')):
                     if sample['step'] == f'perf-fit-{mode}-{tab}' and sample['measure'] == 'fit':
                         fits[tab][field].append(float(sample['value_ms']))
-    results = fit_tab_comparisons(fits, backend=row()['backend'])
-    assert results['pattern']['ratio'] == pytest.approx(53850 / 22372), (
-        'The frozen software-OpenGL Pattern regression pin uses all repeated baseline fits'
+    ratios = {
+        tab: measured_median(samples['every_pattern_ms']) / measured_median(samples['adaptive_ms'])
+        for tab, samples in fits.items()
+    }
+    assert ratios['pattern'] == pytest.approx(53850 / 22372), (
+        'The frozen software-OpenGL Pattern regression pin reports the legacy fit-waits mode'
     )
-    assert results['stacked']['ratio'] == pytest.approx(16684 / 17127), (
-        'The frozen software-OpenGL Stacked regression pin stays separate from Pattern'
+    assert ratios['stacked'] == pytest.approx(16684 / 17127), (
+        'The frozen Stacked regression pin reports the legacy fit-waits mode separately'
     )
-    assert (
-        not results['pattern']['within_five_percent'] and results['stacked']['within_five_percent']
-    ), 'The committed baseline exposes the Pattern overhead despite a fast Stacked fit'
+
+
+@pytest.mark.parametrize('missing', ['display_catches_up_ms', 'fit_waits_for_display_ms'])
+def test_both_every_pattern_choices_have_distinct_live_receipts(missing):
+    fits = row()['fits']
+    del fits['pattern'][missing]
+    with pytest.raises(ValueError, match='distinguish display catches up and fit waits'):
+        fit_tab_comparisons(fits, backend=row()['backend'])
+
+
+def test_legacy_every_pattern_samples_cannot_be_relabelled_as_catchup():
+    fits = row()['fits']
+    samples = fits['pattern']
+    samples['every_pattern_ms'] = samples.pop('display_catches_up_ms')
+    with pytest.raises(ValueError, match='distinguish display catches up and fit waits'):
+        fit_tab_comparisons(fits, backend=row()['backend'])
+
+
+def test_fit_waits_is_reported_without_the_catchup_bound():
+    fits = row()['fits']
+    fits['pattern']['fit_waits_for_display_ms'] = [300, 310, 320]
+    result = fit_tab_comparisons(fits, backend=row()['backend'])['pattern']
+    assert result['within_five_percent'], 'Only display catches up carries the five-percent bound'
+    assert result['fit_waits_ratio'] == pytest.approx(3.1), (
+        'The fit-waits overhead is still reported honestly'
+    )
+    assert result['mode'] == 'display_catches_up', (
+        'The bounded result must name the new catch-up mode'
+    )
