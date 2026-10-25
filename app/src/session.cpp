@@ -146,7 +146,11 @@ bool Session::openProjectAt(const QUrl& location) {
     if (given.isFile() && given.fileName() == QStringLiteral("project.edi")) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
-        return open(source, {});
+        if (!open(source, {})) {
+            return false;
+        }
+        setOpenedArchive(given.fileName());
+        return true;
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
@@ -242,8 +246,10 @@ bool Session::saveAs(const QUrl& directory) {
     if (!error.isEmpty()) {
         return false;
     }
-    // Saved where the user chose, the project is no longer the example's or the read-only tree's temporary copy.
+    // Saved where the user chose, the project is no longer the example's, the archive's or the read-only tree's
+    // temporary copy.
     read_only_copy_ = false;
+    setOpenedArchive({});
     if (!opened_example_.isEmpty()) {
         opened_example_.clear();
         emit openedExampleChanged();
@@ -456,8 +462,16 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
     return true;
 }
 
+void Session::setOpenedArchive(const QString& name) {
+    if (name != opened_archive_) {
+        opened_archive_ = name;
+        emit openedArchiveChanged();
+    }
+}
+
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
     read_only_copy_ = false;
+    setOpenedArchive({});
     // Every piece of the session's state — the project, its load warnings, the example it came from,
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
     // the new state of the others; then each property signals only if it changed.

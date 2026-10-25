@@ -80,6 +80,8 @@ class Session : public QObject {
     // The bundled example the open project came from, empty for a project opened from its directory
     // or created (its extracted location is a temporary directory, not the user's).
     Q_PROPERTY(QString openedExample READ openedExample NOTIFY openedExampleChanged)
+    // The .zip the open project was unpacked from, by file name, until it is saved somewhere (edi ADR-0052).
+    Q_PROPERTY(QString openedArchive READ openedArchive NOTIFY openedArchiveChanged)
     // Where the open project is, as the Description tab shows it: its directory, for an example the working
     // copy a save writes (edi ADR-0017 §9). The demo shows the working copy's temporary root as
     // "<temporary>", so its images do not change with the run's directory.
@@ -98,6 +100,7 @@ class Session : public QObject {
     ExampleListModel* examples() const { return examples_; }
     WarningListModel* loadWarnings() const { return warnings_; }
     QString openedExample() const { return opened_example_; }
+    QString openedArchive() const { return opened_archive_; }
     QString projectLocation() const;
     bool needsSaveAs() const;
 
@@ -142,6 +145,7 @@ class Session : public QObject {
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openedExampleChanged();
+    void openedArchiveChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
     void lastErrorChanged();
@@ -158,6 +162,7 @@ class Session : public QObject {
     bool openCopy(const QString& source, const QString& target, const QString& example);
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
+    void setOpenedArchive(const QString& name);
 
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
@@ -166,6 +171,7 @@ class Session : public QObject {
     int project_messages_ = 0;  // the keys of the project's messages
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
+    QString opened_archive_;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
