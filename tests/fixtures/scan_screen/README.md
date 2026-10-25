@@ -13,7 +13,7 @@ The worker receipt records actual completed files before their GUI delivery.
 Calculated series hashes witness changes; they are observations, not numerical
 correctness references or golden values.
 
-The Extras control is found through its four displayed options. The observer
+The Extras control is found through its five displayed options. The observer
 activates its actual QML handler. Each mode has a fresh private machine settings
 store; a second host invocation saves the choice, and a third reads it after a
 restart. Browser runs reload the same origin in one isolated context, and use a
@@ -21,7 +21,10 @@ fresh context for each machine.
 
 Adaptive mode temporarily shows Evolution, then returns to Pattern while the
 worker is running. The first resumed pattern must reach at least the newest
-completed file at release. Every-pattern mode must draw each file in order;
+completed file at release. The legacy `every` probe selects “Every pattern, fit waits for the display” by
+its exact label; the separate catch-up gates cover the new choice. The worker
+wait probes bind `file` in the fitted-file callback, and completion probes bind
+`record.file_name` in the completed-file callback. Fit-waits mode must draw each file in order;
 about-once-per-second mode must have at least one live drawing and at least one
 second between successive live drawings; only-at-the-end mode draws only the
 final file after completion. All modes must settle on the final file.
