@@ -76,7 +76,7 @@ try. A slow scan (a file every few seconds) can show every file and should.
      current dataset is the file shown last, not the newest finished one (7). While files wait behind the one being
      shown, the status bar shows "Showing N of M", N the files shown and M those the scan has sent. When the scan
      ends first, the view shows the rest, then the last dataset as its row gives it (5). Another choice made
-     meanwhile drops the files still waiting. The menu lists it last, as it is stored as 4.
+     meanwhile drops the files still waiting. It is stored as 4; the menu lists the choices in this order, each mapped to its stored value.
    - **Only at the end**: no pattern while the scan runs; 5 still shows the last file.
 
 A slow scan therefore shows every file as it finishes. A fast scan shows the newest file about twice a second by
