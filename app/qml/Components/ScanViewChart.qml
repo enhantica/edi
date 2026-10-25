@@ -435,10 +435,30 @@ Item {
                     chart.project.currentExperimentIndex = dataset;
             }
 
-            EaElements.ToolTip {
-                objectName: "scanView." + chart.mode + ".hover"
-                visible: parent.hovered >= 0 && parent.containsMouse
-                text: parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(parent.hovered) : ""
+            // The hovered dataset's name next to the pointer (the owner, 2026-10-25): above it while that fits inside the
+            // plot, else below it, and kept between the plot's sides, so it never covers the toolbar. Its arrow points
+            // at the pointer.
+            Item {
+                id: hoverPoint
+
+                x: parent.mouseX
+                y: parent.mouseY
+                width: 0
+                height: 0
+
+                EaElements.ToolTip {
+                    id: hoverTip
+
+                    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+                    readonly property real plotWidth: hoverPoint.parent.width
+
+                    objectName: "scanView." + chart.mode + ".hover"
+                    visible: hoverPoint.parent.hovered >= 0 && hoverPoint.parent.containsMouse
+                    text: hoverPoint.parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(hoverPoint.parent.hovered) : ""
+                    x: Math.max(-hoverPoint.x, Math.min(plotWidth - hoverPoint.x - implicitWidth, -implicitWidth / 2))
+                    // Below, clear of the cross cursor.
+                    y: hoverPoint.y >= implicitHeight + gap ? -implicitHeight - gap : 3 * gap
+                }
             }
         }
     }
