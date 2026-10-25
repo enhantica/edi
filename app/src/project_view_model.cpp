@@ -1549,8 +1549,16 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     publishCurrent();
     if (view.frame) {
         showFitFrame(*view.frame, std::move(view.d_frame));
-    } else if (!view.error.isEmpty()) {
-        setLastError(view.error);
+    } else {
+        if (!view.error.isEmpty()) {
+            setLastError(view.error);
+        }
+        // The chart shows the dataset the model now holds at once, its calculation not current until the next one
+        // arrives: never one file's points while the model holds another's (the template's at a scan's first swap,
+        // or an earlier followed file's when a finished scan settles on its last file, which comes with no frame).
+        if (ExperimentViewModel* experiment = currentExperiment()) {
+            experiment->capturePattern();
+        }
     }
     applied = true;
 }
