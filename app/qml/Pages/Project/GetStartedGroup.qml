@@ -12,8 +12,8 @@ import EasyApplication.Gui.Logic as EaLogic
 
 import edi.app
 
-// Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project
-// or open an existing one — an edi project is a directory — and save the open one as (edi ADR-0017 §13).
+// Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project, open one from its
+// project.edi or a .zip, or save the open one as a folder or a .zip, or a copy of it (edi ADR-0017 §13, ADR-0052).
 EaElements.GroupBox {
     id: group
     objectName: "group.getStarted"
@@ -30,22 +30,15 @@ EaElements.GroupBox {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: EaGlobals.Vars.showProjectDescriptionDialog = true
+            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true)
         }
 
         EaElements.SideBarButton {
             objectName: "project.open"
             fontIcon: "upload"
-            text: qsTr("Open an existing project")
-            // In the browser the chosen folder is copied into the page's memory first (edi ADR-0023).
-            onClicked: {
-                if (WebFiles.available) {
-                    group.webRequestProject = Session.project;
-                    group.webRequest = WebFiles.openProject();
-                } else {
-                    openProjectDialog.open();
-                }
-            }
+            text: qsTr("Open project…")
+            // In the browser a folder or a .zip is chosen through the browser (edi ADR-0052 §9): which, first.
+            onClicked: AppState.afterChanges(() => WebFiles.available ? openChoice.open() : openProjectDialog.open())
         }
 
         EaElements.SideBarButton {
@@ -75,56 +68,87 @@ EaElements.GroupBox {
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
         defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges).
         onAccepted: {
-            if (!Session.createProject(createDialog.projectName, createDialog.projectDescription, WebFiles.available ? "" : createDialog.projectLocation, Preferences.newProjectSuRule, createDialog.projectTitle, createDialog.projectAuthors, Preferences.newReportLibraries === "embedded"))
-                createError.open();
+            const name = createDialog.projectName, description = createDialog.projectDescription;
+            const location = WebFiles.available ? "" : createDialog.projectLocation;
+            const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
+            Qt.callLater(() => {
+                if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
+                    AppState.createFailed();
+            });
         }
     }
 
-    // A created project that could not be saved at its location stays open, unsaved; this says why.
+    // The browser's Open (edi ADR-0052 §9): a project folder or a .zip, then the browser's own chooser. Chrome and Edge
+    // open it on the disk, where Save writes it back; other browsers copy it into the browser's storage.
     AppDialog {
-        id: createError
-        objectName: "create.error"
+        id: openChoice
+        objectName: "open.choice"
+        property bool zip: false
         parent: Overlay.overlay
-        title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
+        title: qsTr("Open project")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
+        contentHeight: openChoiceColumn.implicitHeight
+        onAboutToShow: zip = false
+        onAccepted: Session.openWebProject(zip ? "file" : "folder")
+
+        Column {
+            id: openChoiceColumn
+
+            EaElements.RadioButton {
+                objectName: "open.folder"
+                verticalPadding: AppSizes.choiceRowPadding
+                text: qsTr("Folder")
+                checked: !openChoice.zip
+                onClicked: openChoice.zip = false
+            }
+            EaElements.RadioButton {
+                objectName: "open.zip"
+                verticalPadding: AppSizes.choiceRowPadding
+                // Chrome and Edge open a project.edi too, from its folder on the disk.
+                text: WebStorage.diskAccess ? qsTr("project.edi or zip archive") : qsTr("Zip archive")
+                checked: openChoice.zip
+                onClicked: openChoice.zip = true
+            }
+        }
+    }
+
+    // A project.edi picked in Chrome or Edge opens its folder, which the browser lets the page use only once the user
+    // picks it too, with a click of its own.
+    Connections {
+        target: Session
+        function onWebFolderNeeded(name) {
+            recordFolder.name = name;
+            recordFolder.open();
+        }
+    }
+    AppDialog {
+        id: recordFolder
+        objectName: "open.recordFolder"
+        property string name
+        parent: Overlay.overlay
+        title: qsTr("Open project")
+        standardButtons: Dialog.Ok | Dialog.Cancel
         contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: createErrorText.implicitHeight
+        contentHeight: recordFolderText.implicitHeight
+        onAccepted: Session.openWebRecordFolder()
 
         EaElements.Label {
-            id: createErrorText
-            width: createError.contentWidth
+            id: recordFolderText
+            width: recordFolder.contentWidth
             wrapMode: Text.Wrap
-            text: Session.lastError
+            text: qsTr("To open %1, choose the folder that holds it.").arg(recordFolder.name)
         }
     }
 
-    // The folder request and the project open when it was made: a folder that arrives after another project was
-    // opened meanwhile is not opened over it.
-    property int webRequest: 0
-    property var webRequestProject: null
-    Connections {
-        target: WebFiles
-        function onProjectOpened(request, directory) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (Session.project === group.webRequestProject)
-                Session.openProject(directory);
-        }
-        function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
-        function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
-    }
-
-    FolderDialog {
+    // The system's file dialog: a project.edi opens its folder, a .zip is unpacked (edi ADR-0052).
+    FileDialog {
         id: openProjectDialog
-        title: qsTr("Open an edi project directory")
-        onAccepted: Session.openProject(selectedFolder)
+        title: qsTr("Open an edi project")
+        nameFilters: [qsTr("edi projects (project.edi *.zip)")]
+        // On the next turn: the opened project replaces this page, dialog and all (AppState.afterChanges).
+        onAccepted: Qt.callLater(Session.openProject, selectedFile)
     }
 }

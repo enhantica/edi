@@ -167,7 +167,7 @@ Rectangle {
                     objectName: "project.location"
                     width: column.width - AppSizes.descriptionNameColumnWidth
                     elide: Text.ElideMiddle
-                    text: Session.projectLocation
+                    text: Session.locationText
                 }
             }
             // The blocks by name, each with its icon in its colour, the count in the label (as
