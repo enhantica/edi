@@ -101,8 +101,9 @@ class Session : public QObject {
     QString projectLocation() const;
     bool needsSaveAs() const;
 
-    // Open a project directory; only `file:` URLs (seam row 13).
-    Q_INVOKABLE bool openProject(const QUrl& directory);
+    // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
+    // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
+    Q_INVOKABLE bool openProject(const QUrl& location);
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
@@ -122,6 +123,12 @@ class Session : public QObject {
     // when the project must be saved as.
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QUrl& directory);
+    // Write the open project's folder, as last saved and with its reports, as one .zip at `archive` (a `file:` URL),
+    // the archive every surface writes (edi ADR-0052). A project with no folder yet is written to a temporary one
+    // first. False, with `lastError` saying why, when it cannot be written.
+    Q_INVOKABLE bool exportProject(const QUrl& archive);
+    // The open project's folder, or the temporary one it was unpacked or exported into, for the browser's download.
+    Q_INVOKABLE QString exportFolder();
     Q_INVOKABLE void clearError();
     /// Whether a saved project directory is present on disk.
     Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
