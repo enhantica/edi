@@ -35,6 +35,14 @@ const fixture = join(repo, 'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-
 const documents = spawnSync('python', ['-c', 'import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))', fixture], {encoding:'utf8'});
 assert.equal(documents.status, 0, 'Browser input comes from Python zipfile, independently of the app');
 const initial = JSON.parse(documents.stdout);
+const offersProjectRecord=options=>options?.types?.some(type=>
+  Object.values(type.accept??{}).some(extensions=>Array.isArray(extensions)&&
+    extensions.some(extension=>typeof extension==='string'&&extension.toLowerCase()==='.edi')))===true;
+assert(!offersProjectRecord({types:[{description:'project.edi archive',accept:{'application/zip':['.zip']}}]}),
+  'A picker description cannot impersonate an offered project record extension');
+assert(offersProjectRecord({types:[{accept:{'application/octet-stream':['.edi']}}]})&&
+  offersProjectRecord({types:[{accept:{'application/octet-stream':['.EDI']}}]})&&!offersProjectRecord({}),
+  'Only an explicitly accepted project record extension satisfies the file-route requirement');
 const receipts = {}, failures = {};
 const logicalMembers=members=>{
   const logical={...members};const text=Buffer.from(members['project.edi'],'base64').toString();
@@ -276,7 +284,7 @@ try {
       if(scenario==='disk-record') {
         const options=await page.evaluate(()=>window.__storageOpenOptions);
         await writeFile(join(output,scenario+'-picker-options.json'),JSON.stringify(options??null,null,2));
-        assert(options&&JSON.stringify(options).includes('.edi'),'The Chromium Open file route must offer the project.edi record declared by the working-place contract');
+        assert(offersProjectRecord(options),'The Chromium Open file route must offer the project.edi record declared by the working-place contract');
       }
     }
     await control(/^Analysis$/,'tab');
