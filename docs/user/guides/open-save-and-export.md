@@ -7,8 +7,12 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
 
 - **Open project…** opens a `project.edi` (its folder opens) or a `.zip`. You can also drop a project folder, a
   `project.edi` or a `.zip` onto the window.
-- A project opened from a `.zip` is unpacked into a temporary folder. It counts as unsaved: the first **Save** asks
-  where to keep it, and later saves go there. Its reports come along.
+- A project opened from a `.zip` works from a temporary unpacked copy, and **Save** writes the `.zip` again. If the
+  `.zip` sits somewhere you cannot write, or the project is a bundled example, **Save** asks where to keep it instead.
+  Its reports come along.
+- Right after a project opens, its pages are prepared one after another; the status bar shows how many are ready, and a
+  page's button in the top bar becomes available once its page is ready.
+- If the project has unsaved changes when you open another project, create one or quit, edi asks whether to save them.
 - **Save project as…** asks first for the format, **Folder** or **Zip archive**, and whether to **Save a copy**, then
   where. A project saved as a zip archive keeps that `.zip` as its location, and later saves rewrite it. A copy is
   written as the project stands now, and you keep working where you were.
