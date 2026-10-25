@@ -26,8 +26,6 @@ CASES = [
         f'test_pages_at_minimum:{page}'
         for page in ('home', 'project', 'structure', 'experiment', 'analysis', 'report')
     ],
-    'test_desktop_minimum',
-    'test_placeholder_boundary_and_state',
 ]
 
 

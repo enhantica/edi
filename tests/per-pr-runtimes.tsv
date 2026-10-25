@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T22:15:48Z
+# measured_utc = 2026-10-25T22:33:40Z
 #
-# Recorded from: measured test run (9 node(s) measured once, 15319 banked, 0 stale row(s) dropped)
-# Collected tests: 16945; with a reported duration: 9913
-# Module-scoped fixture costs recorded: 82
+# Recorded from: measured test run (2 node(s) measured once, 15325 banked, 2 stale row(s) dropped)
+# Collected tests: 16945; with a reported duration: 9914
+# Module-scoped fixture costs recorded: 83
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 16945
 # inventory_cpp = 393
-# inventory_measured = 15326
-# inventory_unmeasured = 2012
+# inventory_measured = 15327
+# inventory_unmeasured = 2011
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -7260,6 +7260,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-Bani]
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-Uani]
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-beta]
+0.000	tests/system/py/test_app_minimum.py::test_app_minimum_and_overlay[test_desktop_minimum]
+0.000	tests/system/py/test_app_minimum.py::test_app_minimum_and_overlay[test_placeholder_boundary_and_state]
 0.570	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-screen]
 0.600	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-selector]
 0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-desktop-screen]
@@ -12483,7 +12485,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::tes
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:map]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:stacked]
-0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_desktop_minimum]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_gpu_backend]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:map]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:stacked]
@@ -12495,7 +12496,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::tes
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:project]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:report]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placeholder_boundary_and_state]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:1]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:324]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_placement:3]
@@ -17403,6 +17403,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py

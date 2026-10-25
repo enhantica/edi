@@ -304,3 +304,11 @@ WebAssembly runtime capture. Native minimum publication is checked separately.
 Before this adaptation, the gate searched only `win.contentItem` and required
 underlying controls to disappear. It now observes the named overlay, its actual
 pixels and pointer interception while requiring the underlying state to survive.
+
+
+The two window-level cases are independently runnable through
+`tests/system/py/test_app_minimum.py`; the native case names remain
+`test_desktop_minimum` and `test_placeholder_boundary_and_state`. Their separate
+capture fixture lets the canonical runtime bank measure this scope without
+replacing the broader chart module's full recorded capture cost with a partial
+run. The six existing per-page minimum cases remain in the chart driver.
