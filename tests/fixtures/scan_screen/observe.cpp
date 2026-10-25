@@ -195,7 +195,9 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
             if (!layer || !calc || !layer->isVisible() || calc->points().isEmpty() ||
                 layer->points().isEmpty())
                 return;
-            auto* model = project->currentExperiment()->pattern();
+            auto* displayed = qvariant_cast<edi_app::ExperimentViewModel*>(layer->parent()->property("experiment"));
+            if (!displayed) return;
+            auto* model = displayed->pattern();
             QList<double> measured;
             for (int role :
                  {edi_app::PatternModel::XRole, edi_app::PatternModel::IntensityMeasRole,
@@ -214,8 +216,8 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
                 drawn.append(QJsonArray{point.x(), point.y()});
             *latest = {{"ms", static_cast<double>(clock->elapsed())},
                        {"running", project->fit()->running()},
-                       {"patternGeneration", static_cast<qint64>(project->currentExperiment()->patternGeneration())},
-                       {"presentedGeneration", static_cast<qint64>(project->currentExperiment()->presentedGeneration())},
+                       {"patternGeneration", static_cast<qint64>(displayed->patternGeneration())},
+                       {"presentedGeneration", static_cast<qint64>(displayed->presentedGeneration())},
                        {"modelMeasured", hash_values(measured)},
                        {"drawnMeasured", hash_points(layer->points())},
                        {"drawnPoints", drawn},
@@ -311,6 +313,13 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         timer->setInterval(25);
         QObject::connect(timer, &QTimer::timeout, window, [=] {
             auto* project = session->project();
+            auto* pattern_tab = window->findChild<QObject*>("mainArea.analysis.tab.fitting");
+            if (pattern_tab && pattern_tab->property("enabled").toBool() &&
+                !pattern_tab->property("checked").toBool()) {
+                press(pattern_tab);
+                window->update();
+                return;
+            }
             if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
                 result->value("frames").toArray().isEmpty())
                 return;

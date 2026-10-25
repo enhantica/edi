@@ -83,10 +83,29 @@ try {
     const resolved = await cdp.send('DOM.resolveNode',{backendNodeId:activation.node.backendDOMNodeId});
     await cdp.send('Runtime.callFunctionOn',{objectId:resolved.object.objectId,functionDeclaration:'function(){this.click();}'});
     await click(/^Start$/); await click(/^Project$/,'tab');
+    const rename = async name => {
+      const item = await page.evaluate(() => window.ediControlGeometry('project.name'));
+      assert(item?.visible && item.enabled && item.width > 0 && item.height > 0,
+        'Folder overwrite uses the actual project-name editor');
+      await page.mouse.click(item.x + item.width/2, item.y + item.height/2);
+      await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(name);
+      await page.keyboard.press('Tab'); await frame();
+    };
+    const inspect = archive => {
+      const result=spawnSync('python',['-c','import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))',archive],{encoding:'utf8'});
+      assert.equal(result.status,0,'The exported project is independently readable with Python zipfile');
+      return JSON.parse(result.stdout);
+    };
+    const exported = async () => {
+      const completed=page.waitForEvent('download'); await click(/^Export project/);
+      const path=join(output,capability+'-export.zip'); await (await completed).saveAs(path);
+      return inspect(path);
+    };
     if (capability === 'folder') {
       await page.evaluate(() => window.__projectFolderReady.then(()=>true));
       await click(/^Open an existing project/);
       await control(/^Analysis$/,'tab');
+      await rename('archive-folder-first');
       await click(/^Save project$/);
       const readFolder = () => page.evaluate(async () => {
         const result={};
@@ -103,11 +122,18 @@ try {
       const first=await readFolder();
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
+      await rename('archive-folder-second');
       await click(/^Save project$/);
+      await page.waitForFunction(async () => {
+        const root=await window.__projectFolderReady;
+        return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>text.includes('archive-folder-second'));
+      });
       const second=await readFolder();
       assert.equal(await page.evaluate(()=>window.__projectFolderPickCount),picks,'Later Save overwrites the picked folder without another picker');
-      assert(second['project.edi'],'A repeated folder Save retains a readable project record');
-      receipts.folder={first,second,picks};
+      assert.notEqual(second['project.edi'],first['project.edi'],'A later Save really overwrites the picked folder with the edited model');
+      const archive=await exported();
+      assert.deepEqual(archive,second,'The app export contains exactly the picked folder member names and bytes');
+      receipts.folder={first,second,picks,archive};
     } else {
       const chooser=page.waitForEvent('filechooser'); await click(/^Open an existing project/);
       await (await chooser).setFiles(fixture);
@@ -119,7 +145,9 @@ try {
       const members=JSON.parse(inspected.stdout);
       assert.equal(members['reports/opaque.html'],initial['reports/opaque.html'],'Fallback ZIP Save retains exact report bytes');
       assert(members['project.edi'],'Fallback ZIP Save contains the project record');
-      receipts.fallback={members};
+      const archive=await exported();
+      assert.deepEqual(archive,members,'Fallback Export contains exactly the previously saved project members and report bytes');
+      receipts.fallback={members,archive};
     }
     await page.screenshot({path:join(output,capability+'.png')});
     await context.close();
