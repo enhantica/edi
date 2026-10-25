@@ -21,11 +21,11 @@ class RenderingInfo : public QObject {
     QML_SINGLETON
     Q_PROPERTY(bool detected READ detected NOTIFY detectedChanged)
     // "OpenGL", "Metal", "Direct3D 11", "Direct3D 12", "Vulkan", "Software" (Qt Quick's own), empty until detected.
-    Q_PROPERTY(QString api READ api NOTIFY detectedChanged)
+    Q_PROPERTY(QString api READ api NOTIFY apiChanged)
     // The OpenGL renderer string (GL_RENDERER); empty for another API.
-    Q_PROPERTY(QString renderer READ renderer NOTIFY detectedChanged)
+    Q_PROPERTY(QString renderer READ renderer NOTIFY rendererChanged)
     // Drawing without a GPU.
-    Q_PROPERTY(bool software READ software NOTIFY detectedChanged)
+    Q_PROPERTY(bool software READ software NOTIFY softwareChanged)
 
    public:
     explicit RenderingInfo(QObject* parent = nullptr);
@@ -43,6 +43,9 @@ class RenderingInfo : public QObject {
 
    signals:
     void detectedChanged();
+    void apiChanged();
+    void rendererChanged();
+    void softwareChanged();
 
    private:
     void setDetected(const QString& api, const QString& renderer);

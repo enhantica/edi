@@ -383,10 +383,14 @@ void ScanViewModel::placeRows() {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }
     }
-    if (texts != row_texts_) {
+    const bool changed = texts != row_texts_;
+    if (changed) {
         ++row_texts_revision_;
     }
     publish(row_texts_, texts, &ScanViewModel::rowTextsChanged);
+    if (changed) {
+        emit rowTextsRevisionChanged();
+    }
     emit orderNameChanged();
     double low = 0.0, high = 1.0;
     if (!spans_.empty()) {
