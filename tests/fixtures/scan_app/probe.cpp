@@ -1,3 +1,4 @@
+#include "example_list_model.hpp"
 #include <sys/resource.h>
 
 #include <QColor>
@@ -416,6 +417,8 @@ QJsonObject tree_hashes(const QString& root) {
 QJsonObject bundle(const std::string& id, const std::string& destination, bool readonly = false) {
     const QString source = readonly ? QString::fromStdString(id)
                                     : QString::fromStdString(":/edi/examples/" + id + "/project");
+    if (!readonly && !edi_app::ExampleListModel::bundledIds().contains(QString::fromStdString(id)))
+        return {{"opened", false}, {"error", "Example precondition: requested scan id must be bundled"}};
     const QJsonObject original = tree_hashes(source);
     edi_app::Session session;
     const bool opened = readonly ? session.openProject(QUrl::fromLocalFile(source))

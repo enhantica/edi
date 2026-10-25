@@ -1,0 +1,62 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 21:01:38.953
+ => Reading control file *.PCR ... start
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =start):
+ => Reading intensity file of pattern  1  start
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: start
+ => Pattern:   1  start
+ => Ordering reflections contributing to each point for pattern:       1
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Writing results for cycle       1
+ => R-Factors:   13.0      11.6     Chi2:  88.4     DW-Stat.:  0.0216   Patt#:  1
+ => Expected :            1.24                                1.8978
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  54.3     Rwp:  58.1     Rexp:    6.18                        Chi2:  88.4
+    => Global user-weigthed Chi2 (Bragg contrib.):   88.41
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   13.0      11.6     Chi2:  88.4     DW-Stat.:  0.0216   Patt#:  1
+ => Expected :            1.24                                1.8978
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  54.3     Rwp:  58.1     Rexp:    6.18                        Chi2:  88.4
+    => Global user-weigthed Chi2 (Bragg contrib.):   88.41
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+  
+  
+ =>               CPU Time:    12.406 seconds
+ =>                             0.207 minutes
+  
+ => END   Date:22/10/2026  Time => 21:01:51.365
+  
+ => Data Files :
+ =>             - start.dat
+ => PCR  File  : start
+ => Do you want to continue (<cr>=N)? 
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/3035504/fd/0
+Image              PC                Routine            Line        Source             
+fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
+fp2k               000000000068C8CB  Unknown               Unknown  Unknown
+fp2k               0000000000405B3D  Unknown               Unknown  Unknown
+libc.so.6          00007F9CCB882D90  Unknown               Unknown  Unknown
+libc.so.6          00007F9CCB882E40  __libc_start_main     Unknown  Unknown
+fp2k               0000000000405A55  Unknown               Unknown  Unknown
+         (s:same, a:another problem): 

@@ -1,0 +1,358 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "scope": "asymmetry-off fit",
+  "start_project": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
+  "n_free": 57,
+  "converged": true,
+  "r_wp": 0.0471,
+  "r_wp_by_bank": {
+    "bm01": 0.0471
+  },
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Bck_0_pat1",
+      "value": 37139648.0,
+      "uncertainty": 2648736.5
+    },
+    "2": {
+      "symbol": "Bck_1_pat1",
+      "value": 41357624.0,
+      "uncertainty": 1109098.6
+    },
+    "3": {
+      "symbol": "Bck_2_pat1",
+      "value": 52201624.0,
+      "uncertainty": 1095346.5
+    },
+    "4": {
+      "symbol": "Bck_3_pat1",
+      "value": 67324264.0,
+      "uncertainty": 1361981.2
+    },
+    "5": {
+      "symbol": "Bck_4_pat1",
+      "value": 81845328.0,
+      "uncertainty": 1526584.2
+    },
+    "6": {
+      "symbol": "Bck_5_pat1",
+      "value": 79522168.0,
+      "uncertainty": 1114401.5
+    },
+    "7": {
+      "symbol": "Bck_6_pat1",
+      "value": 47487372.0,
+      "uncertainty": 681076.75
+    },
+    "8": {
+      "symbol": "Bck_7_pat1",
+      "value": 36828652.0,
+      "uncertainty": 684654.0
+    },
+    "9": {
+      "symbol": "Bck_8_pat1",
+      "value": 30479222.0,
+      "uncertainty": 549325.44
+    },
+    "10": {
+      "symbol": "Bck_9_pat1",
+      "value": 25887522.0,
+      "uncertainty": 384276.56
+    },
+    "11": {
+      "symbol": "Bck_10_pat1",
+      "value": 24107250.0,
+      "uncertainty": 393756.06
+    },
+    "12": {
+      "symbol": "Bck_11_pat1",
+      "value": 22587104.0,
+      "uncertainty": 352430.41
+    },
+    "13": {
+      "symbol": "Bck_12_pat1",
+      "value": 22286478.0,
+      "uncertainty": 377486.44
+    },
+    "14": {
+      "symbol": "Bck_13_pat1",
+      "value": 24761820.0,
+      "uncertainty": 330675.38
+    },
+    "15": {
+      "symbol": "Bck_14_pat1",
+      "value": 24002514.0,
+      "uncertainty": 290613.06
+    },
+    "16": {
+      "symbol": "Bck_15_pat1",
+      "value": 25668812.0,
+      "uncertainty": 228596.28
+    },
+    "17": {
+      "symbol": "Bck_16_pat1",
+      "value": 19061254.0,
+      "uncertainty": 179071.45
+    },
+    "18": {
+      "symbol": "Bck_17_pat1",
+      "value": 15724211.0,
+      "uncertainty": 168336.19
+    },
+    "19": {
+      "symbol": "Bck_18_pat1",
+      "value": 16330298.0,
+      "uncertainty": 162434.28
+    },
+    "20": {
+      "symbol": "Bck_19_pat1",
+      "value": 18665634.0,
+      "uncertainty": 157212.69
+    },
+    "21": {
+      "symbol": "Bck_20_pat1",
+      "value": 17902474.0,
+      "uncertainty": 154437.2
+    },
+    "22": {
+      "symbol": "Bck_21_pat1",
+      "value": 17776090.0,
+      "uncertainty": 132024.92
+    },
+    "23": {
+      "symbol": "Bck_22_pat1",
+      "value": 19250172.0,
+      "uncertainty": 149376.16
+    },
+    "24": {
+      "symbol": "Bck_23_pat1",
+      "value": 20220872.0,
+      "uncertainty": 129601.08
+    },
+    "25": {
+      "symbol": "Bck_24_pat1",
+      "value": 21714090.0,
+      "uncertainty": 130602.59
+    },
+    "26": {
+      "symbol": "Bck_25_pat1",
+      "value": 22241530.0,
+      "uncertainty": 117329.58
+    },
+    "27": {
+      "symbol": "Bck_26_pat1",
+      "value": 21722114.0,
+      "uncertainty": 102219.95
+    },
+    "28": {
+      "symbol": "Bck_27_pat1",
+      "value": 23691804.0,
+      "uncertainty": 93711.57
+    },
+    "29": {
+      "symbol": "Bck_28_pat1",
+      "value": 18839866.0,
+      "uncertainty": 108467.22
+    },
+    "30": {
+      "symbol": "Bck_29_pat1",
+      "value": 15203295.0,
+      "uncertainty": 262693.31
+    },
+    "31": {
+      "symbol": "Zero_pat1",
+      "value": -0.011901076,
+      "uncertainty": 0.000488016
+    },
+    "32": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 0.54557604,
+      "uncertainty": 0.12389401
+    },
+    "33": {
+      "symbol": "EtaPV_ph1_pat1",
+      "value": 0.41265103,
+      "uncertainty": 0.015760217
+    },
+    "34": {
+      "symbol": "U-Cagl_ph1_pat1",
+      "value": -0.015159384,
+      "uncertainty": 0.0080632335
+    },
+    "35": {
+      "symbol": "V-Cagl_ph1_pat1",
+      "value": 0.051317673,
+      "uncertainty": 0.0044575473
+    },
+    "36": {
+      "symbol": "W-Cagl_ph1_pat1",
+      "value": 0.0087557482,
+      "uncertainty": 0.00051287096
+    },
+    "37": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 6.9705553,
+      "uncertainty": 0.021794433
+    },
+    "38": {
+      "symbol": "Cell_B_ph1_pat1",
+      "value": 7.1160316,
+      "uncertainty": 0.021317204
+    },
+    "39": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 7.005022,
+      "uncertainty": 0.019617457
+    },
+    "40": {
+      "symbol": "Scale_ph2_pat1",
+      "value": 0.80837733,
+      "uncertainty": 0.46408507
+    },
+    "41": {
+      "symbol": "Cell_A_ph2_pat1",
+      "value": 4.9886746,
+      "uncertainty": 0.014145656
+    },
+    "42": {
+      "symbol": "Cell_C_ph2_pat1",
+      "value": 9.5048351,
+      "uncertainty": 0.039264843
+    },
+    "43": {
+      "symbol": "Z_Ti1_ph3",
+      "value": 0.14175959,
+      "uncertainty": 9.0052854e-05
+    },
+    "44": {
+      "symbol": "Biso_Ti1_ph3",
+      "value": 0.29767257,
+      "uncertainty": 0.020600036
+    },
+    "45": {
+      "symbol": "X_P1_ph3",
+      "value": 0.28775072,
+      "uncertainty": 0.00027162003
+    },
+    "46": {
+      "symbol": "Biso_P1_ph3",
+      "value": 0.22026333,
+      "uncertainty": 0.021509863
+    },
+    "47": {
+      "symbol": "X_O1_ph3",
+      "value": 0.18169202,
+      "uncertainty": 0.00066753553
+    },
+    "48": {
+      "symbol": "Y_O1_ph3",
+      "value": 0.99125886,
+      "uncertainty": 0.00063997303
+    },
+    "49": {
+      "symbol": "Z_O1_ph3",
+      "value": 0.1888953,
+      "uncertainty": 0.00023537096
+    },
+    "50": {
+      "symbol": "Biso_O1_ph3",
+      "value": 0.93619365,
+      "uncertainty": 0.07240615
+    },
+    "51": {
+      "symbol": "X_O2_ph3",
+      "value": 0.18782322,
+      "uncertainty": 0.00047769173
+    },
+    "52": {
+      "symbol": "Y_O2_ph3",
+      "value": 0.16258261,
+      "uncertainty": 0.00045284245
+    },
+    "53": {
+      "symbol": "Z_O2_ph3",
+      "value": 0.081647165,
+      "uncertainty": 0.00021362306
+    },
+    "54": {
+      "symbol": "Biso_O2_ph3",
+      "value": 0.52841836,
+      "uncertainty": 0.060742747
+    },
+    "55": {
+      "symbol": "Scale_ph3_pat1",
+      "value": 4.1572051,
+      "uncertainty": 0.031530023
+    },
+    "56": {
+      "symbol": "Cell_A_ph3_pat1",
+      "value": 8.4986362,
+      "uncertainty": 0.00018574315
+    },
+    "57": {
+      "symbol": "Cell_C_ph3_pat1",
+      "value": 20.835058,
+      "uncertainty": 0.00080997212
+    }
+  },
+  "parameter_codes": {
+    "bm01.background.4.intensity": 1,
+    "bm01.background.5.intensity": 2,
+    "bm01.background.7.intensity": 3,
+    "bm01.background.8.intensity": 4,
+    "bm01.background.9.intensity": 5,
+    "bm01.background.10.intensity": 6,
+    "bm01.background.12.intensity": 7,
+    "bm01.background.14.intensity": 8,
+    "bm01.background.16.intensity": 9,
+    "bm01.background.18.intensity": 10,
+    "bm01.background.20.intensity": 11,
+    "bm01.background.23.intensity": 12,
+    "bm01.background.25.intensity": 13,
+    "bm01.background.27.intensity": 14,
+    "bm01.background.30.intensity": 15,
+    "bm01.background.33.intensity": 16,
+    "bm01.background.36.intensity": 17,
+    "bm01.background.38.intensity": 18,
+    "bm01.background.40.intensity": 19,
+    "bm01.background.43.intensity": 20,
+    "bm01.background.45.intensity": 21,
+    "bm01.background.47.intensity": 22,
+    "bm01.background.49.intensity": 23,
+    "bm01.background.51.intensity": 24,
+    "bm01.background.53.intensity": 25,
+    "bm01.background.55.intensity": 26,
+    "bm01.background.57.intensity": 27,
+    "bm01.background.59.intensity": 28,
+    "bm01.background.61.intensity": 29,
+    "bm01.background.62.intensity": 30,
+    "bm01.instrument.calib_twotheta_offset": 31,
+    "bm01.linked_structure.alpo4_c2221.scale": 32,
+    "bm01.peak.mixing_eta_0": 33,
+    "bm01.peak.broad_gauss_u": 34,
+    "bm01.peak.broad_gauss_v": 35,
+    "bm01.peak.broad_gauss_w": 36,
+    "alpo4_c2221.cell.length_a": 37,
+    "alpo4_c2221.cell.length_b": 38,
+    "alpo4_c2221.cell.length_c": 39,
+    "bm01.linked_structure.alpo4_p63mc.scale": 40,
+    "alpo4_p63mc.cell.length_a": 41,
+    "alpo4_p63mc.cell.length_c": 42,
+    "latp.atom_site.Ti1.fract_z": 43,
+    "latp.atom_site.Ti1.adp_iso": 44,
+    "latp.atom_site.P1.fract_x": 45,
+    "latp.atom_site.P1.adp_iso": 46,
+    "latp.atom_site.O1.fract_x": 47,
+    "latp.atom_site.O1.fract_y": 48,
+    "latp.atom_site.O1.fract_z": 49,
+    "latp.atom_site.O1.adp_iso": 50,
+    "latp.atom_site.O2.fract_x": 51,
+    "latp.atom_site.O2.fract_y": 52,
+    "latp.atom_site.O2.fract_z": 53,
+    "latp.atom_site.O2.adp_iso": 54,
+    "bm01.linked_structure.latp.scale": 55,
+    "latp.cell.length_a": 56,
+    "latp.cell.length_c": 57
+  }
+}

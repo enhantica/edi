@@ -1,6 +1,10 @@
 #include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
+#include <QDirIterator>
+#include <QTemporaryDir>
+#include <QUrl>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -157,12 +161,19 @@ void scan_screen_settings(QQmlApplicationEngine& engine) {
 void scan_screen_install(QQmlApplicationEngine& engine) {
     auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     auto* clock = new QElapsedTimer;
     clock->start();
     observation_clock = clock;
     observation_window = window;
     auto* result = new QJsonObject{{"mode", wanted("SCAN_SCREEN_MODE", "adaptive")},
                                    {"frames", QJsonArray{}}};
+    auto* preferences = engine.singletonInstance<QObject*>("edi.app", "Preferences");
+    if (!preferences || !preferences->setProperty("patternMeasuredStyle", QStringLiteral("linePoints"))) {
+        (*result)["error"] = "Scan drawing precondition: the actual measured points must be enabled";
+        publish(*result);
+        return;
+    }
     auto* finish = new QTimer(window);
     finish->setSingleShot(true);
     QObject::connect(finish, &QTimer::timeout, window, [result] {
@@ -228,7 +239,9 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     QObject::connect(
         window, &QQuickWindow::frameSwapped, window,
         [=] {
-            if (latest->isEmpty()) return;
+            if (latest->isEmpty() || !result->contains("readyGeneration") ||
+                latest->value("patternGeneration").toInteger() < result->value("readyGeneration").toInteger())
+                return;
             const QString key = latest->value("drawnMeasured").toString() +
                                 latest->value("drawnCalculated").toString() +
                                 (latest->value("running").toBool() ? "running" : "stopped") +
@@ -242,7 +255,22 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         },
         Qt::DirectConnection);
     QTimer::singleShot(500, window, [=, &engine] {
-        if (!session->openExample("pd-neut-cwl_cosio-d20_scan-162f")) {
+        static QTemporaryDir fixture;
+        const QString source = QStringLiteral(":/test-fixtures/scan-screen");
+        QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
+        bool copied = fixture.isValid();
+        while (copied && files.hasNext()) {
+            const QString from = files.next();
+            const QString to = fixture.path() + from.mid(source.size());
+            copied = QDir().mkpath(QFileInfo(to).absolutePath()) && QFile::copy(from, to)
+                     && QFile::setPermissions(to, QFile::ReadOwner | QFile::WriteOwner);
+        }
+        if (!copied || !QFile::exists(fixture.filePath("project.edi"))) {
+            (*result)["error"] = "Scan fixture precondition: the retained 162-file project must be extracted";
+            publish(*result);
+            return;
+        }
+        if (!session->openProject(QUrl::fromLocalFile(fixture.path()))) {
             (*result)["error"] = session->lastError();
             publish(*result);
             return;
@@ -320,9 +348,15 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
                 window->update();
                 return;
             }
-            if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
-                result->value("frames").toArray().isEmpty())
+            if (!project->pendingRefusal().isEmpty() || project->calculating() ||
+                project->currentExperiment()->pattern()->stale() || result->value("frames").toArray().isEmpty())
                 return;
+            if (!result->contains("readyGeneration")) {
+                (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+                window->update();
+                return;
+            }
+            if (result->value("frames").toArray().isEmpty()) return;
             timer->stop();
             (*result)["started"] = true;
             QObject::connect(project->fit(), &edi_app::FitViewModel::runningChanged, window, [=] {

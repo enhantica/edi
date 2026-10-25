@@ -1,0 +1,34 @@
+{
+  "program": "edi",
+  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
+  "banks": [
+    "d1a",
+    "lab"
+  ],
+  "n_free": 51,
+  "status": "done",
+  "converged": true,
+  "iterations": 12,
+  "rwp": 0.058011814657167475,
+  "reduced_chi_square": 1.957668856194921,
+  "cells": {
+    "pbso4": {
+      "a": [
+        8.479965045496007,
+        8.522113385314972e-05
+      ],
+      "b": [
+        5.398120029533242,
+        5.587881123034601e-05
+      ],
+      "c": [
+        6.95959346180777,
+        7.299616565480886e-05
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "d1a.csv": "f29f8371c3360afd4f2cbceb5d51a6e1f72220db9e92ede349711273bb5d3b88",
+    "lab.csv": "477f13e31f8e0673cd9d5b3ae8538f4337d8f714ad2e8aeb4c9dc307cc24db9a"
+  }
+}

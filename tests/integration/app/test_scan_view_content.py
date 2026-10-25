@@ -67,6 +67,17 @@ def reverse_parts():
     return range((len(maps) + len(palettes) + 11) // 12)
 
 
+def case_variants(case):
+    if case.startswith('test_map_reverse_and_key:'):
+        count = len(reverse_parts())
+    elif case.startswith('test_offered_maps_are_readable_in_both_themes:'):
+        maps = json.loads((ROOT / 'tests/fixtures/scan_views/offered.json').read_text())['maps']
+        count = (len(maps) + 6) // 7
+    else:
+        return [case]
+    return [case + f'-part{part}' for part in range(count)]
+
+
 @pytest.fixture(scope='module')
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
@@ -124,11 +135,9 @@ def scan_receipt(request):
         for index in range(0, len(cases), size)
     ]
     batches = [
-        [cases[0] + f'-part{part}'] if cases[0].startswith('test_map_reverse_and_key:') else cases
+        [variant] if len(cases) == 1 else cases
         for cases in batches
-        for part in (
-            reverse_parts() if cases[0].startswith('test_map_reverse_and_key:') else [None]
-        )
+        for variant in (case_variants(cases[0]) if len(cases) == 1 else [None])
     ]
     batches.sort(
         key=lambda cases: (
@@ -158,11 +167,7 @@ def test_scan_view_content(scan_receipt, case):
         'A crashed, skipped or incomplete acceptance function cannot supply passing receipts: '
         + output
     )
-    variants = (
-        [case + f'-part{part}' for part in reverse_parts()]
-        if case.startswith('test_map_reverse_and_key:')
-        else [case]
-    )
+    variants = case_variants(case)
     for variant in variants:
         name, _, tag = variant.partition(':')
         witness = f'::ScanViewContent::{name}({tag})'

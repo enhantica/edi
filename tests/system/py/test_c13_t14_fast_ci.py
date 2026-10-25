@@ -275,6 +275,63 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
         artifact_routes(damaged, tmp_path / 'damaged')
 
 
+def app_cache_step(workflow, role):
+    job, action = ('app', 'cache/save') if role == 'producer' else ('system', 'cache/restore')
+    return next(
+        step
+        for step in workflow['jobs'][job]['steps']
+        if action in step.get('uses', '')
+        and 'edi-app-' in str(step.get('with', {}).get('key', ''))
+    )
+
+
+@pytest.mark.parametrize('role', ['producer', 'consumer'])
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'missing-app',
+        'missing-runner',
+        'extra-file',
+        'duplicate',
+        'empty',
+        'missing-path',
+        'non-text',
+    ],
+)
+def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
+    tmp_path, role, defect
+):
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    artifact_routes(workflow, tmp_path / 'valid')
+    paths = ['build/app/app/edi_app', 'build/app/app/edi_app_tests']
+    payloads = {
+        'missing-app': [paths[1]],
+        'missing-runner': [paths[0]],
+        'extra-file': ['\n'.join([*paths, 'build/app/app/edi_imgdiff'])],
+        'duplicate': ['\n'.join([*paths, path]) for path in paths],
+        'empty': [''],
+        'missing-path': [None],
+        'non-text': [paths],
+    }[defect]
+    for index, payload in enumerate(payloads):
+        damaged = copy.deepcopy(workflow)
+        options = app_cache_step(damaged, role)['with']
+        if payload is None:
+            options.pop('path')
+        else:
+            options['path'] = payload
+        with pytest.raises(AssertionError, match=r'exactly|must be uploaded'):
+            artifact_routes(damaged, tmp_path / f'damaged-{index}')
+
+
+def test_app_cache_payload_order_does_not_change_the_transferred_executables(tmp_path):
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    for role in ('producer', 'consumer'):
+        options = app_cache_step(workflow, role)['with']
+        options['path'] = '\n'.join(reversed(options['path'].splitlines()))
+    artifact_routes(workflow, tmp_path)
+
+
 def invoke_time_gate(tmp_path, current, main):
     script = ROOT / CONTRACT['time_gate']
     assert script.is_file(), (

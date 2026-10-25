@@ -1,0 +1,209 @@
+COMM pd-neut-tof_ferrite-austenite-beer
+NPATT 2 1 1
+W_PAT 1 1
+!Nph Dum Ias Nre Cry Opt Aut
+2 0 0 0 0 1 1
+!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int
+-1 7 31 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 1
+-1 7 31 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 2
+!File names of data(patterns) files
+fit_1.dat
+fit_2.dat
+!Mat Pcr NLI Rpa Sym Sho
+0 2 0 1 1 1
+!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 1
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 2
+! Bkpos Wdt Iabscor for Pattern# 1
+85072.211 48 2
+! Bkpos Wdt Iabscor for Pattern# 2
+85072.211 48 2
+!NCY Eps R_at R_an R_pr R_gl
+200 0.1 0.2 0.2 0.2 0.2
+! Range minimum step maximum for Pattern# 1
+40094.52342 31.85388639 135592.4748
+! Range minimum step maximum for Pattern# 2
+40094.52342 31.85388639 135592.4748
+!2Theta/TOF/E(Kev) Background for Pattern# 1
+40111.8789 0.19 11
+41193.5664 0.19 21
+42041.375 0.19 31
+42713.7734 0.19 41
+44409.3945 0.19 51
+45198.7344 0.19 61
+46251.1875 0.19 71
+49350.0742 0.19 81
+51289.6836 0.19 91
+55245.1992 0.19 101
+55679.707 0.19 111
+56383.9102 0.19 121
+58956.1797 0.19 131
+61536.457 0.19 141
+63768.0469 0.19 151
+65581.2109 0.19 161
+70183.8516 0.19 171
+71787.8203 0.19 181
+78343.1094 0.19 191
+80016.8047 0.19 201
+98141.8516 0.19 211
+99262.2344 0.19 221
+100985.8516 0.19 231
+101933.8516 0.19 241
+108656.0312 0.19 251
+110896.75 0.19 261
+113137.4844 0.19 271
+114430.2031 0.19 281
+116929.4844 0.19 291
+119428.7422 0.19 301
+134506.3438 0.19 0
+! Excluded regions (LowT HighT) for Pattern# 1
+!2Theta/TOF/E(Kev) Background for Pattern# 2
+40111.8789 0.18 311
+41193.5664 0.18 321
+42041.375 0.18 331
+42713.7734 0.18 341
+44409.3945 0.18 351
+45198.7344 0.18 361
+46251.1875 0.18 371
+49350.0742 0.18 381
+51289.6836 0.18 391
+55245.1992 0.18 401
+55679.707 0.18 411
+56383.9102 0.18 421
+58956.1797 0.18 431
+61536.457 0.18 441
+63768.0469 0.18 451
+65581.2109 0.18 461
+70183.8516 0.18 471
+71787.8203 0.18 481
+78343.1094 0.18 491
+80016.8047 0.18 501
+98141.8516 0.18 511
+99262.2344 0.18 521
+100985.8516 0.18 531
+101933.8516 0.18 541
+108656.0312 0.18 551
+110896.75 0.18 561
+113137.4844 0.18 571
+114430.2031 0.18 581
+116929.4844 0.18 591
+119428.7422 0.18 601
+134506.3438 0.18 0
+! Excluded regions (LowT HighT) for Pattern# 2
+73 !Number of refined parameters
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 1
+0 611 54902.1875 0 0 0 0 0 90
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 2
+0 621 54902.1875 0 0 0 0 0 90
+! Data for PHASE number: 1
+austenite
+!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More
+1 0 0 0 0 0 0 0 0 0
+!Contributions (0/1) of this phase to the patterns
+1 1
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 1
+0 7 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 1
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 2
+0 7 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 2
+0 0 1 1 0 0 0
+F m -3 m <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+Fe FE 0 0 0 0.5 0.02083333333 0 0 0 0
+0 0 0 631 0
+! Profile Parameters for Pattern # 1 Phase austenite
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+100 0 0 0 0 0 0
+641 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+300 1000 900 0 0 0 0 0
+651 661 671 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0 5 0 0
+0 0 681 0 0
+! a b c alpha beta gamma
+3.6468 3.6468 3.6468 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 2 Phase austenite
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+100 0 0 0 0 0 0
+641 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+300 1000 900 0 0 0 0 0
+691 701 711 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0 5 0 0
+0 0 721 0 0
+! a b c alpha beta gamma
+3.6468 3.6468 3.6468 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Data for PHASE number: 2
+ferrite
+!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More
+1 0 0 0 0 0 0 0 0 0
+!Contributions (0/1) of this phase to the patterns
+1 1
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 1
+0 7 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 1
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 2
+0 7 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 2
+0 0 1 1 0 0 0
+I m -3 m <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+Fe FE 0 0 0 0.5 0.02083333333 0 0 0 0
+0 0 0 631 0
+! Profile Parameters for Pattern # 1 Phase ferrite
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+400 0 0 0 0 0 0
+731 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+300 1000 900 0 0 0 0 0
+651 661 671 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0 5 0 0
+0 0 681 0 0
+! a b c alpha beta gamma
+2.886 2.886 2.886 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 2 Phase ferrite
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+400 0 0 0 0 0 0
+731 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+300 1000 900 0 0 0 0 0
+691 701 711 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0 5 0 0
+0 0 721 0 0
+! a b c alpha beta gamma
+2.886 2.886 2.886 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+40158.23119 129986.1908 1
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+40158.23119 129986.1908 2
