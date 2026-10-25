@@ -315,9 +315,10 @@ try {
       let notice;
       try{notice=await evaluate(()=>window.ediControlGeometry('webNotice.text'));}
       catch(error){if(!/no visible item/.test(error.message))throw error;}
-      const text=typeof notice?.text==='string'?notice.text:notice?
-        (await ax()).filter(n=>n.role?.value==='StaticText'&&/download|replace.{0,60}file/i.test(n.name?.value||'')).map(n=>n.name.value).filter(t=>t!=='download').join('\n'):'';
-      try{assertPendingNotice(notice&&text===''?undefined:text,false);}catch(error){errors.push(error.message);}
+      // A global AX search can mistake an unrelated download icon for this label.
+      // A visible notice needs the text of this actual native item; absence is not a pass.
+      const text=notice?notice.text:'';
+      try{assertPendingNotice(text,false);}catch(error){errors.push(error.message);}
       const shot=await cdp.send('Page.captureScreenshot',{format:'png'});
       await writeFile(join(output,scenario+'-permission-pending.png'),Buffer.from(shot.data,'base64'));
       await writeFile(join(output,scenario+'-permission-pending-ax.json'),JSON.stringify(await cdp.send('Accessibility.getFullAXTree'),null,2));
