@@ -3,8 +3,8 @@
 - **Status:** Proposed
 - **Date:** 2026-10-25
 - **Implementation:** 🟡 Partially implemented — folders, archives, export, the open routes and the save sequence on
-  the desktop app, the command line and Python; the web app's archives come from the core. The web app's picked
-  folder (the File System Access API) is pending.
+  the desktop app, the command line and Python, and the web app's places (decision 9); the web app's checks in a real
+  browser are pending.
 - **Priority:** High
 - **Forward constraint (binding on new features):** a project is one folder; every surface reads and writes a project
   archive through the core's `project_archive` functions and saves through `adopt_saved_project` after the write, so
@@ -46,9 +46,8 @@ not the project being read (measured with the app's software renderer, as on the
 
 1. **Where the project is.** The Project page's Location is the project's folder or `.zip`, never an internal
    temporary path. A project with none of its own yet says what it came from: *Not saved yet: example \<title>*, *Not
-   saved yet: uploaded \<name>.zip* in the browser, *Not saved yet: opened from \<name>.zip* for an archive in a
-   read-only place, *Not saved yet: a copy of \<folder>* for a read-only folder. The browser shows a chosen folder by
-   its name.
+   saved yet: opened from \<name>.zip* for an archive in a read-only place, *Not saved yet: a copy of \<folder>* for a
+   read-only folder. The web app shows *In this browser only*, or the disk's folder or `.zip` by its name (decision 9).
 
 1. **Unsaved changes and temporary folders.** Opening, creating or closing a project, or quitting, while the project
    has unsaved changes first asks to save or discard them (a project with nowhere to write yet opens Save as). Each
@@ -81,9 +80,22 @@ not the project being read (measured with the app's software renderer, as on the
    worker is gone with it, so nothing of the first reaches the second. A Save while pages or the first calculation are
    pending runs the save sequence of decision 7 on the model, unaffected.
 
-1. **The web app.** It reads and writes archives through the core. It keeps zip download (Save and Save as) and
-   folder or archive upload (Open) in every browser; in Chrome and Edge, where the File System Access API exists, a
-   picked folder is written in place by later saves (pending).
+1. **The web app** (owner, 2026-10-25). Every project there has a place, and Save writes into it: no download and no
+   dialog. The place is the browser's own storage (its origin private file system, which survives a reload), shown as
+   *In this browser only*; after such a Save a short notice says so and that Save project as… keeps a copy on the disk,
+   since a browser may clear what it stores (its site data, or Safari's removal of sites unused for about a week). An
+   example, a new project and, in Firefox and Safari, a project opened from the disk (a folder or a `.zip` uploaded) are
+   worked on there. In Chrome and Edge, where the File System Access API exists, Open takes a folder or a `.zip` on
+   the disk, which stays the project's place: Save writes it back, the files a save removed from the folder are removed
+   there too, and an archive is rewritten whole; Save project as… picks a folder or a `.zip` that becomes the place
+   (or, with *Save a copy*, only receives one), starting where the project is. In Firefox and Safari Save project as…
+   saves and downloads a `.zip` named as the project came: the browser decides where downloads go, so replacing the
+   original file goes through its own save dialog. Open asks first for a folder or a `.zip`, then the browser's own
+   chooser. Each place has a record in the browser's IndexedDB (kind, name, and the disk's handle), which Recent
+   projects lists; a project's unsaved state is kept beside it three seconds after its last edit, so after a reload or a
+   closed tab Recent projects offers *Continue where you left off* with those changes, until a Save or a discard drops
+   them. The page writes the browser's storage from a worker with synchronous file handles, which Firefox and Safari
+   have where they lack writable streams.
 
 ## Consequences
 
