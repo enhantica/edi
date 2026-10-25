@@ -6,6 +6,19 @@ How long the Stacked and Map views ([ADR-0041](../adrs/0041-scan-pattern-views.m
 before and after a fit. The first table set is the baseline: the views as they drew before the GPU renderer, with
 `QPainter` in `ScanLayer`.
 
+## Tools
+
+| Tool | Run it with | What it times |
+| --- | --- | --- |
+| The app's demo | `edi_app --demo <dir> --demo-only perf-views` (also `perf-gpu-views`, `perf-fit-`, `perf-slider`) | the real views, fits and slider in the app, each change to its frame |
+| `edi_app_scan_bench` | `pixi run -e app app-scan-bench`, or `build/app/app/edi_app_scan_bench <scan dir> <png or ''> <a, b or p> <column share> <width px>` | the Stacked view's three candidate renderers on the 324-file scan |
+| `edi_app_plot_bench` | `pixi run -e app plot-bench`, with `-- --workloads <names>` or `--routes <names>` for a part | every way of feeding Qt Graphs, and the references, on four workloads; writes `build/plot-bench/<machine>-<platform>-<renderer>.tsv` |
+| `plot_bench_compare.py` | `pixi run -e app plot-bench-compare a.tsv b.tsv` | two machines' tables side by side |
+
+Each logs every change as it runs and stops early when its window is not drawn: keep the window visible and uncovered
+on a desktop. On Linux without a display, `plot-bench` draws on the UI test's own X server. Why each choice was made is
+in [ADR-0041](../adrs/0041-scan-pattern-views.md) §9 and its alternatives; the numbers are below.
+
 ## How the numbers are taken
 
 The app's demo mode times them (`app/src/demo_driver.cpp`, the `perf-` steps):
