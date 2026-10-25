@@ -38,6 +38,22 @@ std::vector<ParameterEntry> parameter_entries(Project& project);
 // nothing is written and the answer is false.
 bool copy_parameter_states(Project& to, Project& from);
 
+// One warning per anisotropic site whose tensor has a negative eigenvalue, by crysta's rule (a zero or
+// semi-definite tensor is allowed): the site's tensor row and the message. A structure that does not
+// convert gives none.
+struct AdpDefinitenessWarning {
+    const AtomSiteAniso* tensor = nullptr;
+    std::string message;
+};
+std::vector<AdpDefinitenessWarning> adp_definiteness_warnings(const Project& project);
+
+// The warnings that hold for the project's current values, one each: a value outside its admissible range,
+// set or derived by a constraint (an anisotropic site's equivalent isotropic displacement), and an anisotropic
+// tensor with a negative eigenvalue. Such values are kept, saved and loaded; the app posts these after a fit,
+// and after a load those the loader does not report itself (`ranges` false: the tensors), and marks the values
+// red; the user decides (the owner, 2026-10-23).
+std::vector<std::string> standing_warnings(Project& project, bool ranges = true);
+
 }  // namespace edi
 
 #endif  // EDI_PARAMETER_WALK_HPP

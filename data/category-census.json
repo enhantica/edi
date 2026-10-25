@@ -642,12 +642,12 @@
         },
         {
           "member": "FitParameterCorrelation::correlation",
-          "type": "detail::WrittenText",
+          "type": "detail::Written<double>",
           "items": [
             "correlation"
           ],
           "storage": [
-            "crysta::Column<std::string>"
+            "crysta::Column<double>"
           ]
         },
         {
@@ -1327,6 +1327,100 @@
       ]
     },
     {
+      "name": "_extinction",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExtinctionBase::type",
+          "type": "std::optional<std::string>",
+          "items": [
+            "type"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::mosaic_distribution",
+          "type": "std::optional<std::string>",
+          "items": [
+            "mosaic_distribution"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::domain_radius",
+          "type": "OptionalParameter",
+          "items": [
+            "domain_radius"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::mosaic_spread",
+          "type": "OptionalParameter",
+          "items": [
+            "mosaic_spread"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::crystal_radius",
+          "type": "OptionalParameter",
+          "items": [
+            "crystal_radius"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_11",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_11"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_22",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_22"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_33",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_33"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_12",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_12"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_13",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_13"
+          ]
+        },
+        {
+          "member": "ExtinctionBase::coefficient_23",
+          "type": "OptionalParameter",
+          "items": [
+            "coefficient_23"
+          ]
+        }
+      ],
+      "owner": "ExtinctionBase",
+      "legacy": [
+        "_easydiffraction_extinction"
+      ]
+    },
+    {
       "name": "_background",
       "form": "one row",
       "columns": [
@@ -1356,6 +1450,27 @@
           "type": "std::optional<double>",
           "items": [
             "x_max"
+          ]
+        }
+      ],
+      "owner": "ExperimentBase"
+    },
+    {
+      "name": "_reflns",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "ExperimentBase::reflns_threshold_sigma",
+          "type": "std::optional<double>",
+          "items": [
+            "threshold_sigma"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_threshold_basis",
+          "type": "std::optional<std::string>",
+          "items": [
+            "threshold_basis"
           ]
         }
       ],
@@ -1553,6 +1668,20 @@
           "type": "std::optional<double>",
           "items": [
             "threshold"
+          ]
+        }
+      ],
+      "owner": "Project"
+    },
+    {
+      "name": "_refine_ls",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "Project::refine_ls_threshold_sigma",
+          "type": "std::optional<double>",
+          "items": [
+            "threshold_sigma"
           ]
         }
       ],
@@ -2371,6 +2500,69 @@
           "items": [
             "two_theta",
             "time_of_flight"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_h",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_h"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_k",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_k"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::index_l",
+          "type": "detail::Written<std::vector<std::int32_t>>",
+          "items": [
+            "index_l"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_meas_su",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "intensity_meas_su"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::wavelength",
+          "type": "detail::Written<std::vector<double>>",
+          "items": [
+            "wavelength"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::d_spacing",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "d_spacing"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::sin_theta_over_lambda",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "sin_theta_over_lambda"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::intensity_calc",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "intensity_calc"
           ]
         }
       ]
@@ -3678,6 +3870,126 @@
       "part": "the row token of the object's non-loop categories"
     },
     {
+      "member": "ExtinctionBase::type",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::mosaic_distribution",
+      "type": "std::optional<std::string>",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::domain_radius",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::mosaic_spread",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::crystal_radius",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_11",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_22",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_33",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_12",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_13",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::coefficient_23",
+      "type": "OptionalParameter",
+      "category": "_extinction"
+    },
+    {
+      "member": "ExtinctionBase::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExtinctionBase::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExtinctionBase::table_row",
+      "type": "detail::CategoryRow",
+      "part": "the row token of the object's non-loop categories"
+    },
+    {
+      "member": "ReflnDataBase::index_h",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_k",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::index_l",
+      "type": "detail::Written<std::vector<std::int32_t>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_meas_su",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::wavelength",
+      "type": "detail::Written<std::vector<double>>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::d_spacing",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::sin_theta_over_lambda",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::intensity_calc",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
       "member": "PrefOrient::structure_id",
       "type": "ItemKey",
       "category": "_preferred_orientation"
@@ -3975,6 +4287,20 @@
       ]
     },
     {
+      "member": "ExperimentBase::reflections",
+      "type": "std::optional<ReflnDataBase>",
+      "holds": [
+        "_refln"
+      ]
+    },
+    {
+      "member": "ExperimentBase::extinction",
+      "type": "ExtinctionBase",
+      "holds": [
+        "_extinction"
+      ]
+    },
+    {
       "member": "ExperimentBase::dataset_weight",
       "type": "double",
       "category": "_joint_fit"
@@ -4028,6 +4354,16 @@
       "member": "ExperimentBase::background_estimate_max_terms",
       "type": "std::optional<int>",
       "category": "_background_estimate"
+    },
+    {
+      "member": "ExperimentBase::reflns_threshold_sigma",
+      "type": "std::optional<double>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::reflns_threshold_basis",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
     },
     {
       "member": "ExperimentBase::background_estimate_inputs",
@@ -4185,7 +4521,7 @@
     },
     {
       "member": "FitParameterCorrelation::correlation",
-      "type": "detail::WrittenText",
+      "type": "detail::Written<double>",
       "category": "_fit_parameter_correlation"
     },
     {
@@ -4739,6 +5075,11 @@
       "category": "_pattern_chart"
     },
     {
+      "member": "Project::refine_ls_threshold_sigma",
+      "type": "std::optional<double>",
+      "category": "_refine_ls"
+    },
+    {
       "member": "Project::path",
       "type": "std::string",
       "category": "project"
@@ -4891,6 +5232,9 @@
     "_easydiffraction_experiment_type": [
       "_experiment_type"
     ],
+    "_easydiffraction_extinction": [
+      "_extinction"
+    ],
     "_easydiffraction_peak": [
       "_peak"
     ],
@@ -4911,6 +5255,9 @@
     ],
     "_expt_type": [
       "_experiment_type"
+    ],
+    "_extinction": [
+      "_extinction"
     ],
     "_fit_parameter": [
       "_fit_parameter"
@@ -4985,8 +5332,14 @@
     "_preferred_orientation": [
       "_preferred_orientation"
     ],
+    "_refine_ls": [
+      "_refine_ls"
+    ],
     "_refln": [
       "_refln"
+    ],
+    "_reflns": [
+      "_reflns"
     ],
     "_rendering_plot": [
       "_rendering_plot"

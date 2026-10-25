@@ -1,0 +1,4 @@
+_edi.schema_version 3
+_fitting_mode.type single
+_minimizer.max_iterations 100
+_minimizer.chi_square_tolerance 1e-10

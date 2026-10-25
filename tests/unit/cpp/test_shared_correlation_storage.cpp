@@ -37,8 +37,8 @@ void storage_case_0() {
         const auto rows = correlation_rows(*table, "template.xy");
         REQUIRE_MESSAGE(rows.size() == 6,
                         "Four free columns must expose six ordered off-diagonal pairs");
-        const std::vector<std::string> text{"0.5",   "-1",   "-0.8401680504168058",
-                                            "0.125", "0.05", "-0.12345678901234566"};
+        const std::vector<double> expected{.5,   -1., -.84016805041680576,
+                                           .125, .05, -.12345678901234566};
         std::size_t k = 0;
         for (std::size_t i = 0; i < 4; ++i) {
             for (std::size_t j = i + 1; j < 4; ++j, ++k) {
@@ -54,8 +54,8 @@ void storage_case_0() {
                               "The first endpoint must follow the free column order");
                 CHECK_MESSAGE(rows[k].parameter_unique_name_j.value() == table->names->at(j),
                               "The second endpoint must follow the free column order");
-                CHECK_MESSAGE(rows[k].correlation.value() == text[k],
-                              "Formatting must retain shortest text, a clamped end and the "
+                CHECK_MESSAGE(rows[k].correlation.get() == expected[k],
+                              "Numeric rows must retain a clamped end and the "
                               "17-digit witness");
                 CHECK_MESSAGE(rows[k].file_path.value() == "template.xy",
                               "Making rows must retain the selected dataset's identity");
@@ -129,7 +129,7 @@ void storage_case_2() {
         row.source_kind = "deterministic";
         row.parameter_unique_name_i = "bank.background.base.coef";
         row.parameter_unique_name_j = "bank.background.ramp.coef";
-        row.correlation = "0.50";
+        row.correlation = 0.50;
         row.file_path = "template.xy";
         record.correlations.push_back(row);
         adopt_scan_file_result(record, "other.xy", bundle<Record>(chosen_table<Record>()),
@@ -138,10 +138,10 @@ void storage_case_2() {
                         "Another file's new fit must not replace the loaded template's rows");
         CHECK_MESSAGE(
             (record.correlations[0]->id.value() == "pair17" &&
-             record.correlations[0]->correlation.value() == "0.50"),
-            "A loaded nonordinal identity and decimal text must survive unrelated live results");
-        CHECK_MESSAGE(edi::correlation_value(*record.correlations[0]) == .5,
-                      "The numeric view must parse the retained literal decimal text as one half");
+             record.correlations[0]->correlation.get() == 0.50),
+            "A loaded nonordinal identity and numeric coefficient survive unrelated live results");
+        CHECK_MESSAGE(record.correlations[0]->correlation.get() == .5,
+                      "The numeric view must retain the loaded coefficient as one half");
 
     } else {
         REQUIRE_MESSAGE(false, "Fit records must expose their immutable per-file result bundles");

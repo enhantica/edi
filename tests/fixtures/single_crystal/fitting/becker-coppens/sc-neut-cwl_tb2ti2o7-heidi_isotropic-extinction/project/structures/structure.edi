@@ -1,0 +1,24 @@
+data_structure
+_edi.schema_version 3
+_space_group.name_h_m "F d -3 m"
+_space_group.coord_system_code 2
+_cell.length_a 10.130000
+_cell.length_b 10.130000
+_cell.length_c 10.130000
+_cell.angle_alpha 90.000000
+_cell.angle_beta 90.000000
+_cell.angle_gamma 90.000000
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+Tb Tb d 0.50000 0.50000 0.50000 0.99996 Biso 0.00000
+Ti Ti c 0.00000 0.00000 0.00000 0.99996 Biso 0.00000
+O1 O f 0.32804 0.12500 0.12500 1.00000 Biso 0.00000
+O2 O b 0.37500 0.37500 0.37500 1.00008 Biso 0.00000

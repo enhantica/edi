@@ -37,7 +37,7 @@ def test_report_observer_waits_for_drawing_without_animation_frames(
     assert page['ready'] is drawn, (
         'Only a page with initialized plot data and an actual drawing may report ready'
     )
-    assert page['patterns'][0]['traces'] == [{'name': 'Measured', 'line': {'color': '#0055aa'}}], (
-        'Readiness must retain the independently declared trace and its exact colour'
-    )
+    assert page['patterns'][0]['traces'] == [
+        {'name': 'Measured', 'line': {'color': '#0055aa'}, 'x': [], 'y': []}
+    ], 'Readiness must retain the independently declared trace and its exact colour'
     assert page['errors'] == [], 'The independent delayed browser page must execute cleanly'

@@ -43,3 +43,14 @@ and regression pins from the check run above.
 three axes free. A free flag on a dependent is ignored with a warning and saved bare, so every load warned about the
 two follower flags; the structure now flags x alone. The free set is unchanged and the project still reproduces its
 pins (`tools/checks/cli_projects.py --project`).
+
+## Pins re-taken with crysta build-3fcc7925
+
+crysta build-3fcc7925 adds the tails of time-of-flight reflections centred just outside the measured range, and
+resumes a descent whose final polish shows it had not converged. Both move this fit, so its regression pins were
+re-taken from `python -m edi fit` with that build. Reference values are unchanged.
+
+| run | quantity | before | after |
+| --- | --- | --- | --- |
+| default | `reduced_chi_square` | 9.4975227 | 9.496481829 |
+| default | `rwp` | 0.07694453423 | 0.07694031779 |

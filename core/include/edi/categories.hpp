@@ -11,6 +11,7 @@
 // shown and marked not refinable (edi ADR-0019): a page shows it disabled, with its implied value.
 // So is a field a declared constraint sets (ADR-0024), from the dependence crysta marks it with.
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -188,6 +189,39 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
     std::vector<Category> categories;
     categories.push_back({"experiment_type"});
+    if (experiment.reflections.has_value()) {
+        // A single crystal: no profile, background, excluded regions or absorption; its extinction
+        // instead.
+        // Its wavelength at constant wavelength. At time of flight, which reads none, the category holds no
+        // parameter: the app's Instrument group shows the reflections' wavelength band.
+        categories.push_back(experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH
+                                 ? instrument_category(experiment)
+                                 : Category{"instrument"});
+        Category extinction{"extinction"};
+        detail::add_optional(extinction.fields, "crystal_radius", experiment.extinction.crystal_radius);
+        if (experiment.extinction.crystal_radius) {
+            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
+        }
+        detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
+        detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
+        detail::add_optional(extinction.fields, "coefficient", experiment.extinction.coefficient);
+        detail::add_optional(extinction.fields, "coefficient_11", experiment.extinction.coefficient_11);
+        detail::add_optional(extinction.fields, "coefficient_22", experiment.extinction.coefficient_22);
+        detail::add_optional(extinction.fields, "coefficient_33", experiment.extinction.coefficient_33);
+        detail::add_optional(extinction.fields, "coefficient_12", experiment.extinction.coefficient_12);
+        detail::add_optional(extinction.fields, "coefficient_13", experiment.extinction.coefficient_13);
+        detail::add_optional(extinction.fields, "coefficient_23", experiment.extinction.coefficient_23);
+        categories.push_back(extinction);
+        Category linked{"linked_structure", true, experiment.linked_structures.size()};
+        for (const auto& link : experiment.linked_structures) {
+            linked.fields.push_back({"scale", &link->scale, true});
+        }
+        categories.push_back(linked);
+        categories.push_back({"scattering_source"});
+        categories.push_back({"refln", true, experiment.reflections->size()});
+        detail::mark_dependents(categories);
+        return categories;
+    }
     if (experiment.data.has_value()) {  // D-h: the measured range, or the declared grid
         Category data{experiment.calculation_only ? "data_range" : "data"};
         data.rows = experiment.data->intensity_meas.size();
@@ -316,6 +350,11 @@ std::vector<NamedSlot> named_slots(Project& project);
 // the fit start state when there are any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
+    // A single crystal's fit cutoff (edi ADR-0050).
+    if (std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
+        categories.push_back({"refine_ls"});
+    }
     // The declared aliases and constraints, in diffraction-lib's analysis order, empty when there are none.
     categories.push_back({"alias", true, project.aliases.size()});
     categories.push_back({"constraint", true, project.constraints.size()});

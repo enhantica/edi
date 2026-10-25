@@ -35,3 +35,14 @@ parameter is within 0.27 of FullProf's standard uncertainty, and every backgroun
 | `n_free` | reference | the `.sum`'s number of fitted parameters, 19 |
 | `param.<name>.value`, `param.background[<m>].value` | reference, tolerance 4 sigma | `Ceo2_PEARL.sum`, FullProf's refined values and standard uncertainties |
 | `iterations`, `reduced_chi_square`, `rwp` | regression pin | the check run above |
+
+## Pins re-taken with crysta build-3fcc7925
+
+crysta build-3fcc7925 adds the tails of time-of-flight reflections centred just outside the measured range, and
+resumes a descent whose final polish shows it had not converged. Both move this fit, so its regression pins were
+re-taken from `python -m edi fit` with that build. Reference values are unchanged.
+
+| run | quantity | before | after |
+| --- | --- | --- | --- |
+| default | `reduced_chi_square` | 3.877572872 | 3.877256659 |
+| default | `rwp` | 0.05293503604 | 0.05293287759 |

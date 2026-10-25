@@ -120,9 +120,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t2-02-linked-structure", {"group.linked_structure"}});
     steps_.push_back({"t2-03-experiment-extras-peak", {extras, "group.peak"}});
     steps_.push_back({"t2-04-analysis-slider", {analysis, basic, "parameters.row.0"}});
+    // The Report page's Text tab holds the report's own settings, not the project's CIF, so nothing is scrolled to.
     steps_.push_back({"t2-05-report-text",
-                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text,
-                       "scroll-to:text.view:_atom_site.multiplicity"}});
+                      {"pin-time:28 Sep 2026 12:00:00", QStringLiteral("appBar.tab.report"), text}});
     steps_.push_back({"t2-06-dark-experiment", {"theme:dark", experiment, basic}});
     steps_.push_back({"t2-07-dark-analysis", {analysis, basic}});
     steps_.push_back({"t2-08-dark-structure-text", {"appBar.tab.structure", text}});
@@ -146,12 +146,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                        "|_instrument.calib_twotheta_offset 0.()=_instrument.calib_twotheta_offset 0.()\\n"
                        "_instrument.calib_sample_displacement 0.05\\n_instrument.calib_sample_transparency -0.02",
                        "group.instrument"}});
-    // ... and every Example's Experiment page with its peak group open, where the types differ most.
-    // The first returns to the light theme the rest are captured in.
+    // ... and every Example's Experiment page with its peak group open, where the types differ most; a single
+    // crystal has no peak, so its extinction group instead, opened from Home so `--demo-only ex-sc-` runs them
+    // alone. The first returns to the light theme the rest are captured in.
     for (const QString& id : ExampleListModel::bundledIds()) {
         const QStringList theme = steps_.back().image.startsWith(QLatin1String("t2-")) ? QStringList{"theme:light"}
                                                                                         : QStringList{};
-        steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        if (id.startsWith(QLatin1String("sc-"))) {
+            const QStringList home{"theme:light", "appBar.tab.home", "home.start", "expand:group.examples"};
+            steps_.push_back({QStringLiteral("ex-") + id,
+                              home + open_example(id) + QStringList{experiment, basic, "group.extinction"}});
+        } else {
+            steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
+        }
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
@@ -293,6 +300,149 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                      "mainArea.analysis.tab.evolution", "fitting.start",
                                                                      "wait-files:200", "capture-now"}});
     steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    // A single crystal (Tb2Ti2O7 on HEiDi): the reflections chart and table on Experiment and Analysis, in both themes,
+    // before and after a fit of its scale.
+    steps_.push_back({"sc-01-tb2ti2o7-experiment-light",
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + QStringList{experiment, basic}});
+    steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
+    steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-03b-tb2ti2o7-analysis-fitted-light", {"choose:OK"}});
+    steps_.push_back({"sc-04-tb2ti2o7-analysis-dark", {"theme:dark"}});
+    steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
+    steps_.push_back({"sc-05b-tb2ti2o7-reflections-dark", {extras, "expand:group.refln"}});
+    steps_.push_back({"sc-05c-tb2ti2o7-f-dark", {basic, "singleCrystal.toolbar.quantity", "choose:F"}});
+    steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", {"singleCrystal.toolbar.quantity", "choose:F²", "resize:960x768"}});
+    steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
+    steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
+                                                                  + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction"}
+                                                                  + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
+    steps_.push_back({"sc-06-pr2nio4-experiment-light",
+                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                          + QStringList{experiment, basic}});
+    steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
+    steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-07a2-pr2nio4-fitted-dark", {"choose:OK"}});
+    steps_.push_back({"sc-07a3-pr2nio4-correlations-dark", {"mainArea.analysis.tab.correlations"}});
+    steps_.push_back({"sc-07b-pr2nio4-zoomed",
+                      {"mainArea.analysis.tab.fitting", "drag:singleCrystal.pointer:0.05,0.6,0.4,0.95"}});
+    steps_.push_back({"sc-07c-pr2nio4-panned", {"chart.toolbar.pan", "drag:singleCrystal.pointer:0.5,0.5,0.3,0.3",
+                                                "chart.toolbar.zoom"}});
+    // The report of the fit: its chart and reflections on the Report page, then saved as HTML and PDF where
+    // EDI_DEMO_REPORT_DIR names, else in the run's own folder.
+    steps_.push_back({"sc-07r1-pr2nio4-report-chart", {QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"}});
+    const QString sc_report = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
+    steps_.push_back({"sc-07r2-pr2nio4-report-saved",
+                      {"save-as:" + (sc_report.isEmpty() ? QStringLiteral("report-sc") : sc_report), "report.writesPdf",
+                       "report.save"}});
+    steps_.push_back({"sc-07d-pr2nio4-created", {experiment, basic, "expand:group.experiments", "experiments.create"}});
+    steps_.push_back({"sc-07e-pr2nio4-created-single-crystal", {"experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sc-07f-pr2nio4-created-loaded", {"load-reflections"}});
+    steps_.push_back({"sc-08-pr2nio4-messages", {"statusBar.warnings"}});
+    steps_.push_back({"sc-09-pr2nio4-hover", {"choose:OK", "hover:singleCrystal.pointer:0.003,0.997"}});
+    // Both single-crystal fitting examples' report charts after loading and after a fit; then the extinction's s.u.
+    // after it is fixed and fitted again, and the reflection table filling the Extras sidebar. Run only when asked
+    // (`--demo-only sccheck-`).
+    const QStringList fit_sc{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"};
+    const QStringList sc_report_steps{QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"};
+    steps_.push_back({"sccheck-01-tb2ti2o7-report-loaded",
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + sc_report_steps});
+    steps_.push_back({"sccheck-02-tb2ti2o7-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2_fit") + sc_report_steps});
+    steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
+    steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
+                      QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.0", "parameters.free.1",
+                                  "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"sccheck-06-pr2nio4-extinction-fixed-refitted",
+                      {"parameters.free.0", "parameters.free.1", "reveal:fitting.start", "fitting.start", "wait-fit",
+                       "choose:OK"}});
+    steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
+    steps_.push_back({"sccheck-09-created-single-crystal",
+                      QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments", "experiments.create",
+                                        "experimentType.sampleForm", "choose:single crystal"}});
+    steps_.push_back({"sccheck-09b-created-back-to-powder", {"experimentType.sampleForm", "choose:powder"}});
+    // A single crystal saved in another project, loaded where its structure is missing: the message, the link in
+    // red, the structure's own text, then the link pointed at the project's structure.
+    steps_.push_back({"sccheck-09c-loaded-missing-link",
+                      start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                          + QStringList{experiment, basic, "expand:group.experiments",
+                                        "load-experiments:sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi"}});
+    steps_.push_back({"sccheck-09d-missing-link-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-09e-missing-link-red", {"choose:OK", "expand:group.linked_structure"}});
+    steps_.push_back({"sccheck-09f-structure-text", {"appBar.tab.structure", text}});
+    steps_.push_back({"sccheck-09g-relinked", {experiment, basic, "linkedStructure.structureId.0", "choose:tb2ti2o7"}});
+    // A time-of-flight single crystal's Instrument group: its reflections' wavelength band, read-only.
+    steps_.push_back({"sccheck-14-taurine-instrument",
+                      start + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic, "group.instrument"}});
+    // A single crystal's reflections through the row's Load data: FullProf's .int (its wavelength taken), a plain
+    // h k l F² su file, then a malformed one; each into a created experiment linked to the project's structure.
+    // The files are named by EDI_DEMO_SC_FILES, a folder holding prnio.int, tbti.dat and malformed.dat.
+    const QString sc_files = qEnvironmentVariable("EDI_DEMO_SC_FILES");
+    const QStringList create_sc{experiment, basic, "expand:group.experiments", "experiments.create",
+                                "experimentType.sampleForm", "choose:single crystal"};
+    steps_.push_back({"sccheck-10a-int-loaded", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/prnio.int"}});
+    steps_.push_back({"sccheck-10b-int-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
+    steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
+    // The two single crystals fit together, each with its own scale.
+    steps_.push_back({"sccheck-10e-int-joint-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                    + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
+    steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
+    steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
+                                                "choose:single crystal", "load-reflections:" + sc_files + "/malformed.dat"}});
+    // The extinction type selector: the Tb2Ti2O7 example's mixed type with its three fields, the type choices, and
+    // type II with the domain radius alone.
+    // Taurine's six datasets: every experiment on one chart on the Stacked tabs, its legend shown, and the Pattern
+    // chart's legend behind its button.
+    steps_.push_back({"sccheck-15a-taurine-stacked-experiment", QStringList{"resize:1280x768"} + start + open_example("sc-neut-tof_taurine_fit")
+                                                                    + QStringList{experiment, basic, "mainArea.experiment.tab.stacked"}});
+    steps_.push_back({"sccheck-15b-taurine-stacked-analysis", {analysis, basic, "mainArea.analysis.tab.stacked"}});
+    steps_.push_back({"sccheck-15c-taurine-pattern-legend", {"mainArea.analysis.tab.fitting", "chart.toolbar.legend"}});
+    steps_.push_back({"sccheck-11-extinction-mixed", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                                                         + QStringList{experiment, basic, "expand:group.extinction"}});
+    steps_.push_back({"sccheck-11b-extinction-types", {"extinction.type"}});
+    steps_.push_back({"sccheck-11c-extinction-type-2", {"choose:Isotropic Becker-Coppens type II (analytical)"}});
+    steps_.push_back({"sccheck-11d-extinction-type-1", {"extinction.type", "choose:Isotropic Becker-Coppens type I (analytical)"}});
+    steps_.push_back({"sccheck-11e-extinction-larson", {"extinction.type", "choose:Isotropic Larson (empirical)"}});
+    steps_.push_back({"sccheck-11f-extinction-larson-anisotropic", {"extinction.type", "choose:Anisotropic Larson (empirical)"}});
+    // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
+    steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
+                                                            + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
+    steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    // The fit's cutoff (FullProf's Rmub 3), and the observed threshold above the reflection table switched to F.
+    steps_.push_back({"sccheck-12d-taurine-fitted-reflections", {"choose:OK", extras, "expand:group.refine_ls"}});
+    steps_.push_back({"sccheck-12e-taurine-observed-on-f",
+                      {experiment, extras, "expand:group.refln", "reflns.thresholdBasis", "choose:F"}});
+    // The aliases and constraints that share the first dataset's extinction, each id column as wide as its ids.
+    steps_.push_back({"sccheck-12f-taurine-aliases", {analysis, extras, "expand:group.alias"}});
+    steps_.push_back({"sccheck-12g-taurine-constraints", {"expand:group.constraint", "reveal:constraints.list"}});
+    // At the 3 su cutoff: the reflection table's fit column and the chart's dimmed points, on both views.
+    steps_.push_back({"sccheck-12h-taurine-fit-use", {experiment, extras, "expand:group.refln"}});
+    steps_.push_back({"sccheck-12i-taurine-fit-use-stacked", {"mainArea.experiment.tab.stacked"}});
+    // On F axes the weak reflections the cutoff leaves out spread away from the origin; then back to F².
+    steps_.push_back({"sccheck-12j-taurine-fit-use-on-f",
+                      {"mainArea.experiment.tab.chart", "singleCrystal.toolbar.quantity", "choose:F"}});
+    steps_.push_back({"sccheck-12k-taurine-back-on-f-squared", {"singleCrystal.toolbar.quantity", "choose:F²"}});
+    // Stacked with the selected dataset highlighted (the default), a point's experiment and h k l on hover, a click
+    // there selecting that experiment, then every experiment drawn alike with the selection bold in the legend.
+    steps_.push_back({"sccheck-12l-taurine-stacked-highlight", {"mainArea.experiment.tab.stacked"}});
+    steps_.push_back({"sccheck-12m-taurine-stacked-hover", {"hover:singleCrystal.pointer:0.12,0.86"}});
+    steps_.push_back({"sccheck-12n-taurine-stacked-click-selects",
+                      {"drag:singleCrystal.pointer:0.12,0.86,0.12,0.86", "hover:singleCrystal.pointer:0.12,0.86"}});
+    steps_.push_back({"sccheck-12o-taurine-stacked-all-alike", {"singleCrystal.toolbar.highlight"}});
+    steps_.push_back({"sccheck-12p-taurine-stacked-highlight-again", {"singleCrystal.toolbar.highlight"}});
+    // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
+    steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
+                                                              + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
+                                                              + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                                            "choose:OK", "parameters.nameFilter", "type:scale"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
                       QStringList{"resize:1280x768"} + start
@@ -845,7 +995,10 @@ void DemoDriver::next_action() {
         if (!perform(action)) {
             return;  // fail() has ended the run
         }
-        park_pointer();
+        // A hover is what the step shows, so its pointer stays.
+        if (!action.startsWith(QLatin1String("hover:"))) {
+            park_pointer();
+        }
         // What the action opened is drawn before the next; a step captured unsettled does not wait for it, nor
         // does an action a wait follows (a fit keeps the window changing until it ends).
         const bool waits = action_ < step.actions.size() && step.actions.at(action_).startsWith(QLatin1String("wait-"));
@@ -1074,6 +1227,23 @@ bool DemoDriver::perform(const QString& action) {
         QCoreApplication::sendEvent(&window_, &release);
         return true;
     }
+    if (action.startsWith(QLatin1String("hover:"))) {
+        // hover:<name>:<x>,<y> moves the pointer over the item, at fractions of its size, with no button down.
+        const QStringList parts = action.mid(6).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, QStringLiteral("0.5,0.5")).split(QLatin1Char(','));
+        if (item == nullptr || at.size() != 2) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const QPointF to = item->mapToScene(QPointF(at[0].toDouble() * item->width(), at[1].toDouble() * item->height()));
+        for (const QPointF& point : {to + QPointF(1.0, 1.0), to}) {
+            QMouseEvent move(QEvent::MouseMove, point, window_.mapToGlobal(point), Qt::NoButton, Qt::NoButton,
+                             Qt::NoModifier);
+            QCoreApplication::sendEvent(&window_, &move);
+        }
+        return true;
+    }
     if (action.startsWith(QLatin1String("expand:"))) {
         QQuickItem* group = find(action.mid(7), false);
         if (group == nullptr || !group->setProperty("collapsed", false)) {
@@ -1104,6 +1274,18 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         session->project()->pinTimestamps(action.mid(9));
+        return true;
+    }
+    if (action == QLatin1String("load-reflections") || action.startsWith(QLatin1String("load-reflections:"))) {
+        // Load data into the current experiment from the file the action names, else the one EDI_DEMO_REFLECTIONS
+        // names, through the call the row's file dialog makes on accept; without either the step only captures.
+        const QString path = action.contains(QLatin1Char(':')) ? action.section(QLatin1Char(':'), 1)
+                                                                : qEnvironmentVariable("EDI_DEMO_REFLECTIONS");
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
+            session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path));
+        }
         return true;
     }
     if (action.startsWith(QLatin1String("load-experiments:"))) {

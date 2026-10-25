@@ -184,6 +184,77 @@ void select_absorption(ExperimentBase& experiment, const std::string& value) {
                             absorption_file_token(experiment.effective_beam_mode(), value));
 }
 
+std::vector<std::string> extinction_type_labels() {
+    std::vector<std::string> labels;
+    for (const std::string& token : extinction_type_tokens()) {
+        if (token == "none") {
+            labels.emplace_back("None");
+        } else if (token == "becker-coppens-type-1") {
+            labels.emplace_back("Isotropic Becker-Coppens type I");
+        } else if (token == "becker-coppens-type-2") {
+            labels.emplace_back("Isotropic Becker-Coppens type II");
+        } else if (token == "becker-coppens-mixed") {
+            labels.emplace_back("Isotropic Becker-Coppens mixed");
+        } else if (token == "larson-isotropic") {
+            labels.emplace_back("Isotropic Larson");
+        } else if (token == "larson-anisotropic") {
+            labels.emplace_back("Anisotropic Larson");
+        } else {
+            labels.push_back(token);
+        }
+    }
+    return labels;
+}
+
+std::vector<std::string> extinction_type_choice_labels() {
+    std::vector<std::string> labels = extinction_type_labels();
+    const std::vector<std::string> tokens = extinction_type_tokens();
+    for (std::size_t index = 0; index < tokens.size(); ++index) {
+        if (tokens[index].starts_with("becker-coppens-")) {
+            labels[index] += " (analytical)";
+        } else if (tokens[index].starts_with("larson-")) {
+            labels[index] += " (empirical)";
+        }
+    }
+    return labels;
+}
+
+std::vector<std::string> mosaic_distribution_labels() {
+    std::vector<std::string> labels;
+    for (const std::string& token : mosaic_distribution_tokens()) {
+        labels.push_back(token == "gaussian" ? "Gaussian" : token == "lorentzian" ? "Lorentzian" : token);
+    }
+    return labels;
+}
+
+void select_extinction(ExperimentBase& experiment, const std::string& token) {
+    if (!experiment.reflections.has_value()) {
+        throw std::invalid_argument("extinction belongs to a single crystal");
+    }
+    apply_extinction_type(experiment.extinction, token);
+}
+
+std::vector<std::string> reflns_threshold_basis_labels() {
+    std::vector<std::string> labels;
+    for (const std::string& token : reflns_threshold_basis_tokens()) {
+        labels.push_back(token == "amplitude" ? "F" : "I");
+    }
+    return labels;
+}
+
+void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token) {
+    const std::vector<std::string> distributions = mosaic_distribution_tokens();
+    if (std::find(distributions.begin(), distributions.end(), token) == distributions.end()) {
+        throw std::invalid_argument("mosaic distribution '" + token + "' is not supported (expected 'gaussian' or "
+                                    "'lorentzian')");
+    }
+    if (!experiment.extinction.mosaic_distribution) {
+        throw std::invalid_argument("extinction type '" + experiment.extinction.type.value_or("none") +
+                                    "' has no mosaic distribution");
+    }
+    experiment.extinction.mosaic_distribution = token;
+}
+
 void select_background_type(ExperimentBase& experiment, const std::string& token) {
     const std::vector<std::string> types = supported_background_types();
     if (std::find(types.begin(), types.end(), token) == types.end()) {

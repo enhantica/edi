@@ -1,0 +1,193 @@
+"""Observe single-crystal values in the production chart and rendered table."""
+
+import os
+import shlex
+import subprocess
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[3]
+PROJECTS = (
+    'sc-neut-cwl_pr2nio4_basic',
+    'sc-neut-cwl_tbti_basic',
+    'sc-neut-cwl_tbti_anisotropic-adp',
+    'sc-neut-cwl_tbti_isotropic-extinction',
+    'sc-neut-tof_taurine_basic',
+)
+
+
+@pytest.fixture(scope='module')
+def app_result():
+    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
+    assert runner.is_file(), 'The single-crystal app gate requires the real production Qt runner'
+    app_env = ROOT / '.pixi/envs/app'
+    environment = {
+        **os.environ,
+        'CONDA_PREFIX': str(app_env),
+        'PATH': str(app_env / 'bin') + os.pathsep + os.environ.get('PATH', ''),
+        'EDI_ACCEPTANCE_REFERENCE': str(ROOT / 'tests/fixtures/single_crystal'),
+    }
+    environment.pop('QT_QUICK_BACKEND', None)
+    environment.pop('QT_QPA_PLATFORM', None)
+    return subprocess.run(
+        [
+            'bash',
+            '-c',
+            (
+                'source tools/ci/app-platform.sh; '
+                'app_capture_platform single-crystal-acceptance || exit 1; "$@"'
+            ),
+            'single-crystal-acceptance',
+            str(runner),
+            '-input',
+            str(ROOT / 'tests/unit/app/tst_single_crystal_views.qml'),
+            *shlex.split(os.environ.get('EDI_SINGLE_CRYSTAL_FUNCTIONS', '')),
+            '-o',
+            '-,txt',
+        ],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=600,
+    )
+
+
+@pytest.mark.parametrize('project', PROJECTS)
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+@pytest.mark.parametrize('page', ['experiment', 'analysis'])
+def test_real_single_crystal_chart_table_and_sidebar(app_result, project, theme, page):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0 and all(
+        f'PASS   : edi_app::SingleCrystalViews::{phase}()' in output
+        for phase in ['initTestCase', 'cleanupTestCase']
+    ), 'Every real app case and cleanup must complete successfully: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::test_chart_table_and_sidebar'
+        f'({project}-{theme}-{page})' in output
+    ), (
+        'Each project must execute chart, rendered table and sidebar checks in both themes: '
+        + output
+    )
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+@pytest.mark.parametrize('page', ['experiment', 'analysis'])
+def test_real_powder_view_retains_the_regression_pin(app_result, theme, page):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0 and all(
+        f'PASS   : edi_app::SingleCrystalViews::{phase}()' in output
+        for phase in ['initTestCase', 'cleanupTestCase']
+    ), 'Every real app case and cleanup must complete successfully: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::test_powder_view_unchanged'
+        f'({theme}-{page})' in output
+    ), 'The real powder chart and sidebar must remain unchanged in each theme: ' + output
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+@pytest.mark.parametrize('page', ['experiment', 'analysis'])
+@pytest.mark.parametrize(
+    'case',
+    [
+        'toolbar_quantity_and_memory',
+        'reflection_hover_and_shared_toggle',
+        'zoom_selection_and_shared_pointer_modes',
+    ],
+)
+def test_real_chart_toolbar_conversion_memory_and_hover(app_result, theme, page, case):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0 and all(
+        f'PASS   : edi_app::SingleCrystalViews::{phase}()' in output
+        for phase in ['initTestCase', 'cleanupTestCase']
+    ), 'The single-crystal chart host must complete without a crash: ' + output
+    assert f'PASS   : edi_app::SingleCrystalViews::test_{case}({theme}-{page})' in output, (
+        'The real toolbar and pointer must execute the selected quantity or tooltip witness: '
+        + output
+    )
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+@pytest.mark.parametrize(
+    'case',
+    [
+        'calculation_after_edits_and_extinction_labels',
+        'fit_lowers_objective_and_reports_single_crystal_factors',
+        'result_structure_names_are_complete',
+    ],
+)
+def test_real_single_crystal_calculation_fit_and_results(app_result, theme, case):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0 and all(
+        f'PASS   : edi_app::SingleCrystalViews::{phase}()' in output
+        for phase in ['initTestCase', 'cleanupTestCase']
+    ), 'The single-crystal fit host must complete without a crash: ' + output
+    assert f'PASS   : edi_app::SingleCrystalViews::test_{case}({theme})' in output, (
+        'The app must calculate after edits and execute the independent fit and results witness: '
+        + output
+    )
+
+
+@pytest.mark.parametrize('compound', ['tb2ti2o7', 'pr2nio4'])
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_compound_examples_are_independent_fitting_exercises(app_result, compound, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The real compound fitting host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_two_compound_fitting_examples({compound}-{theme})' in output
+    ), 'Each compound must open through its row and fit to independent FullProf values: ' + output
+
+
+@pytest.mark.parametrize('extension', ['int', 'dat'])
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_created_experiment_selects_type_before_loading(app_result, extension, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The created-experiment host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_create_single_crystal_then_load_reflections({extension}-{theme})' in output
+    ), 'The real created experiment must select supported axes and load its reflections: ' + output
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_single_crystal_report_chart_html_and_pdf(app_result, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The real report-output host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_single_crystal_report_chart_and_outputs({theme})' in output
+    ), (
+        'The report model, live preview and actual HTML/PDF must contain reflection charts: '
+        + output
+    )
+
+
+@pytest.mark.parametrize('theme', ['light', 'dark'])
+def test_real_single_crystal_report_reflections(app_result, theme):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, 'The reflection-list report host must not crash: ' + output
+    assert (
+        'PASS   : edi_app::SingleCrystalViews::'
+        f'test_single_crystal_report_reflection_list({theme})' in output
+    ), 'The report preview, actual HTML and paginated PDF must list every reflection: ' + output
+
+
+@pytest.mark.parametrize(
+    'case',
+    [
+        'weak_negative_f_axes',
+        'multidataset_split_stacked_and_legend',
+        'plain_reflections_one_warning',
+    ],
+)
+def test_real_single_crystal_extended_contracts(app_result, case):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, (
+        'The extended single-crystal host must complete without a crash: ' + output
+    )
+    assert f'PASS   : edi_app::SingleCrystalViews::test_{case}()' in output, (
+        'The actual app must execute the independent extended single-crystal witness: ' + output
+    )

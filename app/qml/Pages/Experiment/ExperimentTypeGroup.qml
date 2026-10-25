@@ -22,7 +22,10 @@ Grid {
     property ProjectViewModel project: null
     property ExperimentViewModel experiment: null
     property int experimentIndex: -1
+    // The type axes may change while nothing measured is held: a calculation grid, or a single crystal with no
+    // reflections loaded yet.
     readonly property bool editable: experiment !== null && experiment.calculationOnly
+    readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
     // A choice on one axis: the experiment made anew, or the box back at the stored value.
@@ -38,33 +41,19 @@ Grid {
     columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
-    // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
-    // the tool tip is the cell's, since a disabled box takes no hover.
-    Item {
+    EaElements.ParamComboBox {
+        id: sampleForm
+        objectName: "experimentType.sampleForm"
         width: row.cellWidth
-        height: sampleForm.height
-
-        EaElements.ParamComboBox {
-            id: sampleForm
-            objectName: "experimentType.sampleForm"
-            width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(sampleForm)
-            enabled: false
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.sampleFormToken : "",
-                    "shortPrettyName": qsTr("sample form"),
-                    "permittedValues": ["powder", "single crystal"]
-                })
-            onActivated: index => row.choose(sampleForm, "sampleForm", index)
-        }
-        HoverHandler {
-            id: sampleFormHover
-        }
-        EaElements.ToolTip {
-            text: qsTr("Only powder samples are supported for now")
-            visible: sampleFormHover.hovered && EaGlobals.Vars.showToolTips
-        }
+        Component.onCompleted: FieldTitles.align(sampleForm)
+        enabled: row.editable
+        currentIndex: permittedValues.indexOf(value)
+        parameter: ({
+                "value": row.experiment ? row.experiment.sampleFormToken : "",
+                "shortPrettyName": qsTr("sample form"),
+                "permittedValues": ["powder", "single crystal"]
+            })
+        onActivated: index => row.choose(sampleForm, "sampleForm", index)
     }
     EaElements.ParamComboBox {
         id: beamMode
@@ -80,19 +69,33 @@ Grid {
             })
         onActivated: index => row.choose(beamMode, "beamMode", index)
     }
-    EaElements.ParamComboBox {
-        id: radiationProbe
-        objectName: "experimentType.radiationProbe"
+    // A single crystal is computed for neutrons only for now: its probe box is fixed, with a tool tip saying so
+    // (the owner, 2026-10-22).
+    Item {
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(radiationProbe)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.radiationProbeToken : "",
-                "shortPrettyName": qsTr("probe"),
-                "permittedValues": ["neutron", "xray"]
-            })
-        onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
+        height: radiationProbe.height
+
+        EaElements.ParamComboBox {
+            id: radiationProbe
+            objectName: "experimentType.radiationProbe"
+            width: row.cellWidth
+            Component.onCompleted: FieldTitles.align(radiationProbe)
+            enabled: row.editable && !row.singleCrystal
+            currentIndex: permittedValues.indexOf(value)
+            parameter: ({
+                    "value": row.experiment ? row.experiment.radiationProbeToken : "",
+                    "shortPrettyName": qsTr("probe"),
+                    "permittedValues": ["neutron", "xray"]
+                })
+            onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
+        }
+        HoverHandler {
+            id: radiationProbeHover
+        }
+        EaElements.ToolTip {
+            text: qsTr("Single crystals are neutron only for now")
+            visible: row.singleCrystal && row.editable && radiationProbeHover.hovered && EaGlobals.Vars.showToolTips
+        }
     }
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
     // the tool tip is the cell's, since a disabled box takes no hover.

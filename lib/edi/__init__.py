@@ -271,6 +271,12 @@ from edi._edi import (  # noqa: E402 -
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _read_plain_data as _edi_read_plain_data,  # Crysta's plain-data reader
 )
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_from_scratch as _single_crystal_from_scratch,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_with_reflections as _single_crystal_with_reflections,
+)
 from edi._edi import (  # noqa: E402 -
     _structure_factor_evaluations as _structure_factor_evaluations,
 )
@@ -891,6 +897,20 @@ _CW_PROFILE_KEYS = {
 }
 _BEAM_MODE_TOF = 'time-of-flight'
 _BEAM_MODE_CW = 'constant wavelength'
+_SAMPLE_FORM_SINGLE_CRYSTAL = 'single crystal'
+
+
+def _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type):
+    """A single crystal from scratch: neutron and Bragg, with diffraction-lib's defaults."""
+    if radiation_probe not in {'', 'neutron'}:
+        raise ValueError(
+            f"radiation_probe '{radiation_probe}' is not supported for a single crystal"
+        )
+    if scattering_type not in {'', 'bragg'}:
+        raise ValueError(f"scattering_type '{scattering_type}' is not supported")
+    return _single_crystal_from_scratch(name, beam_mode)
+
+
 _CW_PEAK_KEYS = frozenset({
     'type',
     'cutoff_fwhm',
@@ -1248,6 +1268,10 @@ class ExperimentFactory:
             radiation_probe=radiation_probe,
             scattering_type=scattering_type,
         )
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            # A single crystal reads reflections: a FullProf .int or a plain h k l F2 su
+            # [wavelength] file.
+            return _single_crystal_with_reflections(experiment, str(data_path))
         rows = _edi_read_plain_data(str(data_path))
         x, y, sy = rows['x'], rows['y'], rows['sigma']
         if beam_mode == _BEAM_MODE_CW:
@@ -1281,6 +1305,8 @@ class ExperimentFactory:
         ``tof-jorgensen``. A CW experiment starts with its profile's peak parameters and both CW
         instrument parameters present, fixed at 0.
         """
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            return _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type)
         peak_spec = {}
         if peak_type:
             peak_spec['type'] = peak_type

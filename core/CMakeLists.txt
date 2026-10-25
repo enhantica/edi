@@ -135,3 +135,9 @@ endif()
 # format (the Makefile `... target` shape silently matches nothing under Ninja).
 list(LENGTH EDI_TEST_SOURCES EDI_TEST_CASE_FILES)
 file(WRITE ${CMAKE_BINARY_DIR}/edi_tests_case_files.txt "${EDI_TEST_CASE_FILES}\n")
+
+# Public-model acceptance observer, built once alongside the native artifacts.
+if(NOT EMSCRIPTEN AND EXISTS "${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_edges/CMakeLists.txt")
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_edges
+                     ${CMAKE_BINARY_DIR}/single_crystal_edges)
+endif()

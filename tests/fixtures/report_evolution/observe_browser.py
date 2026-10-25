@@ -26,8 +26,16 @@ const observeLoaded = () => {
       patterns: [...document.querySelectorAll('.js-plotly-plot')]
         .filter(plot => plot.closest('.pattern-figure')).map(plot => ({
         traces: (plot.data || []).map(trace => ({
-          name: trace.name, line: trace.line, marker: trace.marker})),
+          name: trace.name, line: trace.line, marker: trace.marker,
+          mode: trace.mode, x: Array.from(trace.x ?? []), y: Array.from(trace.y ?? []),
+          error_x: trace.error_x, error_y: trace.error_y})),
+        svgCount: plot.querySelectorAll('svg,canvas').length,
+        xTitle: plot.layout?.xaxis?.title?.text, yTitle: plot.layout?.yaxis?.title?.text,
         background: plot._fullLayout?.plot_bgcolor ?? plot.layout?.plot_bgcolor})),
+      tables: [...document.querySelectorAll('table')].map(table => ({
+        columns: [...table.querySelectorAll('thead th')].map(cell => cell.textContent.trim()),
+        rows: [...table.querySelectorAll('tbody tr')].map(row =>
+          [...row.querySelectorAll('td')].map(cell => cell.textContent.trim()))})),
       figures: [...document.querySelectorAll('.evolution-figure')].map(f => ({
         className: f.className, text: f.textContent,
         children: [...f.children].map(c => c.className)})), plots: plots.map(plot => {
@@ -137,10 +145,23 @@ def observe(html, *, render_timeout_ms=5000):
             url,
         ]
     )
+    environment = {**os.environ, 'MOZ_HEADLESS': '1'}
+    # The native runner's report-writer fault shim must stay in that runner. Firefox's
+    # sandbox also forks processes; loading the writer interposer there can crash them.
+    fault_directory = environment.get('EDI_REPORT_ACCEPTANCE_PRELOADED')
+    if fault_directory:
+        for key in ('LD_PRELOAD', 'DYLD_INSERT_LIBRARIES'):
+            libraries = [
+                item
+                for item in environment.get(key, '').split(':')
+                if item and Path(item).parent != Path(fault_directory)
+            ]
+            if libraries:
+                environment[key] = ':'.join(libraries)
+            else:
+                environment.pop(key, None)
     with (temporary / 'browser.log').open('w') as log:
-        process = subprocess.Popen(
-            args, stdout=log, stderr=log, env={**os.environ, 'MOZ_HEADLESS': '1'}
-        )
+        process = subprocess.Popen(args, stdout=log, stderr=log, env=environment)
         try:
             # Allow browser startup and both frames to load on slower CI runners.
             # Each page still has its own drawing deadline.

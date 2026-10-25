@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40",
+    "artifact": "tbti.out",
+    "provenance": "../../README.md"
+  },
+  "comparable_parameters": true,
+  "quantities": {
+    "n_free": {
+      "value": 1,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 220,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "param.scale.value": {
+      "value": 3.2802625,
+      "kind": "reference",
+      "tol_abs": 0.053695616
+    },
+    "reduced_chi_square": {
+      "value": 85.18766204306294,
+      "kind": "reference",
+      "tol_abs": 0.06,
+      "tol_rel": 0.002
+    }
+  }
+}

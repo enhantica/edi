@@ -55,6 +55,16 @@ namespace fs = std::filesystem;
 namespace edi {
 namespace {
 
+// "'a', 'b' or 'c'", for a refusal naming the tokens a field admits.
+std::string spelled_tokens(const std::vector<std::string>& tokens) {
+    std::string spelled;
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        spelled += i == 0 ? "" : (i + 1 == tokens.size() ? " or " : ", ");
+        spelled += "'" + tokens[i] + "'";
+    }
+    return spelled;
+}
+
 // ---- STAR/CIF parsing -----------------------------------------------------------------------------
 
 // ADR-0016: the constructor is the one way a loop exists — parsed, translated from CIF or
@@ -646,6 +656,7 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
 // reject nothing across every `.edi` in the acceptance vehicle and in edi's fixtures.
 const std::set<std::string>& covered_categories() {
     static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso", "background",
+                                                  "extinction",
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
                                                   "fit_parameter", "peak", "preferred_orientation",
@@ -657,6 +668,10 @@ const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
         // _absorption
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
+        // _extinction (a single crystal's)
+        "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
+        "_extinction.mosaic_spread", "_extinction.crystal_radius", "_extinction.coefficient",
+        "_extinction.coefficient_11", "_extinction.coefficient_22", "_extinction.coefficient_33", "_extinction.coefficient_12", "_extinction.coefficient_13", "_extinction.coefficient_23",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -1549,9 +1564,211 @@ void read_background_estimate(const Block& block, ExperimentBase& experiment, co
     experiment.background_estimate_points = digest("_background_estimate.points_digest");
 }
 
+// The `_linked_structure` loop of a powder or a single crystal: every row a linked structure with its scale and an
+// optional enabled flag (absent = taking part).
+std::vector<std::shared_ptr<LinkedStructure>> read_linked_structures(const Block& block, const std::string& where) {
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        if (linked->column("_linked_structure.enabled") >= 0) {
+            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
+            if (token != "true" && token != "false") {
+                fail_schema(where, "invalid-linked-structure-enabled",
+                            "_linked_structure.enabled is '" + token + "', expected true or false");
+            }
+            link->enabled = token == "true";
+        }
+        links.push_back(std::move(link));
+    }
+    return links;
+}
+
+// A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
+// the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
+BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
+    BraggPdExperiment experiment;
+    experiment.name = block.name;
+    experiment.experiment_type.sample_form = SampleFormEnum::SINGLE_CRYSTAL;
+    const std::string* beam = block.find("_experiment_type.beam_mode");
+    if (beam == nullptr || (*beam != kBeamModeTof && *beam != kBeamModeCwl)) {
+        fail_schema(where, "unknown-beam-mode",
+                    "a single crystal declares _experiment_type.beam_mode 'constant wavelength' or "
+                    "'time-of-flight'");
+    }
+    const bool cw = *beam == kBeamModeCwl;
+    experiment.experiment_type.beam_mode =
+        cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    // A category only a powder pattern has is refused by name before anything is read, as crysta refuses it; it would
+    // otherwise be dropped silently and lost on save.
+    const auto refuse_pattern_category = [&where](const std::string& tag) {
+        if (const std::string found = single_crystal_forbidden_tag(tag); !found.empty()) {
+            fail_schema(where, "pattern-category-on-single-crystal",
+                        found + " on a single crystal, which has no powder pattern");
+        }
+    };
+    for (const auto& item : block.items) {
+        refuse_pattern_category(item.first);
+    }
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            refuse_pattern_category(tag);
+        }
+    }
+    if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
+        if (*probe != "neutron") {
+            fail_schema(where, "unknown-radiation-probe",
+                        "a single crystal is a neutron experiment; _experiment_type.radiation_probe is '" +
+                            *probe + "'");
+        }
+        experiment.experiment_type.radiation_probe = RadiationProbeEnum::NEUTRON;
+    }
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type")) {
+        if (*scattering != "bragg") {
+            fail_schema(where, "unknown-scattering-type",
+                        "a single crystal is a Bragg experiment; _experiment_type.scattering_type is '" +
+                            *scattering + "'");
+        }
+        experiment.experiment_type.scattering_type = ScatteringTypeEnum::BRAGG;
+    }
+    if (const std::string* source = block.find("_scattering_source.neutron_scattering_length")) {
+        experiment.neutron_scattering_length = *source;
+    }
+    if (cw) {
+        experiment.instrument.setup_wavelength =
+            require_spec_parameter(block, spec::instrument_wavelength, where);
+        if (const std::string domain =
+                detail::wavelength_domain_message(experiment.instrument.setup_wavelength->value);
+            !domain.empty()) {
+            fail_domain(where, "wavelength-domain", domain);
+        }
+    }
+    // The type, none without one, then the items of that type alone (edi ADR-0049).
+    const std::string* type = block.find("_extinction.type");
+    const std::string extinction_type = type != nullptr ? *type : "none";
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), extinction_type) == types.end()) {
+        fail_schema(where, "unknown-extinction-type",
+                    "_extinction.type '" + extinction_type + "' is not a known type (expected " +
+                        spelled_tokens(types) + ")");
+    }
+    apply_extinction_type(experiment.extinction, extinction_type);
+    // The observed-reflection threshold (edi ADR-0050), each item absent until declared.
+    try {
+        if (const std::string* sigma = block.find("_reflns.threshold_sigma")) {
+            experiment.reflns_threshold_sigma = detail::read_threshold_sigma(*sigma, "_reflns.threshold_sigma");
+        }
+        if (const std::string* basis = block.find("_reflns.threshold_basis")) {
+            experiment.reflns_threshold_basis = detail::read_threshold_basis(*basis);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-threshold", error.what());
+    }
+    if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
+        const std::vector<std::string> distributions = mosaic_distribution_tokens();
+        if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
+            fail_schema(where, "unknown-mosaic-distribution",
+                        "_extinction.mosaic_distribution '" + *distribution + "' is not known (expected " +
+                            spelled_tokens(distributions) + ")");
+        }
+        if (!experiment.extinction.mosaic_distribution) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        "_extinction.mosaic_distribution is not an item of _extinction.type '" + extinction_type + "'");
+        }
+        experiment.extinction.mosaic_distribution = *distribution;
+    }
+    for (const auto& [field, specification] :
+         {std::pair{&experiment.extinction.domain_radius, &spec::extinction_domain_radius},
+          std::pair{&experiment.extinction.mosaic_spread, &spec::extinction_mosaic_spread},
+          std::pair{&experiment.extinction.crystal_radius, &spec::extinction_crystal_radius},
+          std::pair{&experiment.extinction.coefficient, &spec::extinction_coefficient},
+          std::pair{&experiment.extinction.coefficient_11, &spec::extinction_coefficient_11},
+          std::pair{&experiment.extinction.coefficient_22, &spec::extinction_coefficient_22},
+          std::pair{&experiment.extinction.coefficient_33, &spec::extinction_coefficient_33},
+          std::pair{&experiment.extinction.coefficient_12, &spec::extinction_coefficient_12},
+          std::pair{&experiment.extinction.coefficient_13, &spec::extinction_coefficient_13},
+          std::pair{&experiment.extinction.coefficient_23, &spec::extinction_coefficient_23}}) {
+        std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
+        if (!found) {
+            continue;
+        }
+        if (!field->has_value()) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        std::string(specification->edi_names[0]) + " is not an item of _extinction.type '" +
+                            extinction_type + "'");
+        }
+        // The tensor's cross terms x12, x13 and x23 multiply hk, hl and kl and may be negative.
+        const bool signed_term = field == &experiment.extinction.coefficient_12 ||
+                                 field == &experiment.extinction.coefficient_13 ||
+                                 field == &experiment.extinction.coefficient_23;
+        const double value = found->value.get();
+        if (!std::isfinite(value) || (!signed_term && !(value >= 0.0))) {
+            fail_domain(where, "extinction-domain",
+                        std::string(specification->edi_names[0]) +
+                            (signed_term ? " must be finite" : " must be finite and not negative"));
+        }
+        *field = *found;
+    }
+    try {
+        experiment.linked_structures.assign(read_linked_structures(block, where));
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "duplicate-id", error.what());
+    }
+    // A single crystal without reflection rows (no `_refln` loop, or one without rows) is data-free, as a powder
+    // one that declares no measured column is; loading its reflections makes it measured.
+    const Loop* refln = block.loop_with("_refln.index_h");
+    ReflnDataBase rows;
+    if (refln == nullptr || refln->rows.empty()) {
+        experiment.reflections = std::move(rows);
+        experiment.calculation_only = true;
+        return experiment;
+    }
+    const auto index = [&](const std::vector<std::string>& row, const char* tag) {
+        const std::string& text = loop_cell(*refln, row, tag, where);
+        const double value = to_double(text, where);
+        if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+            fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+        }
+        return static_cast<std::int32_t>(value);
+    };
+    std::vector<std::int32_t> h;
+    std::vector<std::int32_t> k;
+    std::vector<std::int32_t> l;
+    std::vector<double> meas;
+    std::vector<double> su;
+    std::vector<double> wavelength;
+    for (const std::vector<std::string>& row : refln->rows) {
+        h.push_back(index(row, "_refln.index_h"));
+        k.push_back(index(row, "_refln.index_k"));
+        l.push_back(index(row, "_refln.index_l"));
+        meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
+        su.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
+        if (!cw) {
+            wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
+        }
+    }
+    rows.index_h = std::move(h);
+    rows.index_k = std::move(k);
+    rows.index_l = std::move(l);
+    rows.intensity_meas = std::move(meas);
+    rows.intensity_meas_su = std::move(su);
+    rows.wavelength = std::move(wavelength);
+    experiment.reflections = std::move(rows);
+    return experiment;
+}
+
 BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
+    if (const std::string* form = block.find("_experiment_type.sample_form");
+        form != nullptr && *form == "single crystal") {
+        return single_crystal_from_block(block, where);
+    }
     BraggPdExperiment experiment;
     experiment.name = block.name;
     // Resolve the experiment kind from the `_peak.type` family cross-validated against
@@ -1896,30 +2113,10 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
     }
 
-    // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
-    // = taking part). No loop: the experiment links no structure (one made before any structure existed, or whose
-    // structures were removed); it calculates as background alone and cannot be fitted.
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        if (linked->column("_linked_structure.enabled") >= 0) {
-            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
-            if (token != "true" && token != "false") {
-                fail_schema(where, "invalid-linked-structure-enabled",
-                            "_linked_structure.enabled is '" + token + "', expected true or false");
-            }
-            link->enabled = token == "true";
-        }
-        links.push_back(std::move(link));
-    }
+    // No loop: the experiment links no structure (one made before any structure existed, or whose structures were
+    // removed); it calculates as background alone and cannot be fitted.
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
@@ -2404,6 +2601,30 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
+        }
+        // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
+        if (experiment.extinction.domain_radius) {
+            add(prefix + "domain_radius", prefix + "extinction.domain_radius", &*experiment.extinction.domain_radius);
+        }
+        if (experiment.extinction.mosaic_spread) {
+            add(prefix + "mosaic_spread", prefix + "extinction.mosaic_spread", &*experiment.extinction.mosaic_spread);
+        }
+        if (experiment.extinction.crystal_radius) {
+            add(prefix + "crystal_radius", prefix + "extinction.crystal_radius", &*experiment.extinction.crystal_radius);
+        }
+        if (experiment.extinction.coefficient) {
+            add(prefix + "coefficient", prefix + "extinction.coefficient", &*experiment.extinction.coefficient);
+        }
+        for (const auto& [name, term] :
+             {std::pair{"coefficient_11", &experiment.extinction.coefficient_11},
+              std::pair{"coefficient_22", &experiment.extinction.coefficient_22},
+              std::pair{"coefficient_33", &experiment.extinction.coefficient_33},
+              std::pair{"coefficient_12", &experiment.extinction.coefficient_12},
+              std::pair{"coefficient_13", &experiment.extinction.coefficient_13},
+              std::pair{"coefficient_23", &experiment.extinction.coefficient_23}}) {
+            if (*term) {
+                add(prefix + name, prefix + "extinction." + name, &**term);
+            }
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
@@ -3128,6 +3349,29 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    if (type.sample_form == "single crystal") {
+        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
+        // are loaded.
+        if (type.radiation_probe != "neutron") {
+            throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
+        }
+        std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+        text += "_experiment_type.sample_form \"single crystal\"\n";
+        text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+        text += "_experiment_type.radiation_probe \"neutron\"\n";
+        text += "_experiment_type.scattering_type \"bragg\"\n\n";
+        if (constant_wavelength) {
+            text += "_instrument.setup_wavelength 1.\n\n";
+        }
+        text += "_extinction.type none\n";
+        if (!structure_ids.empty()) {
+            text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+            for (const std::string& structure_id : structure_ids) {
+                text += structure_id + " 1.\n";
+            }
+        }
+        return experiment_from_edi_text(text);
+    }
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
     text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
@@ -3217,17 +3461,13 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.sample_form") == "single crystal") {
-        throw IoError(path + ": _experiment_type.sample_form 'single crystal' is not implemented - "
-                             "edi experiments are powder + bragg");
-    }
     if (*block.find("_experiment_type.scattering_type") == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
     BraggPdExperiment experiment = experiment_from_block(block, path);
     // load_project's rule for every experiment of a project: measured data or a calculation grid.
-    if (!experiment.data.has_value()) {
+    if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
         throw IoError(path + ": experiment '" + experiment.name +
                       "' declares neither an embedded _data loop nor a _data_range grid - an "
                       "experiment must say what it computes over");
@@ -3438,11 +3678,30 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
         }
         BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
+        // carries for one are read past, and said so (the owner, 2026-10-23).
+        if (experiment.reflections.has_value() &&
+            experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
+            std::vector<std::string> ignored;
+            for (const auto& item : experiment_block.items) {
+                if (item.first.starts_with("_instrument.")) {
+                    ignored.push_back(item.first);
+                }
+            }
+            if (!ignored.empty()) {
+                std::string list;
+                for (const std::string& tag : ignored) {
+                    list += (list.empty() ? "" : ", ") + tag;
+                }
+                warn("experiment '" + experiment.name + "': a time-of-flight single crystal has no instrument; " +
+                     list + " ignored");
+            }
+        }
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
@@ -3516,6 +3775,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
             if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
                 project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+            // A single-crystal fit's cutoff (edi ADR-0050).
+            if (const std::string* cutoff = block.find("_refine_ls.threshold_sigma")) {
+                project.refine_ls_threshold_sigma = detail::read_threshold_sigma(*cutoff, "_refine_ls.threshold_sigma");
             }
         } catch (const std::invalid_argument& error) {
             throw IoError(std::string(error.what()) + ": " + analysis_file.string());
@@ -3857,7 +4120,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
                                   "' outside [-1, 1]: " + where);
                 }
-                pair->correlation = text;
+                pair->correlation = value;
                 if (per_file) {
                     pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
                 }
@@ -4219,6 +4482,35 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // A single-crystal fit has no derivative for its wavelength, so a free one loads fixed, and said so (crysta's fit
+    // refuses one).
+    for (const auto& experiment : project.experiments) {
+        if (experiment->reflections.has_value() && experiment->instrument.setup_wavelength &&
+            experiment->instrument.setup_wavelength->free) {
+            experiment->instrument.setup_wavelength->free = false;
+            warn("experiment '" + experiment->name.value() +
+                 "': a single-crystal fit does not refine the wavelength; _instrument.setup_wavelength loaded fixed");
+        }
+    }
+    // A single crystal's integrated intensities do not fix the cell, which comes from its reflections' positions, so a
+    // fit of single crystals only does not refine it: a cell parameter marked free loads fixed, and said so.
+    if (!project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
+        for (const auto& structure : project.structures) {
+            std::string fixed;
+            for (Parameter* parameter : structure->cell.parameters()) {
+                if (parameter->free && parameter->spec != nullptr) {
+                    parameter->free = false;
+                    fixed += (fixed.empty() ? "" : ", ") + std::string(parameter->spec->edi_names[0]);
+                }
+            }
+            if (!fixed.empty()) {
+                warn("structure '" + structure->name.value() + "': a single-crystal fit does not refine the cell; " +
+                     fixed + " loaded fixed");
+            }
+        }
+    }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.).
@@ -4231,6 +4523,46 @@ double parse_edi_double(const std::string& text, const std::string& where) {
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
     // never re-open the numeric seam the products already resolved.
     return to_double(text, where);
+}
+
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token) {
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), token) == types.end()) {
+        throw std::invalid_argument("extinction type '" + token + "' is not supported (expected " +
+                                    spelled_tokens(types) + ")");
+    }
+    extinction.type = token;
+    const bool spread = token == "becker-coppens-type-1" || token == "becker-coppens-mixed";
+    const auto keep = [](OptionalParameter& field, bool wanted, const ParameterSpec& spec, const char* start) {
+        if (!wanted) {
+            field.reset();
+        } else if (!field.has_value()) {
+            Parameter started = parse_parameter(start, "<extinction-type-default>");
+            started.spec = &spec;
+            field = started;
+        }
+    };
+    const bool domain = token == "becker-coppens-type-2" || token == "becker-coppens-mixed";
+    keep(extinction.domain_radius, domain, spec::extinction_domain_radius, "0");
+    keep(extinction.mosaic_spread, spread, spec::extinction_mosaic_spread, "0");
+    const bool larson = token == "larson-isotropic";
+    const bool tensor = token == "larson-anisotropic";
+    // 1 mm until the crystal's own radius is given (the owner, 2026-10-23).
+    keep(extinction.crystal_radius, token != "none" && !larson && !tensor, spec::extinction_crystal_radius, "1");
+    keep(extinction.coefficient, larson, spec::extinction_coefficient, "0");
+    keep(extinction.coefficient_11, tensor, spec::extinction_coefficient_11, "0");
+    keep(extinction.coefficient_22, tensor, spec::extinction_coefficient_22, "0");
+    keep(extinction.coefficient_33, tensor, spec::extinction_coefficient_33, "0");
+    keep(extinction.coefficient_12, tensor, spec::extinction_coefficient_12, "0");
+    keep(extinction.coefficient_13, tensor, spec::extinction_coefficient_13, "0");
+    keep(extinction.coefficient_23, tensor, spec::extinction_coefficient_23, "0");
+    // Every Becker-Coppens type has a distribution: it selects the secondary extinction's coefficients, type II's
+    // included, as in cryspy.
+    if (!spread && !domain) {
+        extinction.mosaic_distribution.reset();
+    } else if (!extinction.mosaic_distribution) {
+        extinction.mosaic_distribution = "gaussian";
+    }
 }
 
 void apply_absorption_family(AbsorptionBase& absorption, const std::string& token) {
@@ -4408,13 +4740,6 @@ void clear_fit_share(ExperimentBase& experiment) {
     }
 }
 
-double correlation_value(const FitParameterCorrelation& row) {
-    double value = 0.0;
-    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
-               ? value
-               : std::numeric_limits<double>::quiet_NaN();
-}
-
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
@@ -4559,9 +4884,9 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     const auto key_of = [](const FitParameterCorrelation& row) {
         return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
     };
-    std::map<RowKey, std::string> written;
+    std::map<RowKey, double> written;
     for (const auto& row : saved.fit_result.correlations) {
-        written.emplace(key_of(*row), row->correlation.value());
+        written.emplace(key_of(*row), row->correlation.get());
     }
     // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
     // correlations of a few hundred free parameters.
@@ -4570,7 +4895,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     bool rows_changed = false;
     for (auto& row : rows) {
         const auto found = written.find(key_of(*row));
-        if (found != written.end() && row->correlation.value() != found->second) {
+        if (found != written.end() && row->correlation.get() != found->second) {
             auto adopted = std::make_shared<FitParameterCorrelation>(*row);
             adopted->correlation = found->second;
             row = std::move(adopted);
@@ -4581,7 +4906,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         project.fit_result.correlations.assign(std::move(rows));
         changed = true;
     }
-    for (const auto& [key, text] : written) {
+    for (const auto& [key, coefficient] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));
         if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
             table->second->correlations) {

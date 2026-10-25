@@ -49,6 +49,20 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* absorptionTypeOptions READ absorptionTypeOptions CONSTANT)
+    Q_PROPERTY(QString extinctionType READ extinctionType WRITE setExtinctionType NOTIFY extinctionTypeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* extinctionTypeOptions READ extinctionTypeOptions CONSTANT)
+    Q_PROPERTY(QString mosaicDistribution READ mosaicDistribution WRITE setMosaicDistribution NOTIFY
+                   mosaicDistributionChanged)
+    Q_PROPERTY(edi_app::OptionListModel* mosaicDistributionOptions READ mosaicDistributionOptions CONSTANT)
+    // A single crystal's observed threshold (edi ADR-0050): n (NaN until set; 2 by default), the basis (empty until set;
+    // intensity by default) and the expression they make.
+    Q_PROPERTY(double reflnsThresholdSigma READ reflnsThresholdSigma WRITE setReflnsThresholdSigma NOTIFY
+                   reflnsThresholdSigmaChanged)
+    Q_PROPERTY(QString reflnsThresholdBasis READ reflnsThresholdBasis WRITE setReflnsThresholdBasis NOTIFY
+                   reflnsThresholdBasisChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsThresholdBasisOptions READ reflnsThresholdBasisOptions CONSTANT)
+    Q_PROPERTY(QString reflnsThresholdExpression READ reflnsThresholdExpression NOTIFY
+                   reflnsThresholdExpressionChanged)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
     // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
@@ -110,6 +124,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::BackgroundTermListModel* backgroundTerms READ backgroundTerms CONSTANT)
     Q_PROPERTY(edi_app::ExcludedRegionListModel* excludedRegions READ excludedRegions CONSTANT)
     Q_PROPERTY(edi_app::ReflectionListModel* reflections READ reflections CONSTANT)
+    Q_PROPERTY(edi_app::SingleCrystalReflectionModel* singleCrystalReflections READ singleCrystalReflections CONSTANT)
+    Q_PROPERTY(edi_app::ParameterListModel* extinction READ extinction CONSTANT)
     Q_PROPERTY(edi_app::PrefOrientListModel* preferredOrientation READ preferredOrientation CONSTANT)
     Q_PROPERTY(edi_app::LinkedStructureListModel* linkedStructures READ linkedStructures CONSTANT)
     Q_PROPERTY(edi_app::ScatteringSourceViewModel* scatteringSource READ scatteringSource CONSTANT)
@@ -152,6 +168,19 @@ class ExperimentViewModel : public QObject {
     QString absorptionType() const { return absorption_type_; }
     void setAbsorptionType(const QString& token);
     OptionListModel* absorptionTypeOptions() const { return absorption_type_options_; }
+    QString extinctionType() const { return extinction_type_; }
+    void setExtinctionType(const QString& token);
+    OptionListModel* extinctionTypeOptions() const { return extinction_type_options_; }
+    // Empty for a type without a mosaic spread.
+    QString mosaicDistribution() const { return mosaic_distribution_; }
+    void setMosaicDistribution(const QString& token);
+    OptionListModel* mosaicDistributionOptions() const { return mosaic_distribution_options_; }
+    double reflnsThresholdSigma() const { return reflns_threshold_sigma_; }
+    void setReflnsThresholdSigma(double sigma);
+    QString reflnsThresholdBasis() const { return reflns_threshold_basis_; }
+    void setReflnsThresholdBasis(const QString& token);
+    OptionListModel* reflnsThresholdBasisOptions() const { return reflns_threshold_basis_options_; }
+    QString reflnsThresholdExpression() const { return reflns_threshold_expression_; }
     QString backgroundType() const { return background_type_; }
     void setBackgroundType(const QString& token);
     double backgroundOrigin() const { return background_origin_; }
@@ -209,6 +238,8 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peakLorentzian() const { return peak_families_[2]; }
     ParameterListModel* peakOther() const { return peak_families_[3]; }
     ParameterListModel* absorption() const { return absorption_; }
+    ParameterListModel* extinction() const { return extinction_; }
+    SingleCrystalReflectionModel* singleCrystalReflections() const { return single_crystal_reflections_; }
     ParameterItem* scale() const { return scale_; }
     BackgroundListModel* background() const { return background_; }
     BackgroundTermListModel* backgroundTerms() const { return background_terms_; }
@@ -269,6 +300,11 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
+    void extinctionTypeChanged();
+    void mosaicDistributionChanged();
+    void reflnsThresholdSigmaChanged();
+    void reflnsThresholdBasisChanged();
+    void reflnsThresholdExpressionChanged();
     void backgroundTypeChanged();
     void backgroundEstimateModeChanged();
     void backgroundEstimateMethodChanged();
@@ -320,6 +356,12 @@ class ExperimentViewModel : public QObject {
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
+    OptionListModel* extinction_type_options_;
+    OptionListModel* mosaic_distribution_options_;
+    QString extinction_type_, mosaic_distribution_;
+    OptionListModel* reflns_threshold_basis_options_;
+    double reflns_threshold_sigma_ = qQNaN();
+    QString reflns_threshold_basis_, reflns_threshold_expression_;
     OptionListModel* background_type_options_;
     OptionListModel* background_estimate_methods_;
     OptionListModel* background_estimate_modes_;
@@ -340,11 +382,13 @@ class ExperimentViewModel : public QObject {
     ParameterListModel* peak_asymmetry_;
     ParameterListModel* peak_families_[4] = {};
     ParameterListModel* absorption_;
+    ParameterListModel* extinction_;
     ParameterItem* scale_ = nullptr;
     BackgroundListModel* background_;
     BackgroundTermListModel* background_terms_;
     ExcludedRegionListModel* excluded_regions_;
     ReflectionListModel* reflections_;
+    SingleCrystalReflectionModel* single_crystal_reflections_;
     PrefOrientListModel* preferred_orientation_;
     LinkedStructureListModel* linked_structures_;
     ScatteringSourceViewModel* scattering_source_;

@@ -163,6 +163,26 @@ inline constexpr const char* kBackgroundCoefCif[] = {"_pd_background.Chebyshev_c
 inline constexpr const char* kAbscor1[] = {"_absorption.abscor1"};
 inline constexpr const char* kAbscor2[] = {"_absorption.abscor2"};
 inline constexpr const char* kMuR[] = {"_absorption.mu_r"};
+inline constexpr const char* kExtinctionDomainRadius[] = {"_extinction.domain_radius"};
+inline constexpr const char* kExtinctionDomainRadiusCif[] = {"_easydiffraction_extinction.domain_radius"};
+inline constexpr const char* kExtinctionMosaicSpread[] = {"_extinction.mosaic_spread"};
+inline constexpr const char* kExtinctionMosaicSpreadCif[] = {"_easydiffraction_extinction.mosaic_spread"};
+inline constexpr const char* kExtinctionCrystalRadius[] = {"_extinction.crystal_radius"};
+inline constexpr const char* kExtinctionCrystalRadiusCif[] = {"_easydiffraction_extinction.crystal_radius"};
+inline constexpr const char* kExtinctionCoefficient[] = {"_extinction.coefficient"};
+inline constexpr const char* kExtinctionCoefficientCif[] = {"_easydiffraction_extinction.coefficient"};
+inline constexpr const char* kExtinctionCoefficient11[] = {"_extinction.coefficient_11"};
+inline constexpr const char* kExtinctionCoefficient11Cif[] = {"_easydiffraction_extinction.coefficient_11"};
+inline constexpr const char* kExtinctionCoefficient22[] = {"_extinction.coefficient_22"};
+inline constexpr const char* kExtinctionCoefficient22Cif[] = {"_easydiffraction_extinction.coefficient_22"};
+inline constexpr const char* kExtinctionCoefficient33[] = {"_extinction.coefficient_33"};
+inline constexpr const char* kExtinctionCoefficient33Cif[] = {"_easydiffraction_extinction.coefficient_33"};
+inline constexpr const char* kExtinctionCoefficient12[] = {"_extinction.coefficient_12"};
+inline constexpr const char* kExtinctionCoefficient12Cif[] = {"_easydiffraction_extinction.coefficient_12"};
+inline constexpr const char* kExtinctionCoefficient13[] = {"_extinction.coefficient_13"};
+inline constexpr const char* kExtinctionCoefficient13Cif[] = {"_easydiffraction_extinction.coefficient_13"};
+inline constexpr const char* kExtinctionCoefficient23[] = {"_extinction.coefficient_23"};
+inline constexpr const char* kExtinctionCoefficient23Cif[] = {"_easydiffraction_extinction.coefficient_23"};
 inline constexpr const char* kMuRCif[] = {"_easydiffraction_absorption.mu_r"};
 inline constexpr const char* kMarchR[] = {"_preferred_orientation.march_r"};
 inline constexpr const char* kMarchRCif[] = {"_pd_pref_orient_March_Dollase.r", "_pref_orient.march_r"};
@@ -463,6 +483,48 @@ inline const ParameterSpec absorption_mu_r{
     "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
     "each reflection's Bragg theta",
     {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
+// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the domain radius r in micrometres and the
+// mosaic spread g in inverse radians, the inverse width of the mosaic distribution (larger is narrower), a plain
+// number like any other.
+inline const ParameterSpec extinction_domain_radius{
+    "extinction", "domain_radius", "micrometres", "Becker-Coppens domain radius of the crystal",
+    {0.0, detail::kInf}, "Domain radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionDomainRadius,
+    detail::kExtinctionDomainRadiusCif};
+inline const ParameterSpec extinction_mosaic_spread{
+    "extinction", "mosaic_spread", "reciprocal_radians",
+    "Becker-Coppens mosaic spread of the crystal, the inverse width of its mosaic distribution",
+    {0.0, detail::kInf}, "Mosaic spread", "rad⁻¹", "", "\\mathrm{rad}^{-1}",
+    detail::kExtinctionMosaicSpread, detail::kExtinctionMosaicSpreadCif};
+// The crystal taken as a sphere, in millimetres as `_exptl_crystal.size_rad`: each reflection's mean path through it.
+inline const ParameterSpec extinction_crystal_radius{
+    "extinction", "crystal_radius", "millimetres", "Radius of the crystal, which sets the mean path length",
+    {0.0, detail::kInf}, "Crystal radius", "mm", "", "\\mathrm{mm}", detail::kExtinctionCrystalRadius,
+    detail::kExtinctionCrystalRadiusCif};
+// Larson's empirical extinction coefficient x, SHELXL's EXTI: F² calc is multiplied by [1 + 0.001 x F² λ³ / sin 2θ]^(-1/2).
+inline const ParameterSpec extinction_coefficient{
+    "extinction", "coefficient", "dimensionless", "Larson's empirical extinction coefficient",
+    {0.0, detail::kInf}, "Extinction coefficient", "", "", "", detail::kExtinctionCoefficient,
+    detail::kExtinctionCoefficientCif};
+// Larson's anisotropic tensor (FullProf's model 4; Qureshi, Mag2Pol manual 5.1.3, eq. 3.2): x_aniso =
+// x11 h² + x22 k² + x33 l² + x12 hk + x13 hl + x23 kl in place of 4 x (sin θ/λ)².
+inline const ParameterSpec extinction_coefficient_11{
+    "extinction", "coefficient_11", "dimensionless", "The h² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x11", "", "x_{11}", "", detail::kExtinctionCoefficient11, detail::kExtinctionCoefficient11Cif};
+inline const ParameterSpec extinction_coefficient_22{
+    "extinction", "coefficient_22", "dimensionless", "The k² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x22", "", "x_{22}", "", detail::kExtinctionCoefficient22, detail::kExtinctionCoefficient22Cif};
+inline const ParameterSpec extinction_coefficient_33{
+    "extinction", "coefficient_33", "dimensionless", "The l² term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x33", "", "x_{33}", "", detail::kExtinctionCoefficient33, detail::kExtinctionCoefficient33Cif};
+inline const ParameterSpec extinction_coefficient_12{
+    "extinction", "coefficient_12", "dimensionless", "The hk term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x12", "", "x_{12}", "", detail::kExtinctionCoefficient12, detail::kExtinctionCoefficient12Cif};
+inline const ParameterSpec extinction_coefficient_13{
+    "extinction", "coefficient_13", "dimensionless", "The hl term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x13", "", "x_{13}", "", detail::kExtinctionCoefficient13, detail::kExtinctionCoefficient13Cif};
+inline const ParameterSpec extinction_coefficient_23{
+    "extinction", "coefficient_23", "dimensionless", "The kl term of Larson's anisotropic extinction tensor",
+    detail::kUnbounded, "x23", "", "x_{23}", "", detail::kExtinctionCoefficient23, detail::kExtinctionCoefficient23Cif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.
@@ -478,10 +540,11 @@ inline const ParameterSpec preferred_orientation_march_random_fract{
 
 }  // namespace spec
 
-// A setting a fit never refines (the Berar-Baldinozzi limit angle, as FullProf's AsyLim): no free
-// walk includes it, its Python handle refuses to be freed, and the app shows it fixed.
+// A setting a fit never refines (the Berar-Baldinozzi limit angle, as FullProf's AsyLim; the
+// extinction's crystal radius, a descriptor of the crystal): no free walk includes it, its Python
+// handle refuses to be freed, and the app shows it fixed.
 inline bool is_fixed_setting(const ParameterSpec* parameter_spec) noexcept {
-    return parameter_spec == &spec::peak_asym_beba_limit;
+    return parameter_spec == &spec::peak_asym_beba_limit || parameter_spec == &spec::extinction_crystal_radius;
 }
 
 // The admissible-range rule of the Python attribute boundary (`lib/src/bindings.cpp`
