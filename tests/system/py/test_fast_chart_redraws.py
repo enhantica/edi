@@ -11,6 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
     'test_gpu_backend',
+    'test_adaptive_is_retained',
     *[f'test_placement:{count}' for count in (1, 3, 324)],
     *[f'test_highlight:{mode}' for mode in ('stacked', 'map')],
     *[
@@ -60,7 +61,9 @@ def chart_receipt(request):
             start_new_session=True,
         )
         try:
-            output, _ = process.communicate(timeout=45)
+            output, _ = process.communicate(
+                timeout=90 if case == 'test_adaptive_is_retained' else 45
+            )
             status = process.returncode
         except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGTERM)
