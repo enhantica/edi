@@ -82,20 +82,29 @@ took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt 
 
 1. **The web app** (owner, 2026-10-25). Every project there has a place, and Save writes into it: no download and no
    dialog. The place is the browser's own storage (its origin private file system, which survives a reload), shown as
-   *In this browser only*; after such a Save a short notice says so and that Save project as… keeps a copy on the disk,
-   since a browser may clear what it stores (its site data, or Safari's removal of sites unused for about a week). An
-   example, a new project and, in Firefox and Safari, a project opened from the disk (a folder or a `.zip` uploaded) are
-   worked on there. In Chrome and Edge, where the File System Access API exists, Open takes a folder or a `.zip` on
-   the disk, which stays the project's place: Save writes it back, the files a save removed from the folder are removed
-   there too, and an archive is rewritten whole; Save project as… picks a folder or a `.zip` that becomes the place
-   (or, with *Save a copy*, only receives one), starting where the project is. In Firefox and Safari Save project as…
-   saves and downloads a `.zip` named as the project came: the browser decides where downloads go, so replacing the
-   original file goes through its own save dialog. Open asks first for a folder or a `.zip`, then the browser's own
-   chooser. Each place has a record in the browser's IndexedDB (kind, name, and the disk's handle), which Recent
-   projects lists; a project's unsaved state is kept beside it three seconds after its last edit, so after a reload or a
-   closed tab Recent projects offers *Continue where you left off* with those changes, until a Save or a discard drops
-   them. The page writes the browser's storage from a worker with synchronous file handles, which Firefox and Safari
-   have where they lack writable streams.
+   *In this browser only*: an example, a new project and, in Firefox and Safari, a project opened from the disk (a
+   folder or a `.zip` uploaded) are worked on there. The first Save of a project into it in a session shows a dialog
+   with the warning icon, *Saved in this browser only. The browser may clear what it keeps; use Save project as… to
+   keep a copy on your disk.*, with Save project as… and OK; later saves show a short notice. A browser may clear what
+   it stores (its site data, or Safari's removal of sites unused for about a week). At start the app writes one small
+   file to learn whether the browser keeps anything for it: where it does not (a private window may not; Safari
+   answers *UnknownError*), Location reads that the project is only in this tab, Save saves nothing and says so in the
+   same dialog, and nothing touches that storage again; a write that fails later does the same, in plain words. In
+   Chrome and Edge, where the File System Access API exists, Open takes a folder, a `project.edi` (whose folder the
+   user then picks too, the chooser starting there; a second click when the browser asks for one) or a `.zip` on the
+   disk, which stays the project's place: Save writes it back, the files a save removed from the folder are removed
+   there too, and an archive is rewritten whole. Save project as… always opens edi's own dialog. In Chrome and Edge it
+   is the desktop's: a folder or a `.zip` the user picks becomes the place (or, with *Save a copy*, only receives
+   one), the chooser starting where the project is and suggesting its name. In Firefox and Safari, Folder is shown
+   disabled with a tooltip saying why, Zip archive is chosen and Save a copy is checked and disabled: OK hands a copy
+   of the project, as a Save writes it, to the browser as a `.zip` named as the project came, leaving the project and
+   the browser's storage as they are. The browser decides where downloads go, so replacing the original file goes
+   through its own save dialog, which the notice says only for a project opened from a file. Open asks first for a
+   folder or a file, then the browser's own chooser. Each place has a record in the browser's IndexedDB (kind, name,
+   and the disk's handle), which Recent projects lists; a project's unsaved state is kept beside it three seconds
+   after its last edit, so after a reload or a closed tab Recent projects offers *Continue where you left off* with
+   those changes, until a Save or a discard drops them. The page writes the browser's storage from a worker with
+   synchronous file handles, which Firefox and Safari have where they lack writable streams.
 
 ## Consequences
 
