@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T16:15:25Z
+# measured_utc = 2026-10-25T16:41:05Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 15262 banked, 0 stale row(s) dropped)
-# Collected tests: 16898; with a reported duration: 9906
-# Module-scoped fixture costs recorded: 75
+# Recorded from: measured test run (61 node(s) measured once, 15234 banked, 0 stale row(s) dropped)
+# Collected tests: 16901; with a reported duration: 9904
+# Module-scoped fixture costs recorded: 76
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16898
+# inventory_python = 16901
 # inventory_cpp = 393
-# inventory_measured = 15263
-# inventory_unmeasured = 2028
+# inventory_measured = 15265
+# inventory_unmeasured = 2029
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -5713,6 +5713,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.p
 0.000	tests/integration/py/test_fast_chart_timing.py::test_each_backend_requires_both_fit_tabs[stacked]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_frozen_baseline_regression_pin_keeps_pattern_and_stacked_separate
 0.000	tests/integration/py/test_fast_chart_timing.py::test_hardware_numbers_cannot_replace_the_no_gpu_row
+0.000	tests/integration/py/test_fast_chart_timing.py::test_non_opengl_backend_has_no_opengl_renderer_to_report
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-adaptive_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples0-after_ms]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_software_case_requires_repeated_real_samples[samples1-adaptive_ms]
@@ -12468,11 +12469,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_sch
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-light]
 1.390	tests/system/py/test_excluded_examples.py::test_committed_examples_do_not_claim_excluded_zero_calculations
+UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
+0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:map]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_desktop_minimum]
-0.002	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_gpu_backend]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_gpu_backend]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:map]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:stacked]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:analysis]
@@ -13452,7 +13455,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
-0.003	tests/system/py/test_rendering_setup.py::test_actual_qt_renderer_reference_is_available
+0.000	tests/system/py/test_rendering_setup.py::test_actual_qt_renderer_reference_is_available
 UNMEASURED:failed-in-this-run	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_default_uses_detected_renderer]
 UNMEASURED:failed-in-this-run	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_develop_reports_detection]
 UNMEASURED:failed-in-this-run	tests/system/py/test_rendering_setup.py::test_normal_app_reports_its_actual_rendering_setup_at_startup
@@ -17378,14 +17381,15 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 86.934	tests/system/py/test_element_contrast.py
-# module-cost: 230.858	tests/system/py/test_fast_chart_redraws.py
+# module-cost: 482.204	tests/system/py/test_fast_chart_fit_timing.py
+# module-cost: 265.162	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 2.327	tests/system/py/test_rendering_setup.py
+# module-cost: 2.885	tests/system/py/test_rendering_setup.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py

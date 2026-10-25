@@ -34,6 +34,7 @@ Software and hardware timings are never pooled. The arithmetic tests use
 synthetic samples and make no performance claim. Live samples and their backend
 identity still come from the measured app, with the same machine and project
 for each comparison. GPU measurements need a GPU host.
+The OpenGL renderer is empty on APIs such as Metal, which have no OpenGL context.
 
 Each backend row now keeps `fits.pattern` and `fits.stacked`, each containing
 `every_pattern_ms` and `adaptive_ms`. Both tabs are mandatory and each ratio is
@@ -58,6 +59,9 @@ renderer selector offers GPU and software/painter choices, optionally automatic;
 finds those choices by their displayed text rather than a new public API.
 Each explicit choice is written through real input, then read and exercised by
 a second host process using the same private settings file.
+The restart actor lives in the system tier and runs through that two-process
+harness, with an actual display and private settings, rather than the unit
+runner's offscreen all-files invocation.
 
 The old renderer gate required the painter's retirement on every host. The
 owner's rendering-detection decision changes that assertion: a fresh software

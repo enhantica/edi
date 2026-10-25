@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def capture(arguments, *, env=None, timeout=45):
     command = ['bash', str(ROOT / 'tests/fixtures/scan_views/run.sh'), *map(str, arguments)]
+    env = dict(os.environ if env is None else env)
+    env['XDG_CACHE_HOME'] = str(ROOT / 'build/fast-chart-cache')
     process = subprocess.Popen(
         command,
         cwd=ROOT,
@@ -31,6 +33,7 @@ def capture(arguments, *, env=None, timeout=45):
             os.killpg(process.pid, signal.SIGKILL)
             output, _ = process.communicate()
         status = 124
+        output += '\nThe native actor exceeded its bounded process watchdog'
     print('Native renderer capture: ' + str(status) + '\n' + output, flush=True)
     return status, output
 
@@ -41,7 +44,7 @@ def actor(case, *, env=None):
         [
             binary,
             '-input',
-            ROOT / 'tests/unit/app/tst_rendering_setup.qml',
+            ROOT / 'tests/system/app/RenderingSetup.qml',
             '-o',
             '-,txt',
             'RenderingSetup::' + case,

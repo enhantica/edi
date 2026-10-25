@@ -14,7 +14,12 @@ def measured_median(samples):
 def backend_identity(backend):
     """Keep the observed graphics API and renderer together in every timing row."""
     api, renderer = backend.get('api'), backend.get('renderer')
-    if not all(isinstance(value, str) and value.strip() for value in (api, renderer)):
+    if (
+        not isinstance(api, str)
+        or not api.strip()
+        or not isinstance(renderer, str)
+        or (api.lower() == 'opengl' and not renderer.strip())
+    ):
         raise ValueError('Timing evidence needs the observed graphics API and renderer')
     software = 'llvmpipe' in renderer.lower()
     if software and api.lower() != 'opengl':
