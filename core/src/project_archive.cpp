@@ -10,12 +10,26 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <system_error>
 
 #include "edi/io.hpp"
 #include "miniz.h"
+
+#if defined(_WIN32)
+#include <process.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <unistd.h>
+
+#include <cerrno>
+#include <csignal>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -285,20 +299,118 @@ bool is_project_archive(const std::string& path) {
     return extension == ".zip" && fs::is_regular_file(fs::path(path), error);
 }
 
+namespace {
+
+fs::path archive_base() {
+    std::error_code error;
+    return fs::temp_directory_path(error) / "edi-archives";
+}
+
+long this_process() {
+#if defined(_WIN32)
+    return static_cast<long>(_getpid());
+#else
+    return static_cast<long>(getpid());
+#endif
+}
+
+bool running(long pid) {
+#if defined(_WIN32)
+    HANDLE process =
+        OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, static_cast<DWORD>(pid));
+    if (process == nullptr) {
+        return false;
+    }
+    DWORD code = 0;
+    const bool alive = GetExitCodeProcess(process, &code) && code == STILL_ACTIVE;
+    CloseHandle(process);
+    return alive;
+#else
+    return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
+#endif
+}
+
+// The directories this process made, removed when it ends normally.
+struct Made {
+    std::mutex mutex;
+    std::vector<fs::path> paths;
+    Made() = default;
+    Made(const Made&) = delete;
+    Made& operator=(const Made&) = delete;
+    Made(Made&&) = delete;
+    Made& operator=(Made&&) = delete;
+    ~Made() {
+        for (const fs::path& path : paths) {
+            std::error_code ignored;
+            fs::remove_all(path, ignored);
+        }
+    }
+};
+
+Made& made() {
+    static Made directories;
+    return directories;
+}
+
+}  // namespace
+
 std::string fresh_archive_directory(const std::string& kind) {
     static std::atomic<unsigned> counter{0};
     std::error_code error;
-    const fs::path base = fs::temp_directory_path(error) / "edi-archives";
+    const fs::path base = archive_base();
     std::random_device seed;
     for (int attempt = 0; attempt < 100; ++attempt) {
-        const fs::path path = base / (kind + "-" + std::to_string(seed()) + "-" +
-                                      std::to_string(counter.fetch_add(1)));
+        const fs::path path =
+            base / (kind + "-" + std::to_string(this_process()) + "-" + std::to_string(seed()) +
+                    "-" + std::to_string(counter.fetch_add(1)));
         fs::create_directories(base, error);
         if (fs::create_directory(path, error) && !error) {
+            const std::lock_guard lock(made().mutex);
+            made().paths.push_back(path);
             return path.string();
         }
     }
     throw IoError("cannot create a temporary directory for an archive");
+}
+
+void remove_archive_directory(const std::string& path) {
+    const fs::path given = fs::path(path).lexically_normal();
+    const std::lock_guard lock(made().mutex);
+    auto& paths = made().paths;
+    for (auto it = paths.begin(); it != paths.end(); ++it) {
+        const auto [inner, outer] =
+            std::mismatch(it->begin(), it->end(), given.begin(), given.end());
+        if (inner == it->end()) {
+            std::error_code ignored;
+            fs::remove_all(*it, ignored);
+            paths.erase(it);
+            return;
+        }
+    }
+}
+
+void remove_stale_archive_directories() {
+    std::error_code error;
+    for (const fs::directory_entry& entry : fs::directory_iterator(archive_base(), error)) {
+        // <kind>-<pid>-<random>-<count>
+        const std::string name = entry.path().filename().string();
+        const std::size_t first = name.find('-');
+        const std::size_t second =
+            first == std::string::npos ? std::string::npos : name.find('-', first + 1);
+        if (second == std::string::npos) {
+            continue;
+        }
+        long pid = 0;
+        try {
+            pid = std::stol(name.substr(first + 1, second - first - 1));
+        } catch (const std::exception&) {
+            continue;
+        }
+        if (pid > 0 && pid != this_process() && !running(pid)) {
+            std::error_code ignored;
+            fs::remove_all(entry.path(), ignored);
+        }
+    }
 }
 
 }  // namespace edi
