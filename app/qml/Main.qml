@@ -394,7 +394,7 @@ EaComponents.ApplicationWindow {
             if (Session.needsSaveAs) {
                 window.saveProjectAs();
             } else if (Session.save()) {
-                action();
+                Qt.callLater(action);
             } else {
                 saveError.open();
             }
@@ -402,7 +402,7 @@ EaComponents.ApplicationWindow {
         onDiscarded: {
             close();
             Session.discardKeptChanges();
-            action();
+            Qt.callLater(action);
         }
 
         // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
@@ -585,9 +585,34 @@ EaComponents.ApplicationWindow {
 
         EaElements.Label {
             id: webFilesErrorText
+            objectName: "webFiles.error.message"
             width: webFilesError.contentWidth
             wrapMode: Text.Wrap
             text: webFilesError.message
+        }
+    }
+
+    // A created project that could not be saved at its location stays open, unsaved; this says why. Here, not on the
+    // Project page, which the new project replaces.
+    Connections {
+        target: AppState
+        function onCreateFailed() {
+            createError.open();
+        }
+    }
+    AppDialog {
+        id: createError
+        objectName: "create.error"
+        title: qsTr("The project was not saved")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: createErrorText.implicitHeight
+
+        EaElements.Label {
+            id: createErrorText
+            width: createError.contentWidth
+            wrapMode: Text.Wrap
+            text: Session.lastError
         }
     }
 
