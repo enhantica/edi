@@ -6,6 +6,8 @@ import {resolve, extname, sep, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {restoreCanvasViewport} from './web_control_geometry.mjs';
+import {installDownloadBoundary,assertPendingNotice,checkNoticeControls} from './browser_download_boundary.mjs';
+checkNoticeControls();
 
 const [siteArg, mode, output, chrome] = process.argv.slice(2);
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -72,9 +74,10 @@ print(json.dumps([c for c in candidates if sys.argv[1].encode() in base64.b64dec
   return matches;
 };
 try {
-  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip').split(',')) {
+  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip,example-private').split(',')) {
     console.log(mode,scenario,'starting');
-    const fallback=scenario==='upload-fallback';
+    const privateStorage=scenario==='example-private';
+    const fallback=scenario==='upload-fallback'||privateStorage;
     const context=await browser.newContext({viewport:{width:1280,height:768},acceptDownloads:true});
     const page=await context.newPage();
     page.setDefaultTimeout(45000);
@@ -84,7 +87,8 @@ try {
     page.on('download',()=>++events.downloads);
     page.on('filechooser',()=>++events.filechoosers);
     page.on('dialog',async dialog=>{++events.dialogs;await dialog.dismiss();});
-    await page.addInitScript(({initial,scenario,fallback})=>{
+    if(privateStorage)await page.addInitScript(installDownloadBoundary);
+    await page.addInitScript(({initial,scenario,fallback,privateStorage})=>{
       const nativeFocus=HTMLElement.prototype.focus;
       HTMLElement.prototype.focus=function(options){return nativeFocus.call(this,{...options,preventScroll:true});};
       window.__storagePicks={directory:0,open:0,save:0};
@@ -98,13 +102,13 @@ try {
       };
       // This is only the user's picker selection. Every byte uses real browser file handles.
       // It is not proof of an OS file-picker widget or actual Firefox/Safari execution.
-      window.__storageHandles=(async()=>{
+      if(!privateStorage)window.__storageHandles=(async()=>{
         const root=await navigator.storage.getDirectory();
         const disk=await root.getDirectoryHandle('test-picked-output',{create:true});
         if(!(await disk.keys().next()).done)return disk;
         await put(disk,initial);return disk;
       })();
-      window.__storageExportHandles=navigator.storage.getDirectory().then(root=>root.getDirectoryHandle('test-picked-exports',{create:true}));
+      if(!privateStorage)window.__storageExportHandles=navigator.storage.getDirectory().then(root=>root.getDirectoryHandle('test-picked-exports',{create:true}));
       if(fallback) {
         for(const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
           Object.defineProperty(window,name,{value:undefined,configurable:true});
@@ -119,7 +123,7 @@ try {
         window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageExportHandles).getFileHandle('destination.zip',{create:true});};
 
       }
-    },{initial,scenario,fallback});
+    },{initial,scenario,fallback,privateStorage});
     const navigationError=error=>/Execution context was destroyed|Cannot find context|navigated/i.test(error.message);
     const evaluate=async(expression,arg)=>{
       const deadline=Date.now()+45000;
@@ -290,6 +294,40 @@ try {
     await control(/^Analysis$/,'tab');
     if(scenario==='disk-folder')assert((await page.evaluate(()=>window.__storagePicks.directory))>0,'The disk-folder case actually reaches the directory picker');
     if(scenario==='disk-record'||scenario==='disk-zip')assert((await page.evaluate(()=>window.__storagePicks.open))>0,'Record and ZIP opening actually reach the file-handle picker');
+    if(privateStorage) {
+      // Opening an example may have reported failed automatic storage. Clear that
+      // dialog before attributing anything to this separate Save-as action.
+      await settle();await page.keyboard.press('Escape');await frame();
+      const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
+      assert(beforeStorage.length>0,'The private-session scenario must actually exercise throwing storage before Save-as');
+      const errors=[];
+      const errorVisible=async()=> (await ax()).some(n=>/The browser could not use the file|Private-session storage unavailable/.test(n.name?.value||''));
+      assert.equal(await errorVisible(),false,'Any earlier storage error must be dismissed before Save-as is tested');
+      await click(/^Save project as/);
+      await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);
+      await frame();await frame();
+      const held=await evaluate(()=>({calls:window.__downloadBoundary.calls,storage:window.__downloadBoundary.storage,pending:window.__downloadBoundary.pending.length}));
+      assert.equal(held.calls.length,1,'Save-as must reach exactly one real browser download request');
+      assert.equal(held.pending,1,'The browser download must remain held before permission or completion');
+      assert.equal(events.downloads,0,'No browser download can complete before the held request is released');
+      if(JSON.stringify(held.storage)!==JSON.stringify(beforeStorage))errors.push('Save project as touched failing storage');
+      if(await errorVisible())errors.push('Save project as displayed a storage error');
+      let notice;
+      try{notice=await evaluate(()=>window.ediControlGeometry('webNotice.text'));}
+      catch(error){if(!/no visible item/.test(error.message))throw error;}
+      const text=typeof notice?.text==='string'?notice.text:notice?
+        (await ax()).filter(n=>n.role?.value==='StaticText'&&/download|replace.{0,60}file/i.test(n.name?.value||'')).map(n=>n.name.value).filter(t=>t!=='download').join('\n'):'';
+      try{assertPendingNotice(notice&&text===''?undefined:text,false);}catch(error){errors.push(error.message);}
+      const shot=await cdp.send('Page.captureScreenshot',{format:'png'});
+      await writeFile(join(output,scenario+'-permission-pending.png'),Buffer.from(shot.data,'base64'));
+      await writeFile(join(output,scenario+'-permission-pending-ax.json'),JSON.stringify(await cdp.send('Accessibility.getFullAXTree'),null,2));
+      // Cancellation proves that even a refused download cannot have been reported as finished.
+      await evaluate(()=>window.__downloadBoundary.cancel());await frame();
+      assert.equal(events.downloads,0,'Cancelling permission must not create a finished download');
+      receipts[scenario]={held,beforeStorage,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
+      assert.deepEqual(errors,[],'Save-as from an example must bypass failing storage and report only an unconfirmed download request without original-file guidance');
+      console.log(mode,scenario,'PASS');continue;
+    }
     const name='browser-saved-'+scenario;
     await edit('project.name',name);
     const before={...events},picksBefore=await page.evaluate(()=>({...window.__storagePicks}));
