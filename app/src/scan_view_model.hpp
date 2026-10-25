@@ -62,7 +62,7 @@ class ScanViewModel : public QObject {
     // datablock's name.
     Q_PROPERTY(QStringList rowTexts READ rowTexts NOTIFY rowTextsChanged)
     // Bumped when rowTexts changes: what a label reads rowText by, so it is evaluated only then.
-    Q_PROPERTY(int rowTextsRevision READ rowTextsRevision NOTIFY rowTextsChanged)
+    Q_PROPERTY(int rowTextsRevision READ rowTextsRevision NOTIFY rowTextsRevisionChanged)
     // Whether the rows sit at their scan values (else in order, by file or datablock, one equal band each).
     Q_PROPERTY(bool rowsByValue READ rowsByValue NOTIFY rowsByValueChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
@@ -176,6 +176,7 @@ class ScanViewModel : public QObject {
     void rowTitleChanged();
     void orderNameChanged();
     void rowTextsChanged();
+    void rowTextsRevisionChanged();
     void rowsByValueChanged();
     void xMinChanged();
     void xMaxChanged();
