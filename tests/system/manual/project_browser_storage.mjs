@@ -155,6 +155,7 @@ try {
       throw Error('The real browser UI must expose '+regex);
     };
     let lastDialogControl;
+    let selectedExample='sc-neut-cwl_tb2ti2o7-heidi_fit';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
       // Qt's shipped Popup controls are drawn but absent from the web AX tree.
@@ -180,7 +181,7 @@ try {
       if(groupName){const rect=await geometry(groupName);point={x:rect.x+50,y:rect.y+15};}
       const recentLabels=[...new Set((await ax()).filter(n=>n.role?.value==='StaticText'&&/^(Continue where you left off:)| · (in this browser|on this computer)$/.test(n.name?.value||'')).map(n=>n.name.value))];
       const recentIndex=recentLabels.indexOf(item.node.name?.value);
-      const nativeName=(recentIndex>=0?'recentProjects.path.'+recentIndex:null)||names[item.node.name?.value]||(item.node.name?.value?.startsWith('sc-neut-cwl_tb2ti2o7-heidi_fit:')?'examples.open.sc-neut-cwl_tb2ti2o7-heidi_fit':null);
+      const nativeName=(recentIndex>=0?'recentProjects.path.'+recentIndex:null)||names[item.node.name?.value]||(item.node.name?.value?.startsWith(selectedExample+':')?'examples.open.'+selectedExample:null);
       if(nativeName){const rect=await geometry(nativeName);point={x:rect.x+rect.width/2,y:rect.y+rect.height/2};}
       if(item.node.role?.value==='tab'&&/^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(item.node.name?.value||'')){
         const rect=await geometry('appBar.tab.'+item.node.name.value.toLowerCase());point={x:rect.x+rect.width/2,y:rect.y+rect.height/2};
@@ -409,13 +410,21 @@ try {
       await awaitStored('later-browser-save');await clean();
       assert.equal((await native(observation.warningText)).visible,false,'A later Save of the same project must use the short notice');
       await geometry(observation.notice);await page.keyboard.press('Escape');await frame();
+      // Warning suppression belongs to the project, not the whole tab session.
+      selectedExample='sc-neut-tof_taurine_fit';
+      await click(/Examples$/,'button');await edit('examples.search',selectedExample);
+      await click(/^sc-neut-tof_taurine_fit:/,'button');await control(/^Analysis$/,'tab');
+      await edit('project.name','another-project-first-save');
+      await click(/^Save current state of the project$/,'button');
+      await awaitStored('another-project-first-save');await clean();
+      const another=await warning(false);await pointer(observation.warningOk);
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
       await click(/^Save project as/);await formatChoice();await click(/^OK$/,'button');
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
       assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'Fallback Save-as must not save into browser storage even when storage works');
       assert.equal(events.downloads,0,'The healthy-storage fallback also holds browser permission before completion');
       await evaluate(()=>window.__downloadBoundary.cancel());
-      receipts[scenario]={first,events,capability:'Real Chromium OPFS, no disk APIs, held/cancelled anchor'};
+      receipts[scenario]={first,another,events,capability:'Real Chromium OPFS, no disk APIs, held/cancelled anchor'};
       console.log(mode,scenario,'PASS');continue;
     }
     const name='browser-saved-'+scenario;
