@@ -866,9 +866,10 @@ int main(int argc, char** argv) {
         log("[%zu/%zu] %s on %s", done, cells.size(), method->name, work->name.c_str());
         for (Row& row : run_cell(*method, *work, 1.0)) {
             const bool change = row.measure != "first";
-            if (row.status == "no frame" || (change && row.median > kHopelessMs)) {
-                const std::string what =
-                    row.status == "no frame" ? "drew no frame" : std::to_string(std::lround(row.median)) + " ms";
+            // No frame at all, or a change measure with no change timed, is as hopeless as a slow one.
+            const bool none = row.status == "no frame" || (change && row.n == 0 && row.status != "route failed");
+            if (none || (change && row.median > kHopelessMs)) {
+                const std::string what = none ? "drew no frame" : std::to_string(std::lround(row.median)) + " ms";
                 hopeless.emplace(key, row.measure + " " + what + " at " + work->name);
             }
             rows.push_back(std::move(row));

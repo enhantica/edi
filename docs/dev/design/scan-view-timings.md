@@ -141,3 +141,107 @@ before the swap. So the time is Qt Graphs' handling of 324 series, not the feedi
 A colour change alone does not make Qt Graphs draw (6.11): `setColor` schedules no frame, so the restyles drew nothing
 in the runs above. The benchmark now emits the series' `update()` signal after the colour, and a restyle then draws in
 about 2 s without a GPU, as the other changes do.
+
+## Every way of feeding Qt Graphs
+
+`plot_bench` (`app/tools/plot_bench.cpp`; `pixi run -e app plot-bench`, `pixi run -e app plot-bench-compare a.tsv
+b.tsv`) times each route into Qt Graphs 6.11 on four kinds of work, with ScanLines and QPainter as references where
+only lines are drawn. The routes: `replace(QList<QPointF>)` from C++; `clear()` then `append(QList<QPointF>)`;
+`clear()` then `append(QPointF)` per point; `replace(index, QPointF)` per point where the count holds; a
+`QXYModelMapper` over a C++ table model; and the points handed to QML, which calls `replace(points)` or appends them
+one by one. `QCustomSeries` is not a route for a curve: it makes one Qt Quick item per data item. The work:
+
+| Workload | What |
+| --- | --- |
+| stacked-324, -1000, -3000 | the 324-file scan's patterns, repeated, each reduced at the plot's pixel columns |
+| single-10000, -100000, -1000000 | one band, the LATP measurement ± its s.u. interpolated to N points, fed whole |
+| pattern | the LATP pattern calculated with five structures (its three, then the first two at half intensity), as the Pattern chart presents it in band mode: the measured band, a filled profile per structure, the total and the background, the residual band and the ticks, 14 curves, 7 of them areas |
+
+Each measure is five changes, at most 10 s of them; a route slower than 2 s per change at one size is skipped at the
+larger ones. Two machines: the no-GPU VM above, its plot 1 000 columns, at 8904d687
+([rows](scan-view-timings/plot-bench-linux-vm-xcb-llvmpipe.tsv)); and the owner's M2 (macOS, Metal, a Retina plot of
+2 000 columns), run by the owner on 2026-10-25 at the same commit, its table verbatim but the machine's name
+([rows](scan-view-timings/plot-bench-owner-m2-cocoa-metal.tsv)). Medians in milliseconds; * marks a measure the budget
+cut short, "no frame" one that drew nothing within three times its first draw. Every measure side by side, as
+`plot-bench-compare` prints it: [VM against M2](scan-view-timings/plot-bench-compare-vm-m2.txt).
+
+The Stacked view (M2 from the owner's earlier run of the whole table at d5eaf916, ten changes per measure, stopped
+during stacked-3000; medians from his log as reported, not in the rows file):
+
+| Route | stacked-324 update, no GPU | stacked-324 update, M2 | stacked-1000 update, no GPU | stacked-1000 update, M2 |
+| --- | ---: | ---: | ---: | ---: |
+| cpp-replace | 2 283 | about 545 | skipped | about 3 700 to 3 900 |
+| cpp-append-list | 2 115 | about 540 | skipped | about 3 700 to 3 900 |
+| qml-replace | 2 724* | about 538 | skipped | about 3 700 to 3 900 |
+| cpp-replace-index | 6 545* | about 2 250 | skipped | |
+| cpp-append-point | 5 909* | about 2 250 | skipped | |
+| qml-append | 7 236* | about 2 620 | skipped | |
+| model-mapper | no frame | no frame | no frame | |
+| ScanLines | 508 | about 19.6 | 2 101 | about 35.5 |
+| QPainter | 134 | about 62.6 | 338 | about 187 |
+
+At stacked-3000 without a GPU only QPainter ran (986 ms per update); every other route was skipped.
+
+**pattern**
+
+| Route | Update, no GPU | Update, M2 | Restyle, no GPU | Restyle, M2 |
+| --- | ---: | ---: | ---: | ---: |
+| cpp-replace | 466 | 89.8 | 248 | 35.7 |
+| cpp-append-list | 420 | 84.8 | 224 | 36.8 |
+| cpp-append-point | 484 | 96.5 | 261 | 34.7 |
+| cpp-replace-index | 436 | 96.8 | 206 | 35.5 |
+| model-mapper | 449 | 113 | 203 | 35.0 |
+| qml-replace | 353 | 84.8 | 206 | 34.8 |
+| qml-append | 498 | 119 | 164 | 35.0 |
+
+**single-10000**
+
+| Route | Update, no GPU | Update, M2 | Restyle, no GPU | Restyle, M2 |
+| --- | ---: | ---: | ---: | ---: |
+| cpp-replace | 185 | 44.1 | 119 | 19.8 |
+| cpp-append-list | 229 | 38.0 | 113 | 19.4 |
+| cpp-append-point | 201 | 38.2 | 117 | 19.0 |
+| cpp-replace-index | 188 | 39.9 | 104 | 19.8 |
+| model-mapper | 205 | 42.0 | 101 | 18.9 |
+| qml-replace | 187 | 36.7 | 89.3 | 19.4 |
+| qml-append | 329 | 46.9 | 129 | 19.6 |
+
+**single-100000**
+
+| Route | Update, no GPU | Update, M2 | Restyle, no GPU | Restyle, M2 |
+| --- | ---: | ---: | ---: | ---: |
+| cpp-replace | 2 030 | 268 | 1 031 | 152 |
+| cpp-append-list | 1 742 | 273 | 838 | 152 |
+| cpp-append-point | 2 181 | 295 | 854 | 153 |
+| cpp-replace-index | 2 043 | 294 | 858 | 154 |
+| model-mapper | 1 779 | 331 | 775 | 151 |
+| qml-replace | 1 584 | 275 | 794 | 151 |
+| qml-append | 1 878 | 388 | 932 | 153 |
+
+**single-1000000**
+
+| Route | Update, no GPU | Update, M2 | Restyle, no GPU | Restyle, M2 |
+| --- | ---: | ---: | ---: | ---: |
+| cpp-replace | – | 1 118 | – | 918 |
+| cpp-append-list | 6 313* | 1 085 | 6 447* | 932 |
+| cpp-append-point | – | 1 346 | – | 918 |
+| cpp-replace-index | – | 1 334 | – | 924 |
+| model-mapper | 8 707* | 1 696 | 7 404* | 937 |
+| qml-replace | 8 193* | 1 079 | 7 466* | 928 |
+| qml-append | 13 003* | 2 058 | 8 755* | 945 |
+
+What the tables say:
+
+- **The route hardly matters.** On one band every route but one costs about the same, about 1.5 µs per point on the
+  M2 and about 10 µs without a GPU (single-100000, 200 000 points with its lower line: 268 to 331 ms on the M2, 1.6 to
+  2.2 s without a GPU). Appending point by point from QML is the slowest, up to twice the others on the M2 and three
+  times on the stacked patterns without a GPU. On the M2 `replace` from C++, `append` of a list and `replace` from QML
+  are the fastest and within 10 % of each other.
+- **A restyle feeds no point and still costs half an update or more.** It only sets the colour and asks Qt Graphs to
+  draw, yet Qt Graphs prepares every point of every series again (1 000 000 points: 918 ms against 1 118 ms for an
+  update on the M2). So a restyle cannot be made cheaper by not feeding: only fewer points help.
+- **Qt Graphs cannot draw the Stacked view.** Its time grows with the number of series: about 0.5 s for 324 patterns and
+  about 3.8 s for 1 000 on the M2. ScanLines takes 20 to 36 ms there; without a GPU QPainter is the faster of the two.
+- **The Pattern chart already reduces its curves.** `present_pattern` keeps each pixel column's lowest and highest point
+  (`decimate`), so a pattern of a million points reaches Qt Graphs as at most two points per column per curve, the
+  `pattern` workload's case: 85 to 119 ms per update on the M2 and 350 to 500 ms without a GPU for 14 curves.
