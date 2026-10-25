@@ -17,4 +17,4 @@ Built by `tools/cli_projects/build_sc_projects.py`: Bani on every site but Od, e
 
 ## Result from this start (local diagnostic)
 
-From this start edi converges in 11 iterations to reduced χ² 9.75 over the 198 reflections, with the scale 4.022(28). FullProf's fit of the same reflections with β tensors reports χ² 9.96 and the scale 4.031(36) on this occupancy scale.
+From this start edi converges in 11 iterations to reduced χ² 9.75 over the 198 reflections, with the scale 4.022(28). FullProf 8.40 from the same start, with β tensors, converges in 14 cycles to χ² 9.69 and the scale 4.022(28) on this occupancy scale; all 23 values agree within 0.01 of edi's s.u.
