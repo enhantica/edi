@@ -6,6 +6,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QFile>
 #include <QGuiApplication>
@@ -17,6 +18,8 @@
 #include <QQuickWindow>
 #include <QThread>
 #include <QUrl>
+#include <atomic>
+#include <cmath>
 #include <cstdio>
 
 #include "analysis_view_model.hpp"
@@ -25,6 +28,7 @@
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
+#include "scan_view_model.hpp"
 #include "session.hpp"
 #include "structure_view_model.hpp"
 
@@ -40,6 +44,8 @@ constexpr int kFitWaitMs = 300000;
 // The timed scenario's idle poll: fine enough not to blur a measured interval.
 constexpr int kIdlePollMs = 5;
 constexpr int kUnsettledCaptureMs = 150;
+// A timed change whose frame has not been swapped within this counts as none.
+constexpr int kFrameWaitMs = 5000;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
@@ -938,6 +944,38 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"perf-162f", {scan, "timed-fit:162", "timed-reset"}});
         steps_.push_back({"perf-control-partial", {scan, "timed-fit:162:40"}});
         steps_.push_back({"perf-control-refused", {scan, "remove-scan-data", "timed-fit:162"}});
+        // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn against the
+        // adaptive rule (edi ADR-0029), and slider steps on LBCO before and after a fit (edi ADR-0041).
+        const QString analysis = QStringLiteral("appBar.tab.analysis");
+        QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
+                          "mainArea.analysis.tab.stacked", "wait-scan:stacked"};
+        for (const QString mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {
+            if (mode == QLatin1String("map")) {
+                views << "mainArea.analysis.tab.map" << "wait-scan:map";
+            }
+            views << "timed-frames:" + mode + ":zoom:40" << "timed-frames:" + mode + ":pan:50"
+                  << "timed-frames:" + mode + ":restyle:20" << "timed-frames:" + mode + ":select:20"
+                  << "timed-frames:" + mode + ":data:10";
+        }
+        steps_.push_back({"perf-views-324f", views});
+        // The same with the Stacked lines on the GPU, chosen as a user chooses it in Develop.
+        views.insert(1, QStringLiteral("preference:scanRenderer=gpu"));
+        steps_.push_back({"perf-gpu-views-324f", views});
+        const QStringList updates{"resize:1280x800", scan, analysis, "sideBar.tab.settings", "expand:group.patternUpdates",
+                                  "analysis.patternUpdates"};
+        for (const auto& [name, choice] : {std::pair{"every", "Every pattern"}, std::pair{"adaptive", "Adaptive"}}) {
+            steps_.push_back({QStringLiteral("perf-fit-%1-pattern").arg(QLatin1String(name)),
+                              updates + QStringList{QStringLiteral("choose:") + QLatin1String(choice), "mainArea.analysis.tab.fitting",
+                                                    "timed-fit:162"}});
+            steps_.push_back({QStringLiteral("perf-fit-%1-stacked").arg(QLatin1String(name)),
+                              updates + QStringList{QStringLiteral("choose:") + QLatin1String(choice), "mainArea.analysis.tab.stacked",
+                                                    "wait-scan:stacked", "timed-fit:162"}});
+        }
+        const QStringList lbco{"resize:1280x800", "open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", analysis,
+                               "sideBar.tab.basic", "mainArea.analysis.tab.fitting", "parameters.nameFilter",
+                               "type:length_a"};
+        steps_.push_back({"perf-slider-lbco-1-before-fit", lbco + QStringList{"timed-slider:30"}});
+        steps_.push_back({"perf-slider-lbco-2-after-fit", {"fitting.start", "wait-fit", "choose:OK", "timed-slider:30"}});
     }
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
@@ -984,6 +1022,20 @@ void DemoDriver::next_action() {
         if (action.startsWith(QLatin1String("timed-fit:"))) {
             const QStringList parts = action.split(QLatin1Char(':'));
             timed_fit_then([this] { next_action(); }, parts.value(1).toInt(), parts.size() > 2 ? parts.at(2).toInt() : -1);
+            return;
+        }
+        if (action.startsWith(QLatin1String("wait-scan:"))) {
+            wait_scan_then([this] { next_action(); }, action.mid(10));
+            return;
+        }
+        if (action.startsWith(QLatin1String("timed-frames:")) || action.startsWith(QLatin1String("timed-slider:"))) {
+            const QStringList parts = action.split(QLatin1Char(':'));
+            const bool done = parts.at(0) == QLatin1String("timed-frames")
+                                  ? timed_frames(parts.value(1), parts.value(2), parts.value(3).toInt())
+                                  : timed_slider(parts.value(1).toInt());
+            if (done) {
+                settle_then([this] { next_action(); });
+            }
             return;
         }
         if (action == QLatin1String("timed-reset")) {
@@ -1116,6 +1168,18 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         return click_item(candidates.last());
+    }
+    if (action.startsWith(QLatin1String("preference:"))) {
+        // One of edi's Preferences, as its dialog sets it: preference:<name>=<value>, a string value.
+        const QString setting = action.mid(11);
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* preferences = engine == nullptr ? nullptr : engine->singletonInstance<QObject*>("edi.app", "Preferences");
+        if (preferences == nullptr || !setting.contains(QLatin1Char('=')) ||
+            !preferences->setProperty(qPrintable(setting.section(QLatin1Char('='), 0, 0)), setting.section(QLatin1Char('='), 1))) {
+            fail(QStringLiteral("step %1: cannot apply '%2'").arg(steps_[current_].image, action));
+            return false;
+        }
+        return true;
     }
     if (action.startsWith(QLatin1String("theme:")) || action.startsWith(QLatin1String("platform:"))) {
         // The base's theme values (Colors.Themes) and Qt's colour schemes (Qt::ColorScheme).
@@ -1634,6 +1698,174 @@ bool DemoDriver::timed_reset() {
         next_action();
     });
     return false;
+}
+
+void DemoDriver::record_samples(const QString& label, std::vector<double> samples) {
+    QFile all(output_dir_.filePath(QStringLiteral("frames.tsv")));
+    if (all.open(QIODevice::Append | QIODevice::Text)) {
+        for (const double ms : samples) {
+            all.write(QStringLiteral("%1\t%2\t%3\n").arg(steps_[current_].image, label).arg(ms, 0, 'f', 3).toUtf8());
+        }
+    }
+    const auto missing = std::count_if(samples.begin(), samples.end(), [](double ms) { return ms < 0.0; });
+    std::erase_if(samples, [](double ms) { return ms < 0.0; });
+    std::sort(samples.begin(), samples.end());
+    const auto at = [&samples](double share) {
+        return samples.empty() ? -1.0 : samples[static_cast<std::size_t>(share * static_cast<double>(samples.size() - 1))];
+    };
+    QFile file(output_dir_.filePath(QStringLiteral("timings.tsv")));
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        file.write(QStringLiteral("%1\t%2 median\t%3\n%1\t%2 p95\t%4\n%1\t%2 max\t%5\n%1\t%2 missing\t%6\n")
+                       .arg(steps_[current_].image, label)
+                       .arg(at(0.5), 0, 'f', 3)
+                       .arg(at(0.95), 0, 'f', 3)
+                       .arg(at(1.0), 0, 'f', 3)
+                       .arg(missing)
+                       .toUtf8());
+    }
+}
+
+void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms) {
+    QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+    auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
+    if (model != nullptr && model->count() > 0 && model->loaded() == model->count()) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the scan's datasets were not read").arg(steps_[current_].image));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this,
+                       [this, next, mode, waited_ms] { wait_scan_then(next, mode, waited_ms + kSettleIntervalMs); });
+}
+
+double DemoDriver::frame_after(const std::function<void()>& change, const std::function<bool()>& ready) {
+    std::atomic<bool> synced{false};
+    std::atomic<qint64> swapped_ns{-1};
+    QElapsedTimer clock;
+    QEventLoop loop;
+    // Both on the render thread, while the GUI thread waits for the synchronisation.
+    const QMetaObject::Connection sync = connect(
+        &window_, &QQuickWindow::afterSynchronizing, &window_,
+        [&] {
+            if (!ready || ready()) {
+                synced = true;
+            }
+        },
+        Qt::DirectConnection);
+    const QMetaObject::Connection swap = connect(
+        &window_, &QQuickWindow::frameSwapped, &window_,
+        [&] {
+            if (synced && swapped_ns < 0) {
+                swapped_ns = clock.nsecsElapsed();
+                QMetaObject::invokeMethod(&loop, &QEventLoop::quit, Qt::QueuedConnection);
+            }
+        },
+        Qt::DirectConnection);
+    // A state that turns ready after its last frame (a calculation ending after its pattern was drawn) asks for one.
+    QTimer poll;
+    connect(&poll, &QTimer::timeout, this, [&] {
+        if (ready && !synced && ready()) {
+            window_.update();
+        }
+    });
+    QTimer guard;
+    guard.setSingleShot(true);
+    connect(&guard, &QTimer::timeout, &loop, &QEventLoop::quit);
+    guard.start(kFrameWaitMs);
+    if (ready) {
+        poll.start(kIdlePollMs);
+    }
+    clock.start();
+    change();
+    loop.exec();
+    disconnect(sync);
+    disconnect(swap);
+    return swapped_ns < 0 ? -1.0 : static_cast<double>(swapped_ns.load()) / 1e6;
+}
+
+bool DemoDriver::timed_frames(const QString& mode, const QString& kind, int count) {
+    QQuickItem* chart = find(QStringLiteral("scanView.") + mode, false);
+    QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+    auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
+    if (chart == nullptr || model == nullptr || model->count() == 0) {
+        fail(QStringLiteral("step %1: no %2 view with datasets to time").arg(steps_[current_].image, mode));
+        return false;
+    }
+    const double x_min = model->xMin(), x_max = model->xMax(), span = x_max - x_min;
+    const auto zoom = [chart](const QVariantList& x) {
+        QMetaObject::invokeMethod(chart, "setZoom", Q_ARG(QVariant, QVariant(x)), Q_ARG(QVariant, QVariant(QVariantList{})));
+    };
+    std::vector<double> samples;
+    for (int i = 0; i < count; ++i) {
+        std::function<void()> change;
+        if (kind == QLatin1String("zoom")) {
+            // In to the middle half and out again.
+            change = [&, i] { zoom(i % 2 == 0 ? QVariantList{x_min + span / 4, x_max - span / 4} : QVariantList{}); };
+        } else if (kind == QLatin1String("pan")) {
+            // A window of half the range moved by a fiftieth of the range each frame, back and forth.
+            const int place = i % 50 < 25 ? i % 50 : 50 - i % 50;
+            const double from = x_min + span * static_cast<double>(place) / 50.0;
+            change = [&, from] { zoom(QVariantList{from, from + span / 2}); };
+        } else if (kind == QLatin1String("restyle")) {
+            const char* property = mode == QLatin1String("map") ? "reversed" : "stackedReversed";
+            change = [layer, property] { layer->setProperty(property, !layer->property(property).toBool()); };
+        } else if (kind == QLatin1String("select")) {
+            change = [layer, i, model] { layer->setProperty("current", (i * 37) % model->count()); };
+        } else if (kind == QLatin1String("data")) {
+            // The rows placed again (by file, by scan value): every dataset's row moves.
+            change = [model] { model->setRowsByIndex(!model->rowsByIndex()); };
+        } else {
+            fail(QStringLiteral("step %1: no timed change '%2'").arg(steps_[current_].image, kind));
+            return false;
+        }
+        samples.push_back(frame_after(change));
+        // Each change from an idle window, so one frame's work does not run into the next change's.
+        QThread::msleep(20);
+        QCoreApplication::processEvents();
+    }
+    record_samples(mode + QLatin1Char(' ') + kind, samples);
+    return true;
+}
+
+bool DemoDriver::timed_slider(int count) {
+    ProjectViewModel* project = open_project(window_);
+    QQuickItem* slider = find(QStringLiteral("parameters.slider"), true);
+    if (project == nullptr || slider == nullptr) {
+        fail(QStringLiteral("step %1: no slider to move").arg(steps_[current_].image));
+        return false;
+    }
+    const double from = slider->property("from").toDouble(), to = slider->property("to").toDouble();
+    const double centre = slider->property("value").toDouble();
+    std::vector<double> shown, calculated;
+    for (int i = 0; i < count; ++i) {
+        // Small steps either side of where the slider was, as a drag makes them.
+        const double value = std::clamp(centre + (to - from) * 0.01 * static_cast<double>(i % 2 == 0 ? 1 : -1) *
+                                                     static_cast<double>(1 + i % 5),
+                                        from, to);
+        QElapsedTimer clock;
+        std::atomic<qint64> ended_ns{-1};
+        const QMetaObject::Connection ended = connect(project, &ProjectViewModel::calculatingChanged, this, [&] {
+            if (!project->calculating() && ended_ns < 0) {
+                ended_ns = clock.nsecsElapsed();
+            }
+        });
+        clock.start();
+        shown.push_back(frame_after(
+            [slider, value] {
+                slider->setProperty("value", value);
+                QMetaObject::invokeMethod(slider, "moved");
+            },
+            [&] { return ended_ns >= 0; }));
+        disconnect(ended);
+        calculated.push_back(ended_ns < 0 ? -1.0 : static_cast<double>(ended_ns.load()) / 1e6);
+        QThread::msleep(20);
+        QCoreApplication::processEvents();
+    }
+    record_samples(QStringLiteral("slider shown"), shown);
+    record_samples(QStringLiteral("slider calculated"), calculated);
+    return true;
 }
 
 void DemoDriver::fail(const QString& message) {

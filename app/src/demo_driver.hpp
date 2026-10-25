@@ -39,6 +39,7 @@ class DemoDriver : public QObject {
     //   choose:<text>            click the open popup's entry showing <text>
     //   load-experiments:<file>  load bundled .edi files through the view-model call the file
     //                            dialog's accept makes (the dialog itself is not driven)
+    //   preference:<name>=<value>   one of edi's Preferences, as its dialog sets it (a string value)
     //   theme:<light|dark|system>   the Preferences theme (the base's Colors.theme)
     //   platform:<light|dark>       the platform appearance "system" follows (AppState's seam; a
     //                               headless runner has none)
@@ -87,6 +88,17 @@ class DemoDriver : public QObject {
     void idle_then(std::function<void()> next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
+    // Waits until a scan view's model has read every dataset, then calls `next`.
+    void wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms = 0);
+    // Applies `change` and waits for the first frame swapped after a scene synchronisation that follows it, and
+    // follows `ready()` turning true when given; the milliseconds from the change to that swap, or -1 when none came.
+    double frame_after(const std::function<void()>& change, const std::function<bool()>& ready = {});
+    // `count` changes of one kind to a scan view (zoom, pan, restyle, select, data), each timed by frame_after; the
+    // samples go to frames.tsv and their median and 95th percentile to timings.tsv.
+    bool timed_frames(const QString& mode, const QString& kind, int count);
+    // `count` steps of the Analysis slider, each timed from the move to the frame after its calculation ended.
+    bool timed_slider(int count);
+    void record_samples(const QString& label, std::vector<double> samples);
     void delay_then_record();
 
     QQuickWindow& window_;

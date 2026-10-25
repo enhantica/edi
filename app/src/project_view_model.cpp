@@ -1882,25 +1882,37 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // Swaps can be reported on the render thread; the count is kept on this one. The first swap may be a frame
-        // already under way when the dataset was applied, so one more is asked for and the second one counts.
-        render_connection_ = connect(
-            window, &QQuickWindow::frameSwapped, this,
-            [this, window] {
-                if (render_swaps_ <= 0) {
-                    return;
-                }
-                if (!presentedFollowed()) {
-                    followRendered(false);  // hidden, or another pattern replaced it, before it was drawn
-                } else if (--render_swaps_ == 0) {
-                    followRendered(true);
-                } else {
-                    window->update();
+        // The pattern is drawn by the first frame synchronised after it was applied: the GUI thread waits during a
+        // synchronisation, so none can be under way while it is armed here, and a frame already rendering when the
+        // dataset was applied never counts. Both signals come on the render thread; the receipt goes to this one.
+        render_sync_connection_ = connect(
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                if (render_armed_.load()) {
+                    render_synced_.store(true);
                 }
             },
-            Qt::QueuedConnection);
+            Qt::DirectConnection);
+        render_connection_ = connect(
+            window, &QQuickWindow::frameSwapped, this,
+            [this] {
+                if (render_synced_.load() && render_armed_.exchange(false)) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this] {
+                            if (render_swaps_ > 0) {
+                                // Hidden, or another pattern replaced it, before it was drawn: not drawn.
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
+                }
+            },
+            Qt::DirectConnection);
     }
-    render_swaps_ = 2;
+    render_swaps_ = 1;
+    render_synced_.store(false);
+    render_armed_.store(true);
     render_wait_.start(kRenderWaitMs);
     window->update();
 }
@@ -1916,6 +1928,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_token_ = 0;
     follow_generation_ = 0;
     render_swaps_ = -1;
+    render_armed_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
