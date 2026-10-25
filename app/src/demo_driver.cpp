@@ -5,8 +5,6 @@
 
 #include <QCoreApplication>
 #include <QDir>
-#include <QDirIterator>
-#include <QFileInfo>
 #include <QFile>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -18,8 +16,11 @@
 #include <QThread>
 #include <QUrl>
 #include <cstdio>
+#include <filesystem>
+#include <system_error>
 
 #include "analysis_view_model.hpp"
+#include "crysta/project_output.hpp"
 #include "edi/categories.hpp"
 #include "edi/palette.hpp"
 #include "fit_view_model.hpp"
@@ -56,16 +57,20 @@ QStringList open_cli_project(const QString& id) {
 
 }  // namespace
 
+// The copy goes through the engine's project output (ADR-0039), so it refuses to write over anything already there.
 QString copy_cli_project(const QString& id, const QDir& into) {
-    const QDir source(QStringLiteral(EDI_CLI_PROJECTS_DIR "/") + id + QStringLiteral("/project"));
-    const QDir target(into.filePath(id + QStringLiteral("/project")));
-    bool copied = source.exists();
-    for (QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories); copied && files.hasNext();) {
-        const QString file = files.next();
-        const QString copy = target.filePath(source.relativeFilePath(file));
-        copied = QDir().mkpath(QFileInfo(copy).path()) && QFile::copy(file, copy);
+    namespace fs = std::filesystem;
+    const fs::path source = fs::path(EDI_CLI_PROJECTS_DIR) / id.toStdString() / "project";
+    const fs::path target = fs::path(into.filePath(id).toStdString()) / "project";
+    std::error_code error;
+    if (!fs::is_directory(source, error)) {
+        return {};
     }
-    return copied ? target.path() : QString();
+    crysta::output::create_directories(target.parent_path(), error);
+    if (!error) {
+        crysta::output::copy_new(source, target, crysta::output::CopyFiles::copied, error);
+    }
+    return error ? QString() : QString::fromStdString(target.string());
 }
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
