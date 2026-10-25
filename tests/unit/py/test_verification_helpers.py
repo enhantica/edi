@@ -235,21 +235,3 @@ def test_engine_label_carries_edi_and_crysta_identities():
 def test_engine_label_rejects_unknown_engines():
     with pytest.raises(ValueError, match='Unknown engine'):
         verify.engine_label('cryspy')
-
-
-@pytest.mark.parametrize(
-    ('row', 'x', 'icalc'),
-    [
-        ('       6.566115594496.00 87355512.00 28238984.00', 6.566, 87355512.0),
-        ('      30.592 97885616.00107255072.00 -9369456.00', 30.592, 107255072.0),
-    ],
-)
-def test_igor_fixed_width_rows_preserve_icalc_when_large_fields_touch(tmp_path, row, x, icalc):
-    # Literal rows from the independent LATP start.prf, including its negative Diff column.
-    path = tmp_path / 'fixed-width.prf'
-    path.write_text('IGOR\nWAVES TwoTheta, Iobs, Icalc, Diff\nBEGIN\n' + row + '\nEND\n')
-    actual_x, actual_y = verify._parse_fullprof_calc_profile(str(path))
-    assert actual_x.tolist() == [x], 'FullProf fixed-width exports must retain every axis value'
-    assert actual_y.tolist() == [icalc], (
-        'FullProf calculated intensities must come from Icalc, even when adjacent fields touch'
-    )

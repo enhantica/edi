@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -24,13 +23,6 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
                                 double gamma_deg);
 std::string wavelength_domain_message(double wavelength);
 
-// The current `.edi` name of `tag` when it is an older spelling crysta's dictionary lists, else `tag` itself.
-std::string current_edi_name(const std::string& tag);
-
-// A structure CIF as the `.edi` document crysta's save would write for it, or nullopt when the text
-// is already `.edi`. Throws std::invalid_argument naming a missing item.
-std::optional<std::string> structure_edi_from_cif(const std::string& text);
-
 }  // namespace edi::detail
 
 namespace edi {
@@ -44,6 +36,10 @@ namespace edi::detail {
 void read_report_item(std::string_view item, const std::string& value, Project& project);
 // `_correlation_chart.threshold`, `_pattern_chart.x_axis` and a `_report_file.format`, checked.
 double read_correlation_threshold(const std::string& value);
+// A single crystal's `_reflns.threshold_sigma`/`_refine_ls.threshold_sigma` (`tag`) and `_reflns.threshold_basis`,
+// checked by crysta's rules (edi ADR-0050).
+double read_threshold_sigma(const std::string& value, const char* tag);
+std::string read_threshold_basis(const std::string& value);
 std::string read_pattern_x_axis(const std::string& value);
 std::string read_report_file_format(const std::string& value);
 

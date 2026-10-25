@@ -5,15 +5,15 @@ namespace edi_app {
 
 ChartLegendModel::ChartLegendModel(QObject* parent) : QAbstractListModel(parent) {}
 
-void ListedLegendModel::setRows(const QVariantList& rows) {
+void ListedLegendModel::setRows(const QStringList& labels, const QStringList& colors, int selected) {
     QList<Entry> entries;
-    for (const QVariant& row : rows) {
-        const QVariantMap map = row.toMap();
+    for (qsizetype i = 0; i < labels.size(); ++i) {
         Entry entry;
-        entry.label = map.value(QStringLiteral("label")).toString();
-        entry.color = map.value(QStringLiteral("color")).value<QColor>();
-        entry.mark = map.value(QStringLiteral("mark"), QStringLiteral("line")).toString();
-        entry.markWidth = map.value(QStringLiteral("markWidth"), 3.0).toDouble();  // the sample's thickness, pixels
+        entry.label = labels.at(i);
+        entry.color = QColor(i < colors.size() ? colors.at(i) : QString());
+        entry.mark = QStringLiteral("line");
+        entry.markWidth = 3.0;  // the sample's thickness, pixels
+        entry.selected = i == selected;
         entries.append(entry);
     }
     setEntries(entries);
@@ -50,6 +50,7 @@ QVariant ChartLegendModel::data(const QModelIndex& index, int role) const {
         case MarkWidthRole: return entry.markWidth;
         case LabelTextsRole: return entry.labelTexts;
         case LabelColorsRole: return entry.labelColors;
+        case SelectedRole: return entry.selected;
         default: return {};
     }
 }
@@ -61,7 +62,8 @@ QHash<int, QByteArray> ChartLegendModel::roleNames() const {
             {BraggRole, "bragg"},
             {MarkWidthRole, "markWidth"},
             {LabelTextsRole, "labelTexts"},
-            {LabelColorsRole, "labelColors"}};
+            {LabelColorsRole, "labelColors"},
+            {SelectedRole, "selected"}};
 }
 
 ChartBandModel::ChartBandModel(QObject* parent) : QAbstractListModel(parent) {}

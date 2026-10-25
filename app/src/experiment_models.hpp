@@ -123,24 +123,28 @@ class SingleCrystalReflectionModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to an experiment")
-    Q_PROPERTY(QList<double> calculated READ calculated NOTIFY pointsChanged)
-    Q_PROPERTY(QList<double> measured READ measured NOTIFY pointsChanged)
-    Q_PROPERTY(QList<double> measuredSu READ measuredSu NOTIFY pointsChanged)
-    Q_PROPERTY(double low READ low NOTIFY pointsChanged)
-    Q_PROPERTY(double high READ high NOTIFY pointsChanged)
-    Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> calculated READ calculated NOTIFY calculatedChanged)
+    Q_PROPERTY(QList<double> measured READ measured NOTIFY measuredChanged)
+    Q_PROPERTY(QList<double> measuredSu READ measuredSu NOTIFY measuredSuChanged)
+    Q_PROPERTY(double low READ low NOTIFY lowChanged)
+    Q_PROPERTY(double high READ high NOTIFY highChanged)
+    Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY calculatedShownChanged)
     // The same points as F: Fcalc, Fmeas = sqrt(F²meas) and its su F²su / (2 Fmeas), where F²meas > 0 (NaN elsewhere).
-    Q_PROPERTY(QList<double> calculatedF READ calculatedF NOTIFY pointsChanged)
-    Q_PROPERTY(QList<double> measuredF READ measuredF NOTIFY pointsChanged)
-    Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY pointsChanged)
-    Q_PROPERTY(double lowF READ lowF NOTIFY pointsChanged)
-    Q_PROPERTY(double highF READ highF NOTIFY pointsChanged)
+    Q_PROPERTY(QList<double> calculatedF READ calculatedF NOTIFY calculatedFChanged)
+    Q_PROPERTY(QList<double> measuredF READ measuredF NOTIFY measuredFChanged)
+    Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY measuredFSuChanged)
+    Q_PROPERTY(double lowF READ lowF NOTIFY lowFChanged)
+    Q_PROPERTY(double highF READ highF NOTIFY highFChanged)
+    // Whether the fit uses each reflection (F² > n su(F²) under the fit's cutoff, every one without), and the cutoff's
+    // n, NaN without one.
+    Q_PROPERTY(QList<bool> used READ used NOTIFY usedChanged)
+    Q_PROPERTY(double fitCutoff READ fitCutoff NOTIFY fitCutoffChanged)
     // The smallest and the largest reflection wavelength of a time-of-flight single crystal, NaN without one.
-    Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY pointsChanged)
-    Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY pointsChanged)
+    Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY wavelengthLowChanged)
+    Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY wavelengthHighChanged)
     // The column the table is sorted by (empty: file order) and its direction.
-    Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortChanged)
-    Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortChanged)
+    Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortRoleChanged)
+    Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortAscendingChanged)
 
    public:
     SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, const edi::Project& project, QObject* parent);
@@ -166,12 +170,31 @@ class SingleCrystalReflectionModel : public RowTableModel {
     QList<double> measuredFSu() const { return measured_f_su_; }
     double lowF() const { return low_f_; }
     double highF() const { return high_f_; }
+    QList<bool> used() const { return used_; }
+    double fitCutoff() const { return fit_cutoff_; }
     double wavelengthLow() const { return wavelength_low_; }
     double wavelengthHigh() const { return wavelength_high_; }
 
    signals:
+    // Any of the points' properties below changed (the chart redraws once for them all).
     void pointsChanged();
-    void sortChanged();
+    void calculatedChanged();
+    void measuredChanged();
+    void measuredSuChanged();
+    void lowChanged();
+    void highChanged();
+    void calculatedShownChanged();
+    void calculatedFChanged();
+    void measuredFChanged();
+    void measuredFSuChanged();
+    void lowFChanged();
+    void highFChanged();
+    void usedChanged();
+    void fitCutoffChanged();
+    void wavelengthLowChanged();
+    void wavelengthHighChanged();
+    void sortRoleChanged();
+    void sortAscendingChanged();
 
    private:
     void publish();
@@ -196,6 +219,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double high_f_ = 1.0;
     double wavelength_low_ = qQNaN();
     double wavelength_high_ = qQNaN();
+    QList<bool> used_;
+    double fit_cutoff_ = qQNaN();
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.

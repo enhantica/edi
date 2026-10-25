@@ -263,6 +263,16 @@ class Edit {
     static Edit mosaic_distribution(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_mosaic_distribution(experiment, token); });
     }
+    // A single crystal's observed threshold and a fit's cutoff (edi ADR-0050); empty clears.
+    static Edit reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
+        return Edit([&experiment, sigma] { set_reflns_threshold_sigma(experiment, sigma); });
+    }
+    static Edit reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis) {
+        return Edit([&experiment, basis = std::move(basis)] { set_reflns_threshold_basis(experiment, basis); });
+    }
+    static Edit refine_ls_threshold_sigma(Project& project, std::optional<double> sigma) {
+        return Edit([&project, sigma] { set_refine_ls_threshold_sigma(project, sigma); });
+    }
     // The background model, the old type's rows and constants removed (select_background_type).
     static Edit background_type(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_background_type(experiment, token); });

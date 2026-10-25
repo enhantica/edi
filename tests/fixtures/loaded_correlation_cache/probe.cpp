@@ -12,26 +12,23 @@
 #include "edi/io.hpp"
 
 namespace {
-int parsed = 0;
+int reads = 0;
 }
-namespace edi {
-double observed_correlation_value(const FitParameterCorrelation& row) {
-    ++parsed;
-    return correlation_value(row);
+namespace edi_app {
+double observed_correlation_value(const edi::FitParameterCorrelation& row) {
+    ++reads;
+    return row.correlation.get();
 }
-}  // namespace edi
+}  // namespace edi_app
 
-// Compile the unmodified production view. Only its call to the real parser is counted;
-// the observer returns the parser's actual value and never supplies a cached number.
-#define correlation_value observed_correlation_value
+// The private source copy counts numeric reads without changing their values.
 #include "../../../app/src/correlation_view_model.cpp"
-#undef correlation_value
 
 namespace {
 using Row = edi::FitParameterCorrelation;
 using Rows = std::vector<std::shared_ptr<Row>>;
 
-void define(Row& row, const char* id, const char* left, const char* right, const char* value) {
+void define(Row& row, const char* id, const char* left, const char* right, double value) {
     row.id = id;
     row.source_kind = "deterministic";
     row.parameter_unique_name_i = left;
@@ -59,15 +56,15 @@ QJsonObject snapshot(edi_app::CorrelationViewModel& view, const Rows& rows, bool
         pointers.append(QString::number(reinterpret_cast<std::uintptr_t>(row.get())));
         writes.append(QString::number(row->correlation.written()));
     }
-    return {{"parses", parsed}, {"available", view.available()}, {"labels", labels},
+    return {{"reads", reads}, {"available", view.available()}, {"labels", labels},
             {"cells", cells}, {"pointers", pointers}, {"writes", writes}, {"admitted", admitted}};
 }
 
 QJsonObject run(const std::string& channel, const std::string& scenario) {
     auto owner = std::make_shared<std::array<Row, 3>>();
-    define(owner->at(0), "first", "bank.background.base.coef", "bank.background.ramp.coef", "0.50");
-    define(owner->at(1), "second", "bank.background.base.coef", "bank.background.curve.coef", "-0.25");
-    define(owner->at(2), "third", "bank.background.ramp.coef", "bank.background.curve.coef", "0.125");
+    define(owner->at(0), "first", "bank.background.base.coef", "bank.background.ramp.coef", 0.50);
+    define(owner->at(1), "second", "bank.background.base.coef", "bank.background.curve.coef", -0.25);
+    define(owner->at(2), "third", "bank.background.ramp.coef", "bank.background.curve.coef", 0.125);
     auto first = std::shared_ptr<Row>(owner, &owner->at(0));
     auto second = std::shared_ptr<Row>(owner, &owner->at(1));
     auto third = std::shared_ptr<Row>(owner, &owner->at(2));
@@ -97,7 +94,7 @@ QJsonObject run(const std::string& channel, const std::string& scenario) {
         publish({first, third});
     } else if (scenario == "second-coefficient-write") {
         publish({first, second});
-        second->correlation = "0.125";
+        second->correlation = 0.125;
         publish({first, second});
     } else if (scenario == "file-switch" && channel == "record") {
         project.experiments.push_back(std::make_shared<edi::BraggPdExperiment>());
@@ -117,7 +114,7 @@ QJsonObject run(const std::string& channel, const std::string& scenario) {
             first->parameter_unique_name_j = "renamed.background.ramp.coef";
             publish({first});
         } else if (scenario == "coefficient-write" || scenario == "same-value-write") {
-            first->correlation = scenario == "coefficient-write" ? "-0.25" : "0.500";
+            first->correlation = scenario == "coefficient-write" ? -.25 : .5;
             publish({first});
         } else if (scenario == "alias-replace") {
             publish({second});
@@ -125,7 +122,7 @@ QJsonObject run(const std::string& channel, const std::string& scenario) {
             project.fit_result.correlations.clear();
             std::destroy_at(first.get());
             std::construct_at(first.get());
-            define(*first, "first", "bank.background.base.coef", "bank.background.ramp.coef", "-0.875");
+            define(*first, "first", "bank.background.base.coef", "bank.background.ramp.coef", -0.875);
             publish({first});
         } else if (scenario == "replace-undo") {
             auto replacement = std::make_shared<Row>(*second);
@@ -133,7 +130,7 @@ QJsonObject run(const std::string& channel, const std::string& scenario) {
             publish({first});
         } else if (scenario == "clear-undo" || scenario == "clear-write-undo") {
             publish({});
-            if (scenario == "clear-write-undo") first->correlation = "-0.25";
+            if (scenario == "clear-write-undo") first->correlation = -0.25;
             publish({first});
         } else if (scenario == "file-switch") {
             publish({second}, "second.xy");

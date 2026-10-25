@@ -48,8 +48,8 @@ std::string fnv1a64(std::string_view bytes);
 /// The digest a saved report's `_report_file` row records (ADR-0036 §7): FNV-1a 64 over what the format's writer writes
 /// for `model` with its time left out, so it is equal exactly when that writer would write the same now, the time
 /// aside. For "html" the file's text, with `libraries` in it (all empty: loaded online); for "pdf" the model's JSON
-/// and the static text the PDF lays out, as its figures are drawn from the model. Empty for "cif", whose report is not
-/// made from the model: its digest is of the CIF text itself.
+/// and the static text the PDF lays out, as its figures are drawn from the model. Empty for a format with no writer
+/// here ("cif").
 std::string report_digest(ReportModel model, std::string_view format, const ReportLibraries& libraries = {});
 
 }  // namespace edi

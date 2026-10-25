@@ -1,6 +1,7 @@
 """Scan equivalence, linear scale recovery and unchanged-data persistence."""
 
 import csv
+import warnings
 from pathlib import Path
 
 import edi as engine
@@ -191,7 +192,7 @@ def test_refusal_before_solver_stops_scan(tmp_path, mode):
 
 
 @pytest.mark.parametrize('geometry', ['single', 'phase_sum', 'scan'])
-def test_fit_from_fitted_start_keeps_dependent_in_range(tmp_path, geometry):
+def test_fit_from_fitted_start_keeps_dependent_in_range(tmp_path, geometry, capfd):
     project = phase_scan.bounded_start(tmp_path / 'start', geometry, engine)
     first = project.analysis.fit()
     assert first.converged, 'The bounded-trial control must begin from a successful fitted state'
@@ -217,20 +218,26 @@ def test_fit_from_fitted_start_keeps_dependent_in_range(tmp_path, geometry):
             + '\n_sequential_fit.data_dir experiments/scan\n_sequential_fit.file_pattern *.xy\n'
         )
     project = engine.Project.load(saved)
-    outcome = project.analysis.fit()
+    capfd.readouterr()
+    with warnings.catch_warnings(record=True) as notices:
+        warnings.simplefilter('always')
+        outcome = project.analysis.fit()
+    diagnostics = capfd.readouterr().err + '\n'.join(str(item.message) for item in notices)
     assert outcome.converged, (
-        'A constrained fit from a fitted start must shorten or '
-        'reject inadmissible trials and finish'
+        'A constrained fit from a fitted start must keep finite out-of-range dependents and finish'
+    )
+    assert 'crysta.domain.constraint_range' in diagnostics, (
+        'A finite dependent outside its range must emit the stable range-warning code'
     )
     parent = project.experiments['bank'].background_terms[0].coef.value
-    assert parent == pytest.approx(2, abs=2e-6), (
-        'The constrained least-squares optimum is the admissible '
-        'boundary a=2, not the unconstrained optimum a=1'
+    assert parent == pytest.approx(1, abs=2e-6), (
+        'Constant observations of one have optimum a=1 even when its dependent leaves its range'
     )
-    for structure in project.structures:
-        dependent = structure.atom_sites[0].adp_iso.value
-        assert dependent >= 0, (
-            'Every phase dependent must stay in its declared nonnegative displacement range'
+    for name in ('phase',) if geometry == 'single' else ('phase', 'other'):
+        dependent = project.structures[name].atom_sites[0].adp_iso.value
+        expected = parent - 2 if name == 'phase' else 2 * parent - 4
+        assert dependent == pytest.approx(expected, abs=2e-6) and dependent < 0, (
+            'Every phase must keep the finite negative value prescribed by its relation'
         )
     if geometry == 'scan':
         assert all(

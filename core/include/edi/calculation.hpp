@@ -62,6 +62,9 @@ struct CalculationResult {
     bool cancelled = false;
     // Why crysta refused the pattern calculation; empty when it did not.
     std::string refusal;
+    // The refusal came before anything was calculated (a single crystal's reflection table): publish writes
+    // nothing, and every computed column stays as it was.
+    bool kept = false;
     // Per experiment: the computed `_data` columns (the residual included) and `_refln`. Empty
     // after a refusal.
     std::vector<PdDataBase> data;

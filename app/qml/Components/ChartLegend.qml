@@ -75,6 +75,7 @@ Rectangle {
                 required property real markWidth
                 required property list<string> labelTexts
                 required property list<string> labelColors
+                required property bool selected
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
@@ -89,6 +90,13 @@ Rectangle {
                     },
                     {
                         "text": label
+                    }
+                ] : selected ? [legend.markPiece(mark, markWidth, color),
+                    // The selected dataset: its name bold in the accent colour.
+                    {
+                        "text": label,
+                        "color": EaStyle.Colors.themeAccent,
+                        "bold": true
                     }
                 ] : [legend.markPiece(mark, markWidth, color),
                     {

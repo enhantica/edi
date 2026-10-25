@@ -1,12 +1,17 @@
 #include <doctest/doctest.h>
 
+#include <array>
+#include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <type_traits>
 
 #include "edi/categories.hpp"
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
+#include "edi/validation.hpp"
+#include "xray_doublet/physical_relation_inputs.hpp"
 
 namespace {
 edi::Project relation_edit_project() {
@@ -161,4 +166,104 @@ TEST_CASE("Alias candidates exclude dependents while retaining ordinary fixed pa
 TEST_CASE("Alias candidates exclude symmetry fixed coordinates and cell fields") {
     auto project = relation_edit_project();
     suitable_parameters(project, true);
+}
+
+namespace {
+void physical_relation_diagnostics(std::size_t family) {
+    const auto& input = physical_relation_inputs::inputs.at(family);
+    for (const std::string entrance : {"refresh", "calculate"}) {
+        CAPTURE(std::string(input.name));
+        CAPTURE(entrance);
+        struct Files {
+            std::filesystem::path root =
+                std::filesystem::temp_directory_path() /
+                ("physical-relations-" +
+                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            ~Files() { std::filesystem::remove_all(root); }
+        } files;
+        for (const auto& dir : {"structures", "experiments", "analysis"})
+            std::filesystem::create_directories(files.root / dir);
+        std::ofstream(files.root / "structures/phase.edi") << input.structure;
+        std::ofstream(files.root / "experiments/bank.edi") << input.experiment;
+        std::ofstream(files.root / "analysis/analysis.edi") << input.analysis;
+        auto project = edi::load_project(files.root.string());
+        CHECK_NOTHROW_MESSAGE(
+            edi::refresh_relations(project),
+            "ADR-0078 valid physical relations must cross the consumer boundary");
+        edi::Parameter *source = nullptr, *middle = nullptr, *target = nullptr;
+        for (const auto& slot : edi::named_slots(project)) {
+            if (slot.unique_name == "phase.atom_site.X.fract_x") source = slot.parameter;
+            if (slot.unique_name == "bank.instrument.calib_twotheta_offset")
+                middle = slot.parameter;
+            if (slot.unique_name == std::string("bank.") + input.target) target = slot.parameter;
+        }
+        REQUIRE_MESSAGE((source && middle && target),
+                        "ADR-0078 the consumer witness must resolve the complete authored chain");
+        const std::array<double, 2> before{middle->value.get(), target->value.get()};
+        const std::array<std::uint64_t, 2> clocks{middle->epoch.value(), target->epoch.value()};
+        source->value = 0.4;
+        bool structured = false;
+        try {
+            if (entrance == "refresh")
+                edi::refresh_relations(project);
+            else
+                project.calculate();
+        } catch (const edi::DomainValidationError& error) {
+            structured = true;
+            REQUIRE_MESSAGE(
+                error.diagnostics().size() == 1,
+                "ADR-0078 the native consumer must preserve one physical error diagnostic");
+            const auto& diagnostic = error.diagnostics()[0];
+            CHECK_MESSAGE(diagnostic.severity == edi::Severity::Error,
+                          "ADR-0078 the consumer must retain error severity for physical refusal");
+            CHECK_MESSAGE(diagnostic.code.starts_with("crysta.domain.constraint_"),
+                          "ADR-0078 the native consumer must retain the engine domain code");
+            CHECK_MESSAGE(
+                (diagnostic.message.find("domain_relation") != std::string::npos &&
+                 diagnostic.message.find(input.target) != std::string::npos),
+                "ADR-0078 the native consumer must name the later relation and physical target");
+        } catch (const std::exception&) {
+            // The assertion below distinguishes a typed refusal from a generic escape.
+        }
+        CHECK_MESSAGE(structured,
+                      "ADR-0078 the native consumer must refuse with DomainValidationError");
+        CHECK_MESSAGE(
+            (middle->value.get() == before[0] && target->value.get() == before[1] &&
+             middle->epoch.value() == clocks[0] && target->epoch.value() == clocks[1]),
+            "ADR-0078 a consumer refusal must preserve dependent values and write epochs");
+        CHECK_MESSAGE(
+            !edi::apply_relations(project),
+            "ADR-0078 the consumer trial completion must refuse an invalid physical chain");
+        CHECK_MESSAGE(
+            (middle->value.get() == before[0] && target->value.get() == before[1]),
+            "ADR-0078 a later consumer trial failure must not publish an earlier dependent");
+        source->value = 0.1;
+        CHECK_NOTHROW_MESSAGE(edi::refresh_relations(project),
+                              "ADR-0078 a refused consumer must permit a valid relation retry");
+        CHECK_MESSAGE(edi::apply_relations(project),
+                      "ADR-0078 a valid consumer retry must complete the physical chain");
+        CHECK_MESSAGE(middle->value.get() == doctest::Approx(0.06),
+                      "ADR-0078 a valid consumer retry must complete the first affine relation");
+    }
+}
+}  // namespace
+
+TEST_CASE("Physical relation second wavelength ratio retains consumer diagnostics") {
+    physical_relation_diagnostics(0);
+}
+
+TEST_CASE("Physical relation second wavelength retains consumer diagnostics") {
+    physical_relation_diagnostics(1);
+}
+
+TEST_CASE("Physical relation polarization coefficient retains consumer diagnostics") {
+    physical_relation_diagnostics(2);
+}
+
+TEST_CASE("Physical relation monochromator angle retains consumer diagnostics") {
+    physical_relation_diagnostics(3);
+}
+
+TEST_CASE("Physical relation March Dollase fraction retains consumer diagnostics") {
+    physical_relation_diagnostics(4);
 }

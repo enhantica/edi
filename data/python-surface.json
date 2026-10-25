@@ -4235,6 +4235,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "export_zip": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "fit": {
      "need": {
       "by": "deviation",
@@ -4582,15 +4591,6 @@
      "verdict": "public"
     },
     "save": {
-     "need": {
-      "by": "deviation",
-      "ref": "D83",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
-    "save_cif": {
      "need": {
       "by": "deviation",
       "ref": "D83",
@@ -7451,6 +7451,7 @@
     "descent",
     "experiment",
     "experiments",
+    "export_zip",
     "fit",
     "fit_independent",
     "fit_joint",
@@ -7505,7 +7506,6 @@
     "model",
     "pdf",
     "save",
-    "save_cif",
     "save_html",
     "x_axis"
    ]

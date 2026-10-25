@@ -5,7 +5,7 @@ import hashlib
 import tarfile
 from pathlib import Path
 
-PIN = '540cda20a0c15982c5a3c5bdefab275f3e343c43'
+PIN = 'b008de4eab7a753d281c663c74419302dc9cbeb6'
 PREFIX = f'gui-components-{PIN}/'
 PARAMETER = 'src/EasyApplication/Gui/Components/ListViewParameter.qml'
 

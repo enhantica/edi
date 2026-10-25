@@ -24,6 +24,7 @@ def resolve(value, matrix):
 
 
 FULL_EVENTS = ('push', 'schedule', 'workflow_dispatch')
+APP_CACHE_PATHS = ('build/app/app/edi_app', 'build/app/app/edi_app_tests')
 
 
 def reachable(node, jobs, matrix, event='push'):
@@ -155,9 +156,10 @@ def _artifact_routes(workflow, root, event):
                 options = step['with']
                 cached = 'cache/save' in step.get('uses', '')
                 if cached:
-                    assert options.get('path') == 'build/app/app/edi_app', (
-                        'The app cache must transfer exactly the normal executable'
-                    )
+                    assert (
+                        isinstance(options.get('path'), str)
+                        and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
+                    ), 'The app cache must transfer exactly the app and its native test runner'
                     assert (
                         options.get('key') == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}'
                     ), 'The app cache identity must bind the platform and this exact workflow run'
@@ -192,9 +194,10 @@ def _artifact_routes(workflow, root, event):
                     assert options.get('fail-on-cache-miss') is True and not options.get(
                         'restore-keys'
                     ), 'The app cache must fail closed without falling back to another run'
-                    assert options.get('path') == 'build/app/app/edi_app', (
-                        'System app reuse must restore exactly the delivered normal executable'
-                    )
+                    assert (
+                        isinstance(options.get('path'), str)
+                        and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
+                    ), 'System reuse must restore exactly the app and its native test runner'
                 pattern = resolve(
                     options.get('key' if cached else 'name', options.get('pattern', '')), matrix
                 )

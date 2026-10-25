@@ -103,9 +103,19 @@ console.log(JSON.stringify({calls,desktopFilters}));
     for token, value in substitutions.items():
         program = program.replace(token, value)
     observed = javascript(program)
-    expected = (
-        [['web', '.xye,.xy,.dat,.txt,.csv,.int', False]] if browser else [['desktop', 'initiator']]
-    )
+    if browser:
+        assert observed['calls'] and observed['calls'][0][0] == 'web', (
+            'The real browser click must open its file chooser before routing a result'
+        )
+        assert (
+            {'.xye', '.xy', '.dat', '.txt', '.csv', '.int'}
+            | ({'.hkl'} if sample_form == 'single crystal' else set())
+        ).issubset(set(observed['calls'][0][1].split(','))), (
+            'The browser picker must admit every supported reflection extension, including hkl'
+        )
+        expected = [['web', observed['calls'][0][1], False]]
+    else:
+        expected = [['desktop', 'initiator']]
     if scenario not in {'foreign-project', 'closed-project', 'cancelled', 'failed'}:
         expected.append(['loaded', 'original', 'initiator', 'chosen.dat'])
     assert observed['calls'] == expected, (
@@ -118,7 +128,7 @@ console.log(JSON.stringify({calls,desktopFilters}));
         and all(
             extension in observed['desktopFilters'][0]
             for extension in (
-                ['*.int', '*.dat', '*.txt']
+                ['*.int', '*.hkl', '*.dat', '*.txt']
                 if sample_form == 'single crystal' and not browser
                 else ['*.xye', '*.xy', '*.dat', '*.txt', '*.csv']
             )

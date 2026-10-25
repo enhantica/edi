@@ -1,13 +1,40 @@
 _edi.schema_version 3
 
-_metadata.name             pd-xray-cwl_latp_scan-4f
-_metadata.title "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ SNBL"
-_metadata.description "3 phases · 4 of the 73 synchrotron patterns · Linked displacement parameters"
-_metadata.authors .
-_metadata.created          "22 Oct 2026 09:50:09"
-_metadata.last_modified    "22 Oct 2026 14:01:42"
+_metadata.name             latp_scan
+_metadata.title "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF"
+_metadata.description "3 phases · 4 synchrotron patterns · Linked displacement parameters"
+_metadata.created          "07 Oct 2026 11:30:00"
+_metadata.last_modified    "07 Oct 2026 11:30:00"
+_metadata.timestamp        2026-10-07T09:30:00+00:00
+
+_rendering_plot.type auto
+
+_report.cif false
+_report.html true
+_report.tex false
+_report.pdf false
+_report.html_offline false
+
+_rendering_table.type auto
+
+_rendering_structure.type auto
+
+_structure_view.show_labels false
+_structure_view.show_moments true
+_structure_view.range_a_min 0.
+_structure_view.range_a_max 1.
+_structure_view.range_b_min 0.
+_structure_view.range_b_max 1.
+_structure_view.range_c_min 0.
+_structure_view.range_c_max 1.
+
+_structure_style.atom_view adp
+_structure_style.color_scheme jmol
+_structure_style.adp_probability 0.99
+_structure_style.atom_scale 0.3
+
+_verbosity.fit short
 _metadata.purpose "refinement"
 _metadata.dimensionality "1D"
 _metadata.instrument "BM01"
-_metadata.facility "SNBL"
-_su_format.rule iucr_19
+_metadata.facility "ESRF"

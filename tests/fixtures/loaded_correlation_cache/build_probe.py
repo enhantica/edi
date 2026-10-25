@@ -1,4 +1,4 @@
-"""Build the actual loaded-correlation view with a counting observer around its parser."""
+"""Build the actual loaded-correlation view with a counting observer around its numeric reads."""
 
 import argparse
 import hashlib
@@ -26,6 +26,16 @@ def main():
         original = args.root / 'app/src' / name
         shutil.copy2(original, view / name)
         inputs[str(original)] = hashlib.sha256(original.read_bytes()).hexdigest()
+    copied = view / 'correlation_view_model.cpp'
+    original = copied.read_text()
+    marker = 'kept.values.push_back(row->correlation.get());'
+    if original.count(marker) != 1:
+        message = 'The numeric-read observer must reach the one real row-to-cache copy'
+        raise RuntimeError(message)
+    copied.write_text(
+        original.replace(marker, 'kept.values.push_back(observed_correlation_value(*row));')
+    )
+    inputs['numeric_read_observer'] = hashlib.sha256(copied.read_bytes()).hexdigest()
     inputs[str(args.core)] = hashlib.sha256(args.core.read_bytes()).hexdigest()
     (args.build / 'inputs.json').write_text(json.dumps(inputs, indent=2) + '\n')
     subprocess.run(

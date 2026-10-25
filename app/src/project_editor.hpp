@@ -48,6 +48,10 @@ class ProjectEditor {
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }
+    // An edit of a setting no calculation reads (a single crystal's observed threshold, which changes only the
+    // observed counts and R(gt)): applied and published as `apply` does, but the published patterns stay current, so
+    // nothing is recalculated and no chart is redrawn.
+    virtual QString apply_unread(const edi::Edit& change) { return apply(change, false); }
     // Why a user may not set this parameter's value, before anything is written: empty when they may. An auto-mode
     // background's point intensities and term coefficients refuse (estimated_background_refusal).
     virtual QString value_refusal(const edi::Parameter& /*parameter*/) const { return {}; }

@@ -30,6 +30,7 @@ const char* category_title(std::string_view id) {
         {"scattering_source", "Scattering source"},
         {"refln", "Reflections"},
         {"minimizer", "Minimizer"},
+        {"refine_ls", "Fitted reflections"},
         {"fitting_mode", "Fitting mode"},
         {"alias", "Aliases"},
         {"constraint", "Constraints"},

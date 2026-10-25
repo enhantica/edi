@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
@@ -400,22 +401,10 @@ bool is_tag(const Token& token) {
 
 // Parse a file's single `data_` block. A second `data_` header ends the parse (these files are one
 // block each). Any dangling tag/row (truncation) fails closed. `require_data` is relaxed for the
-// analysis section, which is a headerless STAR body (no `data_` line). An older spelling of a name
-// is read as the current one, and a block giving one name in both spellings is refused.
+// analysis section, which is a headerless STAR body (no `data_` line).
 Block parse_block(const std::string& text, const std::string& where, bool require_data = true) {
     const std::vector<Token> tokens = tokenize(text, where);
     Block block;
-    std::set<std::string> renamed;
-    const auto current = [&renamed](const std::string& tag) {
-        std::string name = detail::current_edi_name(tag);
-        if (name != tag) {
-            renamed.insert(name);
-        }
-        return name;
-    };
-    const auto refuse_both = [&where](const std::string& tag) {
-        fail_syntax(where, "both-spellings", tag + " is given twice, in its current and an older spelling");
-    };
     bool have_data = false;
     std::size_t index = 0;
     const std::size_t size = tokens.size();
@@ -437,11 +426,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             std::vector<std::string> tags;
             std::vector<std::vector<std::string>> rows;
             while (index < size && is_tag(tokens[index])) {
-                std::string tag = current(tokens[index].text);
-                if (renamed.contains(tag) && std::ranges::count(tags, tag) > 0) {
-                    refuse_both(tag);
-                }
-                tags.push_back(std::move(tag));
+                tags.push_back(tokens[index].text);
                 ++index;
             }
             if (tags.empty()) {
@@ -461,10 +446,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
         } else if (is_tag(token)) {
-            const std::string tag = current(token.text);
-            if (renamed.contains(tag) && block.find(tag) != nullptr) {
-                refuse_both(tag);
-            }
+            const std::string tag = token.text;
             ++index;
             if (index >= size || is_control(tokens[index])) {
                 fail_syntax(where, "tag-without-value", "tag " + tag + " has no value (truncated)");
@@ -1583,6 +1565,31 @@ void read_background_estimate(const Block& block, ExperimentBase& experiment, co
     experiment.background_estimate_points = digest("_background_estimate.points_digest");
 }
 
+// The `_linked_structure` loop of a powder or a single crystal: every row a linked structure with its scale and an
+// optional enabled flag (absent = taking part).
+std::vector<std::shared_ptr<LinkedStructure>> read_linked_structures(const Block& block, const std::string& where) {
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        if (linked->column("_linked_structure.enabled") >= 0) {
+            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
+            if (token != "true" && token != "false") {
+                fail_schema(where, "invalid-linked-structure-enabled",
+                            "_linked_structure.enabled is '" + token + "', expected true or false");
+            }
+            link->enabled = token == "true";
+        }
+        links.push_back(std::move(link));
+    }
+    return links;
+}
+
 // A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
 // the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
 BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
@@ -1598,6 +1605,22 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     const bool cw = *beam == kBeamModeCwl;
     experiment.experiment_type.beam_mode =
         cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    // A category only a powder pattern has is refused by name before anything is read, as crysta refuses it; it would
+    // otherwise be dropped silently and lost on save.
+    const auto refuse_pattern_category = [&where](const std::string& tag) {
+        if (const std::string found = single_crystal_forbidden_tag(tag); !found.empty()) {
+            fail_schema(where, "pattern-category-on-single-crystal",
+                        found + " on a single crystal, which has no powder pattern");
+        }
+    };
+    for (const auto& item : block.items) {
+        refuse_pattern_category(item.first);
+    }
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            refuse_pattern_category(tag);
+        }
+    }
     if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
         if (*probe != "neutron") {
             fail_schema(where, "unknown-radiation-probe",
@@ -1636,6 +1659,17 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
                         spelled_tokens(types) + ")");
     }
     apply_extinction_type(experiment.extinction, extinction_type);
+    // The observed-reflection threshold (edi ADR-0050), each item absent until declared.
+    try {
+        if (const std::string* sigma = block.find("_reflns.threshold_sigma")) {
+            experiment.reflns_threshold_sigma = detail::read_threshold_sigma(*sigma, "_reflns.threshold_sigma");
+        }
+        if (const std::string* basis = block.find("_reflns.threshold_basis")) {
+            experiment.reflns_threshold_basis = detail::read_threshold_basis(*basis);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-threshold", error.what());
+    }
     if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
         const std::vector<std::string> distributions = mosaic_distribution_tokens();
         if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
@@ -1669,34 +1703,28 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
                         std::string(specification->edi_names[0]) + " is not an item of _extinction.type '" +
                             extinction_type + "'");
         }
-        if (!(found->value.get() >= 0.0) || !std::isfinite(found->value.get())) {
+        // The tensor's cross terms x12, x13 and x23 multiply hk, hl and kl and may be negative.
+        const bool signed_term = field == &experiment.extinction.coefficient_12 ||
+                                 field == &experiment.extinction.coefficient_13 ||
+                                 field == &experiment.extinction.coefficient_23;
+        const double value = found->value.get();
+        if (!std::isfinite(value) || (!signed_term && !(value >= 0.0))) {
             fail_domain(where, "extinction-domain",
-                        std::string(specification->edi_names[0]) + " must be finite and not negative");
+                        std::string(specification->edi_names[0]) +
+                            (signed_term ? " must be finite" : " must be finite and not negative"));
         }
         *field = *found;
     }
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row :
-         linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        links.push_back(std::move(link));
-    }
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
-    // A single crystal made in the app holds no reflections until its data are loaded: until then it is a
-    // data-less experiment, as a powder one with a declared range is.
+    // A single crystal without reflection rows (no `_refln` loop, or one without rows) is data-free, as a powder
+    // one that declares no measured column is; loading its reflections makes it measured.
     const Loop* refln = block.loop_with("_refln.index_h");
     ReflnDataBase rows;
-    if (refln == nullptr) {
+    if (refln == nullptr || refln->rows.empty()) {
         experiment.reflections = std::move(rows);
         experiment.calculation_only = true;
         return experiment;
@@ -2086,30 +2114,10 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
     }
 
-    // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
-    // = taking part). No loop: the experiment links no structure (one made before any structure existed, or whose
-    // structures were removed); it calculates as background alone and cannot be fitted.
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        if (linked->column("_linked_structure.enabled") >= 0) {
-            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
-            if (token != "true" && token != "false") {
-                fail_schema(where, "invalid-linked-structure-enabled",
-                            "_linked_structure.enabled is '" + token + "', expected true or false");
-            }
-            link->enabled = token == "true";
-        }
-        links.push_back(std::move(link));
-    }
+    // No loop: the experiment links no structure (one made before any structure existed, or whose structures were
+    // removed); it calculates as background alone and cannot be fitted.
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
@@ -2784,34 +2792,235 @@ void ProjectMetadata::update_last_modified() {
         star_timestamp_format(stored.has_value() && now <= *stored ? *stored + 1 : now);
 }
 
-Structure structure_from_edi_text(const std::string& text) {
-    const std::string where = "<from_cif_str>";
-    // A CIF is read by crysta through its dictionary's CIF names into the `.edi`
-    // document a save would write, which the `.edi` reader then reads; a `.edi` text is read as it is.
-    std::optional<std::string> edi;
-    try {
-        edi = detail::structure_edi_from_cif(text);
-    } catch (const std::invalid_argument& error) {
-        throw IoError(where + ": " + error.what());
+// The bare element symbol from a CIF `_atom_site_type_symbol`, dropping any oxidation-state
+// suffix so a CIF structure's scattering species matches the
+// `.edi` twin's plain element symbol. Falls back to the raw token when there is no leading
+// alphabetic run.
+std::string element_from_type_symbol(const std::string& type_symbol) {
+    std::size_t end = 0;
+    while (end < type_symbol.size() &&
+           std::isalpha(static_cast<unsigned char>(type_symbol[end])) != 0) {
+        ++end;
     }
-    const Block block = parse_block(edi.has_value() ? *edi : text, where);
-    return structure_from_block(block, where);
+    return end == 0 ? type_symbol : type_symbol.substr(0, end);
 }
 
-Structure load_structure_cif_file(const std::string& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) {
-        throw IoError(path + ": cannot open the file");
+// Classic IUCr CIF structure reader (`_cell_*` / `_atom_site_*` underscore tags) — the core
+// reader this task's necessity sweep removed with its binding, RESTORED per review-32 F1 with
+// two task-era adaptations: `esd` is spelled `uncertainty`, and each site keeps the ADP type the
+// file gives it.
+Structure structure_from_cif_block(const Block& block, const std::string& where) {
+    Structure structure;
+    structure.name = block.name;
+    // A CIF spells the bond increment `incr`; the model and a
+    // `.edi` file spell it `inc`. Both CIF forms are read: the DDLm data name and its classic alias.
+    for (const auto& [dotted, classic, field] :
+         {std::tuple<const char*, const char*, detail::Written<std::optional<double>> Geom::*>{
+              "_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff",
+              &Geom::min_bond_distance_cutoff},
+          {"_geom.bond_distance_incr", "_geom_bond_distance_incr", &Geom::bond_distance_inc}}) {
+        const std::string* text = block.find(dotted);
+        if (text == nullptr) {
+            text = block.find(classic);
+        }
+        if (text != nullptr) {
+            const double value = to_double(*text, where);
+            if (value < 0.0) {
+                fail_domain(where, "out-of-range",
+                            std::string(dotted) + " '" + *text + "' must be finite and >= 0");
+            }
+            structure.geom.*field = value;
+        }
     }
-    std::ostringstream text;
-    text << in.rdbuf();
-    std::optional<std::string> edi;
-    try {
-        edi = detail::structure_edi_from_cif(text.str());
-    } catch (const std::invalid_argument& error) {
-        throw IoError(path + ": " + error.what());
+    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
+        structure.space_group.name_h_m = *symbol;
+    } else {
+        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
     }
-    return structure_from_block(parse_block(edi.has_value() ? *edi : text.str(), path), path);
+    read_into(structure.cell.length_a,
+              parse_parameter(block.require("_cell_length_a", where), where), where);
+    read_into(structure.cell.length_b,
+              parse_parameter(block.require("_cell_length_b", where), where), where);
+    read_into(structure.cell.length_c,
+              parse_parameter(block.require("_cell_length_c", where), where), where);
+    read_into(structure.cell.angle_alpha,
+              parse_parameter(block.require("_cell_angle_alpha", where), where), where);
+    read_into(structure.cell.angle_beta,
+              parse_parameter(block.require("_cell_angle_beta", where), where), where);
+    read_into(structure.cell.angle_gamma,
+              parse_parameter(block.require("_cell_angle_gamma", where), where), where);
+    require_realizable_cell(structure.cell, where);
+
+    const Loop* loop = block.loop_with("_atom_site_label");
+    if (loop == nullptr) {
+        throw IoError(where + ": missing _atom_site loop (not a CIF structure)");
+    }
+
+    // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
+    // a site with one keeps it in that type (ADR-0027).
+    struct CifTensor {
+        std::string type;
+        AtomSiteAniso tensor;
+    };
+    std::map<std::string, CifTensor> tensors;
+    static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
+        {"Uani",
+         {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
+          "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
+        {"Bani",
+         {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
+          "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
+        {"beta",
+         {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
+          "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
+    }};
+    // A tensor column is the label or any component the three forms spell.
+    const auto is_tensor = [](const std::string& tag) {
+        if (tag == "_atom_site_aniso_label") {
+            return true;
+        }
+        return std::any_of(kForms.begin(), kForms.end(), [&tag](const auto& form) {
+            return std::find(form.second.begin(), form.second.end(), tag) != form.second.end();
+        });
+    };
+    if (const Loop* aniso = block.tensor_loop(is_tensor, "_atom_site_aniso_label", where)) {
+        bool found_form = false;
+        for (const auto& [type, tags] : kForms) {
+            if (aniso->column(tags[0]) < 0) {
+                continue;
+            }
+            found_form = true;
+            for (const auto& row : aniso->rows) {
+                const std::string& label = loop_cell(*aniso, row, "_atom_site_aniso_label", where);
+                CifTensor held{type, AtomSiteAniso{}};
+                held.tensor.id = label;
+                // The three diagonal columns are required; an off-diagonal column the file leaves
+                // out is zero.
+                const std::vector<Parameter*> components = held.tensor.parameters();
+                for (std::size_t k = 0; k < 6; ++k) {
+                    const std::string cell = k >= 3 && aniso->column(tags[k]) < 0
+                                                 ? std::string("0")
+                                                 : loop_cell(*aniso, row, tags[k], where);
+                    read_into(*components[k], parse_parameter(cell, where), where);
+                }
+                tensors.emplace(label, std::move(held));
+            }
+            break;
+        }
+        if (!found_form) {
+            throw IoError(where + ": the _atom_site_aniso loop has no U_11, B_11 or beta_11 column");
+        }
+    }
+
+    std::vector<std::pair<std::string, std::string>> declared_types;
+    std::set<std::string> consumed;
+    for (const auto& row : loop->rows) {
+        AtomSite site;
+        site.id = loop_cell(*loop, row, "_atom_site_label", where);
+        site.type_symbol =
+            element_from_type_symbol(loop_cell(*loop, row, "_atom_site_type_symbol", where));
+        const int wyckoff = loop->column("_atom_site_Wyckoff_symbol");
+        if (wyckoff >= 0) {
+            site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
+        }
+        read_into(site.fract_x,
+                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_x", where), where),
+                  where);
+        read_into(site.fract_y,
+                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_y", where), where),
+                  where);
+        read_into(site.fract_z,
+                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_z", where), where),
+                  where);
+        read_into(site.occupancy,
+                  parse_parameter(loop_cell(*loop, row, "_atom_site_occupancy", where), where),
+                  where);
+        // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
+        // form the file spells them in (below, once the structure is complete). A site that declares
+        // none takes its tensor row's form (the row states the type), else the default, Biso, a
+        // U_iso_or_equiv value converted to B.
+        // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
+        // type with one, and a tensor row naming no site refuse (ADR-0027).
+        const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
+        const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
+        const int type_column = loop->column("_atom_site_adp_type");
+        const auto given = [&row](int column) {
+            return column >= 0 && row[static_cast<std::size_t>(column)] != "?" &&
+                   row[static_cast<std::size_t>(column)] != ".";
+        };
+        std::string type = "Biso";
+        if (given(b_iso_column)) {
+            read_into(site.adp_iso,
+                      parse_parameter(row[static_cast<std::size_t>(b_iso_column)], where), where);
+        } else if (given(u_iso_column)) {
+            read_into(site.adp_iso,
+                      parse_parameter(row[static_cast<std::size_t>(u_iso_column)], where), where);
+            type = "Uiso";
+        }
+        const std::string label = site.id.value();
+        const std::string declared =
+            given(type_column) ? row[static_cast<std::size_t>(type_column)] : std::string();
+        const auto tensor = tensors.find(label);
+        if (!declared.empty()) {
+            const std::string at = where + ": site '" + label + "'";
+            if (!is_adp_type(declared)) {
+                throw IoError(at + " declares _atom_site_adp_type '" + declared +
+                              "', which is not one of Biso, Uiso, Bani, Uani or beta");
+            }
+            if (is_anisotropic_adp_type(declared) && tensor == tensors.end()) {
+                throw IoError(at + " declares the anisotropic type '" + declared +
+                              "' but has no _atom_site_aniso row");
+            }
+            if (!is_anisotropic_adp_type(declared) && tensor != tensors.end()) {
+                throw IoError(at + " declares the isotropic type '" + declared +
+                              "' but has an _atom_site_aniso row");
+            }
+            declared_types.emplace_back(label, declared);
+        } else if (tensor == tensors.end() && type != "Biso") {
+            declared_types.emplace_back(label, "Biso");  // the default; the column gave U
+        }
+        if (tensor != tensors.end()) {
+            type = tensor->second.type;
+            structure.atom_site_aniso.push_back(tensor->second.tensor);
+            consumed.insert(label);
+        }
+        site.adp_type = type;
+        structure.atom_sites.push_back(std::move(site));
+    }
+    for (const auto& [label, tensor] : tensors) {
+        if (!consumed.contains(label)) {
+            throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
+        }
+    }
+    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
+    // each declared type, converted from the form the file spells it in, uncertainties with it.
+    if (!structure.atom_site_aniso.empty()) {
+        sync_atom_site_aniso(structure);
+    }
+    for (const auto& [label, declared] : declared_types) {
+        for (const auto& site : structure.atom_sites) {
+            if (site->id.value() == label) {
+                change_adp_type(structure, *site, declared);
+            }
+        }
+    }
+    return structure;
+}
+
+Structure structure_from_edi_text(const std::string& text) {
+    const std::string where = "<from_cif_str>";
+    const Block block = parse_block(text, where);
+    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
+    // exactly one per document, decided by which cell vocabulary is present.
+    if (block.find("_cell.length_a") != nullptr) {
+        return structure_from_block(block, where);
+    }
+    if (block.find("_cell_length_a") != nullptr) {
+        return structure_from_cif_block(block, where);
+    }
+    throw IoError(where +
+                  ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
+                  "present");
 }
 
 // ---- classic-CIF experiment translation (experiment half) ----------------------------
@@ -3418,7 +3627,7 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3567,6 +3776,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
             if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
                 project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+            // A single-crystal fit's cutoff (edi ADR-0050).
+            if (const std::string* cutoff = block.find("_refine_ls.threshold_sigma")) {
+                project.refine_ls_threshold_sigma = detail::read_threshold_sigma(*cutoff, "_refine_ls.threshold_sigma");
             }
         } catch (const std::invalid_argument& error) {
             throw IoError(std::string(error.what()) + ": " + analysis_file.string());
@@ -3908,7 +4121,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
                                   "' outside [-1, 1]: " + where);
                 }
-                pair->correlation = text;
+                pair->correlation = value;
                 if (per_file) {
                     pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
                 }
@@ -4270,11 +4483,61 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
+    // A single-crystal fit has no derivative for its wavelength, so a free one loads fixed, and said so (crysta's fit
+    // refuses one).
+    for (const auto& experiment : project.experiments) {
+        if (experiment->reflections.has_value() && experiment->instrument.setup_wavelength &&
+            experiment->instrument.setup_wavelength->free) {
+            experiment->instrument.setup_wavelength->free = false;
+            warn("experiment '" + experiment->name.value() +
+                 "': a single-crystal fit does not refine the wavelength; _instrument.setup_wavelength loaded fixed");
+        }
+    }
+    // A single crystal's integrated intensities do not fix the cell, which comes from its reflections' positions, so a
+    // fit of single crystals only does not refine it: a cell parameter marked free loads fixed, and said so.
+    if (!project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
+        for (const auto& structure : project.structures) {
+            std::string fixed;
+            for (Parameter* parameter : structure->cell.parameters()) {
+                if (parameter->free && parameter->spec != nullptr) {
+                    parameter->free = false;
+                    fixed += (fixed.empty() ? "" : ", ") + std::string(parameter->spec->edi_names[0]);
+                }
+            }
+            if (!fixed.empty()) {
+                warn("structure '" + structure->name.value() + "': a single-crystal fit does not refine the cell; " +
+                     fixed + " loaded fixed");
+            }
+        }
+    }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.).
     refresh_relations(project, warn, true);
     return project;
+}
+
+Project load_project(const std::string& path, const WarningSink& on_warning) {
+    // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
+    std::error_code error;
+    const fs::path given(path);
+    if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
+        const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
+        return load_project_folder(folder.string(), on_warning);
+    }
+    if (is_project_archive(path)) {
+        const std::string folder = unpack_project_archive(read_file(path), fresh_archive_directory("open"));
+        Project project = load_project_folder(folder, on_warning);
+        // The unpacked folder is temporary: the project has no directory of its own until it is saved somewhere, and
+        // reads its scan data from the unpacked folder meanwhile.
+        project.scan_data_root = folder;
+        project.path.clear();
+        project.metadata.path.clear();
+        return project;
+    }
+    return load_project_folder(path, on_warning);
 }
 
 double parse_edi_double(const std::string& text, const std::string& where) {
@@ -4315,7 +4578,9 @@ void apply_extinction_type(ExtinctionBase& extinction, const std::string& token)
     keep(extinction.coefficient_12, tensor, spec::extinction_coefficient_12, "0");
     keep(extinction.coefficient_13, tensor, spec::extinction_coefficient_13, "0");
     keep(extinction.coefficient_23, tensor, spec::extinction_coefficient_23, "0");
-    if (!spread) {
+    // Every Becker-Coppens type has a distribution: it selects the secondary extinction's coefficients, type II's
+    // included, as in cryspy.
+    if (!spread && !domain) {
         extinction.mosaic_distribution.reset();
     } else if (!extinction.mosaic_distribution) {
         extinction.mosaic_distribution = "gaussian";
@@ -4497,13 +4762,6 @@ void clear_fit_share(ExperimentBase& experiment) {
     }
 }
 
-double correlation_value(const FitParameterCorrelation& row) {
-    double value = 0.0;
-    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
-               ? value
-               : std::numeric_limits<double>::quiet_NaN();
-}
-
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs) {
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows;
@@ -4648,9 +4906,9 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     const auto key_of = [](const FitParameterCorrelation& row) {
         return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
     };
-    std::map<RowKey, std::string> written;
+    std::map<RowKey, double> written;
     for (const auto& row : saved.fit_result.correlations) {
-        written.emplace(key_of(*row), row->correlation.value());
+        written.emplace(key_of(*row), row->correlation.get());
     }
     // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
     // correlations of a few hundred free parameters.
@@ -4659,7 +4917,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     bool rows_changed = false;
     for (auto& row : rows) {
         const auto found = written.find(key_of(*row));
-        if (found != written.end() && row->correlation.value() != found->second) {
+        if (found != written.end() && row->correlation.get() != found->second) {
             auto adopted = std::make_shared<FitParameterCorrelation>(*row);
             adopted->correlation = found->second;
             row = std::move(adopted);
@@ -4670,7 +4928,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         project.fit_result.correlations.assign(std::move(rows));
         changed = true;
     }
-    for (const auto& [key, text] : written) {
+    for (const auto& [key, coefficient] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));
         if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
             table->second->correlations) {
@@ -4679,6 +4937,24 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         }
     }
     return changed;
+}
+
+bool adopt_saved_project(Project& project, const std::string& directory) {
+    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one that held a
+    // calculation is calculated again from those values and written once more, so its calculated pattern and R factors
+    // describe the values beside them.
+    if (!adopt_saved_values(project, directory)) {
+        return false;
+    }
+    const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
+        return (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+               (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+    });
+    if (calculated) {
+        project.refresh_calculated_pattern();
+        save_project(project, directory);
+    }
+    return true;
 }
 
 

@@ -12,14 +12,13 @@ from tests.fixtures.e04_t1.project_actor import run_projects
 
 ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
-ORACLE = json.loads(
+PROJECTS = json.loads(
     (ROOT / 'tests/fixtures/e04_t1/oracle.js')
     .read_text()
     .split('var frozen = ', 1)[1]
     .rstrip(';\n')
-)
-PROJECTS = ORACLE['projects']
-APP_PROJECTS = [p for p in PROJECTS if p['id'] in ORACLE['catalogue_ids']]
+)['projects']
+APP_PROJECTS = [p for p in PROJECTS if p['metadata']['_metadata.purpose'] != 'verification']
 VERIFICATION_PROJECTS = [
     p for p in PROJECTS if p['metadata']['_metadata.purpose'] == 'verification'
 ]

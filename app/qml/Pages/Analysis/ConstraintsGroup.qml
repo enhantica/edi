@@ -27,7 +27,7 @@ Column {
         defaultInfoText: qsTr("No constraints")
         sourceModel: group.constraints
 
-        columnWidths: [numberColumnWidth, EaStyle.Sizes.fontPixelSize * 7, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("id")), -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

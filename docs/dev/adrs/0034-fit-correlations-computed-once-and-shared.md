@@ -47,8 +47,8 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    single or joint fit it holds that fit's rows, as now. For a scan it holds the template file's rows (the declared
    template dataset, else the first file of the scan's listing, the one its report shows; `effective_scan_template_file`,
    2026-10-14), made from the template's table when the template's fit changes: the end of a run, a Single fit on a dataset, or their Undo. Ids
-   run 1, 2, … in pair order, and coefficients are crysta's shortest form, so the bytes match today's. Rows read from a
-   file keep their ids and text until a fit replaces them. When the template's fit changes, rows read with another
+   run 1, 2, … in pair order, and the save writes each coefficient rounded as before, so the bytes match today's.
+   Rows read from a file keep their ids and values until a fit replaces them. When the template's fit changes, rows read with another
    file move, unchanged, into that file's bundle unless a fit gave it one: the loop then holds the template's rows
    only, so the new rows' ids never collide with a read row's, and the moved rows are not saved, as the template-only
    rule wants. Undoing that fit puts the loop back as it was. A save therefore aggregates nothing, and an unchanged save
@@ -71,6 +71,11 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    the same per-file event and shared the same way, so a later per-file result adds no second map and no copies.
 10. **The saved format does not change.** The `_fit_parameter_correlation` loop keeps its columns, and a scan saves the
     template's pairs only.
+11. **Rows hold numbers (amended 2026-10-24).** A row's coefficient is a double, in edi and in crysta. A single or joint
+    fit's rows take crysta's doubles directly, and a loaded row's text is parsed once, when the file is read. Text is
+    made only when saving. The chart, the report, Python's `correlation` and crysta's weight-fraction s.u. read the
+    number. Before, every coefficient was spelled at full precision for each reader to parse back, and making that text
+    was close to half of a large single-crystal fit's time.
 
 The invariants below make these decisions exact; tests are written from them.
 
@@ -87,9 +92,9 @@ its meaning.
 | I3 | Each value is `clamp(cov[i][j] / (sqrt(cov[i][i]) · sqrt(cov[j][j])), −1, 1)`, the same expression crysta evaluates today, so the double is the same. |
 | I4 | No table is made, and the fit's correlations are empty as today, when the covariance is unavailable or not n × n, n < 2, a variance is not positive and finite, a label names no parameter, or a value is not finite. |
 | I5 | A table shares the previous table's names object only when its covariance labels equal the previous labels in the same order. A changed or reordered column set resolves its own names. |
-| I6 | Rows made from a table are numbered 1, 2, … in I2's order, with `source_kind` `deterministic`, the pair's two names, and the coefficient in crysta's shortest round-trip text. They match the rows edi makes before this change, byte for byte. |
-| I7 | Rows read from a file keep their ids, `source_kind`, names, text and file exactly, in the loop or, once the template's fit changes, in their file's bundle. They are never renumbered or reformatted. A fit that replaces them writes I6 rows. |
-| I8 | The numeric view of read rows is made once, when first shown: each row's value is its text parsed as `correlation_value` parses it today, in the rows' order. |
+| I6 | Rows made from a table are numbered 1, 2, … in I2's order, with `source_kind` `deterministic`, the pair's two names, and the table's coefficient. They save as the rows edi made before this change, byte for byte. |
+| I7 | Rows read from a file keep their ids, `source_kind`, names, values and file exactly, in the loop or, once the template's fit changes, in their file's bundle. They are never renumbered. A fit that replaces them writes I6 rows. |
+| I8 | A read row's value is its text parsed once, when the file is read. |
 | I9 | Python lists and the report are made when read: I6 rows from a table, I7 rows as read. |
 | I10 | The Correlations matrix for a file is made from that file's table or read rows only, with today's level and count filter. |
 | I11 | A rename replaces each names object holding a renamed parameter with one renamed copy, which every table that held the old object then holds. Values and pair order do not change. |

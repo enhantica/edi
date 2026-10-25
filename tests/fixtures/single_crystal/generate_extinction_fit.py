@@ -93,7 +93,7 @@ def main():  # noqa: PLR0914 - independent fit inputs and uncertainty quantities
             'kind': 'reference',
             'tol_abs': float(su[0]),
         },
-        'param.radius.value': {
+        'param.domain_radius.value': {
             'value': float(fit.x[1]),
             'kind': 'reference',
             'tol_abs': float(su[1]),

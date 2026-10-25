@@ -92,6 +92,7 @@ WorkflowPage {
                 anchors.fill: parent
                 visible: page.singleCrystals
                 stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
+                project: page.project
                 shown: stackedTab.shown && page.singleCrystals
             }
         },
@@ -174,29 +175,36 @@ WorkflowPage {
     }
     Component {
         id: singleCrystalReflectionsContent
-        SingleCrystalTable {
-            id: reflectionTable
-
-            // From the column's height and where the table starts in it, never from the table's own height, so a
-            // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
-            // Set after the column has laid out: the table's place is read, not bound.
-            function place() {
-                const column = page.extrasColumn;
-                if (!column || !column.contentItem)
-                    return;
-                const top = mapToItem(column.contentItem, 0, 0).y;
-                spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
+        // The observed threshold above the reflection table (edi ADR-0050).
+        Column {
+            spacing: AppSizes.groupContentSpacing
+            ObservedThresholdRow {
+                experiment: page.experiment
             }
+            SingleCrystalTable {
+                id: reflectionTable
 
-            experiment: page.experiment
-            Component.onCompleted: Qt.callLater(place)
-            Connections {
-                target: page.extrasColumn
-                function onHeightChanged() {
-                    Qt.callLater(reflectionTable.place);
+                // From the column's height and where the table starts in it, never from the table's own height, so a
+                // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
+                // Set after the column has laid out: the table's place is read, not bound.
+                function place() {
+                    const column = page.extrasColumn;
+                    if (!column || !column.contentItem)
+                        return;
+                    const top = mapToItem(column.contentItem, 0, 0).y;
+                    spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
                 }
-                function onContentHeightChanged() {
-                    Qt.callLater(reflectionTable.place);
+
+                experiment: page.experiment
+                Component.onCompleted: Qt.callLater(place)
+                Connections {
+                    target: page.extrasColumn
+                    function onHeightChanged() {
+                        Qt.callLater(reflectionTable.place);
+                    }
+                    function onContentHeightChanged() {
+                        Qt.callLater(reflectionTable.place);
+                    }
                 }
             }
         }

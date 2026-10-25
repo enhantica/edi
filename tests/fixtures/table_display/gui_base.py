@@ -1,6 +1,6 @@
 """Independent upstream archive identities; regenerate with generate_gui_reference.py."""
 
-PIN = '540cda20a0c15982c5a3c5bdefab275f3e343c43'
-ARCHIVE_SHA256 = '9b026cd593e59b93b1f9eb36f445298d6210475fda89b7f6db3e3682a6698fc0'
-SOURCE_SHA256 = 'f9784d6fd2035a8742ae8fb3c6c5d2f96c60c7e198320a46bf396adc50a245ca'
+PIN = 'b008de4eab7a753d281c663c74419302dc9cbeb6'
+ARCHIVE_SHA256 = 'd8c70a7deae7f1beef8fa69cd7c6ecdb7142f006ba1d67661b7eca20aa62a095'
+SOURCE_SHA256 = '5585836fccc7cb02f1582ffac42c10ba861cfd897f7ffe284a8c0c172091d1c9'
 PARAMETER_SHA256 = 'cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821'

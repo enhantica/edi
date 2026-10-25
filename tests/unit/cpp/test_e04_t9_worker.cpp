@@ -464,6 +464,8 @@ TEST_CASE("E04-T9 I13a publication is byte-equivalent to the retained direct cal
         worker.submit("transaction", [&](const auto& token, const auto&) {
             result.emplace(edi::calculate(snapshot, token)); return []{};
         }); queue.one();
+        REQUIRE_MESSAGE((result.has_value()),
+                        "The worker must return a calculation before its result can be published");
         CHECK_MESSAGE((edi::publish(project, std::move(*result)) == edi::PublishOutcome::Published),
                       " seam 11 snapshot stamps come from live identities, not the copied records");
         for (std::size_t b = 0; b < project.experiments.size(); ++b)
@@ -473,8 +475,20 @@ TEST_CASE("E04-T9 I13a publication is byte-equivalent to the retained direct cal
             CHECK_MESSAGE((project.structures[s]->geometry_current() == direct.structures[s]->geometry_current()),
                           " I13a every published structure has direct-path geometry currency");
         for (std::size_t b=0;b<project.experiments.size();++b) {
-            const auto& actual=project.experiments[b]->data->intensity_calc;
-            const auto& expected=direct.experiments[b]->data->intensity_calc;
+            const auto& live = *project.experiments[b];
+            const auto& reference = *direct.experiments[b];
+            const bool single = live.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL;
+            REQUIRE_MESSAGE((live.experiment_type.effective_sample_form() ==
+                             reference.experiment_type.effective_sample_form()),
+                            "Worker publication preserves the independently loaded sample form");
+            REQUIRE_MESSAGE((single ? (live.reflections && reference.reflections && !live.data && !reference.data)
+                                    : (live.data.has_value() && reference.data.has_value())),
+                            "Worker publication provides the declared reflection or powder category before access");
+            const auto& actual=single ? live.reflections->intensity_calc : live.data->intensity_calc;
+            const auto& expected=single ? reference.reflections->intensity_calc : reference.data->intensity_calc;
+            if (single)
+                REQUIRE_MESSAGE((live.reflections->size() > 0 && actual.size() == live.reflections->size()),
+                                "Worker publication retains every single-crystal calculated reflection");
             REQUIRE_MESSAGE(actual.size()==expected.size(), " I13a published calculated columns retain all direct-path rows before any lazy save");
             for (std::size_t r=0;r<actual.size();++r)
                 CHECK_MESSAGE(std::bit_cast<std::uint64_t>(actual[r])==std::bit_cast<std::uint64_t>(expected[r]),

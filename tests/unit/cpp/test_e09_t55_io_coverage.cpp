@@ -626,6 +626,57 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
 
     std::string alternates = replace_one("_experiment_type.sample_form powder",
                                          "_experiment_type.sample_form \"single crystal\"");
+    // This composite mutation retains a powder profile, background and pattern. It is not
+    // a valid alternate single-crystal type: category admission must refuse before losing data.
+    check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(alternates)); },
+                   "_peak.type on a single crystal",
+                   "a single-crystal declaration must refuse the retained powder categories");
+
+    const std::vector<std::string> powder_tags{"_peak.type",
+                                               "_background.type",
+                                               "_background_estimate.method",
+                                               "_data.two_theta",
+                                               "_data_range.two_theta_min",
+                                               "_excluded_region.start",
+                                               "_absorption.type",
+                                               "_preferred_orientation.structure_id",
+                                               "_data_source.file_name"};
+    for (const bool tof : {false, true}) {
+        const std::string clean =
+            std::string("data_single\n_edi.schema_version 3\n") +
+            "_experiment_type.sample_form \"single crystal\"\n" +
+            "_experiment_type.radiation_probe neutron\n_experiment_type.scattering_type bragg\n" +
+            "_experiment_type.beam_mode \"" + (tof ? "time-of-flight" : "constant wavelength") +
+            "\"\n" + (tof ? "" : "_instrument.setup_wavelength 1.6\n");
+        const auto single = edi::experiment_from_edi_text(clean);
+        CHECK_MESSAGE(single.experiment_type.sample_form == edi::SampleFormEnum::SINGLE_CRYSTAL,
+                      "a clean single-crystal declaration must retain its typed sample form");
+        CHECK_MESSAGE(single.experiment_type.radiation_probe == edi::RadiationProbeEnum::NEUTRON,
+                      "a supported single crystal must retain its declared neutron probe");
+        CHECK_MESSAGE(single.experiment_type.scattering_type == edi::ScatteringTypeEnum::BRAGG,
+                      "a supported single crystal must retain its declared Bragg scattering");
+        CHECK_MESSAGE(
+            single.experiment_type.beam_mode ==
+                (tof ? edi::BeamModeEnum::TIME_OF_FLIGHT : edi::BeamModeEnum::CONSTANT_WAVELENGTH),
+            "a clean single crystal must retain its declared wavelength mode");
+        for (const auto& tag : powder_tags) {
+            for (const bool loop : {false, true}) {
+                CAPTURE(tag);
+                CAPTURE(tof);
+                CAPTURE(loop);
+                const std::string forbidden =
+                    clean + (loop ? "loop_\n" + tag + "\n1\n" : tag + " 1\n");
+                check_io_error(
+                    [&] { static_cast<void>(edi::experiment_from_edi_text(forbidden)); },
+                    tag + " on a single crystal",
+                    "each powder category must refuse by name in scalar and loop single-crystal "
+                    "input");
+            }
+        }
+    }
+
+    // Keep the independent x-ray/total token controls on their valid powder input.
+    alternates = valid;
     const std::size_t neutron = alternates.find("_experiment_type.radiation_probe neutron");
     REQUIRE_MESSAGE(neutron != std::string::npos,
                     "the committed CW fixture must carry the radiation mutation seam");
@@ -637,8 +688,8 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
     alternates.replace(bragg, std::string("_experiment_type.scattering_type bragg").size(),
                        "_experiment_type.scattering_type total");
     const edi::BraggPdExperiment typed = edi::experiment_from_edi_text(alternates);
-    CHECK_MESSAGE(typed.experiment_type.sample_form == edi::SampleFormEnum::SINGLE_CRYSTAL,
-                  "the alternate sample-form token must retain its typed value");
+    CHECK_MESSAGE(typed.experiment_type.sample_form == edi::SampleFormEnum::POWDER,
+                  "the alternate powder type control must retain its sample form");
     CHECK_MESSAGE(typed.experiment_type.radiation_probe == edi::RadiationProbeEnum::XRAY,
                   "the alternate radiation token must retain its typed value");
     CHECK_MESSAGE(typed.experiment_type.scattering_type == edi::ScatteringTypeEnum::TOTAL,

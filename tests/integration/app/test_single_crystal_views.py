@@ -1,6 +1,7 @@
 """Observe single-crystal values in the production chart and rendered table."""
 
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -41,6 +42,7 @@ def app_result():
             str(runner),
             '-input',
             str(ROOT / 'tests/unit/app/tst_single_crystal_views.qml'),
+            *shlex.split(os.environ.get('EDI_SINGLE_CRYSTAL_FUNCTIONS', '')),
             '-o',
             '-,txt',
         ],
@@ -171,3 +173,21 @@ def test_real_single_crystal_report_reflections(app_result, theme):
         'PASS   : edi_app::SingleCrystalViews::'
         f'test_single_crystal_report_reflection_list({theme})' in output
     ), 'The report preview, actual HTML and paginated PDF must list every reflection: ' + output
+
+
+@pytest.mark.parametrize(
+    'case',
+    [
+        'weak_negative_f_axes',
+        'multidataset_split_stacked_and_legend',
+        'plain_reflections_one_warning',
+    ],
+)
+def test_real_single_crystal_extended_contracts(app_result, case):
+    output = app_result.stdout + app_result.stderr
+    assert app_result.returncode >= 0, (
+        'The extended single-crystal host must complete without a crash: ' + output
+    )
+    assert f'PASS   : edi_app::SingleCrystalViews::test_{case}()' in output, (
+        'The actual app must execute the independent extended single-crystal witness: ' + output
+    )

@@ -1,7 +1,0 @@
-{
-  "program": "diffraction-lib",
-  "version": "0.21.1+dev3",
-  "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
-  "model_compatible": false,
-  "reason": "Time-of-flight absorption: banks 1+10, 2+9 and 3+8 carry a cylinder absorption, and diffraction-lib has no time-of-flight absorption."
-}

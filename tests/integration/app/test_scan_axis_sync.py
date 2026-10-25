@@ -30,29 +30,39 @@ ROUTES = {
 def axis_receipt():
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Quantity sharing requires the real native workflow host'
-    result = subprocess.run(
-        [
-            'bash',
-            str(ROOT / 'tests/fixtures/scan_views/run.sh'),
-            str(binary),
-            '-input',
-            str(ROOT / 'tests/unit/app/tst_scan_axis_sync.qml'),
-            '-o',
-            '-,txt',
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=40,
-    )
-    output = result.stdout + result.stderr
-    print(output)
-    assert (
-        result.returncode >= 0
-        and 'Totals:' in output
-        and '::ScanAxisSync::cleanupTestCase()' in output
-    ), 'An incomplete or crashed quantity-sharing actor cannot produce passing receipts'
-    return output
+    outputs = []
+    for quantity, routes in ROUTES.items():
+        result = subprocess.run(
+            [
+                'bash',
+                str(ROOT / 'tests/fixtures/scan_views/run.sh'),
+                str(binary),
+                '-input',
+                str(ROOT / 'tests/unit/app/tst_scan_axis_sync.qml'),
+                '-o',
+                '-,txt',
+                *[
+                    'ScanAxisSync::test_each_quantity_is_shared_both_directions:'
+                    + quantity
+                    + '-'
+                    + route
+                    for route in routes
+                ],
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=40,
+        )
+        output = result.stdout + result.stderr
+        print(output)
+        assert (
+            result.returncode >= 0
+            and 'Totals:' in output
+            and '::ScanAxisSync::cleanupTestCase()' in output
+        ), 'An incomplete or crashed quantity-sharing actor cannot produce passing receipts'
+        outputs.append(output)
+    return '\n'.join(outputs)
 
 
 @pytest.mark.parametrize(

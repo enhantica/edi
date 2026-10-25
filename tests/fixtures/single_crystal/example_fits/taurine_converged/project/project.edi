@@ -1,0 +1,13 @@
+_edi.schema_version 3
+
+_metadata.name             sc_neut_tof_taurine_fit
+_metadata.title "Taurine [P2₁/c] · SENJU @ J-PARC"
+_metadata.description "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "SENJU"
+_metadata.facility "J-PARC"
+_metadata.polarisation "none"

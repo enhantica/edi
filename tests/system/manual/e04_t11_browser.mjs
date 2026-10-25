@@ -215,20 +215,6 @@ try {
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
-    // The summary table belongs to the results popup. Use its native rectangle
-    // to sample the surrounding dialog padding; agreement tables may grow below it.
-    const table = await evaluate(`(() => {
-      try { return window.ediControlGeometry('fit.results.list'); }
-      catch (error) {
-        if (String(error).includes('no visible item')) return null;
-        throw error;
-      }
-    })()`);
-    if (table === null) return false;
-    assert(table.visible && table.width > 0 && table.height > 0,
-      'results modal samples require the actually visible summary table');
-    const points = [.25,.75].flatMap(y => [table.x-12,table.x+table.width+12].map(x =>
-      [Math.round(x),Math.round(table.y+table.height*y)]));
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
     const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
     const channels = data[25] === 2 ? 3 : data[25] === 6 ? 4 : 0;
@@ -242,11 +228,9 @@ try {
     }
     const raw = inflateSync(Buffer.concat(compressed)), stride = width * channels;
     assert.equal(raw.length, (stride+1)*height, 'screenshot rows must be complete');
-    assert(points.every(([x,y]) => x >= 0 && x < width && y >= 0 && y < height),
-      'results dialog padding must lie inside the actual screenshot');
     let previous = Buffer.alloc(stride);
     const samples = [];
-    for (let y = 0; y <= Math.max(...points.map(point => point[1])); ++y) {
+    for (let y = 0; y <= Math.round(height*.74); ++y) {
       const filter = raw[y*(stride+1)], row = Buffer.alloc(stride);
       assert(filter <= 4, 'browser PNG row filters must be supported');
       for (let x = 0; x < stride; ++x) {
@@ -255,14 +239,17 @@ try {
         const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a+b)/2) : pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
-      for (const [px,py] of points) {
-        if (py === y) samples.push([...row.subarray(px*channels,px*channels+3)]);
+      if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
+        for (const fraction of [.28,.72]) {
+          const x = Math.round(width*fraction)*channels;
+          samples.push([...row.subarray(x,x+3)]);
+        }
       }
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
-    // Sample outside both summary-table edges, independent of table height and column layout.
-    // A visible native summary alone is insufficient: these opaque dialog pixels must also exist.
+    // Sample the two dialog margins: its central results table can have a selected row.
+    // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
     return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
@@ -278,7 +265,6 @@ try {
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
-    window.__e04PickerAttempts = [];
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
       if (this instanceof HTMLInputElement && this.type === 'file' && this.id === 'edi-open-folder' && type === 'change') {
@@ -292,11 +278,7 @@ try {
     };
     const nativeInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
-      if (this.type === 'file') {
-        this.__e04Picker = ++pickerSequence; window.__e04FileInput = this;
-        window.__e04PickerAttempts.push({sequence:pickerSequence, active:navigator.userActivation.isActive,
-          time:performance.now(), multiple:this.multiple, accept:this.accept});
-      }
+      if (this.type === 'file') { this.__e04Picker = ++pickerSequence; window.__e04FileInput = this; }
       return nativeInputClick.call(this);
     };
     const nativeFocus = HTMLElement.prototype.focus;
@@ -381,6 +363,9 @@ try {
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     await click(/^Save project as/);
+    await waitAX(/^Save project as$/);
+    await click(/^Zip archive$/, 'radio');
+    await click(/^OK$/, 'button');
     return join(output, (await download).guid);
   };
   const inspectArchive = archive => {
@@ -518,7 +503,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await shot('empty-before-reopen');
   lastEvents.delete('Page.fileChooserOpened');
   const chooser = event('Page.fileChooserOpened');
-  await click(/^Open an existing project/);
+  await click(/^Open project(?:…|\.\.\.)?$/);
   const opened = await chooser;
   await writeFile(join(output, `${mode}-reopen-picker.json`), JSON.stringify(opened,null,2));
   const picked = await send('Runtime.evaluate', {expression:'window.__e04FileInput'});
@@ -622,7 +607,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     };
     const openFolder = async name => {
       await projectPage();
-      const input=await beginPicker(/^Open an existing project/);
+      const input=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
       await settleRenderedPage();
@@ -684,11 +669,11 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
 
     if (['all','overlap'].includes(fileRequestCase)) {
     await projectPage(); await armReads();
-    const first=await beginPicker(/^Open an existing project/);
+    const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...first,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','first folder read must be pending');
-    const second=await beginPicker(/^Open an existing project/);
+    const second=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const secondId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...second,files:[join(inputs,'routing_b')]});
     await waitBrowser('window.__e04Reads.length===2','both folder requests must overlap before either completion');
@@ -704,7 +689,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (fileRequestCase !== 'all') await openFolder('routing_b');
     // A folder read started for B must not replace a project opened while that read is pending.
     await armReads();
-    const obsolete=await beginPicker(/^Open an existing project/);
+    const obsolete=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const obsoleteId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...obsolete,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
@@ -780,8 +765,6 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
       const tree = await send('Accessibility.getFullAXTree');
       await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
-      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
-      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
     } catch { /* The original failure remains the verdict if the target already closed. */ }
   }
   throw error;

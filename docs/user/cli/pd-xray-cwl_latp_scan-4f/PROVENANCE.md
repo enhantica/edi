@@ -1,33 +1,59 @@
 # pd-xray-cwl_latp_scan-4f — provenance
 
-Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_latp_fixture.py`) from the example
-`pd-xray-cwl_latp-bm01_scan`.
+The owner's LATP project, a constant-wavelength synchrotron X-ray measurement (λ = 0.28457 Å) of
+Li1.3Al0.3Ti1.7(PO4)3 with two AlPO4 phases, given to edi on 2026-10-07.
 
 ## Sources
 
-- **Data and model:** `pd-xray-cwl_latp-bm01_scan`'s project, its `.edi` files unchanged except the name and the
-  description, and four of its patterns, `latp_312.dat`, `latp_304.dat`, `latp_296.dat` and `latp_288.dat`, copied
-  byte for byte. That project's `PROVENANCE.md` names where they come from: provided by the project owner;
-  licence not recorded.
+| file | origin |
+| --- | --- |
+| `fullprof/latp.pcr` | the owner's FullProf project after his fit; its header records FullProf's χ² 7.048 |
+| `fullprof/s13_150_z20_xrd_sum.dat` | the summed pattern that fit used, as the owner gave it |
+| `project/` | the edi project the owner built from `latp.pcr`: its structures, experiment (holding the summed pattern) and analysis, unchanged except for the scan files below |
 
-## Why these four
+FullProf ran once, on the owner's machine, when he made `latp.pcr`; no test runs it.
 
-The template first and then every 8th pattern, so the four span the start of the scan while each fit can start from
-the one before. With every 24th pattern (`latp_288`, `latp_264`, `latp_240`), `latp_240` started from `latp_264`
-ended without a convergence verdict, which the checks would read as a failed run.
+## The scan files
 
-## Pins
+The owner's scan has 8565 files of the same two-column shape (`# Two Theta	Intensity`, then 2θ and intensity); they
+are not public. The four files here are made from the summed pattern, keeping its 2θ grid:
 
-From `python -m edi fit` of a copy (`OMP_NUM_THREADS=1`): 59 free parameters (a reference: the count follows from the
-model), and per file the reduced χ² (relative tolerance 10⁻⁵) and the LATP cell c (10⁻⁴ Å), regression pins.
+```bash
+S=fullprof/s13_150_z20_xrd_sum.dat
+mk() {  # mk <file> <factor> <leading points made negative>
+  { printf '# Two Theta\tIntensity\n'
+    awk -v k="$2" -v neg="$3" 'NF==2 {n++; y=$2*k; if (n<=neg) y=-(n%4)-0.5; printf "%s %.5f\n", $1, y}' "$S"; } \
+    > project/experiments/latp_scan/"$1"
+}
+mk pattern_0_0001.txt 1.00 0
+mk pattern_0_0002.txt 0.96 0
+mk pattern_0_0003.txt 1.04 20
+mk pattern_0_0004.txt 0 0
+```
 
-| file | reduced χ² | c (Å) | iterations |
+## The expected values
+
+- `n_free` (54): the free set FullProf fits in `latp.pcr` (a **reference**).
+- The eight `param.*` values: FullProf's, read from `latp.pcr` (**references**), each with a tolerance of two edi
+  e.s.d.s of the last fitted file (`pattern_0_0003.txt`).
+- `reduced_chi_square` and `iterations`: **regression pins** of this project's own sequential fit, measured by
+  `python -m edi fit --report machine` with `OMP_NUM_THREADS=1` on edi `ddb1219` linked against crysta
+  `d703cd2c`.
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` were added. Every other file is unchanged.
+
+## Pins re-taken with crysta build-5dffd338
+
+crysta build-5dffd338 includes crysta's change that resumes a descent whose final polish shows it had not converged
+(crysta main 4a16593a), which moves this fit, so its regression pins were re-taken with that build from
+`python -m edi fit --report machine` with `OMP_NUM_THREADS=1`. Reference values are unchanged. These pins are
+temporary: the rebuilt LATP project of the example catalogue branch replaces this project and its pins when it lands.
+
+| run | quantity | before | after |
 | --- | --- | --- | --- |
-| `latp_312.dat` | 1.422321·10⁸ | 20.82674 | 5 |
-| `latp_304.dat` | 1.437673·10⁸ | 20.83157 | 17 |
-| `latp_296.dat` | 1.476181·10⁸ | 20.83880 | 18 |
-| `latp_288.dat` | 1.408974·10⁸ | 20.85007 | 18 |
-
-The project rebuilt here replaced an earlier one made from a summed pattern of a different measurement, with
-synthetic frames for negative points and an empty frame; those cases are covered by the scan fixtures under
-`tests/fixtures/`.
+| default | `reduced_chi_square` | 6.971255464 | 6.931248119 |
+| default | `iterations` | 3 | 2 |

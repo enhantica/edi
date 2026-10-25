@@ -47,7 +47,10 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
-Project load_project(const std::string& directory, const WarningSink& on_warning = {});
+// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
+// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
+// and it reads its scan data from the unpacked folder.
+Project load_project(const std::string& path, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project only from `.edi` block files. Each load
 // refuses a path without the `.edi` extension and content without the project format's
@@ -57,9 +60,6 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 // class implements (powder + bragg); a project directory keeps the loader's presence-tracked
 // axes. Nothing is changed by a load: adding is the separate step below.
 Structure load_structure_edi_file(const std::string& path);
-// A structure from a CIF file (or a `.edi` one), read through crysta's dictionary CIF names in
-// either notation; the values are the published ones, fixed. Throws IoError naming the file.
-Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name
 // unique against the project and within the batch. The first refusal names its file.
@@ -149,13 +149,15 @@ void save_project_as(Project& project, const std::string& directory);
 // without a structure) is left as it is.
 bool adopt_saved_values(Project& project, const std::string& directory);
 
+// The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
+// adopt_saved_values, then, when a value changed and the project held a calculation, calculate it from the adopted
+// values and write it again, so the files, the open project and a reopen agree, the calculated pattern and R factors
+// included. Returns whether any value changed.
+bool adopt_saved_project(Project& project, const std::string& directory);
+
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
-
-// The project's report as a CIF, written by crysta from the project a save would write: every item under its default
-// CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.
-std::string cif_report_text(const Project& project);
 
 // Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.
@@ -260,10 +262,11 @@ void copy_fit_result(Project& to, const Project& from);
 void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
-// A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
-double correlation_value(const FitParameterCorrelation& row);
+// `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
+// crysta's list, the one both loaders refuse from.
+std::string single_crystal_forbidden_tag(const std::string& tag);
 // ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
-// names and the coefficient in crysta's shortest round-trip text, `file` naming the scan file (empty for a single fit).
+// names and the coefficient, `file` naming the scan file (empty for a single fit).
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
 // ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
 // (I7) and, for the template file, the saved rows made from its table (I6), the other files' read rows moving to their

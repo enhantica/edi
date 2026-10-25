@@ -11,7 +11,9 @@
 #include <QTimer>
 #include <QString>
 #include <QUrl>
+#include <QtQml/qqmllist.h>
 #include <QtQml/qqmlregistration.h>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -181,8 +183,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
     // A project of several single crystals and nothing else: its experiments, in order, for the Stacked chart; empty
     // otherwise.
-    Q_PROPERTY(QList<edi_app::ExperimentViewModel*> singleCrystalExperiments READ singleCrystalExperiments NOTIFY
-                   experimentModelsChanged)
+    Q_PROPERTY(QQmlListProperty<edi_app::ExperimentViewModel> singleCrystalExperiments READ
+                   singleCrystalExperimentList NOTIFY experimentModelsChanged)
     // The Correlations tab: the last fit's parameter correlations for the shown experiment.
     Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -232,6 +234,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -256,6 +263,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     EvolutionViewModel* evolution() const { return evolution_; }
     ScanViewModel* scanViews() const { return scan_views_; }
     QList<ExperimentViewModel*> singleCrystalExperiments() const;
+    QQmlListProperty<ExperimentViewModel> singleCrystalExperimentList();
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
@@ -375,6 +383,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    QString apply_unread(const edi::Edit& change) override;
     QString value_refusal(const edi::Parameter& parameter) const override;
     QString free_refusal() const override;
     QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
@@ -403,6 +412,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
@@ -574,9 +585,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
     // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
-    // its dataset is applied, the main window's second frame swap after that (the first may already have been
-    // under way); or never, when the read or the application fails, or the read or the drawing takes longer than
-    // kRenderWaitMs (edi ADR-0029).
+    // its dataset is applied, the swap of the main window's first frame synchronised after that; or never, when the
+    // read or the application fails, or the read or the drawing takes longer than kRenderWaitMs (edi ADR-0029).
     // The receipt is bound to what was drawn: the followed dataset still in the model, and a shown chart that has
     // presented the pattern generation its application set (or a later one). Any other view request releases it.
     int follow_index_ = -1;
@@ -585,9 +595,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
     std::uint64_t follow_generation_ = 0;
     bool follow_issuing_ = false;  // the followed file's own view request is being made
-    int render_swaps_ = -1;  // frame swaps still to see, -1 while nothing waits for one
+    int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
+    // Set while a followed file waits for its frame, and once a frame has been synchronised since: the render thread's.
+    std::atomic<bool> render_armed_{false}, render_synced_{false};
     QTimer render_wait_;
-    QMetaObject::Connection render_connection_;
+    QMetaObject::Connection render_connection_, render_sync_connection_;
     void handFollowed(int index, const std::string& file, std::uint64_t token);
     void awaitRender();
     bool presentedFollowed() const;

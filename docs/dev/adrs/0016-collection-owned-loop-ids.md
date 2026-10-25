@@ -43,7 +43,8 @@
   catches any value it changed. The computed `data` columns and `refln` are read only while that record still
   matches (`ExperimentBase::computed_current()`): the Python `data` and `refln` getters, the app's pattern and save
   all read through it. A write by any route therefore never leaves an old result readable, and needs no hook of its
-  own. A refused calculation clears every experiment's computed categories.
+  own. A refused calculation clears every experiment's computed categories; a single crystal's malformed reflection
+  table is refused before the calculation starts and clears nothing (ADR 0049 point 3).
 - **`_refln` (item 6).** The reflections are a computed category edi carries from crysta as `experiment.refln`.
   Their ids are positional, the row ordinal, as crysta writes `_refln.id`. An imported file's own loop stays read-only
   carriage.

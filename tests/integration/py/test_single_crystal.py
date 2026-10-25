@@ -69,35 +69,34 @@ def test_each_reference_reader_preserves_every_input_row(case, extension):
     )
 
 
-@pytest.mark.parametrize('extension', ['int', 'dat'])
-@pytest.mark.parametrize(
-    'bad',
-    ['2.5 1 3 9 1', '2 1 3 nan 1', '2 1 3 9 0', '2 1 3 9 -1', '2 1 3 9', '2 1 3 9 1 garbage'],
-    ids=[
-        'fractional-index',
-        'nonfinite-intensity',
-        'zero-su',
-        'negative-su',
-        'missing-su',
-        'trailing-word',
-    ],
-)
-def test_reader_refusal_names_the_physical_line(tmp_path, extension, bad):
-    prefix = 'Sample\n(3i4,2f12.4)\n1.234 0 0\n' if extension == 'int' else '# Sample\n\n'
-    path = tmp_path / f'bad.{extension}'
-    good = f'{1:4d}{2:4d}{3:4d}{18.5:12.4f}{0.7:12.4f}\n'
-    path.write_text(prefix + good + bad + '\n')
-    line = len(prefix.splitlines()) + 2
-    with pytest.raises((ValueError, RuntimeError), match=rf'(?i)line\s*[:#]?\s*{line}\b'):
-        imported(path)
+@pytest.mark.parametrize('extension', ['int', 'dat', 'hkl', 'reflections', ''])
+def test_reader_refusal_names_the_physical_line(tmp_path, extension):
+    path = tmp_path / ('mixed.' + extension if extension else 'mixed')
+    good = '1 2 3 18.5 0.7'
+    if extension == 'int':
+        prefix = 'Sample\n(3i4,2f12.4)\n1.234 0 0\n'
+        path.write_text(prefix + good + '\n2.5 1 3 9 1\n')
+        with pytest.raises((ValueError, RuntimeError), match=r'(?i)line\s*[:#]?\s*5\b'):
+            imported(path)
+        path.write_text(prefix + good + '\n0 0 0 0 0\n')
+    else:
+        path.write_text(
+            'Header\n# comment\n' + good + ' later ignored\n'
+            '2.5 1 3 9 1\n2 1 3 nan 1\n0 0 0 0 0\n'
+            '2 1 3 9 -1\n2 1 3 9\n'
+        )
+    assert columns(imported(path)) == [[1, 2, 3, 18.5, 0.7]], (
+        'Plain reflections skip unparsed lines and later columns; FullProf skips zero-su rows'
+    )
 
 
 @pytest.mark.parametrize('value', ['0', '-1.7', 'nan', 'inf'])
 def test_tof_refuses_unusable_wavelength_at_its_line(tmp_path, value):
     path = tmp_path / 'bad.dat'
     path.write_text(f'# TOF\n1 2 3 18.5 0.7 1.25\n2 3 4 20 1 {value}\n')
-    with pytest.raises((ValueError, RuntimeError), match=r'(?i)line\s*[:#]?\s*3\b'):
-        imported(path, tof=True)
+    assert columns(imported(path, tof=True), tof=True) == [[1, 2, 3, 18.5, 0.7, 1.25]], (
+        'Plain TOF input must skip unusable wavelengths and preserve every valid row'
+    )
 
 
 @pytest.mark.parametrize('case', NO_EXTINCTION)
@@ -136,17 +135,10 @@ def test_project_round_trip_retains_reflections_and_model(tmp_path, case):
         path.write_text(text)
         default = engine().Project.load(omitted)
         extinction = default.experiments[0].extinction
-        assert (
-            extinction.model,
-            float(extinction.radius.value),
-            float(extinction.mosaicity.value),
-        ) == ('gauss', 1.0, 1.0), (
-            'Omitted single-crystal extinction must use the diffraction-lib defaults'
+        assert extinction.type == 'none', (
+            'An omitted extinction category must select None for new single crystals'
         )
-        path.write_text(
-            text + '_extinction.type becker-coppens\n_extinction.model gauss\n'
-            '_extinction.radius 1\n_extinction.mosaicity 1\n'
-        )
+        path.write_text(text + '_extinction.type none\n')
         explicit = engine().Project.load(omitted)
         np.testing.assert_allclose(
             calculated(default),
@@ -207,8 +199,10 @@ def atom_project(tmp_path, row, model, scale):
         '_scattering_source.neutron_scattering_length sears1992\n'
     )
     text += f'_instrument.setup_wavelength {row["wavelength"]}\n'
-    text += f'_extinction.type becker-coppens\n_extinction.model {model}\n'
-    text += f'_extinction.radius {row["radius"]}\n_extinction.mosaicity {row["mosaicity"]}\n'
+    text += f'_extinction.type becker-coppens-mixed\n_extinction.mosaic_distribution {model}\n'
+    text += f'_extinction.crystal_radius {row["crystal_radius"]}\n'
+    text += f'_extinction.domain_radius {row["radius"]}\n'
+    text += f'_extinction.mosaic_spread {row["mosaic_spread"]}\n'
     text += f'loop_\n_linked_structure.structure_id\n_linked_structure.scale\nstructure {scale}\n'
     text += (
         'loop_\n_refln.index_h\n_refln.index_k\n_refln.index_l\n'
@@ -219,16 +213,18 @@ def atom_project(tmp_path, row, model, scale):
     return engine().Project.load(root)
 
 
-@pytest.mark.parametrize('model', ['gauss', 'lorentz'])
+@pytest.mark.parametrize('model', ['gaussian', 'lorentzian'])
 @pytest.mark.parametrize('sample', range(len(SAMPLES)))
 def test_extinction_matches_decimal_closed_form_before_scale(tmp_path, model, sample):
     row = SAMPLES[sample]
     for scale in (0.37, 2.7):
         result = calculated(atom_project(tmp_path, row, model, scale))
-        expected = scale * float(row['f2']) * float(row[model])
+        expected = (
+            scale * float(row['f2']) * float(row['gauss' if model == 'gaussian' else 'lorentz'])
+        )
         assert result.tolist() == pytest.approx([expected], rel=2e-11, abs=1e-12), (
             'Becker-Coppens must apply the spherical primary and selected secondary correction '
-            'to unscaled F² with micrometre radius and the stored mosaicity convention, on both '
+            'to unscaled F² with micrometre domains and plain inverse-radian spread, on both '
             'angular branches'
         )
 

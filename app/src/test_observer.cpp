@@ -15,10 +15,10 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSocketNotifier>
-#include <QTemporaryDir>
 #include <QTimer>
 #include <QUrl>
 #include <QtGraphs/QXYSeries>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -33,7 +33,6 @@
 #include <unistd.h>
 
 #include "analysis_view_model.hpp"
-#include "demo_driver.hpp"
 #include "app_build_info.hpp"
 #include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
@@ -179,20 +178,28 @@ void record_frame(ScreenObservation& o) {
     for (auto* candidate : o.window->findChildren<MeasuredLayer*>("chart.measured"))
         if (candidate->isVisible() && candidate->parent()->property("shown").toBool()) layer = candidate;
     auto* calc = layer != nullptr ? layer->parent()->findChild<QXYSeries*>("chart.series.calc") : nullptr;
-    if (layer == nullptr || calc == nullptr || calc->points().isEmpty() || layer->points().isEmpty()) return;
+    // The measured points are the markers when the measured style draws them, else the measured line.
+    auto* line = layer != nullptr ? layer->parent()->findChild<QXYSeries*>("chart.series.meas") : nullptr;
+    QList<QPointF> shown = layer != nullptr ? layer->points() : QList<QPointF>();
+    if (shown.isEmpty() && line != nullptr) {
+        // The line's gaps (excluded points) are not measured points, as the markers leave them out too.
+        for (const QPointF& point : line->points())
+            if (std::isfinite(point.x()) && std::isfinite(point.y())) shown.append(point);
+    }
+    if (calc == nullptr || calc->points().isEmpty() || shown.isEmpty()) return;
     auto* model = project->currentExperiment()->pattern();
     QList<double> measured;
     for (int role : {PatternModel::XRole, PatternModel::IntensityMeasRole, PatternModel::IntensityMeasSuRole})
         for (int row = 0; row < model->rowCount(); ++row)
             measured.append(model->data(model->index(row), role).toDouble());
     QJsonArray drawn;
-    for (const auto& point : layer->points()) drawn.append(QJsonArray{point.x(), point.y()});
+    for (const auto& point : shown) drawn.append(QJsonArray{point.x(), point.y()});
     o.latest = {{"ms", static_cast<double>(o.clock.elapsed())},
                 {"running", project->fit()->running()},
                 {"patternGeneration", static_cast<qint64>(project->currentExperiment()->patternGeneration())},
                 {"presentedGeneration", static_cast<qint64>(project->currentExperiment()->presentedGeneration())},
                 {"modelMeasured", hash_values(measured)},
-                {"drawnMeasured", hash_points(layer->points())},
+                {"drawnMeasured", hash_points(shown)},
                 {"drawnPoints", drawn},
                 {"drawnCalculated", hash_points(calc->points())},
                 {"finished", QJsonArray::fromStringList(completed())}};
@@ -200,7 +207,10 @@ void record_frame(ScreenObservation& o) {
 
 // Keep a synchronised frame once it is on screen, if it differs from the last one kept.
 void keep_frame(ScreenObservation& o) {
-    if (o.latest.isEmpty()) return;
+    // Frames drawn while the project was still loading are not the pattern the fit starts from.
+    if (o.latest.isEmpty() || !o.result.contains("readyGeneration") ||
+        o.latest.value("patternGeneration").toInteger() < o.result.value("readyGeneration").toInteger())
+        return;
     const QString key = o.latest.value("drawnMeasured").toString() + o.latest.value("drawnCalculated").toString() +
                         (o.latest.value("running").toBool() ? "running" : "stopped") +
                         QString::number(o.latest.value("presentedGeneration").toInteger());
@@ -262,23 +272,77 @@ void start_fit(ScreenObservation& o, const QString& mode) {
 }
 
 // Open the scan, choose the pattern-update mode in Extras, then fit once the first frame is drawn.
-void drive(ScreenObservation& o) {
-    // The 162-file test scan, which the app does not bundle: a copy of the CLI project, as the demo opens one.
-    static QTemporaryDir copies;
-    const QString scan = copies.isValid() ? copy_cli_project(QStringLiteral("pd-neut-cwl_cosio-d20_scan-162f"),
-                                                             QDir(copies.path()))
-                                          : QString();
-    if (scan.isEmpty() || !o.session->openProject(QUrl::fromLocalFile(scan))) {
-        o.result["error"] = scan.isEmpty() ? QStringLiteral("cannot copy the 162-file test scan") : o.session->lastError();
-        publish(o.result);
-        return;
-    }
-    press(o.window->findChild<QObject*>("appBar.tab.analysis"));
+// Poll until `ready` holds, then run `then`: the pages are built in the background after a project opens (edi
+// ADR-0052). Past half a minute the observation ends naming `what` did not happen.
+void when_ready(ScreenObservation& o, std::function<bool()> ready, std::function<void()> then, const char* what) {
+    auto* timer = new QTimer(o.window);
+    auto waited = std::make_shared<QElapsedTimer>();
+    waited->start();
+    timer->setInterval(25);
+    QObject::connect(timer, &QTimer::timeout, o.window, [&o, timer, waited, ready, then, what] {
+        if (ready()) {
+            timer->stop();
+            timer->deleteLater();
+            then();
+        } else if (waited->elapsed() > 30000) {
+            timer->stop();
+            timer->deleteLater();
+            o.result["error"] = QString::fromLatin1(what);
+            publish(o.result);
+        }
+    });
+    timer->start();
+}
+
+// The Analysis page's Extras button, once that page is built.
+QObject* analysis_extras(ScreenObservation& o) {
     for (auto* button : o.window->findChildren<QObject*>("sideBar.tab.extras")) {
         QObject* owner = button;
         while (owner != nullptr && owner->property("pageName").toString() != "analysis") owner = owner->parent();
-        if (owner != nullptr) press(button);
+        if (owner != nullptr) return button;
     }
+    return nullptr;
+}
+
+void configure(ScreenObservation& o);
+
+// Whether the Analysis page's Extras show the pattern-update selector with its choices.
+bool pattern_updates_shown(ScreenObservation& o) {
+    for (auto* object : o.window->findChildren<QObject*>()) {
+        const QString values = choices(object).join("|");
+        if (values.contains("adaptive", Qt::CaseInsensitive) && values.contains("every pattern", Qt::CaseInsensitive))
+            return true;
+    }
+    return false;
+}
+
+void drive(ScreenObservation& o) {
+    if (!o.session->openExample("pd-neut-cwl_cosio-d20_scan-162f")) {
+        o.result["error"] = o.session->lastError();
+        publish(o.result);
+        return;
+    }
+    when_ready(
+        o,
+        [&o] {
+            auto* tab = qobject_cast<QQuickItem*>(o.window->findChild<QObject*>("appBar.tab.analysis"));
+            return tab != nullptr && tab->isEnabled();
+        },
+        [&o] {
+            press(o.window->findChild<QObject*>("appBar.tab.analysis"));
+            when_ready(
+                o, [&o] { return analysis_extras(o) != nullptr; },
+                [&o] {
+                    press(analysis_extras(o));
+                    when_ready(o, [&o] { return pattern_updates_shown(o); }, [&o] { configure(o); },
+                               "The Analysis page's Extras did not show the pattern updates");
+                },
+                "The Analysis page was not built");
+        },
+        "The Analysis tab did not become available");
+}
+
+void configure(ScreenObservation& o) {
     QObject* combo = nullptr;
     QStringList options;
     bool label = false;
@@ -328,9 +392,16 @@ void drive(ScreenObservation& o) {
     timer->setInterval(25);
     QObject::connect(timer, &QTimer::timeout, o.window, [&o, timer, mode] {
         auto* project = o.session->project();
-        if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
-            o.result.value("frames").toArray().isEmpty())
+        if (!project->pendingRefusal().isEmpty() || project->calculating() ||
+            project->currentExperiment()->pattern()->stale())
             return;
+        // Once loading has settled, wait for a fresh frame of the loaded pattern before fitting.
+        if (!o.result.contains("readyGeneration")) {
+            o.result["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+            o.window->update();
+            return;
+        }
+        if (o.result.value("frames").toArray().isEmpty()) return;
         timer->stop();
         start_fit(o, mode);
     });
@@ -711,6 +782,8 @@ void install_test_observer(QQmlApplicationEngine& engine) {
     static ScreenObservation o;
     o.window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     o.session = engine.singletonInstance<Session*>("edi.app", "Session");
+    // The frames are read from the measured markers, which only the points styles draw: the default band draws none.
+    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     o.clock.start();
     o.result = {{"mode", setting("SCAN_SCREEN_MODE", "adaptive")}, {"frames", QJsonArray{}}};
     o.finish = new QTimer(o.window);

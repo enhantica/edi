@@ -317,7 +317,7 @@ EaElements.GroupBox {
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
     // that experiment wherever its row is by then, and is refused if it has gone.
-    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int"
+    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int,.hkl"
     function chooseData(experiment) {
         if (WebFiles.available) {
             group.webRequestProject = group.project;
