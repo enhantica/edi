@@ -34,11 +34,9 @@ Access API. A second context removes the picker APIs and exercises real archive
 upload and download. The driver reads the independent ZIP with Python's
 `zipfile`; it never substitutes a project writer.
 
-The opening measurement structure reads
-`docs/dev/measurements/project-opening.json`: `machine`, `project` and `routes`
-(`folder`, `project.edi`, `zip`, `example`). Each route supplies
-`baseline_usable_ms`, `target_usable_ms`, `baseline_first_display_ms`,
-`target_first_display_ms`, and stage times `file_access_ms`, `parse_ms`,
-`model_ms`, `first_calculation_ms`, `chart_ms`, `reflections_ms`.
-The implementation measurement supplies these numbers before the timed app
-gates can be qualified. No latency target is invented by these tests.
+The opening reference is `../project_opening/baseline.json`, generated from the
+committed measurement rows by `../project_opening/generate.py`. It retains the
+named machine and display, every cold/warm route, the original marks and their
+published targets. The timed app acceptance run must use that same machine and
+display after implementation; the reference-data check does not claim that the
+current app meets its targets.
