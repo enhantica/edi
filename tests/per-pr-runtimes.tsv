@@ -10,7 +10,7 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T04:25:41Z
+# measured_utc = 2026-10-25T04:43:24Z
 #
 # Recorded from: measured test run (1 node(s) measured once, 15030 banked, 0 stale row(s) dropped)
 # Collected tests: 16803; with a reported duration: 9689
@@ -2190,7 +2190,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
 0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
-0.520	tests/integration/py/test_catalogue_consumers.py::test_live_actors_request_only_bundled_example_ids
+0.710	tests/integration/py/test_catalogue_consumers.py::test_live_actors_request_only_bundled_example_ids
 0.000	tests/integration/py/test_catalogue_convention_seams.py::test_beba_map_is_exercised_at_the_nonzero_fitted_witness
 0.000	tests/integration/py/test_catalogue_convention_seams.py::test_constraints_share_fullprof_code_indices_with_the_correct_sign
 0.010	tests/integration/py/test_catalogue_convention_seams.py::test_line_background_interpolates_at_an_interior_point

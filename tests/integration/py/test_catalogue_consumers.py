@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 IDENTITY = r'([a-z0-9-]+_[a-z0-9_-]+)'
 QUOTED = r"""["']""" + IDENTITY + r"""["']"""
 CALLS = (
+    r'\bopen_example\s*\(\s*' + QUOTED,
     r'(?:\.|->)openExample\s*\(\s*' + QUOTED,
     r'Examples\.bundled\s*\([^,]+,\s*[^,]+,\s*' + QUOTED,
     r'openExampleRow\s*\(\s*' + QUOTED,
@@ -34,6 +35,7 @@ def test_live_actors_request_only_bundled_example_ids():
     assert bundled, 'Catalogue precondition: the independent registry declares bundled cases'
     removed = 'pd-neut-cwl_cosio-d20_start-1'
     plants = (
+        f'open_example("{removed}")',
         f'Session.openExample("{removed}")',
         f'session->openExample("{removed}")',
         f'Examples.bundled(this, Session, "{removed}")',
@@ -55,7 +57,8 @@ def test_live_actors_request_only_bundled_example_ids():
         'Catalogue precondition: indirect retained inputs explicitly declare their fixture route'
     )
     violations = {}
-    for path in (ROOT / 'tests').rglob('*'):
+    paths = [*(ROOT / 'tests').rglob('*'), ROOT / 'app/src/demo_driver.cpp']
+    for path in paths:
         if path.suffix not in {'.qml', '.cpp', '.js', '.mjs', '.py'} or path == Path(__file__):
             continue
         missing = requests(path.read_text()) - bundled
