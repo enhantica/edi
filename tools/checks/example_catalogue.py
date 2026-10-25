@@ -304,9 +304,7 @@ def survey(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | Non
     problems.extend(
         f'{fixture}: a test fixture has an index.md page'
         for fixture in ids
-        if fixture not in known
-        and fixture not in app_only
-        and (root / CLI_DIR / fixture / 'index.md').exists()
+        if fixture not in known and (root / CLI_DIR / fixture / 'index.md').exists()
     )
     return problems, facts
 

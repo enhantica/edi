@@ -70,13 +70,13 @@ differently and why.
 
 ## Single crystal
 
-These three are in the app's Examples too, but they do not have a tutorial or reference values yet, so they
-are not catalogue cases. Open them in the app or fit them from the command line.
+These three are in the app's Examples too, but they do not have a page, a tutorial or reference values yet,
+so they are not catalogue cases. Open them in the app or fit their folders from the command line.
 
-| example | app title |
+| folder | app title |
 | --- | --- |
-| [Tb2Ti2O7 on HEiDi, fitted from a rough start](sc-neut-cwl_tb2ti2o7-heidi_fit/index.md) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) |
-| [Pr2NiO4 on 5C2, fitted from a rough start](sc-neut-cwl_pr2nio4-5c2_fit/index.md) | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB |
-| [Taurine on SENJU, six datasets fitted together](sc-neut-tof_taurine_fit/index.md) | Taurine [P2₁/c] · SENJU @ J-PARC |
+| `sc-neut-cwl_tb2ti2o7-heidi_fit` | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) |
+| `sc-neut-cwl_pr2nio4-5c2_fit` | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB |
+| `sc-neut-tof_taurine_fit` | Taurine [P2₁/c] · SENJU @ J-PARC |
 
 The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.

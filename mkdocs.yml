@@ -143,9 +143,6 @@ nav:
           - user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan/index.md
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
-          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/index.md
-          - user/cli/sc-neut-cwl_pr2nio4-5c2_fit/index.md
-          - user/cli/sc-neut-tof_taurine_fit/index.md
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/sequential-fitting-in-the-app.md
