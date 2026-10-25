@@ -426,6 +426,7 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
+        enterAccepts: true
         property bool zip: false
         property bool copy: false
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
@@ -594,6 +595,7 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: browserSaved
         objectName: "webStorageWarning"
+        enterAccepts: true
         property var warnedFor: null
         property bool kept: true
         parent: Overlay.overlay
