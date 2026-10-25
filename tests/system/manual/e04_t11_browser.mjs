@@ -180,10 +180,9 @@ try {
       return;
     }
     if(regex.source==='^OK$') {
-      const count=lastDialogTarget==='saveAs.zip'||lastDialogTarget==='open.folder'?2:1;
-      for(let i=0;i<count;++i) for(const type of ['keyDown','keyUp'])
-        await send('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
-      for(const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',{type,key:' ',code:'Space',windowsVirtualKeyCode:32});
+      // Accept the declared dialog default; pointer focus does not define a Tab count.
+      for(const type of ['keyDown','keyUp'])
+        await send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await frame();return;
     }
     const node = await waitAX(regex, true, role);
