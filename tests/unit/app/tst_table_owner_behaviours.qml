@@ -353,12 +353,15 @@ TestCase {
         verify(SettingsProof.type(search, "cosio-d20 single"), "The actual example search receives its independently named input");
         const table = named(group, "examples.list");
         tryCompare(table, "count", 1, 2000, "The actual search isolates the independently named olivine example");
+        table.forceLayout();
+        tryVerify(() => table.itemAtIndex(0) && table.itemAtIndex(0).exampleId === "pd-neut-cwl_cosio-d20", 2000, "The recycled row publishes the requested catalogue identity before its text is inspected");
+        verify(waitForPolish(table) && waitForRendering(table), "The selected catalogue row lays out and renders its own description");
         const row = table.itemAtIndex(0);
         verify(row !== null, "The example description is inspected in its rendered row");
         const text = actualText(row);
         const identity = text.find(item => item.text.includes("Co₂SiO₄") && item.text.includes("D20 @ ILL"));
         const detail = text.find(item => item.text.includes("Olivine · Coordinates, displacements and oxygen occupancies"));
-        verify(identity !== undefined && detail !== undefined, "The example shows the independent sample, facility and starting-model identities");
+        verify(identity !== undefined && detail !== undefined, "The example shows its independent sample, facility and catalogue detail; actual: " + text.map(item => item.text).join(" | "));
         compare(identity.color, Style.Colors.themeForeground, "The example identity uses the app foreground for its complete chemical formula");
         compare(detail.color, Style.Colors.themeForegroundMinor, "The example detail remains secondary to its scientific identity");
         const facets = text.filter(item => ["Fitting", "Single", "powder", "pd", "neut", "cwl", "Bragg"].includes(item.text));

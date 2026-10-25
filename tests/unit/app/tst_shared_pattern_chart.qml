@@ -273,7 +273,10 @@ Item {
             });
             verify(signal.valid && measured.count > 0, "The positive observer reaches real measured data and Qt-series signals");
             const initial = measured.revision;
-            select(named(current, "chart.toolbar.yscale"), 1);
+            const scale = named(current, "chart.toolbar.yscale");
+            const next = scale.currentIndex === 1 ? 0 : 1;
+            console.log("DRAWING_UPLOAD_Y_SCALE " + scale.currentIndex + " -> " + next);
+            select(scale, next);
             tryVerify(() => measured.revision > initial && signal.count > 0, 1500, "Visible input reaches both independent drawing upload observers");
             signal.destroy();
             showPage("project", false);

@@ -329,7 +329,7 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "A real pattern project supplies both chart and Settings controls");
             const factory = name === "analysis" ? analysisFactory : experimentFactory;
             const page = createTemporaryObject(factory, surface, {
-                width: 1200,
+                width: surface.width,
                 height: 800,
                 current: true
             });
@@ -447,12 +447,12 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             const page = patternPage(data.page), y = findChild(page, "chart.toolbar.yscale");
             verify(y !== null && y.visible && y.enabled, "Each chart keeps its actionable y-axis selector after Settings duplication is removed");
             const original = Session.project.analysis.text.text, modified = Session.project.modified;
-            const code = 'import QtQuick; import edi.app; QtObject { property PatternChart chart: PatternChart { settingsPage: "' + data.page + '"; width: 900; height: 500; function choice(root) { if (root.objectName === "chart.toolbar.yscale") return root.currentIndex; for (const child of root.children || []) { const found = choice(child); if (found !== undefined) return found; } return undefined; } } property var selected: chart.choice(chart) }';
+            const code = 'import QtQuick; import edi.app; QtObject { property PatternChart chart: PatternChart { settingsPage: "pattern"; width: 900; height: 500; function choice(root) { if (root.objectName === "chart.toolbar.yscale") return root.currentIndex; for (const child of root.children || []) { const found = choice(child); if (found !== undefined) return found; } return undefined; } } property var selected: chart.choice(chart) }';
             for (const index of [2, 1]) {
                 choose(y, index);
-                const group = data.page === "analysis" ? "Analysis" : "Experiment";
+                const group = "PatternChart";
                 const token = index === 2 ? "log" : "sqrt";
-                tryVerify(() => SettingsProof.value(location, group, "yScale") === token, 2000, "The actual chart selection reaches the persistent page store before restarting its engine");
+                tryVerify(() => SettingsProof.value(location, group, "yScale") === token, 2000, "The actual chart selection reaches the shared chart store before restarting its engine");
                 const restarted = SettingsProof.restart(code);
                 verify(!restarted.error, "A new production engine reconstructs the chart from the persisted app choice");
                 compare(restarted.selected, index, "The chart's selected y-axis type survives a restart for each pattern page");

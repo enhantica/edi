@@ -56,16 +56,16 @@ Item {
     TestCase {
         name: "TableInteractions"
         when: windowShown
-        property string savedRecentPaths
+        property var savedRecentPaths
         function init() {
             failOnWarning(/.*/);
-            savedRecentPaths = RecentProjects.settings.paths;
+            savedRecentPaths = RecentProjects.settings.recent.slice();
             Session.closeProject();
-            RecentProjects.settings.paths = "[]";
+            RecentProjects.settings.recent = [];
         }
         function cleanup() {
             Session.closeProject();
-            RecentProjects.settings.paths = savedRecentPaths;
+            RecentProjects.settings.recent = savedRecentPaths;
             RecentProjects.refresh();
         }
         function click(control, button) {
@@ -96,7 +96,7 @@ Item {
             const found = Session.projectLocation;
             const missing = found + "/missing-project";
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             const group = createTemporaryObject(recentComponent, surface);
             verify(group !== null);
@@ -119,7 +119,7 @@ Item {
             tryCompare(Session, "hasProject", true);
             compare(Session.projectLocation, found, "Opening the second row uses its directory");
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             tryCompare(table, "count", 2);
             clickNamed(group, "recentProjects.remove.1");

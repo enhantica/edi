@@ -603,28 +603,29 @@ def test_single_fit_persists_template_tag_and_selection(execution):
 
 
 def test_bundle_scan_uses_temporary_copy_and_save_as_retains_results(execution):
-    bundle = execution['bundle']
-    assert bundle.get('opened'), (
-        'Temporary working copy: the bundled 155-file catalogue example must open'
-    )
-    assert bundle['needsSaveAs'], (
-        'Temporary working copy: an opened bundled project must require Save As'
-    )
-    assert not bundle['path'].startswith(':/') and '/docs/user/' not in bundle['path'], (
-        'Temporary working copy: the worker writes into the extracted writable project'
-    )
-    assert bundle['run']['entered'] and bundle['run']['completed'] == 155, (
-        'Temporary working copy: the actual bundled scan must finish on the worker'
-    )
-    assert bundle['beforeSave'], (
-        'Temporary working copy: fitted CSV bytes must exist before Save As'
-    )
-    assert bundle['saved'] and not bundle['afterNeedsSaveAs'], (
-        'Save As: the working copy must become a saved project'
-    )
-    assert bundle['afterSave'] == bundle['beforeSave'], (
-        'Save As: every working result byte travels with the project'
-    )
+    for kind, count in [('bundle', 155), ('readonly', 162)]:
+        bundle = execution[kind]
+        assert bundle.get('opened'), (
+            'Temporary working copy: catalogue and retained 162-file fixture vehicles must open'
+        )
+        assert bundle['needsSaveAs'], (
+            'Temporary working copy: bundled and retained read-only inputs require Save As'
+        )
+        assert not bundle['path'].startswith(':/') and '/docs/user/' not in bundle['path'], (
+            'Temporary working copy: the worker writes into the extracted writable project'
+        )
+        assert bundle['run']['entered'] and bundle['run']['completed'] == count, (
+            'Temporary working copy: each complete scan keeps its declared file population'
+        )
+        assert bundle['beforeSave'], (
+            'Temporary working copy: fitted CSV bytes must exist before Save As'
+        )
+        assert bundle['saved'] and not bundle['afterNeedsSaveAs'], (
+            'Save As: the working copy must become a saved project'
+        )
+        assert bundle['afterSave'] == bundle['beforeSave'], (
+            'Save As: every working result byte travels with the project'
+        )
 
 
 def assert_lazy_trace(trace, paths):

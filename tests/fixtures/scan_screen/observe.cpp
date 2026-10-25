@@ -167,6 +167,12 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     observation_window = window;
     auto* result = new QJsonObject{{"mode", wanted("SCAN_SCREEN_MODE", "adaptive")},
                                    {"frames", QJsonArray{}}};
+    auto* preferences = engine.singletonInstance<QObject*>("edi.app", "Preferences");
+    if (!preferences || !preferences->setProperty("patternMeasuredStyle", QStringLiteral("linePoints"))) {
+        (*result)["error"] = "Scan drawing precondition: the actual measured points must be enabled";
+        publish(*result);
+        return;
+    }
     auto* finish = new QTimer(window);
     finish->setSingleShot(true);
     QObject::connect(finish, &QTimer::timeout, window, [result] {
