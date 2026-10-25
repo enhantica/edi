@@ -8,6 +8,7 @@ import ReportAcceptance 1.0
 import EasyApplication.Gui.Globals as Globals
 import "../../unit/app/RenderedTable.js" as Render
 import "../../unit/app/UiInteraction.js" as Ui
+import "RendererPath.js" as RendererPath
 
 Item {
     id: surface
@@ -54,7 +55,7 @@ Item {
             return observed;
         }
         function software(observed) {
-            return observed.api === "Software" || /llvmpipe|softpipe|swiftshader|software rasterizer|microsoft basic render/i.test(observed.renderer);
+            return RendererPath.software(observed);
         }
         function click(item) {
             verify(item !== null && item.visible && item.enabled, "The renderer preference control is visible and enabled");
@@ -92,11 +93,14 @@ Item {
             chart = chartFactory.createObject(app.contentItem, {project: Session.project});
             verify(chart !== null, "The renderer witness uses the production Stacked view");
             tryCompare(chart.scan, "loaded", 3, 8000, "The renderer witness loads all saved input files");
-            app.update();
-            verify(waitForRendering(chart), "The selected renderer draws the real scan before its type is observed");
+            settled();
             const layer = findChild(chart, "scanView.stacked.layer");
             verify(layer !== null, "The actual Stacked plot exposes its existing line item");
             return layer;
+        }
+        function settled() {
+            app.update();
+            verify(waitForPolish(chart) && waitForRendering(chart), "The active renderer is observed after the loaded scan reaches a completed frame");
         }
         function test_qt_reference() {
             window();
@@ -117,11 +121,11 @@ Item {
             const observed = reference(), dialog = develop(), box = overrideControl(dialog);
             verify(/auto/i.test(box.currentText) || (software(observed) ? /software|painter|cpu/i.test(box.currentText) : /gpu/i.test(box.currentText)), "A fresh app's renderer choice agrees with the detected hardware or automatic mode");
             dialog.close();
-            compare(ChartBackendProof.painted(scan()), software(observed), "The default uses software painting without a GPU and the GPU line item on hardware");
+            RendererPath.check(test, ChartBackendProof, scan(), RendererPath.effectiveGpu(observed, "auto"), settled);
         }
         function test_override_roundtrip() {
             window();
-            reference();
+            const observed = reference();
             const dialog = develop(), box = overrideControl(dialog), wanted = ChartBackendProof.choice();
             const values = options(box);
             const index = values.findIndex(text => wanted === "gpu" ? /gpu/i.test(text) && !/auto/i.test(text) : /software|painter|cpu/i.test(text) && !/auto/i.test(text));
@@ -137,7 +141,7 @@ Item {
             }
             compare(box.currentText, values[index], "The explicit renderer choice survives a complete host restart on the same machine store");
             dialog.close();
-            compare(ChartBackendProof.painted(scan()), wanted === "software", "The persisted override controls the actual scan renderer even when it differs from automatic detection");
+            RendererPath.check(test, ChartBackendProof, scan(), RendererPath.effectiveGpu(observed, wanted), settled);
         }
     }
 }

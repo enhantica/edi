@@ -13,6 +13,7 @@ import "RenderedTable.js" as Render
 import "ApprovedPalette.js" as Approved
 import "UiInteraction.js" as Ui
 import "../../fixtures/scan_views/input.js" as Input
+import "../../system/app/RendererPath.js" as RendererPath
 
 Item {
     id: surface
@@ -128,8 +129,7 @@ Item {
             const observed = ChartBackendProof.facts(layer);
             if (observed.api === "OpenGL")
                 verify(observed.renderer.length > 0, "The default-renderer witness reads Qt's actual OpenGL renderer");
-            const software = /llvmpipe|softpipe|swiftshader|software rasterizer|microsoft basic render/i.test(observed.renderer);
-            compare(ChartBackendProof.painted(layer), software, "The Stacked default uses the software painter without a GPU and the GPU line item on hardware");
+            RendererPath.check(test, ChartBackendProof, layer, RendererPath.effectiveGpu(observed, "auto"), () => settled(layer));
         }
         function test_adaptive_is_retained() {
             Preferences.resetToDefaults();
