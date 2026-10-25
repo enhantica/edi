@@ -19,13 +19,17 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
 
 ## In the web app
 
-- **Open project…** asks whether to open a project folder or a `.zip`, then your browser asks which.
+- **Open project…** asks whether to open a project folder or a file, then your browser asks which.
 - In **Chrome and Edge** the project stays where it is on your computer: **Save** writes the folder or the `.zip` back.
-  **Save project as…** asks for a folder or a `.zip` on your computer, as the desktop app does.
+  A `project.edi` opens its folder: the browser asks you to pick that folder too. **Save project as…** asks for a
+  folder or a `.zip` on your computer, as the desktop app does.
 - In **Firefox and Safari**, and for an example or a new project in any browser, the project is kept in your browser
-  and its Location reads *In this browser only*. **Save** writes it there. **Save project as…** saves it and downloads
-  a `.zip` with the name the project came with. Downloads go to the browser's downloads folder; to replace the original
-  file, set the browser to ask where to save downloads and choose that file.
+  and its Location reads *In this browser only*. **Save** writes it there; the first time, edi reminds you that the
+  browser may clear it. **Save project as…** can only save a copy as a `.zip`: the browser downloads it with the name
+  the project came with. Downloads go to the browser's downloads folder; to replace the original file, set the
+  browser to ask where to save downloads and choose that file.
+- A **private window** may keep nothing for edi: the project is then only in that tab, Save says so, and **Save
+  project as…** is the way to keep it.
 - **Recent projects** lists the projects your browser keeps and, after a reload or a closed tab, offers **Continue
   where you left off** with the changes you had not saved.
 - A browser can clear what it keeps: when you clear its site data, and Safari after about a week without a visit. Use
