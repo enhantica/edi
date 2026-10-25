@@ -31,7 +31,7 @@ CASES += tuple(
         'pd-neut-cwl_cosio-d20_scan-3f',
         'sc-neut-cwl_tb2ti2o7-heidi_basic',
     )
-    for route in ('record', 'zip')
+    for route in ('folder', 'zip')
 )
 CASES += tuple(
     'test_drop:' + project + '-' + route
