@@ -423,9 +423,9 @@ Item {
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
     // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
-    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the y
-    // scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner,
-    // 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the y scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or
+    // d-spacing (owner, 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
     ToolbarLines {
         id: toolbarLines
 
@@ -434,7 +434,6 @@ Item {
         width: chart.width
         height: implicitHeight
         visible: !chart.report
-        centre: mainView.x + mainView.plotArea.x + mainView.plotArea.width / 2
         leftEdge: chart.toolbarLeft
         rightEdge: chart.width - chart.toolbarRightInset
 
