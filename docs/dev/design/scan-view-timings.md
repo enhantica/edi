@@ -300,3 +300,21 @@ The painter now strokes every point while a column holds no more than four, abou
 which is most of the zoom and data cost. The GPU rows are the shader rasterised on the CPU, slower per pixel and with
 quads a pixel longer at each end; that path is not the default without a GPU. Its cost on a real GPU is taken with
 `edi_app --demo <dir> --demo-only perf-gpu-views` on the M2. The load average was 6.6 to 22 during these runs (runs.tsv), so the shares are approximate.
+
+## The 162-file fit with the two Every-pattern choices
+
+"Every pattern" became two choices (the owner, 2026-10-24; [ADR-0029](../adrs/0029-following-a-scan-latest-finished-file.md)
+§8): **fit waits for the display**, as before, and **display catches up**, which never makes the fit wait. Gate 2 bounds
+the second at 1.05 times Adaptive. The fit is timed from its start to its end, without the drawing a catching-up display
+still does after it (`edi_app --demo <dir> --demo-only perf-fit-`, the `perf-fit-catchup-` steps). Edi e974b6ed on the
+no-GPU machine above, the modes run in turn, in seconds; every run is in [fits.tsv](scan-view-timings/gate2/fits.tsv):
+
+| Tab shown | Display catches up | Fit waits for the display | Adaptive | Catches up / Adaptive |
+| --- | ---: | ---: | ---: | ---: |
+| Pattern (3 rounds) | 17.39 (17.01–22.15) | 35.07 (26.67–62.55) | 19.28 (19.19–19.54) | 0.90 |
+| Stacked (6 rounds) | 17.00 (16.44–19.14) | 16.21 (15.84–16.67), 3 rounds | 16.10 (15.90–17.44) | 1.06 |
+
+On Stacked the round-by-round ratio was 1.06, 1.18, 1.08 with the machine's load average at 4 to 24, then 1.02, 1.02 and
+1.05 at 2 to 8: each file the display catches up with is the Stacked view's shown dataset
+redrawn, a full repaint of its lines without a GPU, and that competes with the fit for the same cores. On the Pattern
+tab the drawing is a pattern chart's and the fit is not slower than Adaptive's.
