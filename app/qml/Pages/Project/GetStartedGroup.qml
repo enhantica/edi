@@ -37,15 +37,8 @@ EaElements.GroupBox {
             objectName: "project.open"
             fontIcon: "upload"
             text: qsTr("Open project…")
-            // In the browser the chosen folder or archive is copied into the page's memory first (edi ADR-0023).
-            onClicked: {
-                if (WebFiles.available) {
-                    group.webRequestProject = Session.project;
-                    group.webRequest = WebFiles.openProject();
-                } else {
-                    AppState.afterChanges(() => openProjectDialog.open());
-                }
-            }
+            // In the browser a folder or a .zip is chosen through the browser (edi ADR-0052 §9): which, first.
+            onClicked: AppState.afterChanges(() => WebFiles.available ? openChoice.open() : openProjectDialog.open())
         }
 
         EaElements.SideBarButton {
@@ -99,26 +92,41 @@ EaElements.GroupBox {
         }
     }
 
-    // The folder request and the project open when it was made: a folder that arrives after another project was
-    // opened meanwhile is not opened over it.
-    property int webRequest: 0
-    property var webRequestProject: null
-    Connections {
-        target: WebFiles
-        function onProjectOpened(request, directory) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (Session.project === group.webRequestProject)
-                Session.openProject(directory);
-        }
-        function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
-        function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
+    // The browser's Open (edi ADR-0052 §9): a project folder or a .zip, then the browser's own chooser. Chrome and Edge
+    // open it on the disk, where Save writes it back; other browsers copy it into the browser's storage.
+    AppDialog {
+        id: openChoice
+        objectName: "open.choice"
+        property bool zip: false
+        parent: Overlay.overlay
+        title: qsTr("Open project")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: openChoiceColumn.implicitWidth
+        contentHeight: openChoiceColumn.implicitHeight
+        onAboutToShow: zip = false
+        onAccepted: Session.openWebProject(zip ? "zip" : "folder")
+
+        Column {
+            id: openChoiceColumn
+
+            EaElements.Label {
+                text: qsTr("Format")
+                bottomPadding: EaStyle.Sizes.fontPixelSize * 0.25
+            }
+            EaElements.RadioButton {
+                objectName: "open.folder"
+                verticalPadding: 0
+                text: qsTr("Folder")
+                checked: !openChoice.zip
+                onClicked: openChoice.zip = false
+            }
+            EaElements.RadioButton {
+                objectName: "open.zip"
+                verticalPadding: 0
+                text: qsTr("Zip archive")
+                checked: openChoice.zip
+                onClicked: openChoice.zip = true
+            }
         }
     }
 
