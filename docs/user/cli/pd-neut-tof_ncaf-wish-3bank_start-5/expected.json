@@ -21,13 +21,13 @@
           "tol_rel": null
         },
         "reduced_chi_square": {
-          "value": 14.12339787,
+          "value": 14.13451059,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.07254201564,
+          "value": 0.07257054915,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
@@ -207,13 +207,13 @@
         "tol_rel": null
       },
       "reduced_chi_square": {
-        "value": 14.12339787,
+        "value": 14.13451059,
         "kind": "regression-pin",
         "tol_abs": 1e-06,
         "tol_rel": null
       },
       "rwp": {
-        "value": 0.07254201564,
+        "value": 0.07257054915,
         "kind": "regression-pin",
         "tol_abs": 1e-09,
         "tol_rel": null
