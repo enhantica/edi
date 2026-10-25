@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// Pinned gui-components copy; its text wraps at one width shared by every tooltip in the app, about 45 characters of
-// the app's font, and never reaches past the window (owner, 2026-10-25). Upstream draws it on one line however long.
+// Pinned gui-components copy (owner and conductor, 2026-10-25); upstream draws its text on one line however long, above
+// its control. Here the text wraps at one width shared by every tooltip in the app, about 45 characters of the app's
+// font, and never past the window; wrapped text aligns left in lines of balanced length, so no short word is left alone
+// on the last one. The tooltip sits below its control, or above it where there is no room below: never over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
@@ -34,8 +36,18 @@ T.ToolTip {
     property int currentGuideIndex: 0
     property alias controlButtons: controlButtons.data
 
+    // Between the control and the tooltip.
+    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+
     x: parent ? (parent.width - implicitWidth) / 2 : 0
-    y: -implicitHeight - EaStyle.Sizes.fontPixelSize * 0.5
+    y: parent ? parent.height + gap : 0
+    // Below, unless the window has no room for it there; worked out as it opens, where the control is now.
+    onAboutToShow: {
+        if (!parent)
+            return;
+        const bottom = parent.mapToItem(null, 0, parent.height).y;
+        y = bottom + gap + implicitHeight <= parent.Window.height - margins ? parent.height + gap : -implicitHeight - gap;
+    }
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset, contentWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset, contentHeight + topPadding + bottomPadding)
@@ -81,11 +93,16 @@ T.ToolTip {
 
         // Main text
         EaElements.Label {
-            width: Math.min(implicitWidth, control.maxTextWidth)
+            // Wider than the shared width, the text wraps into as few lines as it needs, of balanced length: the
+            // natural width shared out over them, with a little room for a word that does not split evenly.
+            readonly property bool wraps: implicitWidth > control.maxTextWidth
+            readonly property int lines: Math.ceil(implicitWidth / control.maxTextWidth)
+
+            width: wraps ? Math.min(control.maxTextWidth, Math.ceil(implicitWidth / lines) + EaStyle.Sizes.fontPixelSize * 2) : implicitWidth
             wrapMode: Text.Wrap
             text: control.text
             textFormat: control.textFormat
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: wraps ? Text.AlignLeft : Text.AlignHCenter
 
             font: control.font
 
