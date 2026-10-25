@@ -33,12 +33,28 @@ took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt 
    unpacked.
 
 1. **Opening.** `load_project` takes a folder, a `project.edi` (its folder) or a `.zip`. An archive unpacks into a new
-   temporary folder; the project then has no folder of its own (`path` empty) and reads its data from the unpacked one,
-   so its first Save asks where to keep it (Python's `save` refuses, `save_as` sets it; the apps open Save as), and
-   later saves go there. The unpacked folder's other files, its reports among them, are carried into the saved one.
-   The CLI's `fit` and `calc` take a `.zip` too; they write back only into `--output DIR`, never into the archive. The
-   desktop app has one *Open project…*: the system's file dialog takes a `project.edi` or a `.zip`, and a folder, a
-   `project.edi` or a `.zip` dropped on the window opens too (owner, 2026-10-25).
+   temporary folder, from which the project reads its data. For Python and the command line the project then has no
+   folder of its own (`path` empty): `save` refuses and `save_as` sets one; the CLI's `fit` and `calc` take a `.zip` too
+   and write back only into `--output DIR`. In the desktop app the archive is the project's location (owner,
+   2026-10-25, reversing "an opened archive is never overwritten"): the project works in the unpacked folder and Save
+   rewrites the archive from it, as for a project saved as a zip. Save opens Save project as only where writing back is
+   impossible: a bundled example, an archive in a read-only place, or the browser's uploaded copy. The unpacked
+   folder's other files, its reports among them, are carried into every save. The desktop app has one *Open project…*:
+   the system's file dialog takes a `project.edi` or a `.zip`, and a folder, a `project.edi` or a `.zip` dropped on the
+   window opens too (owner, 2026-10-25).
+
+1. **Where the project is.** The Project page's Location is the project's folder or `.zip`, never an internal
+   temporary path. A project with none of its own yet says what it came from: *Not saved yet: example \<title>*, *Not
+   saved yet: uploaded \<name>.zip* in the browser, *Not saved yet: opened from \<name>.zip* for an archive in a
+   read-only place, *Not saved yet: a copy of \<folder>* for a read-only folder. The browser shows a chosen folder by
+   its name.
+
+1. **Unsaved changes and temporary folders.** Opening, creating or closing a project, or quitting, while the project
+   has unsaved changes first asks to save or discard them (a project with nowhere to write yet opens Save as). Each
+   temporary folder (an unpacked archive, a zip-saved project's working folder, a copy on its way into an archive)
+   carries its process's id. The app releases a project's folder when the project is replaced, saved elsewhere or
+   closed; a process removes the rest of its own when it ends; and each start of the app removes those a crashed
+   process left (`remove_stale_archive_directories`).
 
 1. **Save as, and export.** The desktop app has one *Save project as…* (owner, 2026-10-25). A small dialog first asks
    for the format, a folder or a zip archive, and whether to save a copy, keeping the project where it is; then the
@@ -53,11 +69,15 @@ took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt 
    agree, the calculated pattern and R factors included. In the app this is not an edit: the project stays unmodified
    with nothing to undo.
 
-1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, the
-   shown page first and the others once it is ready; a page on its way shows *Opening this page…*. Opening another
-   project meanwhile drops the pages being built, and the replaced project's worker is gone with it, so nothing of the
-   first reaches the second. A Save while pages or the first calculation are pending runs the save sequence of
-   decision 5 on the model, unaffected.
+1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, one
+   after another in the order Project, Structure, Experiment, Analysis, Report (owner, 2026-10-25): asynchronous loaders
+   that the app's own incubation controller builds in slices of about 12 ms per turn of the event loop, so input and
+   drawing go on between slices. Each app-bar tab stays disabled until its page is built, with the tooltip *Preparing
+   this page…*; while pages build, the status bar shows *Opening project… N of M pages* with a progress bar in the fit
+   area's place, gone once every page is built. A page past Project that was shown when another project opened gives
+   way to the Project page. Opening another project meanwhile drops the pages being built, and the replaced project's
+   worker is gone with it, so nothing of the first reaches the second. A Save while pages or the first calculation are
+   pending runs the save sequence of decision 7 on the model, unaffected.
 
 1. **The web app.** It reads and writes archives through the core. It keeps zip download (Save and Save as) and
    folder or archive upload (Open) in every browser; in Chrome and Edge, where the File System Access API exists, a
