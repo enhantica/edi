@@ -748,6 +748,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
     // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    // A click on the Pattern chart's legend hides the measured curve, keeping the y range; with the range fitted to the
+    // visible curves, showing it and hiding it again fits the range each time (the owner, 2026-10-25). Run only when
+    // asked (`--demo-only legendhide-`).
+    if (only.startsWith(QLatin1String("legendhide-"))) {
+        steps_.push_back({"legendhide-1-keep", {"resize:1280x960", "theme:light", "preference:chartHiddenRange=keep",
+                                                "open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", "appBar.tab.analysis", basic,
+                                                "mainArea.analysis.tab.fitting", "chart.toolbar.legend", "chart.legend.toggle"}});
+        steps_.push_back({"legendhide-2-shown", {"preference:chartHiddenRange=fit", "chart.legend.toggle"}});
+        steps_.push_back({"legendhide-3-fit", {"chart.legend.toggle"}});
+    }
     // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU, to compare
     // the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only lines-`), at any
     // QT_SCALE_FACTOR with EDI_DEMO_ANY_RATIO set.

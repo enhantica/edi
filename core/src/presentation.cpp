@@ -583,6 +583,9 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         return values;
     };
     bool any_main = false, any_residual = false;
+    const auto counted = [&view](const std::string& id) {
+        return std::find(view.uncounted.begin(), view.uncounted.end(), id) == view.uncounted.end();
+    };
 
     const auto column_for = [&](const PatternSource::Column& column) -> const std::vector<double>* {
         return column && column->size() == x.size() && !x.empty() ? column.get() : nullptr;
@@ -627,7 +630,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
             series.bar_low.push_back(row == kNoRow ? kNaN : bar_low[row]);
             series.bar_high.push_back(row == kNoRow ? kNaN : bar_high[row]);
         }
-        for (std::size_t k = 0; k < series.points.size(); ++k) {
+        for (std::size_t k = 0; k < series.points.size() && counted(series.id); ++k) {
             cover(out.y_main, any_main, series.points[k].y);
             cover(out.y_main, any_main, series.bar_low[k]);
             cover(out.y_main, any_main, series.bar_high[k]);
@@ -652,8 +655,11 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         fill_points(series, decimate(x, display, display, out.x.min, out.x.max, view.columns, crossing), x,
                     display);
         for (const PresentedPoint& point : series.points) {
-            pane == Pane::Residual ? cover(out.y_residual, any_residual, point.y)
-                                   : cover(out.y_main, any_main, point.y);
+            if (pane == Pane::Residual) {
+                cover(out.y_residual, any_residual, point.y);
+            } else if (counted(series.id)) {
+                cover(out.y_main, any_main, point.y);
+            }
         }
         out.series.push_back(std::move(series));
     };
@@ -693,7 +699,9 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
                 series.bar_low.push_back(row == kNoRow ? kNaN : base[row]);
             }
             for (const PresentedPoint& point : series.points) {
-                cover(out.y_main, any_main, point.y);
+                if (counted(series.id)) {
+                    cover(out.y_main, any_main, point.y);
+                }
             }
             out.series.push_back(std::move(series));
         }

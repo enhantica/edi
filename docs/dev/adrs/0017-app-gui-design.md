@@ -615,6 +615,16 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
   list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
   of dictionaries.
+- **Hiding a curve from the legend** (the owner, 2026-10-25, as plotly's legend does): a click on a legend row hides its
+  curve, its row drawn in the disabled colour, and a second click shows it; the row's tooltip says *Click to hide* or
+  *Click to show*. A structure's row hides its ticks and its curve together; on the single-crystal charts a row hides
+  its experiment's reflections. The pattern charts of Experiment and Analysis and the single-crystal charts do this;
+  a report figure does not. The hidden rows are kept per chart while the app runs, not in the project, and cleared
+  when another project opens. What the y range does is a preference, *When a curve is hidden*: **Keep the y range**
+  (the default; the owner wanted nothing to jump), where hiding and showing change nothing and every later fit counts
+  the hidden curves too, or **Fit the range to visible curves**, where hiding and showing fit the range once to the
+  curves still shown and later fits count only those (`edi::PatternView::uncounted`). A hidden curve's points are not
+  read by the pointer.
 - **Each structure's curve** (the owner, 2026-10-14 and 2026-10-21): a toolbar switch with the structure icon, tooltip
   *Show each structure's curve*, draws every linked structure's calculated curve (crysta's
   `component_intensities_net`, its ADR-0096) as a soft fill from the background up to the curve, 0.25 opaque, with a
