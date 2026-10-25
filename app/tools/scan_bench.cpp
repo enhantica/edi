@@ -387,13 +387,23 @@ int main(int argc, char** argv) {
         }
         log("%s: %d changes, each waiting at most %d ms", name, kRepeats, timeout_ms);
         for (int i = 0; i < kRepeats && misses < kMaxMisses; ++i) {
-            const double ms = frame_after(view, [&] { change(i); }, timeout_ms);
+            // How long the change itself takes, before Qt Quick polishes, synchronises and draws: the feeding.
+            double applied_ms = 0.0;
+            const double ms = frame_after(
+                view,
+                [&] {
+                    QElapsedTimer applying;
+                    applying.start();
+                    change(i);
+                    applied_ms = static_cast<double>(applying.nsecsElapsed()) / 1e6;
+                },
+                timeout_ms);
             samples.push_back(ms);
             misses = ms < 0.0 ? misses + 1 : 0;
             if (ms < 0.0) {
                 log("%s %d/%d: missed", name, i + 1, kRepeats);
             } else {
-                log("%s %d/%d: %.2f ms", name, i + 1, kRepeats, ms);
+                log("%s %d/%d: %.2f ms (applied in %.2f ms)", name, i + 1, kRepeats, ms, applied_ms);
             }
             idle(50);
         }
@@ -415,6 +425,8 @@ int main(int argc, char** argv) {
         }
         for (std::size_t d = 0; d < series.size(); ++d) {
             series[d]->setColor(colours[d]);
+            // A colour change alone does not make Qt Graphs draw (6.11): the series' own update signal asks for it.
+            emit series[d]->update();
         }
     });
     phase("offset", offset_ms, [&](int i) {
