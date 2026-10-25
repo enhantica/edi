@@ -106,6 +106,12 @@ def test_python_opens_each_project_route_and_preserves_model_values(tmp_path, ca
             )
     if route == 'zip':
         # The owner reversed the former first-Save-as rule: Save now writes the opened ZIP.
+        assert Path(loaded.location) == archive, (
+            'A ZIP-loaded project declares its archive as location'
+        )
+        assert loaded.metadata.path is None, (
+            'An archive location never becomes a directory metadata path'
+        )
         before = archive.read_bytes()
         loaded.metadata.name = 'zip-python-save'
         loaded.save()
@@ -117,31 +123,68 @@ def test_python_opens_each_project_route_and_preserves_model_values(tmp_path, ca
             assert (
                 written.read('reports/opaque.html') == inventory(folder)['reports/opaque.html']
             ), 'Ordinary ZIP write-back retains every independently authored report byte'
+        saved_archive = archive.read_bytes()
         destination = tmp_path / 'kept'
         loaded.save_as(destination)
         assert Path(loaded.metadata.path) == destination, (
-            'First Save as establishes the project folder'
+            'Save as establishes the project folder as its directory metadata path'
         )
         assert (destination / 'reports/opaque.html').read_bytes() == inventory(folder)[
             'reports/opaque.html'
         ], 'Saving an archive-opened project retains its carried report bytes'
+        assert Path(loaded.location) == destination, (
+            'Save as makes the chosen folder the working location'
+        )
+        assert archive.read_bytes() == saved_archive, (
+            'Save as leaves the previously opened ZIP unchanged'
+        )
+        loaded.metadata.name = 'folder-python-next-save'
         loaded.save()
-        assert edi.Project.load(destination).name == 'zip-python-save', (
+        assert archive.read_bytes() == saved_archive, (
+            'Later folder Save never writes the former ZIP location'
+        )
+        assert edi.Project.load(destination).name == 'folder-python-next-save', (
             'Later Save writes the established project folder'
         )
 
 
 @pytest.mark.parametrize('case', CASES)
-def test_cli_calculation_opens_an_independently_created_zip_without_overwriting_it(tmp_path, case):
+@pytest.mark.parametrize('dry', [False, True], ids=['calculate', 'dry'])
+@pytest.mark.parametrize('with_output', [False, True], ids=['no-output', 'folder-output'])
+def test_cli_calculation_opens_an_independently_created_zip_without_overwriting_it(
+    tmp_path, case, dry, with_output
+):
     folder = source(tmp_path, case)
     archive = tmp_path / 'independent.zip'
     with zipfile.ZipFile(archive, 'w') as output:
         for name, body in inventory(folder).items():
             output.writestr(name, body)
     before = archive.read_bytes()
-    result = cli('calc', archive, '--dry', '--verbosity', 'off')
+    inventory_source = inventory(folder)
+    destination = tmp_path / 'cli-output'
+    arguments = ['calc', archive, '--verbosity', 'off']
+    if dry:
+        arguments.append('--dry')
+    if with_output:
+        arguments.extend(['--output', destination])
+    result = cli(*arguments)
     assert result.returncode == 0, 'CLI calculation accepts a project ZIP path: ' + result.stderr
     assert archive.read_bytes() == before, 'A ZIP input is never the CLI write-back destination'
+    assert inventory(folder) == inventory_source, (
+        'CLI ZIP calculation never changes the independent source folder'
+    )
+    if with_output and not dry:
+        written = edi.Project.load(destination)
+        assert written.name == edi.Project.load(folder).name, (
+            'CLI output retains the loaded project identity'
+        )
+        assert (destination / 'reports/opaque.html').read_bytes() == inventory_source[
+            'reports/opaque.html'
+        ], 'CLI output preserves the independently authored report bytes'
+    else:
+        assert not destination.exists(), (
+            'A dry run or omitted output never publishes a project folder'
+        )
 
 
 @pytest.mark.parametrize(
