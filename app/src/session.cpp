@@ -12,6 +12,7 @@
 
 #include "app_info.hpp"
 #include "edi/io.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
 
@@ -116,8 +117,8 @@ Session::Session(QObject* parent)
 
 Session::~Session() = default;
 
-bool Session::openProject(const QUrl& directory) {
-    if (openProjectAt(directory)) {
+bool Session::openProject(const QUrl& location) {
+    if (openProjectAt(location)) {
         return true;
     }
     emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
@@ -132,15 +133,23 @@ bool Session::openExample(const QString& exampleId) {
     return false;
 }
 
-bool Session::openProjectAt(const QUrl& directory) {
-    if (!directory.isLocalFile()) {
-        setLastError(QStringLiteral("cannot open %1: only local project directories (file: URLs) can be opened")
-                         .arg(directory.toString()));
+bool Session::openProjectAt(const QUrl& location) {
+    if (!location.isLocalFile()) {
+        setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
+                         .arg(location.toString()));
         return false;
+    }
+    QString source = location.toLocalFile();
+    // edi ADR-0052: a project record opens its folder; an archive is unpacked by the core into a temporary folder and
+    // opens unsaved, so its first Save asks where to keep it.
+    const QFileInfo given(source);
+    if (given.isFile() && given.fileName() == QStringLiteral("project.edi")) {
+        source = given.absolutePath();
+    } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
+        return open(source, {});
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
-    const QString source = directory.toLocalFile();
     const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
     if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
         if (extracted_ == nullptr || !extracted_->isValid()) {
@@ -242,6 +251,46 @@ bool Session::saveAs(const QUrl& directory) {
     emit projectLocationChanged();
     emit needsSaveAsChanged();
     emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
+    return true;
+}
+
+QString Session::exportFolder() {
+    if (project_ == nullptr) {
+        return {};
+    }
+    const edi::Project& model = project_->project();
+    if (!model.path.empty()) {
+        return QString::fromStdString(model.path);
+    }
+    if (!model.scan_data_root.empty()) {
+        return QString::fromStdString(model.scan_data_root);
+    }
+    try {
+        const std::string folder = edi::fresh_archive_directory("export");
+        edi::save_project(model, folder);
+        return QString::fromStdString(folder);
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        return {};
+    }
+}
+
+bool Session::exportProject(const QUrl& archive) {
+    if (!archive.isLocalFile()) {
+        setLastError(QStringLiteral("cannot export to %1: only local files (file: URLs)").arg(archive.toString()));
+        return false;
+    }
+    const QString folder = exportFolder();
+    if (folder.isEmpty()) {
+        return false;
+    }
+    try {
+        edi::write_project_archive(folder.toStdString(), archive.toLocalFile().toStdString());
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    setLastError({});
     return true;
 }
 
