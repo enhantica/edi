@@ -393,7 +393,10 @@ try {
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     await click(/^Save project as/);
-    // With disk APIs absent, Save as saves in this browser and directly downloads the ZIP.
+    // The app's format choice precedes the browser download, including the fallback.
+    await click(/^Zip archive$/,'radio');
+    lastDialogTarget='saveAs.copy';
+    await click(/^OK$/,'button');
     return join(output, (await download).guid);
   };
   const inspectArchive = archive => {

@@ -6,8 +6,8 @@ import {resolve, extname, sep, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {restoreCanvasViewport} from './web_control_geometry.mjs';
-import {installDownloadBoundary,assertPendingNotice,checkNoticeControls} from './browser_download_boundary.mjs';
-checkNoticeControls();
+import {installDownloadBoundary,assertPendingNotice,checkNoticeControls,assertFallbackChoices,assertBrowserWarning,checkChoiceAndWarningControls} from './browser_download_boundary.mjs';
+checkNoticeControls();checkChoiceAndWarningControls();
 
 const [siteArg, mode, output, chrome] = process.argv.slice(2);
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -37,6 +37,7 @@ const fixture = join(repo, 'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-
 const documents = spawnSync('python', ['-c', 'import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))', fixture], {encoding:'utf8'});
 assert.equal(documents.status, 0, 'Browser input comes from Python zipfile, independently of the app');
 const initial = JSON.parse(documents.stdout);
+const observation=JSON.parse(await readFile(join(repo,'tests/fixtures/project_archive/browser_save_observation.json'),'utf8')).controls;
 const offersProjectRecord=options=>options?.types?.some(type=>
   Object.values(type.accept??{}).some(extensions=>Array.isArray(extensions)&&
     extensions.some(extension=>typeof extension==='string'&&extension.toLowerCase()==='.edi')))===true;
@@ -74,10 +75,11 @@ print(json.dumps([c for c in candidates if sys.argv[1].encode() in base64.b64dec
   return matches;
 };
 try {
-  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip,example-private').split(',')) {
+  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip,example-private,example-private-save,example-warning,example-warning-save-as').split(',')) {
     console.log(mode,scenario,'starting');
-    const privateStorage=scenario==='example-private';
-    const fallback=scenario==='upload-fallback'||privateStorage;
+    const privateStorage=scenario.startsWith('example-private'),warningScenario=scenario.startsWith('example-warning');
+    const boundary=privateStorage||warningScenario;
+    const fallback=scenario==='upload-fallback'||boundary;
     const context=await browser.newContext({viewport:{width:1280,height:768},acceptDownloads:true});
     const page=await context.newPage();
     page.setDefaultTimeout(45000);
@@ -87,8 +89,8 @@ try {
     page.on('download',()=>++events.downloads);
     page.on('filechooser',()=>++events.filechoosers);
     page.on('dialog',async dialog=>{++events.dialogs;await dialog.dismiss();});
-    if(privateStorage)await page.addInitScript(installDownloadBoundary);
-    await page.addInitScript(({initial,scenario,fallback,privateStorage})=>{
+    if(boundary)await page.addInitScript(installDownloadBoundary,{denyStorage:scenario==='example-private'});
+    await page.addInitScript(({initial,scenario,fallback,boundary})=>{
       const nativeFocus=HTMLElement.prototype.focus;
       HTMLElement.prototype.focus=function(options){return nativeFocus.call(this,{...options,preventScroll:true});};
       window.__storagePicks={directory:0,open:0,save:0};
@@ -102,13 +104,13 @@ try {
       };
       // This is only the user's picker selection. Every byte uses real browser file handles.
       // It is not proof of an OS file-picker widget or actual Firefox/Safari execution.
-      if(!privateStorage)window.__storageHandles=(async()=>{
+      if(!boundary)window.__storageHandles=(async()=>{
         const root=await navigator.storage.getDirectory();
         const disk=await root.getDirectoryHandle('test-picked-output',{create:true});
         if(!(await disk.keys().next()).done)return disk;
         await put(disk,initial);return disk;
       })();
-      if(!privateStorage)window.__storageExportHandles=navigator.storage.getDirectory().then(root=>root.getDirectoryHandle('test-picked-exports',{create:true}));
+      if(!boundary)window.__storageExportHandles=navigator.storage.getDirectory().then(root=>root.getDirectoryHandle('test-picked-exports',{create:true}));
       if(fallback) {
         for(const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
           Object.defineProperty(window,name,{value:undefined,configurable:true});
@@ -123,7 +125,7 @@ try {
         window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageExportHandles).getFileHandle('destination.zip',{create:true});};
 
       }
-    },{initial,scenario,fallback,privateStorage});
+    },{initial,scenario,fallback,boundary});
     const navigationError=error=>/Execution context was destroyed|Cannot find context|navigated/i.test(error.message);
     const evaluate=async(expression,arg)=>{
       const deadline=Date.now()+45000;
@@ -242,12 +244,47 @@ try {
       }
       throw Error('Actual browser storage must durably contain '+name);
     };
+    const native=async name=>evaluate(name=>{try{return window.ediControlGeometry(name);}catch(error){
+      if(/no visible item/.test(error.message))return {visible:false,exists:true};
+      if(/no item is named/.test(error.message))return {visible:false,exists:false};throw error;
+    }},name);
+    const pointer=async name=>{const r=await geometry(name);await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();};
+    const warning=async(privateStorage=false)=>{
+      const text=await native(observation.warningText),icon=await native(observation.warningIcon);
+      assert(text.visible,'The first Save into browser storage must show the warning dialog before later short notices');
+      assertBrowserWarning(text.text,icon,privateStorage);
+      await geometry(observation.warningOk);await geometry(observation.warningSaveAs);
+      return {text,icon};
+    };
+    const formatChoice=async()=>{
+      if(boundary)await page.waitForFunction(()=>{try{return window.ediControlGeometry('saveAs.zip').visible;}catch{return window.__downloadBoundary.calls.length>0;}});
+      if(!boundary)await geometry('saveAs.zip');
+      const zip=await native('saveAs.zip');
+      assert(zip.visible,'Fallback Save-as must open edi format dialog before handing any ZIP to the browser');
+      if(!fallback){
+        assert.equal((await native('saveAs.folder')).enabled,true,'File System Access keeps the Folder format available');
+        assert.equal((await native('saveAs.copy')).enabled,true,'File System Access keeps Save-a-copy optional');
+      }
+      if(fallback){
+        if(boundary)assert.equal(await evaluate(()=>window.__downloadBoundary.calls.length),0,'The browser must not be asked to download before edi dialog OK');
+        const folder=await native('saveAs.folder'),copy=await native('saveAs.copy');
+        await page.mouse.move(folder.x+folder.width/2,folder.y+folder.height/2);
+        await page.waitForFunction(name=>{try{return window.ediControlGeometry(name).visible;}catch{return false;}},observation.folderTooltip,{timeout:5000});
+        const tooltip=await native(observation.folderTooltip);
+        assertFallbackChoices(folder,zip,copy,tooltip.text);
+        await click(/^Zip archive$/,'radio');
+        // Disabled Save-a-copy is skipped in the real dialog focus order.
+        lastDialogControl='saveAs.copy';
+      }
+      return zip;
+    };
     const exportZip=async (label,copy=true)=>{
       const download=fallback?page.waitForEvent('download'):null;download?.catch(()=>{});
       await click(/^Save project as/);
+      await formatChoice();
       if(!fallback){await geometry('saveAs.folder');await click(/^Zip archive$/,'radio');if(copy)await click(/^Save a copy/,'checkbox');}
       const previous=fallback?0:await page.evaluate(async()=>{try{return (await(await(await window.__storageExportHandles).getFileHandle('destination.zip')).getFile()).lastModified;}catch{return 0;}});
-      if(!fallback)await click(/^OK$/,'button');
+      await click(/^OK$/,'button');
       const path=join(output,scenario+'-'+label+'.zip');
       if(fallback)await(await download).saveAs(path);
       else {
@@ -298,17 +335,31 @@ try {
       // Opening an example may have reported failed automatic storage. Clear that
       // dialog before attributing anything to this separate Save-as action.
       await settle();await page.keyboard.press('Escape');await frame();
+      const storageErrors=[];
+      if(scenario==='example-private-save'){
+        await evaluate(()=>window.__downloadBoundary.deny());await frame();
+        await edit('project.name','private-save-edited');
+        await click(/^Save current state of the project$/,'button');
+        await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
+        await frame();
+        try{await warning(true);}catch(error){storageErrors.push(error.message);}
+        await page.keyboard.press('Escape');await frame();
+      }
+      await location(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
+      const actualLocation=await control(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
+      if(!/tab|memory/i.test(actualLocation.node.name?.value||''))storageErrors.push('Unavailable storage must use a plain-words in-memory Location, never In this browser only');
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
       assert(beforeStorage.length>0,'The private-session scenario must actually exercise throwing storage before Save-as');
-      const errors=[];
+      const errors=storageErrors;
       const errorState=()=>evaluate(()=>{
-        try{return {observable:true,visible:window.ediControlGeometry('webFiles.error.text').visible};}
+        try{return {observable:true,visible:window.ediControlGeometry('webFiles.error.message').visible};}
         catch(error){if(/no visible item/.test(error.message))return {observable:true,visible:false};
           if(/no item is named/.test(error.message))return {observable:false};throw error;}
       });
       const errorBefore=await errorState();
       if(errorBefore.observable)assert.equal(errorBefore.visible,false,'Any earlier storage error must be dismissed before Save-as is tested');
       await click(/^Save project as/);
+      try{await formatChoice();await click(/^OK$/,'button');}catch(error){errors.push(error.message);}
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);
       await frame();await frame();
       const held=await evaluate(()=>({calls:window.__downloadBoundary.calls,storage:window.__downloadBoundary.storage,pending:window.__downloadBoundary.pending.length}));
@@ -336,6 +387,37 @@ try {
       assert.deepEqual(errors,[],'Save-as from an example must bypass failing storage and report only an unconfirmed download request without original-file guidance');
       console.log(mode,scenario,'PASS');continue;
     }
+    if(warningScenario){
+      await edit('project.name','first-browser-save');
+      await click(/^Save current state of the project$/,'button');
+      await awaitStored('first-browser-save');await clean();
+      const first=await warning(false);
+      if(scenario==='example-warning-save-as'){
+        const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
+        await pointer(observation.warningSaveAs);await formatChoice();await click(/^OK$/,'button');
+        await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
+        assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'The warning Save-as action must download without another browser-storage save');
+        assert.equal(events.downloads,0,'The warning action must leave browser permission pending');
+        await evaluate(()=>window.__downloadBoundary.cancel());
+        receipts[scenario]={first,events,action:'Save project as from actual first-Save warning'};
+        console.log(mode,scenario,'PASS');continue;
+      }
+      await pointer(observation.warningOk);
+      assert.equal((await native(observation.warningText)).visible,false,'OK must close the first-Save browser warning');
+      await edit('project.name','later-browser-save');
+      await click(/^Save current state of the project$/,'button');
+      await awaitStored('later-browser-save');await clean();
+      assert.equal((await native(observation.warningText)).visible,false,'A later Save of the same project must use the short notice');
+      await geometry(observation.notice);await page.keyboard.press('Escape');await frame();
+      const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
+      await click(/^Save project as/);await formatChoice();await click(/^OK$/,'button');
+      await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
+      assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'Fallback Save-as must not save into browser storage even when storage works');
+      assert.equal(events.downloads,0,'The healthy-storage fallback also holds browser permission before completion');
+      await evaluate(()=>window.__downloadBoundary.cancel());
+      receipts[scenario]={first,events,capability:'Real Chromium OPFS, no disk APIs, held/cancelled anchor'};
+      console.log(mode,scenario,'PASS');continue;
+    }
     const name='browser-saved-'+scenario;
     await edit('project.name',name);
     const before={...events},picksBefore=await page.evaluate(()=>({...window.__storagePicks}));
@@ -347,11 +429,11 @@ try {
       await location(/^In this browser only$/);
       // This Qt Popup has no AX node in the shipped kit. Retain actual rendered
       // pixels for the independent notice-text inspection, and gate its visibility.
-      await geometry('webNotice.text');
+      await warning(false);
       await settle();
       const notice=await cdp.send('Page.captureScreenshot',{format:'png'});
       await writeFile(join(output,scenario+'-save-notice.png'),Buffer.from(notice.data,'base64'));
-      await page.keyboard.press('Escape');await frame();
+      await pointer(observation.warningOk);
     } else {
       const deadline=Date.now()+30000;let candidates=[];
       while(Date.now()<deadline){try{candidates=pythonStore(await readFiles(true),name);break;}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}await frame();}
