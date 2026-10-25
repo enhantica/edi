@@ -3,6 +3,7 @@
 
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 // A project's `.zip` archive (edi ADR-0052): one archive of the whole project folder, its members
@@ -21,6 +22,10 @@ std::vector<std::string> project_archive_members(const std::string& directory);
 // The archive of the project folder `directory`, as bytes. Each member is deflated and carries its
 // file's modification time. Throws IoError when a file cannot be read.
 std::string project_archive_bytes(const std::string& directory);
+
+// An archive of the given members (name, bytes), in that order, each deflated: what the browser
+// downloads when it hands over several files at once. Throws IoError.
+std::string archive_bytes(const std::vector<std::pair<std::string, std::string>>& members);
 
 // Write the archive of the project folder `directory` to `archive`, replacing it. Refuses an
 // archive inside the folder. Throws IoError.

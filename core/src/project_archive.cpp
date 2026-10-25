@@ -6,6 +6,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -128,30 +129,54 @@ std::vector<std::string> project_archive_members(const std::string& directory) {
     return members;
 }
 
-std::string project_archive_bytes(const std::string& directory) {
-    const std::vector<std::string> members = project_archive_members(directory);
+// An archive of members whose bytes `body` reads and whose time `time` gives.
+template <typename Body, typename Time>
+std::string archive_of(const std::vector<std::string>& members, const Body& body,
+                       const Time& time) {
     Writer writer;
     if (!mz_zip_writer_init_heap(&writer.zip, 0, 0)) {
-        throw IoError("cannot start an archive of " + directory);
+        throw IoError("cannot start an archive");
     }
     writer.open = true;
-    for (const std::string& member : members) {
-        const fs::path path = fs::path(directory) / fs::path(member);
-        const std::string body = read_bytes(path);
-        MZ_TIME_T written = modification_time(path);
-        if (!mz_zip_writer_add_mem_ex_v2(&writer.zip, member.c_str(), body.data(), body.size(),
+    for (std::size_t index = 0; index < members.size(); ++index) {
+        const std::string& member = members[index];
+        const std::string data = body(index);
+        MZ_TIME_T written = time(index);
+        if (!mz_zip_writer_add_mem_ex_v2(&writer.zip, member.c_str(), data.data(), data.size(),
                                          nullptr, 0, MZ_DEFAULT_LEVEL, 0, 0, &written, nullptr, 0,
                                          nullptr, 0)) {
-            throw IoError("cannot add " + member + " to the archive of " + directory);
+            throw IoError("cannot add " + member + " to the archive");
         }
     }
     void* buffer = nullptr;
     std::size_t size = 0;
     if (!mz_zip_writer_finalize_heap_archive(&writer.zip, &buffer, &size)) {
-        throw IoError("cannot finish the archive of " + directory);
+        throw IoError("cannot finish the archive");
     }
     const std::unique_ptr<void, decltype(&mz_free)> owned(buffer, &mz_free);
     return std::string(static_cast<const char*>(buffer), size);
+}
+
+std::string project_archive_bytes(const std::string& directory) {
+    const std::vector<std::string> members = project_archive_members(directory);
+    const auto path = [&](std::size_t index) {
+        return fs::path(directory) / fs::path(members[index]);
+    };
+    return archive_of(
+        members, [&](std::size_t index) { return read_bytes(path(index)); },
+        [&](std::size_t index) { return modification_time(path(index)); });
+}
+
+std::string archive_bytes(const std::vector<std::pair<std::string, std::string>>& members) {
+    std::vector<std::string> names;
+    names.reserve(members.size());
+    for (const auto& member : members) {
+        names.push_back(member.first);
+    }
+    const MZ_TIME_T now = std::time(nullptr);
+    return archive_of(
+        names, [&](std::size_t index) { return members[index].second; },
+        [&](std::size_t) { return now; });
 }
 
 void write_project_archive(const std::string& directory, const std::string& archive) {
