@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T19:03:02Z
+# measured_utc = 2026-10-25T19:53:13Z
 #
-# Recorded from: measured test run (37 node(s) measured once, 15219 banked, 3 stale row(s) dropped)
-# Collected tests: 16970; with a reported duration: 9939
+# Recorded from: measured test run (4 node(s) measured once, 15256 banked, 0 stale row(s) dropped)
+# Collected tests: 16974; with a reported duration: 9941
 # Module-scoped fixture costs recorded: 74
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 16970
+# inventory_python = 16974
 # inventory_cpp = 393
-# inventory_measured = 15256
-# inventory_unmeasured = 2107
+# inventory_measured = 15258
+# inventory_unmeasured = 2109
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -13348,6 +13348,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 3.370	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:pd-neut-cwl_cosio-d20_scan-3f]
 3.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-cwl_tb2ti2o7-heidi_basic]
 3.110	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-tof_taurine_fit]
+2.990	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
+2.760	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-recent]
 0.030	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[declared-writer-native]
 0.040	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[declared-writer-python]
 0.020	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[existing-allowed-native]

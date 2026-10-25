@@ -203,6 +203,60 @@ TestCase {
         const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
         compare(Session.project.name, name, "Unified Open retains the input project's declared name");
     }
+    function test_web_zip_lifecycle_data() {
+        const rows = [];
+        for (const route of ["open", "recent"])
+            for (const state of ["empty", "replace"])
+                rows.push({
+                    tag: route + "-" + state,
+                    route,
+                    state
+                });
+        return rows;
+    }
+    function test_web_zip_lifecycle(data) {
+        application();
+        const input = SettingsProof.copyProjectArchive(Probe.repoUrl("tests/fixtures/project_archive/browser-saved-project.zip"));
+        verify(input.toString().endsWith(".zip"), "The desktop route uses a writable copy of the actual web download");
+        const expected = JSON.parse(SettingsProof.repoText("tests/fixtures/project_archive/browser-saved-project.json"));
+        if (data.state === "replace") {
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "Reopening starts with a different real project already open");
+            tryCompare(Session.project, "calculating", false, 15000, "The replaced project is usable before the next real control action");
+            compare(Session.project.name, "relations", "The pre-existing project differs from the downloaded project");
+        } else {
+            verify(!Session.hasProject, "The empty-window route starts without an open project");
+        }
+        if (data.route === "open") {
+            clickControl("project.open");
+            let dialogs;
+            tryVerify(() => {
+                dialogs = SettingsProof.projectFileDialogs(app, false);
+                return dialogs.length === 1;
+            }, 2000, "The Get started Open project button exposes one real native file chooser");
+            verify(SettingsProof.chooseProjectLocation(dialogs[0], input, false), "The native chooser accepts the actual browser-produced ZIP");
+        } else {
+            RecentProjects.remember(SettingsProof.localPath(input));
+            RecentProjects.refresh();
+            const group = Ui.control(Probe, app, "group.recentProjects");
+            verify(group !== null, "Recent projects is present in the real Project page");
+            if (group.collapsed)
+                mouseClick(group.titleArea, group.titleArea.width / 2, group.titleArea.height / 2);
+            let index = -1;
+            for (let i = 0; i < RecentProjects.rows.count; ++i)
+                if (RecentProjects.rows.get(i).path === SettingsProof.localPath(input))
+                    index = i;
+            verify(index >= 0, "The exact downloaded ZIP appears in Recent projects");
+            clickControl("recentProjects.path." + index);
+        }
+        tryVerify(() => Session.hasProject && Session.project.name === expected.name, 4000, "The real control finishes loading the name recorded in the downloaded ZIP");
+        tryCompare(Session.project, "calculating", false, 15000, "The downloaded project's own calculation settles after opening");
+        compare(Session.lastError, "", "The downloaded project opens without a reported error");
+        clickControl("project.saveAs");
+        const choice = findChild(app, "saveAs.choice");
+        verify(choice !== null, "The project remains interactive after the opening signal handler returns");
+        tryCompare(choice, "opened", true, 2000, "A second real action works after ZIP opening");
+        choice.close();
+    }
     function test_drop_data() {
         const rows = [];
         for (const projectName of cases)
