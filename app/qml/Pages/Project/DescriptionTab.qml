@@ -167,7 +167,8 @@ Rectangle {
                     objectName: "project.location"
                     width: column.width - AppSizes.descriptionNameColumnWidth
                     elide: Text.ElideMiddle
-                    text: Session.projectLocation
+                    // A project opened from a .zip has no folder until it is saved (edi ADR-0052).
+                    text: Session.projectLocation !== "" || Session.openedArchive === "" ? Session.projectLocation : qsTr("Not saved yet: opened from %1").arg(Session.openedArchive)
                 }
             }
             // The blocks by name, each with its icon in its colour, the count in the label (as
