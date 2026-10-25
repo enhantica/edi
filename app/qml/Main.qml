@@ -163,56 +163,114 @@ EaComponents.ApplicationWindow {
         }
     ]
 
+    // edi ADR-0052: an opened project shows at once and its pages follow. Each page is built afresh for each project,
+    // in the background (asynchronous loaders), the shown page first and the others once it is ready; a page on its
+    // way says so. The pages let go of a project before it is replaced, so opening another one meanwhile drops what
+    // was being built for the first.
+    property bool pagesStarted: true
+    readonly property var pageLoaders: [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader]
+    readonly property bool shownPageReady: pageLoaders.every(loader => !loader.SwipeView.isCurrentItem || loader.status === Loader.Ready)
+    function pageTurn(loader) {
+        return pagesStarted && (loader.SwipeView.isCurrentItem || shownPageReady);
+    }
+    Connections {
+        target: Session
+        function onProjectAboutToChange() {
+            window.pagesStarted = false;
+        }
+        function onProjectChanged() {
+            pagesStart.restart();
+        }
+    }
+    Timer {
+        id: pagesStart
+        interval: 0
+        onTriggered: window.pagesStarted = true
+    }
+
+    component PagePending: EmptyStateLabel {
+        required property Loader loader
+        anchors.centerIn: parent
+        width: parent.width * 0.8
+        visible: Session.hasProject && loader.status !== Loader.Ready
+        text: qsTr("Opening this page…")
+    }
+
     contentArea: [
         HomePage {},
         Loader {
             id: projectLoader
 
-            active: AppState.projectPageEnabled
+            active: AppState.projectPageEnabled && window.pageTurn(projectLoader)
+            asynchronous: true
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
                 }
             }
+
+            PagePending {
+                loader: projectLoader
+            }
         },
         Loader {
             id: structureLoader
 
-            active: AppState.structurePageEnabled
+            active: AppState.structurePageEnabled && window.pageTurn(structureLoader)
+            asynchronous: true
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
                 }
             }
+
+            PagePending {
+                loader: structureLoader
+            }
         },
         Loader {
             id: experimentLoader
 
-            active: AppState.experimentPageReached
+            active: AppState.experimentPageReached && window.pageTurn(experimentLoader)
+            asynchronous: true
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
                 }
             }
+
+            PagePending {
+                loader: experimentLoader
+            }
         },
         Loader {
             id: analysisLoader
 
-            active: AppState.analysisPageReached
+            active: AppState.analysisPageReached && window.pageTurn(analysisLoader)
+            asynchronous: true
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
                 }
             }
+
+            PagePending {
+                loader: analysisLoader
+            }
         },
         Loader {
             id: reportLoader
 
-            active: AppState.reportPageReached
+            active: AppState.reportPageReached && window.pageTurn(reportLoader)
+            asynchronous: true
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
                 }
+            }
+
+            PagePending {
+                loader: reportLoader
             }
         }
     ]

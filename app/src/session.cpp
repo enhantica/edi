@@ -463,6 +463,7 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // the new state of the others; then each property signals only if it changed.
     ProjectViewModel* previous = project_;
     const QString previous_example = opened_example_;
+    emit projectAboutToChange();
     project_ = project;
     opened_example_ = example;
     warnings_->setMessages(warnings);
