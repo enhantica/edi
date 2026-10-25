@@ -111,6 +111,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
         qml/Components/ScanViewChart.qml
+        qml/Components/SingleCrystalChart.qml
+        qml/Components/SingleCrystalTable.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectedPatternBox.qml
@@ -153,9 +155,12 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/MinimizerGroup.qml
         qml/Pages/Analysis/ParametersGroup.qml
         qml/Pages/Analysis/PatternUpdatesGroup.qml
+        qml/Pages/Analysis/RefinementGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
+        qml/Pages/Experiment/ExtinctionGroup.qml
+        qml/Pages/Experiment/ObservedThresholdRow.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml
@@ -207,13 +212,13 @@ if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
-# The Examples: the user-facing projects of edi's CLI registry (`user-facing: true`), in registry order, each
-# with its scan data (a scan's datasets are browsed in the app). Every other registered project is a test
-# fixture, and verification projects stay CLI projects only (ADR-0031). Configuration fails when the registry
-# and the project directories disagree.
+# The Examples: the user-facing projects of edi's CLI registry (`user-facing: true`) and its declared app-only
+# ones (`app-only: <reason>`, ADR-0048), in registry order, each with its scan data (a scan's datasets are
+# browsed in the app). Every other registered project is a test fixture, and verification projects stay CLI
+# projects only (ADR-0031). Configuration fails when the registry and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
-file(STRINGS ${_cli}/projects.yml _registry_lines REGEX "^  - id: |^    user-facing: ")
+file(STRINGS ${_cli}/projects.yml _registry_lines REGEX "^  - id: |^    user-facing: |^    app-only: ")
 set(_registered_ids)
 set(EDI_APP_EXAMPLE_IDS)
 foreach(line IN LISTS _registry_lines)
@@ -223,7 +228,7 @@ foreach(line IN LISTS _registry_lines)
             message(FATAL_ERROR "docs/user/cli/projects.yml lists '${id}', which has no docs/user/cli/${id}/project/")
         endif()
         list(APPEND _registered_ids ${id})
-    elseif(line MATCHES "^    user-facing: *true$")
+    elseif(line MATCHES "^    user-facing: *true$" OR line MATCHES "^    app-only: ")
         list(APPEND EDI_APP_EXAMPLE_IDS ${id})
     endif()
 endforeach()

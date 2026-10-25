@@ -21,6 +21,9 @@ matched neither. A user could not tell which example showed a technique, and a f
 1. **One registry.** `docs/user/cli/projects.yml` lists every project. A row with `user-facing: true` is a catalogue
    case; every other row is a test fixture. A case's title is its project's `_metadata.title`, its data sources and
    licences are its `PROVENANCE.md` `## Sources`, and its tutorial follows from its id. Nothing restates them.
+   The app also lists a declared set of `app-only: <reason>` rows: examples that arrived before their catalogue form
+   (the three single-crystal projects). The catalogue check holds that set to its declared ids and reason, and it
+   only shrinks: each row leaves it when its project becomes a case.
 2. **One spelling.** A case's folder, CLI id, `_metadata.name`, app entry and tutorial file stem are the same string:
    `<technique>_<sample>[-<instrument>][_<variant>]`, two or three parts, a variant only when it tells the user
    something (`simulation`, `scan`).

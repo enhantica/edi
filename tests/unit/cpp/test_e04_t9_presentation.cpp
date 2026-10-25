@@ -145,6 +145,38 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
             const auto source = edi::capture_pattern(project, b);
             const auto p = edi::present_pattern(source, {});
             REQUIRE_MESSAGE((p.current), " I22 successful calculation presents current columns");
+            const auto& live = *project.experiments[b];
+            if (live.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL) {
+                REQUIRE_MESSAGE((!live.data && live.reflections),
+                                "A declared single crystal has measured reflections and no powder pattern");
+                REQUIRE_MESSAGE((experiment.reflections.get()),
+                                "The independent single-crystal load retains its measured reflections");
+                const auto& rows = *live.reflections;
+                const auto& input = *experiment.reflections.get();
+                const auto& expected = computed.refln().intensity_calc;
+                REQUIRE_MESSAGE((rows.size() > 0 && rows.size() == input.size()),
+                                "Single-crystal presentation covers every independently loaded reflection");
+                REQUIRE_MESSAGE((source.refln_calc && source.refln_calc->size() == rows.size() &&
+                                 expected.size() == rows.size()),
+                                "Single-crystal capture retains every calculated reflection in input order");
+                CHECK_MESSAGE((!source.x && !source.meas && !source.su && !source.calc &&
+                               !source.bkg && !source.resid && p.series.empty()),
+                              "Single-crystal capture does not invent powder curves");
+                for (std::size_t r = 0; r < rows.size(); ++r) {
+                    CHECK_MESSAGE((rows.index_h[r] == input.index_h[r] &&
+                                   rows.index_k[r] == input.index_k[r] && rows.index_l[r] == input.index_l[r]),
+                                  "Single-crystal Miller indices retain the independent input order");
+                    CHECK_MESSAGE((identical(rows.intensity_meas[r], input.intensity[r]) &&
+                                   identical(rows.intensity_meas_su[r], input.sigma[r])),
+                                  "Single-crystal measured values and uncertainties retain independent input bits");
+                    CHECK_MESSAGE((identical((*source.refln_calc)[r], expected[r]) &&
+                                   identical(rows.intensity_calc[r], expected[r])),
+                                  "Captured single-crystal values retain the independent calculated bits");
+                }
+                continue;
+            }
+            REQUIRE_MESSAGE((experiment.data.get() && live.data),
+                            "Every declared powder project retains its pattern before category access");
             const auto& data = *experiment.data;
             compare_points(series(p, edi::SeriesKind::Calculated), data.grid, computed.data().intensity_calc);
             compare_points(series(p, edi::SeriesKind::Background), data.grid, computed.data().intensity_bkg);
@@ -202,6 +234,27 @@ TEST_CASE("E04-T9 gate 2 independent pixel extrema over corpus and stress measur
                         " gate 2 independently loaded experiment modes cover every bank");
         for (std::size_t b = 0; b < project.experiments.size(); ++b) {
             const auto s = edi::capture_pattern(project, b);
+            const auto& experiment = *project.experiments[b];
+            if (experiment.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL) {
+                REQUIRE_MESSAGE((!experiment.data && experiment.reflections),
+                                "A declared single crystal exposes reflections instead of a powder pattern");
+                const auto& rows = *experiment.reflections;
+                REQUIRE_MESSAGE((s.current && s.refln_calc && rows.size() > 0 &&
+                                 s.refln_calc->size() == rows.size()),
+                                "Single-crystal capture retains a current value for every measured reflection");
+                for (int width : {1, 7, 400, 1200, 2400}) {
+                    edi::PatternView view;
+                    view.columns = width;
+                    const auto shown = edi::present_pattern(s, view);
+                    CHECK_MESSAGE((shown.current && shown.series.empty()),
+                                  "Every pixel width retains single-crystal currency without creating powder curves");
+                }
+                for (std::size_t r = 0; r < rows.size(); ++r)
+                    CHECK_MESSAGE((std::isfinite((*s.refln_calc)[r]) &&
+                                   identical((*s.refln_calc)[r], rows.intensity_calc[r])),
+                                  "Every single-crystal calculated reflection survives capture without decimation");
+                continue;
+            }
             REQUIRE_MESSAGE((s.x && s.calc && s.bkg),
                             " gate 2 every fixture exposes its axis and calculated curves");
             for (auto column : {s.calc, s.bkg}) exercise_decimator(*s.x, *column, *column);

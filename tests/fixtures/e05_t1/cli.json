@@ -40231,6 +40231,3602 @@
       "edi_sha": "09a40bdc2bc854c913310c02dbc02e46bd0eec55",
       "crysta_build_commit": "e25adc97e4151b76b8e5f5b08b4fa7470b010977",
       "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_pr2nio4-5c2_basic",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "28575aae0988f6239e31eec7e95cab0767838209b9508cd030d35d6b6d8d684a",
+        "experiments/pr2nio4.edi": "deb6c159d59a8bb7c6518844f593681bb22f5fa5af480f56bb95a0ff10eca891",
+        "project.edi": "1778edce9fc08982d51ff4cf45f4a3aa3f026085ffd479b66f7e244cbfd34f1b",
+        "structures/pr2nio4.edi": "9650cabf089c757fda805a194dfd0b8eac113a6e2c8f3c381110f61d705cd3b4"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "198",
+        "n_points_fitted": "198",
+        "n_free": "1",
+        "iterations": "2",
+        "reduced_chi_square": "10.80514652",
+        "rwp": "0.04754441248",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "9.141",
+        "iter.1.rwp": "0.0475444128",
+        "iter.1.reduced_chi_square": "10.80514666",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "3.553",
+        "iter.2.rwp": "0.04754441248",
+        "iter.2.reduced_chi_square": "10.80514652",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "7.052",
+        "param.scale.value": "4.008973541",
+        "param.scale.uncertainty": "0.01359536812",
+        "x-edi.correlations": "0"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 5.417799,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.4146,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 12.483399,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.35973,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.7299489714207147,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5327846107414085,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.2492690410292335,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.17385,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.722965,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.4358807984374156,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.074655,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0717672991736846,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.07347,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.07347,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.17349,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.074654,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.31435,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0071,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0071,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00084,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0028,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0028,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00151,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.005,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.005,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00413,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.0014,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.01716,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.01716,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00045,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.01033,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.01176,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.001,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.8302,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.008973540890845,
+          "uncertainty": 0.013595368120975249,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_pr2nio4-5c2_fit",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+        "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
+        "project.edi": "7fd7ed14f9c50f3963e1a5769bc203ba309d39a31b10b593c9779d6b4f5166a8",
+        "structures/pr2nio4.edi": "27b55ca7cad6af444695d7e2881bae2d9ad454c42a92155ea10c4f35384a592f"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "198",
+        "n_points_fitted": "198",
+        "n_free": "12",
+        "iterations": "10",
+        "reduced_chi_square": "306.764526",
+        "rwp": "0.2461558051",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "208.107",
+        "iter.1.rwp": "0.2867206134",
+        "iter.1.reduced_chi_square": "416.2007",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "18.522",
+        "iter.2.rwp": "0.2504634222",
+        "iter.2.reduced_chi_square": "317.5949532",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "35.785",
+        "iter.3.rwp": "0.2467517766",
+        "iter.3.reduced_chi_square": "308.2517486",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "53.230",
+        "iter.4.rwp": "0.2462571639",
+        "iter.4.reduced_chi_square": "307.0172089",
+        "iter.4.unevaluable_trials": "0",
+        "iter.4.elapsed_ms": "70.611",
+        "iter.5.rwp": "0.2461750671",
+        "iter.5.reduced_chi_square": "306.8125372",
+        "iter.5.unevaluable_trials": "0",
+        "iter.5.elapsed_ms": "87.803",
+        "iter.6.rwp": "0.2461597434",
+        "iter.6.reduced_chi_square": "306.7743419",
+        "iter.6.unevaluable_trials": "0",
+        "iter.6.elapsed_ms": "104.767",
+        "iter.7.rwp": "0.2461566463",
+        "iter.7.reduced_chi_square": "306.7666226",
+        "iter.7.unevaluable_trials": "0",
+        "iter.7.elapsed_ms": "122.012",
+        "iter.8.rwp": "0.2461559848",
+        "iter.8.reduced_chi_square": "306.7649739",
+        "iter.8.unevaluable_trials": "0",
+        "iter.8.elapsed_ms": "139.316",
+        "iter.9.rwp": "0.2461558383",
+        "iter.9.reduced_chi_square": "306.7646087",
+        "iter.9.unevaluable_trials": "0",
+        "iter.9.elapsed_ms": "156.842",
+        "iter.10.rwp": "0.2461558051",
+        "iter.10.reduced_chi_square": "306.764526",
+        "iter.10.unevaluable_trials": "0",
+        "iter.10.elapsed_ms": "182.132",
+        "param.Ni.adp_iso.value": "0.7381663128",
+        "param.Ni.adp_iso.uncertainty": "0.06718438695",
+        "param.O1.adp_iso.value": "1.604510142",
+        "param.O1.adp_iso.uncertainty": "0.09115705525",
+        "param.O2.adp_iso.value": "1.637988263",
+        "param.O2.adp_iso.uncertainty": "0.1354116593",
+        "param.O2.fract_z.value": "0.1744769015",
+        "param.O2.fract_z.uncertainty": "0.0007442562145",
+        "param.Od.adp_iso.value": "-0.06181385578",
+        "param.Od.adp_iso.uncertainty": "0.242652",
+        "param.Od.fract_x.value": "0.06530494935",
+        "param.Od.fract_x.uncertainty": "0.004271736844",
+        "param.Od.fract_y.value": "0.06205360729",
+        "param.Od.fract_y.uncertainty": "0.004072118607",
+        "param.Od.fract_z.value": "0.172927201",
+        "param.Od.fract_z.uncertainty": "0.001669019686",
+        "param.Oi.adp_iso.value": "0.1094734818",
+        "param.Oi.adp_iso.uncertainty": "0.523157789",
+        "param.Pr.adp_iso.value": "0.8910939078",
+        "param.Pr.adp_iso.uncertainty": "0.09139538105",
+        "param.Pr.fract_z.value": "0.3600437339",
+        "param.Pr.fract_z.uncertainty": "0.0004442395486",
+        "param.scale.value": "4.142329064",
+        "param.scale.uncertainty": "0.1561184393",
+        "x-edi.correlations": "66"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 5.417799,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.4146,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 12.483399,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.3600437338587164,
+          "uncertainty": 0.00044423954858063304,
+          "free": true
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.891093907762788,
+          "uncertainty": 0.09139538104700898,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.7381663127723803,
+          "uncertainty": 0.06718438695398983,
+          "free": true
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.6045101419732057,
+          "uncertainty": 0.0911570552516529,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.1744769014724541,
+          "uncertainty": 0.000744256214487428,
+          "free": true
+        },
+        {
+          "value": 0.722965,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.6379882625747106,
+          "uncertainty": 0.1354116593112688,
+          "free": true
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.074655,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.10947348180272955,
+          "uncertainty": 0.5231577889694768,
+          "free": true
+        },
+        {
+          "value": 0.06530494934892242,
+          "uncertainty": 0.004271736844124349,
+          "free": true
+        },
+        {
+          "value": 0.06205360728551995,
+          "uncertainty": 0.004072118606862673,
+          "free": true
+        },
+        {
+          "value": 0.17292720098655479,
+          "uncertainty": 0.0016690196863893142,
+          "free": true
+        },
+        {
+          "value": 0.074654,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.06181385577891961,
+          "uncertainty": 0.24265199996804424,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.8302,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.142329063880204,
+          "uncertainty": 0.15611843930171848,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+        "experiments/heidi.edi": "efb12d752babb06a3c6ad4a3c965100bfb3b818c0e968f4622d5b8a09bf3d6d7",
+        "project.edi": "25ebbbdb3c692a4e6b4aff11d6d927f205e32f749d8853da89f9bfa9d1c418dd",
+        "structures/tb2ti2o7.edi": "66a2aeed88f6a63df7e56d83bcab248d47189c2f2d31a7e9368614a35ec5b626"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "220",
+        "n_points_fitted": "220",
+        "n_free": "1",
+        "iterations": "2",
+        "reduced_chi_square": "21.02513113",
+        "rwp": "0.1172159313",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "10.555",
+        "iter.1.rwp": "0.1172159314",
+        "iter.1.reduced_chi_square": "21.02513116",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "3.960",
+        "iter.2.rwp": "0.1172159313",
+        "iter.2.reduced_chi_square": "21.02513113",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "8.071",
+        "param.scale.value": "4.577363818",
+        "param.scale.uncertainty": "0.03650767811",
+        "x-edi.correlations": "0"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.40636292400000007,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.37352551600000006,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.32804,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.381734868,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.250385236,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00099,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00099,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00099,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00048,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00048,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00048,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00091,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00091,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00091,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00017,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00017,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00017,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00123,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00078,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00078,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.00041,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00061,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00061,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00061,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.793,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.5773638178885205,
+          "uncertainty": 0.03650767811173669,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_basic",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+        "experiments/heidi.edi": "1648786c3188d365ba8318e0bde453e643194823955e15411aef836f146b2735",
+        "project.edi": "ed312eb997ec3e6c238a93a6ede84d167fea35a4ee7bb66b1c2991eeaff1ca27",
+        "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "220",
+        "n_points_fitted": "220",
+        "n_free": "1",
+        "iterations": "2",
+        "reduced_chi_square": "85.19254053",
+        "rwp": "0.2359489617",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "11.677",
+        "iter.1.rwp": "0.2359489875",
+        "iter.1.reduced_chi_square": "85.19255916",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "4.143",
+        "iter.2.rwp": "0.2359489617",
+        "iter.2.reduced_chi_square": "85.19254053",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "8.826",
+        "param.scale.value": "3.280172936",
+        "param.scale.uncertainty": "0.05381846118",
+        "x-edi.correlations": "0"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.32804,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.793,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.280172936063479,
+          "uncertainty": 0.0538184611831541,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_fit",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+        "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
+        "project.edi": "4b152423748086ce80404e9daf3b2a99faeb755878f58d9423e19f4e90eb0cbc",
+        "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "220",
+        "n_points_fitted": "220",
+        "n_free": "11",
+        "iterations": "13",
+        "reduced_chi_square": "3.263487111",
+        "rwp": "0.04511379091",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "288.470",
+        "iter.1.rwp": "0.06584170228",
+        "iter.1.reduced_chi_square": "6.951289219",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "21.301",
+        "iter.2.rwp": "0.06046563688",
+        "iter.2.reduced_chi_square": "5.862468475",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "41.655",
+        "iter.3.rwp": "0.05988783858",
+        "iter.3.reduced_chi_square": "5.750962497",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "62.379",
+        "iter.4.rwp": "0.05880403313",
+        "iter.4.reduced_chi_square": "5.544692736",
+        "iter.4.unevaluable_trials": "0",
+        "iter.4.elapsed_ms": "84.121",
+        "iter.5.rwp": "0.05689247426",
+        "iter.5.reduced_chi_square": "5.190066238",
+        "iter.5.unevaluable_trials": "0",
+        "iter.5.elapsed_ms": "104.250",
+        "iter.6.rwp": "0.05391576766",
+        "iter.6.reduced_chi_square": "4.661168935",
+        "iter.6.unevaluable_trials": "0",
+        "iter.6.elapsed_ms": "124.448",
+        "iter.7.rwp": "0.05024030794",
+        "iter.7.reduced_chi_square": "4.047322789",
+        "iter.7.unevaluable_trials": "0",
+        "iter.7.elapsed_ms": "145.038",
+        "iter.8.rwp": "0.04712934557",
+        "iter.8.reduced_chi_square": "3.561607652",
+        "iter.8.unevaluable_trials": "0",
+        "iter.8.elapsed_ms": "165.681",
+        "iter.9.rwp": "0.04555656919",
+        "iter.9.reduced_chi_square": "3.327861765",
+        "iter.9.unevaluable_trials": "0",
+        "iter.9.elapsed_ms": "186.582",
+        "iter.10.rwp": "0.04514959335",
+        "iter.10.reduced_chi_square": "3.268668993",
+        "iter.10.unevaluable_trials": "0",
+        "iter.10.elapsed_ms": "206.869",
+        "iter.11.rwp": "0.04511395781",
+        "iter.11.reduced_chi_square": "3.263511258",
+        "iter.11.unevaluable_trials": "0",
+        "iter.11.elapsed_ms": "226.823",
+        "iter.12.rwp": "0.04511379385",
+        "iter.12.reduced_chi_square": "3.263487537",
+        "iter.12.unevaluable_trials": "0",
+        "iter.12.elapsed_ms": "246.514",
+        "iter.13.rwp": "0.04511379091",
+        "iter.13.reduced_chi_square": "3.263487111",
+        "iter.13.unevaluable_trials": "0",
+        "iter.13.elapsed_ms": "268.502",
+        "param.O1.adp_11.value": "0.006681678715",
+        "param.O1.adp_11.uncertainty": "0.0001833701677",
+        "param.O1.adp_22.value": "0.004826565868",
+        "param.O1.adp_22.uncertainty": "0.0001248017278",
+        "param.O1.adp_23.value": "0.001880636585",
+        "param.O1.adp_23.uncertainty": "0.0001336015526",
+        "param.O1.fract_x.value": "0.3279745503",
+        "param.O1.fract_x.uncertainty": "4.931908777e-05",
+        "param.O2.adp_11.value": "0.00372964295",
+        "param.O2.adp_11.uncertainty": "0.000171904464",
+        "param.Tb.adp_11.value": "0.00632490825",
+        "param.Tb.adp_11.uncertainty": "0.0001232450039",
+        "param.Tb.adp_12.value": "-0.002270924169",
+        "param.Tb.adp_12.uncertainty": "0.0001174400353",
+        "param.Ti.adp_11.value": "0.00556555914",
+        "param.Ti.adp_11.uncertainty": "0.0002006511794",
+        "param.Ti.adp_12.value": "-0.0004874237814",
+        "param.Ti.adp_12.uncertainty": "0.0002610812073",
+        "param.mosaicity.value": "32005.73994",
+        "param.mosaicity.uncertainty": "3996.640124",
+        "param.scale.value": "5.655519112",
+        "param.scale.uncertainty": "0.04627577978",
+        "x-edi.correlations": "55"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.006324908250212668,
+          "uncertainty": 0.00012324500394873304,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.005565559140148833,
+          "uncertainty": 0.00020065117942997737,
+          "free": false
+        },
+        {
+          "value": 0.32797455034818906,
+          "uncertainty": 4.9319087766527925e-05,
+          "free": true
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0054449368166102794,
+          "uncertainty": 0.00010668241309159041,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0037296429499449023,
+          "uncertainty": 0.00017190446398299822,
+          "free": false
+        },
+        {
+          "value": 0.006324908250212669,
+          "uncertainty": 0.00012324500394873304,
+          "free": true
+        },
+        {
+          "value": 0.006324908250212669,
+          "uncertainty": 0.00012324500394873304,
+          "free": false
+        },
+        {
+          "value": 0.006324908250212669,
+          "uncertainty": 0.00012324500394873304,
+          "free": false
+        },
+        {
+          "value": -0.0022709241685802996,
+          "uncertainty": 0.00011744003531285033,
+          "free": true
+        },
+        {
+          "value": -0.0022709241685802996,
+          "uncertainty": 0.00011744003531285033,
+          "free": false
+        },
+        {
+          "value": -0.0022709241685802996,
+          "uncertainty": 0.00011744003531285033,
+          "free": false
+        },
+        {
+          "value": 0.005565559140148834,
+          "uncertainty": 0.00020065117942997737,
+          "free": true
+        },
+        {
+          "value": 0.005565559140148834,
+          "uncertainty": 0.00020065117942997737,
+          "free": false
+        },
+        {
+          "value": 0.005565559140148834,
+          "uncertainty": 0.00020065117942997737,
+          "free": false
+        },
+        {
+          "value": -0.00048742378139176044,
+          "uncertainty": 0.00026108120725511295,
+          "free": true
+        },
+        {
+          "value": -0.00048742378139176044,
+          "uncertainty": 0.00026108120725511295,
+          "free": false
+        },
+        {
+          "value": -0.00048742378139176044,
+          "uncertainty": 0.00026108120725511295,
+          "free": false
+        },
+        {
+          "value": 0.006681678714828013,
+          "uncertainty": 0.0001833701676865632,
+          "free": true
+        },
+        {
+          "value": 0.004826565867501413,
+          "uncertainty": 0.00012480172778912144,
+          "free": true
+        },
+        {
+          "value": 0.004826565867501413,
+          "uncertainty": 0.00012480172778912144,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0018806365852333305,
+          "uncertainty": 0.0001336015526461865,
+          "free": true
+        },
+        {
+          "value": 0.0037296429499449027,
+          "uncertainty": 0.00017190446398299822,
+          "free": true
+        },
+        {
+          "value": 0.0037296429499449027,
+          "uncertainty": 0.00017190446398299822,
+          "free": false
+        },
+        {
+          "value": 0.0037296429499449027,
+          "uncertainty": 0.00017190446398299822,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.793,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.655519112057277,
+          "uncertainty": 0.046275779776112504,
+          "free": true
+        },
+        {
+          "value": 25.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 32005.73994264256,
+          "uncertainty": 3996.640124280495,
+          "free": true
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+        "experiments/heidi.edi": "fa8996ae08f0230c5053f58d5660d2aa8039b18a0ec8cc9a3215d67e87a0d62f",
+        "project.edi": "0bea558c21b6db4aacadf945be5236b48b02cde7c2950309894134fbf784ee84",
+        "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "220",
+        "n_points_fitted": "220",
+        "n_free": "2",
+        "iterations": "3",
+        "reduced_chi_square": "76.80145037",
+        "rwp": "0.2235157783",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "20.358",
+        "iter.1.rwp": "0.2235568247",
+        "iter.1.reduced_chi_square": "76.82966054",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "5.760",
+        "iter.2.rwp": "0.2235158585",
+        "iter.2.reduced_chi_square": "76.80150552",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "10.530",
+        "iter.3.rwp": "0.2235157783",
+        "iter.3.reduced_chi_square": "76.80145037",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "16.232",
+        "param.radius.value": "16.54767338",
+        "param.radius.uncertainty": "2.225794163",
+        "param.scale.value": "3.6797997",
+        "param.scale.uncertainty": "0.1028878014",
+        "x-edi.correlations": "1"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.32804,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.793,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.6797996997143803,
+          "uncertainty": 0.10288780135431726,
+          "free": true
+        },
+        {
+          "value": 16.547673380678926,
+          "uncertainty": 2.2257941632134517,
+          "free": true
+        },
+        {
+          "value": 35000.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-tof_taurine-unknown_basic",
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
+        "experiments/taurine.edi": "56c145643afef44cfcf0d606f669776b31f5234967141d40282d86d9ef2a8539",
+        "project.edi": "70e3370b5f52c8c1ff99216ba18d5ea2dee59da83fc770f6d2211206ca371f86",
+        "structures/taurine.edi": "459d6697830c4fc48e3d2e892d296a98a5fe7e28d66ab60685eb6d727236ff32"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "171",
+        "n_points_fitted": "171",
+        "n_free": "1",
+        "iterations": "2",
+        "reduced_chi_square": "24.41893799",
+        "rwp": "0.1246829828",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "6.977",
+        "iter.1.rwp": "0.124682983",
+        "iter.1.reduced_chi_square": "24.41893809",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "2.728",
+        "iter.2.rwp": "0.1246829828",
+        "iter.2.reduced_chi_square": "24.41893799",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "5.401",
+        "param.scale.value": "2.688642164",
+        "param.scale.uncertainty": "0.02591301688",
+        "x-edi.correlations": "0"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 5.272901,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 11.656488,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 7.838297,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 94.010994,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.19448,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.35173,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.3473,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.37018,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.31207,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.23951,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.35143,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.68011,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.05909,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.33563,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.29636,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.50515,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.22105,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.41215,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.50573,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.83513,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.2634,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.62808,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.33048,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.07364,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.12861,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.58669,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.41769,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.31527,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.18953,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.71385,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.31124,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.46988,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.4397,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.62023,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.34592,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.34151,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.34384,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.44116,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.20155,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.73667,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.55246,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.43345,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.24304,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.32279,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.32537,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.3897,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.08264,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.05746,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.20029,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.55716,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.18272,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.66017,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.2765,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.60004,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.07688,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.15403,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -0.00383,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.54767,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.15762,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.71303,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.688642163711136,
+          "uncertainty": 0.025913016876477207,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-tof_taurine_fit",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
+        "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
+        "project.edi": "f70488fb481a49930fe8e0e97419991a7e331ad397d10a5bf40abc5e133f3ffe",
+        "structures/taurine.edi": "f914da36d8e5553f5475e3e381e7cb6d0bd51b55ce56bf4bf98800b09a75e129"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "286",
+        "n_points_fitted": "286",
+        "n_free": "15",
+        "iterations": "6",
+        "reduced_chi_square": "24.21629776",
+        "rwp": "0.1566595012",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "129.409",
+        "iter.1.rwp": "0.229137578",
+        "iter.1.reduced_chi_square": "51.80681647",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "19.154",
+        "iter.2.rwp": "0.1605124722",
+        "iter.2.reduced_chi_square": "25.42212424",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "37.535",
+        "iter.3.rwp": "0.1566757691",
+        "iter.3.reduced_chi_square": "24.2213274",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "55.969",
+        "iter.4.rwp": "0.1566599922",
+        "iter.4.reduced_chi_square": "24.21644955",
+        "iter.4.unevaluable_trials": "0",
+        "iter.4.elapsed_ms": "74.832",
+        "iter.5.rwp": "0.1566595208",
+        "iter.5.reduced_chi_square": "24.21630382",
+        "iter.5.unevaluable_trials": "0",
+        "iter.5.elapsed_ms": "93.616",
+        "iter.6.rwp": "0.1566595012",
+        "iter.6.reduced_chi_square": "24.21629776",
+        "iter.6.unevaluable_trials": "0",
+        "iter.6.elapsed_ms": "111.265",
+        "param.C1.adp_iso.value": "1.804231356",
+        "param.C1.adp_iso.uncertainty": "0.1189265687",
+        "param.C2.adp_iso.value": "1.911209796",
+        "param.C2.adp_iso.uncertainty": "0.1250479381",
+        "param.H1.adp_iso.value": "3.00586188",
+        "param.H1.adp_iso.uncertainty": "0.2508366577",
+        "param.H11.adp_iso.value": "3.725323399",
+        "param.H11.adp_iso.uncertainty": "0.3101487567",
+        "param.H12.adp_iso.value": "3.546922172",
+        "param.H12.adp_iso.uncertainty": "0.2771937533",
+        "param.H2.adp_iso.value": "4.248681253",
+        "param.H2.adp_iso.uncertainty": "0.3051380547",
+        "param.H21.adp_iso.value": "2.702962756",
+        "param.H21.adp_iso.uncertainty": "0.2224703518",
+        "param.H22.adp_iso.value": "4.397996545",
+        "param.H22.adp_iso.uncertainty": "0.3265374238",
+        "param.H3.adp_iso.value": "4.200210091",
+        "param.H3.adp_iso.uncertainty": "0.3229237933",
+        "param.N1.adp_iso.value": "2.2602946",
+        "param.N1.adp_iso.uncertainty": "0.1006762901",
+        "param.O1.adp_iso.value": "2.792739874",
+        "param.O1.adp_iso.uncertainty": "0.1606832533",
+        "param.O2.adp_iso.value": "3.334912804",
+        "param.O2.adp_iso.uncertainty": "0.1893869643",
+        "param.O3.adp_iso.value": "2.289140134",
+        "param.O3.adp_iso.uncertainty": "0.1425084553",
+        "param.S1.adp_iso.value": "1.302425794",
+        "param.S1.adp_iso.uncertainty": "0.2152827066",
+        "param.scale.value": "2.750961455",
+        "param.scale.uncertainty": "0.04689650979",
+        "x-edi.correlations": "105"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 5.272901,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 11.656488,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 7.838297,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 94.010994,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.19448,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.35173,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.3473,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.3024257943845194,
+          "uncertainty": 0.2152827065786391,
+          "free": true
+        },
+        {
+          "value": 0.31207,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.23951,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.35143,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.79273987351851,
+          "uncertainty": 0.16068325334733152,
+          "free": true
+        },
+        {
+          "value": -0.05909,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.33563,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.29636,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.334912803653487,
+          "uncertainty": 0.1893869643089033,
+          "free": true
+        },
+        {
+          "value": 0.22105,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.41215,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.50573,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.2891401344628406,
+          "uncertainty": 0.14250845529125997,
+          "free": true
+        },
+        {
+          "value": 0.2634,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.62808,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.33048,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.2602945996903614,
+          "uncertainty": 0.10067629005221015,
+          "free": true
+        },
+        {
+          "value": 0.12861,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.58669,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.41769,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.005861880395138,
+          "uncertainty": 0.2508366577454767,
+          "free": true
+        },
+        {
+          "value": 0.18953,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.71385,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.31124,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.248681253041324,
+          "uncertainty": 0.3051380546517604,
+          "free": true
+        },
+        {
+          "value": 0.4397,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.62023,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.34592,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.200210091381306,
+          "uncertainty": 0.32292379334434934,
+          "free": true
+        },
+        {
+          "value": 0.34384,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.44116,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.20155,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.804231355798731,
+          "uncertainty": 0.11892656874918425,
+          "free": true
+        },
+        {
+          "value": 0.55246,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.43345,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.24304,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.7253233985728404,
+          "uncertainty": 0.31014875667540853,
+          "free": true
+        },
+        {
+          "value": 0.32537,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.3897,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.08264,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.546922171501676,
+          "uncertainty": 0.27719375333735846,
+          "free": true
+        },
+        {
+          "value": 0.20029,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.55716,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.18272,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.9112097963209458,
+          "uncertainty": 0.1250479381376531,
+          "free": true
+        },
+        {
+          "value": 0.2765,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.60004,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.07688,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.7029627558387137,
+          "uncertainty": 0.22247035177799276,
+          "free": true
+        },
+        {
+          "value": -0.00383,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.54767,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.15762,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 4.397996544631054,
+          "uncertainty": 0.3265374237835864,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.7509614546567565,
+          "uncertainty": 0.04689650978700737,
+          "free": true
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "1a92f4f096a228a6f8f97a6948ccc2768b0cff9c",
+      "crysta_build_commit": "a4728f02302e3bb2c2ca0565e5bbea7dd19d4173",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
     }
   ]
 }

@@ -30,6 +30,8 @@ IDENTITIES = {
     # ITA conventional numbers/systems for the owner's FullProf LATP phases.
     'C 2 2 21': (20, 'orthorhombic'),
     'P 63 m c': (186, 'hexagonal'),
+    'P 21/c': (14, 'monoclinic'),
+    'F m m m': (69, 'orthorhombic'),
 }
 
 
@@ -46,6 +48,8 @@ DEFAULT_COORDINATE_CODES = {
     225: '1',
     227: '2',
     229: '1',
+    14: 'b1',
+    69: 'abc',
 }
 
 
@@ -67,7 +71,7 @@ def displayed_steps(path):
     return f'{low:g}\u2013{high:g}', 'readonly'
 
 
-def generate(added_project=None, updated_project=None, *, catalogue=False):
+def generate(added_project=None, updated_project=None, output_dir=None, *, catalogue=False):
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     projects = [ROOT / 'docs/user/cli' / entry['id'] / 'project' for entry in registry]
     projects += [
@@ -131,7 +135,7 @@ def generate(added_project=None, updated_project=None, *, catalogue=False):
             )
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             values = read(experiment)
-            mode = (
+            mode = values.get('_experiment_type.beam_mode') or (
                 'time-of-flight'
                 if values['_peak.type'].startswith('tof-')
                 else 'constant wavelength'
@@ -157,6 +161,31 @@ def generate(added_project=None, updated_project=None, *, catalogue=False):
                 ],
                 experiment.stem,
             )
+            if values.get('_experiment_type.sample_form') == 'single crystal':
+                add(
+                    project,
+                    'experiment',
+                    'basic',
+                    'extinction',
+                    [
+                        ['extinction.' + name, values['_extinction.' + name]['value'], 'parameter']
+                        for name in {
+                            'none': (),
+                            'becker-coppens': ('radius', 'mosaicity'),
+                            'becker-coppens-mixed': (
+                                'domain_radius',
+                                'mosaic_spread',
+                                'crystal_radius',
+                            ),
+                            'larson-anisotropic': tuple(
+                                'coefficient_' + component
+                                for component in ('11', '22', '33', '12', '13', '23')
+                            ),
+                        }[values['_extinction.type']]
+                    ],
+                    experiment.stem,
+                )
+                continue
             add(
                 project,
                 'experiment',
@@ -204,7 +233,7 @@ def generate(added_project=None, updated_project=None, *, catalogue=False):
                 ['statusBar.minimizer', 'crysta', 'label'],
             ],
         )
-    output = Path(__file__).with_name('display_oracle.js')
+    output = (Path(output_dir) if output_dir else Path(__file__).parent) / 'display_oracle.js'
     if added_project is not None:
         retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
         path = str(projects[0].relative_to(ROOT))

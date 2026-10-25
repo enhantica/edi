@@ -99,17 +99,17 @@ var frozen = {
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401",
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
     "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/structures/lab6.edi": "e4882f46d2cbb6f4bf18d28865d16b09ec23f81db06775bd3f05aa1ef5671718",
     "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/experiments/echidna.edi": "f8fcbd4544ac9fca609567f985863f5fbe380c73c6968f417f54721b4089bde4",
     "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/structures/diamond.edi": "82e667fcdfa28dc58d2222fe03df3b9bac6f15bf598ab6ffeb236cc0f7d21c86",
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/experiments/dream.edi": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea",
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi": "c4cd9712556b9d39513b186e86d5c87a04455111c0e34ca064875e36ba5eabff",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
@@ -180,7 +180,36 @@ var frozen = {
     "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
     "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
     "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
-    "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3"
+    "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/structures/pr2nio4.edi": "9650cabf089c757fda805a194dfd0b8eac113a6e2c8f3c381110f61d705cd3b4",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/experiments/pr2nio4.edi": "f46766cc6784c097c10fa90a1763ee630032c49e3630a34eef2beab7d8554ca7",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/analysis/analysis.edi": "28575aae0988f6239e31eec7e95cab0767838209b9508cd030d35d6b6d8d684a",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/experiments/heidi.edi": "c76d9ef8b326c211d302917ed324f1385a709c9719a18fc17cb4386967256619",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/experiments/heidi.edi": "378511b52bc9464ed2ae3833ce6bf3bb83a00f77e6b8898a80fbae8b89c1596d",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/analysis/analysis.edi": "722e871ba03c9b2ad66a7d52211143b7f09c368184ab8452ee6ad40a579caa82",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/structures/tb2ti2o7.edi": "66a2aeed88f6a63df7e56d83bcab248d47189c2f2d31a7e9368614a35ec5b626",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/experiments/heidi.edi": "931f908709a0c86dbdc82d2b67e6cbd80170a948c40314cfd9ed2709d93db333",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi": "a37a18c113ba4738af270329671dfbed3992098d997d59deff3cd92f6bc016d6",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+    "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/structures/taurine.edi": "459d6697830c4fc48e3d2e892d296a98a5fe7e28d66ab60685eb6d727236ff32",
+    "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/senju.edi": "dfabd1d4faea02152f7b8c16d3a54b2745d00f11f739960f60bcc50da9598ed4",
+    "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/analysis/analysis.edi": "ae65364d1535b5965587a3b644d97529106ac9f72fd8038099f838941cd65a24",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi": "6c8f4067c2be3cecc08a60d72f7bbac4f0fa8c899112e82ec49eeb1e3ed7e372",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi": "39035cc5318112ac8ff5546a3341bac766e0269a651ebfd092ec560d13a8f82d",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi": "b6fcf89cf5387af7d0a9168ecd13e81710c3b66213aba0b05b9456c0a11cd119",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi": "50c444b6ccc03e01907c24055d44bab891f3a6f32824c8732ff11c6bdfa3bcf3",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
   },
   "cases": [
     {
@@ -4119,201 +4148,6 @@ var frozen = {
       ]
     },
     {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_c2221",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "alpo4_c2221",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "orthorhombic",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "20",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "C 2 2 21",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "abc",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_p63mc",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "alpo4_p63mc",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "hexagonal",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "186",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "P 63 m c",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "h",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:latp",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "latp",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "trigonal",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "167",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "R -3 c",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "h",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:experiment_type:bm01",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "experiment",
-      "tier": "basic",
-      "group": "experiment_type",
-      "selection": "bm01",
-      "fields": [
-        [
-          "experimentType.sampleForm",
-          "powder",
-          "disabled"
-        ],
-        [
-          "experimentType.beamMode",
-          "constant wavelength",
-          "disabled"
-        ],
-        [
-          "experimentType.radiationProbe",
-          "xray",
-          "disabled"
-        ],
-        [
-          "experimentType.scatteringType",
-          "bragg",
-          "disabled"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:data:bm01",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "experiment",
-      "tier": "extras",
-      "group": "data",
-      "selection": "bm01",
-      "fields": [
-        [
-          "range.minimum",
-          3.67257,
-          "number"
-        ],
-        [
-          "range.maximum",
-          63.0724,
-          "number"
-        ],
-        [
-          "range.step",
-          0.018785524984187223,
-          "number"
-        ],
-        [
-          "range.points",
-          3163,
-          "number"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:sequential_fit",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "sequential_fit",
-      "selection": null,
-      "fields": [
-        [
-          "sequentialFit.dataDir",
-          "experiments/bm01_scan",
-          "readonly"
-        ],
-        [
-          "sequentialFit.filePattern",
-          "*.dat",
-          "readonly"
-        ],
-        [
-          "sequentialFit.reverse",
-          "true",
-          "readonly"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:engines",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "engines",
-      "selection": null,
-      "fields": [
-        [
-          "statusBar.calculator",
-          "crysta",
-          "label"
-        ],
-        [
-          "statusBar.minimizer",
-          "crysta",
-          "label"
-        ]
-      ]
-    },
-    {
       "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project:space_group:lab6",
       "path": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project",
       "page": "structure",
@@ -4516,6 +4350,201 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project:engines",
       "path": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_c2221",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_c2221",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "20",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "C 2 2 21",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_p63mc",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_p63mc",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "hexagonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "186",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P 63 m c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:latp",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "latp",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "trigonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "167",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "R -3 c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:experiment_type:bm01",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "bm01",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:data:bm01",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "bm01",
+      "fields": [
+        [
+          "range.minimum",
+          3.67257,
+          "number"
+        ],
+        [
+          "range.maximum",
+          63.0724,
+          "number"
+        ],
+        [
+          "range.step",
+          0.018785524984187223,
+          "number"
+        ],
+        [
+          "range.points",
+          3163,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:sequential_fit",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "experiments/bm01_scan",
+          "readonly"
+        ],
+        [
+          "sequentialFit.filePattern",
+          "*.dat",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "true",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:engines",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",
@@ -7276,6 +7305,1131 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project:engines",
       "path": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project:space_group:pr2nio4",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "pr2nio4",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "69",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F m m m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project:experiment_type:pr2nio4",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "pr2nio4",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project:extinction:pr2nio4",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "pr2nio4",
+      "fields": []
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project:space_group:tb2ti2o7",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "tb2ti2o7",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "227",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F d -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "2",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project:experiment_type:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project:extinction:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi",
+      "fields": []
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project:space_group:tb2ti2o7",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "tb2ti2o7",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "227",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F d -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "2",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project:experiment_type:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project:extinction:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi",
+      "fields": [
+        [
+          "extinction.domain_radius",
+          10.0,
+          "parameter"
+        ],
+        [
+          "extinction.mosaic_spread",
+          101810.87303,
+          "parameter"
+        ],
+        [
+          "extinction.crystal_radius",
+          0.01,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project:space_group:tb2ti2o7",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "tb2ti2o7",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "227",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F d -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "2",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project:experiment_type:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project:extinction:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi",
+      "fields": []
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project:space_group:tb2ti2o7",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "tb2ti2o7",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "227",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F d -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "2",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project:experiment_type:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project:extinction:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi",
+      "fields": [
+        [
+          "extinction.domain_radius",
+          25.0,
+          "parameter"
+        ],
+        [
+          "extinction.mosaic_spread",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.crystal_radius",
+          3.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project:space_group:pr2nio4",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "pr2nio4",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "69",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F m m m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project:experiment_type:llb_5c2",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "llb_5c2",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project:extinction:llb_5c2",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "llb_5c2",
+      "fields": []
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project:space_group:taurine",
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "taurine",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "monoclinic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "14",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P 21/c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "b1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project:experiment_type:senju",
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project:extinction:senju",
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju",
+      "fields": []
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project:engines",
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:space_group:taurine",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "taurine",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "monoclinic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "14",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P 21/c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "b1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_1",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_1",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_1",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_1",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_2",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_2",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_2",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_2",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_3",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_3",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_3",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_3",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_4",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_4",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_4",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_4",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_5",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_5",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_5",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_5",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:experiment_type:senju_6",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "senju_6",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:extinction:senju_6",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "senju_6",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:engines",
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

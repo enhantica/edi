@@ -133,7 +133,7 @@ def codec_copy(case, target):
     # complete model, while historical result counts keep their CLI provenance.
     for experiment in (target / 'experiments').glob('*.edi'):
         lines = experiment.read_text().splitlines()
-        first = next(i for i, line in enumerate(lines) if line.startswith('_data.'))
+        first = next(i for i, line in enumerate(lines) if line.startswith(('_data.', '_refln.')))
         while first < len(lines) and (not lines[first].strip() or lines[first].startswith('_')):
             first += 1
         experiment.write_text('\n'.join(lines[: first + 3]) + '\n')

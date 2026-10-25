@@ -16,7 +16,9 @@ when:
   ``project = edi.Project.load('<path>')``; any other mention of ``Project.load`` fails;
 - a file under a case's ``data/`` is not named in its Sources with its sha256;
 - a tutorial, notebook or exclusion entry names something that is not a case, or a fixture has an
-  ``index.md`` page (a fixture's page is its ``README.md``).
+  ``index.md`` page (a fixture's page is its ``README.md``);
+- the ``app-only`` rows, app examples without their catalogue form yet, are not exactly the
+  declared list below with its reason, or a row is both a case and app-only.
 
 Every problem is reported. With none, it prints each case's title, tutorial and data files.
 """
@@ -39,9 +41,19 @@ TUTORIALS_DIR = Path('docs') / 'user' / 'tutorials'
 REGISTRY = CLI_DIR / 'projects.yml'
 EXCLUSIONS = TUTORIALS_DIR / 'execution-exclusions.yml'
 # The app's CMake reads the registry with these patterns (app/CMakeLists.txt).
-CMAKE_LINE = re.compile(r'^  - id: |^    user-facing: ')
+CMAKE_LINE = re.compile(r'^  - id: |^    user-facing: |^    app-only: ')
 CMAKE_ID = re.compile(r'^  - id: *(.+)$')
-CMAKE_CASE = re.compile(r'^    user-facing: *true$')
+CMAKE_CASE = re.compile(r'^    user-facing: *true$|^    app-only: ')
+# App examples that have no catalogue form yet (ADR-0048). The list only shrinks: each leaves it
+# when it becomes a catalogue case, and no other project may be app-only.
+APP_ONLY_REASON = (
+    'its tutorial and reference values come later; until then it is an app example only'
+)
+APP_ONLY = {
+    'sc-neut-cwl_tb2ti2o7-heidi_fit': APP_ONLY_REASON,
+    'sc-neut-cwl_pr2nio4-5c2_fit': APP_ONLY_REASON,
+    'sc-neut-tof_taurine_fit': APP_ONLY_REASON,
+}
 SOURCES = re.compile(r'^## Sources\s*$(?P<body>.*?)(?=^## |\Z)', re.MULTILINE | re.DOTALL)
 # Files in the tutorials folder that are not tutorials.
 NOT_TUTORIALS = {'index.md', 'execution-exclusions.yml'}
@@ -51,15 +63,18 @@ def read(path: Path) -> str:
     return path.read_text(encoding='utf-8')
 
 
-def registry_from_yaml(root: Path, problems: list[str]) -> tuple[list[str], list[str]]:
+def registry_from_yaml(
+    root: Path, problems: list[str]
+) -> tuple[list[str], list[str], dict[str, object]]:
     try:
         rows = yaml.safe_load(read(root / REGISTRY))['projects']
         ids = [str(row['id']) for row in rows]
         cases = [str(row['id']) for row in rows if row.get('user-facing') is True]
+        app_only = {str(row['id']): row['app-only'] for row in rows if 'app-only' in row}
     except (OSError, yaml.YAMLError, KeyError, TypeError) as error:
         problems.append(f'{REGISTRY}: cannot be read as YAML ({error})')
-        return [], []
-    return ids, cases
+        return [], [], {}
+    return ids, cases, app_only
 
 
 def registry_as_cmake_reads_it(root: Path) -> tuple[list[str], list[str]]:
@@ -251,13 +266,19 @@ def check(root: Path) -> list[str]:
 def survey(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | None, int]]]:
     """The problems, and each case's title, tutorial and number of data files."""
     problems: list[str] = []
-    ids, cases = registry_from_yaml(root, problems)
+    ids, cases, app_only = registry_from_yaml(root, problems)
     cmake_ids, cmake_cases = registry_as_cmake_reads_it(root)
-    if ids and (ids, cases) != (cmake_ids, cmake_cases):
+    app_examples = [example for example in ids if example in cases or example in app_only]
+    if ids and (ids, app_examples) != (cmake_ids, cmake_cases):
         problems.append(
-            f'{REGISTRY}: as YAML, {len(ids)} projects and the cases {cases}; as the app reads '
-            f'it, {len(cmake_ids)} projects and the cases {cmake_cases}'
+            f'{REGISTRY}: as YAML, {len(ids)} projects and the app examples {app_examples}; '
+            f'as the app reads it, {len(cmake_ids)} projects and the app examples {cmake_cases}'
         )
+    if ids and app_only != APP_ONLY:
+        problems.append(f'{REGISTRY}: the app-only rows are {app_only}, not {APP_ONLY}')
+    problems.extend(
+        f'{REGISTRY}: {both} is both a case and app-only' for both in cases if both in app_only
+    )
     excluded = exclusion_entries(root, problems)
     facts = []
     for case in cases:
@@ -283,7 +304,9 @@ def survey(root: Path) -> tuple[list[str], list[tuple[str, str | None, str | Non
     problems.extend(
         f'{fixture}: a test fixture has an index.md page'
         for fixture in ids
-        if fixture not in known and (root / CLI_DIR / fixture / 'index.md').exists()
+        if fixture not in known
+        and fixture not in app_only
+        and (root / CLI_DIR / fixture / 'index.md').exists()
     )
     return problems, facts
 

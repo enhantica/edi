@@ -408,6 +408,14 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
+    if (experiment.reflections.has_value()) {  // a single crystal: its calculated F², by reflection
+        source.current = experiment.computed_current();
+        const ComputedColumn<double>& calc = experiment.reflections->intensity_calc;
+        if (source.current && !calc.empty()) {
+            source.refln_calc = calc.buffer();
+        }
+        return source;
+    }
     if (!experiment.data.has_value()) {
         return source;
     }

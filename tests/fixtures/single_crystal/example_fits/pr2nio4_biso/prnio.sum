@@ -1,0 +1,89 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 23/10/2026  Time: 05:57:24.812                              
+
+ => PCR file code: prnio
+ => DAT file code: prnio                -> Relative contribution: 1.0000                                                            
+ => Title: Pr2NiO4
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Refinement/Calculation of Neutron integrated intensity(Laue or monochromatic) data or Flipping Ratios                           
+ =>-------> Pattern#  1
+ => Integrated intensities or Flipping Ratios as observations for phase: 1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    7.393 g/cm3
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:   12
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Pr2NiO4                                 F m m m             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   198  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Pr      0.50000(   0)  0.50000(   0)  0.36004(  44)  0.892( 91)  0.250(  0)    8
+ Ni      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.738( 67)  0.125(  0)    4
+ O1      0.25000(   0)  0.25000(   0)  0.00000(   0)  1.605( 90)  0.250(  0)    8
+ O2      0.00000(   0)  0.00000(   0)  0.17448(  74)  1.638(134)  0.181(  0)    8
+ Oi      0.25000(   0)  0.25000(   0)  0.25000(   0)  0.109(521)  0.019(  0)    8
+ Od      0.06529( 425)  0.06211( 406)  0.17293( 166) -0.060(242)  0.075(  0)   32
+
+ ==> SCALE, EXTINCTION, CELL PARAMETERS FOR PATTERN#  1
+
+ ==> OVERALL PARAMETERS:
+
+
+
+ => Scale factors ( 1: 6): 
+             4.142610        0.155720
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Extinction parameters: 
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   305.    
+
+     -----------------------------------------------------
+     R-Factors and Chi2 for Integrated Intensity Pattern #  1
+     -----------------------------------------------------
+ => Phase:  1
+ =>    RF2 -factor :   15.6    
+ =>    RF2w-factor :   24.6    
+ =>    RF  -factor :   11.2    
+ =>    Chi2(Intens):   305.    
+ =>  N_eff Reflect.:    198 with I >  0.00 sigma
+
+ 
+              CPU Time:     0.101 seconds
+                            0.002 minutes
+
+ => Run finished at:     Date: 23/10/2026  Time: 05:57:24.912                              

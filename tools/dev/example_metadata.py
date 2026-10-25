@@ -31,7 +31,10 @@ def scalars(path: Path) -> dict[str, str]:
 
 def generate() -> dict[str, object]:
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text(encoding='utf-8'))
-    ids = [row['id'] for row in registry['projects'] if row.get('user-facing')]
+    # The catalogue cases and the declared app-only examples (ADR-0048), in registry order.
+    ids = [
+        row['id'] for row in registry['projects'] if row.get('user-facing') or row.get('app-only')
+    ]
     entries = {}
     for example_id in ids:
         project = ROOT / 'docs/user/cli' / example_id / 'project'

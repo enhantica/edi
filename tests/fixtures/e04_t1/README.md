@@ -241,3 +241,20 @@ from the declared range and step without calling a calculation engine.
 Scan axis samples keep the ASCII input precision. Report-cell expectations use
 the independent IUCr rounding reference and crystallographic equality of tied
 cell lengths; the raw model values and physical bounds remain separate.
+
+The app selection is the catalogue plus the declared app-only list in ADR-0048:
+`sc-neut-cwl_tb2ti2o7-heidi_fit`, `sc-neut-cwl_pr2nio4-5c2_fit` and
+`sc-neut-tof_taurine_fit`. The oracle records that list separately, checks its
+exact registry population and matches regenerated app metadata before writing.
+Every other registered project keeps its direct-opening coverage.
+
+The single-crystal input adaptation uses `adapt_single_crystal_inputs.py`. It
+matches every original file pin of the eight existing single-crystal projects to
+`f0fc35eb`, captures current input text with the visible source parsers, and merges
+only those project/display witnesses. Registry order and every powder witness are
+retained. This records typed extinction fields and SENJU experiment names, including
+the six-bank taurine input; it is an input/UI projection, not a new scientific
+correctness reference. The Pr2NiO4 basic experiment is separately bounded:
+`deb6c159` (Becker-Coppens with fixed zero radius and mosaicity) becomes `f46766cc`
+(explicit none), with all other experiment bytes identical. No app or engine is
+used to produce these expectations.

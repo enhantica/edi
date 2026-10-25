@@ -288,6 +288,39 @@ Value pattern_json(const ReportPattern& pattern) {
                   {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}};
 }
 
+Value single_crystal_json(const ReportSingleCrystal& crystal) {
+    const auto indices = [](const std::vector<int>& values) {
+        return numbers(std::vector<double>(values.begin(), values.end()));
+    };
+    return Object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
+                  {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
+                  {"title", crystal.title}};
+}
+
+ReportSingleCrystal single_crystal_of(const Value& value) {
+    ReportSingleCrystal crystal;
+    const auto indices = [&value](const char* key) {
+        std::vector<int> out;
+        for (const Value& item : value.at(key).array(key)) {
+            out.push_back(static_cast<int>(whole_number(item, key, -1e6, 1e6)));
+        }
+        return out;
+    };
+    crystal.h = indices("h");
+    crystal.k = indices("k");
+    crystal.l = indices("l");
+    crystal.meas = numbers_of(value.at("meas"), "meas");
+    crystal.su = numbers_of(value.at("su"), "su");
+    crystal.calc = numbers_of(value.at("calc"), "calc");
+    crystal.title = value.at("title").string("title");
+    const std::size_t count = crystal.meas.size();
+    if (crystal.h.size() != count || crystal.k.size() != count || crystal.l.size() != count ||
+        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count)) {
+        throw std::invalid_argument("report JSON: a single crystal's columns differ in length");
+    }
+    return crystal;
+}
+
 ReportPattern pattern_of(const Value& value) {
     ReportPattern pattern;
     PatternPresentation& shown = pattern.presentation;
@@ -782,9 +815,14 @@ std::string report_to_json(const ReportModel& model) {
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
-        experiments.emplace_back(Object{{"id", experiment.id},
-                                        {"categories", categories(experiment.categories)},
-                                        {"pattern", pattern_json(experiment.pattern)}});
+        Object item{{"id", experiment.id},
+                    {"categories", categories(experiment.categories)},
+                    {"pattern", pattern_json(experiment.pattern)}};
+        // Only a single crystal carries its chart.
+        if (experiment.single_crystal) {
+            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal));
+        }
+        experiments.emplace_back(std::move(item));
     }
     const Object document{{"schema_version", model.schema_version},
                           {"generated", model.generated},
@@ -885,8 +923,12 @@ ReportModel report_from_json(const std::string& text) {
         model.structures.push_back(std::move(structure));
     }
     for (const Value& item : document.at("experiments").array("experiments")) {
-        model.experiments.push_back(
-            {item.at("id").string("id"), categories_of(item.at("categories"), "categories"), pattern_of(item.at("pattern"))});
+        ReportExperiment experiment{item.at("id").string("id"), categories_of(item.at("categories"), "categories"),
+                                    pattern_of(item.at("pattern")), std::nullopt};
+        if (const Value& crystal = item.get("single_crystal"); !crystal.is_null()) {
+            experiment.single_crystal = single_crystal_of(crystal);
+        }
+        model.experiments.push_back(std::move(experiment));
     }
     model.pattern_styles = pattern_styles_of(document.at("pattern_styles"));
     model.structure_styles = structure_styles_of(document.at("structure_styles"));
