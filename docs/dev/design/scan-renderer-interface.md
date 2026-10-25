@@ -6,7 +6,7 @@ has two separate inputs: what the user requested and what Qt can draw.
 `software`, stored as `ScanViews/renderer`. Develop exposes it through
 `preferences.scanRenderer`. The choice survives a complete host restart.
 
-`GraphicsInfo.detected`, `api`, `renderer` and `software` describe detection.
+`RenderingInfo.detected`, `api`, `renderer` and `software` describe detection.
 The reference for detection is Qt's graphics API and, for OpenGL,
 `GL_RENDERER`. Startup reporting and the Develop display can be checked with
 no project open. A software OpenGL renderer such as llvmpipe is classified as
@@ -172,3 +172,9 @@ scan plots, without visiting the Structure page. The system capability pair
 now exercises both the active 3D item and the fallback message directly.
 A software-OpenGL replay is correctness evidence for the supported API path;
 it is not a physical-GPU performance measurement or a browser replay.
+
+The [scan-update acceptance interface](scan-update-interface.md) covers both
+Every-pattern choices, the catch-up timing bound, stable parameter y ranges
+and first-group sidebar defaults. The rendering-detection singleton is now
+named `RenderingInfo`; its earlier name `GraphicsInfo` shadowed Qt Quick's
+attached graphics API type used by the Structure view.
