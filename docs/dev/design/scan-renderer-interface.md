@@ -269,3 +269,38 @@ and resets when another project opens.
 Before the amended owner record, the legend rule would have required an
 unchanged range for every click. The gates now separate the default keep rule
 from visible-only fits and test both actual preference choices and persistence.
+
+
+## Supported minimum and undersize overlay
+
+ADR-0017 section 2 fixes the supported app area at 1024 by 640 logical pixels.
+`AppSizes.minimumAppWidth` and `minimumAppHeight` supply both the native window's
+`minimumWidth`/`minimumHeight` and the undersize predicate. The inherited GUI
+library's minimum-size tokens are not the reference for this app-specific size.
+
+The window owns the named Rectangle `app.tooSmall`, visually parented to
+`Overlay.overlay`, above the entire application, including dialogs. It is visible
+when the actual window width is below 1024 **or** its height is below 640, and
+hidden exactly at both minima. Its `EmptyStateLabel` child is named
+`app.tooSmall.text`, says `Increase the window size`, and is centred in the
+complete window area. It uses the same font as the ordinary empty-view label;
+the cover uses the shared empty-view background colour.
+
+The acceptance observer finds these names from the actual window's QObject
+hierarchy, checks their visual ancestry in `Overlay.overlay`, and captures the
+window's complete visual root. An application content-item-only text traversal
+can miss an overlay sibling. Discovering controls beneath the cover does not
+mean they are exposed: the observer checks that the cover fills and paints the
+whole window and that a real pointer click cannot activate a covered control.
+The same control must work after the area grows again.
+
+The cover leaves the existing application underneath alive. Crossing either
+boundary and returning to the minimum retains the project and page instances,
+page and chart tabs, selected dataset and existing scroll positions. The native
+actor temporarily relaxes the window-manager minimum properties to exercise the
+same production predicate at browser-reachable sizes; this is not a claim of a
+WebAssembly runtime capture. Native minimum publication is checked separately.
+
+Before this adaptation, the gate searched only `win.contentItem` and required
+underlying controls to disappear. It now observes the named overlay, its actual
+pixels and pointer interception while requiring the underlying state to survive.
