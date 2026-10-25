@@ -19,7 +19,7 @@ EaElements.GroupBox {
     readonly property var rules: ["iucr_19", "iucr_99"]
 
     objectName: "group.su_format"
-    collapsed: !SideBarGroups.isOpen(openKey)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
     last: SideBarGroups.isLast(group)
     title: qsTr("Standard uncertainties")
