@@ -98,11 +98,13 @@ Item {
                 return item.enabled && point !== null;
             }, 1500, "A real pointer reaches the visible quantity selector after its tab transition");
             mouseClick(item, point.x, point.y);
+            tryCompare(item.popup, "opened", true, 1000, "The real quantity popup opens before keyboard selection");
             verify(SettingsProof.key(item, Qt.Key_Home), "The real selector receives Home");
             for (let step = 0; step < index; ++step)
                 verify(SettingsProof.key(item, Qt.Key_Down), "The real selector receives Down");
             verify(SettingsProof.key(item, Qt.Key_Return), "The real selector receives Return");
             tryCompare(item, "currentIndex", index, 1000, "The origin selector changes through actual user input");
+            tryCompare(item.popup, "visible", false, 1000, "The real quantity popup closes before the reverse choice");
         }
         function test_each_quantity_is_shared_both_directions_data() {
             const rows = [];

@@ -161,6 +161,7 @@ void scan_screen_settings(QQmlApplicationEngine& engine) {
 void scan_screen_install(QQmlApplicationEngine& engine) {
     auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     auto* clock = new QElapsedTimer;
     clock->start();
     observation_clock = clock;
@@ -236,7 +237,9 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
     QObject::connect(
         window, &QQuickWindow::frameSwapped, window,
         [=] {
-            if (latest->isEmpty()) return;
+            if (latest->isEmpty() || !result->contains("readyGeneration") ||
+                latest->value("patternGeneration").toInteger() < result->value("readyGeneration").toInteger())
+                return;
             const QString key = latest->value("drawnMeasured").toString() +
                                 latest->value("drawnCalculated").toString() +
                                 (latest->value("running").toBool() ? "running" : "stopped") +
@@ -336,9 +339,15 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
         timer->setInterval(25);
         QObject::connect(timer, &QTimer::timeout, window, [=] {
             auto* project = session->project();
-            if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
-                result->value("frames").toArray().isEmpty())
+            if (!project->pendingRefusal().isEmpty() || project->calculating() ||
+                project->currentExperiment()->pattern()->stale())
                 return;
+            if (!result->contains("readyGeneration")) {
+                (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+                window->update();
+                return;
+            }
+            if (result->value("frames").toArray().isEmpty()) return;
             timer->stop();
             (*result)["started"] = true;
             QObject::connect(project->fit(), &edi_app::FitViewModel::runningChanged, window, [=] {

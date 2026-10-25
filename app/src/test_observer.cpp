@@ -200,7 +200,10 @@ void record_frame(ScreenObservation& o) {
 
 // Keep a synchronised frame once it is on screen, if it differs from the last one kept.
 void keep_frame(ScreenObservation& o) {
-    if (o.latest.isEmpty()) return;
+    // Frames drawn while the project was still loading are not the pattern the fit starts from.
+    if (o.latest.isEmpty() || !o.result.contains("readyGeneration") ||
+        o.latest.value("patternGeneration").toInteger() < o.result.value("readyGeneration").toInteger())
+        return;
     const QString key = o.latest.value("drawnMeasured").toString() + o.latest.value("drawnCalculated").toString() +
                         (o.latest.value("running").toBool() ? "running" : "stopped") +
                         QString::number(o.latest.value("presentedGeneration").toInteger());
@@ -328,9 +331,16 @@ void drive(ScreenObservation& o) {
     timer->setInterval(25);
     QObject::connect(timer, &QTimer::timeout, o.window, [&o, timer, mode] {
         auto* project = o.session->project();
-        if (project->calculating() || project->currentExperiment()->pattern()->stale() ||
-            o.result.value("frames").toArray().isEmpty())
+        if (!project->pendingRefusal().isEmpty() || project->calculating() ||
+            project->currentExperiment()->pattern()->stale())
             return;
+        // Once loading has settled, wait for a fresh frame of the loaded pattern before fitting.
+        if (!o.result.contains("readyGeneration")) {
+            o.result["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+            o.window->update();
+            return;
+        }
+        if (o.result.value("frames").toArray().isEmpty()) return;
         timer->stop();
         start_fit(o, mode);
     });
@@ -711,6 +721,8 @@ void install_test_observer(QQmlApplicationEngine& engine) {
     static ScreenObservation o;
     o.window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
     o.session = engine.singletonInstance<Session*>("edi.app", "Session");
+    // The frames are read from the measured markers, which only the points styles draw: the default band draws none.
+    engine.singletonInstance<QObject*>("edi.app", "Preferences")->setProperty("patternMeasuredStyle", "points");
     o.clock.start();
     o.result = {{"mode", setting("SCAN_SCREEN_MODE", "adaptive")}, {"frames", QJsonArray{}}};
     o.finish = new QTimer(o.window);

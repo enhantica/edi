@@ -265,6 +265,53 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         )
 
 
+@pytest.mark.parametrize('project_id', sorted(RETAKEN_SEEDS))
+@pytest.mark.parametrize('defect', ['value', 'kind', 'tolerance', 'input', 'extra', 'missing'])
+def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
+    project_id, defect, tmp_path, monkeypatch
+):
+    from tests.fixtures.table_display import metadata_bytes  # noqa: PLC0415
+
+    directory = tmp_path / 'docs/user/cli' / PROJECT_IDS[project_id]
+    shutil.copytree(CLI / PROJECT_IDS[project_id], directory)
+    (tmp_path / 'tests').mkdir()
+    (tmp_path / 'tests/fixtures').symlink_to(ROOT / 'tests/fixtures', target_is_directory=True)
+    monkeypatch.setattr(sys.modules[__name__], 'ROOT', tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], 'CLI', directory.parent)
+    monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
+    test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+        project_id, tmp_path / 'positive'
+    )
+    expected_file = directory / 'expected.json'
+    if defect in {'value', 'kind', 'tolerance'}:
+        data = json.loads(expected_file.read_text())
+        quantity = next(iter(next(iter(data['variants'].values()))['quantities'].values()))
+        assert quantity['kind'] == 'regression-pin', (
+            'The mutation control must reach an existing numerical regression pin'
+        )
+        field, replacement = {
+            'value': ('value', quantity['value'] + 0.125),
+            'kind': ('kind', 'reference'),
+            'tolerance': ('tol_abs', 0.125),
+        }[defect]
+        quantity[field] = replacement
+        expected_file.write_text(json.dumps(data, indent=2) + '\n')
+    elif defect == 'input':
+        path = directory / 'project/project.edi'
+        path.write_bytes(path.read_bytes() + b'\n# unexpected project byte\n')
+    elif defect == 'extra':
+        (directory / 'project/extra.edi').write_text('unexpected extra input\n')
+    else:
+        expected_file.unlink()
+    with pytest.raises(
+        AssertionError,
+        match=r'pinned|blob ids|source tree|regular files|archived source|reviewed source byte',
+    ):
+        test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+            project_id, tmp_path / 'negative'
+        )
+
+
 def test_registry_executes_owner_declared_set_and_retains_every_seed():
     rows = registry()
     by_id = {row['id']: row['executing'] for row in rows}
