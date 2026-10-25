@@ -570,10 +570,12 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   platform's software renderer skips, so a look is checked on a capture from an OpenGL platform (the UI test's).
 - **Ranges and ticks.** Tick labels are round values. A fitted main y range is what is presented and a tenth of
   its span beyond each end (easydiffractionbeta's rule), with about five round ticks inside it; the x axis has about
-  five. A range the user chose keeps its bounds and takes round ticks inside them. **While a parameter is adjusted**
-  (a slider, a spin box or a typed value; the owner, 2026-10-25), a fitted main range holds while the calculated
-  curve stays inside it and grows only when the curve leaves it, so moving a slider does not lay the axis, the grid
-  and every series out again on each step; another experiment, dataset, axis, scale or x range, a fit and a reset
+  five. A range the user chose keeps its bounds and takes round ticks inside them. **While a parameter's slider is
+  held** (the owner, 2026-10-25), a fitted main range holds while the calculated curve stays inside it and grows
+  only when the curve leaves it, so dragging a slider does not lay the axis, the grid and every series out again on
+  each step. Letting the slider go fits the range once to the measured and calculated curves, shrinking as well as
+  growing: a scale set far too high and then pulled down ends with the measured pattern at full height. A typed
+  value or a spin-box step fits it at once. Another experiment, dataset, axis, scale or x range, a fit and a reset
   fit the range again.
 - **The residual's range.** The residual pane is linear on every scale (ADR-0021 §5), its range centred on 0, with
   three ticks: 0 and the greatest round value inside the range, on either side. **On the linear scale it has the

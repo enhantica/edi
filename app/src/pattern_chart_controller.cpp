@@ -378,6 +378,12 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
+        // The slider let go: the y range is fitted once again, shrinking as well as growing.
+        connect(experiment_, &ExperimentViewModel::adjustingChanged, this, [this] {
+            if (!experiment_->adjusting()) {
+                invalidate();
+            }
+        });
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
             shown_.current = false;
@@ -757,9 +763,9 @@ void PatternChartController::refresh() {
         y_step = round_step(y_low, y_high);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     }
-    // While a parameter is adjusted (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
-    // inside it and grows only when the curve leaves it; another experiment, dataset, axis, scale or x range, a fit,
-    // and a reset fit it again.
+    // While a parameter's slider is held (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
+    // inside it and grows only when the curve leaves it; letting the slider go, another experiment, dataset, axis,
+    // scale or x range, a fit and a reset fit it again.
     if (fitted && !animating_ && !report_) {
         const edi::PatternSource* source = experiment_ ? &experiment_->patternSource(axis()) : nullptr;
         HeldRange now{experiment_, source != nullptr ? source->meas.get() : nullptr, presented_x_, y_scale_, x_low,
