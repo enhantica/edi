@@ -113,7 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
         '--output',
         metavar='DIR',
         help='save the project into DIR and write the results there; a .zip project is written '
-        'back only this way, since its archive is never overwritten',
+        'back only this way: an input archive is never written as the output',
     )
     # The forward calculation, mirroring `crysta <project-dir> calc`. The output is the
     # versioned record=calc machine record, byte-comparable with crysta's by construction
@@ -149,7 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
         '--output',
         metavar='DIR',
         help='save the project into DIR and write the results there; a .zip project is written '
-        'back only this way, since its archive is never overwritten',
+        'back only this way: an input archive is never written as the output',
     )
     export = subcommands.add_parser(
         'export', help='write a project folder as one .zip archive (edi ADR-0052)'
@@ -614,8 +614,8 @@ _CALC_MARKER = '# --- calculated series (crysta calc; regenerated on every run) 
 def _open(args: argparse.Namespace) -> edi.Project:
     """Load the command's project; with --output, save it there first, so every write lands there.
 
-    A .zip project (edi ADR-0052) has no directory of its own: without --output nothing is written
-    back, as under --dry, and its archive is never changed.
+    A .zip project (edi ADR-0052) is never a command's output: without --output nothing is written
+    back, as under --dry, and its archive is left as it was (Project.save() in Python rewrites it).
     """
     project = edi.Project.load(args.project)
     if getattr(args, 'output', None) and not args.dry:

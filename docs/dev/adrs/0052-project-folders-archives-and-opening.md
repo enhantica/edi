@@ -34,11 +34,11 @@ took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt 
    unpacked.
 
 1. **Opening.** `load_project` takes a folder, a `project.edi` (its folder) or a `.zip`. An archive unpacks into a new
-   temporary folder, from which the project reads its data. For Python and the command line the project then has no
-   folder of its own (`path` empty): `save` refuses and `save_as` sets one; the CLI's `fit` and `calc` take a `.zip` too
-   and write back only into `--output DIR`. In the desktop app the archive is the project's location (owner,
-   2026-10-25, reversing "an opened archive is never overwritten"): the project works in the unpacked folder and Save
-   rewrites the archive from it, as for a project saved as a zip. Save opens Save project as only where writing back is
+   temporary folder. The archive is then the project's location (owner, 2026-10-25, reversing "an opened archive is
+   never overwritten"): the project works in the unpacked folder and Save rewrites the archive from it, as for a
+   project saved as a zip. In Python `Project.location` is the `.zip`, `save()` rewrites it and `save_as(folder)` moves
+   the project to that folder, leaving the archive as it was. The command line is the exception: its `fit` and `calc`
+   take a `.zip` too but write back only into `--output DIR`, since an input is never a command's output. Save opens Save project as only where writing back is
    impossible: a bundled example, an archive in a read-only place, or the browser's uploaded copy. The unpacked
    folder's other files, its reports among them, are carried into every save. The desktop app has one *Open project…*:
    the system's file dialog takes a `project.edi` or a `.zip`, and a folder, a `project.edi` or a `.zip` dropped on the
