@@ -5,7 +5,7 @@ Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal
 ## Sources
 
 - **Model:** diffraction-lib (develop `cb2cda7be6117199be8f8cac0a666a7bccd32d90`)'s verification page `sc-neut-tof_taurine_basic` (FullProf `taurine.pcr`): the P2₁/c structure and its 14 sites.
-- **Data:** `data/taurine-senju.int`, FullProf's reflection file of the taurine project with its six SENJU datasets (the dataset in column 6), one experiment each. The project embeds the 1540 reflections with a positive su (286, 255, 276, 221, 242 and 260) unchanged (h, k, l, F², su, wavelength). Its sha256 is `bc1824a80d8c132f05219c6e89a1df050c94c97a6d3318f039b6bc3711145637`.
+- **Data:** `data/taurine-senju.int`, FullProf's reflection file of the taurine project with its six SENJU datasets (the dataset in column 6), one experiment each. The project embeds the 1540 reflections with a positive su (286, 255, 276, 221, 242 and 260) unchanged (h, k, l, F², su, wavelength). Its sha256 is `3a4921c04418d3112c36039bff79c10bda771be49dec163258f083c94cd8162b`.
 
 ## Start
 
