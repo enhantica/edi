@@ -481,10 +481,11 @@ Item {
         rowLabelsRoom = Math.ceil(widest);
     }
     // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
-    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit.
+    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. A view
+    // not shown chooses none: a followed scan moves the shown dataset with every file.
     readonly property var shownRowLabels: {
         const shown = [];
-        const texts = rowLabels && scan !== null ? scan.rowTexts : [];
+        const texts = chart.shown && rowLabels && scan !== null ? scan.rowTexts : [];
         if (texts.length === 0 || scan.revision < 0 || !(axisY.max > axisY.min) || plot.height <= 0)
             return shown;
         // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
