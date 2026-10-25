@@ -301,8 +301,13 @@ try {
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
       assert(beforeStorage.length>0,'The private-session scenario must actually exercise throwing storage before Save-as');
       const errors=[];
-      const errorVisible=async()=> (await ax()).some(n=>/The browser could not use the file|Private-session storage unavailable/.test(n.name?.value||''));
-      assert.equal(await errorVisible(),false,'Any earlier storage error must be dismissed before Save-as is tested');
+      const errorState=()=>evaluate(()=>{
+        try{return {observable:true,visible:window.ediControlGeometry('webFiles.error.text').visible};}
+        catch(error){if(/no visible item/.test(error.message))return {observable:true,visible:false};
+          if(/no item is named/.test(error.message))return {observable:false};throw error;}
+      });
+      const errorBefore=await errorState();
+      if(errorBefore.observable)assert.equal(errorBefore.visible,false,'Any earlier storage error must be dismissed before Save-as is tested');
       await click(/^Save project as/);
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);
       await frame();await frame();
@@ -311,7 +316,9 @@ try {
       assert.equal(held.pending,1,'The browser download must remain held before permission or completion');
       assert.equal(events.downloads,0,'No browser download can complete before the held request is released');
       if(JSON.stringify(held.storage)!==JSON.stringify(beforeStorage))errors.push('Save project as touched failing storage');
-      if(await errorVisible())errors.push('Save project as displayed a storage error');
+      const errorAfter=await errorState();
+      if(!errorAfter.observable)errors.push('The actual storage-error label is not observable; absence from AX cannot prove the dialog stayed closed');
+      else if(errorAfter.visible)errors.push('Save project as displayed a storage error');
       let notice;
       try{notice=await evaluate(()=>window.ediControlGeometry('webNotice.text'));}
       catch(error){if(!/no visible item/.test(error.message))throw error;}
@@ -325,7 +332,7 @@ try {
       // Cancellation proves that even a refused download cannot have been reported as finished.
       await evaluate(()=>window.__downloadBoundary.cancel());await frame();
       assert.equal(events.downloads,0,'Cancelling permission must not create a finished download');
-      receipts[scenario]={held,beforeStorage,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
+      receipts[scenario]={held,beforeStorage,errorBefore,errorAfter,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
       assert.deepEqual(errors,[],'Save-as from an example must bypass failing storage and report only an unconfirmed download request without original-file guidance');
       console.log(mode,scenario,'PASS');continue;
     }
