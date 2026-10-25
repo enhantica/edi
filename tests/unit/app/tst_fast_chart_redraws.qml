@@ -543,8 +543,10 @@ Item {
         }
         function test_desktop_minimum() {
             const win = window();
-            compare(win.minimumWidth, Style.Sizes.appWindowMinimumWidth, "The native window publishes the shared supported minimum width to its window manager");
-            compare(win.minimumHeight, Style.Sizes.appWindowMinimumHeight, "The native window publishes the shared supported minimum height to its window manager");
+            compare(AppSizes.minimumAppWidth, 1024, "ADR-0017 section 2 fixes the supported app width at 1024 logical pixels");
+            compare(AppSizes.minimumAppHeight, 640, "ADR-0017 section 2 fixes the supported app height at 640 logical pixels");
+            compare(win.minimumWidth, AppSizes.minimumAppWidth, "The native window publishes the app's shared supported minimum width to its window manager");
+            compare(win.minimumHeight, AppSizes.minimumAppHeight, "The native window publishes the app's shared supported minimum height to its window manager");
             verify(win.minimumWidth >= win.appBarCentralTabs.width && win.minimumHeight > 2 * AppSizes.toolbarControlSize, "The published native minimum leaves room for the workflow controls");
         }
         function test_placeholder_boundary_and_state() {
@@ -553,7 +555,7 @@ Item {
             chart = null;
             const win = window(), w = win.minimumWidth, h = win.minimumHeight;
             Ui.click(test, Probe, win, "appBar.tab.analysis");
-            tryVerify(() => !Ui.moving(win.contentItem), 2000, "The restored-state witness starts on a settled nondefault page");
+            tryVerify(() => pageReady("analysis") && !Ui.moving(win.contentItem), 3000, "The restored-state witness starts on a settled nondefault page");
             Session.project.currentExperimentIndex = 1;
             const retainedPage = pageBody("analysis");
             const tabs = Array.from(retainedPage.mainTabs || []);
@@ -567,24 +569,49 @@ Item {
             verify(w >= win.appBarCentralTabs.width && h > 2 * AppSizes.toolbarControlSize, "The undersize predicate shares a usable desktop minimum");
             const reference = emptyFactory.createObject(surface);
             const project = Session.project, page = Globals.Vars.appBarCurrentIndex;
+            const cover = findChild(win, "app.tooSmall"), label = findChild(win, "app.tooSmall.text"), root = Ui.windowRoot(win);
+            verify(cover !== null && label !== null, "The actual Main window owns the named undersize overlay and its empty-view label");
+            compare(cover.parent, win.Overlay.overlay, "The undersize cover belongs to the complete window overlay rather than the application content subtree");
+            verify(label.parent === cover && String(label.text) === "Increase the window size", "The named overlay contains the exact requested increase-window message");
+            const home = Ui.control(Probe, win, "appBar.tab.home");
+            verify(home !== null && home.enabled && !home.checked, "The pointer-blocking witness targets a real enabled nonselected navigation control");
             win.minimumWidth = 0;
             win.minimumHeight = 0;
-            for (const size of [[w - 1, h], [w, h - 1], [w, h], [w + 1, h + 1]]) {
+            for (const size of [[w - 1, h], [w, h - 1], [w - 1, h - 1], [w, h], [w + 1, h + 1]]) {
                 win.width = size[0];
                 win.height = size[1];
-                verify(waitForPolish(win.contentItem) && waitForRendering(win.contentItem), "A resize reaches its completed content layout");
-                const labels = Render.texts(win.contentItem).filter(item => /increase.*window.*size/i.test(item.text));
+                tryCompare(win, "width", size[0], 1500, "The native boundary witness actually reaches its requested browser-sized width");
+                tryCompare(win, "height", size[1], 1500, "The native boundary witness actually reaches its requested browser-sized height");
+                verify(waitForPolish(root) && waitForRendering(root), "A resize reaches its completed full-window overlay layout");
                 const small = size[0] < w || size[1] < h;
-                compare(labels.length, small ? 1 : 0, "The placeholder appears below either threshold and disappears exactly at the minimum");
+                tryCompare(cover, "visible", small, 1500, "The named placeholder appears below either threshold and disappears exactly at the minimum");
+                compare(label.visible, small, "The actual empty-view label follows the overlay's effective visibility");
                 if (small) {
-                    const label = labels[0], at = label.mapToItem(win.contentItem, label.width / 2, label.height / 2);
+                    const box = cover.mapToItem(root, 0, 0, cover.width, cover.height);
+                    verify(Math.abs(box.x) <= 1 && Math.abs(box.y) <= 1 && Math.abs(box.width - win.width) <= 1 && Math.abs(box.height - win.height) <= 1, "The named overlay covers the entire application area including app and status bars");
+                    const at = label.mapToItem(root, label.width / 2, label.height / 2);
                     compare(label.font.family, reference.font.family, "The placeholder reuses the empty-view font family");
                     compare(label.font.pixelSize, reference.font.pixelSize, "The placeholder reuses the empty-view font size");
                     compare(label.font.weight, reference.font.weight, "The placeholder reuses the empty-view font weight");
-                    compare(controls(win.contentItem).length, 0, "Below the minimum only the placeholder remains, with all application controls hidden");
-                    const image = grabImage(win.contentItem), colour = image.pixel(5, 5), expected = Style.Colors.contentBackground;
-                    verify(["r", "g", "b"].every(channel => Math.abs(colour[channel] - expected[channel]) <= 1 / 255), "The undersize area reuses the empty view's grey background");
+                    compare(label.color, reference.color, "The placeholder reuses the empty-view disabled text colour");
                     verify(Math.abs(at.x - win.width / 2) <= 1 && Math.abs(at.y - win.height / 2) <= 1, "The undersize message is centred in the complete application area");
+                    const image = grabImage(root), expected = Style.Colors.contentBackground;
+                    const text = label.mapToItem(root, 0, 0, label.width, label.height);
+                    const dpr = image.width / root.width;
+                    const empty = colour => ["r", "g", "b"].every(channel => Math.abs(colour[channel] - expected[channel]) <= 1 / 255);
+                    for (let y = 3; y < root.height; y += 29)
+                        for (let x = 3; x < root.width; x += 31)
+                            if (x < text.x - 3 || x > text.x + text.width + 3 || y < text.y - 3 || y > text.y + text.height + 3)
+                                verify(empty(image.pixel(Math.floor(x * dpr), Math.floor(y * dpr))), "The complete undersize frame paints only the empty-view background outside its message");
+                    let ink = false;
+                    for (let y = Math.max(0, Math.floor(text.y * dpr)); y < Math.min(image.height, (text.y + text.height) * dpr) && !ink; y += 2)
+                        for (let x = Math.max(0, Math.floor(text.x * dpr)); x < Math.min(image.width, (text.x + text.width) * dpr) && !ink; x += 2)
+                            ink = !empty(image.pixel(x, y));
+                    verify(ink, "The named increase-window message contributes actual visible glyph ink");
+                    const hit = Ui.clickPoint(home);
+                    verify(hit !== null, "The underlying enabled navigation target remains in the window for pointer interception");
+                    mouseClick(home, hit.x, hit.y);
+                    compare(Globals.Vars.appBarCurrentIndex, page, "The undersize overlay blocks actual pointer activation of a covered application control");
                 }
             }
             compare(Session.project, project, "Resizing across the minimum preserves the current project instance");
@@ -594,6 +621,8 @@ Item {
             verify(stacked.checked, "Resize restoration retains the selected chart tab");
             for (let index = 0; index < viewports.length; ++index)
                 compare(viewports[index].contentY, scrolls[index], "Resize restoration retains each existing scroll position");
+            Ui.click(test, Probe, win, "appBar.tab.home");
+            tryCompare(home, "checked", true, 1500, "The same real navigation control accepts pointer input after the overlay disappears");
             reference.destroy();
         }
     }
