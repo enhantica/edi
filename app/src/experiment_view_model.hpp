@@ -276,6 +276,10 @@ class ExperimentViewModel : public QObject {
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
     void markPatternStale();
+    // Whether the pattern's newest change follows a parameter being adjusted (an admitted edit), rather than a dataset
+    // shown or a fit: a pattern chart then holds its y range while the calculated curve stays inside it.
+    bool adjusting() const { return adjusting_; }
+    void setAdjusting(bool adjusting) { adjusting_ = adjusting; }
     // Pattern charts showing this experiment's pattern register here while they are shown (on the page and the tab
     // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
     bool patternShown() const { return !shown_charts_.isEmpty(); }
@@ -345,6 +349,7 @@ class ExperimentViewModel : public QObject {
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
+    bool adjusting_ = false;
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
     std::uint64_t presented_generation_ = 0;
