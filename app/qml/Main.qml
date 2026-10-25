@@ -299,7 +299,7 @@ EaComponents.ApplicationWindow {
         if (Session.project === null)
             return;
         if (!WebFiles.available) {
-            saveFolder.open();
+            saveAsChoice.open();
             return;
         }
         if (Session.saveAs(WebFiles.saveLocation(Session.project.name)))
@@ -331,12 +331,83 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // Save as (edi ADR-0052): first the format and whether to keep working where the project is (a copy), then the
+    // system's dialog for the folder or the .zip.
+    AppDialog {
+        id: saveAsChoice
+        objectName: "saveAs.choice"
+        property bool zip: false
+        property bool copy: false
+        title: qsTr("Save project as")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: saveAsChoiceColumn.implicitHeight
+        onAboutToShow: {
+            zip = false;
+            copy = false;
+        }
+        onAccepted: zip ? saveZip.open() : saveFolder.open()
+
+        Column {
+            id: saveAsChoiceColumn
+            width: saveAsChoice.contentWidth
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            EaElements.Label {
+                text: qsTr("Format")
+            }
+            EaElements.RadioButton {
+                objectName: "saveAs.folder"
+                text: qsTr("Folder")
+                checked: !saveAsChoice.zip
+                onClicked: saveAsChoice.zip = false
+            }
+            EaElements.RadioButton {
+                objectName: "saveAs.zip"
+                text: qsTr("Zip archive")
+                checked: saveAsChoice.zip
+                onClicked: saveAsChoice.zip = true
+            }
+            EaElements.CheckBox {
+                objectName: "saveAs.copy"
+                text: qsTr("Save a copy (keep working where the project is)")
+                checked: saveAsChoice.copy
+                onToggled: saveAsChoice.copy = checked
+            }
+        }
+    }
+
     FolderDialog {
         id: saveFolder
-        title: qsTr("Save the project into a directory")
+        title: saveAsChoice.copy ? qsTr("Save a copy of the project into a folder") : qsTr("Save the project into a folder")
+        acceptLabel: qsTr("Choose")
         onAccepted: {
-            if (!Session.saveAs(selectedFolder))
+            if (!Session.saveProjectAs(selectedFolder, false, saveAsChoice.copy))
                 saveError.open();
+        }
+    }
+
+    FileDialog {
+        id: saveZip
+        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "zip"
+        nameFilters: [qsTr("Zip archives (*.zip)")]
+        acceptLabel: qsTr("Save")
+        onAccepted: {
+            if (!Session.saveProjectAs(selectedFile, true, saveAsChoice.copy))
+                saveError.open();
+        }
+    }
+
+    // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
+    DropArea {
+        anchors.fill: parent
+        onDropped: drop => {
+            if (drop.hasUrls && drop.urls.length > 0) {
+                drop.accept();
+                Session.openProject(drop.urls[0]);
+            }
         }
     }
 
