@@ -88,6 +88,7 @@ EaElements.GroupBox {
     AppDialog {
         id: openChoice
         objectName: "open.choice"
+        enterAccepts: true
         property bool zip: false
         parent: Overlay.overlay
         title: qsTr("Open project")
