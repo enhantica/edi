@@ -17,7 +17,8 @@ and Python each need to open a project from its folder, its `project.edi` or a `
 The web app had its own archive code on Qt's private zip classes, which the core cannot use (ADR-0009: the core is
 Qt-free). A save rounds what it writes, so the open project must take the written values and the calculated pattern
 must be recalculated from them, or the file and the screen disagree (owner, 2026-10-18 and 2026-10-24). Opening taurine
-took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt and drawn, not the project being read.
+took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt and drawn, not the project being read
+(measured with the app's software renderer, as on the test machines).
 
 ## Decision
 
@@ -71,8 +72,9 @@ took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt 
 
 1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, one
    after another in the order Project, Structure, Experiment, Analysis, Report (owner, 2026-10-25): asynchronous loaders
-   that the app's own incubation controller builds in slices of about 12 ms per turn of the event loop, so input and
-   drawing go on between slices. Each app-bar tab stays disabled until its page is built, with the tooltip *Preparing
+   that the app's own incubation controller builds in slices of about 50 ms per turn of the event loop, so input and
+   drawing go on between slices. On taurine every tab is enabled about 3.2 to 3.5 s after a first open and 3.8 to 4.1 s
+   after a second, against 8.6 to 9.5 s with Qt's own controller; 12 ms slices took about half as long again. Each app-bar tab stays disabled until its page is built, with the tooltip *Preparing
    this page…*; while pages build, the status bar shows *Opening project… N of M pages* with a progress bar in the fit
    area's place, gone once every page is built. A page past Project that was shown when another project opened gives
    way to the Project page. Opening another project meanwhile drops the pages being built, and the replaced project's
