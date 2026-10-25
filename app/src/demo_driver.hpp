@@ -86,6 +86,8 @@ class DemoDriver : public QObject {
     bool timed_reset();
     // Polls every few milliseconds until nothing is calculating, then calls `next`.
     void idle_then(std::function<void()> next, int waited_ms = 0);
+    // Waits until a display catching up with a scan has drawn every pattern, then until nothing is calculating.
+    void drawn_then(std::function<void()> next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
     // Waits until a scan view's model has read every dataset, then calls `next`.

@@ -944,8 +944,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"perf-162f", {scan, "timed-fit:162", "timed-reset"}});
         steps_.push_back({"perf-control-partial", {scan, "timed-fit:162:40"}});
         steps_.push_back({"perf-control-refused", {scan, "remove-scan-data", "timed-fit:162"}});
-        // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn against the
-        // adaptive rule (edi ADR-0029), and slider steps on LBCO before and after a fit (edi ADR-0041).
+        // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn (the fit waiting
+        // for each, or the display catching up) against the adaptive rule (edi ADR-0029), and slider steps on LBCO
+        // before and after a fit (edi ADR-0041).
         const QString analysis = QStringLiteral("appBar.tab.analysis");
         QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
                           "mainArea.analysis.tab.stacked", "wait-scan:stacked"};
@@ -963,7 +964,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"perf-gpu-views-324f", views});
         const QStringList updates{"resize:1280x800", scan, analysis, "sideBar.tab.settings", "expand:group.patternUpdates",
                                   "analysis.patternUpdates"};
-        for (const auto& [name, choice] : {std::pair{"every", "Every pattern"}, std::pair{"adaptive", "Adaptive"}}) {
+        for (const auto& [name, choice] : {std::pair{"every", "Every pattern, fit waits for the display"},
+                                           std::pair{"catchup", "Every pattern, display catches up"},
+                                           std::pair{"adaptive", "Adaptive"}}) {
             steps_.push_back({QStringLiteral("perf-fit-%1-pattern").arg(QLatin1String(name)),
                               updates + QStringList{QStringLiteral("choose:") + QLatin1String(choice), "mainArea.analysis.tab.fitting",
                                                     "timed-fit:162"}});
@@ -1616,6 +1619,19 @@ void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { idle_then(next, waited_ms + kIdlePollMs); });
 }
 
+void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr || project->fit() == nullptr || !project->fit()->catchingUp()) {
+        idle_then(std::move(next));
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the display did not catch up").arg(steps_[current_].image));
+        return;
+    }
+    QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { drawn_then(next, waited_ms + kIdlePollMs); });
+}
+
 void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_after) {
     ProjectViewModel* project = open_project(window_);
     FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
@@ -1635,8 +1651,10 @@ void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_
         for (const QMetaObject::Connection& connection : *connections) {
             QObject::disconnect(connection);
         }
-        idle_then([this, next, files, refusal] {
-            const qint64 ms = timer_.elapsed();
+        // The fit's time ends with the fit: a display catching up draws on after it, and is waited for before the
+        // next action.
+        const qint64 ms = timer_.elapsed();
+        drawn_then([this, next, files, refusal, ms] {
             QString problem = refusal->isEmpty() ? scan_work(files) : QStringLiteral("refused: ") + *refusal;
             if (!problem.isEmpty()) {
                 fail(QStringLiteral("step %1: the timed fit did not do its work: %2").arg(steps_[current_].image, problem));
