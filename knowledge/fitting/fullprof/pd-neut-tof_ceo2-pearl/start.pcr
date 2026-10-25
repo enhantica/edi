@@ -1,0 +1,46 @@
+COMM pd-neut-tof_ceo2-pearl
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+-1 9 1 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+2 2 1 0 2 0 4 0 0 2 10 1 1 0 0 1 1
+! Bkpos Wdt Iabscor for Pattern# 1
+7000 48 2
+!NCY Eps R_at R_an R_pr R_gl
+1 0.1 0.2 0.2 0.2 0.2 1500.25 5.5 19400.1875
+! Excluded regions (LowT HighT) for Pattern# 1
+0 !Number of refined parameters
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 1
+0 0 4680 0 1.7621 0 0 0 90
+! Background coefficients/codes for Pattern# 1
+2200 0 0 0 0 0
+0 0 0 0 0 0
+! Data for PHASE number: 1
+ceo2
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More
+2 0 0 0 0 1 0 0 0 0 0 0 0 9 0
+F m -3 m <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+Ce CE 0 0 0 0.5 0.02083333333 0 0 0 0
+0 0 0 0 0
+O O 0.25 0.25 0.25 0.5 0.04166666667 0 0 0 0
+0 0 0 0 0
+! Profile Parameters for Pattern # 1 Phase ceo2
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+2000 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+4 80 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 5 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+5.410495 5.410495 5.410495 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0 0.03 0.3 0.03 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+2000.34375 18695.8125 1

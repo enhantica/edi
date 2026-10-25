@@ -134,3 +134,33 @@ def test_scan_release_observer_requires_a_live_post_release_handover(release_tra
     assert not screen.resumed_draws(item), (
         'ADR-0029: held-only, stopped and pre-release drawings cannot satisfy a live handover'
     )
+
+
+@pytest.mark.parametrize('defect', ['none', 'model', 'drawing', 'running', 'later'])
+def test_initial_lazy_read_transition_keeps_exact_template_drawing(defect):
+    template = screen.template_measured(screen.FULL / 'experiments/d20.edi')
+    pending = screen.measured(screen.files(screen.FULL)[0])[: len(template)]
+    initial = {
+        'running': False,
+        'modelMeasured': screen.columns_hash(pending),
+        'drawnMeasured': 'template measured series',
+        'drawnCalculated': 'template calculated series',
+        'drawnPoints': [[x, y] for x, y, _ in template],
+    }
+    item = {'frames': [initial]}
+    if defect == 'model':
+        initial['modelMeasured'] = screen.columns_hash(pending[:-1])
+    elif defect == 'drawing':
+        initial['drawnPoints'][0][1] += 0.125
+    elif defect == 'running':
+        initial['running'] = True
+    elif defect == 'later':
+        item['frames'].insert(0, dict(initial, modelMeasured=screen.columns_hash(template)))
+    if defect == 'none':
+        assert screen.shown(item) == [], (
+            'The exact stopped lazy-read transition retains '
+            'the independently saved template drawing'
+        )
+    else:
+        with pytest.raises(AssertionError, match='independently saved measured columns'):
+            screen.shown(item)

@@ -15,6 +15,7 @@ import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -28,6 +29,7 @@ from tests.fixtures.c34_t23_cli_projects.retaken_pins import retained_pin_bytes
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
@@ -129,6 +131,19 @@ def restore_retaken_pin(project_id, name, path):
     path.write_bytes(retained)
 
 
+def restore_seed_pin(project_id, live_directory, path):
+    assert path.is_file() and not path.is_symlink(), (
+        'Expected regression pins must remain materialized regular files'
+    )
+    raw = path.read_bytes()
+    retained = retained_bytes((live_directory / 'expected.json').relative_to(ROOT), raw)
+    if retained != raw:
+        # The catalogue replacement already restores the original seed, before main's retake.
+        path.write_bytes(retained)
+    else:
+        restore_retaken_pin(project_id, 'expected.json', path)
+
+
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
 def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
@@ -150,6 +165,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     assert set(paths) == set(expected), (
         ' seed file inventory must equal the independent source tree'
     )
+    restore_seed_pin(project_id, live_directory, paths['expected.json'])
     public_metadata = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
     )
@@ -157,9 +173,6 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         assert path.is_file() and not path.is_symlink(), (
             ' seed files must be materialized regular files'
         )
-        # b761fdf6 -> 90e17741 changes exact regression pins, preserving old checks.
-        # The catalogue rework replaces these four pins when it merges.
-        restore_retaken_pin(project_id, name, path)
         adaptation = public_metadata.get((live_directory / name).relative_to(ROOT).as_posix())
         if adaptation and name != 'project/analysis/analysis.edi':
             assert adaptation['before_blob'] == expected[name], (
@@ -257,6 +270,56 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         )
 
 
+@pytest.mark.parametrize('project_id', sorted(RETAKEN_SEEDS))
+@pytest.mark.parametrize('defect', ['value', 'kind', 'tolerance', 'input', 'extra', 'missing'])
+def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
+    project_id, defect, tmp_path, monkeypatch
+):
+    from tests.fixtures.table_display import metadata_bytes  # noqa: PLC0415
+
+    directory = tmp_path / 'docs/user/cli' / PROJECT_IDS[project_id]
+    shutil.copytree(CLI / PROJECT_IDS[project_id], directory)
+    (tmp_path / 'tests').mkdir()
+    (tmp_path / 'tests/fixtures').symlink_to(ROOT / 'tests/fixtures', target_is_directory=True)
+    monkeypatch.setattr(sys.modules[__name__], 'ROOT', tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], 'CLI', directory.parent)
+    monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
+    test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+        project_id, tmp_path / 'positive'
+    )
+    expected_file = directory / 'expected.json'
+    if defect in {'value', 'kind', 'tolerance'}:
+        data = json.loads(expected_file.read_text())
+        quantity = next(iter(next(iter(data['variants'].values()))['quantities'].values()))
+        assert quantity['kind'] == 'regression-pin', (
+            'The mutation control must reach an existing numerical regression pin'
+        )
+        field, replacement = {
+            'value': ('value', quantity['value'] + 0.125),
+            'kind': ('kind', 'reference'),
+            'tolerance': ('tol_abs', 0.125),
+        }[defect]
+        quantity[field] = replacement
+        expected_file.write_text(json.dumps(data, indent=2) + '\n')
+    elif defect == 'input':
+        path = directory / 'project/project.edi'
+        path.write_bytes(path.read_bytes() + b'\n# unexpected project byte\n')
+    elif defect == 'extra':
+        (directory / 'project/extra.edi').write_text('unexpected extra input\n')
+    else:
+        expected_file.unlink()
+    with pytest.raises(
+        AssertionError,
+        match=(
+            r'pinned|blob ids|source tree|regular files|archived source|'
+            r'reviewed source byte|exact committed'
+        ),
+    ):
+        test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+            project_id, tmp_path / 'negative'
+        )
+
+
 def test_registry_executes_owner_declared_set_and_retains_every_seed():
     rows = registry()
     by_id = {row['id']: row['executing'] for row in rows}
@@ -275,9 +338,9 @@ def test_registry_executes_owner_declared_set_and_retains_every_seed():
         ' every registry project must explicitly declare executing membership'
     )
     assert all(
-        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}', row['id'])
+        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}', row['id'])
         for row in rows
-    ), ' every registered id needs three lowercase kebab parts separated by underscores'
+    ), ' every registered id needs two or three lowercase kebab parts separated by underscores'
 
 
 def nav_paths(value):
@@ -298,7 +361,13 @@ def test_effective_docs_navigation_has_descriptive_project_pages():
     for row in rows:
         prefix = f'user/cli/{row["id"]}/'
         candidates = [ROOT / 'docs' / path for path in paths if path.startswith(prefix)]
-        assert candidates, ' every project must appear in effective docs navigation'
+        if not row.get('user-facing', False):
+            assert not candidates, 'Retained fixture pages must leave the user navigation'
+            assert (CLI / row['id'] / 'project').is_dir(), (
+                'Non-public fixtures must retain their materialized project'
+            )
+            continue
+        assert candidates, 'Every user-facing case must appear in effective docs navigation'
         descriptions = []
         for path in candidates:
             assert path.is_file(), ' each project nav link must resolve to a page'
@@ -554,7 +623,7 @@ def test_loaded_settings_keep_multiple_occurrences_distinguishable(project_copy,
     [
         'cosio-d20-s1',
         'pd-neut-tof-diamond-dream',
-        'pd-neut-cwl_lif',
+        'pd-neut-cwl',
         'pd_neut_cwl_lif_single',
         'pd-neut-cwl__single',
         'pd-neut-cwl_LiF_single',
@@ -578,6 +647,7 @@ def test_executing_registry_refuses_obsolete_and_malformed_ids(tmp_path, project
 @pytest.mark.parametrize(
     'project_id',
     [
+        'pd-neut-cwl_lif',
         'pd-neut-tof_diamond-dream_basic',
         'pd-xray-cwl_lif_single',
         'pd-neut-cwl_yap_3k',
@@ -649,3 +719,39 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
+
+
+@pytest.mark.parametrize('template', ['latp_312.dat', 'latp_304.dat'])
+def test_settings_cli_exposes_loaded_sequential_conditions_by_item_name(tmp_path, template):
+    target = tmp_path / 'project'
+    shutil.copytree(CLI / 'pd-xray-cwl_latp-bm01_scan/project', target)
+    analysis = target / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text().replace('latp_312.dat', template)
+        + '\n# _sequential_fit.phantom_sequence ignored\n'
+        + '_sequential_fit.unknown_condition ignored\n'
+    )
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'tools/checks/cli_projects.py'), '--settings', str(target)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, 'The settings CLI must load and report a real scan project'
+    settings = json.loads(result.stdout)
+    for item, value in {
+        'data_dir': 'experiments/bm01_scan',
+        'file_pattern': '*.dat',
+        'reverse': 'true',
+        'template_file': template,
+    }.items():
+        assert settings.get(item) == {
+            f'analysis/analysis.edi:_sequential_fit.{item}': {'value': value}
+        }, 'Loaded sequential conditions use item-named tokens with exact saved values'
+    assert template not in settings, (
+        'A sequential file name is a value rather than an exercise token'
+    )
+    assert 'phantom_sequence' not in settings and 'unknown_condition' not in settings, (
+        'Comments and sequential fields ignored by the real loader cannot become exercise tokens'
+    )

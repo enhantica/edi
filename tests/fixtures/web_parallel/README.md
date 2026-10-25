@@ -214,3 +214,9 @@ capture's excluded rows had `.` for the d-spacing; they now have the real d. The
 capture, so it was solved from each bank's included rows (time of flight is linear in the three constants), which it
 reproduces to 1e-11 relative, and each excluded d is the physical root, written as the shortest round trip.
 `scientific_sha256` in `ncaf-conditioning.json` was updated to match.
+
+The frozen native tokens contained NumPy scalar repr wrappers in saved phase
+weight fractions. `python -m tests.fixtures.web_parallel.normalize_native_tokens`
+removes only `np.float64(...)`, retaining every decimal digit. The per-token
+receipt reverses to the complete original scientific hash. Conditioning matrices,
+parameter bindings and numerical tolerances retain their captured values.

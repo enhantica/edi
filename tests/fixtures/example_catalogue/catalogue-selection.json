@@ -1,0 +1,25 @@
+{
+  "source": "Owner selection, naming and ordering of 22 October 2026, after removing LaB6 and diamond",
+  "cases": [
+    {"id": "pd-neut-cwl_lbco_simulation", "group": "Calculations without data"},
+    {"id": "pd-neut-tof_si_simulation", "group": "Calculations without data"},
+    {"id": "pd-xray-cwl_nacl_simulation", "group": "Calculations without data"},
+    {"id": "pd-neut-cwl_lbco-hrpt", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-cwl_hs-hrpt", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-cwl_cosio-d20", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-cwl_lmo-echidna", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-cwl_y2o3-spodi", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-cwl_yalo3-al2o3-spodi", "group": "Constant-wavelength neutron"},
+    {"id": "pd-neut-tof_si-sepd", "group": "Time-of-flight neutron"},
+    {"id": "pd-neut-tof_cecoal-polaris", "group": "Time-of-flight neutron"},
+    {"id": "pd-neut-tof_ceo2-pearl", "group": "Time-of-flight neutron"},
+    {"id": "pd-neut-tof_lbco-si-mcstas", "group": "Time-of-flight neutron"},
+    {"id": "pd-neut-tof_ncaf-wish", "group": "Time-of-flight neutron"},
+    {"id": "pd-neut-tof_ferrite-austenite-beer", "group": "Time-of-flight neutron"},
+    {"id": "pd-xray-cwl_pbso4-lab", "group": "X-ray"},
+    {"id": "pd-xray-cwl_lam7o3-p021", "group": "X-ray"},
+    {"id": "pd-neut-xray-cwl_pbso4-d1a-lab", "group": "Neutron and X-ray joint"},
+    {"id": "pd-neut-cwl_cosio-d20_scan", "group": "Scans"},
+    {"id": "pd-xray-cwl_latp-bm01_scan", "group": "Scans"}
+  ]
+}

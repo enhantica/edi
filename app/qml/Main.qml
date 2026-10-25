@@ -91,46 +91,14 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    // A workflow tab as wide when it is the current page's as when it is not: the base sets the current tab's name in
-    // bold, so the tab bar changed width with every page switch, which moved the Experiment button the sidebar is
-    // measured from, resized every page's main area and drew each shown chart a second time.
-    component WorkflowTab: EaElements.AppBarTabButton {
-        id: tab
-
-        // The tab's page: while it is being built in the background the tab stays disabled and says so (edi ADR-0052).
-        property Loader page: null
-        property bool pageWanted: false
-        readonly property bool preparing: page !== null && pageWanted && Session.hasProject && page.status !== Loader.Ready
-
-        // The base binds the width to the name's width in its current weight; this is the wider of the two.
-        width: implicitWidth
-        implicitWidth: Math.ceil(Math.max(plainName.advanceWidth, boldName.advanceWidth) + font.pixelSize * 1.5)
-
-        TextMetrics {
-            id: plainName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            text: tab.text
-        }
-        TextMetrics {
-            id: boldName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            font.bold: true
-            text: tab.text
-        }
-    }
-
     appBarCentralTabs.contentData: [
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.home"
             fontIcon: "home"
             text: qsTr("Home")
             ToolTip.text: qsTr("Home page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: projectTab
             objectName: "appBar.tab.project"
             page: projectLoader
@@ -140,7 +108,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: structureTab
             objectName: "appBar.tab.structure"
             page: structureLoader
@@ -150,7 +118,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: experimentTab
             objectName: "appBar.tab.experiment"
             page: experimentLoader
@@ -160,7 +128,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: analysisTab
             objectName: "appBar.tab.analysis"
             page: analysisLoader
@@ -170,7 +138,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: reportTab
             objectName: "appBar.tab.report"
             page: reportLoader
@@ -223,7 +191,7 @@ EaComponents.ApplicationWindow {
         HoverHandler {
             id: tabBarHover
         }
-        readonly property WorkflowTab preparingTab: {
+        readonly property WorkflowTabButton preparingTab: {
             if (!tabBarHover.hovered)
                 return null;
             for (const tab of [projectTab, structureTab, experimentTab, analysisTab, reportTab]) {

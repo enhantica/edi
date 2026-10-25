@@ -2,6 +2,9 @@
 
 Status: accepted (owner's examples table decisions, 2026-10-09).
 
+Amended by [One example catalogue](0048-one-example-catalogue.md): the app bundles the registry's user-facing
+projects, in registry order, and the app's own LiF example is retired.
+
 The prior implementation is `ExampleListModel` in Session and `ExamplesGroup.qml`: it inferred sample and technique from registry IDs and displayed two lines without filters. The CLI registry is an execution contract; presentation facts now live in the app's bundled `examples/metadata.json`, with source paths for each entry. Missing facts remain “Not specified”; simulation purpose is separate from the saved fitting mode. Multi-phase examples name every sample.
 
 The model publishes typed properties and list models, following ADR-0015. Search normalizes Unicode and case and requires every word. A property picker selects the value vocabulary; choosing a new property resets the value to All. Value counts reflect the text search, count each example once, and ignore the selected value. Zero-count choices remain available. Filtering retains registry order and immutable example IDs; clicking a filtered row opens its own ID.
@@ -19,6 +22,8 @@ Purpose tags are green/purple and fitting-mode tags amber, with readable dark-pa
 Word tags use sentence case; compact technique codes (`pd`, `neut`, `xray`, `cwl`, `tof`) remain lowercase. The bold identity line uses bundled Noto Sans for the entire title: PT Sans Bold contains some Unicode subscript digits but lacks others, producing visibly mixed weights when fallback fonts are combined.
 
 Purpose badges use the owner's selected bundled Font Awesome 5 symbols: `bullseye` for refinement and `wave-square` for simulation. The paired icon roles are selected from stored purpose values, so translation does not change the symbols.
+
+The `refinement` purpose is shown as **Fitting** on every fitted example, powder or single crystal (owner, 2026-10-23): a single-crystal fit is not a Rietveld refinement, and edi says fit, not refine. The stored token stays `refinement`.
 
 The app's examples are refinement and simulation examples only (owner, 2026-10-10). A CLI project whose model is exactly
 FullProf's, fitted only for its scale or against FullProf's own calculated pattern, records `_metadata.purpose

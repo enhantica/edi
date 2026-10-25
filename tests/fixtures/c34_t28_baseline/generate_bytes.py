@@ -158,7 +158,9 @@ def saved_hashes(directory, *, excluded=False):
     }
 
 
-def observe(source, destination, *, calculator=False, historical_weights=False):
+def observe(
+    source, destination, *, calculator=False, historical_weights=False, retain_files=False
+):
     package = importlib.import_module(PACKAGE)
     # Drive the real loader with prescribed metadata, not a masked save output.
     # last_modified advances from this future input by exactly one second.
@@ -183,7 +185,12 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
                 text += '\n' + line + '\n'
         project_file.write_text(text)
         project = package.Project.load(controlled)
-    project.save_as(destination)
+        if retain_files:
+            project.save_as(destination)
+    # Historical pins were captured after deleting the authoring copy. New scan
+    # invariants retain that copy until their measured files have been saved.
+    if not retain_files:
+        project.save_as(destination)
     if historical_weights:
         return {
             p.relative_to(destination).as_posix(): hashlib.sha256(
@@ -202,14 +209,33 @@ def observe(source, destination, *, calculator=False, historical_weights=False):
     return saved_hashes(destination) if calculator else hashes(destination)
 
 
+def rebuild_latp_fixed_point():
+    source = ROOT / 'docs/user/cli/pd-xray-cwl_latp_scan-4f/project'
+    destination = Path(__file__).with_name('saved-bytes.json')
+    retained = json.loads(destination.read_text())
+    row = retained['post_feature_fixed_points']['repo:' + source.relative_to(ROOT).as_posix()]
+    if 'prior_input_sha256' in row:
+        raise ValueError('the rebuilt LATP input was already recorded')
+    row['prior_input_sha256'] = row['input_sha256']
+    row['input_sha256'] = hashes(source)
+    row['source'] = 'ADR-0048 rebuilt four-pattern verification input; BM01 at ESRF'
+    destination.write_text(json.dumps(retained, indent=2, sort_keys=True) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--record', action='store_true')
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument('--add-fixed-point', metavar='PROJECT_ID')
     selection.add_argument('--add-corpus-fixed-point', metavar='CASE_ID')
+    selection.add_argument('--rebuild-latp-fixed-point', action='store_true')
     parser.add_argument('--source-root', type=Path, default=ROOT)
     args = parser.parse_args()
+    if args.rebuild_latp_fixed_point:
+        if args.record:
+            parser.error('a rebuilt input cannot regenerate historical output pins')
+        rebuild_latp_fixed_point()
+        return
     if args.add_fixed_point or args.add_corpus_fixed_point:
         if args.record:
             parser.error('a new-project invariant cannot regenerate historical save pins')

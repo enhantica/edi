@@ -50,12 +50,12 @@ def test_projects_remain_registered_nonexecuting_and_documented(project_id):
     assert (directory / 'project/project.edi').is_file(), (
         ' each non-executing project must retain its authored project'
     )
-    assert (directory / 'index.md').is_file(), (
+    assert (directory / 'README.md').is_file(), (
         ' each non-executing project must retain its documentation'
     )
     nav = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)['nav']
-    assert f'user/cli/{project_id}/index.md' in nav_paths(nav), (
-        ' each non-executing project must remain in the docs nav'
+    assert f'user/cli/{project_id}/index.md' not in nav_paths(nav), (
+        ' non-executing fixtures retain local instructions outside the user catalogue nav'
     )
 
 

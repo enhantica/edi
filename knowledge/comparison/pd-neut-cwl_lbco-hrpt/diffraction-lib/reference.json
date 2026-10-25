@@ -1,0 +1,33 @@
+{
+  "program": "diffraction-lib",
+  "version": "0.21.1+dev3",
+  "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
+  "model_compatible": true,
+  "minimizer": "lmfit (leastsq)",
+  "n_free": 15,
+  "success": true,
+  "iterations": 145,
+  "fit_seconds": 11.1,
+  "banks": [
+    "hrpt"
+  ],
+  "cells": {
+    "lbco": {
+      "a": [
+        3.890868285348954,
+        3.7979827786550504e-05
+      ],
+      "b": [
+        3.890868285348954,
+        null
+      ],
+      "c": [
+        3.890868285348954,
+        null
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "hrpt.csv": "006a0267339b716053b6d87bf5fa658962405c588071964c9550cf230f8c59a5"
+  }
+}

@@ -27,6 +27,7 @@ from tests.system.py.ci_execution_contract import (
 from tests.system.py.ci_script_execution import observe, retains_work
 from tests.system.py.ci_shipped_cadence import (
     cadence_errors,
+    catalogue_task_extension,
     linux_closure_errors,
     linux_gate_errors,
     suite_steps,
@@ -472,9 +473,10 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'Inventory migrations name only identities in the independently shipped snapshot'
     )
     successors = [node for replacement in MIGRATIONS.values() for node in replacement]
-    assert all(MIGRATIONS.values()) and len(successors) == len(set(successors)), (
-        'Each migrated witness retains a nonempty, distinct set of replacement identities'
-    )
+    assert all(
+        replacements and len(replacements) == len(set(replacements))
+        for replacements in MIGRATIONS.values()
+    ), 'Each migrated witness retains a nonempty set of distinct replacement identities'
     assert not set(successors) & set(MIGRATIONS) and set(successors) <= set(nodes()), (
         'Migration targets are current witnesses, never retired aliases or absent tests'
     )
@@ -501,6 +503,7 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'axis-nonfirst',
         'axis-absent-zero',
         'axis-zero-absent',
+        *[f'catalogue-{index}' for index in range(21)],
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):
@@ -1117,3 +1120,31 @@ def test_retired_aliases_do_not_exempt_canonical_sdk_or_qualification_work(path,
         'Retiring app aliases must not admit changed canonical maps, '
         'missing qualification or lost refusal'
     )
+
+
+def test_catalogue_task_additions_cannot_replace_or_reorder_existing_work():
+    old = 'python tools/dev/example_metadata.py --check && python tools/checks/cli_projects.py'
+    new = (
+        'python tools/checks/example_catalogue.py --check && '
+        'python tools/dev/example_metadata.py --check && '
+        'python tools/comparison/fit_quality.py --check && python tools/checks/cli_projects.py'
+    )
+    expected = [('core-build', 'build-core', {}), ('cli-projects', old, {})]
+    actual = [('core-build', 'build-core', {}), ('cli-projects', new, {})]
+    assert catalogue_task_extension(actual, expected), (
+        'The catalogue task adds its two checks while retaining every original dependency'
+    )
+    damaged = [
+        actual[1:],
+        actual[::-1],
+        actual + [('extra', 'true', {})],
+        [actual[0], ('cli-projects', new.replace('cli_projects.py', 'true'), {})],
+        [actual[0], ('cli-projects', new.replace('fit_quality.py --check && ', ''), {})],
+        [actual[0], ('cli-projects', new + ' || true', {})],
+        [('core-build', 'true', {}), actual[1]],
+        [actual[0], ('cli-projects', new, {'SKIP': '1'})],
+    ]
+    for candidate in damaged:
+        assert not catalogue_task_extension(candidate, expected), (
+            'The catalogue extension cannot hide removed, reordered, swallowed or replaced work'
+        )

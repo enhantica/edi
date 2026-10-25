@@ -28,7 +28,7 @@ QString label(const QString& value) {
     if (value == unknown) return ExampleListModel::tr("Not specified");
     if (value == QLatin1String("__not_applicable__"))
         return ExampleListModel::tr("Not applicable");
-    if (value == QLatin1String("refinement")) return ExampleListModel::tr("Rietveld refinement");
+    if (value == QLatin1String("refinement")) return ExampleListModel::tr("Fitting");
     if (value == QLatin1String("simulation")) return ExampleListModel::tr("Simulation");
     QString result = value;
     if (!result.isEmpty()) result[0] = result[0].toUpper();

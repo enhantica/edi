@@ -15,8 +15,45 @@ import re
 import shutil
 import subprocess
 import tempfile
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
+
+
+def reference_spelling(text):
+    # The external loop reader cannot parse exponent notation before its empty su.
+
+    def plain_decimal(match):
+        original = match.group()
+        converted = format(Decimal(original), 'f')
+        assert float(original) == float(converted), (
+            'Count-only numeric spelling must preserve the exact loaded floating value'
+        )
+        return converted
+
+    text = re.sub(
+        r'(?<!\S)[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+(?=\s|$)',
+        plain_decimal,
+        text,
+    )
+    lines = text.splitlines()
+    if '_background.id' in lines:
+        first = lines.index('_background.id')
+        cursor = first
+        while cursor < len(lines) and lines[cursor].startswith('_background.'):
+            cursor += 1
+        while (
+            cursor < len(lines)
+            and lines[cursor].strip()
+            and not lines[cursor].startswith(('_', 'loop_', 'data_'))
+        ):
+            tokens = lines[cursor].split()
+            if not re.fullmatch(r'[A-Za-z0-9_]+', tokens[0]):
+                tokens[0] = 'point_' + str(cursor - first)
+                lines[cursor] = ' '.join(tokens)
+            cursor += 1
+        text = '\n'.join(lines) + '\n'
+    return text
 
 
 def load_reference_project(path, retained_ranges=None):
@@ -50,6 +87,7 @@ def load_reference_project(path, retained_ranges=None):
         shutil.copytree(path, private)
         for model_file in private.rglob('*.edi'):
             text = model_file.read_text()
+            text = reference_spelling(text)
             if (
                 model_file.parent.name == 'experiments'
                 and '_experiment_type.beam_mode' not in text
@@ -244,6 +282,12 @@ def main():
             'private copies: _edi.schema_version 2/3 -> 1; _calculator.type crysta -> cryspy; '
             '_minimizer.type crysta -> "lmfit (leastsq)"; missing legacy TOF family supplied '
             'from the declared tof-* peak tag; parameter tags unchanged; no fit run'
+        ),
+        'numeric_input_adaptation': (
+            'private scientific notation expanded to decimal for the reference loop reader; '
+            'every loaded float checked equal, fields/free markers retained; '
+            'private background labels use the external identifier grammar; '
+            'row order, coordinates and coefficients retained; no fit or calculation'
         ),
         'reader_label_adaptation': (
             'private P b n m -> reference P n m a with cab, verified by Cryspy IT table; '
