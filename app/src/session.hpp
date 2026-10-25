@@ -147,8 +147,6 @@ class Session : public QObject {
     // Asks for a project "folder" or "zip" and opens it: from the disk where the browser can write it back, else as a
     // copy kept in the browser.
     Q_INVOKABLE void openWebProject(const QString& kind);
-    // The folder of the project.edi just picked, asked for after webFolderNeeded.
-    Q_INVOKABLE void openWebRecordFolder();
     // Reopens a stored place, or the unsaved state kept for it (`recovery`).
     Q_INVOKABLE void openStoredProject(const QString& key, bool recovery);
     // Save as onto the disk, where the browser can write it: a "folder" or a "zip" the user picks becomes the
@@ -183,8 +181,6 @@ class Session : public QObject {
     void webSaved(const QString& kind);
     // `fromFile`: the project came from a file the user may want to replace.
     void webDownloaded(const QString& name, bool fromFile);
-    // A project.edi was picked in the browser: its folder must be picked too, with a click of its own.
-    void webFolderNeeded(const QString& name);
     // Save found that the browser keeps nothing for the app (a private window may not): nothing was saved.
     void webStorageUnavailable();
     // A write to the project's place, or a download, failed: why.
