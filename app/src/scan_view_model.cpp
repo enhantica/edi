@@ -3,6 +3,7 @@
 
 #include <QCoreApplication>
 #include <QFileInfo>
+#include <QFontMetricsF>
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
@@ -462,6 +463,17 @@ void ScanViewModel::setIncludedOnly(bool on) {
         ++revision_;
         emit revisionChanged();
     }
+}
+
+double ScanViewModel::widestRowText(const QVariantList& shown, const QFont& font, const QFont& boldFont, int bold) const {
+    const QFontMetricsF plain(font), heavy(boldFont);
+    double widest = 0.0;
+    for (qsizetype i = 0; i < shown.size() && i < row_texts_.size(); ++i) {
+        if (shown.at(i).toBool()) {
+            widest = std::max(widest, (i == bold ? heavy : plain).horizontalAdvance(row_texts_.at(i)));
+        }
+    }
+    return widest;
 }
 
 void ScanViewModel::setRowsByIndex(bool on) {

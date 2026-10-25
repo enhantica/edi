@@ -466,21 +466,35 @@ Item {
 
     // The rows labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22): the
     // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
-    // dataset's colour, at its row's height. The widest label sets the room left for them, measured once after the
-    // labels' widths change (a binding over every label ran again for each label that changed).
+    // dataset's colour, at its row's height. The widest label sets the room left for them, worked out from the font
+    // with the texts (an IconLine: the icon, its spacing, the text), so the plot takes its room in the frame that changed
+    // the labels, never a frame later. A view not shown keeps the room it had: its labels are blank until it shows.
     readonly property real rowLabelGap: Math.round(em * 0.4)
     property real rowLabelsRoom: 0
-    function measureRowLabels() {
-        // A view not shown keeps the room it had: its labels are blank until it shows again.
-        if (!chart.shown)
-            return;
-        let widest = 0;
-        for (let i = 0; i < rowLabelRepeater.count; ++i) {
-            const label = rowLabelRepeater.itemAt(i);
-            if (label)
-                widest = Math.max(widest, label.width);
-        }
-        rowLabelsRoom = Math.ceil(widest);
+    Binding {
+        target: chart
+        property: "rowLabelsRoom"
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelFont.font, labelBold.font, Preferences.chartHighlightSelected || chart.project === null ? -1 : chart.project.currentExperimentIndex)) : 0
+    }
+    // The row label's pieces' fonts, as IconLine sets them.
+    TextMetrics {
+        id: labelIcon
+        font.family: EaStyle.Fonts.iconsFamily
+        font.pixelSize: chart.em
+        text: "microscope"
+    }
+    FontMetrics {
+        id: labelFont
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: chart.em
+    }
+    FontMetrics {
+        id: labelBold
+        font.family: EaStyle.Fonts.ptSansBold.name
+        font.styleName: "Bold"
+        font.pixelSize: chart.em
     }
     // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
     // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. A view
@@ -530,7 +544,6 @@ Item {
         // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
         // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
         model: chart.scan !== null ? chart.scan.count : 0
-        onCountChanged: Qt.callLater(chart.measureRowLabels)
         delegate: IconLine {
             required property int index
             // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
@@ -556,7 +569,6 @@ Item {
                     "bold": marked
                 }
             ]
-            onWidthChanged: Qt.callLater(chart.measureRowLabels)
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
             // On Stacked a label stands on its curve's baseline, its bottom at the row (the owner, 2026-10-22); on the
             // Map it is centred on its band.
