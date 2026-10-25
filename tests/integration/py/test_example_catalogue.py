@@ -20,6 +20,12 @@ TUTORIALS = ROOT / 'docs/user/tutorials'
 FIXTURE = ROOT / 'tests/fixtures/example_catalogue'
 SELECTION = json.loads((FIXTURE / 'catalogue-selection.json').read_text())['cases']
 SELECTED = [row['id'] for row in SELECTION]
+# The corrected October 25 decision admits exactly these pending catalogue cases.
+APP_ONLY = [
+    'sc-neut-cwl_tb2ti2o7-heidi_fit',
+    'sc-neut-cwl_pr2nio4-5c2_fit',
+    'sc-neut-tof_taurine_fit',
+]
 RETAINED = json.loads((FIXTURE / 'retained-projects.json').read_text())['projects']
 
 
@@ -29,6 +35,17 @@ def registry(root=ROOT):
 
 def selected(root=ROOT):
     return [row['id'] for row in registry(root) if row.get('user-facing') is True]
+
+
+def app_cases(root=ROOT):
+    declared = [row['id'] for row in registry(root) if 'app-only' in row]
+    assert declared == APP_ONLY, (
+        'The declared app-only list contains exactly the three decided single-crystal ids in order'
+    )
+    assert selected(root) == SELECTED, (
+        'App-only entries must leave the independent catalogue membership and order intact'
+    )
+    return SELECTED + declared
 
 
 def page_cases(path):
@@ -64,8 +81,10 @@ def test_selected_cases_and_order_match_the_independent_owner_selection(surface)
         actual = list(json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples'])
     else:
         actual = page_cases((CLI if surface == 'cli-page' else TUTORIALS) / 'index.md')
-    assert actual == SELECTED, (
-        'Every public catalogue must show the owner-selected cases in their requested order'
+    expected = app_cases() if surface == 'metadata' else SELECTED
+    assert actual == expected, (
+        'Every catalogue retains owner order; the app also retains '
+        'exactly its declared app-only list'
     )
 
 

@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-import yaml
+from tests.integration.py.test_example_catalogue import app_cases
 
 ROOT = Path(__file__).resolve().parents[3]
 IDENTITY = r'([a-z0-9-]+_[a-z0-9_-]+)'
@@ -30,8 +30,7 @@ def requests(source):
 
 
 def test_live_actors_request_only_bundled_example_ids():
-    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
-    bundled = {row['id'] for row in registry['projects'] if row.get('user-facing')}
+    bundled = set(app_cases(ROOT))
     assert bundled, 'Catalogue precondition: the independent registry declares bundled cases'
     removed = 'pd-neut-cwl_cosio-d20_start-1'
     plants = (

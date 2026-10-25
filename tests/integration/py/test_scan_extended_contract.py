@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.integration.py.test_example_catalogue import app_cases
 from tests.integration.py.test_scan_app_contract import (
     APP,
     ROOT,
@@ -26,13 +27,6 @@ from tests.integration.py.test_scan_app_contract import (
     source,
     spans,
 )
-
-CATALOGUE_CASES = [
-    row['id']
-    for row in json.loads(
-        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
-    )['cases']
-]
 
 
 def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
@@ -897,8 +891,9 @@ def expected_bundle(count):
 def test_effective_bundle_contains_selected_scan_payloads(tmp_path, web):
     files, index = resource_inventory(tmp_path, web)
     assert_bundled_index(files, index)
-    assert index == CATALOGUE_CASES, (
-        'The deployed index follows the independent twenty-case owner selection on each platform'
+    assert index == app_cases(ROOT), (
+        'The deployed index retains catalogue order plus exactly '
+        'the declared app-only cases on each platform'
     )
     for case, count in [('pd-neut-cwl_cosio-d20_scan', 155), ('pd-xray-cwl_latp-bm01_scan', 73)]:
         assert case in index and bundled_inputs(files, case) == expected_bundle(count), (

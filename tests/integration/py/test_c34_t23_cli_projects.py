@@ -131,6 +131,19 @@ def restore_retaken_pin(project_id, name, path):
     path.write_bytes(retained)
 
 
+def restore_seed_pin(project_id, live_directory, path):
+    assert path.is_file() and not path.is_symlink(), (
+        'Expected regression pins must remain materialized regular files'
+    )
+    raw = path.read_bytes()
+    retained = retained_bytes((live_directory / 'expected.json').relative_to(ROOT), raw)
+    if retained != raw:
+        # The catalogue replacement already restores the original seed, before main's retake.
+        path.write_bytes(retained)
+    else:
+        restore_retaken_pin(project_id, 'expected.json', path)
+
+
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
 def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
@@ -152,12 +165,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     assert set(paths) == set(expected), (
         ' seed file inventory must equal the independent source tree'
     )
-    paths['expected.json'].write_bytes(
-        retained_bytes(
-            (live_directory / 'expected.json').relative_to(ROOT),
-            paths['expected.json'].read_bytes(),
-        )
-    )
+    restore_seed_pin(project_id, live_directory, paths['expected.json'])
     public_metadata = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
     )
@@ -165,9 +173,6 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         assert path.is_file() and not path.is_symlink(), (
             ' seed files must be materialized regular files'
         )
-        # b761fdf6 -> 90e17741 changes exact regression pins, preserving old checks.
-        # The catalogue rework replaces these four pins when it merges.
-        restore_retaken_pin(project_id, name, path)
         adaptation = public_metadata.get((live_directory / name).relative_to(ROOT).as_posix())
         if adaptation and name != 'project/analysis/analysis.edi':
             assert adaptation['before_blob'] == expected[name], (
@@ -305,7 +310,10 @@ def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
         expected_file.unlink()
     with pytest.raises(
         AssertionError,
-        match=r'pinned|blob ids|source tree|regular files|archived source|reviewed source byte',
+        match=(
+            r'pinned|blob ids|source tree|regular files|archived source|'
+            r'reviewed source byte|exact committed'
+        ),
     ):
         test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
             project_id, tmp_path / 'negative'
