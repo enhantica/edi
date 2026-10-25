@@ -39,12 +39,13 @@ Every number below is the median of three runs, each run's value the median of i
 ([baseline](scan-view-timings/baseline/samples.tsv)) and when each run ran
 ([baseline](scan-view-timings/baseline/runs.tsv)).
 
-**Machine.** A Linux VM, 64 vCPUs (Intel Xeon, Cascade Lake), 31 GB, no GPU. The app runs on X (Xwayland on headless
-Weston) with Mesa llvmpipe drawing OpenGL on the CPU, as the UI test captures do, pinned to 8 vCPUs. Other work
-shared the machine: the load average was 4 to 18 during the runs it was recorded for (not the view runs). A GPU draws much faster than llvmpipe, so these
-times say how the views scale, not what a user with a GPU sees.
+**Machine: the no-GPU case.** A Linux VM, 64 vCPUs (Intel Xeon, Cascade Lake), 31 GB, no GPU. The app runs on X
+(Xwayland on headless Weston) with Mesa llvmpipe drawing OpenGL on the CPU, as the UI test captures do, pinned to 8
+vCPUs. A user without a GPU sees this case, so the redraw target holds here as well as on a GPU. Other work
+shared the machine: the load average was 4 to 18 during the runs it was recorded for (not the view runs). GPU
+numbers are taken where a GPU exists (the macOS CI runner).
 
-## Baseline
+## Baseline, no GPU
 
 The views, 324 patterns of about 1 500 points each, a plot 1 000 pixels wide, in milliseconds:
 
@@ -83,3 +84,33 @@ Read from Qt's render loop timing (`QT_LOGGING_RULES=qt.scenegraph.time.renderlo
   is a separate item): a followed scan redraws all 324 patterns for every file.
 - **"Every pattern" with the Pattern tab shown** waits about 0.2 s per file for the pattern chart to draw
   ([ADR-0029](../adrs/0029-following-a-scan-latest-finished-file.md) §8). With the Stacked tab shown nothing waits.
+
+## The renderers compared, no GPU
+
+`scan_bench` on the same 324 patterns, plot 1 000 columns wide, each change timed to its frame as above, 30 changes
+of each kind per run. Candidates: **a**, Qt Graphs, a `LineSeries` per pattern fed its reduced trace in one
+`replace()`; **b**, `ScanLines`, a scene-graph node of quads per 64 patterns, its shader placing each pattern's line,
+so an offset, height or colour change gives the shader new values and no new vertices; **p**, the way the view draws
+today, every pattern stroked with `QPainter` into the item's image on each change. Medians of three runs, in
+milliseconds ([rows](scan-view-timings/renderers.tsv)):
+
+| Candidate | Width | First | x range | Restyle | Offset |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| a, Qt Graphs | 2 px | 2 853 | 2 151 | no frame | 2 156 |
+| a, Qt Graphs (one run) | 1 px | 2 496 | 2 486 | no frame | 2 382 |
+| b, ScanLines | 2 px | 489 | 358 | 258 | 341 |
+| b, ScanLines | 1 px | 576 | 479 | 262 | 240 |
+| p, QPainter | 2 px | 3 174 | 3 090 | 3 159 | 2 983 |
+| p, QPainter | 1 px | 134 | 124 | 128 | 126 |
+
+"x range" is a new x range, every trace reduced again (a zoom or pan step); reducing the 324 traces takes 6 to 8 ms
+of it. "No frame": after a colour change alone, Qt Graphs drew no frame within 10 s.
+
+- Qt Graphs misses the 100 ms target by twenty times on every change.
+- ScanLines costs about the same at either width: llvmpipe's cost is its vertices (four per segment, about 1.9
+  million), not its pixels. A first build with one node per pattern took about 500 ms for a restyle; one node per 64
+  patterns took it to about 260 ms.
+- QPainter strokes a 1 px antialiased line on a fast path and a 2 px one through its general stroker, 25 times
+  slower. At 324 rows in about 600 pixels the view draws 1 px lines (ADR-0041 §4), so without a GPU the painter is
+  today's fastest path, at about 125 ms.
+- None meets 100 ms without a GPU yet.
