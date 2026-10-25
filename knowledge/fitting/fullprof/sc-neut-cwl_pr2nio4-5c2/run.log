@@ -1,0 +1,267 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:25/10/2026  Time => 23:21:39.738
+ => Reading control file *.PCR ... fit
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =fit):
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       1
+    => Global user-weigthed Chi2 (Bragg contrib.):   7181.
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   55.47
+    =>    RF2w-factor :   101.0
+    =>    RF  -factor :   28.84
+    =>    Chi2(Intens):   5453.
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(bet33_O1)/(eps*Sigma)=  346.28 abs> 1
+  
+    ===================>>> CYCLE:       2
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       2
+    => Global user-weigthed Chi2 (Bragg contrib.):   1135.
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   28.16
+    =>    RF2w-factor :   48.60
+    =>    RF  -factor :   16.77
+    =>    Chi2(Intens):   1264.
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(bet33_O1)/(eps*Sigma)=  571.07 abs> 1
+  
+    ===================>>> CYCLE:       3
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       3
+    => Global user-weigthed Chi2 (Bragg contrib.):   144.1
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   11.52
+    =>    RF2w-factor :   19.42
+    =>    RF  -factor :   7.945
+    =>    Chi2(Intens):   201.8
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(bet33_O1)/(eps*Sigma)=  824.06 abs> 1
+  
+    ===================>>> CYCLE:       4
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       4
+    => Global user-weigthed Chi2 (Bragg contrib.):   24.26
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   4.294
+    =>    RF2w-factor :   6.942
+    =>    RF  -factor :   3.040
+    =>    Chi2(Intens):   25.79
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(bet33_O1)/(eps*Sigma)=  392.02 abs> 1
+  
+    ===================>>> CYCLE:       5
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       5
+    => Global user-weigthed Chi2 (Bragg contrib.):   12.24
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   3.263
+    =>    RF2w-factor :   4.786
+    =>    RF  -factor :   2.272
+    =>    Chi2(Intens):   12.25
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)= -144.48 abs> 1
+  
+    ===================>>> CYCLE:       6
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       6
+    => Global user-weigthed Chi2 (Bragg contrib.):   10.34
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   3.011
+    =>    RF2w-factor :   4.396
+    =>    RF  -factor :   2.108
+    =>    Chi2(Intens):   10.34
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=  -80.42 abs> 1
+  
+    ===================>>> CYCLE:       7
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       7
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.858
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.940
+    =>    RF2w-factor :   4.293
+    =>    RF  -factor :   2.069
+    =>    Chi2(Intens):   9.858
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=  -41.91 abs> 1
+  
+    ===================>>> CYCLE:       8
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       8
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.733
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.914
+    =>    RF2w-factor :   4.265
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.733
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=  -21.36 abs> 1
+  
+    ===================>>> CYCLE:       9
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle       9
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.704
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.259
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.704
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=  -10.81 abs> 1
+  
+    ===================>>> CYCLE:      10
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      10
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.696
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.257
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.696
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=   -5.45 abs> 1
+  
+    ===================>>> CYCLE:      11
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      11
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.694
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.257
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.694
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=   -2.75 abs> 1
+  
+    ===================>>> CYCLE:      12
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      12
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.694
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.257
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.694
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ =>  Conv. not yet reached -> [Max] Shift(    Z_O2)/(eps*Sigma)=   -1.39 abs> 1
+  
+    ===================>>> CYCLE:      13
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ =>  Calculation of Integrated intensities/Flipping ratios + Normal Matrix & vector...
+ =>  Solving L.S. equations...
+ => Writing results for cycle      13
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.694
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.257
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.694
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.      13
+    => Global user-weigthed Chi2 (Bragg contrib.):   9.694
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    RF2 -factor :   2.913
+    =>    RF2w-factor :   4.257
+    =>    RF  -factor :   2.058
+    =>    Chi2(Intens):   9.694
+    =>  N_eff Reflect.:     198 and    0.000     * sigma < Int
+ => Normal end, final calculations and writing...
+  
+  
+ =>               CPU Time:     0.094 seconds
+ =>                             0.002 minutes
+  
+ => END   Date:25/10/2026  Time => 23:21:39.833
+  
+ => Data Files :
+ =>             - fit
+ => PCR  File  : fit
+ => Do you want to continue (<cr>=N)? 
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/1758521/fd/0
+Image              PC                Routine            Line        Source             
+fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
+fp2k               000000000068C8CB  Unknown               Unknown  Unknown
+fp2k               0000000000405B3D  Unknown               Unknown  Unknown
+libc.so.6          00007FE7A23F2D90  Unknown               Unknown  Unknown
+libc.so.6          00007FE7A23F2E40  __libc_start_main     Unknown  Unknown
+fp2k               0000000000405A55  Unknown               Unknown  Unknown
+         (s:same, a:another problem): exit 24
