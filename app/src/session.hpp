@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
@@ -80,6 +81,11 @@ class Session : public QObject {
     // The bundled example the open project came from, empty for a project opened from its directory
     // or created (its extracted location is a temporary directory, not the user's).
     Q_PROPERTY(QString openedExample READ openedExample NOTIFY openedExampleChanged)
+    // The .zip the open project was unpacked from, by file name, until it is saved somewhere (edi ADR-0052).
+    Q_PROPERTY(QString openedArchive READ openedArchive NOTIFY openedArchiveChanged)
+    // Where the project is, as the Project page shows it (edi ADR-0052): its folder or .zip, or, when it has none of
+    // its own yet, what it came from ("Not saved yet: …"); never an internal temporary path.
+    Q_PROPERTY(QString locationText READ locationText NOTIFY locationTextChanged)
     // Where the open project is, as the Description tab shows it: its directory, for an example the working
     // copy a save writes (edi ADR-0017 §9). The demo shows the working copy's temporary root as
     // "<temporary>", so its images do not change with the run's directory.
@@ -98,11 +104,14 @@ class Session : public QObject {
     ExampleListModel* examples() const { return examples_; }
     WarningListModel* loadWarnings() const { return warnings_; }
     QString openedExample() const { return opened_example_; }
+    QString openedArchive() const { return opened_archive_; }
+    QString locationText() const;
     QString projectLocation() const;
     bool needsSaveAs() const;
 
-    // Open a project directory; only `file:` URLs (seam row 13).
-    Q_INVOKABLE bool openProject(const QUrl& directory);
+    // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
+    // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
+    Q_INVOKABLE bool openProject(const QUrl& location);
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
@@ -122,23 +131,51 @@ class Session : public QObject {
     // when the project must be saved as.
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QUrl& directory);
+    // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
+    // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
+    // there as it stands and stays where it is: a copy. False, with `lastError` saying why, when it cannot be written.
+    Q_INVOKABLE bool saveProjectAs(const QUrl& target, bool zip, bool copy);
     Q_INVOKABLE void clearError();
+
+    // The web app (edi ADR-0052 §9). Every project there has a place: the browser's own storage, or in Chrome and Edge
+    // a folder or a .zip on the disk; Save writes into it, never a download.
+    // Asks for a project "folder" or "zip" and opens it: from the disk where the browser can write it back, else as a
+    // copy kept in the browser.
+    Q_INVOKABLE void openWebProject(const QString& kind);
+    // Reopens a stored place, or the unsaved state kept for it (`recovery`).
+    Q_INVOKABLE void openStoredProject(const QString& key, bool recovery);
+    // Save as onto the disk, where the browser can write it: a "folder" or a "zip" the user picks becomes the
+    // project's place, or with `copy` only receives a copy.
+    Q_INVOKABLE void saveWebProjectAs(const QString& kind, bool copy);
+    // Save as where the browser cannot write the disk: saves into the browser's storage and downloads a .zip.
+    Q_INVOKABLE void downloadWebProject();
+    // The unsaved state kept for the open project is no longer wanted (its changes were discarded).
+    Q_INVOKABLE void discardKeptChanges();
     /// Whether a saved project directory is present on disk.
     Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
     /// Turn a native directory path into the file URL accepted by openProject.
     Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
 
    signals:
+    // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
+    void projectAboutToChange();
     void projectChanged();
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openedExampleChanged();
+    void openedArchiveChanged();
+    void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op.
     void loadFailed(const QString& message);
+    // The web app wrote the project into its place (`kind`: "browser", "folder" or "zip"), or downloaded it as `name`.
+    void webSaved(const QString& kind);
+    void webDownloaded(const QString& name);
+    // A write to the project's place, or a download, failed: why.
+    void webSaveFailed(const QString& message);
 
    private:
     bool openProjectAt(const QUrl& directory);
@@ -149,6 +186,9 @@ class Session : public QObject {
     bool openCopy(const QString& source, const QString& target, const QString& example);
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
+    void setOpenedArchive(const QString& name);
+    bool saveInto(const QString& folder);
+    bool saveCopy(const QString& target, bool zip);
 
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
@@ -157,10 +197,39 @@ class Session : public QObject {
     int project_messages_ = 0;  // the keys of the project's messages
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
+    QString opened_archive_;
+    // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
+    QString archive_location_;
+    // The read-only folder a temporary working copy was made from.
+    QString read_only_source_;
+    // The temporary folder the project works in (an unpacked archive), removed when it is no longer the project's.
+    QString temporary_folder_;
+    void releaseTemporaryFolder();
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
     bool copyTree(const QString& source, const QString& target, const QString& linked);
+
+    // The web app's place of the open project: its key in the browser's records, its kind and its name.
+    struct WebPlace {
+        QString key;
+        QString kind;
+        QString name;
+    };
+    WebPlace web_place_;
+    // The open project's place is the browser's own storage until a Save as onto the disk.
+    void setWebPlace(const WebPlace& place);
+    // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
+    bool openWebCopy(const QString& path, const WebPlace& place);
+    // Writes the saved project folder into its place; `announce` says so when it is written (webSaved).
+    void writeWebPlace(bool announce = true);
+    // The name a .zip of the project is offered under: the place's own name, or the project's.
+    QString downloadName() const;
+    // Keeps the open project's unsaved state in the browser, a few seconds after its last edit.
+    void keepChanges();
+    QTimer* keep_timer_ = nullptr;
+    // The memory folder the browser copied the open project into, released with it.
+    QString web_copy_;
 };
 
 }  // namespace edi_app

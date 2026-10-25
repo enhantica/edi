@@ -2454,10 +2454,20 @@ void ProjectViewModel::syncUndo() {
 }
 
 void ProjectViewModel::setModified(bool modified) {
+    if (modified) {
+        emit edited();
+    }
     if (modified != modified_) {
         modified_ = modified;
         emit modifiedChanged();
     }
+}
+
+void ProjectViewModel::workIn(const QString& folder) {
+    project_->path = folder.toStdString();
+    project_->metadata.path = project_->path;
+    project_->scan_data_root.clear();
+    emit pathChanged();
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {
@@ -2486,9 +2496,10 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         project_->scan_data_root = scan_template_->scan_data_root;
     }
     // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
-    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
+    // with nothing to undo.
     try {
-        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
+        if (edi::adopt_saved_project(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
             if (scan_template_) {
                 scan_template_->refresh_calculated_pattern();
             } else {
