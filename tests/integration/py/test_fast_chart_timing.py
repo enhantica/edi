@@ -32,6 +32,15 @@ def test_hardware_numbers_cannot_replace_the_no_gpu_row():
         backend_comparisons([])
 
 
+def test_non_opengl_backend_has_no_opengl_renderer_to_report():
+    result = backend_comparisons([row('', 'Metal'), row()])[0]
+    assert result['fit']['pattern']['backend'] == {
+        'api': 'Metal',
+        'renderer': '',
+        'llvmpipe': False,
+    }, 'A Metal timing keeps its real backend without inventing an OpenGL renderer string'
+
+
 def test_each_backend_keeps_its_own_targets_and_identity():
     software = row()
     software['after_ms'] = [99, 100, 101]

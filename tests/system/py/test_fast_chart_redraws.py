@@ -2,11 +2,11 @@
 
 import os
 import re
-import signal
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.fast_chart_redraws.rendering import capture
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
@@ -43,10 +43,8 @@ def chart_receipt(request):
     for case in CASES:
         if case not in selected:
             continue
-        process = subprocess.Popen(
+        status, output = capture(
             [
-                'bash',
-                str(ROOT / 'tests/fixtures/scan_views/run.sh'),
                 str(binary),
                 '-input',
                 str(ROOT / 'tests/unit/app/tst_fast_chart_redraws.qml'),
@@ -54,29 +52,10 @@ def chart_receipt(request):
                 '-,txt',
                 'FastChartRedraws::' + case,
             ],
-            cwd=ROOT,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            start_new_session=True,
+            timeout=90 if case == 'test_adaptive_is_retained' else 45,
         )
-        try:
-            output, _ = process.communicate(
-                timeout=90 if case == 'test_adaptive_is_retained' else 45
-            )
-            status = process.returncode
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                output, _ = process.communicate(timeout=3)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                output, _ = process.communicate()
-            status = 124
-            output += '\nThe native actor exceeded its bounded process watchdog'
         receipts[case] = status, output
         print('Chart actor ' + case + ': ' + str(status), flush=True)
-        print(receipts[case][1], flush=True)
     return receipts
 
 

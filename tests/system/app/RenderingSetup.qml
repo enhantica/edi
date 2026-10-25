@@ -6,8 +6,8 @@ import EdiAcceptance 1.0
 import ChartBackendAcceptance 1.0
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Globals as Globals
-import "RenderedTable.js" as Render
-import "UiInteraction.js" as Ui
+import "../../unit/app/RenderedTable.js" as Render
+import "../../unit/app/UiInteraction.js" as Ui
 
 Item {
     id: surface
