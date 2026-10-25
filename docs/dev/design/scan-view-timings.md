@@ -258,3 +258,45 @@ What the tables say:
 - **The Pattern chart already reduces its curves.** `present_pattern` keeps each pixel column's lowest and highest point
   (`decimate`), so a pattern of a million points reaches Qt Graphs as at most two points per column per curve, the
   `pattern` workload's case: 85 to 119 ms per update on the M2 and 350 to 500 ms without a GPU for 14 curves.
+
+## The Stacked lines' quality
+
+The owner compared Stacked with the Pattern tab on an M2 (2026-10-25): the Stacked lines were stair-stepped, uneven
+and notched at peaks. The causes, read from captures of the same three cosio patterns on both charts
+(`edi_app --demo <dir> --demo-only lines-` at `QT_SCALE_FACTOR` 1 and 2, with `EDI_DEMO_ANY_RATIO=1`):
+
+- the trace was reduced to item pixel columns, half a device pixel ratio 2 screen's, and each column drawn as a
+  vertical stroke from its lowest to its highest value, which drew stairs where the Pattern chart draws the points;
+- on the GPU each segment was a quad ending at its points, leaving a notch at every outer join and overlapping at the
+  inner one, and faded lines were translucent, so every overlap was darker;
+- the painter's pen was cosmetic, its width in device pixels, so at ratio 2 its line was half the Pattern chart's.
+
+[ADR-0041](../adrs/0041-scan-pattern-views.md) §9 says how each is fixed. At ratio 2, before (left) and after (right):
+
+![Stacked lines at device pixel ratio 2, before and after](scan-view-timings/lines/stacked-dpr2-before-after.png)
+
+The Pattern chart's line (left) and the Stacked lines after (right), same scale, both 2 px wide:
+
+![Pattern and Stacked lines at device pixel ratio 2](scan-view-timings/lines/pattern-vs-stacked-dpr2.png)
+
+**What it costs**, on the no-GPU machine above, 324 patterns, the two builds run in turn three times (edi 5cb96806,
+the lines as they were, against 5e8f2d0d), medians of the three runs' medians in milliseconds; every run's medians are
+in [frames.tsv](scan-view-timings/lines/frames.tsv) and when each ran in [runs.tsv](scan-view-timings/lines/runs.tsv):
+
+| Path | Change | Before | After | After / before |
+| --- | --- | ---: | ---: | ---: |
+| Painter (no GPU, the default here) | zoom | 142.0 | 170.3 | 1.20 |
+| | pan | 123.7 | 122.6 | 0.99 |
+| | restyle | 108.3 | 112.2 | 1.04 |
+| | select | 96.1 | 83.0 | 0.86 |
+| | data | 763.6 | 1 001.8 | 1.31 |
+| GPU lines on llvmpipe | zoom | 446.9 | 635.5 | 1.42 |
+| | pan | 308.4 | 422.1 | 1.37 |
+| | restyle | 457.4 | 688.8 | 1.51 |
+| | select | 291.4 | 378.2 | 1.30 |
+| | data | 1 067.8 | 1 786.0 | 1.67 |
+
+The painter now strokes every point while a column holds no more than four, about 1.5 times as many on this scan,
+which is most of the zoom and data cost. The GPU rows are the shader rasterised on the CPU, slower per pixel and with
+quads a pixel longer at each end; that path is not the default without a GPU. Its cost on a real GPU is taken with
+`edi_app --demo <dir> --demo-only perf-gpu-views` on the M2. The load average was 6.6 to 22 during these runs (runs.tsv), so the shares are approximate.

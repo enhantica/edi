@@ -45,8 +45,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    undo) keep what was read. A dataset that cannot be read is not drawn, and the views say so above the plot: how many
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
    a dataset gives none, the rows stay in order by file and the views name that dataset.
-4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
-   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. A toolbar box sets how high the patterns
+4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or, with more than four
+   points to a device pixel column, each column's first, lowest, highest and last point in their order, so a narrow
+   peak keeps its height (§9); the highest value of the scan reaches four rows above a row. A toolbar box sets how high the patterns
    rise, one to five times that, twice by default (the owner, 2026-10-22). Its rows are labelled (§2), not scaled: the height the patterns rise into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as the pattern chart's measured
    line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
@@ -134,6 +135,16 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    and shows it in Preferences, Develop, where the user can choose GPU or the painter instead of Automatic; the choice
    is kept per machine. Qt Quick's own software backend cannot run the shader, so there the lines are always painted.
    The Map stays one image of the plot's pixels, made again only when what it shows changes.
+   **The lines are drawn as well as the pattern chart's** (the owner, 2026-10-25): the same width, antialiased, with
+   no notch or doubled colour where segments meet, at the screen's device pixels. The trace is reduced at device pixel
+   columns, not item pixels, so a high-DPI screen gets its full resolution; it follows the points in their order
+   (`edi::scan_polyline`) rather than a stroke from each column's lowest to its highest value, which drew stairs. On
+   the GPU each segment's quad reaches past both ends by half the width and a device pixel, and the shader gives a
+   pixel only to the nearest of the segment and its two neighbours (ties to the earlier), so joins are round and each
+   pixel is drawn once along the line; the fringe fades over one device pixel. The painter strokes each pattern as
+   one path with round joins, its width in item pixels at any ratio. With the shown dataset highlighted, the other
+   lines are faded by blending their colour toward the background, opaque, rather than drawn translucent, so a line
+   crossing itself up and down a narrow peak stays one even colour.
    Each dataset's reduction (its trace, or the Map's pixel columns) is kept until its points, the x range, the plot's
    width, the y scale or the included range change: a colour, a reversal or a row placing reduces nothing, and a
    change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. The row
