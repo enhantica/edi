@@ -13,8 +13,7 @@ import EasyApplication.Gui.Logic as EaLogic
 import edi.app
 
 // Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project, open one from its
-// folder, its project.edi or a .zip of the folder, save the open one as, or export it as a .zip (edi ADR-0017 §13,
-// ADR-0052).
+// project.edi or a .zip, or save the open one as a folder or a .zip, or a copy of it (edi ADR-0017 §13, ADR-0052).
 EaElements.GroupBox {
     id: group
     objectName: "group.getStarted"
@@ -37,7 +36,7 @@ EaElements.GroupBox {
         EaElements.SideBarButton {
             objectName: "project.open"
             fontIcon: "upload"
-            text: qsTr("Open an existing project")
+            text: qsTr("Open project…")
             // In the browser the chosen folder or archive is copied into the page's memory first (edi ADR-0023).
             onClicked: {
                 if (WebFiles.available) {
@@ -50,34 +49,11 @@ EaElements.GroupBox {
         }
 
         EaElements.SideBarButton {
-            objectName: "project.openFolder"
-            visible: !WebFiles.available
-            fontIcon: "folder-open"
-            text: qsTr("Open a project folder…")
-            onClicked: openFolderDialog.open()
-        }
-
-        EaElements.SideBarButton {
             objectName: "project.saveAs"
             enabled: Session.project !== null
             fontIcon: "file-export"
             text: qsTr("Save project as…")
             onClicked: AppState.saveAsRequested()
-        }
-
-        EaElements.SideBarButton {
-            objectName: "project.export"
-            enabled: Session.project !== null
-            fontIcon: "file-archive"
-            text: qsTr("Export project…")
-            // The browser downloads the archive; the desktop asks where to write it.
-            onClicked: {
-                if (!WebFiles.available) {
-                    exportDialog.open();
-                } else if (!WebFiles.downloadProject(Session.exportFolder())) {
-                    exportError.open();
-                }
-            }
         }
 
         // Opening a project from a URL is not implemented: shown, disabled (edi ADR-0017 §4).
@@ -146,45 +122,11 @@ EaElements.GroupBox {
         }
     }
 
+    // The system's file dialog: a project.edi opens its folder, a .zip is unpacked (edi ADR-0052).
     FileDialog {
         id: openProjectDialog
         title: qsTr("Open an edi project")
         nameFilters: [qsTr("edi projects (project.edi *.zip)")]
         onAccepted: Session.openProject(selectedFile)
-    }
-
-    FolderDialog {
-        id: openFolderDialog
-        title: qsTr("Open an edi project folder")
-        onAccepted: Session.openProject(selectedFolder)
-    }
-
-    FileDialog {
-        id: exportDialog
-        title: qsTr("Export the project as a .zip")
-        fileMode: FileDialog.SaveFile
-        defaultSuffix: "zip"
-        nameFilters: [qsTr("Zip archives (*.zip)")]
-        onAccepted: {
-            if (!Session.exportProject(selectedFile))
-                exportError.open();
-        }
-    }
-
-    AppDialog {
-        id: exportError
-        objectName: "export.error"
-        parent: Overlay.overlay
-        title: qsTr("The project was not exported")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: exportErrorText.implicitHeight
-
-        EaElements.Label {
-            id: exportErrorText
-            width: exportError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
-        }
     }
 }
