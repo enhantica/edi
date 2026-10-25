@@ -221,10 +221,13 @@ DPR 1 and 2, each with effective GPU and software Stacked drawing. The approved
 measured palette assignment remains the colour reference.
 
 Both actual plots have equal physical grids and equal data ranges. Only their
-line subtrees are captured over white, at opacity 0.3, exposing overlapping joins.
+line subtrees are captured over white. The triangular join witness uses opacity
+0.3, exposing overlapping joins; the narrow reduction witness is opaque, so
+coverage of its closely spaced arms measures geometry without opacity stacking.
 The tolerances are engineering allowances for different antialiasing kernels:
 
-- Integrated stroke coverage and seven local cross-sections differ by at most
+- Integrated stroke coverage and local cross-sections sampled at seven positions
+  along the segments (outside the vertex disk) differ by at most
   15 percent from Pattern; the local checks also reject uneven thickness.
 - Absolute coverage error, after a half-physical-pixel smoothing kernel, is at
   most 12 percent of Pattern's integrated coverage. No logical-pixel rescaling

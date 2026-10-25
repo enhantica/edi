@@ -404,6 +404,19 @@ Item {
             tryVerify(() => Math.abs(win.width - requested) <= 1, 2000, "Toolbar geometry uses the actual supported minimum, middle or wide application width");
             tryVerify(() => pageReady(data.page), 3000, "The actual chart page reaches its viewport after application resize");
             settled(chart);
+            let previous = "", stable = 0;
+            tryVerify(() => {
+                const selector = Ui.control(Probe, win, "mainArea.blocks");
+                if (!selector) return false;
+                const geometry = [selector, chart].concat(controls(chart)).map(item => {
+                    const point = item.mapToItem(win.contentItem, 0, 0);
+                    return [point.x, point.y, item.width, item.height].map(value => Math.round(value * 10) / 10);
+                });
+                const current = JSON.stringify(geometry);
+                stable = current === previous ? stable + 1 : 0;
+                previous = current;
+                return stable >= 3;
+            }, 4000, "The selector and toolbar finish their independent geometry animations before their centres are compared");
             const items = controls(chart).filter(item => String(item.objectName).includes("toolbar."));
             verify(items.length >= 6, "Toolbar grouping observes all production controls, including selectors and buttons; observed=" + JSON.stringify(items.map(item => item.objectName)));
             const lines = {};
