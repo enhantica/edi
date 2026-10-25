@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QHash>
 #include <QDir>
 #include <QFileInfo>
@@ -9,7 +10,10 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QJsonDocument>
+#include <QImage>
+#include <QPainter>
 #include <QQuickItem>
+#include <QQuickItemGrabResult>
 #include <QQuickPaintedItem>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
@@ -19,6 +23,8 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QtQml/qqml.h>
+#include <QtMath>
+#include <QtTest/QSignalSpy>
 #include "engine_setup.hpp"
 
 class ChartBackendProof : public QObject {
@@ -27,6 +33,34 @@ public:
     explicit ChartBackendProof(QQmlEngine* engine) : QObject(engine), engine_(engine) {}
     Q_INVOKABLE bool painted(QObject* object) const {
         return qobject_cast<QQuickPaintedItem*>(object) != nullptr;
+    }
+    Q_INVOKABLE int paintedInk(QObject* object) const {
+        auto* item = qobject_cast<QQuickPaintedItem*>(object);
+        if (!item) return -1;
+        const int width = qCeil(item->width()), height = qCeil(item->height());
+        if (width <= 0 || height <= 0) return -2;
+        QImage image(width, height, QImage::Format_ARGB32_Premultiplied);
+        if (image.isNull()) return -2;
+        image.fill(Qt::transparent);
+        {
+            QPainter painter(&image);
+            item->paint(&painter);
+        }
+        return inkPixels(image);
+    }
+    Q_INVOKABLE QVariantMap snapshot(QQuickItem* item) const {
+        if (!item) return {{"valid", false}};
+        // A subtree capture excludes changing controls behind the transparent plot.
+        const auto grab = item->grabToImage();
+        if (!grab) return {{"valid", false}};
+        QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+        if (!ready.wait(3000)) return {{"valid", false}};
+        const auto image = grab->image().convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        if (image.isNull()) return {{"valid", false}};
+        const QByteArray pixels(reinterpret_cast<const char*>(image.constBits()), image.sizeInBytes());
+        return {{"valid", true}, {"width", image.width()}, {"height", image.height()},
+                {"ink", inkPixels(image)},
+                {"signature", QString::fromLatin1(QCryptographicHash::hash(pixels, QCryptographicHash::Sha256).toHex())}};
     }
     Q_INVOKABLE bool gpu(QQuickItem* item) const {
         if (!item || !item->window()) return false;
@@ -88,6 +122,14 @@ public:
     Q_INVOKABLE QString choice() const { return qEnvironmentVariable("EDI_RENDER_ACCEPTANCE_CHOICE"); }
 
 private:
+    static int inkPixels(const QImage& image) {
+        int ink = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            const auto* pixels = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+            for (int x = 0; x < image.width(); ++x) ink += qAlpha(pixels[x]) > 0;
+        }
+        return ink;
+    }
     mutable QMutex mutex_;
     QHash<QQuickWindow*, QVariantMap> facts_;
     QQmlEngine* engine_;
