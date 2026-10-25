@@ -35,7 +35,31 @@ synthetic samples and make no performance claim. Live samples and their backend
 identity still come from the measured app, with the same machine and project
 for each comparison. GPU measurements need a GPU host.
 
+Each backend row now keeps `fits.pattern` and `fits.stacked`, each containing
+`every_pattern_ms` and `adaptive_ms`. Both tabs are mandatory and each ratio is
+checked separately. `python -m tests.fixtures.fast_chart_redraws.measure_fit DIR`
+runs the real app's `perf-fit-every-pattern`, `perf-fit-adaptive-pattern`,
+`perf-fit-every-stacked` and `perf-fit-adaptive-stacked` routes in alternating
+order, with repeated samples. Each capture must report the same Qt backend
+and renderer observed independently by the native actor. The system timing
+gate runs this producer; its local runs are diagnostics, and final performance
+evidence still needs the quiet-machine runs the packet specifies.
+
 Adaptive remains a separate choice in the real Analysis Settings selector.
 The native actor selects it after Every pattern and follows the saved 162-file
 scan, checking live coalescing, the ADR-0029 half-second interval, completion of
 all files and restoration of the final dataset.
+
+Rendering detection is compared with `QSGRendererInterface::graphicsApi` and
+`glGetString(GL_RENDERER)` read in Qt's rendering callback. The normal app must
+report those values at startup without forced Qt debug logs. Preferences,
+Develop must display them and identify software rendering as no GPU. Its scan
+renderer selector offers GPU and software/painter choices, optionally automatic; the actor
+finds those choices by their displayed text rather than a new public API.
+Each explicit choice is written through real input, then read and exercised by
+a second host process using the same private settings file.
+
+The old renderer gate required the painter's retirement on every host. The
+owner's rendering-detection decision changes that assertion: a fresh software
+OpenGL host uses the painter, while hardware uses the GPU line item. A future
+software successor needs the same observed path and drawing checks.
