@@ -45,6 +45,15 @@ Item {
         property var chart: null
         property var app: null
         property int frames: 0
+        property var adaptiveDraws: []
+        Connections {
+            target: Session.project ? Session.project.fit : null
+            function onScanShownFileChanged() {
+                const fit = Session.project.fit;
+                if (fit.running && fit.scanShownFile)
+                    test.adaptiveDraws.push({file: fit.scanShownFile, ms: Date.now()});
+            }
+        }
         Connections {
             target: surface.Window.window
             function onFrameSwapped() {
@@ -52,6 +61,10 @@ Item {
             }
         }
         function cleanup() {
+            if (Session.project && Session.project.fit.running) {
+                Session.project.fit.cancel();
+                tryCompare(Session.project.fit, "running", false, 10000, "The chart actor stops its real scan before closing the project");
+            }
             if (chart && !app)
                 chart.destroy();
             chart = null;
@@ -110,6 +123,54 @@ Item {
             const layer = named("layer");
             verify(ChartBackendProof.gpu(layer), "The real chart capture runs on an actual GPU rendering API");
             verify(!ChartBackendProof.painted(layer), "The Stacked line renderer retires the CPU-painted item on the actual view");
+        }
+        function test_adaptive_is_retained() {
+            Preferences.resetToDefaults();
+            const location = SettingsProof.copyProject(Qt.resolvedUrl("../../../docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project"));
+            verify(Session.openProject(location), "Adaptive acceptance opens a private copy of the saved 162-file scan");
+            const win = window();
+            Ui.click(test, Probe, win, "appBar.tab.analysis");
+            Ui.click(test, Probe, win, "sideBar.tab.settings");
+            Ui.expandGroup(test, Probe, win, "group.patternUpdates");
+            const selector = Ui.control(Probe, win, "analysis.patternUpdates");
+            verify(selector !== null, "The Analysis Settings page retains its real pattern-update selector");
+            Ui.scrollIntoView(selector);
+            Ui.click(test, Probe, win, "analysis.patternUpdates");
+            tryCompare(selector.popup, "opened", true, 1000, "The pattern-update choices open through actual pointer input");
+            const choices = Array.from(selector.model);
+            const adaptive = choices.indexOf("Adaptive"), every = choices.indexOf("Every pattern");
+            verify(adaptive >= 0 && every >= 0 && adaptive !== every, "Adaptive remains a distinct selectable choice alongside Every pattern");
+            mouseMove(win.contentItem, win.width - 1, win.height - 1);
+            verify(SettingsProof.key(selector, Qt.Key_Home), "The open pattern-update selector receives Home through its actual window");
+            verify(SettingsProof.key(selector, Qt.Key_Return), "The open pattern-update selector commits Every pattern through real keyboard input");
+            tryCompare(Session.project.fit, "patternUpdates", every, 1000, "Real keyboard input can choose Every pattern before returning to Adaptive");
+            Ui.click(test, Probe, win, "analysis.patternUpdates");
+            mouseMove(win.contentItem, win.width - 1, win.height - 1);
+            verify(SettingsProof.key(selector, Qt.Key_Home), "The reopened pattern-update selector receives Home through its actual window");
+            for (let i = 0; i < adaptive; ++i)
+                verify(SettingsProof.key(selector, Qt.Key_Down), "The open pattern-update selector receives each real navigation key");
+            verify(SettingsProof.key(selector, Qt.Key_Return), "The open pattern-update selector commits Adaptive through real keyboard input");
+            tryCompare(selector, "currentText", "Adaptive", 1000, "Real keyboard input selects Adaptive after Every pattern");
+            tryCompare(Session.project.fit, "patternUpdates", adaptive, 1000, "The selected Adaptive choice reaches the actual fit worker");
+            tryCompare(Preferences, "scanPatternUpdates", adaptive, 1000, "Adaptive remains a machine setting");
+            const project = Session.project, fit = project.fit;
+            tryVerify(() => !project.calculating && Probe.datasetReady(project), 10000, "The saved scan's first pattern is ready before starting Adaptive");
+            compare(fit.scanTotal, 162, "Adaptive behaviour uses every independently saved input file");
+            adaptiveDraws = [];
+            fit.start();
+            tryCompare(fit, "running", true, 1000, "Adaptive starts a real sequential fit");
+            tryCompare(fit, "running", false, 65000, "Adaptive completes without waiting for every pattern drawing");
+            compare(fit.scanFitted, 162, "Adaptive retains all fitted files rather than dropping scientific work");
+            compare(fit.outcome, "success", "The full Adaptive scan completes successfully");
+            verify(adaptiveDraws.length >= 2 && adaptiveDraws.length < 162, "Adaptive draws changing files during a fast scan and coalesces intermediate files");
+            const files = adaptiveDraws.map(row => row.file);
+            verify(new Set(files).size === files.length, "Adaptive never replays an older drawn scan file");
+            verify(files.every((file, index) => index === 0 || files[index - 1] < file), "Adaptive follows the saved scan's independent ascending filename order");
+            for (let i = 1; i < adaptiveDraws.length; ++i)
+                verify(adaptiveDraws[i].ms - adaptiveDraws[i - 1].ms >= 500, "ADR-0029 keeps at least half a second between live Adaptive pattern drawings");
+            tryCompare(project, "currentExperimentIndex", 161, 10000, "Adaptive still settles on the last independently enumerated scan file");
+            tryVerify(() => !project.calculating && Probe.datasetReady(project), 10000, "The final Adaptive pattern finishes loading after the scan ends");
+            settled(win.contentItem);
         }
         function test_placement_data() {
             return [1, 3, 324].map(n => ({
