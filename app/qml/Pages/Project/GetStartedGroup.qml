@@ -30,7 +30,7 @@ EaElements.GroupBox {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: EaGlobals.Vars.showProjectDescriptionDialog = true
+            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true)
         }
 
         EaElements.SideBarButton {
@@ -43,7 +43,7 @@ EaElements.GroupBox {
                     group.webRequestProject = Session.project;
                     group.webRequest = WebFiles.openProject();
                 } else {
-                    openProjectDialog.open();
+                    AppState.afterChanges(() => openProjectDialog.open());
                 }
             }
         }

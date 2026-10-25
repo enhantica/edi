@@ -233,6 +233,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
