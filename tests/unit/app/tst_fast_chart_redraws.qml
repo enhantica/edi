@@ -194,20 +194,22 @@ Item {
             for (let percent = 0; percent <= 100; percent += 10) {
                 choose(offset, percent + "%");
                 choose(height, "Fit");
-                const low = axes.axisY.min, range = axes.axisY.max - low;
-                const expectedHeight = range / (1 + (data.n - 1) * percent / 100);
+                closeEnough(axes.axisY.min, 0, "The unzoomed Stacked axis starts at zero plot share");
+                closeEnough(axes.axisY.max, 1, "The unzoomed Stacked axis ends at one plot share");
+                const expectedHeight = 1 / (1 + (data.n - 1) * percent / 100);
                 for (let i = 0; i < data.n; ++i) {
-                    closeEnough(chart.scan.rowOf(i), low + i * expectedHeight * percent / 100, "Stack baselines obey the closed-form relative offset");
-                    closeEnough(layer.peakOf(i) - chart.scan.rowOf(i), expectedHeight, "Each independently equal triangle has exactly the Fit height");
+                    closeEnough(layer.rowOf(i), i * expectedHeight * percent / 100, "Stack baselines obey the closed-form relative offset");
+                    closeEnough(layer.peakOf(i) - layer.rowOf(i), expectedHeight, "Each independently equal triangle has exactly the Fit height");
                     if (percent === 100 && i > 0)
-                        verify(layer.peakOf(i - 1) <= chart.scan.rowOf(i) + 0.00001, "At full offset adjacent traces have no vertical overlap");
+                        verify(layer.peakOf(i - 1) <= layer.rowOf(i) + 0.00001, "At full offset adjacent traces have no vertical overlap");
                 }
                 closeEnough(layer.peakOf(data.n - 1), axes.axisY.max, "Fit places the whole stack's top exactly at the plot top");
                 for (let fixed = 10; fixed <= 100; fixed += 10) {
                     choose(height, fixed + "%");
-                    const span = axes.axisY.max - axes.axisY.min;
-                    for (const i of [0, data.n - 1])
-                        closeEnough(layer.peakOf(i) - chart.scan.rowOf(i), span * fixed / 100, "A fixed relative height is a fraction of the visible plot height");
+                    for (const i of [0, data.n - 1]) {
+                        closeEnough(layer.rowOf(i), i * fixed / 100 * percent / 100, "A fixed height retains the independent relative baseline spacing");
+                        closeEnough(layer.peakOf(i) - layer.rowOf(i), fixed / 100, "A fixed relative height is a fraction of the unzoomed plot height");
+                    }
                 }
             }
         }
@@ -222,29 +224,34 @@ Item {
             const toggle = named("toolbar.highlight");
             verify(Preferences.chartHighlightSelected && toggle.checked, "Powder uses the single-crystal highlight setting, enabled by default");
             const layer = named("layer"), axes = named("axes");
+            compare(layer.highlight, true, "The default highlight preference reaches the active scan layer");
+            closeEnough(layer.faded, 0.3, "The active scan layer uses the shared thirty-percent fade");
             Session.project.currentExperimentIndex = 1;
             if (data.mode === "stacked") {
                 choose(named("toolbar.offset"), "100%");
                 choose(named("toolbar.height"), "Fit");
             }
             settled(chart);
-            const before = grabImage(layer);
+            const before = grabImage(surface);
             mouseClick(toggle, toggle.width / 2, toggle.height / 2);
             tryCompare(Preferences, "chartHighlightSelected", false, 1000, "Actual toolbar input writes the one shared highlight preference");
+            compare(layer.highlight, false, "Disabling highlight reaches the active scan layer");
             settled(chart);
-            const equal = grabImage(layer);
+            const equal = grabImage(surface);
             verify(!before.equals(equal), "Disabling highlight changes actual rendered ink rather than only a preference");
             const background = chart.colors.chartBackground;
             function sample(image, x, y) {
-                return image.pixel(Math.floor(x * image.width / layer.width), Math.floor(y * image.height / layer.height));
+                const point = layer.mapToItem(surface, x, y);
+                return image.pixel(Math.floor(point.x * image.width / surface.width), Math.floor(point.y * image.height / surface.height));
             }
             function distance(colour) {
                 return Math.sqrt(["r", "g", "b"].reduce((sum, channel) => sum + Math.pow(colour[channel] - background[channel], 2), 0));
             }
             for (let row = 0; row < 3; ++row) {
-                const level = data.mode === "map" ? chart.scan.rowOf(row) : layer.peakOf(row);
+                const level = data.mode === "map" ? chart.scan.rowOf(row) : layer.rowOf(row) + (layer.peakOf(row) - layer.rowOf(row)) * 2 / 3;
                 const py = (axes.axisY.max - level) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                const px = (40 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
+                const xValue = data.mode === "map" ? 40 : 30;
+                const px = (xValue - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 let best = null;
                 for (let dy = -3; dy <= 3; ++dy) {
                     const y = Math.max(2, Math.min(layer.height - 3, Math.round(py) + dy));
@@ -270,9 +277,9 @@ Item {
                 const hex = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1];
                 const expected = [1, 3, 5].map(start => parseInt(hex.substr(start, 2), 16) / 255);
                 const x = (30 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
-                const peak = layer.peakOf(1), base = chart.scan.rowOf(1), value = base + (peak - base) * 2 / 3;
+                const peak = layer.peakOf(1), base = layer.rowOf(1), value = base + (peak - base) * 2 / 3;
                 const y = (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                const overlap = grabImage(layer);
+                const overlap = grabImage(surface);
                 let error = Infinity;
                 for (let dy = -3; dy <= 3; ++dy) {
                     const pixel = sample(overlap, x, Math.max(1, Math.min(layer.height - 2, y + dy)));
@@ -286,13 +293,23 @@ Item {
             compare(findChild(chart, "scanView." + data.mode + ".current"), null, "The retired selected-pattern rectangle has no remaining runtime instance");
             Session.project.currentExperimentIndex = 1;
             settled(chart);
-            const label = named("rowLabel.1");
-            const bold = Render.texts(label).find(item => item.font.bold);
-            verify(bold !== undefined, "With highlight off the selected dataset retains its bold row label");
+            const labels = Render.descendants(chart).filter(item => item.objectName === "scanView." + data.mode + ".rowLabel.1" && item.visible && item.opacity > 0 && item.width > 0 && item.height > 0);
+            compare(labels.length, 1, "With highlight off exactly one visible label marks the selected dataset");
+            const label = labels[0];
+            const segments = Array.from(label.segments).filter(segment => typeof segment.text === "string" && segment.text !== "" && segment.bold === true);
+            verify(segments.length > 0, "The selected IconLine declares a nonempty bold text segment");
+            compare(label.textColor, Style.Colors.themeAccent, "The selected IconLine uses the theme accent colour");
+            const bold = Render.texts(label).find(item => item.opacity > 0 && segments.some(segment => segment.text === item.text) && item.font.family === Style.Fonts.ptSansBold.name && item.font.styleName === "Bold");
+            verify(bold !== undefined, "The selected dataset's visible text uses the loaded bold font family and style");
+            tryCompare(bold, "color", Style.Colors.themeAccent, 1500, "The selected dataset's actual text reaches the theme accent colour");
             const pointer = named("pointer");
-            const row = chart.scan.rowOf(2);
+            const row = data.mode === "map" ? chart.scan.rowOf(2) : layer.rowOf(2) + (layer.peakOf(2) - layer.rowOf(2)) * 2 / 3;
+            const x = (30 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
             const y = (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * pointer.height;
-            mouseClick(pointer, pointer.width * .3, Math.max(1, Math.min(pointer.height - 1, y - 1)));
+            mouseMove(pointer, x, y);
+            const hover = named("hover");
+            tryVerify(() => hover.visible && hover.text === chart.scan.rowText(2), 1500, "Actual plot hover names the independently targeted dataset");
+            mouseClick(pointer, x, y);
             tryCompare(Session.project, "currentExperimentIndex", 2, 1000, "Actual plot input selects the dataset at its independently observed row");
         }
         function combo(item) {

@@ -1,9 +1,12 @@
 # Chart redraw acceptance
 
-The placement oracle is ADR-0041's relative stack rule: a trace's height H is
+The placement oracle is the independent relative stack rule: a trace's height H is
 P / (1 + (N - 1) * offset) in Fit mode, otherwise P * heightPercent / 100.
-Baseline i is i * H * offset. The QML actor observes rowOf, peakOf and the
-actual plot range, then captures the production chart through xcb/OpenGL.
+Baseline i is i * H * offset. The QML actor observes the Stacked layer's rowOf and peakOf in the
+unzoomed zero-to-one axis coordinates, then captures the production chart
+through xcb/OpenGL. Model scan-value rows are used only for Map. The visible
+[placement contract](../../../docs/dev/design/scan-renderer-interface.md#stacked-placement-and-selectors)
+names the units, defaults and exact-text selector activation.
 The input generator writes independent triangular traces into private scan files.
 
 The toolbar oracle uses control types and their actual mapped rectangles. It
@@ -24,7 +27,7 @@ A browser run still needs to exercise the compiled wasm build separately.
 Timing actors and final thresholds follow the committed baseline measurement.
 No timing value has been invented or banked here. The pending comparisons are:
 324 datasets, repeated pan/zoom and data-redraw medians (redraw under 100 ms);
-162 datasets, Every pattern / Adaptive fit ratio at most 1.05; LBCO slider-step
+162 datasets, Every pattern, display catches up / Adaptive fit ratio at most 1.05; LBCO slider-step
 cost before and after fitting within the baseline's measured noise.
 
 Redraw and fit comparisons require the observed graphics API and renderer in
@@ -36,18 +39,24 @@ identity still come from the measured app, with the same machine and project
 for each comparison. GPU measurements need a GPU host.
 The OpenGL renderer is empty on APIs such as Metal, which have no OpenGL context.
 
-Each backend row now keeps `fits.pattern` and `fits.stacked`, each containing
-`every_pattern_ms` and `adaptive_ms`. Both tabs are mandatory and each ratio is
-checked separately. `python -m tests.fixtures.fast_chart_redraws.measure_fit DIR`
-runs the real app's `perf-fit-every-pattern`, `perf-fit-adaptive-pattern`,
-`perf-fit-every-stacked` and `perf-fit-adaptive-stacked` routes in alternating
-order, with repeated samples. Each capture must report the same Qt backend
-and renderer observed independently by the native actor. The system timing
-gate runs this producer; its local runs are diagnostics, and final performance
-evidence still needs the quiet-machine runs the packet specifies.
+Each backend row keeps `fits.pattern` and `fits.stacked`, with separate
+`display_catches_up_ms`, `fit_waits_for_display_ms` and `adaptive_ms` samples.
+Only display catches up carries the 1.05 bound. The legacy Every-pattern
+baseline remains a fit-waits regression pin; it is never relabelled as catch-up.
+`python -m tests.fixtures.fast_chart_redraws.measure_fit DIR` now drives the
+actual update-mode UI in a native app host, records the worker-completion time,
+then lets the display finish. It alternates all three modes on both tabs with
+repeated samples. Each receipt retains the selected UI text, tab, complete
+scientific file count and independent Qt backend. `sample.json` and
+`fit-comparisons.json` retain the raw samples and separate mode ratios.
+The previous producer used the app's old Every/Adaptive demo routes.
+The [scan update contract](../../../docs/dev/design/scan-update-interface.md)
+describes the queue, visible progress, legacy migration and parameter range
+observations. Timing replay remains a local diagnostic; final performance
+proof still needs the packet's quiet-machine measurements.
 
 Adaptive remains a separate choice in the real Analysis Settings selector.
-The native actor selects it after Every pattern and follows the saved 162-file
+The native actor selects it after Every pattern, fit waits for the display, and follows the saved 162-file
 scan, checking live coalescing, the ADR-0029 half-second interval, completion of
 all files and restoration of the final dataset.
 

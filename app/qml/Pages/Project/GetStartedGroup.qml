@@ -68,27 +68,15 @@ EaElements.GroupBox {
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
         defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges).
         onAccepted: {
-            if (!Session.createProject(createDialog.projectName, createDialog.projectDescription, WebFiles.available ? "" : createDialog.projectLocation, Preferences.newProjectSuRule, createDialog.projectTitle, createDialog.projectAuthors, Preferences.newReportLibraries === "embedded"))
-                createError.open();
-        }
-    }
-
-    // A created project that could not be saved at its location stays open, unsaved; this says why.
-    AppDialog {
-        id: createError
-        objectName: "create.error"
-        parent: Overlay.overlay
-        title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: createErrorText.implicitHeight
-
-        EaElements.Label {
-            id: createErrorText
-            width: createError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
+            const name = createDialog.projectName, description = createDialog.projectDescription;
+            const location = WebFiles.available ? "" : createDialog.projectLocation;
+            const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
+            Qt.callLater(() => {
+                if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
+                    AppState.createFailed();
+            });
         }
     }
 
@@ -101,32 +89,57 @@ EaElements.GroupBox {
         parent: Overlay.overlay
         title: qsTr("Open project")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: openChoiceColumn.implicitWidth
+        contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
-        onAccepted: Session.openWebProject(zip ? "zip" : "folder")
+        onAccepted: Session.openWebProject(zip ? "file" : "folder")
 
         Column {
             id: openChoiceColumn
 
-            EaElements.Label {
-                text: qsTr("Format")
-                bottomPadding: EaStyle.Sizes.fontPixelSize * 0.25
-            }
             EaElements.RadioButton {
                 objectName: "open.folder"
-                verticalPadding: 0
+                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Folder")
                 checked: !openChoice.zip
                 onClicked: openChoice.zip = false
             }
             EaElements.RadioButton {
                 objectName: "open.zip"
-                verticalPadding: 0
-                text: qsTr("Zip archive")
+                verticalPadding: AppSizes.choiceRowPadding
+                // Chrome and Edge open a project.edi too, from its folder on the disk.
+                text: WebStorage.diskAccess ? qsTr("project.edi or zip archive") : qsTr("Zip archive")
                 checked: openChoice.zip
                 onClicked: openChoice.zip = true
             }
+        }
+    }
+
+    // A project.edi picked in Chrome or Edge opens its folder, which the browser lets the page use only once the user
+    // picks it too, with a click of its own.
+    Connections {
+        target: Session
+        function onWebFolderNeeded(name) {
+            recordFolder.name = name;
+            recordFolder.open();
+        }
+    }
+    AppDialog {
+        id: recordFolder
+        objectName: "open.recordFolder"
+        property string name
+        parent: Overlay.overlay
+        title: qsTr("Open project")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: recordFolderText.implicitHeight
+        onAccepted: Session.openWebRecordFolder()
+
+        EaElements.Label {
+            id: recordFolderText
+            width: recordFolder.contentWidth
+            wrapMode: Text.Wrap
+            text: qsTr("To open %1, choose the folder that holds it.").arg(recordFolder.name)
         }
     }
 
@@ -135,6 +148,7 @@ EaElements.GroupBox {
         id: openProjectDialog
         title: qsTr("Open an edi project")
         nameFilters: [qsTr("edi projects (project.edi *.zip)")]
-        onAccepted: Session.openProject(selectedFile)
+        // On the next turn: the opened project replaces this page, dialog and all (AppState.afterChanges).
+        onAccepted: Qt.callLater(Session.openProject, selectedFile)
     }
 }

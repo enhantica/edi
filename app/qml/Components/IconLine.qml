@@ -81,12 +81,14 @@ Item {
 
         Repeater {
             id: pieces
-            model: line.segments
+            // By count, so a change of a piece's text or colour updates the pieces in place; only a change of how many
+            // there are makes them again.
+            model: line.segments.length
             delegate: EaElements.Label {
                 id: piece
 
                 required property int index
-                required property var modelData
+                readonly property var modelData: line.segments[index] ?? ({})
                 readonly property bool elided: line.maximumWidth > 0 && !isIcon && index === line.elidedIndex
                 readonly property bool isIcon: modelData.icon !== undefined
                 readonly property string mark: modelData.mark ?? ""

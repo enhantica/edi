@@ -975,7 +975,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                "sideBar.tab.basic", "mainArea.analysis.tab.fitting", "parameters.nameFilter",
                                "type:length_a"};
         steps_.push_back({"perf-slider-lbco-1-before-fit", lbco + QStringList{"timed-slider:30"}});
+        // The same steps again and again with no fit: what a growing edit history alone costs.
+        steps_.push_back({"perf-slidernofit-1", lbco + QStringList{"timed-slider:30"}});
+        for (int batch = 2; batch <= 4; ++batch) {
+            steps_.push_back({QStringLiteral("perf-slidernofit-%1").arg(batch), {"timed-slider:30"}});
+        }
         steps_.push_back({"perf-slider-lbco-2-after-fit", {"fitting.start", "wait-fit", "choose:OK", "timed-slider:30"}});
+        // Note 45 says "after the fits": four more, five in all, from where the slider left the model each time.
+        QStringList fits;
+        for (int fit = 0; fit < 4; ++fit) {
+            fits << "fitting.start" << "wait-fit" << "choose:OK";
+        }
+        steps_.push_back({"perf-slider-lbco-3-after-five-fits", fits + QStringList{"timed-slider:30"}});
     }
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });

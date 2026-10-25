@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include "graphics_info.hpp"
+#include "rendering_info.hpp"
 
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -33,9 +33,9 @@ QString api_name(QSGRendererInterface::GraphicsApi api) {
 
 }  // namespace
 
-GraphicsInfo::GraphicsInfo(QObject* parent) : QObject(parent) {}
+RenderingInfo::RenderingInfo(QObject* parent) : QObject(parent) {}
 
-bool GraphicsInfo::isSoftware(const QString& api, const QString& renderer) {
+bool RenderingInfo::isSoftware(const QString& api, const QString& renderer) {
     if (api == QLatin1String("Software")) {
         return true;
     }
@@ -49,7 +49,7 @@ bool GraphicsInfo::isSoftware(const QString& api, const QString& renderer) {
     return false;
 }
 
-void GraphicsInfo::observe(QQuickWindow* window) {
+void RenderingInfo::observe(QQuickWindow* window) {
     if (window == nullptr || detected_ || watched_ == window) {
         return;
     }
@@ -76,7 +76,7 @@ void GraphicsInfo::observe(QQuickWindow* window) {
     window->update();
 }
 
-void GraphicsInfo::setDetected(const QString& api, const QString& renderer) {
+void RenderingInfo::setDetected(const QString& api, const QString& renderer) {
     if (detected_) {
         return;
     }

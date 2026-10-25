@@ -16,7 +16,8 @@ import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
-const fileRequestsOnly = process.argv.includes('--file-requests-only');
+const saveRouteOnly = process.argv.includes('--save-route-only');
+const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
@@ -159,13 +160,39 @@ try {
     } while (Date.now() < deadline);
     throw Error('page navigation must finish rendering before the next pointer action');
   };
+  const waitNative = async objectName => {
+    const deadline=Date.now()+45000;
+    do {
+      const ready=await evaluate(`(() => {try {const r=window.ediControlGeometry(${JSON.stringify(objectName)});return r.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}})()`);
+      if(ready)return await controlPointer(evaluate,objectName);
+      await frame();
+    } while(Date.now()<deadline);
+    throw Error('The real dialog must expose its declared native control '+objectName);
+  };
+  let lastDialogTarget;
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
+    if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
+      const target=regex.test('Folder')?'open.folder':'saveAs.zip';
+      lastDialogTarget=target;
+      const point=await waitNative(target);
+      for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
+      return;
+    }
+    if(regex.source==='^OK$') {
+      const count=lastDialogTarget==='saveAs.zip'||lastDialogTarget==='open.folder'?2:1;
+      for(let i=0;i<count;++i) for(const type of ['keyDown','keyUp'])
+        await send('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+      for(const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',{type,key:' ',code:'Space',windowsVirtualKeyCode:32});
+      await frame();return;
+    }
     const node = await waitAX(regex, true, role);
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
       nativeObjectName ||= `appBar.tab.${node.name.value.toLowerCase()}`;
+    const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
+    nativeObjectName ||= names[node.name?.value];
     let x, y;
     if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
     else {
@@ -263,11 +290,14 @@ try {
     await writeFile(join(output, `${mode}-${name}.png`), Buffer.from(png.data, 'base64'));
   };
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+    // The download gate explicitly exercises the browser capability fallback.
+    for (const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
+      Object.defineProperty(window,name,{value:undefined,configurable:true});
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if (this instanceof HTMLInputElement && this.type === 'file' && this.id === 'edi-open-folder' && type === 'change') {
+      if (this instanceof HTMLInputElement && this.type === 'file' && ['edi-open-folder','edi-open-project'].includes(this.id) && type === 'change') {
         const original = listener;
         listener = async function(event) {
           try { await original.call(this,event); }
@@ -286,7 +316,7 @@ try {
       nativeFocus.call(this, { ...options, preventScroll: true });
     };
   ` });
-  await send('Page.navigate', { url: origin + '/webapp/' });
+  await send('Page.navigate', { url: origin + '/webapp/' + (mode === 'shim' ? '' : '?build=' + mode) });
   let ready = false;
   const readyDeadline = Date.now() + 90000;
   while (!ready && Date.now() < readyDeadline) {
@@ -363,16 +393,17 @@ try {
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     await click(/^Save project as/);
-    await waitAX(/^Save project as$/);
-    await click(/^Zip archive$/, 'radio');
-    await click(/^OK$/, 'button');
+    // The app's format choice precedes the browser download, including the fallback.
+    await click(/^Zip archive$/,'radio');
+    lastDialogTarget='saveAs.copy';
+    await click(/^OK$/,'button');
     return join(output, (await download).guid);
   };
   const inspectArchive = archive => {
     const result = spawnSync('python', ['-c', `import hashlib, json, pathlib, re, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as archive:
     files = {name: archive.read(name) for name in archive.namelist() if not name.endswith('/')}
-roots = [name[:-len('project.edi')] for name in files if name.endswith('/project.edi')]
+roots = [name[:-len('project.edi')] for name in files if name == 'project.edi' or name.endswith('/project.edi')]
 if len(roots) != 1:
     raise SystemExit('saved zip must contain one project root')
 root = roots[0]
@@ -391,6 +422,17 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     assert.equal(result.status, 0, 'each browser save must produce a readable scientific project archive');
     return JSON.parse(result.stdout);
   };
+  if (saveRouteOnly) {
+    await click(/^Project$/);
+    const archive = await saveArchive();
+    const state = inspectArchive(archive);
+    assert(Object.keys(state.scientific).includes('project.edi') && Object.keys(state.scientific).includes('analysis/analysis.edi'),
+      'Fallback Save project as must download the complete scientific project');
+    assert.equal(await evaluate('typeof window.showSaveFilePicker'), 'undefined',
+      'The download gate must actually exercise the browser capability fallback');
+    await writeFile(join(output, `${mode}-save-route.json`), JSON.stringify({completed:true, archive, state},null,2));
+    console.log(`${mode}: actual fallback Save project as download passed`);
+  } else {
   if (!fileRequestsOnly) {
   await click(/^Analysis$/);
   await waitModal(false);
@@ -504,6 +546,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   lastEvents.delete('Page.fileChooserOpened');
   const chooser = event('Page.fileChooserOpened');
   await click(/^Open project(?:…|\.\.\.)?$/);
+  await waitNative('open.folder');
+  await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
   const opened = await chooser;
   await writeFile(join(output, `${mode}-reopen-picker.json`), JSON.stringify(opened,null,2));
   const picked = await send('Runtime.evaluate', {expression:'window.__e04FileInput'});
@@ -588,7 +632,11 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
         /Load experiment/.test(regex.source) ? 'experiments.load' :
         /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
       const role = /Load data/.test(regex.source) ? 'StaticText' : 'button';
-      const [chooser] = await Promise.all([opened, click(regex, role, nativeObjectName)]);
+      await click(regex, role, nativeObjectName);
+      if (/Open project/.test(regex.source)) {
+        await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+      }
+      const chooser = await opened;
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
       assert(chooser.backendNodeId,'each request must expose its actual browser file input');
       const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendNodeId});
@@ -755,6 +803,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
   if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
 } catch (error) {

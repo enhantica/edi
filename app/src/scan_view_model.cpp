@@ -403,11 +403,6 @@ void ScanViewModel::placeRows() {
     }
     publish(row_lowest_, lowest, &ScanViewModel::rowLowestChanged);
     publish(row_highest_, highest, &ScanViewModel::rowHighestChanged);
-    // Four rows' height, times the chosen scale: how far up the stacked view draws a pattern's highest point above
-    // its row.
-    publish(stack_height_,
-            4.0 * stack_scale_ * (high - low) / std::max<double>(1.0, static_cast<double>(patterns_.size())),
-            &ScanViewModel::stackHeightChanged);
 }
 
 // The project's current d column against its own axis, finite pairs only, what a scan's d-spacing is read from, and the
@@ -460,17 +455,6 @@ void ScanViewModel::setIncludedOnly(bool on) {
         included_only_ = on;
         emit includedOnlyChanged();
         placeRange();
-        ++revision_;
-        emit revisionChanged();
-    }
-}
-
-void ScanViewModel::setStackScale(int scale) {
-    const int bounded = std::clamp(scale, 1, 5);
-    if (bounded != stack_scale_) {
-        stack_scale_ = bounded;
-        emit stackScaleChanged();
-        placeRows();
         ++revision_;
         emit revisionChanged();
     }
