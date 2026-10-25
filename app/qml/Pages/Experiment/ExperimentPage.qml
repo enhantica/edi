@@ -146,7 +146,7 @@ WorkflowPage {
     // One block selector in the main view's tab bar (edi ADR-0017 §7).
     blockSelectorShown: true
     // The row ends where the shown chart's toolbar does, so the two share one centre.
-    blockSelectorRightInset: stackedTab.shown ? (page.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset) : mapChart.shown ? mapChart.toolbarRightInset : chartView.toolbarRightInset
+    blockSelectorRightInset: stackedTab.SwipeView.isCurrentItem ? (page.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset) : mapChart.SwipeView.isCurrentItem ? mapChart.toolbarRightInset : chartView.toolbarRightInset
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"
