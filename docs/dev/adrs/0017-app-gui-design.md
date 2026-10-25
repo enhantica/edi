@@ -57,6 +57,14 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
+- **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
+  and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
+  <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
+  and every chart toolbar keeps whole groups (§15). The desktop window cannot be made smaller (its `minimumWidth` and
+  `minimumHeight`). The browser's page can: below either dimension the app shows only the empty view's background, as
+  *No structures defined* does, with *Increase the window size* centred in the empty view's font, over everything,
+  dialogs included, and takes no pointer input. Nothing beneath is torn down, so growing the page back shows the same
+  page, tab, selection and scroll position. Later work that adds controls keeps this minimum.
 - **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
   ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
   had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Correlations and Evolution (owner, 2026-10-11). The block
