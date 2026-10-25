@@ -21,47 +21,47 @@
     "param.O.fract_z.value": {
       "value": 0.25884059,
       "kind": "reference",
-      "tol_abs": 0.00013569640866,
+      "tol_abs": 0.00013569629528,
       "tol_rel": null
     },
     "param.O.adp_iso.value": {
       "value": 0.73836148,
       "kind": "reference",
-      "tol_abs": 0.05233687176,
+      "tol_abs": 0.05233680658,
       "tol_rel": null
     },
     "param.Li1.adp_iso.value": {
       "value": 1.5444678,
       "kind": "reference",
-      "tol_abs": 0.2257603912,
+      "tol_abs": 0.2257595918,
       "tol_rel": null
     },
     "param.Ni2.adp_iso.value": {
       "value": 0.29797092,
       "kind": "reference",
-      "tol_abs": 0.031408631,
+      "tol_abs": 0.03140859584,
       "tol_rel": null
     },
     "param.cell_length_a.value": {
       "value": 2.8751578,
       "kind": "reference",
-      "tol_abs": 0.00012480178198,
+      "tol_abs": 0.00012480172766,
       "tol_rel": null
     },
     "param.cell_length_c.value": {
       "value": 14.183333,
       "kind": "reference",
-      "tol_abs": 0.0007328419254,
+      "tol_abs": 0.0007328414606,
       "tol_rel": null
     },
     "iterations": {
-      "value": 18.0,
+      "value": 6.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null
     },
     "reduced_chi_square": {
-      "value": 2.394068351,
+      "value": 2.394068349,
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null
