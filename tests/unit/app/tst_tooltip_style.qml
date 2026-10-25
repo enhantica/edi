@@ -6,6 +6,7 @@ import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Elements as Elements
+import EasyApplication.Gui.Components as Components
 import EasyApplication.Gui.Globals as Globals
 import EasyApplication.Gui.Style as Style
 import "UiInteraction.js" as Ui
@@ -37,6 +38,14 @@ TestCase {
         FontMetrics {}
     }
     Component {
+        id: lazyLabel
+        Components.ListViewLabel {
+            width: 16
+            height: 24
+            text: "An independently authored long table description must render the application's lazy tooltip delegate"
+        }
+    }
+    Component {
         id: anchorFactory
         Item {
             width: 40
@@ -62,7 +71,7 @@ TestCase {
         return Probe.objectsWithProperty(app, "visible");
     }
     function tips() {
-        return Probe.objectsWithProperty(app, "opened").filter(item => item instanceof T.ToolTip);
+        return SettingsProof.tooltipObjects(app).filter(item => item instanceof T.ToolTip);
     }
     function fast(tip) {
         tip.delay = 0;
@@ -102,6 +111,18 @@ TestCase {
         Globals.Vars.autoCollapseSideBarGroups = savedAutoCollapse;
     }
     function test_counterexamples() {
+        verify(!isBalanced({
+            lines: 2,
+            last: "is",
+            lastWidth: 10,
+            widestWidth: 100
+        }), "A short orphan final word fails the balance reference");
+        verify(isBalanced({
+            lines: 2,
+            last: "calibration",
+            lastWidth: 25,
+            widestWidth: 100
+        }), "A long unsplittable final word is not mistaken for a short orphan");
         const good = styled.createObject(test), bad = plain.createObject(test);
         good.parent = test;
         bad.parent = test;
@@ -182,12 +203,16 @@ TestCase {
         return {
             alignment: label.horizontalAlignment,
             lines: label.lineCount,
-            last: lines.length ? lines[lines.length - 1].text : ""
+            last: lines.length ? lines[lines.length - 1].text : "",
+            lastWidth: lines.length ? lines[lines.length - 1].width : 0,
+            widestWidth: Math.max(0, ...lines.map(line => line.width))
         };
     }
     function isBalanced(facts) {
         const words = facts.last.match(/[A-Za-z0-9]+/g) || [];
-        return facts.lines <= 1 || words.length !== 1 || words[0].length > 3;
+        // The qualitative record forbids a short orphan word, not a long word
+        // such as "calibration". Qualify short words by both length and rendered width.
+        return facts.lines <= 1 || words.length !== 1 || words[0].length > 5 || facts.lastWidth >= facts.widestWidth / 3;
     }
     function test_balanced_placement() {
         app = factory.createObject(null, {
@@ -325,10 +350,19 @@ TestCase {
         }
         compare(facts[0].textWidth, facts[1].textWidth, "Ordinary and warning tooltips share one actual maximum text width");
         compare(facts[2].textWidth, facts[3].textWidth, "Ordinary and warning tooltips share their window-constrained maximum width");
+        const label = lazyLabel.createObject(app.contentItem, {
+            x: 120,
+            y: 120
+        });
+        verify(label !== null, "The lazy-tooltip control is the pinned app table-label type");
+        mouseMove(label, label.width / 2, label.height / 2);
+        tryVerify(() => tips().some(tip => tip.visible && tip.text === label.text), 2000, "Truncating and hovering the actual table label instantiates its real tooltip");
+        verify(tips().filter(tip => tip.visible && tip.text === label.text).every(inheritedStyle), "A lazily instantiated table tooltip uses the same actual app delegate");
+        label.destroy();
         anchor.destroy();
     }
     function test_live_tree_data() {
-        return ["project", "structure", "experiment", "analysis", "report", "save-native", "save-web-disk", "save-web-fallback", "web-open", "browser-warning"].map(scope => ({
+        return ["project", "structure", "experiment", "analysis", "report", "preparing", "save-native", "save-web-disk", "save-web-fallback", "web-open", "browser-warning"].map(scope => ({
                     tag: scope,
                     scope
                 }));
@@ -345,6 +379,31 @@ TestCase {
         tryCompare(app, "active", true, 2000, "Actual hover input goes to the observed app window");
         if (Ui.control(Probe, app, "home.start"))
             click("home.start");
+        if (data.scope === "preparing") {
+            const tip = findChild(app, "appBar.preparingToolTip");
+            const report = Ui.control(Probe, app, "appBar.tab.report");
+            verify(tip && report, "The live tree exposes the real preparing tooltip and its disabled tab");
+            fast(tip);
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "Preparing-tooltip coverage starts an actual project opening");
+            mouseMove(report, report.width / 2, report.height / 2);
+            tryVerify(() => tip.visible, 2000, "Hovering the real preparing tab renders its actual tooltip before loading finishes");
+            app.update();
+            verify(waitForRendering(app.contentItem), "The preparing tooltip reaches an actual rendered frame");
+            verify(tip.visible && inheritedStyle(tip), "Preparing this page uses the actual app tooltip delegate while the tab is still loading");
+            compare(placementErrors(tip, report, null).length, 0, "The preparing tooltip sits clear of its real disabled tab");
+            console.log("TOOLTIP_STYLE_CENSUS " + JSON.stringify({
+                scope: data.scope,
+                declared: tips().length,
+                sources: 1,
+                hovered: 1,
+                rendered: 1,
+                openedOwned: 0,
+                defects: [],
+                unreachable: [],
+                unrendered: []
+            }));
+            return;
+        }
         verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "The tooltip census opens an independently authored real project");
         click("appBar.tab.project");
         const page = ["project", "structure", "experiment", "analysis", "report"].includes(data.scope) ? data.scope : "project";
@@ -377,6 +436,14 @@ TestCase {
         app.update();
         verify(waitForRendering(app.contentItem), "Expanded tooltip groups finish drawing before source discovery");
         SettingsProof.endAnimationClock();
+        // Keep table delegates resident while the census scrolls between their
+        // controls. This changes only the test's view cache, not any tooltip.
+        for (const item of Render.descendants(app.contentItem)) {
+            if (typeof item.cacheBuffer === "number" && typeof item.contentHeight === "number")
+                item.cacheBuffer = Math.max(item.cacheBuffer, item.contentHeight + app.height);
+        }
+        app.update();
+        verify(waitForRendering(app.contentItem), "The census retains real table delegates before collecting their tooltip sources");
         const declared = tips();
         verify(declared.length > 0, "The actual QML tree contains app tooltip delegates to inspect");
         const defects = [];
@@ -394,18 +461,31 @@ TestCase {
                     sources.push(source);
             }
         }
-        let hovered = 0, rendered = 0;
+        let hovered = 0, rendered = 0, openedOwned = 0;
         const unreachable = [];
-        for (const source of sources) {
+        const unrendered = [];
+        const inactiveDescriptions = [];
+        const inventory = sources.map(source => ({
+                    item: source,
+                    name: source.objectName,
+                    type: String(source),
+                    text: String(source.ToolTip.text)
+                }));
+        for (const record of inventory) {
+            const source = record.item;
             Ui.scrollIntoView(source);
             app.update();
             verify(waitForRendering(app.contentItem), "A tooltip source reaches its scrolled viewport before hover input");
             const point = Ui.clickPoint(source);
             if (!point) {
                 unreachable.push({
-                    name: source.objectName,
-                    type: String(source),
-                    text: String(source.ToolTip.text)
+                    name: record.name,
+                    type: record.type,
+                    text: record.text,
+                    visible: source.visible,
+                    width: source.width,
+                    height: source.height,
+                    inPane: Ui.inPane(source)
                 });
                 continue;
             }
@@ -415,10 +495,44 @@ TestCase {
             app.update();
             verify(waitForRendering(app.contentItem), "The hovered source and its real tooltip reach a rendered frame");
             ++hovered;
-            const visible = tips().filter(tip => tip.visible);
+            // A disabled control may not receive hover. Open its already instantiated
+            // application delegate directly, as we open the actual dialogs above; never
+            // open an attached Qt fallback on behalf of the app.
+            const current = tips();
+            const owned = current.filter(tip => SettingsProof.tooltipOwnedBy(tip, source) && tip.text !== "");
+            for (const tip of owned)
+                fast(tip);
+            const expected = String(source.ToolTip.text) || (owned.length ? owned[0].text : "");
+            let visible = current.filter(tip => tip.visible && (owned.includes(tip) || tip.text === expected));
+            // Qt's shared attached popup can live outside the app's QObject tree.
             const attached = source.ToolTip.toolTip;
             if (attached && attached.visible && !visible.includes(attached))
                 visible.push(attached);
+            if (visible.length === 0 && owned.length === 0) {
+                // Attached text alone does not create a tooltip. Record this as
+                // metadata without a live delegate, never as rendered coverage.
+                inactiveDescriptions.push({
+                    name: record.name,
+                    text: expected,
+                    type: record.type
+                });
+                continue;
+            }
+            if (visible.length === 0 && owned.length > 0) {
+                for (const tip of owned)
+                    tip.open();
+                app.update();
+                verify(waitForRendering(app.contentItem), "A disabled source's actual app tooltip is rendered before its style is inspected");
+                visible = owned.filter(tip => tip.visible);
+                if (visible.length > 0)
+                    ++openedOwned;
+            }
+            if (visible.length === 0)
+                unrendered.push({
+                    name: source.objectName,
+                    text: expected,
+                    type: String(source)
+                });
             for (const tip of visible) {
                 ++rendered;
                 if (!inheritedStyle(tip))
@@ -427,13 +541,14 @@ TestCase {
                 if (label) {
                     const lines = lineFacts(tip);
                     if (lines.lines > 1 && (lines.alignment !== Text.AlignLeft || !isBalanced(lines)))
-                        defects.push("alignment/balance: " + String(tip));
+                        defects.push("alignment/balance: " + String(tip) + " / " + record.name + " / " + tip.text + " / " + JSON.stringify(lines));
                     for (const issue of placementErrors(tip, tip.parent, modal))
-                        defects.push("placement: " + issue + " / " + String(tip));
+                        defects.push("placement: " + issue + " / " + String(tip) + " / " + record.name + " / " + tip.text);
                     const width = widthFacts(tip);
                     if (width.characters > 50.5 || width.width > app.width || width.left < 0 || width.right > app.width)
                         defects.push("width/window: " + String(tip));
                 }
+                tip.close();
             }
         }
         console.log("TOOLTIP_STYLE_CENSUS " + JSON.stringify({
@@ -442,8 +557,11 @@ TestCase {
             sources: sources.length,
             hovered,
             rendered,
+            openedOwned,
             defects,
-            unreachable
+            unreachable,
+            unrendered,
+            inactiveDescriptions
         }));
         compare(defects.length, 0, "Every actually rendered live tooltip uses the app type and arrow background: " + defects.join("; "));
         if (modal)

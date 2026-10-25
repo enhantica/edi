@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T22:43:11Z
+# measured_utc = 2026-10-25T23:53:22Z
 #
-# Recorded from: measured test run (51 node(s) measured once, 15635 banked, 26 stale row(s) dropped)
-# Collected tests: 17527; with a reported duration: 10186
-# Module-scoped fixture costs recorded: 74
+# Recorded from: measured test run (16 node(s) measured once, 15642 banked, 0 stale row(s) dropped)
+# Collected tests: 17528; with a reported duration: 10190
+# Module-scoped fixture costs recorded: 75
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17527
+# inventory_python = 17528
 # inventory_cpp = 393
-# inventory_measured = 15640
-# inventory_unmeasured = 2280
+# inventory_measured = 15657
+# inventory_unmeasured = 2264
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2453,7 +2453,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullpro
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
-0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
+0.080	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[selector]
@@ -13846,12 +13846,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 1.400	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-folder]
 1.120	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-record]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-folder]
-2.420	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
-2.120	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-folder]
-2.570	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-zip]
+2.740	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-folder]
+2.350	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
+2.280	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
+2.200	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-zip]
+2.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-folder]
+2.290	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-zip]
 1.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_project_actions]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-zip]
@@ -13867,14 +13867,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 3.370	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:pd-neut-cwl_cosio-d20_scan-3f]
 3.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-cwl_tb2ti2o7-heidi_basic]
 3.110	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-tof_taurine-senju]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-folder-folder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-folder-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-zip-folder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-zip-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-folder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-zip]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-folder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-zip]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-folder-folder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-folder-zip]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-zip-folder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-zip-zip]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-folder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-zip]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-folder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-zip]
 2.990	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
 2.760	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
@@ -14058,20 +14058,21 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_save_consistency.py::
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_save_consistency.py::test_values_without_uncertainty_use_six_significant_digits[free-without-su-1.23456789]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_save_consistency.py::test_values_without_uncertainty_use_six_significant_digits[free-without-su-1.23456789e-06]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_save_consistency.py::test_values_without_uncertainty_use_six_significant_digits[free-without-su-12345678.9]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[analysis]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[balanced_placement]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[browser-warning]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[counterexamples]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[disabled_choice_class]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[experiment]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[project]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[report]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-native]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-web-disk]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-web-fallback]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[shared_wrap_width]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[structure]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[web-open]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[analysis]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[balanced_placement]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[browser-warning]
+0.002	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[counterexamples]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[disabled_choice_class]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[experiment]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[preparing]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[project]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[report]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-native]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-web-disk]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[save-web-fallback]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[shared_wrap_width]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[structure]
+0.000	tests/system/py/test_project_tooltip_style.py::test_every_live_tooltip_uses_the_app_delegate[web-open]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
@@ -18013,6 +18014,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
+# module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py

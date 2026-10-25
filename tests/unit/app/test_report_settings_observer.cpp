@@ -17,6 +17,7 @@
 #include <QTemporaryDir>
 #include <QDirIterator>
 #include <QScreen>
+#include <QSet>
 #include <QGuiApplication>
 #include <QJSValue>
 #include <QKeyEvent>
@@ -152,6 +153,29 @@ public:
         QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         if (auto* item = qobject_cast<QQuickItem*>(object)) item->setParentItem(parent);
         return object;
+    }
+    Q_INVOKABLE QVariantList tooltipObjects(QObject* root) const {
+        QVariantList result;
+        QSet<QObject*> visited;
+        std::vector<QObject*> pending{root};
+        while (!pending.empty()) {
+            auto* object = pending.back();
+            pending.pop_back();
+            if (!object || visited.contains(object)) continue;
+            visited.insert(object);
+            if (object->property("opened").isValid()) result.append(QVariant::fromValue(object));
+            for (auto* child : object->children()) pending.push_back(child);
+            if (auto* item = qobject_cast<QQuickItem*>(object))
+                for (auto* child : item->childItems()) pending.push_back(child);
+            if (auto* window = qobject_cast<QQuickWindow*>(object)) pending.push_back(window->contentItem());
+        }
+        return result;
+    }
+    Q_INVOKABLE bool tooltipOwnedBy(QObject* tooltip, QObject* source) const {
+        if (!tooltip || !source) return false;
+        for (auto* owner = tooltip->parent(); owner; owner = owner->parent())
+            if (owner == source) return true;
+        return false;
     }
     Q_INVOKABLE QObject* tooltipPlatformMain(QQuickItem* context, bool web, bool disk) const {
         auto* engine = context ? qmlEngine(context) : nullptr;
