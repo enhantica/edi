@@ -4,7 +4,7 @@
 # prebuilt SDK is not instrumented, and a race inside it would go unseen. Never part of the
 # product build.
 cmake_minimum_required(VERSION 3.24)
-project(edi_tsan CXX)
+project(edi_tsan C CXX)
 find_package(crysta CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 # The core's own sources and embedded tables, as the product build compiles them.
@@ -14,6 +14,8 @@ add_library(edi_core_tsan STATIC ${EDI_CORE_SOURCES})
 target_compile_features(edi_core_tsan PUBLIC cxx_std_20)
 target_include_directories(edi_core_tsan PUBLIC ${EDI_ROOT}/core/include ${EDI_ROOT}/core/src
                                                 ${EDI_ROOT}/tests/fixtures)
+target_include_directories(edi_core_tsan PRIVATE ${EDI_ROOT}/core/third_party/miniz)
+target_compile_definitions(edi_core_tsan PRIVATE MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 target_link_libraries(edi_core_tsan PUBLIC crysta::crysta Threads::Threads)
 
 # The scenario: the tests lane's probe (hidden tier), run by tsan-worker.sh.

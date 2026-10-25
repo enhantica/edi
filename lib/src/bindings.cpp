@@ -35,6 +35,7 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
@@ -796,10 +797,8 @@ static void save_project_advancing_last_modified(edi::Project& self,
         self.metadata.last_modified = previous;
         throw;
     }
-    // The project then holds what its files hold, as a reopen reads them, and is calculated once from that.
-    if (edi::adopt_saved_values(self, directory)) {
-        self.refresh_calculated_pattern();
-    }
+    // The project then holds what its files hold, as a reopen reads them, calculated from that (edi ADR-0052).
+    edi::adopt_saved_project(self, directory);
 }
 
 static nb::object star_datetime(const std::string& stored) {
@@ -4076,18 +4075,48 @@ NB_MODULE(_edi, m) {
                 // `directory` (the project's path from here on; a scan's analysis/results*.csv),
                 // while a scan's data are read in place from the directory this project was
                 // loaded from — never copied.
-                if (self.path.empty()) {
+                if (self.path.empty() && self.scan_data_root.empty()) {
                     throw std::invalid_argument(
                         "this project has no directory (never loaded or saved): nothing to run "
                         "dry against");
                 }
-                self.scan_data_root = self.path;
+                // A project opened from an archive already reads its data from the unpacked folder.
+                if (!self.path.empty()) {
+                    self.scan_data_root = self.path;
+                }
                 self.path = directory.string();
                 self.metadata.path = self.path;
             },
             "directory"_a,
             "Internal: route this project's fit outputs into `directory` and read scan data in "
             "place (the CLI's --dry).")
+        .def(
+            "_save_as_silent",
+            [](edi::Project& self, const std::filesystem::path& directory) {
+                // The CLI's --output: save_as without the narration line, so the machine channel's
+                // stdout stays the record.
+                save_project_advancing_last_modified(self, directory.string());
+                self.path = directory.string();
+                self.metadata.path = directory.string();
+                self.scan_data_root.clear();
+            },
+            "directory"_a, "Internal: save_as without narration (the CLI's --output).")
+        .def(
+            "export_zip",
+            [](edi::Project& self, const std::filesystem::path& archive) {
+                // edi ADR-0052: the project's folder as one .zip, the same archive every surface writes. A project
+                // opened from an archive exports the folder it was unpacked into; one with no folder yet is written
+                // to a temporary folder first.
+                std::string folder = !self.path.empty() ? self.path : self.scan_data_root;
+                if (folder.empty()) {
+                    folder = edi::fresh_archive_directory("export");
+                    edi::save_project(self, folder);
+                }
+                edi::write_project_archive(folder, archive.string());
+            },
+            "archive"_a,
+            "Write the project's folder, as last saved and with its reports, as one .zip archive at `archive` "
+            "(build and cache files left out). Project.load opens it again, as the app's Open does.")
         .def(
             "_save_silent",
             [](edi::Project& self) {
