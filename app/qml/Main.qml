@@ -20,6 +20,10 @@ import edi.app
 EaComponents.ApplicationWindow {
     id: window
 
+    // The supported minimum (AppSizes): the window cannot be made smaller than every page is made for.
+    minimumWidth: AppSizes.minimumAppWidth
+    minimumHeight: AppSizes.minimumAppHeight
+
     // A leading "•" while the open project has unsaved changes (edi ADR-0017 §13).
     title: (Session.project && Session.project.modified ? "• " : "") + ApplicationInfo.name
     appName: ApplicationInfo.name
@@ -220,6 +224,32 @@ EaComponents.ApplicationWindow {
     statusBar: StatusBar {}
 
     AppPreferencesDialog {}
+
+    // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
+    // background and a request for more room, over everything, dialogs included. Nothing beneath is torn down, so
+    // growing the page back shows the same page, tab, selection and scroll position.
+    Rectangle {
+        objectName: "app.tooSmall"
+        parent: Overlay.overlay
+        anchors.fill: parent
+        z: 1000000
+        visible: window.width < AppSizes.minimumAppWidth || window.height < AppSizes.minimumAppHeight
+        color: EaStyle.Colors.contentBackground
+
+        // The content beneath takes no pointer input while it is hidden.
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            onWheel: wheel => wheel.accepted = true
+        }
+        EmptyStateLabel {
+            objectName: "app.tooSmall.text"
+            anchors.centerIn: parent
+            width: parent.width - 2 * EaStyle.Sizes.fontPixelSize
+            text: qsTr("Increase the window size")
+        }
+    }
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
     // shows the core's message.
