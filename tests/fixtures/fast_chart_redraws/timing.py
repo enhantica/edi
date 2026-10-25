@@ -3,6 +3,8 @@
 import math
 from statistics import median
 
+CHANGES = ('data', 'zoom', 'pan', 'restyle', 'select')
+
 
 def measured_median(samples):
     values = list(samples)
@@ -24,18 +26,85 @@ def backend_identity(backend):
     software = 'llvmpipe' in renderer.lower()
     if software and api.lower() != 'opengl':
         raise ValueError('The no-GPU timing case must use llvmpipe OpenGL')
-    return {'api': api, 'renderer': renderer, 'llvmpipe': software}
-
-
-def redraw_comparison(before, after, *, backend):
-    """Return the measured medians and the packet's absolute redraw result, in ms."""
-    old, new = measured_median(before), measured_median(after)
+    cpu_renderer = any(
+        name in renderer.lower()
+        for name in (
+            'llvmpipe',
+            'softpipe',
+            'swrast',
+            'software rasterizer',
+            'swiftshader',
+            'lavapipe',
+            'microsoft basic render',
+        )
+    )
     return {
-        'backend': backend_identity(backend),
+        'api': api,
+        'renderer': renderer,
+        'llvmpipe': software,
+        'software': api.lower() == 'software' or cpu_renderer,
+    }
+
+
+def redraw_comparison(before, after, *, backend, change):
+    """Apply the committed 2026-10-26 operation/backend bound to repeated medians."""
+    if change not in CHANGES:
+        raise ValueError('A redraw timing must name data, zoom, pan, restyle or select')
+    old, new = measured_median(before), measured_median(after)
+    observed = backend_identity(backend)
+    inclusive = observed['software']
+    limit = {'data': 250, 'zoom': 115}.get(change, 100) if inclusive else 100
+    return {
+        'backend': observed,
+        'change': change,
         'before_ms': old,
         'after_ms': new,
-        'under_100_ms': new < 100,
+        'limit_ms': limit,
+        'inclusive': inclusive,
+        'within_limit': new <= limit if inclusive else new < limit,
     }
+
+
+def redraw_changes(changes, *, backend):
+    if set(changes) != set(CHANGES):
+        raise ValueError(
+            'Redraw timing rows require every data, zoom, pan, restyle and select change'
+        )
+    return {
+        change: redraw_comparison(
+            changes[change]['before_ms'],
+            changes[change]['after_ms'],
+            backend=backend,
+            change=change,
+        )
+        for change in CHANGES
+    }
+
+
+def measurement_conditions(conditions):
+    error = 'A timing verdict requires quiet-machine confirmation, CPU count and stated load'
+    if not isinstance(conditions, dict):
+        raise TypeError(error)
+    load = conditions.get('load_average')
+    busy = conditions.get('cpu_busy_percent')
+    cpus = conditions.get('logical_cpus')
+    valid_cpus = type(cpus) is int and cpus > 0
+    valid_average = (
+        isinstance(load, list)
+        and len(load) == 3
+        and all(
+            type(value) in {int, float} and math.isfinite(value) and value >= 0 for value in load
+        )
+    )
+    valid_busy = type(busy) in {int, float} and math.isfinite(busy) and 0 <= busy <= 100
+    one_measure = (load is None) != (busy is None)
+    if conditions.get('quiet') is not True or not valid_cpus or not one_measure:
+        raise ValueError(error)
+    if not (valid_average or valid_busy):
+        raise ValueError(error)
+    result = {'quiet': True, 'logical_cpus': cpus}
+    result.update({'load_average': list(load)} if valid_average else {'cpu_busy_percent': busy})
+    return result
 
 
 def fit_comparison(display_catches_up, adaptive, *, backend, tab):
@@ -79,10 +148,12 @@ def backend_comparisons(rows):
     for row in rows:
         backend = row['backend']
         results.append({
-            'redraw': redraw_comparison(row['before_ms'], row['after_ms'], backend=backend),
+            'backend': backend_identity(backend),
+            'conditions': measurement_conditions(row['conditions']),
+            'redraw': redraw_changes(row['changes'], backend=backend),
             'fit': fit_tab_comparisons(row['fits'], backend=backend),
         })
-    if not any(row['redraw']['backend']['llvmpipe'] for row in results):
+    if not any(row['backend']['llvmpipe'] for row in results):
         raise ValueError('Timing gates require a measured llvmpipe OpenGL row')
     return results
 
