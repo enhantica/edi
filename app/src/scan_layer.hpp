@@ -56,6 +56,14 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
+    // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
+    // pattern scaled so its lowest to highest value spans `height` (Fit: 0, the height that fills the plot exactly),
+    // the i-th in order with its baseline at i × height × offset. offset 0 puts every baseline on one line, 1 starts
+    // each pattern where the one below it ends.
+    Q_PROPERTY(double offset MEMBER offset_ WRITE setOffset NOTIFY offsetChanged)
+    Q_PROPERTY(double heightShare MEMBER height_share_ WRITE setHeightShare NOTIFY heightShareChanged)
+    // How tall each stacked pattern is, on the vertical axis: heightShare, or the Fit height.
+    Q_PROPERTY(double patternHeight READ patternHeight NOTIFY placementChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
     Q_PROPERTY(double displayMin READ displayMin NOTIFY displayMinChanged)
     Q_PROPERTY(double displayMax READ displayMax NOTIFY displayMaxChanged)
@@ -87,6 +95,15 @@ class ScanLayer : public QQuickPaintedItem {
     void setCurrent(int dataset);
     void setIncludedOnly(bool on);
     void setGpu(bool on);
+    void setOffset(double offset);
+    void setHeightShare(double share);
+    double patternHeight() const { return pattern_height_; }
+    // A dataset's row on the vertical axis: on the stacked view its baseline, on the map its scan value or place (the
+    // model's). NaN when it has none. The labels, the ticks and the clicks all take it from here.
+    Q_INVOKABLE double rowOf(int dataset) const;
+    // The dataset a click at (x, y) on the axes points at: on the stacked view the one whose line passes nearest,
+    // on the map the one whose band holds y. -1 for none.
+    Q_INVOKABLE int datasetNear(double x, double y) const;
     // On the stacked view, how high a dataset's line reaches over the x range shown, on the vertical axis; NaN when it
     // draws nothing there.
     Q_INVOKABLE double peakOf(int dataset) const;
@@ -120,6 +137,9 @@ class ScanLayer : public QQuickPaintedItem {
     void currentChanged();
     void includedOnlyChanged();
     void gpuChanged();
+    void offsetChanged();
+    void heightShareChanged();
+    void placementChanged();
     void displayMinChanged();
     void displayMaxChanged();
     void coloursRevisionChanged();
@@ -159,6 +179,9 @@ class ScanLayer : public QQuickPaintedItem {
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.
     void redraw();
     void measure();
+    void place();
+    // A stacked dataset's value on the vertical axis, as its line is drawn.
+    double stackedY(std::size_t dataset, double value) const;
     void reduce();
     void recolour();
     void feedLines();
@@ -178,7 +201,11 @@ class ScanLayer : public QQuickPaintedItem {
     int current_ = -1;
     bool included_only_ = false;
     bool gpu_ = false;
+    double offset_ = 0.1, height_share_ = 0.0;
     double display_min_ = 0.0, display_max_ = 1.0;
+    // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
+    std::vector<double> lows_, highs_, baselines_;
+    double pattern_height_ = 1.0;
 
     // The reductions, by dataset, and what they were made for.
     std::vector<Reduction> reductions_;

@@ -104,8 +104,10 @@ Item {
         font.pixelSize: EaStyle.Sizes.fontPixelSize
     }
     readonly property int yTicks: Math.max(2, Math.min(8, Math.floor((height - em * 6) / (em * 2.5))))
-    readonly property real yMin: zoomY.length === 2 ? zoomY[0] : scan ? scan.rowMin : 0
-    readonly property real yMax: zoomY.length === 2 ? zoomY[1] : scan ? scan.rowMax + (mode === "stacked" ? scan.stackHeight : 0) : 1
+    // The stacked view's vertical axis is the plot's height, 0 to 1, which the patterns are placed on (edi ADR-0041 §4);
+    // the map's is the rows'.
+    readonly property real yMin: zoomY.length === 2 ? zoomY[0] : mode === "stacked" ? 0 : scan ? scan.rowMin : 0
+    readonly property real yMax: zoomY.length === 2 ? zoomY[1] : mode === "stacked" ? 1 : scan ? scan.rowMax : 1
 
     objectName: "scanView." + mode
 
@@ -148,13 +150,6 @@ Item {
         target: chart.scan
         property: "dSpacing"
         value: chart.project !== null && chart.project.patternDSpacing
-        when: chart.scan !== null
-    }
-    // How high the stacked patterns rise, an app setting.
-    Binding {
-        target: chart.scan
-        property: "stackScale"
-        value: Preferences.scanStackedHeight
         when: chart.scan !== null
     }
     // Only the included range, the pattern charts' one setting.
@@ -352,6 +347,9 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // The stacked patterns' offset and height, app settings in percent (Fit: 0).
+            offset: Preferences.scanStackedOffset / 100
+            heightShare: Preferences.scanStackedSize / 100
             // On the GPU as detected or chosen (edi ADR-0041); never on Qt Quick's software backend, which cannot draw
             // the lines' shader.
             gpu: GraphicsInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && GraphicsInfo.detected && !GraphicsInfo.software))
@@ -373,7 +371,7 @@ Item {
             readonly property int dataset: chart.project ? chart.project.currentExperimentIndex : -1
             // What the edges are read from, so the box follows each of them.
             readonly property var follows: [chart.scan ? chart.scan.revision : -1, layer.xMin, layer.xMax, layer.scale, layer.includedOnly, layer.displayMin, layer.displayMax]
-            readonly property real low: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowLowEdge(dataset) : chart.scan.rowOf(dataset)) : NaN
+            readonly property real low: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowLowEdge(dataset) : layer.rowOf(dataset)) : NaN
             readonly property real high: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowHighEdge(dataset) : layer.peakOf(dataset)) : NaN
             readonly property real topPx: (axisY.max - high) / (axisY.max - axisY.min) * plot.height
             readonly property real bottomPx: (axisY.max - low) / (axisY.max - axisY.min) * plot.height
@@ -383,7 +381,7 @@ Item {
             // band, in a dense part of a scan, takes this height centred on the dataset's row, and a band the zoom
             // leaves only a sliver of takes it centred on that sliver.
             readonly property real minimum: 8
-            readonly property real rowPx: chart.scan ? (axisY.max - chart.scan.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
+            readonly property real rowPx: chart.scan ? (axisY.max - layer.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
             readonly property real ownTop: Math.round(topPx) - clear
             readonly property real ownBottom: Math.round(bottomPx) + clear
             readonly property bool thin: ownBottom - ownTop < minimum
@@ -457,8 +455,8 @@ Item {
                 }
                 if (chart.scan === null || chart.project === null)
                     return;
-                // In the stacked view a pattern rises above its row: a click picks the row below it.
-                const dataset = chart.scan.datasetAt(atY(mouse.y / height));
+                // The stacked line nearest the click, or the map's band holding it (one placing: layer.rowOf).
+                const dataset = layer.datasetNear(atX(mouse.x / width), atY(mouse.y / height));
                 if (dataset >= 0)
                     chart.project.currentExperimentIndex = dataset;
             }
@@ -486,14 +484,14 @@ Item {
     readonly property var shownRowLabels: {
         const shown = [];
         const texts = chart.shown && rowLabels && scan !== null ? scan.rowTexts : [];
-        if (texts.length === 0 || scan.revision < 0 || !(axisY.max > axisY.min) || plot.height <= 0)
+        if (texts.length === 0 || scan.revision < 0 || !(layer.patternHeight > 0) || !(axisY.max > axisY.min) || plot.height <= 0)
             return shown;
         // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
         // the label is given.
         const gap = Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height));
         const placed = [];
         for (let i = 0; i < texts.length; ++i) {
-            const at = scan.rowOf(i);
+            const at = layer.rowOf(i);
             shown.push(false);
             if (!isNaN(at) && at >= axisY.min && at <= axisY.max)
                 placed.push({
@@ -531,7 +529,7 @@ Item {
         delegate: IconLine {
             required property int index
             readonly property string rowText: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
             // read here, so the label follows the colour choice and the theme.
             readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
@@ -564,7 +562,7 @@ Item {
         model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
         delegate: Rectangle {
             required property int index
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
 
             objectName: "scanView." + chart.mode + ".rowTick." + index
             visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
@@ -747,17 +745,32 @@ Item {
                         chart.project.evolution.xMode = hasValue ? index : 1;
                 }
             }
-            // How high each stacked pattern rises: one to five times four rows, two by default (the owner, 2026-10-22).
+            // How far each stacked pattern's baseline sits above the one below it, in tenths of a pattern's own height:
+            // 0 % puts every baseline on one line, 100 % starts each where the one below it ends (the owner,
+            // 2026-10-24).
             ToolbarComboBox {
-                readonly property var entries: ["1×", "2×", "3×", "4×", "5×"]
+                readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+                objectName: "scanView.stacked.toolbar.offset"
+                visible: chart.mode === "stacked"
+                toolTip: qsTr("How far each pattern starts above the one below it, in its own height")
+                model: entries.map(percent => qsTr("%1 %").arg(percent))
+                closedTexts: entries.map(percent => qsTr("offset: %1 %").arg(percent))
+                shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedOffset))
+                onActivated: index => Preferences.scanStackedOffset = entries[index]
+            }
+            // How tall each stacked pattern is: Fit, which fills the plot with the whole stack, or a share of the plot's
+            // height; a stack taller than the plot is reached with the zoom (the owner, 2026-10-24).
+            ToolbarComboBox {
+                readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
                 objectName: "scanView.stacked.toolbar.height"
                 visible: chart.mode === "stacked"
-                toolTip: qsTr("How high each pattern rises")
-                model: entries
-                closedTexts: entries.map(text => qsTr("height: %1").arg(text))
-                shownIndex: Math.max(0, Math.min(4, Preferences.scanStackedHeight - 1))
-                onActivated: index => Preferences.scanStackedHeight = index + 1
+                toolTip: qsTr("How tall each pattern is: Fit, or a share of the plot's height")
+                model: entries.map(percent => percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent))
+                closedTexts: entries.map(percent => qsTr("height: %1").arg(percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent)))
+                shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedSize))
+                onActivated: index => Preferences.scanStackedSize = entries[index]
             }
             ToolbarComboBox {
                 objectName: "scanView." + chart.mode + ".toolbar.yscale"
