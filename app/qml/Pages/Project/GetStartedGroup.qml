@@ -92,7 +92,7 @@ EaElements.GroupBox {
         contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
-        onAccepted: Session.openWebProject(zip ? "zip" : "folder")
+        onAccepted: Session.openWebProject(zip ? "file" : "folder")
 
         Column {
             id: openChoiceColumn
@@ -107,10 +107,39 @@ EaElements.GroupBox {
             EaElements.RadioButton {
                 objectName: "open.zip"
                 verticalPadding: AppSizes.choiceRowPadding
-                text: qsTr("Zip archive")
+                // Chrome and Edge open a project.edi too, from its folder on the disk.
+                text: WebStorage.diskAccess ? qsTr("project.edi or zip archive") : qsTr("Zip archive")
                 checked: openChoice.zip
                 onClicked: openChoice.zip = true
             }
+        }
+    }
+
+    // A project.edi picked in Chrome or Edge opens its folder, which the browser lets the page use only once the user
+    // picks it too, with a click of its own.
+    Connections {
+        target: Session
+        function onWebFolderNeeded(name) {
+            recordFolder.name = name;
+            recordFolder.open();
+        }
+    }
+    AppDialog {
+        id: recordFolder
+        objectName: "open.recordFolder"
+        property string name
+        parent: Overlay.overlay
+        title: qsTr("Open project")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: recordFolderText.implicitHeight
+        onAccepted: Session.openWebRecordFolder()
+
+        EaElements.Label {
+            id: recordFolderText
+            width: recordFolder.contentWidth
+            wrapMode: Text.Wrap
+            text: qsTr("To open %1, choose the folder that holds it.").arg(recordFolder.name)
         }
     }
 

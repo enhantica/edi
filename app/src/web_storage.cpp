@@ -135,6 +135,31 @@ EM_JS(int, edi_storage_install, (), {
         return handle;
     };
 
+    // A picked folder becomes the project's place on the disk.
+    S.openFolder = async (handle, root) => {
+        const key = S.key();
+        S.handles.set(key, handle);
+        S.loaded.set(key, new Set(await S.copyIn(handle, root + "/" + handle.name)));
+        await S.put({key : key, kind : "folder", name : handle.name, handle : handle, saved : true, time : Date.now()});
+        return {ok : true, key : key, kind : "folder", name : handle.name, path : root + "/" + handle.name};
+    };
+    // The folder of the project.edi picked last: the folder picker starts there, and the folder must hold that file.
+    S.openRecordFolder = async root => {
+        const record = S.pendingRecord;
+        const folder = await showDirectoryPicker({id : "edi-project", mode : "readwrite", startIn : record});
+        let same = false;
+        try {
+            same = await (await folder.getFileHandle(record.name)).isSameEntry(record);
+        } catch (error) {
+            same = false;
+        }
+        if (!same) {
+            throw new Error("the chosen folder does not hold the " + record.name + " that was opened");
+        }
+        S.pendingRecord = null;
+        return await S.openFolder(folder, root);
+    };
+
     // The browser storage writer: a dedicated worker with synchronous access handles, which Firefox and Safari offer
     // where they offer no writable streams. It writes every file of a job, then removes what the folder has besides.
     const writerMain = () => {
@@ -250,6 +275,17 @@ EM_JS(int, edi_storage_install, (), {
     return S.disk ? 1 : 0;
 });
 
+// Whether the browser lets the page keep files: a private window may refuse its storage or give it no room (Safari
+// answers with UnknownError). One small file is written through the same worker and removed again.
+EM_JS(void, edi_storage_probe, (int job), {
+    const S = globalThis.ediStorage;
+    (async () => {
+        await S.writeBrowser([ "edi", "probe" ], [ [ "probe", new Uint8Array([1]) ] ]);
+        await (await S.opfs(["edi"], false)).removeEntry("probe", {recursive : true});
+        return {ok : true};
+    })().then(value => S.answer(job, value), error => S.answer(job, {ok : false, message : String(error)}));
+});
+
 EM_JS(void, edi_storage_stage, (int job, const char* path, const char* data, int size), {
     const S = globalThis.ediStorage;
     if (!S.staged.has(job)) {
@@ -267,16 +303,26 @@ EM_JS(void, edi_storage_pick_open, (int job, const char* kind_utf8, const char* 
             return await S.upload(kind, root);
         }
         if (kind === "folder") {
-            const handle = await showDirectoryPicker({id : "edi-project", mode : "readwrite"});
-            const key = S.key();
-            S.handles.set(key, handle);
-            S.loaded.set(key, new Set(await S.copyIn(handle, root + "/" + handle.name)));
-            await S.put({key : key, kind : "folder", name : handle.name, handle : handle, saved : true, time : Date.now()});
-            return {ok : true, key : key, kind : "folder", name : handle.name, path : root + "/" + handle.name};
+            return await S.openFolder(await showDirectoryPicker({id : "edi-project", mode : "readwrite"}), root);
         }
-        const [handle] = await showOpenFilePicker(
-            {id : "edi-project", types : [ {description : "Project archive", accept : {"application/zip" : [".zip"]}} ]});
+        // A project file: its project.edi or its .zip, as the desktop Open takes them.
+        const [handle] = await showOpenFilePicker({
+            id : "edi-project",
+            types : [ {description : "edi project (project.edi or .zip)", accept : {"application/zip" : [".zip"], "application/octet-stream" : [".edi"]}} ]
+        });
         const file = await handle.getFile();
+        if (!file.name.toLowerCase().endsWith(".zip")) {
+            // A project.edi opens its folder, which the page may use only once the user picks it too.
+            S.pendingRecord = handle;
+            try {
+                return await S.openRecordFolder(root);
+            } catch (error) {
+                if (error && (error.name === "SecurityError" || error.name === "NotAllowedError")) {
+                    return {ok : false, needsFolder : true, name : file.name};
+                }
+                throw error;
+            }
+        }
         const path = root + "/" + file.name;
         FS.mkdirTree(root);
         FS.writeFile(path, new Uint8Array(await file.arrayBuffer()));
@@ -291,15 +337,19 @@ EM_JS(void, edi_storage_pick_open, (int job, const char* kind_utf8, const char* 
     })().then(value => S.answer(job, value), error => S.fail(job, error));
 });
 
+EM_JS(void, edi_storage_pick_record_folder, (int job, const char* root_utf8), {
+    const S = globalThis.ediStorage;
+    const root = UTF8ToString(root_utf8);
+    S.openRecordFolder(root).then(value => S.answer(job, value), error => S.fail(job, error));
+});
+
 EM_JS(void, edi_storage_pick_save, (int job, const char* kind_utf8, const char* suggested_utf8, const char* start_utf8), {
     const S = globalThis.ediStorage;
     const kind = UTF8ToString(kind_utf8);
     const suggested = UTF8ToString(suggested_utf8);
     const start = S.handles.get(UTF8ToString(start_utf8));
-    const options = {id : "edi-project"};
-    if (start) {
-        options.startIn = start;
-    }
+    // Where the project is on the disk, else the user's documents; a .zip is offered under its name.
+    const options = {id : "edi-project", startIn : start || "documents"};
     (async () => {
         let handle;
         if (kind === "folder") {
@@ -463,8 +513,21 @@ QJsonObject refusal(const QString& message) { return QJsonObject{{QStringLiteral
 WebStorage::WebStorage(QObject* parent) : QObject(parent) {
 #if defined(Q_OS_WASM)
     edi_storage_install();
+    edi_storage_probe(begin([this](const QJsonObject& answer) {
+        if (answer.value(QStringLiteral("ok")).toBool()) {
+            usable_ = true;
+            emit usableChanged();
+        }
+    }));
 #endif
     refresh();
+}
+
+void WebStorage::markUnusable() {
+    if (usable_) {
+        usable_ = false;
+        emit usableChanged();
+    }
 }
 
 WebStorage* WebStorage::instance() {
@@ -550,6 +613,15 @@ void WebStorage::pickOpen(const QString& kind, const QString& root, Answer answe
     edi_storage_pick_open(begin(std::move(answer)), kind.toUtf8().constData(), root.toUtf8().constData());
 #else
     Q_UNUSED(kind);
+    Q_UNUSED(root);
+    answer(refusal(QStringLiteral("opening through the browser is the browser build's")));
+#endif
+}
+
+void WebStorage::pickRecordFolder(const QString& root, Answer answer) {
+#if defined(Q_OS_WASM)
+    edi_storage_pick_record_folder(begin(std::move(answer)), root.toUtf8().constData());
+#else
     Q_UNUSED(root);
     answer(refusal(QStringLiteral("opening through the browser is the browser build's")));
 #endif
