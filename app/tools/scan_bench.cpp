@@ -115,6 +115,7 @@ double frame_after(QQuickWindow& window, const std::function<void()>& change) {
 class Painted : public QQuickPaintedItem {
    public:
     explicit Painted(QQuickItem* parent) : QQuickPaintedItem(parent) { setAntialiasing(true); }
+    double width_px = 2.0;
     std::vector<edi_app::ScanLines::Trace> traces;
     std::vector<edi_app::ScanLines::Style> styles;
     double y_min = 0.0, y_max = 1.0;
@@ -136,7 +137,7 @@ class Painted : public QQuickPaintedItem {
                 }
             }
             QPen pen(styles[d].colour);
-            pen.setWidthF(2.0);
+            pen.setWidthF(width_px);
             pen.setCosmetic(true);
             pen.setCapStyle(Qt::FlatCap);
             painter->setPen(pen);
@@ -164,6 +165,8 @@ int main(int argc, char** argv) {
                                                         "experiments/d20_scan");
     const QString frame_path = argc > 2 ? QString::fromLocal8Bit(argv[2]) : QString();
     const QString candidate = argc > 3 ? QString::fromLocal8Bit(argv[3]) : QStringLiteral("a");
+    // The line width in pixels: 2 as the pattern chart's line, 1 where the view narrows it for close rows.
+    const double line_width = argc > 5 ? std::atof(argv[5]) : 2.0;
     // b and p take the same traces and styles.
     const bool candidate_b = candidate == QLatin1String("b") || candidate == QLatin1String("p");
     QElapsedTimer read_clock;
@@ -200,13 +203,23 @@ int main(int argc, char** argv) {
     auto* axis_x = root->findChild<QValueAxis*>(QStringLiteral("axisX"));
     auto* axis_y = root->findChild<QValueAxis*>(QStringLiteral("axisY"));
     auto* lines = root->findChild<edi_app::ScanLines*>(QStringLiteral("lines"));
+    lines->setLineWidth(line_width);
     Painted* painted = nullptr;
     if (candidate == QLatin1String("p")) {
         painted = new Painted(root);
         painted->setParentItem(root);
-        painted->setPosition(lines->position());
-        painted->setSize(lines->size());
         lines->setVisible(false);
+        painted->width_px = line_width;
+        // Over the plot area, as the lines are, once the view has laid it out.
+        const auto follow = [painted, lines] {
+            painted->setPosition(lines->position());
+            painted->setSize(lines->size());
+        };
+        QObject::connect(lines, &QQuickItem::xChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::yChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::widthChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::heightChanged, painted, follow);
+        follow();
     }
     const auto set_traces = [&](std::vector<edi_app::ScanLines::Trace> traces) {
         if (painted != nullptr) {
@@ -228,7 +241,7 @@ int main(int argc, char** argv) {
     };
     idle(200);
     if (!candidate_b) {
-        QMetaObject::invokeMethod(root, "makeSeries", Q_ARG(int, patterns), Q_ARG(double, 2.0));
+        QMetaObject::invokeMethod(root, "makeSeries", Q_ARG(int, patterns), Q_ARG(double, line_width));
     }
     std::vector<QXYSeries*> series;
     for (const QVariant& v : root->property("series").toList()) {
@@ -366,11 +379,11 @@ int main(int argc, char** argv) {
                 offset = stats(offset_ms);
     std::printf("candidate\tpatterns\tpoints_read\tpoints_drawn\tcolumns\tfirst_ms\trange_median_ms\trange_p95_ms\t"
                 "reduce_median_ms\trestyle_median_ms\trestyle_p95_ms\toffset_median_ms\toffset_p95_ms\tmissing\tplatform\t"
-                "read_ms\n");
-    std::printf("%s\t%d\t%zu\t%zu\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%d\t%s\t%lld\n",
+                "read_ms\twidth_px\n");
+    std::printf("%s\t%d\t%zu\t%zu\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%d\t%s\t%lld\t%.1f\n",
                 qPrintable(candidate), patterns, points,
                 drawn_points, columns, first, range.median, range.p95, reduced.median, restyle.median, restyle.p95,
                 offset.median, offset.p95, range.missing + restyle.missing + offset.missing,
-                qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms));
+                qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms), line_width);
     return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 ? 0 : 1;
 }
