@@ -266,5 +266,14 @@
     "editable": [],
     "passive": true,
     "textColumn": null
+  },
+  {
+    "type": "SingleCrystalTable",
+    "table": "singleCrystal.reflections",
+    "path": "Components/SingleCrystalTable.qml",
+    "owner": "experiment",
+    "editable": [],
+    "passive": false,
+    "textColumn": null
   }
 ]

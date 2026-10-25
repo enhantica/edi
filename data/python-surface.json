@@ -4235,6 +4235,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "export_zip": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "fit": {
      "need": {
       "by": "deviation",
@@ -7442,6 +7451,7 @@
     "descent",
     "experiment",
     "experiments",
+    "export_zip",
     "fit",
     "fit_independent",
     "fit_joint",

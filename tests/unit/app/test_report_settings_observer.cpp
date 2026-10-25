@@ -19,6 +19,9 @@
 #include <QGuiApplication>
 #include <QJSValue>
 #include <QKeyEvent>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QtTest/qtestkeyboard.h>
@@ -406,6 +409,86 @@ public:
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
+    }
+    Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
+        const QUrl root = emptyDirectory();
+        const QString path = QDir(root.toLocalFile()).filePath("opened.zip");
+        if (!QFile::copy(source.toLocalFile(), path)) return {};
+        if (readOnly) {
+            const auto read = QFile::ReadOwner | QFile::ReadGroup | QFile::ReadOther;
+            if (!QFile::setPermissions(path, read) ||
+                !QFile::setPermissions(root.toLocalFile(),
+                                       read | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther))
+                return {};
+        }
+        return QUrl::fromLocalFile(path);
+    }
+    Q_INVOKABLE bool archiveLocationWritable(const QUrl& archive) const {
+        return QFileInfo(archive.toLocalFile()).isWritable() ||
+               QFileInfo(QFileInfo(archive.toLocalFile()).absolutePath()).isWritable();
+    }
+    Q_INVOKABLE QVariantList projectFileDialogs(QObject* root, bool folder) const {
+        QVariantList result;
+        if (!root) return result;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->inherits(folder ? "QQuickFolderDialog" : "QQuickFileDialog") &&
+                object->metaObject()->indexOfProperty(selected) >= 0 &&
+                object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE QVariantMap projectDialogFacts(QObject* dialog) const {
+        if (!dialog) return {};
+        return {{"type", QString::fromLatin1(dialog->metaObject()->className())},
+                {"systemFolder", dialog->inherits("QQuickFolderDialog")},
+                {"systemFile", dialog->inherits("QQuickFileDialog")},
+                {"acceptLabel", dialog->property("acceptLabel")},
+                {"options", dialog->property("options")},
+                {"fileMode", dialog->property("fileMode")}};
+    }
+    Q_INVOKABLE bool chooseProjectLocation(QObject* dialog, const QUrl& location,
+                                           bool folder) const {
+        if (!dialog || !dialog->property("visible").toBool()) return false;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        if (!dialog->setProperty(selected, location) ||
+            dialog->property(selected).toUrl() != location)
+            return false;
+        const bool accepted = QMetaObject::invokeMethod(dialog, "accepted", Qt::DirectConnection);
+        QMetaObject::invokeMethod(dialog, "close", Qt::DirectConnection);
+        return accepted;
+    }
+    Q_INVOKABLE bool dropProject(QObject* object, const QUrl& location) const {
+        auto* window = qobject_cast<QQuickWindow*>(object);
+        if (!window) return false;
+        QMimeData mime;
+        mime.setUrls({location});
+        const QPoint point(window->width() / 2, window->height() / 2);
+        QDragEnterEvent enter(point, Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &enter);
+        if (!enter.isAccepted()) return false;
+        QDropEvent drop(QPointF(point), Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &drop);
+        return drop.isAccepted();
+    }
+    Q_INVOKABLE QString projectArchiveBytes(const QUrl& location) const {
+        QFile file(location.toLocalFile());
+        return file.open(QIODevice::ReadOnly) ? QString::fromLatin1(file.readAll().toBase64())
+                                              : QString();
+    }
+    Q_INVOKABLE QVariantMap projectFolderBytes(const QUrl& location) const {
+        QVariantMap result;
+        QDir root(location.toLocalFile());
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden,
+                           QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            const QString name = files.next();
+            QFile file(name);
+            if (!file.open(QIODevice::ReadOnly)) return {};
+            result.insert(root.relativeFilePath(name),
+                          QString::fromLatin1(file.readAll().toBase64()));
+        }
+        return result;
     }
     Q_INVOKABLE QString localPath(const QUrl& location) const { return location.toLocalFile(); }
     Q_INVOKABLE QVariantMap palette(bool safe) const { return paletteForScheme(safe ? "colourBlindSafe" : "default"); }

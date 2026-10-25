@@ -248,6 +248,7 @@ def test_report_saved_after_project_save_stays_current_after_reopening(tmp_path,
         tmp_path, ['_report.html true', '_report.pdf false', '_report.html_offline false']
     )
     project = edi.Project.load(path)
+    project.su_rule = 'iucr_19'
     parameter = project.experiments['bank'].background[5].intensity
     assert project.experiments['bank'].background[5].position == 72.321, (
         'The save-adoption witness uses the last authored point bordering the measured range, '

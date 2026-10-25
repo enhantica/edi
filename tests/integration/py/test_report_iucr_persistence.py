@@ -107,8 +107,8 @@ def test_absent_rule_defaults_and_unknown_rule_refuses(tmp_path):
     loaded = engine.Project.load(source)
     destination = tmp_path / 'saved'
     loaded.save_as(destination)
-    assert saved_token(destination) == '2.164(5)', (
-        'An absent rule must select the IUCr recommendation-12 default'
+    assert saved_token(destination) == '2.1635(49)', (
+        'An absent rule selects two su digits while declared IUCr choices remain explicit'
     )
     metadata = source / 'project.edi'
     metadata.write_text(metadata.read_text() + '\n_su_format.rule iucr_7\n')
