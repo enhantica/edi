@@ -272,19 +272,8 @@ Item {
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
-        theme: GraphsTheme {
-            colorScheme: GraphsTheme.ColorScheme.Light
-            backgroundVisible: false
-            plotAreaBackgroundVisible: false
+        theme: ChartTheme {
             labelTextColor: chart.colors.chartLabels
-            labelFont.family: EaStyle.Fonts.fontFamily
-            labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-            axisX.mainColor: "transparent"
-            axisX.subColor: "transparent"
-            axisY.mainColor: "transparent"
-            axisY.subColor: "transparent"
-            grid.mainColor: "transparent"
-            grid.subColor: "transparent"
         }
         axisX: ValueAxis {
             id: axisX

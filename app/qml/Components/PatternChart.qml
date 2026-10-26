@@ -166,27 +166,10 @@ Item {
         set(braggView, edge - (braggView.plotArea.x - braggView.marginLeft));
     }
 
-    // A pane's theme: Qt Graphs draws the series and nothing else. The chart draws the background, each pane's
-    // grid and each pane's border itself (below). Qt Graphs' own tick marks, axis lines and grid are shader
-    // effects two pixels wide, over the labels and the measured points; they are transparent here, on every
-    // axis of every pane, the Bragg rows' included. (The offscreen platform's software renderer never draws
-    // them, so only a capture on an OpenGL platform shows whether they are gone.) The font is the size the
-    // axis keeps room for; the labels themselves are `AxisLabel`s. The colour scheme is fixed: every colour the
-    // chart shows is its own and follows the app's theme, while a scheme change makes Qt Graphs restore its own
-    // axis colours, and the tick marks appeared after a switch of the app's theme (the owner, 2026-10-02).
-    component PaneTheme: GraphsTheme {
-        colorScheme: GraphsTheme.ColorScheme.Light
-        backgroundVisible: false
-        plotAreaBackgroundVisible: false
+    // A pane's theme (ChartTheme): the labels themselves are `AxisLabel`s; the theme's font is the size the axis keeps
+    // room for.
+    component PaneTheme: ChartTheme {
         labelTextColor: chart.colors.chartLabels
-        labelFont.family: EaStyle.Fonts.fontFamily
-        labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-        axisX.mainColor: "transparent"
-        axisX.subColor: "transparent"
-        axisY.mainColor: "transparent"
-        axisY.subColor: "transparent"
-        grid.mainColor: "transparent"
-        grid.subColor: "transparent"
     }
 
     // An axis label: the app's label, in the app's font and size (easydiffractionbeta's chart labels), placed
