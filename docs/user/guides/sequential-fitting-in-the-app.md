@@ -46,7 +46,8 @@ updates during a scan**, and kept on this computer:
   second. A slow scan shows every file, a fast one skips some.
 - **About once a second**: the same, at most once a second.
 - **Every pattern, fit waits for the display**: every file is drawn, and the fit waits for each
-  drawing. On a slow display this makes the run longer.
+  drawing. On the Stacked view or the Map, each file in turn becomes the shown dataset. On a slow
+  display this makes the run longer.
 - **Every pattern, display catches up**: every file is drawn in order, but the fit never waits.
   When the display falls behind, the status bar shows **Showing N of M**, and the remaining files
   are drawn after the run ends.
