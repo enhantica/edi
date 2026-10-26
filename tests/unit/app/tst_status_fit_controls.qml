@@ -278,11 +278,18 @@ TestCase {
     function luminance(color) {
         return .2126 * color.r + .7152 * color.g + .0722 * color.b;
     }
-    function paintedLuminance(fill) {
+    function paintedColor(fill) {
         const image = grabImage(appWindow.contentItem);
         const point = fill.mapToItem(appWindow.contentItem, fill.width / 2, 2);
         const scale = image.width / appWindow.contentItem.width;
-        return luminance(image.pixel(Math.round(point.x * scale), Math.round(point.y * scale)));
+        return image.pixel(Math.round(point.x * scale), Math.round(point.y * scale));
+    }
+    function paintedLuminance(fill) {
+        return luminance(paintedColor(fill));
+    }
+    function paintedGrayMatches(fill, channel) {
+        const color = paintedColor(fill);
+        return Math.abs(color.r - channel) <= 1 / 255 && Math.abs(color.g - channel) <= 1 / 255 && Math.abs(color.b - channel) <= 1 / 255;
     }
     function test_button_style(data) {
         open("single");
@@ -294,7 +301,8 @@ TestCase {
         verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
         mouseMove(appWindow.contentItem, 1, 1);
         const fill = rectangle(button), outcome = rectangle(status);
-        tryVerify(() => data.tag === "light" ? paintedLuminance(fill) < .25 : paintedLuminance(fill) > .75, 1500, "Fit has a near-black light-mode background and the inverse in dark mode");
+        const idleChannel = data.tag === "light" ? 0x33 / 255 : 0xe0 / 255;
+        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The status Fit background is #333333 in light mode and #e0e0e0 in dark mode while idle");
         tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
         fuzzyCompare(fill.height, outcome.height, 1, "Fit and outcome buttons have the same background height");
         fuzzyCompare(fill.radius, outcome.radius, .5, "Fit and outcome buttons have the same rounded corners");
@@ -305,12 +313,21 @@ TestCase {
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
         verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The status Fit icon has the same white or inverse ink as its caption");
         const sidebar = analysisButton(), sidebarFill = rectangle(sidebar);
-        tryVerify(() => data.tag === "light" ? paintedLuminance(sidebarFill) < .25 : paintedLuminance(sidebarFill) > .75, 1500, "The Analysis fit button shares the status shortcut's dark primary fill and its dark-mode inverse");
+        tryVerify(() => paintedGrayMatches(sidebarFill, idleChannel), 1500, "The Analysis fit background is #333333 in light mode and #e0e0e0 in dark mode while idle");
         const sidebarLabel = View.textItems(sidebar).filter(item => item.text === sidebar.text);
         compare(sidebarLabel.length, 1, "The primary Analysis fit button renders its state caption");
         tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .25, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
         const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
         verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
+        for (const control of [button, sidebar]) {
+            Ui.scrollIntoView(control);
+            const point = Ui.clickPoint(control);
+            verify(point !== null, "Each fit button has an exposed pointer target for its hover colour");
+            mouseMove(control, point.x, point.y);
+            tryVerify(() => data.tag === "light" ? paintedLuminance(rectangle(control)) < .05 : paintedLuminance(rectangle(control)) > .99, 1500, "Both fit buttons keep the previous near-black light-mode and white dark-mode hover colours");
+            mouseMove(appWindow.contentItem, 1, 1);
+            tryVerify(() => paintedGrayMatches(rectangle(control), idleChannel), 1500, "Leaving either fit button restores the owner's idle background colour");
+        }
         rightmostFitAction();
     }
     function test_preference_default_and_user_store() {
