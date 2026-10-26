@@ -14,6 +14,7 @@ import importlib.util
 import json
 import math
 import re
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -102,9 +103,18 @@ def numeric(token):
     return {'value': value, 'free': digits is not None, 'uncertainty': uncertainty}
 
 
+def edi_text(path):
+    reader = runpy.run_path(str(Path(__file__).with_name('cif_structure.py')))['edi_text']
+    return reader(path)
+
+
+def fixture_text(path):
+    return edi_text(path) if path.suffix == '.cif' else path.read_text()
+
+
 def scalars(path):
     result = {}
-    for line in path.read_text().splitlines():
+    for line in fixture_text(path).splitlines():
         if line.startswith('_'):
             tokens = shlex.split(line, comments=True)
             if len(tokens) == 2:
@@ -123,7 +133,7 @@ def tables(path, extra=()):
     wanted.update(extra)
     # The owner's ASCII records contain CR as an in-row field separator.
     # LF ends a record; universal-newline decoding would invent another row.
-    lines = path.read_bytes().decode().split('\n')
+    lines = (edi_text(path) if path.suffix == '.cif' else path.read_bytes().decode()).split('\n')
     result = {}
     index = 0
     while index < len(lines):
@@ -325,10 +335,16 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old
                     )
                 ],
             }
-            for file in sorted((project / 'structures').glob('*.edi'))
+            for file in sorted([
+                *(project / 'structures').glob('*.edi'),
+                *(project / 'structures').glob('*.cif'),
+            ])
         ]
         files = sorted(project.glob('*.edi'))
-        files += sorted((project / 'structures').glob('*.edi'))
+        files += sorted([
+            *(project / 'structures').glob('*.edi'),
+            *(project / 'structures').glob('*.cif'),
+        ])
         files += sorted((project / 'experiments').glob('*.edi'))
         files += sorted((project / 'analysis').glob('*.edi'))
         analysis = project / 'analysis/analysis.edi'

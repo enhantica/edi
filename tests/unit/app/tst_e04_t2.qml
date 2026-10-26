@@ -6,6 +6,7 @@ import EdiAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
+import "FileSpelling.js" as FileSpelling
 
 TestCase {
     id: test
@@ -48,7 +49,8 @@ TestCase {
     } }
 
     function init() {
-        failOnWarning(/.*/);
+        failOnWarning(Probe.softwareOffscreenWithoutGl()
+            ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
         oracle = JSON.parse(Probe.readFile("tests/fixtures/e04_t2/loops.json"));
         appWindow = application.createObject(null);
         verify(appWindow !== null, ": acceptance runs the real application window");
@@ -153,12 +155,43 @@ TestCase {
             parameter.value = value;
             tryVerify(() => Math.abs(slider.from - (value - .05)) < 1e-10 && Math.abs(slider.to - (value + .05)) < 1e-10,
                       2000, "lattice slider endpoints follow the current value plus or minus 0.05 A");
-            compare(Number(ordered[0].text), Number(slider.from.toPrecision(3)),
-                    "notes 9/14: left box displays the minimum at reference precision");
-            compare(Number(ordered[1].text), Number(slider.to.toPrecision(3)),
-                    "notes 9/14: right box displays the maximum at reference precision");
+            const endpoints = [slider.from, slider.to];
+            const written = endpoints.map(endpoint => {
+                parameter.value = endpoint;
+                const result = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
+                parameter.value = value;
+                return result;
+            });
+            tryCompare(ordered[0], "text", written[0], 2000,
+                       "The slider minimum follows file/Text numeric spelling under the active save rule");
+            tryCompare(ordered[1], "text", written[1], 2000,
+                       "The slider maximum follows file/Text numeric spelling under the active save rule");
             compare(parameter.value, value, "note 14: rounded slider labels preserve the selected stored value");
         });
+    }
+    function test_slider_file_spelling() {
+        open(); pane("analysis", "basic");
+        const box = group("parameters");
+        const parameter = Session.project.currentStructure.cell.lengthA;
+        box.selected = parameter;
+        const slider = Review.find(box, "parameters.slider");
+        verify(slider !== null, "The file-spelling witness reaches the real selected slider");
+        const fields = [Review.find(box, "parameters.slider.from"), Review.find(box, "parameters.slider.to")];
+        verify(fields.every(field => field !== null), "Both real slider limit fields are present");
+        for (const value of [1.2866603586797143, 2.718281828459045]) {
+            parameter.value = value;
+            const endpoints = [slider.from, slider.to];
+            const written = endpoints.map(endpoint => {
+                parameter.value = endpoint;
+                const result = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
+                parameter.value = value;
+                return result;
+            });
+            for (let index = 0; index < 2; ++index)
+                tryCompare(fields[index], "text", written[index], 2000,
+                           "Each slider limit spells the same number as the active file/Text rule");
+            compare(parameter.value, value, "Reading slider spelling preserves the stored parameter");
+        }
     }
     function test_effective_tolerance_and_no_calculator() {
         open(); pane("analysis", "extras");
@@ -187,10 +220,15 @@ TestCase {
         verify(field !== null, "note 14: production parameter field is exposed");
         const value = 1.2866603586797143;
         field.item.value = value;
-        tryCompare(field, "text", "1.29", 2000, "note 14: default display uses the reference three significant digits");
-        verify(field.text.length < String(value).length, "note 14: display rounds the long fractional value");
+        const written = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
+        verify(written !== "" && Number(written) > 1.28 && Number(written) < 1.29,
+               "The file/Text witness spells the nontrivial cell value");
+        tryCompare(field, "text", written, 2000,
+                   "The cell field follows file/Text spelling under the active save rule");
+        compare(field.text.includes("("), false, "A value field keeps the uncertainty in its separate column");
         compare(field.item.value, value, "note 14: displaying a rounded value preserves stored precision");
         field.forceActiveFocus();
+        tryCompare(field, "text", written, 2000, "Focusing an unchanged field retains file/Text spelling");
         keyClick(Qt.Key_Tab);
         compare(field.item.value, value, "note 14: leaving an unedited rounded field preserves stored precision");
     }
@@ -200,8 +238,9 @@ TestCase {
         const field = Review.find(box, "minimizer.chiSquareTolerance");
         const value = 0.0025646436261;
         Session.project.analysis.chiSquareTolerance = value;
-        tryCompare(field, "text", "0.00256", 2000,
-                   "note 14: plain numeric field uses the reference three significant digits");
+        const written = FileSpelling.parameter(Session.project.analysis.text.text, "minimizer.chi_square_tolerance");
+        tryCompare(field, "text", written, 2000,
+                   "A plain numeric field follows the same value spelling as file/Text");
         compare(Session.project.analysis.chiSquareTolerance, value,
                 "note 14: plain-field display does not round the stored value");
         field.forceActiveFocus(); keyClick(Qt.Key_Tab);

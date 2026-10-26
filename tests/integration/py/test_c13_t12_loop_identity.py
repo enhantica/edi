@@ -321,10 +321,11 @@ def test_cif_aniso_identity_table(tmp_path, route, duplicate):
     text += (
         'loop_\n_atom_site_aniso_label\n_atom_site_aniso_U_11\n'
         '_atom_site_aniso_U_22\n_atom_site_aniso_U_33\n'
-        'X 0.01 0.02 0.03\nY 0.02 0.03 0.04\n'
+        '_atom_site_aniso_U_12\n_atom_site_aniso_U_13\n_atom_site_aniso_U_23\n'
+        'X 0.01 0.02 0.03 0 0 0\nY 0.02 0.03 0.04 0 0 0\n'
     )
     if duplicate:
-        text += 'X 0.03 0.04 0.05\n'
+        text += 'X 0.03 0.04 0.05 0 0 0\n'
     path = tmp_path / 'structure.cif'
     path.write_text(text)
 

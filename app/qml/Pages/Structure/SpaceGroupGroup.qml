@@ -26,7 +26,7 @@ EaElements.GroupRow {
     }
     ValueField {
         objectName: "spaceGroup.itNumber"
-        label: qsTr("number")
+        uid: "space_group.it_number"
         fieldValue: row.spaceGroup && row.spaceGroup.hasItNumber ? row.spaceGroup.itNumber : ""
         accepts: "integer"
         // The 230 space-group types (the owner, 2026-10-06).
@@ -40,7 +40,7 @@ EaElements.GroupRow {
     SearchableComboBox {
         objectName: "spaceGroup.nameHM"
         width: row.fieldWidth
-        title: qsTr("name")
+        title: Session.label("space_group.name_h_m")
         searchThreshold: 0
         model: row.spaceGroup ? row.spaceGroup.names : []
         currentIndex: row.spaceGroup ? row.spaceGroup.names.indexOf(row.spaceGroup.nameHM) : -1
@@ -54,7 +54,7 @@ EaElements.GroupRow {
     SearchableComboBox {
         objectName: "spaceGroup.coordSystemCode"
         width: row.fieldWidth
-        title: qsTr("code")
+        title: Session.label("space_group.coord_system_code")
         searchThreshold: 0
         enabled: count > 0
         model: row.spaceGroup ? row.spaceGroup.codes : []

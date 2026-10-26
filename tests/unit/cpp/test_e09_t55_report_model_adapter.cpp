@@ -34,8 +34,11 @@ TEST_CASE("E09-T55 human report renders the documented stream and summary facts"
     const std::string single_header = edi::stream_header(single, "demo");
     check_contains(single_header, "edi fit: project demo, 100 pts fitted / 120 loaded, 3 free",
                    "the single-bank header must distinguish fitted and loaded point counts");
-    check_contains(single_header, "0.2500", "the stream header must include the pre-fit Rwp");
-    check_contains(single_header, "2.5000",
+    check_contains(single_header, "Rwp (%)",
+                   "the stream header must name the Rwp percentage unit");
+    check_contains(single_header, "25.00",
+                   "the stream header must include the pre-fit Rwp in percent");
+    check_contains(single_header, "2.50",
                    "the stream header must include pre-fit reduced chi-square");
 
     edi::FitPreamble joint = single;
@@ -57,8 +60,8 @@ TEST_CASE("E09-T55 human report renders the documented stream and summary facts"
     const std::string summary = edi::summary_line(outcome);
     check_contains(summary, "converged", "the summary must state convergence");
     check_contains(summary, "7 iters", "the summary must state the engine iteration count");
-    check_contains(summary, "reduced χ² 1.2500", "the summary must state reduced chi-square");
-    check_contains(summary, "Rwp 0.1250", "the summary must state Rwp");
+    check_contains(summary, "reduced χ² 1.25", "the summary must state reduced chi-square");
+    check_contains(summary, "Rwp 12.50 %", "the summary must state Rwp in percent");
     check_contains(summary, "2.5 s", "the summary must render elapsed milliseconds as seconds");
     outcome.converged = false;
     check_contains(edi::summary_line(outcome), "not converged",
@@ -72,7 +75,7 @@ TEST_CASE("E09-T55 report tables retain identity paths, starts, uncertainties, a
     outcome.uncertainty = {{"experiment.scale", 0.25}};
     outcome.banks = {{"bank-a", 10, 0.1, 1.0}, {"bank-b", 20, 0.2, 2.0}};
     const std::string table = edi::parameter_table(outcome);
-    check_contains(table, "per-bank Rwp:   bank-a 0.1000   bank-b 0.2000",
+    check_contains(table, "per-bank Rwp (%):   bank-a 10.00   bank-b 20.00",
                    "the full report must carry each engine-provided bank Rwp");
     check_contains(table, "refined parameters (2 free)",
                    "the parameter heading must match the displayed identity-path count");
@@ -95,8 +98,8 @@ TEST_CASE("E09-T55 iteration and machine reports preserve engine-carried facts")
     const std::string human = edi::iteration_line(iteration, 2.0);
     check_contains(human, "4", "an iteration row must carry the iteration number");
     check_contains(human, "2.25", "an iteration row must convert elapsed milliseconds to seconds");
-    check_contains(human, "0.1250", "an iteration row must carry Rwp");
-    check_contains(human, "1.5000", "an iteration row must carry reduced chi-square");
+    check_contains(human, "12.50", "an iteration row must carry Rwp in percent");
+    check_contains(human, "1.50", "an iteration row must carry reduced chi-square");
     check_contains(human, "25.0% ↓", "an iteration row must show change from the previous metric");
 
     const std::string progress = edi::progress_report(iteration);

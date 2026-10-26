@@ -22,14 +22,14 @@ Grid {
     SelectorField {
         objectName: "minimizer.type"
         width: row.fieldWidth
-        label: qsTr("minimizer")
+        uid: "minimizer.type"
         options: row.analysis ? row.analysis.minimizerTypeOptions : null
         token: row.analysis ? row.analysis.minimizerType : ""
     }
     SelectorField {
         objectName: "minimizer.descent"
         width: row.fieldWidth
-        label: qsTr("descent")
+        uid: "minimizer.descent"
         options: row.analysis ? row.analysis.descentOptions : null
         token: row.analysis ? row.analysis.descent : ""
         onSelected: token => row.analysis.descent = token
@@ -37,7 +37,7 @@ Grid {
     ValueField {
         objectName: "minimizer.maxIterations"
         width: row.fieldWidth
-        label: qsTr("max iterations")
+        uid: "minimizer.max_iterations"
         // The declared bound, or the fit's own when none is declared: the value the fit uses, as the
         // tolerance beside it (edi ADR-0017 §5).
         fieldValue: !row.analysis ? "" : row.analysis.hasMaxIterations ? row.analysis.maxIterations : row.analysis.defaultMaxIterations
@@ -47,7 +47,7 @@ Grid {
     ValueField {
         objectName: "minimizer.chiSquareTolerance"
         width: row.fieldWidth
-        label: qsTr("tolerance")
+        uid: "minimizer.chi_square_tolerance"
         // The declared tolerance, or crysta's default when none is declared: the value the fit uses.
         fieldValue: !row.analysis ? "" : row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance
         accepts: "number"

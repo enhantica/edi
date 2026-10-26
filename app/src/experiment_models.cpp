@@ -9,9 +9,9 @@
 #include <exception>
 #include <optional>
 
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
-#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
@@ -36,9 +36,9 @@ void ParameterListModel::sync() {
         const ParameterItem* item = registry_.find(field.parameter);
         rows.append({field.parameter,
                      {parameter_role(registry_, field.parameter), QString::fromStdString(field.name),
-                      spec != nullptr ? QString::fromUtf8(spec->display_name) : QString::fromStdString(field.name),
+                      spec != nullptr ? QString::fromStdString(edi::label(edi::uid_of(*spec))) : QString::fromStdString(field.name),
                       item != nullptr ? item->shortName() : QString::fromStdString(field.name),
-                      spec != nullptr ? QString::fromUtf8(spec->display_units) : QString(), field.used_by_profile}});
+                      spec != nullptr ? QString::fromStdString(edi::units_label(edi::uid_of(*spec))) : QString(), field.used_by_profile}});
     }
     setTableRows(rows);
     if (used_count != used_count_) {
@@ -376,27 +376,15 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     const double meas = squared ? measured_.value(at, qQNaN()) : measured_f_.value(at, qQNaN());
     const double su = squared ? measured_su_.value(at, qQNaN()) : measured_f_su_.value(at, qQNaN());
     const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
-    const QString quantity = squared ? QStringLiteral("F²") : QStringLiteral("F");
-    QStringList lines{QStringLiteral("%1 %2 %3")
-                          .arg(reflections->index_h[at])
-                          .arg(reflections->index_k[at])
-                          .arg(reflections->index_l[at])};
-    // The measured value and its su as the tables write them; the calculated value to the same last digit.
-    int decimals = 6;
-    if (std::isfinite(meas) && std::isfinite(su) && su > 0.0) {
-        const edi::SuText text = edi::su_text(meas, su, project_.su_rule);
-        const auto dot = text.value.find('.');
-        decimals = dot == std::string::npos ? 0 : static_cast<int>(text.value.size() - dot - 1);
-        lines.append(QStringLiteral("%1 meas: %2 ± %3")
-                         .arg(quantity, QString::fromStdString(text.value), QString::fromStdString(text.su)));
-    } else if (std::isfinite(meas)) {
-        lines.append(QStringLiteral("%1 meas: %2").arg(quantity, QString::number(meas, 'f', decimals)));
-    }
-    if (std::isfinite(calc)) {
-        lines.append(QStringLiteral("%1 calc: %2").arg(quantity, QString::number(calc, 'f', decimals)));
+    QStringList lines;
+    for (const std::string& line : edi::reflection_hover_lines(reflections->index_h[at], reflections->index_k[at],
+                                                               reflections->index_l[at], meas, su, calc, squared,
+                                                               project_.su_rule)) {
+        lines.append(QString::fromStdString(line));
     }
     if (at < used_.size() && !used_.at(at)) {
-        lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.").arg(fit_cutoff_));
+        lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.")
+                         .arg(QString::fromStdString(edi::display_text("refine_ls.threshold_sigma", fit_cutoff_))));
     }
     return lines.join(QStringLiteral("<br>"));
 }
@@ -672,7 +660,7 @@ void ScatteringSourceViewModel::sync() {
         if (options == nullptr) {
             options = new OptionListModel(this);
         }
-        options->setOptions(edi::supported_scattering_sources(item));
+        options->setItemOptions("scattering_source." + name.toStdString(), edi::supported_scattering_sources(item));
         const QString token = QString::fromStdString(edi::scattering_source_value(experiment_, item));
         const QString effective = token.isEmpty() ? options->tokenAt(0) : token;
         rows.append({options, {name, token, effective, !token.isEmpty(), QVariant::fromValue<QObject*>(options)}});

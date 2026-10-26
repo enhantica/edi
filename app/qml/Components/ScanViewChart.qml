@@ -711,7 +711,8 @@ Item {
                 toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
                 // A joint fit whose experiments share no native axis has d only.
                 readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
-                readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
+                readonly property string dEntry: qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))
+                readonly property var entries: nativeOffered ? [Session.label(chart.scan !== null && chart.scan.timeOfFlight ? "data.time_of_flight" : "data.two_theta"), dEntry] : [dEntry]
                 model: entries
                 closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
                 shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0

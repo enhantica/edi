@@ -70,9 +70,9 @@ _fit_result.descent ladder
 """
     )
     _, document = model(source)
-    assert 'Rwp 16.35 % · χ² 75.62' in document['experiments'][0]['pattern']['title'], (
+    assert 'Rwp 16.35 % · reduced χ² 75.62' in document['experiments'][0]['pattern']['title'], (
         'Every pattern report title carries percent Rwp and reduced '
-        'chi-square with the dialog precision'
+        'chi-square with the dictionary label and precision'
     )
 
 

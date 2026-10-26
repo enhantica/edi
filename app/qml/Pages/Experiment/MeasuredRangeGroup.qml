@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -24,24 +23,21 @@ Column {
     property ExperimentViewModel experiment: null
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
-    readonly property string units: timeOfFlight ? "µs" : "deg"
+    // The range's items: the `_data_range` of the experiment's beam mode.
+    readonly property string rangeItem: timeOfFlight ? "data_range.time_of_flight" : "data_range.two_theta"
+    readonly property string axisItem: timeOfFlight ? "data.time_of_flight" : "data.two_theta"
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
-    // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
-    // so a calculated value that is effectively zero (1e-46 at a pattern's tail, its digits floating-point
-    // noise that differs by platform) reads 0. The table shows the data, it does not edit it.
-    function shown(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
+    // Each column, measured or calculated, in its item's display format; the table shows the data, it does not edit it.
+    function shown(uid, value) {
+        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
     }
-    function intensity(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(Number(value.toFixed(3)), 10);
-    }
-    // "inc": the steps at the base's default precision, as ValueField shows a number.
+    // The step, or the smallest and largest steps of an uneven pattern, in the step's display format.
     function increment(summary) {
         if (!summary)
             return "";
-        const smallest = EaLogic.Utils.toDefaultPrecision(summary.stepMinimum);
-        const largest = EaLogic.Utils.toDefaultPrecision(summary.stepMaximum);
+        const smallest = Session.display(group.rangeItem + "_step", summary.stepMinimum);
+        const largest = Session.display(group.rangeItem + "_step", summary.stepMaximum);
         return smallest === largest ? summary.step : `${smallest}–${largest}`;
     }
 
@@ -54,8 +50,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(Number(text), group.range.maximum, group.range.step)
             accepts: "number"
-            label: qsTr("min")
-            unit: group.units
+            uid: group.rangeItem + "_min"
             fieldValue: group.range ? group.range.minimum : ""
         }
         ValueField {
@@ -63,8 +58,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(group.range.minimum, Number(text), group.range.step)
             accepts: "number"
-            label: qsTr("max")
-            unit: group.units
+            uid: group.rangeItem + "_max"
             fieldValue: group.range ? group.range.maximum : ""
         }
         ValueField {
@@ -72,8 +66,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(group.range.minimum, group.range.maximum, Number(text))
             accepts: "number"
-            label: qsTr("inc")
-            unit: group.units
+            uid: group.rangeItem + "_step"
             fieldValue: group.increment(group.range)
         }
         ValueField {
@@ -101,37 +94,32 @@ Column {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
+            HeaderLabel {
+                uid: group.axisItem
+                withUnits: true
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("meas")
+            HeaderLabel {
+                uid: "data.intensity_meas"
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("s.u.")
+            HeaderLabel {
+                uid: "data.intensity_meas_su"
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("calc")
+            HeaderLabel {
+                uid: "data.intensity_calc"
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("d (Å)")
+            HeaderLabel {
+                uid: "data.d_spacing"
+                withUnits: true
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("bkg")
+            HeaderLabel {
+                uid: "data.intensity_bkg"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("resid")
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("status")
+            HeaderLabel {
+                uid: "data.calc_status"
             }
             Repeater {
                 model: table.componentNames
@@ -157,37 +145,38 @@ Column {
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.shown(row.model.x)
+                number: group.shown(group.axisItem, row.model.x)
                 full: NumberText.plainFull(row.model.x)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.intensity(row.model.intensityMeas)
+                number: group.shown("data.intensity_meas", row.model.intensityMeas)
                 full: NumberText.plainFull(row.model.intensityMeas)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.intensity(row.model.intensityMeasSu)
+                number: group.shown("data.intensity_meas_su", row.model.intensityMeasSu)
                 full: NumberText.plainFull(row.model.intensityMeasSu)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.intensity(row.model.intensityCalc)
+                number: group.shown("data.intensity_calc", row.model.intensityCalc)
                 full: NumberText.plainFull(row.model.intensityCalc)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.shown(row.model.dSpacing)
+                number: group.shown("data.d_spacing", row.model.dSpacing)
                 full: NumberText.plainFull(row.model.dSpacing)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.intensity(row.model.intensityBkg)
+                number: group.shown("data.intensity_bkg", row.model.intensityBkg)
                 full: NumberText.plainFull(row.model.intensityBkg)
             }
             NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                number: group.intensity(row.model.residual)
+                // The residual, meas − calc, on the measured intensity's scale and in its format.
+                number: group.shown("data.intensity_meas", row.model.residual)
                 full: NumberText.plainFull(row.model.residual)
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
@@ -199,14 +188,14 @@ Column {
                 icon: status === "incl" ? FitOutcomes.icon("success") : status === "excl" ? "minus-circle" : status === "failed" ? FitOutcomes.icon("failed") : ""
                 iconColor: String(status === "incl" ? EaStyle.Colors.green : status === "failed" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
                 ring: status === "pending"
-                toolTip: status === "incl" ? qsTr("Included") : status === "excl" ? qsTr("Excluded") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
+                toolTip: status === "incl" ? Session.optionLabel("data.calc_status", "incl") : status === "excl" ? Session.optionLabel("data.calc_status", "excl") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
             }
             Repeater {
                 model: row.model.componentIntensities
                 delegate: EaComponents.ListViewLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter
-                    text: group.intensity(modelData)
+                    text: group.shown("pd_calc.component_intensities_net", modelData)
                 }
             }
         }
