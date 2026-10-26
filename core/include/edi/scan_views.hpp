@@ -35,6 +35,14 @@ struct ScanTrace {
 ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
                      std::size_t columns);
 
+/// The line the Stacked view draws of one pattern over [x_min, x_max] at `columns` device pixel columns, as a line
+/// through the measured points looks at that resolution: while the range holds no more than four points a column,
+/// the points themselves, as scan_trace gives them; with more, each column's first, lowest, highest and last point in
+/// their order, which draws the same pixels as every point would. Each vertex is one point (`low` equals `high`); a
+/// point with no finite x or intensity breaks the line.
+ScanTrace scan_polyline(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                        std::size_t columns);
+
 /// What the Map colours one pattern's pixel columns by over [x_min, x_max]: with more points than columns, each
 /// column's highest intensity; with no more, the line joining the measured points read at each column's centre, so a
 /// zoomed map follows the points and not a reduction. NaN where the pattern has no value.

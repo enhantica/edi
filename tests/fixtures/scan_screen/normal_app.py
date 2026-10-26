@@ -11,6 +11,7 @@ import subprocess
 from pathlib import Path
 
 from tests.fixtures.app_environment.closure import dependencies
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
 from tests.fixtures.scan_app.build_probe import (
     fingerprint,
     fingerprint_headers,
@@ -70,8 +71,15 @@ def qualified_identity(root, executable):
 
 def validate_identity(record, root):
     executable = Path(record['executable']).resolve()
-    if executable != (root / APP).resolve():
+    delivered = (root / APP).resolve()
+    if Path(record.get('delivered_executable', executable)).resolve() != delivered:
         raise RuntimeError('Desktop receipt must identify the delivered normal app')
+    if executable != delivered:
+        snapshot = Path(native_arguments([delivered])[0]).resolve()
+        if executable != snapshot:
+            raise RuntimeError('Desktop receipt requires its checked native artifact snapshot')
+        # Keep checking the delivered build identity, even when a stable copy is executed.
+        qualified_identity(root, delivered)
     actual = qualified_identity(root, executable)
     if (
         record.get('build_identity') != actual
@@ -88,6 +96,9 @@ def receipt(root, output, sdk, engine_source):
         raise RuntimeError(
             'The screen observer runs the normal app: build it with `pixi run -e app app-build`'
         )
+    delivered = executable
+    qualified_identity(root, delivered)
+    executable = Path(native_arguments([delivered])[0])
     identity = qualified_identity(root, executable)
     fixture = Path(__file__).resolve().parent
     production = fingerprint(root)
@@ -104,6 +115,7 @@ def receipt(root, output, sdk, engine_source):
         'sdk_manifest': manifest,
         'binary': hashlib.sha256(executable.read_bytes()).hexdigest(),
         'executable': str(executable),
+        'delivered_executable': str(delivered),
         'fixture': {
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
             for p in fixture.iterdir()

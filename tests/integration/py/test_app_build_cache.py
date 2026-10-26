@@ -3,6 +3,7 @@
 import hashlib
 import json
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -35,6 +36,8 @@ def namespace(tmp_path, monkeypatch):
     for path, text in files.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
+        if path.name == 'edi_app':
+            path.chmod(0o755)
     subprocess.run(['git', 'init', '-q', str(root)], check=True)
     subprocess.run(
         ['git', '-C', str(root), 'add', 'core/src/value.cpp', 'app/main.cpp', 'CMakeLists.txt'],
@@ -300,9 +303,18 @@ def test_real_app_fixtures_build_once_per_owner_and_backend(namespace, monkeypat
     assert normal_receipts == [root], (
         'desktop screen fixtures prepare one receipt for the delivered app without compiling it'
     )
-    assert drawn['desktop']['receipt']['executable'] == str(root / 'build/app/app/edi_app'), (
-        'the desktop screen dispatch binds the delivered normal app rather than a private host'
-    )
+    check_delivered_snapshot(drawn['desktop']['receipt'], root)
     assert sorted(captures) == ['browser', 'desktop'], (
         'screen fixtures and receipt controls reuse one completed capture per backend'
     )
+
+
+def check_delivered_snapshot(receipt, root):
+    delivered = root / 'build/app/app/edi_app'
+    snapshot = Path(receipt['executable'])
+    assert (
+        snapshot.parent == delivered.parent
+        and snapshot.name.startswith(delivered.name + '.capture-')
+        and snapshot.read_bytes() == delivered.read_bytes()
+        and receipt['binary'] == hashlib.sha256(delivered.read_bytes()).hexdigest()
+    ), 'the desktop screen dispatch binds a checked snapshot of the delivered normal app'

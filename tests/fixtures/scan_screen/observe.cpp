@@ -328,12 +328,13 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
             if (combo && mode != "read") {
                 int index = -1;
                 for (int i = 0; i < options.size(); ++i) {
-                    const QString option = options[i].toLower();
-                    if ((mode == "every" && option.contains("every pattern")) ||
-                        (mode == "second" && option.contains("second")) ||
-                        (mode == "adaptive" && option.contains("adaptive")) ||
-                        (mode == "end" && option.contains("end")))
+                    const QString label = mode == "every" ? "Every pattern, fit waits for the display"
+                        : mode == "second" ? "About once a second"
+                        : mode == "adaptive" ? "Adaptive" : mode == "end" ? "Only at the end" : QString();
+                    if (options[i] == label) {
                         index = i;
+                        break;
+                    }
                 }
                 if (index >= 0) {
                     combo->setProperty("currentIndex", index);

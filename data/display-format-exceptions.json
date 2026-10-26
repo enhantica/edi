@@ -121,6 +121,11 @@
    "reason": "a developer benchmark printing timings, not part of the app"
   },
   {
+   "file": "app/tools/scan_bench.cpp",
+   "match": "std::printf(\"%s\\t%d\\t%zu\\t%zu\\t%d\\t%.2f",
+   "reason": "a developer benchmark printing timings, not part of the app"
+  },
+  {
    "file": "app/tools/ui_compare.cpp",
    "match": "std::printf(\"%s %s: min tile %.4f, image %.4f\\n\"",
    "reason": "a test tool printing image similarity scores, not part of the app"
