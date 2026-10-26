@@ -26,11 +26,14 @@
 #include <filesystem>
 #include <limits>
 #include <numeric>
+#include <optional>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -332,6 +335,9 @@ static void def_parameter_field(nb::class_<Class>& cls, const char* name,
         name,
         [member](Class& self) -> edi::Parameter& {
             (self.*member).category.point_at(self.row);  // X12: the handle's row
+            if constexpr (std::is_same_v<Class, edi::AtomSite>) {
+                (self.*member).category.held_by(self);  // its variant follows the site's type
+            }
             return self.*member;
         },
         [member, name](Class& self, const ParameterOrNumber& incoming) {
@@ -369,6 +375,16 @@ static void def_optional_parameter_field(nb::class_<Class>& cls, const char* nam
         nb::rv_policy::reference_internal);
 }
 
+// A view's parameter is held by the view's experiment, whose variants it shows by (an active doublet).
+template <typename View>
+static void held_by_experiment(const View& view, edi::Parameter& parameter) {
+    if constexpr (requires { view.experiment; }) {
+        if (view.experiment != nullptr) {
+            parameter.category.held_by(*view.experiment);
+        }
+    }
+}
+
 // The view-projection twins of the two field helpers above: a concrete family class is a typed lens over
 // the experiment's category storage, so its members project through `View::storage()` with the SAME
 // spec-preserving write-through and range-check semantics.
@@ -379,6 +395,7 @@ static void def_view_parameter_field(nb::class_<View, Extra...>& cls, const char
         name,
         [member](View& self) -> edi::Parameter& {
             (self.storage().*member).category.point_at(self.storage().row);  // X12
+            held_by_experiment(self, self.storage().*member);
             return self.storage().*member;
         },
         [member, name](View& self, const ParameterOrNumber& incoming) {
@@ -400,6 +417,7 @@ static void def_view_optional_parameter_field(nb::class_<View, Extra...>& cls, c
                 return nullptr;
             }
             field->category.point_at(self.storage().row);  // X12: the handle's row
+            held_by_experiment(self, *field);
             return &*field;
         },
         [member, &spec, name](View& self, std::optional<ParameterOrNumber> incoming) {
@@ -635,6 +653,16 @@ static edi::LeastSquaresFitResult fit_with_scan_callbacks(
     return edi::LeastSquaresFitResult(std::move(outcome));
 }
 
+// A parameter as every surface shows it: its dictionary label, value and units for its variant (an ADP by its site's
+// type), by the rule of the project that holds it, with its dependence as the relations are now. Defined below.
+struct ShownParameter {
+    std::string label;
+    std::string value;
+    std::string units;
+};
+using Variants = std::unordered_map<const edi::Parameter*, std::string>;
+static ShownParameter shown_parameter(edi::Parameter& parameter, const Variants* variants = nullptr);
+
 // `parameters` / `free_parameters` on every node — diffraction-lib's spelling (R18). References
 // into the owning node (reference_internal), so
 // `for p in cell.parameters: p.free = True` writes through, and the node outlives every element.
@@ -651,9 +679,39 @@ static void def_parameters(nb::class_<Class>& cls) {
             } else {
                 edi::detail::point_parameters(self);
             }
+            for (edi::Parameter* parameter : self.parameters()) {
+                held_by_experiment(self, *parameter);
+            }
             return self.parameters();
         },
         nb::rv_policy::reference_internal, "The block's parameters in field order (references).");
+    // diffraction-lib's CategoryItem.__str__, `<name (p=v, ...)>`: the category's title and each parameter's label
+    // and value as every surface shows them.
+    cls.def("__str__", [](Class& self) {
+        if constexpr (requires { self.storage(); }) {
+            edi::detail::point_parameters(self.storage());
+        } else {
+            edi::detail::point_parameters(self);
+        }
+        std::string category;
+        std::string fields;
+        // A block of an experiment's view reads its variants from that experiment, held by a project or not.
+        std::optional<Variants> variants;
+        if constexpr (requires { self.experiment; }) {
+            if (self.experiment != nullptr) {
+                variants = edi::parameter_variants(*self.experiment);
+            }
+        }
+        for (edi::Parameter* parameter : self.parameters()) {
+            if (parameter->spec != nullptr && category.empty()) {
+                const std::string uid = edi::uid_of(*parameter->spec);
+                category = edi::category_label(uid.substr(0, uid.find('.')));
+            }
+            const ShownParameter shown = shown_parameter(*parameter, variants ? &*variants : nullptr);
+            fields += (fields.empty() ? "" : ", ") + shown.label + "=" + shown.value;
+        }
+        return "<" + category + " (" + fields + ")>";
+    });
 }
 
 template <typename Class>
@@ -894,6 +952,49 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
     }
     warn_dependents(*project);
     return parameter.dependence;
+}
+
+// The structure holding the row of a parameter (a site's, a tensor's), in a project or not; null otherwise.
+static const edi::Structure* structure_of(const edi::Parameter& parameter) {
+    const edi::detail::RowLink* link = parameter.category.get();
+    const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
+    return record != nullptr && record->owner != nullptr ? record->owner->holder() : nullptr;
+}
+
+// `variants`, when given, are those of the block the parameter is shown in; else they are found through the project
+// holding the parameter, or the structure holding its row.
+static ShownParameter shown_parameter(edi::Parameter& parameter, const Variants* variants) {
+    if (parameter.spec == nullptr || !edi::has_item(edi::uid_of(*parameter.spec))) {
+        return {"Parameter", nb::cast<std::string>(nb::repr(nb::float_(parameter.value.get()))), {}};
+    }
+    (void)dependence_now(parameter);
+    std::string rule = edi::kDefaultSuRule;
+    std::string variant;
+    const auto pick = [&parameter, &variant](const Variants& found_in) {
+        if (const auto found = found_in.find(&parameter); found != found_in.end()) {
+            variant = found->second;
+        }
+    };
+    const edi::Project* project = project_of(parameter);
+    if (project != nullptr) {
+        rule = project->su_rule;
+    }
+    // The variant follows the parameter's owner as its handle reached it, held by a project or not: a site's
+    // isotropic ADP its type, an experiment's wavelength its doublet; else the project or structure holding it.
+    const edi::AtomSite* site = parameter.category.site();
+    if (variants != nullptr) {
+        pick(*variants);
+    } else if (site != nullptr && &site->adp_iso == &parameter) {
+        variant = site->adp_type.value();
+    } else if (const edi::ExperimentBase* experiment = parameter.category.experiment()) {
+        pick(edi::parameter_variants(*experiment));
+    } else if (project != nullptr) {
+        pick(edi::parameter_variants(*project));
+    } else if (const edi::Structure* structure = structure_of(parameter)) {
+        pick(edi::parameter_variants(*structure));
+    }
+    const std::string uid = edi::uid_of(*parameter.spec);
+    return {edi::label(uid, variant), edi::display_text(parameter, rule, variant), edi::units_label(uid, variant)};
 }
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
@@ -1895,7 +1996,8 @@ NB_MODULE(_edi, m) {
             return edi::BraggPdExperiment(load.experiment);
         },
         "experiment"_a, "path"_a);
-    // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and what it dropped.
+    // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and
+    // what it dropped.
     m.def(
         "_read_plain_data",
         [](const std::string& path) {
@@ -2084,9 +2186,20 @@ NB_MODULE(_edi, m) {
         .def_prop_ro("name", [](const edi::Parameter& p) { return require_spec(p).name; })
         .def_prop_ro("units", [](const edi::Parameter& p) { return require_spec(p).units; })
         .def_prop_ro("description",
-                     [](const edi::Parameter& p) { return require_spec(p).description; })
+                     [](const edi::Parameter& p) { return edi::description(edi::uid_of(require_spec(p))); })
         .def_prop_ro("min_value", [](const edi::Parameter& p) { return require_spec(p).range.min; })
-        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; });
+        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; })
+        // diffraction-lib's shape, `<name = value units (free=...)>`: the dictionary's label, and the value as every
+        // surface shows it, both for the parameter's variant (an ADP by its site's type), by the rule of the project
+        // that holds the parameter, else the default rule, with its dependence as the relations are now.
+        .def("__repr__", [](edi::Parameter& p) {
+            const ShownParameter shown = shown_parameter(p);
+            std::string text = "<" + shown.label + " = " + shown.value;
+            if (!shown.units.empty()) {
+                text += " " + shown.units;
+            }
+            return text + (p.free.get() ? " (free=True)>" : " (free=False)>");
+        });
 
     nb::class_<edi::AtomSite> atom_site(m, "AtomSite", nb::is_weak_referenceable());
     atom_site.def("__setattr__", renewing_setattr<edi::AtomSite>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
@@ -3580,11 +3693,14 @@ NB_MODULE(_edi, m) {
           "The minimal machine failure record: no numeric rows, ever.");
     // Streaming seams (edi-owned presentation; the retired post-hoc report composed the same pieces so the live
     // and after-the-fact tables cannot drift).
-    m.def("iteration_line", &edi::iteration_line, "record"_a, "previous_reduced_chi2"_a,
+    m.def("iteration_line", &edi::iteration_line, "record"_a, "previous_reduced_chi2"_a, "variant"_a = "",
           "One per-iteration table row; `change` is computed against the previous reduced χ².");
-    m.def("stream_header", &edi::stream_header, "preamble"_a, "project_name"_a,
+    m.def("stream_header", &edi::stream_header, "preamble"_a, "project_name"_a, "variant"_a = "",
           "The header line + iteration-table header + pre-fit starting row, from a FitPreamble.");
-    m.def("summary_line", &edi::summary_line, "outcome"_a, "The trailing `done · …` summary line.");
+    m.def("summary_line", &edi::summary_line, "outcome"_a, "variant"_a = "",
+          "The trailing `done · …` summary line.");
+    m.def("_metric_variant", &edi::metric_variant, "project"_a,
+          "The sample form a fit's metrics are named by: `single crystal` for a single-crystal fit, else empty.");
     // Scan renderers: the core owns every line; a surface only chooses the emission mode (in
     // place on a TTY, one line per file otherwise) and supplies the injected-clock elapsed.
     m.def("scan_progress_line", &edi::scan_progress_line, "completed"_a,
@@ -3606,8 +3722,14 @@ NB_MODULE(_edi, m) {
           "how many completions "
           "elapsed_seconds covers, so a no-op resume (0) renders no duration at all and a "
           "partial one names its basis.");
-    m.def("parameter_table", &edi::parameter_table, "outcome"_a,
-          "The per-bank + refined-parameter block (the surface prints it only at full verbosity).");
+    m.def(
+        "parameter_table",
+        [](const edi::FitResultBase& outcome, const edi::Project* project) {
+            return edi::parameter_table(outcome, project);
+        },
+        "outcome"_a, "project"_a = nb::none(),
+        "The per-bank + refined-parameter block (the surface prints it only at full verbosity); with the project, "
+        "each ADP by its site's type and each value by its s.u. under the project's rule.");
     m.def("progress_report", &edi::progress_report, "record"_a,
           "The machine streamed record=progress for one iteration (crysta's shared emitter).");
     // The machine calc record, rendered by crysta's shared emitter so `python -m edi calc` and
@@ -4002,6 +4124,7 @@ NB_MODULE(_edi, m) {
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
             "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
+        .def("_report_cif_text", [](edi::Project& self) { return edi::cif_report_text(self); })
         .def(
             "_report_save",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,

@@ -80,6 +80,7 @@ nav:
           - dev/adrs/0048-one-example-catalogue.md
           - dev/adrs/0049-single-crystal-experiments.md
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
+          - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
           - dev/adrs/0052-project-folders-archives-and-opening.md
           - dev/adrs/template.md
       - Design:

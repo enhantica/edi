@@ -166,27 +166,10 @@ Item {
         set(braggView, edge - (braggView.plotArea.x - braggView.marginLeft));
     }
 
-    // A pane's theme: Qt Graphs draws the series and nothing else. The chart draws the background, each pane's
-    // grid and each pane's border itself (below). Qt Graphs' own tick marks, axis lines and grid are shader
-    // effects two pixels wide, over the labels and the measured points; they are transparent here, on every
-    // axis of every pane, the Bragg rows' included. (The offscreen platform's software renderer never draws
-    // them, so only a capture on an OpenGL platform shows whether they are gone.) The font is the size the
-    // axis keeps room for; the labels themselves are `AxisLabel`s. The colour scheme is fixed: every colour the
-    // chart shows is its own and follows the app's theme, while a scheme change makes Qt Graphs restore its own
-    // axis colours, and the tick marks appeared after a switch of the app's theme (the owner, 2026-10-02).
-    component PaneTheme: GraphsTheme {
-        colorScheme: GraphsTheme.ColorScheme.Light
-        backgroundVisible: false
-        plotAreaBackgroundVisible: false
+    // A pane's theme (ChartTheme): the labels themselves are `AxisLabel`s; the theme's font is the size the axis keeps
+    // room for.
+    component PaneTheme: ChartTheme {
         labelTextColor: chart.colors.chartLabels
-        labelFont.family: EaStyle.Fonts.fontFamily
-        labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-        axisX.mainColor: "transparent"
-        axisX.subColor: "transparent"
-        axisY.mainColor: "transparent"
-        axisY.subColor: "transparent"
-        grid.mainColor: "transparent"
-        grid.subColor: "transparent"
     }
 
     // An axis label: the app's label, in the app's font and size (easydiffractionbeta's chart labels), placed
@@ -457,10 +440,10 @@ Item {
             objectName: "chart.toolbar.xaxis"
             // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
             // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
-            // (the owner, 2026-10-22).
+            // (the owner, 2026-10-22). The axis names are the dictionary's.
             enabled: chart.experiment !== null && controller.dAvailable
             toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-            readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")]
+            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
             model: entries
             closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
             shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0

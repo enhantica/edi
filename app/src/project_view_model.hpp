@@ -618,7 +618,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
     std::set<const QObject*> scan_views_shown_;
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
-    // Set while a followed file waits for its frame; the render thread clears it at the next synchronisation.
+    // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
     std::atomic<bool> render_armed_{false};
     QTimer render_wait_;
     QMetaObject::Connection render_connection_;

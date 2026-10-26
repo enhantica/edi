@@ -508,7 +508,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const fitStarted = await evaluate('performance.now()');
   await click(/^Start fitting$/);
 
-  // I-0335: Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
+  // Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
   const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
   assert.equal(outcome.text,'Success',
     'The actual rendered fit-results Overall status must report successful fitting');

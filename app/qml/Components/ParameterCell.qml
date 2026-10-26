@@ -60,10 +60,14 @@ EaComponents.ListViewParameter {
     // The value as its rule writes it, and as the cell shows it: in scientific notation when that text would not fit
     // (NumberText.fitted; the owner, 2026-10-22), unless the cell makes its text smaller instead (fitDigits). Measured
     // in the shown weight, read from the item: the `parameter` map that sets the weight is made from this text.
-    readonly property string valueText: item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
-    // Its scientific form, whose digits also follow the uncertainty and the project's rule when the plain text does not
-    // change (9e5 or 9.0e5 for 900000 ± 200000).
-    readonly property string narrowText: item !== null && !fitDigits ? NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // The value as the project file and the Text tab spell it (edi ADR-0051); a parameter the dictionary does not know
+    // by the app's rule for numbers.
+    readonly property bool written: item !== null && item.fileValue !== ""
+    readonly property string valueText: written ? item.fileValue : item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // Its scientific form: the written token's own digits, every one of them (NumberText.compact); without one, digits
+    // that follow the uncertainty and the project's rule when the plain text does not change (9e5 or 9.0e5 for
+    // 900000 ± 200000).
+    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.compact(item.fileValue) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText
@@ -103,8 +107,8 @@ EaComponents.ListViewParameter {
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
     clip: true
 
-    // The value as edited: in full, where the cell shows it rounded (NumberText).
-    readonly property string editText: item !== null ? NumberText.full(item.value) : value
+    // The value as edited: the same text, so a cell left as it was changes nothing.
+    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: {
         if (activeFocus && text === value) {
@@ -119,16 +123,18 @@ EaComponents.ListViewParameter {
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
+    // On hover: the value as written when the cell shows it shorter or clipped, else the item's label and `.edi` name
+    // (edi ADR-0051).
     EaElements.ToolTip {
-        text: cell.shownValue !== cell.valueText ? NumberText.plainFull(cell.item.value) : cell.text
-        visible: (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width) && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+        text: cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
+        visible: text !== "" && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
     }
 
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
         "value": cell.shownValue,
-        "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
+        "error": cell.written ? item.fileSu : item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,

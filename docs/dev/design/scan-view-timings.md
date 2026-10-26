@@ -331,20 +331,66 @@ Every median and every p95 is under 100 ms; the slowest p95 is a Stacked data ch
 over: a Stacked data change at 108.6 ms, a Map data change at 112.1 ms and a Map pan at 103.4 ms. One Map selection had
 no frame measured (missing 1).
 
+### Without a GPU
+
+The painter on this machine's llvmpipe, `edi_app --demo <dir> --demo-only perf-views` three times in turn, pinned to
+eight cores, at edi 75a6c618. The load average was 3.9 at the first run and rose to 8.4 by the end of the third. Each
+run's median, in milliseconds ([timings](scan-view-timings/gate1/software-timings.tsv)):
+
+| View | Change | Run 1 | Run 2 | Run 3 | Median of the runs | Bound |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Stacked | zoom | 109.4 | 104.5 | 106.3 | 106.3 | ≤ 115 |
+|  | pan | 88.4 | 93.8 | 99.9 | 93.8 | about 100 |
+|  | restyle | 63.5 | 71.5 | 85.7 | 71.5 | about 100 |
+|  | select | 74.2 | 72.5 | 91.2 | 74.2 | about 100 |
+|  | data | 215.6 | 209.8 | 251.1 | 215.6 | ≤ 250 |
+| Map | zoom | 68.9 | 68.5 | 74.0 | 68.9 | ≤ 115 |
+|  | pan | 52.1 | 53.5 | 54.1 | 53.5 | about 100 |
+|  | restyle | 35.0 | 38.4 | 40.6 | 38.4 | about 100 |
+|  | select | 38.0 | 38.8 | 41.9 | 38.8 | about 100 |
+|  | data | 181.9 | 202.8 | 208.5 | 202.8 | ≤ 250 |
+
+Every median of the runs is within its bound. One run's figure is not: the third run's Stacked data change, 251.1 ms,
+with the load rising from 5.3 to 8.4.
+
 ## The 162-file fit with the two Every-pattern choices
 
 "Every pattern" became two choices (the owner, 2026-10-24; [ADR-0029](../adrs/0029-following-a-scan-latest-finished-file.md)
 §8): **fit waits for the display**, as before, and **display catches up**, which never makes the fit wait. Gate 2 bounds
-the second at 1.05 times Adaptive. The fit is timed from its start to its end, without the drawing a catching-up display
-still does after it (`edi_app --demo <dir> --demo-only perf-fit-`, the `perf-fit-catchup-` steps). Edi e974b6ed on the
-no-GPU machine above, the modes run in turn, in seconds; every run is in [fits.tsv](scan-view-timings/gate2/fits.tsv):
+the second at 1.05 times Adaptive on the Stacked tab. The fit is timed from its start to its end, without the drawing a
+catching-up display still does after it (`edi_app --demo <dir> --demo-only perf-fit-`, the `perf-fit-catchup-` steps).
+
+### Gate 2 on an M2
+
+The owner's M2 (macOS, Metal, a quiet machine), 2026-10-26 about 10:27 CET, crysta SDK build-18823483, with the two modes
+alternating so a slow stretch falls on both:
+`for r in 1 2 3; do for m in catchup adaptive; do pixi run -e app app --demo <dir>/r$r-$m --demo-only perf-fit-$m-stacked; done; done`.
+The whole 162-file fit on the Stacked tab, in milliseconds ([m2-fits.tsv](scan-view-timings/gate2/m2-fits.tsv)):
+
+| Round | Display catches up | Adaptive | Catches up / Adaptive |
+| --- | ---: | ---: | ---: |
+| 1 | 3 262 | 3 192 | 1.022 |
+| 2 | 3 192 | 3 133 | 1.019 |
+| 3 | 3 202 | 3 213 | 0.997 |
+
+The median ratio is 1.019, inside the bound. The M2 built edi 899e3336, whose files are those of 7e4a6bf4 on this branch
+(only commit messages and a comment line in the runtimes table were reworded since). Since then the chart theme's
+tick-label fonts and the moment a followed file's name, count and receipt are taken (the start of the frame that shows
+its points, not after it) changed. Neither touches the fit, which in both modes never waits for the display on the
+Stacked tab, so neither moves the ratio.
+
+### This machine, under load
+
+Without a GPU the Stacked view's lines are a full repaint for every file the display catches up with, competing with the
+fit for the same cores, so the ratio here follows the machine's load. Edi e974b6ed, the modes in turn, in seconds
+([fits.tsv](scan-view-timings/gate2/fits.tsv)), the load average 2 to 24 across the rounds:
 
 | Tab shown | Display catches up | Fit waits for the display | Adaptive | Catches up / Adaptive |
 | --- | ---: | ---: | ---: | ---: |
 | Pattern (3 rounds) | 17.39 (17.01–22.15) | 35.07 (26.67–62.55) | 19.28 (19.19–19.54) | 0.90 |
 | Stacked (6 rounds) | 17.00 (16.44–19.14) | 16.21 (15.84–16.67), 3 rounds | 16.10 (15.90–17.44) | 1.06 |
 
-On Stacked the round-by-round ratio was 1.06, 1.18, 1.08 with the machine's load average at 4 to 24, then 1.02, 1.02 and
-1.05 at 2 to 8: each file the display catches up with is the Stacked view's shown dataset
-redrawn, a full repaint of its lines without a GPU, and that competes with the fit for the same cores. On the Pattern
-tab the drawing is a pattern chart's and the fit is not slower than Adaptive's.
+The Stacked rounds' ratios were 1.06, 1.18 and 1.08 at load 4 to 24, then 1.02, 1.02 and 1.05 at load 2 to 8. These are
+diagnostics, not gate 2's evidence: the bound is judged on the M2 above. On the Pattern tab the drawing is a pattern
+chart's and the fit is not slower than Adaptive's. Fit waits for the display on Stacked was measured before it showed
+each file there (ADR-0029 §8), so its column is not today's.

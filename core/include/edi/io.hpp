@@ -52,14 +52,20 @@ using WarningSink = std::function<void(const std::string&)>;
 // and it reads its scan data from the unpacked folder.
 Project load_project(const std::string& path, const WarningSink& on_warning = {});
 
-// Structures and experiments enter an open project only from `.edi` block files. Each load
-// refuses a path without the `.edi` extension and content without the project format's
-// `_edi.schema_version` (so a classic CIF is refused, although the from-text entries below read
-// that vocabulary too), then builds through the loader's own block builder. An experiment file
-// must also declare its type — all four `_experiment_type` axes — and a type edi's experiment
-// class implements (powder + bragg); a project directory keeps the loader's presence-tracked
-// axes. Nothing is changed by a load: adding is the separate step below.
+// Structures and experiments enter an open project only from `.edi` block files. Every structure
+// and experiment text these loads and the project loader read goes through one check first:
+// crysta decides once, from the text as written, whether it is a CIF, which is refused, as reading
+// CIF files is not supported yet (the from-text entries below still read the classic CIF
+// vocabulary); text crysta cannot read is refused with its reason, never read by another reader.
+// Each load then refuses a path without the `.edi` extension and content without the project
+// format's `_edi.schema_version`, and builds through the loader's own block builder. An
+// experiment file must also declare its type — all four `_experiment_type` axes — and a type edi's
+// experiment class implements (powder + bragg); a project directory keeps the loader's
+// presence-tracked axes. Nothing is changed by a load: adding is the separate step below.
 Structure load_structure_edi_file(const std::string& path);
+// A structure file as crysta reads one, whatever it is called: a `.edi` structure is read, and a
+// CIF is refused, as reading CIF files is not supported yet. Throws IoError naming the file.
+Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name
 // unique against the project and within the batch. The first refusal names its file.
@@ -158,6 +164,10 @@ bool adopt_saved_project(Project& project, const std::string& directory);
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
+
+// The project's report as a CIF, written by crysta from the project a save would write: every item under its default
+// CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.
+std::string cif_report_text(const Project& project);
 
 // Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.
@@ -292,7 +302,8 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
 // the cell vocabulary to the restored reader (B/U/aniso ADP ladder); the experiment entry
 // translates diffraction-lib's `cif_names` spellings (`_pd_meas.*`, `_instr.*`,
 // `_easydiffraction_peak.*`, …) to their `.edi` tags and flows through the one experiment
-// builder. Fails closed (IoError) as the directory loader does.
+// builder. Any other CIF is refused through the check above. Fails closed (IoError) as the
+// directory loader does.
 Structure structure_from_edi_text(const std::string& text);
 BraggPdExperiment experiment_from_edi_text(const std::string& text);
 

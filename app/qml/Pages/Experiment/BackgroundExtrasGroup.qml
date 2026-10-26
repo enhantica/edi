@@ -50,7 +50,7 @@ Column {
         SelectorField {
             objectName: "background_estimate.use_model"
             width: fields.fieldWidth
-            label: qsTr("calculated peaks")
+            uid: "background_estimate.use_model"
             options: group.experiment ? group.experiment.backgroundEstimateModels : null
             token: group.experiment ? group.experiment.backgroundEstimateUseModel : "auto"
             resolved: group.experiment ? group.experiment.estimateModelChoice : ""
@@ -74,7 +74,7 @@ Column {
             objectName: "background_estimate.max_terms"
             visible: !group.lineSegment
             width: fields.fieldWidth
-            label: qsTr("max terms")
+            uid: "background_estimate.max_terms"
             // Blank: at most 12, as many as the tolerance needs, which the placeholder counts.
             fieldValue: group.experiment && group.experiment.backgroundEstimateMaxTerms > 0 ? group.experiment.backgroundEstimateMaxTerms : ""
             placeholderText: group.derived(group.experiment ? group.experiment.estimateTerms : NaN)

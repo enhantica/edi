@@ -2,6 +2,7 @@
 #include "edi/report_model.hpp"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <cmath>
 #include <cstdint>
@@ -10,6 +11,7 @@
 #include <filesystem>
 #include <limits>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -18,6 +20,7 @@
 
 #include "edi/categories.hpp"
 #include "edi/correlation_matrix.hpp"
+#include "edi/display.hpp"
 #include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
@@ -25,7 +28,6 @@
 #include "edi/palette.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
-#include "edi/selectors.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/su_text.hpp"
 #include "edi/symmetry.hpp"
@@ -42,13 +44,6 @@ std::string shortest(double value) {
     return std::string(buffer, result.ptr);
 }
 
-std::string fixed(double value, int decimals) {
-    char buffer[400];
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::fixed, decimals);
-    return std::string(buffer, result.ptr);
-}
-
 std::string utc_now() {
     const std::time_t now = std::time(nullptr);
     std::tm parts{};
@@ -62,72 +57,47 @@ std::string utc_now() {
     return buffer;
 }
 
-// A computed number in a table column: a fixed number of decimals for the whole column, no exponent; one that rounds
-// to nothing reads 0 (the owner, 2026-10-13).
-std::string column_text(double value, int decimals) {
-    if (!std::isfinite(value)) {
-        return shortest(value);
-    }
-    const std::string text = fixed(value, decimals);
-    return text.find_first_not_of("-0.") == std::string::npos ? "0" : text;
-}
-
-// A number as the app's tables show one without an s.u. (NumberText): six significant digits without trailing
-// zeros, and from a million up or below 1e-4 four in scientific notation (`2.290e7`).
-std::string display_text(double value) {
-    if (!std::isfinite(value)) {
-        return shortest(value);
-    }
-    char buffer[64];
-    if (value != 0.0 && (std::abs(value) >= 1e6 || std::abs(value) < 1e-4)) {
-        const auto end = std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::scientific, 3).ptr;
-        std::string text(buffer, end);
-        const std::size_t e = text.find('e');
-        std::string exponent = text.substr(e + 1);
-        const bool negative = exponent.front() == '-';
-        exponent.erase(0, exponent.find_first_not_of("+-0"));
-        return text.substr(0, e + 1) + (negative ? "-" : "") + (exponent.empty() ? "0" : exponent);
-    }
-    const auto end = std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general, 6).ptr;
-    std::string text(buffer, end);
-    // Just under a million rounds up to one: written whole, as the app writes it.
-    return text.find('e') == std::string::npos ? text : fixed(value, 0);
-}
-
-// A parameter's number: with its s.u. in the project's spelling when it is free, or set from others (a symmetry
-// tie or a constraint, whose s.u. the fit propagates), and has one. A dependent without one is written as the app's
-// tables write it, never at full double precision (the owner, 2026-10-13); any other is written as it is.
-ReportValue value_of(const Parameter& parameter, const std::string& rule) {
+// A parameter's number as every surface shows it (the dictionary bridge): a value the space group fixes as its
+// fraction, one with an s.u. in the project's spelling, any other by its dictionary format.
+ReportValue value_of(const Parameter& parameter, const std::string& rule, std::string_view variant = {}) {
     ReportValue out;
     out.value = parameter.value.get();
-    const bool dependent =
-        parameter.dependence == Dependence::SymmetryTied || parameter.dependence == Dependence::Constrained;
     const std::optional<double>& su = parameter.uncertainty.get();
-    if ((parameter.free.get() || dependent) && su.has_value() && std::isfinite(*su) && *su != 0.0 &&
-        std::isfinite(out.value)) {
+    if (su.has_value() && std::isfinite(*su) && *su != 0.0 && std::isfinite(out.value) &&
+        parameter.dependence != Dependence::SymmetryFixed) {
         out.su = *su;
-        out.text = value_su_text(out.value, *su, rule);
-    } else if (dependent) {
-        out.text = display_text(out.value);
-    } else {
-        out.text = shortest(out.value);
     }
+    out.text = parameter.spec != nullptr ? display_text(parameter, rule, variant) : shortest(out.value);
     return out;
 }
 
-// A parameter's short symbol, as the app's tables show it.
-std::string label_of(const Parameter& parameter, const std::string& fallback) {
-    const std::string symbol = parameter_symbol(parameter.spec);
-    return symbol.empty() ? fallback : symbol;
+// A parameter's label and units, from the dictionary, for its variant (an atom site's ADP type).
+std::string label_of(const Parameter& parameter, const std::string& fallback, std::string_view variant = {}) {
+    return parameter.spec != nullptr ? label(uid_of(*parameter.spec), variant) : fallback;
 }
 
-// A parameter's units as the report writes them: as the app's unit fields show them, an angle in deg (the owner,
-// 2026-10-17).
-std::string units_of(const Parameter& parameter) {
-    if (parameter.spec == nullptr || parameter.spec->display_units == nullptr) {
-        return "";
+std::string units_of(const Parameter& parameter, std::string_view variant = {}) {
+    return parameter.spec != nullptr ? units_label(uid_of(*parameter.spec), variant) : std::string();
+}
+
+// The variant every row of a table column shares, for its header; the base item's when the rows differ.
+std::string shared_variant(const std::vector<std::string>& variants) {
+    if (variants.empty() || std::any_of(variants.begin(), variants.end(),
+                                        [&variants](const std::string& v) { return v != variants.front(); })) {
+        return {};
     }
-    return parameter.spec->display_units;
+    return variants.front();
+}
+
+// A table's column header for item `uid`: its dictionary label, with its units in brackets.
+std::string header(std::string_view uid, std::string_view variant = {}) {
+    const std::string units = units_label(uid, variant);
+    return units.empty() ? label(uid, variant) : label(uid, variant) + " (" + units + ")";
+}
+
+// A number of item `uid`, by its dictionary format for `variant`; an empty cell for one that is not finite.
+std::string formatted(std::string_view uid, double value, std::string_view variant = {}) {
+    return std::isfinite(value) ? display_text(uid, value, variant) : std::string();
 }
 
 void add_fields(std::vector<ReportRow>& rows, const std::vector<CategoryField>& fields, const std::string& rule) {
@@ -157,16 +127,7 @@ std::string status_word(const FitResultRecord& result) {
 }
 
 std::string fitting_mode_name(const std::string& mode) {
-    if (mode == "joint") {
-        return "Joint: all experiments at once";
-    }
-    if (mode == "sequential") {
-        return "Sequential: each from the previous";
-    }
-    if (mode == "independent") {
-        return "Independent: each from the same start";
-    }
-    return "Single experiment";
+    return option_label("fitting_mode.type", mode.empty() ? "single" : mode);
 }
 
 // The pairs of correlation rows over their parameters, in the order the rows first name them: the names and the full
@@ -399,11 +360,13 @@ ReportPattern pattern_of(const Project& project, std::size_t index, const Report
     return out;
 }
 
-// A single crystal's chart: its reflections' measured F² and s.u., and their calculated F² once calculated.
-ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment) {
+// A single crystal's chart: its reflections' measured F² and s.u., and their calculated F² once calculated, with
+// the axes' titles and each point's hover by the dictionary, as the app's chart shows them (edi ADR-0051).
+ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment, const std::string& su_rule) {
     const ReflnDataBase& reflections = *experiment.reflections;
     ReportSingleCrystal out;
     if (!reflections.rectangular()) {
+        label_single_crystal(out, su_rule);
         return out;
     }
     out.h.assign(reflections.index_h.begin(), reflections.index_h.end());
@@ -415,16 +378,39 @@ ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment) {
     if (experiment.computed_current() && calc.size() == reflections.size()) {
         out.calc = calc;
     }
+    label_single_crystal(out, su_rule);
     return out;
 }
 
-// A subsection of the report: a category and the title its page shows.
-ReportCategory category(const std::string& id) { return {id, category_title(id), {}, {}}; }
+}  // namespace
 
-// Where an experiment's data lie on its own axis, as a row label and units: 2θ in degrees or TOF in µs.
+void label_single_crystal(ReportSingleCrystal& crystal, const std::string& su_rule) {
+    crystal.name = category_label("refln");
+    crystal.x_title = label("refln.intensity_calc");
+    crystal.y_title = label("refln.intensity_meas");
+    crystal.hover.clear();
+    const std::size_t rows = std::min({crystal.h.size(), crystal.k.size(), crystal.l.size(), crystal.meas.size(),
+                                       crystal.su.size()});
+    for (std::size_t row = 0; row < rows; ++row) {
+        const double calc = row < crystal.calc.size() ? crystal.calc[row] : std::nan("");
+        std::string text;
+        for (const std::string& line : reflection_hover_lines(crystal.h[row], crystal.k[row], crystal.l[row],
+                                                              crystal.meas[row], crystal.su[row], calc, true, su_rule)) {
+            text += (text.empty() ? "" : "<br>") + line;
+        }
+        crystal.hover.push_back(std::move(text));
+    }
+}
+
+namespace {
+
+// A subsection of the report: a category and the title its page shows.
+ReportCategory category(const std::string& id) { return {id, category_label(id), {}, {}}; }
+
+// Where an experiment's data lie on its own axis, as a row label and units from the dictionary.
 std::pair<std::string, std::string> axis_of(const PdDataBase& data) {
-    return data.two_theta.has_value() ? std::pair<std::string, std::string>{"2θ", "deg"}
-                                      : std::pair<std::string, std::string>{"TOF", "µs"};
+    const char* uid = data.two_theta.has_value() ? "data.two_theta" : "data.time_of_flight";
+    return {label(uid), units_label(uid)};
 }
 
 // A structure's categories in its page's order, filled as the page shows them; a loop without rows is left out. The
@@ -436,23 +422,19 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
     for (const Category& listed : structure_categories(walked)) {
         ReportCategory next = category(listed.id);
         if (listed.id == "space_group") {
-            next.rows.push_back({"H-M symbol", structure.space_group.name_h_m.value(), ""});
+            next.rows.push_back({label("space_group.name_h_m"), structure.space_group.name_h_m.value(), ""});
             try {
-                next.rows.push_back({"IT number", std::to_string(space_group_it_number(structure.space_group)), ""});
+                next.rows.push_back({label("space_group.it_number"),
+                                     std::to_string(space_group_it_number(structure.space_group)), ""});
                 next.rows.push_back({"Crystal system", crystal_system_name(structure.space_group), ""});
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — an unknown setting names no number or system
             }
         } else if (listed.id == "cell") {
             const Cell& cell = structure.cell;
-            const std::pair<const char*, const Parameter*> lengths[] = {
-                {"a", &cell.length_a}, {"b", &cell.length_b}, {"c", &cell.length_c}};
-            for (const auto& [name, parameter] : lengths) {
-                next.rows.push_back({name, value_of(*parameter, rule).text, "Å"});
-            }
-            const std::pair<const char*, const Parameter*> angles[] = {
-                {"α", &cell.angle_alpha}, {"β", &cell.angle_beta}, {"γ", &cell.angle_gamma}};
-            for (const auto& [name, parameter] : angles) {
-                next.rows.push_back({name, value_of(*parameter, rule).text, "deg"});
+            for (const Parameter* parameter : {&cell.length_a, &cell.length_b, &cell.length_c, &cell.angle_alpha,
+                                               &cell.angle_beta, &cell.angle_gamma}) {
+                next.rows.push_back(
+                    {label_of(*parameter, ""), value_of(*parameter, rule).text, units_of(*parameter)});
             }
         } else if (listed.id == "atom_site") {
             std::map<std::string, int> multiplicity;
@@ -463,28 +445,66 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no positions: the column stays empty
             }
             // The Wyckoff position as the International Tables write it, the multiplicity then the letter (`1a`).
-            next.table.columns = {"Label", "Type", "x", "y", "z", "Wyckoff", "Occ.", "ADP (Å²)", "ADP type"};
+            // An ADP is labelled and rounded by its site's type: the column by the type every site shares.
+            std::vector<std::string> types;
+            for (const auto& site : structure.atom_sites) {
+                types.push_back(site->adp_type.value());
+            }
+            next.table.columns = {header("atom_site.id"),          header("atom_site.type_symbol"),
+                                  header("atom_site.fract_x"),     header("atom_site.fract_y"),
+                                  header("atom_site.fract_z"),     header("atom_site.wyckoff_letter"),
+                                  header("atom_site.occupancy"),   header("atom_site.adp_iso", shared_variant(types)),
+                                  header("atom_site.adp_type")};
             for (const auto& site : structure.atom_sites) {
                 const std::string& letter = site->wyckoff_letter.value();
                 const auto found = multiplicity.find(letter);
                 next.table.rows.push_back({site->id.value(), site->type_symbol.value(), value_of(site->fract_x, rule).text,
                                            value_of(site->fract_y, rule).text, value_of(site->fract_z, rule).text,
                                            found != multiplicity.end() ? std::to_string(found->second) + letter : letter,
-                                           value_of(site->occupancy, rule).text, value_of(site->adp_iso, rule).text,
+                                           value_of(site->occupancy, rule).text,
+                                           value_of(site->adp_iso, rule, site->adp_type.value()).text,
                                            site->adp_type.value()});
             }
         } else if (listed.id == "atom_site_aniso") {
-            next.table.columns = {"Label", "11", "22", "33", "12", "13", "23"};
+            // A tensor is labelled and rounded by its site's type (Uani, Bani or beta).
+            std::map<std::string, std::string> type_of;
+            for (const auto& site : structure.atom_sites) {
+                type_of.emplace(site->id.value(), site->adp_type.value());
+            }
+            std::vector<std::string> types;
             for (const auto& row : structure.atom_site_aniso) {
-                next.table.rows.push_back({row->id.value(), value_of(row->adp_11, rule).text,
-                                           value_of(row->adp_22, rule).text, value_of(row->adp_33, rule).text,
-                                           value_of(row->adp_12, rule).text, value_of(row->adp_13, rule).text,
-                                           value_of(row->adp_23, rule).text});
+                types.push_back(type_of[row->id.value()]);
+            }
+            // Rows of several types (beta beside U or B) are different quantities: each row then names its type,
+            // which gives its units, and no component column claims one.
+            const std::string shared = shared_variant(types);
+            const bool mixed = !types.empty() && shared.empty();
+            static const std::array<const char*, 6> kComponents{
+                "atom_site_aniso.adp_11", "atom_site_aniso.adp_22", "atom_site_aniso.adp_33",
+                "atom_site_aniso.adp_12", "atom_site_aniso.adp_13", "atom_site_aniso.adp_23"};
+            next.table.columns = {header("atom_site_aniso.id")};
+            if (mixed) {
+                next.table.columns.push_back(header("atom_site.adp_type"));
+            }
+            for (const char* component : kComponents) {
+                next.table.columns.push_back(mixed ? label(component) : header(component, shared));
+            }
+            for (const auto& row : structure.atom_site_aniso) {
+                const std::string& type = type_of[row->id.value()];
+                std::vector<std::string> cells{row->id.value()};
+                if (mixed) {
+                    cells.push_back(type);
+                }
+                for (const Parameter* component : {&row->adp_11, &row->adp_22, &row->adp_33, &row->adp_12,
+                                                   &row->adp_13, &row->adp_23}) {
+                    cells.push_back(value_of(*component, rule, type).text);
+                }
+                next.table.rows.push_back(std::move(cells));
             }
         } else if (listed.id == "scattering_length") {
-            next.table.columns = {"Type", "b (fm)"};
+            next.table.columns = {header("scattering_length.type_symbol"), header("scattering_length.length_fm")};
             for (const auto& [type, length] : structure.scattering_lengths_fm.get()) {
-                next.table.rows.push_back({type, shortest(length)});
+                next.table.rows.push_back({type, formatted("scattering_length.length_fm", length)});
             }
         }
         if (!next.rows.empty() || !next.table.rows.empty()) {
@@ -503,15 +523,7 @@ ReportTable data_table(const BraggPdExperiment& experiment) {
     const PdDataBase& data = *experiment.data;
     const std::vector<double>& axis = data.axis();
     const std::vector<double>& measured = data.intensity_meas;
-    const auto [name, units] = axis_of(data);
-    const int axis_decimals = data.two_theta.has_value() ? 3 : 1;
-    double largest = 0.0;
-    for (const double value : measured) {
-        if (std::isfinite(value)) {
-            largest = std::max(largest, std::abs(value));
-        }
-    }
-    const int decimals = largest > 0.0 ? std::clamp(3 - static_cast<int>(std::floor(std::log10(largest))), 1, 6) : 1;
+    const char* axis_uid = data.two_theta.has_value() ? "data.two_theta" : "data.time_of_flight";
     const bool computed = experiment.computed_current() && data.intensity_calc.size() == axis.size() &&
                           data.intensity_bkg.size() == axis.size();
     const bool status = computed && data.calc_status.size() == axis.size();
@@ -527,21 +539,30 @@ ReportTable data_table(const BraggPdExperiment& experiment) {
                                              });
     }
     const bool any_excluded = std::find(excluded.begin(), excluded.end(), true) != excluded.end();
-    // An excluded row's computed values are NaN; its cell stays empty.
+    // Every intensity column keeps one number of decimals for all its rows, chosen from the largest measured value
+    // (owner, 2026-10-13): about three significant digits there, one to six decimals. An excluded row's computed
+    // values are NaN; its cell stays empty.
+    double largest = 0.0;
+    for (const double value : measured) {
+        if (std::isfinite(value)) {
+            largest = std::max(largest, std::abs(value));
+        }
+    }
+    const int decimals = largest > 0.0 ? std::clamp(3 - static_cast<int>(std::floor(std::log10(largest))), 1, 6) : 1;
     const auto cell = [decimals](const std::vector<double>& column, std::size_t row) {
-        return row < column.size() && std::isfinite(column[row]) ? column_text(column[row], decimals) : std::string();
+        return row < column.size() && std::isfinite(column[row]) ? fixed_text(column[row], decimals) : std::string();
     };
     ReportTable table;
-    table.columns = {name + " (" + units + ")", "Imeas", "s.u."};
+    table.columns = {header(axis_uid), header("data.intensity_meas"), header("data.intensity_meas_su")};
     if (computed) {
-        table.columns.insert(table.columns.end(), {"Icalc", "Ibkg"});
+        table.columns.insert(table.columns.end(), {header("data.intensity_calc"), header("data.intensity_bkg")});
     }
     if (any_excluded) {
-        table.columns.emplace_back("Status");
+        table.columns.push_back(header("data.calc_status"));
     }
     table.rows.reserve(axis.size());
     for (std::size_t row = 0; row < axis.size(); ++row) {
-        std::vector<std::string> cells{column_text(axis[row], axis_decimals), cell(measured, row),
+        std::vector<std::string> cells{formatted(axis_uid, axis[row]), cell(measured, row),
                                        cell(data.intensity_meas_su, row)};
         if (computed) {
             cells.push_back(cell(data.intensity_calc.values(), row));
@@ -577,10 +598,13 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         ReportCategory next = category(listed.id);
         if (listed.id == "experiment_type") {
             const ExperimentType& type = experiment.experiment_type;
-            next.rows = {{"Sample form", token(type.effective_sample_form()), ""},
-                         {"Beam mode", token(experiment.effective_beam_mode()), ""},
-                         {"Radiation probe", token(type.effective_radiation_probe()), ""},
-                         {"Scattering type", token(type.effective_scattering_type()), ""}};
+            const auto row = [](const char* uid, const char* value) {
+                return ReportRow{label(uid), option_label(uid, value), ""};
+            };
+            next.rows = {row("experiment_type.sample_form", token(type.effective_sample_form())),
+                         row("experiment_type.beam_mode", token(experiment.effective_beam_mode())),
+                         row("experiment_type.radiation_probe", token(type.effective_radiation_probe())),
+                         row("experiment_type.scattering_type", token(type.effective_scattering_type()))};
         } else if ((listed.id == "data" || listed.id == "data_range") && experiment.data.has_value()) {
             const PdDataBase& data = *experiment.data;
             const std::vector<double>& axis = data.axis();
@@ -591,11 +615,13 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             }
             next.rows.push_back({"Points", std::to_string(axis.size()), ""});
             if (!axis.empty()) {
+                // Each end and the step by the dictionary format of the axis they belong to.
+                const std::string axis_uid = std::string(listed.id) + (data.two_theta.has_value() ? ".two_theta" : ".time_of_flight");
                 const auto [low, high] = std::minmax_element(axis.begin(), axis.end());
-                next.rows.push_back({name + " min", shortest(*low), units});
-                next.rows.push_back({name + " max", shortest(*high), units});
+                next.rows.push_back({name + " min", formatted(axis_uid, *low), units});
+                next.rows.push_back({name + " max", formatted(axis_uid, *high), units});
                 if (listed.id == "data_range" && axis.size() > 1) {
-                    next.rows.push_back({name + " step", display_text(std::abs(axis[1] - axis[0])), units});
+                    next.rows.push_back({name + " step", formatted(axis_uid, std::abs(axis[1] - axis[0])), units});
                 }
             }
             if (listed.id == "data") {
@@ -608,59 +634,64 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "extinction") {
             // The type's label, then its mosaic distribution and items (edi ADR-0049).
-            const std::vector<std::string> types = extinction_type_tokens();
-            const std::vector<std::string> labels = extinction_type_labels();
             const std::string type = experiment.extinction.type.value_or("none");
-            const auto at = std::find(types.begin(), types.end(), type);
-            next.rows.push_back({"Type", at == types.end() ? type : labels[at - types.begin()], ""});
+            next.rows.push_back({label("extinction.type"), option_label("extinction.type", type), ""});
             if (experiment.extinction.mosaic_distribution) {
-                next.rows.push_back({"Mosaic distribution",
-                                     *experiment.extinction.mosaic_distribution == "lorentzian" ? "Lorentzian"
-                                                                                                : "Gaussian",
+                next.rows.push_back({label("extinction.mosaic_distribution"),
+                                     option_label("extinction.mosaic_distribution",
+                                                  *experiment.extinction.mosaic_distribution),
                                      ""});
             }
             add_fields(next.rows, listed.fields, rule);
         } else if (listed.id == "peak") {
-            next.rows.push_back({"Type", effective_peak_type(experiment), ""});
+            next.rows.push_back({label("peak.type"), option_label("peak.type", effective_peak_type(experiment)), ""});
             add_fields(next.rows, listed.fields, rule);
             add_fields(next.rows, listed.asymmetry, rule);
         } else if (listed.id == "background") {
-            next.rows.push_back({"Type", experiment.background_type, ""});
+            next.rows.push_back(
+                {label("background.type"), option_label("background.type", experiment.background_type), ""});
             if (experiment.background_type == "line-segment") {
-                next.table.columns = {"x", "Intensity"};
+                next.table.columns = {header("background.position"), header("background.intensity")};
                 for (const auto& point : experiment.background) {
-                    next.table.rows.push_back({shortest(point->position.get()), value_of(point->intensity, rule).text});
+                    next.table.rows.push_back(
+                        {formatted("background.position", point->position.get()), value_of(point->intensity, rule).text});
                 }
             } else {
-                next.table.columns = {"Order", "Coefficient"};
+                next.table.columns = {header("background.order"), header("background.coef")};
                 for (const auto& term : experiment.background_terms) {
                     next.table.rows.push_back({std::to_string(term->order.get()), value_of(term->coef, rule).text});
                 }
             }
         } else if (listed.id == "linked_structure") {
-            next.table.columns = {"Structure", "Scale"};
+            next.table.columns = {header("linked_structure.structure_id"), header("linked_structure.scale")};
             for (const auto& link : experiment.linked_structures) {
                 next.table.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
             }
         } else if (listed.id == "excluded_region") {
-            next.table.columns = {"Start", "End"};
+            // A time-of-flight region by its own variant: its units and format.
+            const char* variant = experiment.data.has_value() && experiment.data->time_of_flight.has_value()
+                                      ? "time-of-flight"
+                                      : "";
+            next.table.columns = {header("excluded_region.start", variant), header("excluded_region.end", variant)};
             for (const auto& region : experiment.excluded_regions) {
-                next.table.rows.push_back({shortest(region->first.get()), shortest(region->second.get())});
+                next.table.rows.push_back({display_text("excluded_region.start", region->first.get(), variant),
+                                           display_text("excluded_region.end", region->second.get(), variant)});
             }
         } else if (listed.id == "preferred_orientation") {
-            next.table.columns = {"Structure", "r", "f rand"};
+            next.table.columns = {header("preferred_orientation.structure_id"), header("preferred_orientation.march_r"),
+                                  header("preferred_orientation.march_random_fract")};
             for (const auto& row : experiment.preferred_orientation) {
                 next.table.rows.push_back({row->structure_id.value(), value_of(row->march_r, rule).text,
                                            value_of(row->march_random_fract, rule).text});
             }
         } else if (listed.id == "scattering_source") {
             const std::pair<const char*, const std::optional<std::string>*> sources[] = {
-                {"X-ray form factor", &experiment.xray_form_factor},
-                {"X-ray dispersion", &experiment.xray_dispersion},
-                {"Neutron scattering length", &experiment.neutron_scattering_length}};
-            for (const auto& [name, value] : sources) {
+                {"scattering_source.xray_form_factor", &experiment.xray_form_factor},
+                {"scattering_source.xray_dispersion", &experiment.xray_dispersion},
+                {"scattering_source.neutron_scattering_length", &experiment.neutron_scattering_length}};
+            for (const auto& [uid, value] : sources) {
                 if (value->has_value() && !value->value().empty()) {
-                    next.rows.push_back({name, value->value(), ""});
+                    next.rows.push_back({label(uid), option_label(uid, value->value()), ""});
                 }
             }
         }
@@ -675,41 +706,47 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         const ReflnDataBase& reflections = *experiment.reflections;
         ReportCategory measured{"measured_reflections", "Measured reflections", {}, {}};
         measured.rows = {{"File", experiment.data_file.empty() ? own_file(experiment) : experiment.data_file, ""},
-                         {"Reflections", std::to_string(reflections.size()), ""}};
+                         {category_label("refln"), std::to_string(reflections.size()), ""}};
         out.categories.insert(out.categories.empty() ? out.categories.end() : out.categories.begin() + 1,
                               std::move(measured));
         const std::vector<double>& calc = reflections.intensity_calc.values();
         const bool current = experiment.computed_current() && calc.size() == reflections.size();
         ReportCategory next = category("refln");
-        next.table.columns = {"h", "k", "l", "F² meas", "s.u.", "F² calc", "(F² meas \xE2\x88\x92 F² calc)/s.u."};
+        next.table.columns = {header("refln.index_h"),        header("refln.index_k"),
+                              header("refln.index_l"),        header("refln.intensity_meas"),
+                              header("refln.intensity_meas_su"), header("refln.intensity_calc"),
+                              "(F² meas \xE2\x88\x92 F² calc)/s.u."};
         for (std::size_t row = 0; reflections.rectangular() && row < reflections.size(); ++row) {
             const double meas = reflections.intensity_meas[row];
             const double su = reflections.intensity_meas_su[row];
             next.table.rows.push_back(
                 {std::to_string(reflections.index_h[row]), std::to_string(reflections.index_k[row]),
-                 std::to_string(reflections.index_l[row]), display_text(meas), display_text(su),
-                 current ? display_text(calc[row]) : std::string(),
-                 current && su > 0.0 ? column_text((meas - calc[row]) / su, 2) : std::string()});
+                 std::to_string(reflections.index_l[row]), formatted("refln.intensity_meas", meas),
+                 formatted("refln.intensity_meas_su", su),
+                 current ? formatted("refln.intensity_calc", calc[row]) : std::string(),
+                 current && su > 0.0 ? fixed_text((meas - calc[row]) / su, 2) : std::string()});
         }
         out.categories.push_back(std::move(next));
         return out;
     }
-    // The reflections the calculation made, as the reference report lists them, each column to the decimals its
-    // quantity is worth: d and sinθ/λ to 4, F and F² to 3, 2θ to 3 and TOF to 1.
+    // The reflections the calculation made, as the reference report lists them, each column by its dictionary format.
     const PowderReflnDataBase& refln = experiment.refln;
     if (experiment.computed_current() && refln.size() > 0 && experiment.data.has_value()) {
         ReportCategory next = category("refln");
-        const auto [name, units] = axis_of(*experiment.data);
-        const int position_decimals = experiment.data->two_theta.has_value() ? 3 : 1;
-        next.table.columns = {"Structure", "d (Å)", "sinθ/λ (Å⁻¹)", "h", "k", "l", "F calc", "F² calc",
-                              name + " (" + units + ")"};
+        const char* position_uid = experiment.data->two_theta.has_value() ? "refln.two_theta" : "refln.time_of_flight";
+        next.table.columns = {header("refln.structure_id"),   header("refln.d_spacing"),
+                              header("refln.sin_theta_over_lambda"), header("refln.index_h"),
+                              header("refln.index_k"),        header("refln.index_l"),
+                              header("refln.f_calc"),         header("refln.f_squared_calc"),
+                              header(position_uid)};
         for (std::size_t row = 0; row < refln.size(); ++row) {
             next.table.rows.push_back(
-                {refln.structure_id[row], column_text(refln.d_spacing[row], 4),
-                 column_text(refln.sin_theta_over_lambda[row], 4), std::to_string(refln.index_h[row]),
-                 std::to_string(refln.index_k[row]), std::to_string(refln.index_l[row]),
-                 column_text(refln.f_calc[row], 3), column_text(refln.f_squared_calc[row], 3),
-                 column_text(refln.position[row], position_decimals)});
+                {refln.structure_id[row], formatted("refln.d_spacing", refln.d_spacing[row]),
+                 formatted("refln.sin_theta_over_lambda", refln.sin_theta_over_lambda[row]),
+                 formatted("refln.index_h", refln.index_h[row]), formatted("refln.index_k", refln.index_k[row]),
+                 formatted("refln.index_l", refln.index_l[row]), formatted("refln.f_calc", refln.f_calc[row]),
+                 formatted("refln.f_squared_calc", refln.f_squared_calc[row]),
+                 formatted(position_uid, refln.position[row])});
         }
         out.categories.push_back(std::move(next));
     }
@@ -720,52 +757,59 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
 // subsections). A scan's fit result is its dataset's, with the scan's counts.
 std::vector<ReportCategory> analysis_of(const Project& project, const std::optional<ScanTemplate>& scan, bool fitted) {
     ReportCategory software{"software", "Software", {}, {}};
-    software.rows = {{"Framework", "edi " + core_version(), ""}, {"Calculator", "crysta", ""}};
+    software.rows = {{"Framework", "edi " + core_version(), ""}, {category_label("calculator"), "crysta", ""}};
     ReportCategory minimizer = category("minimizer");
     const std::string& descent = project.descent;
-    minimizer.rows = {{"Type", descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
-                      {"Maximum iterations",
+    minimizer.rows = {{label("minimizer.type"), descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
+                      {label("minimizer.max_iterations"),
                        std::to_string(project.minimizer_max_iterations > 0 ? project.minimizer_max_iterations : 50), ""},
-                      {"χ² change tolerance",
-                       project.minimizer_chi_square_tolerance > 0.0 ? shortest(project.minimizer_chi_square_tolerance)
-                                                                    : "crysta's default",
+                      {label("minimizer.chi_square_tolerance"),
+                       project.minimizer_chi_square_tolerance > 0.0
+                           ? formatted("minimizer.chi_square_tolerance", project.minimizer_chi_square_tolerance)
+                           : "crysta's default",
                        ""}};
     ReportCategory mode = category("fitting_mode");
-    mode.rows = {{"Type", fitting_mode_name(project.fitting_mode), ""}};
-    ReportCategory result{"fit_result", "Fit result", {}, {}};
+    mode.rows = {{label("fitting_mode.type"), fitting_mode_name(project.fitting_mode), ""}};
+    ReportCategory result = category("fit_result");
     const FitResultRecord& record = project.fit_result;
     if (scan && scan->row) {
         const ScanResultIndex::Row& row = *scan->row;
         result.rows = {{"Dataset", scan->file, ""},
                        {"Overall status", row.converged ? "Success" : "Failed", ""},
-                       {"Iterations", std::to_string(row.iterations), ""},
-                       {"Goodness-of-fit (reduced χ²)", fixed(row.reduced_chi_square, 2), ""},
+                       {label("fit_result.iterations"), std::to_string(row.iterations), ""},
+                       {label("fit_result.reduced_chi_square"),
+                        formatted("fit_result.reduced_chi_square", row.reduced_chi_square), ""},
                        {"Files fitted", std::to_string(scan->fitted) + "/" + std::to_string(scan->files), ""},
                        {"Converged", std::to_string(scan->converged), ""},
                        {"Failed", std::to_string(scan->fitted - scan->converged), ""}};
     } else if (fitted) {
         result.rows = {{"Overall status", status_word(record), ""},
-                       {"Fitting time", duration_text(record.fitting_time), "s"},
-                       {"Iterations", std::to_string(record.iterations), ""},
-                       {"Goodness-of-fit (reduced χ²)", fixed(record.reduced_chi_square, 2), ""}};
-        // A single crystal's fit is over F²: its factors are R(F²) and wR(F²), which crysta records as the profile
-        // pair.
+                       {label("fit_result.fitting_time"), duration_text(record.fitting_time),
+                        units_label("fit_result.fitting_time")},
+                       {label("fit_result.iterations"), std::to_string(record.iterations), ""},
+                       {label("fit_result.reduced_chi_square"),
+                        formatted("fit_result.reduced_chi_square", record.reduced_chi_square), ""}};
+        // A single crystal's fit is over F²: crysta records its R(F²) and wR(F²) as the profile pair, which the
+        // dictionary names by the sample form.
         const bool single_crystal =
             !project.experiments.empty() &&
             std::all_of(project.experiments.begin(), project.experiments.end(),
                         [](const auto& experiment) { return experiment->reflections.has_value(); });
-        if (single_crystal) {
-            if (record.prof_r_factor) {
-                result.rows.push_back({"R-factor R(F²)", fixed(*record.prof_r_factor * 100.0, 2), "%"});
-            }
-            result.rows.push_back({"Weighted R-factor wR(F²)", fixed(record.prof_wr_factor * 100.0, 2), "%"});
-        } else {
-            result.rows.push_back({"Weighted profile R-factor (Rwp)", fixed(record.prof_wr_factor * 100.0, 2), "%"});
+        const std::string form = single_crystal ? token(SampleFormEnum::SINGLE_CRYSTAL) : std::string();
+        if (single_crystal && record.prof_r_factor) {
+            result.rows.push_back({label("fit_result.prof_r_factor", form),
+                                   formatted("fit_result.prof_r_factor", *record.prof_r_factor, form),
+                                   units_label("fit_result.prof_r_factor", form)});
         }
+        result.rows.push_back({label("fit_result.prof_wr_factor", form),
+                               formatted("fit_result.prof_wr_factor", record.prof_wr_factor, form),
+                               units_label("fit_result.prof_wr_factor", form)});
         for (const auto& experiment : project.experiments) {
             if (!single_crystal && experiment->fit_prof_wr_factor.has_value()) {
                 result.rows.push_back(
-                    {"Rwp, " + experiment->name.value(), fixed(*experiment->fit_prof_wr_factor * 100.0, 2), "%"});
+                    {label("fit_result_bank.prof_wr_factor") + ", " + experiment->name.value(),
+                     formatted("fit_result_bank.prof_wr_factor", *experiment->fit_prof_wr_factor),
+                     units_label("fit_result_bank.prof_wr_factor")});
             }
         }
     } else {
@@ -863,24 +907,30 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
     if (experiment < project.experiments.size() && project.experiments[experiment]->fit_prof_wr_factor) {
         rwp = *project.experiments[experiment]->fit_prof_wr_factor;
     }
-    // crysta records a single crystal's R(F²) and wR(F²) as the profile pair.
+    // crysta records a single crystal's R(F²) and wR(F²) as the profile pair, which the dictionary names by the
+    // sample form.
     if (experiment < project.experiments.size() && project.experiments[experiment]->reflections.has_value()) {
         const ExperimentBase& crystal = *project.experiments[experiment];
+        const std::string form = token(crystal.experiment_type.effective_sample_form());
         const std::optional<double> r =
             crystal.fit_prof_r_factor ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor;
-        return (r ? "R(F\xC2\xB2) " + fixed(*r * 100.0, 2) + " % \xC2\xB7 " : std::string()) + "wR(F\xC2\xB2) " +
-               fixed(rwp * 100.0, 2) + " % \xC2\xB7 \xCF\x87\xC2\xB2 " +
-               fixed(project.fit_result.reduced_chi_square, 2);
+        const auto factor = [&form](const char* uid, double value) {
+            return label(uid, form) + " " + formatted(uid, value, form) + " " + units_label(uid, form) + " \xC2\xB7 ";
+        };
+        return (r ? factor("fit_result.prof_r_factor", *r) : std::string()) + factor("fit_result.prof_wr_factor", rwp) +
+               label("fit_result.reduced_chi_square") + " " +
+               formatted("fit_result.reduced_chi_square", project.fit_result.reduced_chi_square);
     }
-    return "Rwp " + fixed(rwp * 100.0, 2) + " % \xC2\xB7 \xCF\x87\xC2\xB2 " +
-           fixed(project.fit_result.reduced_chi_square, 2);
+    return label("fit_result.prof_wr_factor") + " " + formatted("fit_result.prof_wr_factor", rwp) + " " +
+           units_label("fit_result.prof_wr_factor") + " \xC2\xB7 " + label("fit_result.reduced_chi_square") + " " +
+           formatted("fit_result.reduced_chi_square", project.fit_result.reduced_chi_square);
 }
 
 namespace {
 
 // A scan's parameters across its datasets, as the Evolution tab draws them (evolution_series): each listed
-// parameter's points at the first extract rule's value, else at the file's place, each value's text in the
-// project's s.u. rule. No series when the scan's datasets or results cannot be read.
+// parameter's points at the first extract rule's value, else at the file's place, each value's text by
+// `rule`. No series when the scan's datasets or results cannot be read.
 std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string& rule) {
     std::vector<ReportEvolution> out;
     try {
@@ -893,11 +943,20 @@ std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string
             x_title = unit.empty() ? extract->id.value() : extract->id.value() + " (" + unit + ")";
             break;
         }
-        // Each parameter's units by its unique name or its results column.
+        // Each parameter's units, dictionary item and variant (an ADP's site type) by its unique name or its results
+        // column.
+        const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(scan);
         std::map<std::string, std::string> units;
+        std::map<std::string, std::pair<std::string, std::string>> uids;
         for (const NamedParameter& named : named_parameters(scan)) {
-            units.emplace(named.unique_name, units_of(*named.parameter));
-            units.emplace(scan_results_column(named.unique_name), units_of(*named.parameter));
+            const auto variant = variants.find(named.parameter);
+            const std::string type = variant != variants.end() ? variant->second : std::string();
+            units.emplace(named.unique_name, units_of(*named.parameter, type));
+            units.emplace(scan_results_column(named.unique_name), units_of(*named.parameter, type));
+            if (named.parameter->spec != nullptr) {
+                uids.emplace(named.unique_name, std::pair{uid_of(*named.parameter->spec), type});
+                uids.emplace(scan_results_column(named.unique_name), std::pair{uid_of(*named.parameter->spec), type});
+            }
         }
         const std::vector<std::string> names = evolution_parameters(scan, index);
         for (const std::string& name : names) {
@@ -905,10 +964,15 @@ std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string
             out.push_back({name, x_title, {}, found != units.end() ? found->second : std::string()});
         }
         // Every series from one read of the results.
-        evolution_series(scan, places, index, names, true, [&out, &rule](std::size_t i, const EvolutionPoint& point) {
-            out[i].points.push_back({point.x, point.y, point.su,
-                                     point.su > 0.0 ? value_su_text(point.y, point.su, rule) : shortest(point.y)});
-        });
+        evolution_series(scan, places, index, names, true,
+                         [&out, &rule, &uids, &names](std::size_t i, const EvolutionPoint& point) {
+                             const auto uid = uids.find(names[i]);
+                             const std::string text =
+                                 point.su > 0.0      ? value_su_text(point.y, point.su, rule)
+                                 : uid != uids.end() ? formatted(uid->second.first, point.y, uid->second.second)
+                                                     : shortest(point.y);
+                             out[i].points.push_back({point.x, point.y, point.su, text});
+                         });
     } catch (const std::exception&) {
         out.clear();
     }
@@ -937,7 +1001,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         }
     }
     const Project& project = scan ? scan->project : input;
-    const std::string& rule = project.su_rule;
+    // A report and its CIF round by the IUCr rule whatever the project's own setting (the owner, 2026-10-24).
+    const std::string rule = kReportSuRule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
     // The optional groups (the owner, 2026-10-13): each in the contents, marked whether the options leave it out.
@@ -961,19 +1026,23 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     model.fitted = scan_mode ? scan && scan->row.has_value() : project.fit_result.held();
     const bool charts = group("charts", "Charts");
-    const bool correlations = group("correlations", "Correlations");
-    const bool reflections = group("reflections", "Reflections");
+    const bool correlations = group("correlations", category_label("fit_parameter_correlation"));
+    const bool reflections = group("reflections", category_label("refln"));
     const bool data = group("data", "Data");
     const bool evolution = scan_mode && group("evolution", "Evolution");
     model.sections = {ReportSection::Summary, ReportSection::Analysis, ReportSection::Structures,
                       ReportSection::Experiments};
     model.analysis = analysis_of(project, scan, model.fitted);
+    const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
     for (const NamedParameter& named : named_parameters(project)) {
         const Parameter& parameter = *named.parameter;
         const std::optional<double>& su = parameter.uncertainty.get();
-        model.parameters.push_back({named.unique_name, label_of(parameter, named.unique_name), parameter.value.get(),
-                                    su && std::isfinite(*su) ? su : std::nullopt, value_of(parameter, rule).text,
-                                    units_of(parameter), parameter.start_value.get(), parameter.free.get()});
+        const auto variant = variants.find(&parameter);
+        const std::string type = variant != variants.end() ? variant->second : std::string();
+        model.parameters.push_back({named.unique_name, label_of(parameter, named.unique_name, type),
+                                    parameter.value.get(), su && std::isfinite(*su) ? su : std::nullopt,
+                                    value_of(parameter, rule, type).text, units_of(parameter, type),
+                                    parameter.start_value.get(), parameter.free.get()});
     }
     for (const auto& structure : project.structures) {
         ReportStructure built = structure_of(*structure, rule);
@@ -988,7 +1057,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
             return (part.id == "refln" && !reflections) || (part.id == "data" && !data);
         });
         if (charts && project.experiments[index]->reflections.has_value()) {
-            built.single_crystal = single_crystal_of(*project.experiments[index]);
+            built.single_crystal = single_crystal_of(*project.experiments[index], rule);
             built.single_crystal->title = reliability_text(project, index);
         } else if (charts) {
             built.pattern = pattern_of(project, index, options, scan && scan->place ? *scan->place : index);

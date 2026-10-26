@@ -40,3 +40,12 @@ named machine and display, every cold/warm route, the original marks and their
 published targets. The timed app acceptance run must use that same machine and
 display after implementation; the reference-data check does not claim that the
 current app meets its targets.
+
+`generate_saved_projections.py` projects immutable archived writer bytes through
+independent decimal arithmetic. Run it with
+`python -m tests.fixtures.project_save.generate_saved_projections`. It writes
+`saved-projections.json` and retains each original archive digest and its full
+old-hash to saved-hash mapping. Historical archives and golden files stay
+unchanged. The paired rounding reference handles positive uncertainties; bare
+and no-positive-uncertainty values use six significant digits. Measured data
+and settings outside the parameter tree retain their spelling.

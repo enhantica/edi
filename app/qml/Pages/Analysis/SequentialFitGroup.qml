@@ -16,19 +16,19 @@ EaElements.GroupRow {
     ValueField {
         objectName: "sequentialFit.dataDir"
         editable: false
-        label: qsTr("data directory")
+        uid: "sequential_fit.data_dir"
         fieldValue: row.fit ? row.fit.dataDir : ""
     }
     ValueField {
         objectName: "sequentialFit.filePattern"
         editable: false
-        label: qsTr("files")
+        uid: "sequential_fit.file_pattern"
         fieldValue: row.fit ? row.fit.filePattern : ""
     }
     ValueField {
         objectName: "sequentialFit.reverse"
         editable: false
-        label: qsTr("reverse")
+        uid: "sequential_fit.reverse"
         fieldValue: row.fit ? row.fit.reverse : ""
     }
 }

@@ -43,7 +43,7 @@ def generate(source, measured_project='sc-neut-tof_taurine-senju'):
         'project': measured_project,
         'current_project': 'sc-neut-tof_taurine-senju',
         'measurement_date': '2026-10-25',
-        'source': 'https://github.com/enhantica/relay/blob/main/knowledge/analysis/e04-t23-opening-measurement.md',
+        'source': 'baseline.tsv',
         'raw_sha256': hashlib.sha256(raw).hexdigest(),
         'routes': routes,
     }

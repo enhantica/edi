@@ -22,15 +22,15 @@ EaElements.GroupBox {
     collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
-    title: qsTr("Standard uncertainties")
+    title: Session.categoryTitle("su_format")
     icon: "ruler-horizontal"
 
     EaElements.ComboBox {
         objectName: "project.suRule"
         width: EaStyle.Sizes.sideBarContentWidth
         enabled: group.project !== null
-        // The order is `rules`.
-        model: [qsTr("IUCr recommendation: 1 digit, or 2 from 10 to 19"), qsTr("Always 2 digits, 10 to 99")]
+        // The order is `rules`, each by its dictionary name.
+        model: group.rules.map(rule => Session.optionLabel("su_format.rule", rule))
         currentIndex: group.project ? group.rules.indexOf(group.project.suRule) : 0
         onActivated: index => group.project.suRule = group.rules[index]
     }

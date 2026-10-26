@@ -15,7 +15,7 @@
 A project made in one app should open in another (owner, 2026-10-10): the desktop app, the web app, the command line
 and Python each need to open a project from its folder, its `project.edi` or a `.zip`, and to hand it on as one file.
 The web app had its own archive code on Qt's private zip classes, which the core cannot use (ADR-0009: the core is
-Qt-free). A save rounds what it writes (crysta ADR-0092), so the open project must take the written values and the
+Qt-free). A save rounds what it writes, so the open project must take the written values and the
 calculated pattern must be recalculated from them, or the file and the screen disagree (owner, 2026-10-18 and
 2026-10-24). Opening taurine took 2.5 s, 9.4 s the second time; nearly all of it was the pages being rebuilt and drawn,
 not the project being read (measured with the app's software renderer, as on the test machines).

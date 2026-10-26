@@ -160,7 +160,7 @@ try {
     let selectedExample='sc-neut-cwl_tb2ti2o7-heidi';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
-      // I-0335 tracks Qt's closed dialog DOM; observe native controls until Qt supports their AX tree.
+      // Qt's dialog DOM remains closed; observe the native controls while its AX tree is unavailable.
       // Resolve the declared native radio/checkbox, then use trusted input; the
       // subsequent real picker/write proves that the dialog accepted the choice.
       if(role==='radio'||role==='checkbox') {

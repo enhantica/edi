@@ -2745,6 +2745,16 @@
       "not_storage": "a parameter's link to its category's row"
     },
     {
+      "member": "CategoryRef::site_",
+      "type": "const AtomSite*",
+      "not_storage": "a parameter's link to its category's row"
+    },
+    {
+      "member": "CategoryRef::experiment_",
+      "type": "const ExperimentBase*",
+      "not_storage": "a parameter's link to its category's row"
+    },
+    {
       "member": "Parameter::value",
       "type": "detail::Written<double>",
       "not_storage": "a parameter: the cells of one parameter column bundle"

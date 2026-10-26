@@ -185,15 +185,20 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
     )['cases']
     current_cases = {'repo:docs/user/cli/' + row['id'] + '/project' for row in catalogue}
-    assert set(NEW_FIXED_POINTS) == current_cases | {
-        'repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project',
-        'repo:docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project',
-        'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
-        'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
-        'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
-    } | SINGLE_CRYSTAL_FIXED_POINTS | {'corpus:multiphase-scales/project'} | ADDED_FIXED_POINTS, (
-        'every declared extended or new X-ray input retains its separate complete byte witness'
-    )
+    assert (
+        set(NEW_FIXED_POINTS)
+        == current_cases
+        | {
+            'repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project',
+            'repo:docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project',
+            'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
+            'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
+            'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
+        }
+        | SINGLE_CRYSTAL_FIXED_POINTS
+        | {'corpus:multiphase-scales/project'}
+        | ADDED_FIXED_POINTS
+    ), 'every declared extended or new X-ray input retains its separate complete byte witness'
     assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
         'a new project invariant cannot replace any old serialization oracle'
     )
