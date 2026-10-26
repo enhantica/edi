@@ -97,7 +97,7 @@ void ScanLayer::labelsMoved() {
     // Made again now, and announced only when the choice changed: a selection that leaves every label where it was
     // re-binds no label.
     shown_labels_stale_ = true;
-    const QVariantList before = shown_labels_;
+    const QList<bool> before = shown_labels_;
     if (shownLabels() != before) {
         emit shownLabelsChanged();
     }
@@ -119,7 +119,7 @@ void ScanLayer::setLabelGap(double gap) {
     }
 }
 
-QVariantList ScanLayer::shownLabels() const {
+QList<bool> ScanLayer::shownLabels() const {
     if (!shown_labels_stale_) {
         return shown_labels_;
     }
