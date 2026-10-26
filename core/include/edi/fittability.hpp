@@ -2,7 +2,7 @@
 #ifndef EDI_FITTABILITY_HPP
 #define EDI_FITTABILITY_HPP
 
-// Which parameters a fit can vary, and why not (edi ADR-0053): crysta's one rule (crysta ADR-0107), read for the fits
+// Which parameters a fit can vary, and why not (edi ADR-0053): crysta's one rule, read for the fits
 // the project's mode runs and marked on every parameter. The pages, the Analysis table, Python, the loader and the
 // fit entries read those marks; none keeps a list of its own.
 

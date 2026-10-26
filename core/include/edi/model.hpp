@@ -1167,7 +1167,7 @@ class CategoryRef {
 // saved.
 enum class Dependence : std::uint8_t { Independent, SymmetryFixed, SymmetryTied, Constrained };
 
-// What keeps a fit from varying a parameter (crysta ADR-0107, edi ADR-0053), the first that applies: a descriptor,
+// What keeps a fit from varying a parameter (ADR-0053), the first that applies: a descriptor,
 // symmetry, a declared constraint, no fitted experiment using it that measures what it needs, or no derivative for
 // it in crysta. Set by refresh_fittability (fittability.hpp) from crysta's one rule; never saved.
 enum class FitBlocker : std::uint8_t { None, Descriptor, Symmetry, Constraint, Data, Capability };

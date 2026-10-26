@@ -15,7 +15,7 @@ Whether a value could be fitted was decided in three places that disagreed. edi 
 and the loader cleared those two with notes of its own. The Analysis table hid every value it could not fit, so a user
 could not see why one was missing, and a checkbox could be enabled for a value the fit then refused.
 
-crysta now decides it once ([crysta ADR-0107](https://github.com/enhantica/crysta/blob/main/docs/dev/adrs/0107-what-a-fit-can-free.md)):
+crysta now decides it once, in one rule its public API exposes:
 for each parameter of a fit, the first of five reasons that applies, each with one text. A descriptor is never fitted.
 Symmetry or a declared constraint may set the value. No experiment in the fit that uses the value may measure what it
 needs: integrated single-crystal intensities measure no reflection positions, so they cannot determine the cell. Or
