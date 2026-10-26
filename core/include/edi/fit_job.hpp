@@ -91,10 +91,14 @@ class FitJob {
     void frame_shown();
     // Whether a running scan draws each file it fits (Follow).
     void follow(bool on);
-    // Whether a followed scan waits after each file until its pattern is shown, so every file is drawn ("every
-    // pattern", edi ADR-0029). It waits a second at most, so a window that does not draw cannot stall the scan,
-    // and never in the single-thread build, whose scan runs on the thread that would draw.
+    // Whether a followed scan draws every file ("every pattern", edi ADR-0029): each file's pattern waits, once the
+    // file is fitted, until the last one is shown, so a file is fitted while the one before it is drawn. It waits a
+    // second at most, so a window that does not draw cannot stall the scan, and never in the single-thread build,
+    // whose scan runs on the thread that would draw.
     void wait_for_patterns(bool on);
+    // Whether a followed scan sends every file's pattern as it is fitted, never waiting for one to be shown ("every
+    // pattern, display catches up", edi ADR-0029): the owner draws them in order at its own pace.
+    void send_every_pattern(bool on);
     // From `start` until `finished` has run.
     bool running() const noexcept;
     // The running fit's job on the worker, or 0.

@@ -131,7 +131,7 @@ Rectangle {
             objectName: "structure.view.labels"
             anchors.fill: parent
             font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
             font.weight: Font.DemiBold
             letterFont.family: EaStyle.Fonts.ptSansBold.name
             letterFont.bold: true

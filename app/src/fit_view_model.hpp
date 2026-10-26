@@ -9,8 +9,11 @@
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
 
 #include "edi/fit_job.hpp"
 #include "edi/model.hpp"
@@ -125,13 +128,18 @@ class FitViewModel : public QObject {
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
-    // How often a followed scan redraws the pattern (edi ADR-0029), saved per machine: 0 every pattern (the scan
-    // waits for each), 1 about once a second, 2 adaptive (the default: the newest finished file whenever the screen
-    // is free, every half second at most), 3 only at the end.
+    // How often a followed scan redraws the pattern (edi ADR-0029), saved per machine: 0 every pattern with the fit
+    // waiting for each to be drawn, 1 about once a second, 2 adaptive (the default: the newest finished file whenever
+    // the screen is free, every half second at most), 3 only at the end, 4 every pattern with the display catching up
+    // (the fit never waits; the patterns are drawn in order at the display's pace).
     Q_PROPERTY(int patternUpdates READ patternUpdates WRITE setPatternUpdates NOTIFY patternUpdatesChanged)
     // The patterns a scan has drawn since it started, and the file drawn last.
     Q_PROPERTY(int scanPatternUpdates READ scanPatternUpdates NOTIFY scanPatternUpdatesChanged)
     Q_PROPERTY(QString scanShownFile READ scanShownFile NOTIFY scanShownFileChanged)
+    // Every pattern, display catches up: the patterns the scan has sent to be drawn, and whether some still wait
+    // behind the one being drawn (the status bar's "Showing N of M").
+    Q_PROPERTY(int scanReceived READ scanReceived NOTIFY scanReceivedChanged)
+    Q_PROPERTY(bool scanBehind READ scanBehind NOTIFY scanBehindChanged)
     // Some experiment holds measured data. Without any, nothing can be fitted: Start fitting and every "free" toggle
     // are disabled, while values stay editable and the calculated pattern follows them (edi ADR-0046).
     Q_PROPERTY(bool measured READ measured NOTIFY measuredChanged)
@@ -195,9 +203,16 @@ class FitViewModel : public QObject {
     void setPatternUpdates(int mode);
     int scanPatternUpdates() const { return scan_pattern_updates_; }
     QString scanShownFile() const { return QString::fromStdString(followed_file_); }
+    int scanReceived() const { return scan_received_; }
+    bool scanBehind() const { return behind_; }
+    // Every pattern, display catches up: files are still waiting to be shown or being shown, the scan running or not.
+    // Until they are, the owner keeps the followed file's pattern and shows the scan's last dataset only after them.
+    bool catchingUp() const { return pattern_updates_ == kCatchUpMode && (!catch_up_.empty() || handed_token_ != 0); }
+    static constexpr int kCatchUpMode = 4;
     // The owner has shown the dataset it was asked for: a newer finished file may be followed now (edi ADR-0029).
     void followShown();
-    // A pattern chart of the current experiment was shown or hidden (ProjectViewModel::patternShown).
+    // A pattern chart of the current experiment, or a Stacked view or Map, was shown or hidden
+    // (ProjectViewModel::patternShown, scanViewShown).
     void patternShownChanged();
     // The followed file handed to the owner was drawn on screen (`drawn`), or will not be (its read or application
     // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
@@ -250,6 +265,8 @@ class FitViewModel : public QObject {
     void patternUpdatesChanged();
     void scanPatternUpdatesChanged();
     void scanShownFileChanged();
+    void scanReceivedChanged();
+    void scanBehindChanged();
     void measuredChanged();
     void availableChanged();
     void unavailableReasonChanged();
@@ -291,6 +308,10 @@ class FitViewModel : public QObject {
     // Follow asks for the next finished file's pattern once the one before is shown and kFollowIntervalMs has
     // passed.
     void followLatest();
+    // Every pattern, display catches up: the oldest waiting pattern goes to the view once the one before is drawn.
+    void drainFollowed();
+    // `behind` and, once a scan that has ended is caught up, the owner's final view.
+    void syncBehind();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
     void scanEnded(const edi::FitReport& report);
@@ -333,8 +354,19 @@ class FitViewModel : public QObject {
     std::uint64_t handOver(const std::string& file);
     void dropHandedFile();
     int scan_pattern_updates_ = 0;  // patterns drawn since the scan started
+    // Every pattern, display catches up: the files fitted and their patterns, oldest first, not yet handed to the
+    // view, and the patterns received since the scan started.
+    std::deque<std::pair<std::string, edi::FitFrame>> catch_up_;
+    int scan_received_ = 0;
+    bool behind_ = false;
+    // The scan ended with patterns still to draw: the owner's final view waits for them (ProjectViewModel::scanEnded).
+    bool caught_up_pending_ = false;
     // A followed file is drawn: the shown file and the count move on.
     void patternDrawn(const std::string& file);
+    // Every pattern, fit waits: the job waits while a view that shows each file is on screen.
+    bool waitsForView(int mode) const;
+    // The view can take the next followed file.
+    bool viewReady() const;
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;
