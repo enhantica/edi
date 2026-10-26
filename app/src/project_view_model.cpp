@@ -1913,6 +1913,18 @@ bool ProjectViewModel::presentedFollowed() const {
            projected_dataset_ == follow_index_ && experiment->presentedGeneration() >= follow_generation_;
 }
 
+void ProjectViewModel::setScanViewShown(QObject* view, bool shown) {
+    const bool was = scanViewShown();
+    if (shown) {
+        scan_views_shown_.insert(view);
+    } else {
+        scan_views_shown_.erase(view);
+    }
+    if (scanViewShown() != was && fit_ != nullptr) {
+        fit_->patternShownChanged();
+    }
+}
+
 bool ProjectViewModel::patternShown() const {
     const ExperimentViewModel* experiment = currentExperiment();
     return experiment != nullptr && experiment->patternShown();

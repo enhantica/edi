@@ -334,7 +334,7 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
     hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) { scanFrame(file, shown); };
     job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
-    job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
+    job_->wait_for_patterns(waitsForView(pattern_updates_));
     job_->send_every_pattern(pattern_updates_ == kCatchUp);
     showRecord();
     sync();
@@ -650,7 +650,28 @@ void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame
     }
     frame_shown_ = false;
     follow_clock_.start();
-    owner_.followScanFrame(file, frame, handOver(file));
+    const std::uint64_t token = handOver(file);
+    if (owner_.patternShown() || pattern_updates_ != kEveryPattern) {
+        owner_.followScanFrame(file, frame, token);
+    } else {
+        // Every pattern on a Stacked view or Map: the file is shown as the current dataset (edi ADR-0029, 8).
+        owner_.followScanSelection(file, token);
+    }
+}
+
+bool FitViewModel::waitsForView(int mode) const {
+    // Fit waits: while a pattern chart, a Stacked view or a Map is on screen, which shows every file; with none, as
+    // on the Correlations or Evolution tab or another page, there is nothing to wait for.
+    return mode == kEveryPattern && (owner_.patternShown() || owner_.scanViewShown());
+}
+
+bool FitViewModel::viewReady() const {
+    // A pattern chart once the last view asked for is applied; with every pattern and no pattern chart, a Stacked view
+    // or Map with no dataset read pending.
+    if (owner_.patternShown()) {
+        return owner_.followReady();
+    }
+    return pattern_updates_ == kEveryPattern && owner_.scanViewShown() && owner_.viewSettled();
 }
 
 std::uint64_t FitViewModel::handOver(const std::string& file) {
@@ -710,7 +731,7 @@ void FitViewModel::syncBehind() {
 }
 
 void FitViewModel::followLatest() {
-    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !owner_.followReady() ||
+    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !viewReady() ||
         pattern_updates_ == kAtEnd || pattern_updates_ == kCatchUp) {
         return;
     }
@@ -731,7 +752,7 @@ void FitViewModel::followLatest() {
 void FitViewModel::patternShownChanged() {
     // Every pattern: the worker waits for a drawing only while a chart can draw one.
     if (job_) {
-        job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
+        job_->wait_for_patterns(waitsForView(pattern_updates_));
         job_->send_every_pattern(pattern_updates_ == kCatchUp);
     }
     followShown();
@@ -974,7 +995,7 @@ void FitViewModel::setFollowing(bool following) {
 void FitViewModel::setPatternUpdates(int mode) {
     mode = mode >= kEveryPattern && mode <= kCatchUp ? mode : kAdaptive;
     if (job_) {
-        job_->wait_for_patterns(mode == kEveryPattern && owner_.patternShown());
+        job_->wait_for_patterns(waitsForView(mode));
         job_->send_every_pattern(mode == kCatchUp);
     }
     if (mode != pattern_updates_) {

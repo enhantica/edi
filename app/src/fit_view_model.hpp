@@ -211,7 +211,8 @@ class FitViewModel : public QObject {
     static constexpr int kCatchUpMode = 4;
     // The owner has shown the dataset it was asked for: a newer finished file may be followed now (edi ADR-0029).
     void followShown();
-    // A pattern chart of the current experiment was shown or hidden (ProjectViewModel::patternShown).
+    // A pattern chart of the current experiment, or a Stacked view or Map, was shown or hidden
+    // (ProjectViewModel::patternShown, scanViewShown).
     void patternShownChanged();
     // The followed file handed to the owner was drawn on screen (`drawn`), or will not be (its read or application
     // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
@@ -362,6 +363,10 @@ class FitViewModel : public QObject {
     bool caught_up_pending_ = false;
     // A followed file is drawn: the shown file and the count move on.
     void patternDrawn(const std::string& file);
+    // Every pattern, fit waits: the job waits while a view that shows each file is on screen.
+    bool waitsForView(int mode) const;
+    // The view can take the next followed file.
+    bool viewReady() const;
     // The running fit's clock, shown once a second.
     QElapsedTimer clock_;
     QTimer clock_timer_;

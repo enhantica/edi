@@ -67,8 +67,10 @@ try. A slow scan (a file every few seconds) can show every file and should.
    - **Every pattern, fit waits for the display**: each finished file's pattern is drawn before the fit goes on. The
      job fits the next file while the window draws the last one, and waits only before sending that next file's
      pattern, until the last is drawn (as in 3), a second at most, so a window that does not draw cannot hold the scan
-     up. It does not wait while no pattern chart is shown. The single-thread kit cannot wait: its scan runs on the
-     thread that draws. A saved "Every pattern" from before the split (the stored value 0) is this choice.
+     up. On the Stacked view or the Map the file is shown as the current dataset, counted at the first frame
+     synchronised after it, and the fit waits for that the same way (the owner, 2026-10-25: each file is shown while
+     it is fitted). It does not wait while no pattern view is shown, as on the Correlations or Evolution tab or another
+     page. The single-thread kit cannot wait: its scan runs on the thread that draws. A saved "Every pattern" from before the split (the stored value 0) is this choice.
    - **Every pattern, display catches up** (the owner, 2026-10-24): the fit never waits. The job sends every finished
      file's pattern as it is fitted; the view keeps them in order and shows each once the one before is shown, at the
      display's pace. With a pattern chart shown the file's pattern is drawn (as in 3); without one (the Stacked or the

@@ -282,6 +282,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::string savedFile(const std::string& relative) const;
     SavedFile savedFileFunction() const;
 
+    // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
+    // file on it as the current dataset (edi ADR-0029, 8).
+    Q_INVOKABLE void setScanViewShown(QObject* view, bool shown);
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
@@ -363,9 +366,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
-    // Every pattern, display catches up, with no pattern chart shown (the Stacked or the Map view): the file is
-    // presented by becoming the current dataset, counted once a frame is synchronised with it.
+    // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
+    // current dataset, counted once a frame is synchronised with it.
     void followScanSelection(const std::string& file, std::uint64_t token);
+    // A Stacked view or Map is on screen (setScanViewShown).
+    bool scanViewShown() const { return !scan_views_shown_.empty(); }
     // No dataset read is in flight or waits to be applied.
     bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
@@ -604,6 +609,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t follow_generation_ = 0;
     bool follow_issuing_ = false;  // the followed file's own view request is being made
     bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
+    std::set<const QObject*> scan_views_shown_;
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; the render thread clears it at the next synchronisation.
     std::atomic<bool> render_armed_{false};
