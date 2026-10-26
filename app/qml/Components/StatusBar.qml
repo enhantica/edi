@@ -129,7 +129,8 @@ EaElements.StatusBar {
         shown: bar.project !== null && valueText !== ""
         keyIcon: "th-list"
         keyText: qsTr("Parameters")
-        valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
+        // What a fit can vary: the free and the fixed; the rows no fit can vary are not counted (edi ADR-0053).
+        valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
     // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
