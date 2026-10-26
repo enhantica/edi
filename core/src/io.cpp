@@ -2915,14 +2915,18 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
     }
 }
 
+// crysta's code for what a CIF import leaves unread or does not keep, which leads each report as it
+// leads crysta's own warnings, so a caller tells them from the loader's notes.
+constexpr const char* kCifReport = "crysta.schema.cif_items_not_read: ";
+
 // What crysta reports about a CIF it read: to `on_warning`, else to stderr as the loader's other
 // warnings go.
 static void report_notes(const std::vector<std::string>& notes, const WarningSink& on_warning) {
     for (const std::string& note : notes) {
         if (on_warning) {
-            on_warning(note);
+            on_warning(kCifReport + note);
         } else {
-            std::cerr << "Warning: " << note << "\n";
+            std::cerr << "Warning: " << kCifReport << note << "\n";
         }
     }
 }
@@ -3269,7 +3273,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     const std::vector<std::string> experiment_files =
         detail::project_structure_files((root / "experiments").string(), &hidden);
     for (const std::string& path : hidden) {
-        warn(path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
+        warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
     }
     if (structure_files.empty()) {
         throw IoError("project has no structures/*.edi: " + directory);
@@ -3353,7 +3357,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             if (!held) {
                 throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
                               ") links the structure '" + detail::printable_id(wanted) +
-                              "', which the project does not hold");
+                              "' (_linked_structure.structure_id), which the project does not hold");
             }
         }
         project.experiments.push_back(std::move(experiment));
