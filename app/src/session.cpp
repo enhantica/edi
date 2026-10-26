@@ -464,7 +464,8 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
     // The place holds the staged snapshot. The open project takes it and works in its folder, unless it was edited
     // meanwhile (the newer edits stay unsaved) or a fit started (the fit owns where it works).
     if (project_->revision() != revision) {
-        emit webSaveFailed(tr("The project changed while it was written to its place: save again to keep the changes."));
+        emit webSaveFailed(tr("The project was written to its place, but it stays unsaved here: it changed while it was "
+                              "written. Save again to keep the changes."));
         return false;
     }
     if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
@@ -975,6 +976,12 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
         emit webSaveFailed(busy);
         return;
     }
+    // A running fit owns where the project works, which the picked place may name: refused before any picker.
+    if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        emit webSaveFailed(refusal);
+        return;
+    }
     const QPointer<ProjectViewModel> before = project_;
     WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy, busy](
                                                                                const WebStorageAnswer& answer) {
@@ -1010,7 +1017,14 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
             if (copy || !written || !takeWebSave(staged, revision)) {
                 QDir(staged.root).removeRecursively();
                 if (copy && written) {
-                    emit webSaved(place.kind);
+                    // The copy holds the snapshot taken before a fit that started meanwhile; the project stays
+                    // unsaved here either way, and says so while the fit runs.
+                    if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
+                        emit webSaveFailed(
+                            tr("The project was written to its place, but it stays unsaved here: %1").arg(refusal));
+                    } else {
+                        emit webSaved(place.kind);
+                    }
                 }
                 if (!copy) {
                     emit webSaveFinished(false);
