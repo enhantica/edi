@@ -22,7 +22,8 @@ FIXTURES = (
 PROBES = (
     'tests/system/app/ChartFonts.qml',
     'tests/unit/app/test_chart_fonts.cpp',
-    'app/tests/app_tests_main.cpp',
+    'tests/fixtures/scan_screen/build.py',
+    'tests/fixtures/scan_screen/harness.py',
 )
 
 
@@ -62,31 +63,22 @@ def build(output, sdk, engine_source):  # noqa: PLR0914 - distinct sealed build 
         (source / relative).unlink()
     # Bind actual working-tree production bytes too, including a pending shared theme.
     for relative in production.keys() | probes.keys():
-        if relative in {'app/CMakeLists.txt', 'app/tests/app_tests_main.cpp'}:
+        if relative == 'app/CMakeLists.txt':
             continue  # Write the final instrumented bytes once below; retain unchanged objects.
         destination = source / relative
         write_changed(destination, (ROOT / relative).read_bytes())
-    main = source / 'app/tests/app_tests_main.cpp'
-    text = (ROOT / 'app/tests/app_tests_main.cpp').read_text()
-    if text.count('"offscreen"') != 1:
-        raise RuntimeError(
-            'The browser witness requires the unchanged native runner platform seam'
-        )
-    write_changed(main, text.replace('"offscreen"', '"wasm"').encode())
     cmake = source / 'app/CMakeLists.txt'
     recipe = (
         (ROOT / 'app/CMakeLists.txt').read_text()
         + """
-qt_add_executable(chart_font_tests tests/app_tests_main.cpp
+qt_add_executable(chart_font_tests ${PROJECT_SOURCE_DIR}/tests/fixtures/chart_fonts/main.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/app/test_chart_fonts.cpp ${EDI_APP_BUILD_COMMIT_CPP})
 add_dependencies(chart_font_tests edi_app_build_commit)
 target_link_libraries(chart_font_tests PRIVATE edi_app_module edi_app_moduleplugin
-    ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest Qt6::QuickTestplugin)
-target_link_options(chart_font_tests PRIVATE "SHELL:-s ASYNCIFY" "-Os")
-target_compile_definitions(chart_font_tests PRIVATE
-    QUICK_TEST_SOURCE_DIR=":/chart-fonts/tests/system/app" QT_HAVE_EMSCRIPTEN_ASYNCIFY)
+    ${EDI_GUI_BASE_TARGETS})
 set_target_properties(chart_font_tests PROPERTIES AUTOMOC ON)
-set(font_probe ${PROJECT_SOURCE_DIR}/tests/system/app/ChartFonts.qml)
+set(font_probe ${PROJECT_SOURCE_DIR}/tests/fixtures/chart_fonts/WebFonts.qml
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/chart_fonts/cases.json)
 """
     )
     for index, relative in enumerate(FIXTURES):
@@ -94,6 +86,17 @@ set(font_probe ${PROJECT_SOURCE_DIR}/tests/system/app/ChartFonts.qml)
             f'file(GLOB_RECURSE font_fixture_{index} LIST_DIRECTORIES false '
             f'"${{PROJECT_SOURCE_DIR}}/{relative}/*")\n'
         )
+    # Qt's earlier example resources set persistent source-file aliases. Give this
+    # separate fixture bundle its own explicit root-relative aliases.
+    recipe += 'foreach(font_input IN LISTS font_probe '
+    recipe += ' '.join('font_fixture_' + str(index) for index in range(len(FIXTURES)))
+    recipe += ')\n'
+    recipe += (
+        'file(RELATIVE_PATH font_alias "${PROJECT_SOURCE_DIR}" "${font_input}")\n'
+        'set_source_files_properties("${font_input}" PROPERTIES '
+        'QT_RESOURCE_ALIAS "${font_alias}")\n'
+        'endforeach()\n'
+    )
     recipe += (
         'qt_add_resources(chart_font_tests "font_inputs" PREFIX "/chart-fonts" '
         'BASE "${PROJECT_SOURCE_DIR}" FILES ${font_probe} '

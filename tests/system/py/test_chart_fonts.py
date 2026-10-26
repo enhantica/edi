@@ -1,5 +1,6 @@
 """Actual tick/title font equality on desktop and the pinned Qt web kit."""
 
+import json
 import os
 import re
 
@@ -7,19 +8,54 @@ import pytest
 
 from tests.fixtures.fast_chart_redraws.rendering import ROOT, capture
 
-CASES = [
-    'powder-main',
-    'powder-residual',
-    'powder-bragg',
-    'single-squared',
-    'single-f',
-    'correlations',
-    'evolution',
-    'stacked',
-    'map',
-    'structure-labels',
-    'structure-axis-letters',
-]
+INVENTORY = json.loads((ROOT / 'tests/fixtures/chart_fonts/cases.json').read_text())
+if not isinstance(INVENTORY, list) or not all(
+    isinstance(row, dict) and isinstance(row.get('tag'), str) for row in INVENTORY
+):
+    raise ValueError('The font inventory must be a list of named chart-input records')
+CASES = [row['tag'] for row in INVENTORY]
+
+
+def test_font_inventory_covers_every_chart_and_pane():
+    assert set(CASES) == {
+        'powder-main',
+        'powder-residual',
+        'powder-bragg',
+        'single-squared',
+        'single-f',
+        'correlations',
+        'evolution',
+        'stacked',
+        'map',
+        'structure-labels',
+        'structure-axis-letters',
+    } and len(CASES) == len(set(CASES)), (
+        'The declared font inventory covers every owner-required chart and pane exactly once'
+    )
+    for row in INVENTORY:
+        tag = row['tag']
+        if tag.startswith('powder-'):
+            wanted = {'tag': tag, 'kind': 'powder', 'pane': tag.removeprefix('powder-')}
+        elif tag.startswith('single-'):
+            wanted = {
+                'tag': tag,
+                'kind': 'single',
+                'quantity': 'f_squared' if tag == 'single-squared' else 'f',
+            }
+        elif tag.startswith('structure-'):
+            wanted = {
+                'tag': tag,
+                'kind': 'powder',
+                'mode': 'structure',
+                'field': 'font' if tag == 'structure-labels' else 'letterFont',
+            }
+        elif tag == 'correlations':
+            wanted = {'tag': tag, 'kind': tag}
+        else:
+            wanted = {'tag': tag, 'kind': 'scan', 'mode': tag}
+        assert row == wanted, (
+            'Every declared font case selects its actual required chart, pane or plotted quantity'
+        )
 
 
 @pytest.fixture(scope='module')

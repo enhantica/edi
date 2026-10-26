@@ -73,6 +73,7 @@ def observe(scratch):
             str(output),
             str(pinned_browser(toolchain)),
             str(toolchain / 'playwright/node_modules/playwright-core/index.mjs'),
+            str(Path(__file__).with_name('cases.json')),
         ],
         cwd=ROOT,
         env=env,

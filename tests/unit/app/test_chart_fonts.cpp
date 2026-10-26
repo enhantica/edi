@@ -5,6 +5,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QMap>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QQuickItem>
 #include <QSet>
 #include <QTemporaryDir>
@@ -12,11 +14,43 @@
 #include <QtQml/qqml.h>
 #include <memory>
 #include <vector>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+EM_JS_DEPS(chart_font_observation, "$UTF8ToString");
+#endif
 
 class ChartFontProbe : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantList cases() const {
+        QString path = QStringLiteral(":/chart-fonts/tests/fixtures/chart_fonts/cases.json");
+        if (!QFile::exists(path))
+            path = QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath())
+                       .absoluteFilePath("../../fixtures/chart_fonts/cases.json");
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) return {};
+        const QVariantList all = QJsonDocument::fromJson(file.readAll()).array().toVariantList();
+#ifdef __EMSCRIPTEN__
+        const QString selected = QString::fromUtf8(emscripten_run_script_string(
+            "new URLSearchParams(window.location.search).get('chart') || ''"));
+        if (!selected.isEmpty()) {
+            QVariantList result;
+            for (const QVariant& row : all)
+                if (row.toMap().value("tag").toString() == selected) result.append(row);
+            return result;
+        }
+#endif
+        return all;
+    }
+    Q_INVOKABLE void publish(const QVariantMap& observation) const {
+#ifdef __EMSCRIPTEN__
+        const QByteArray json = QJsonDocument::fromVariant(observation).toJson(QJsonDocument::Compact);
+        EM_ASM({ window.__chartFontObservation = JSON.parse(UTF8ToString($0)); }, json.constData());
+#else
+        Q_UNUSED(observation);
+#endif
+    }
     Q_INVOKABLE QVariantList objects(QObject* root) const {
         QVariantList result;
         QSet<QObject*> seen;

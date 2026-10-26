@@ -25,9 +25,11 @@ Rectangle {
         property var chart: null
         property var reference: null
         property var originalLoader: null
+        property var originalBoldLoader: null
         property int originalSize: 0
         function init() {
             originalLoader = Style.Fonts.ptSansRegular;
+            originalBoldLoader = Style.Fonts.ptSansBold;
             originalSize = Style.Sizes.fontPixelSize;
             Preferences.resetToDefaults();
         }
@@ -37,6 +39,7 @@ Rectangle {
             reference = null; chart = null;
             Session.closeProject();
             Style.Fonts.ptSansRegular = originalLoader;
+            Style.Fonts.ptSansBold = originalBoldLoader;
             Style.Sizes.fontPixelSize = originalSize;
             Preferences.resetToDefaults();
         }
@@ -65,19 +68,7 @@ Rectangle {
             compare(font.pixelSize, expected.pixelSize, "Every actual chart tick and label uses its axis title's pixel size: " + role);
         }
         function test_fonts_data() {
-            return [
-                {tag: "powder-main", kind: "powder", pane: "main"},
-                {tag: "powder-residual", kind: "powder", pane: "residual"},
-                {tag: "powder-bragg", kind: "powder", pane: "bragg"},
-                {tag: "single-squared", kind: "single", quantity: "f_squared"},
-                {tag: "single-f", kind: "single", quantity: "f"},
-                {tag: "correlations", kind: "correlations"},
-                {tag: "evolution", kind: "scan", mode: "evolution"},
-                {tag: "stacked", kind: "scan", mode: "stacked"},
-                {tag: "map", kind: "scan", mode: "map"},
-                {tag: "structure-labels", kind: "powder", mode: "structure", field: "font"},
-                {tag: "structure-axis-letters", kind: "powder", mode: "structure", field: "letterFont"}
-            ];
+            return Array.from(probe.cases());
         }
         function open(data) {
             const location = probe.project(data.kind);
@@ -149,10 +140,21 @@ Rectangle {
                 equal(label.font, expected, data.tag + "/colour-bar/" + phase);
             }
             // Expose each pane's labels even where a stacked pane normally shares its x labels below.
-            graph.axisX.visible = true;
-            graph.axisY.visible = true;
-            graph.axisX.labelsVisible = true;
-            graph.axisY.labelsVisible = true;
+            if (data.kind !== "scan") {
+                graph.axisX.visible = true;
+                graph.axisY.visible = true;
+                graph.axisX.labelsVisible = true;
+                graph.axisY.labelsVisible = true;
+            }
+            if (data.kind === "scan" && data.mode !== "evolution" && chart.rowLabels) {
+                const rows = objects(chart).filter(item => item.objectName.startsWith("scanView." + data.mode + ".rowLabel.") && item.visible);
+                verify(rows.length > 0, "The row-labelled scan font witness reaches actual shown row names");
+                rows.forEach(row => {
+                    const names = texts(row).filter(item => item.isIcon !== true);
+                    verify(names.length > 0, "Every shown dataset row contributes real label text to font comparison");
+                    names.forEach(item => equal(item.font, expected, data.tag + "/row-name/" + phase));
+                });
+            }
             equal(graph.theme.axisXLabelFont, expected, data.tag + "/axisXLabelFont/" + phase);
             equal(graph.theme.axisYLabelFont, expected, data.tag + "/axisYLabelFont/" + phase);
             frame();
@@ -167,9 +169,11 @@ Rectangle {
             tryCompare(alternate, "status", FontLoader.Ready, 2000, "The font-family stimulus uses an actually bundled alternate face");
             verify(alternate.name !== Style.Fonts.fontFamily, "The shared-font stimulus changes family as well as nontrivial pixel size");
             Style.Fonts.ptSansRegular = alternate;
+            Style.Fonts.ptSansBold = alternate;
             Style.Sizes.fontPixelSize = originalSize + 5;
             inspect(data, "changed-shared-font");
             Style.Fonts.ptSansRegular = originalLoader;
+            Style.Fonts.ptSansBold = originalBoldLoader;
             Style.Sizes.fontPixelSize = originalSize;
             inspect(data, "restored");
         }
