@@ -907,16 +907,18 @@ refuses to write its bank rows into it.
 - **The status bar's fit buttons** (the owner, 2026-10-26) are its last items: Reset and Follow in a scan project,
   then the Fit button in the right corner, after the outcome, the values and, while a fit runs, the progress bar. They
   are shown on every page whenever the Analysis page is available, so a fit can be run again after changing a value
-  elsewhere. The Fit button reads *Fit*, *Continue* or *Stop* with the matching icon. While it can act it is dark grey
-  (#333333) with white text in light mode and light grey (#e0e0e0) with dark text in dark mode, near-black and white
-  on hover (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`); otherwise it looks like Reset and
-  Follow, which take the base's normal button colours adapted to the bar (`Components/StatusBarButton.qml`: the light
-  frame, the theme's text, the accent while Follow is on, the disabled colour while a button cannot act). Its tool
-  tip, shown only while tool tips are on, says *Fit the free parameters*. When the bar runs short of room Reset and
-  Follow drop their words before the Fit button does. The outcome before them is framed as a button of the same height
-  and shape, in the light hover colour, and darker on hover. All are framed fit-area items as tall and as round as the
-  progress bar, with one spacing: half a font size before the icon, a little less between icon and word, a little more
-  after the word, so the three look even.
+  elsewhere. The Fit button reads *Fit*, *Continue* or *Stop* with the matching icon. While it can act it is black
+  with white text in light mode and white with black text in dark mode, its background turning the accent blue on
+  hover with the base's colour animation (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`);
+  otherwise it looks like the other buttons. The outcome, Reset and Follow (`Components/StatusBarButton.qml`) are white
+  with a 1 px border in the bar's border colour in light mode and black with a border just off the bar's background in
+  dark mode, the theme's text, the accent while Follow is on and the disabled colour while a button cannot act; on
+  hover their icon and word turn the accent blue (`AppColors.statusButtonBackground`, `statusButtonBorder`). The Fit
+  button's tool tip, shown only while tool tips are on, says *Fit the free parameters*. When the bar runs short of room
+  Reset and Follow drop their words before the Fit button does. All are framed fit-area items as tall and as round as
+  the progress bar, with one spacing: half a font size before the icon, a little less between icon and word, a little
+  more after the word, so the three look even. The status bar has the tab bars' height, three font sizes, with the buttons centred in it
+  (`Base/Gui/Style/Sizes.qml`, which edi builds in place of the base's; the owner, 2026-10-26).
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*

@@ -59,7 +59,7 @@ QtObject {
     readonly property int tableColumnFlex: -1
 
     // Status bar
-    property int statusBarHeight: Math.round(fontPixelSize * 2.5)
+    property int statusBarHeight: tabBarHeight
     property int statusBarSpacing: fontPixelSize
 
     // Tabbar

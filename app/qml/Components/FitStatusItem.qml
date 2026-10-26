@@ -26,11 +26,15 @@ Control {
     // The key is shown only while every item of the bar fits with its key (StatusBar.keysFit).
     property bool showKey: true
     property bool clickable: false
-    // A framed item shows its frame all the time, as a button, in `frameColor`, and in `frameHoverColor` while a
-    // clickable one is hovered.
+    // A framed item shows its frame all the time, as a button: `frameColor` with a 1 px `frameBorderColor` border, and
+    // `frameHoverColor` while a clickable one is hovered. With `tintsOnHover` its icon and word turn the accent on hover
+    // instead (the owner, 2026-10-26).
     property bool framed: false
-    property color frameColor: AppColors.hoverHighlight
-    property color frameHoverColor: AppColors.hoverHighlightStrong
+    property color frameColor: AppColors.statusButtonBackground
+    property color frameHoverColor: frameColor
+    property color frameBorderColor: AppColors.statusButtonBorder
+    property bool tintsOnHover: true
+    readonly property bool hoverTinted: framed && tintsOnHover && clickable && hover.hovered
     // A framed item's word, which one that `dropsWord` gives up while the bar is short of room (`showWord` false),
     // before the Fit button gives up its own (the owner, 2026-10-26).
     property bool showWord: true
@@ -67,7 +71,7 @@ Control {
             verticalAlignment: Text.AlignVCenter
             font.family: EaStyle.Fonts.iconsFamily
             font.pixelSize: control.font.pixelSize
-            color: control.iconColor
+            color: control.hoverTinted ? EaStyle.Colors.themeAccent : control.iconColor
             Behavior on color {
                 EaAnimations.ThemeChange {}
             }
@@ -103,7 +107,10 @@ Control {
             visible: control.wordShown
             anchors.verticalCenter: parent.verticalCenter
             font: control.font
-            color: control.valueColor
+            color: control.hoverTinted ? EaStyle.Colors.themeAccent : control.valueColor
+            Behavior on color {
+                EaAnimations.ThemeChange {}
+            }
             text: control.valueText
         }
     }
@@ -118,6 +125,11 @@ Control {
             radius: control.framed ? height / 2 : 2
             visible: control.framed || (control.clickable && hover.hovered)
             color: !control.framed ? AppColors.hoverHighlight : control.clickable && hover.hovered ? control.frameHoverColor : control.frameColor
+            Behavior on color {
+                EaAnimations.ThemeChange {}
+            }
+            border.width: control.framed ? 1 : 0
+            border.color: control.frameBorderColor
         }
     }
 
