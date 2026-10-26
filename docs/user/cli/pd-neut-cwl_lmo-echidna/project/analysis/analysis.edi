@@ -1,0 +1,27 @@
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Li1 lmo.atom_site.Li1.adp_iso
+biso_Li2 lmo.atom_site.Li2.adp_iso
+biso_Ni1 lmo.atom_site.Ni1.adp_iso
+biso_Ni2 lmo.atom_site.Ni2.adp_iso
+occ_Li1 lmo.atom_site.Li1.occupancy
+occ_Li2 lmo.atom_site.Li2.occupancy
+occ_Ni1 lmo.atom_site.Ni1.occupancy
+occ_Ni2 lmo.atom_site.Ni2.occupancy
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_Ni1 = biso_Li1"
+2 "biso_Li2 = biso_Ni2"
+3 "occ_Ni1 = 1 - occ_Li1"
+4 "occ_Li2 = 1 - occ_Li1"
+5 "occ_Ni2 = occ_Li1"

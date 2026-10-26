@@ -18,6 +18,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tests.fixtures.engine_fit_records.records import record as engine_record
 from tests.fixtures.loop_parameter_ids.reference_paths import reference_paths
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -152,15 +153,12 @@ def test_c09_t6_cli_oracle_has_exact_joint_layout_and_metrics() -> None:
 
 
 def _frec_expected() -> dict[str, dict[str, float]]:
-    """The re-derived cross-surface expected table (ruling 8a: regenerated, never ported).
+    """Read current pinned-engine parity values qualified against FullProf.
 
-    Parsed from the ruled vehicle's committed `goldens/joint-default.json` — the crysta CLI's
-    full-verbosity record at the engine-default configuration, the like-for-like config the
-    F-live producer runs — mapped into edi paths by the same label grammar as before.
+    The added TOF tails change the model; the old F-rec transcript remains a codec fixture.
     """
-    from conftest import frec_golden_record
-
-    record = frec_golden_record('ncaf-wish-3bank-s5', 'joint-default')
+    # The added TOF tails change the live model; retain the historical codec transcript.
+    record = engine_record('joint-tail-default')
     reference = reference_paths(_project())
     expected: dict[str, dict[str, float]] = {}
     for key, value in record.items():
@@ -208,9 +206,7 @@ def test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer(
         )
         _assert_physical(write_back[path][1], row['esd'], f'{path}.write_back.uncertainty')
 
-    from conftest import frec_golden_record
-
-    golden = frec_golden_record('ncaf-wish-3bank-s5', 'joint-default')
+    golden = engine_record('joint-tail-default')
     _assert_physical(float(outcome.rwp), float(golden['rwp']), 'rwp')
     _assert_physical(
         float(outcome.reduced_chi_square),
@@ -332,3 +328,35 @@ def test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess(
     assert session_joint_fit.observations == [], (
         'the joint refit performed native file I/O or spawned a subprocess'
     )
+
+
+def test_current_tail_record_retains_the_fullprof_reference_bounds():
+    from conftest import corpus_case_dir
+
+    case = corpus_case_dir('ncaf-wish-3bank-s5')
+    snapshot = json.loads(
+        (ROOT / 'tests/fixtures/engine_fit_records/joint-tail-default.json').read_text()
+    )
+    provenance = snapshot['provenance']
+    assert provenance['historical_record_sha256'] == _sha256(
+        case / 'goldens/joint-default.json'
+    ), 'The tail adaptation retains the complete historical engine transcript unchanged'
+    assert provenance['fullprof_expected_sha256'] == _sha256(case / 'expected.json'), (
+        'The tail adaptation retains every independent FullProf target and original bound'
+    )
+    assert provenance['fullprof_files_sha256'] == {
+        path.name: _sha256(path)
+        for path in sorted((case / 'fullprof').iterdir())
+        if path.is_file()
+    }, 'The tail adaptation retains every frozen external FullProf artifact byte'
+    expected = json.loads((case / 'expected.json').read_text())['variants']['ladder']['quantities']
+    reference = {name: spec for name, spec in expected.items() if spec['kind'] == 'reference'}
+    assert reference and set(provenance['independent_checks']) == set(reference), (
+        'Every original independent reference participates in the tail-model qualification'
+    )
+    current = engine_record('joint-tail-default')
+    for name, spec in reference.items():
+        bound = max(spec['tol_abs'] or 0, (spec['tol_rel'] or 0) * abs(spec['value']))
+        assert abs(float(current[name]) - spec['value']) <= bound, (
+            'The tail-model parity record must satisfy every unchanged independent FullProf bound'
+        )

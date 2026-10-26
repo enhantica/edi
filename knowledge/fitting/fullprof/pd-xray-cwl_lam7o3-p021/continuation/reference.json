@@ -1,0 +1,30 @@
+{
+  "program": "FullProf 8.40",
+  "scope": "continuation diagnostic; not a fit directly from the committed start",
+  "staging": "FullProf self-continuation with the original free set unchanged",
+  "source": "knowledge/fitting/fullprof/pd-xray-cwl_lam7o3-p021/fit.new",
+  "source_sha256": "83edcda8761fee1aeaba0ab97add9758d356b6b91edc9bd7d02511c929dbad61",
+  "control_projection": "NCY only: 200 cycles; the emitted three-column 1000 is ***",
+  "converged": true,
+  "finite": true,
+  "n_free": 39,
+  "r_wp": 0.016399999999999998,
+  "artifacts_sha256": {
+    "fit.new": "5224b40bba182a587d17b82a27d4a4e376b416692e81d090d7aa1c4fdcf76410",
+    "fit.prf": "1f91f9b39f2e45e10ae4a65ab8e65e1242c292a3623116ba3dfb21e3a4f5cfc5",
+    "fit.out": "cd25c69512193ffe1cea35451d9293734aa3f37fcc4d6aafee49f2c565e251aa",
+    "fit.sum": "fa2f12e515690e88b811e6102623e846fa8a96d69713ddc2de1d7705e1822cfe",
+    "fit.log": "940abff7569143f1f90a8d25cab4f16f1f3a58111e53b2400dc4ea35bc3abec2",
+    "fit.dat": "ed8a9c0c8f0896e4cdbd1c27d1aa548e134d8f2ca37887ca920bf666424d2b54",
+    "fit.pcr": "f6a187646795f7288d75bde42b30223df069d35907612d6a98bcdf2d29aed5e3"
+  },
+  "fixed_twin_sha256": {
+    "fixed.dat": "ed8a9c0c8f0896e4cdbd1c27d1aa548e134d8f2ca37887ca920bf666424d2b54",
+    "fixed.sum": "84636bc18719c7f7761ef1fab16bd80b8521332ae8f38e2555f07a77bd1605b3",
+    "fixed.new": "8ff5c7c91d71e490d887d764072926ab7133637fac8eb991627d4b25f4104ad9",
+    "fixed.log": "62af0272f4694c754b25dd748ebfac476df85f61be183430d6f6e50bf124b9e9",
+    "fixed.out": "309db1c205b263c18531a783f4bc3b8e254ba3b37f9242442139a5b9fe30e3cd",
+    "fixed.pcr": "faa059826275ef8bcc10f938d5a4c715c04c299adcdb6249c5e5a3806210bee6",
+    "fixed.prf": "2b6bbb84d7087000bf9aeb56ec4fed34ee0c46f096131bc9ba1610e4cdb0ca3c"
+  }
+}

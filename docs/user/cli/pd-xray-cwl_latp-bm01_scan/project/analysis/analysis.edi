@@ -1,0 +1,29 @@
+_edi.schema_version 3
+
+_fitting_mode.type sequential
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+z_Ti1 latp.atom_site.Ti1.fract_z
+z_Al1 latp.atom_site.Al1.fract_z
+b_Ti1 latp.atom_site.Ti1.adp_iso
+b_Al1 latp.atom_site.Al1.adp_iso
+b2_Al1 alpo4_c2221.atom_site.Al1.adp_iso
+b2_P1 alpo4_c2221.atom_site.P1.adp_iso
+b2_O1 alpo4_c2221.atom_site.O1.adp_iso
+b2_O2 alpo4_c2221.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+z_Al1 "z_Al1 = z_Ti1"
+b_Al1 "b_Al1 = b_Ti1"
+b2_P1 "b2_P1 = b2_Al1"
+b2_O1 "b2_O1 = b2_Al1"
+b2_O2 "b2_O2 = b2_Al1"
+
+_sequential_fit.data_dir experiments/bm01_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse true
+_sequential_fit.template_file latp_312.dat

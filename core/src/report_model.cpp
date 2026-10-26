@@ -949,7 +949,9 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     };
     model.name = project.metadata.name;
     model.title = project.metadata.title;
-    model.authors = project.metadata.authors;
+    // "." and "?" are CIF's empty values: a project that names no authors shows none.
+    const std::string& authors = project.metadata.authors;
+    model.authors = authors == "." || authors == "?" ? std::string() : authors;
     model.description = project.metadata.description;
     for (const auto& structure : project.structures) {
         model.structure_ids.push_back(structure->name.value());

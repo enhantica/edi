@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
@@ -99,10 +100,17 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
                 'temporary look-check projects must not enter shipped application resources'
             )
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
-    examples = re.search(r'set\(EDI_APP_OWN_EXAMPLES\s+([^)]*)\)', cmake)
-    assert examples, 'the app example packaging list must be inspectable'
-    assert not re.search(r'(?i)(?:look|preview|sample|demo)', examples.group(1)), (
-        'look-check and preview projects must not enter the shipped example resource list'
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    bundled = [row['id'] for row in registry if row.get('user-facing') is True]
+    assert bundled and len(bundled) == 20, 'the app bundles the complete owner-selected catalogue'
+    assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
+        'the app example selection must read the registry user-facing declarations'
+    )
+    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' in cmake, (
+        'the registry-selected catalogue must reach the production bundle call'
+    )
+    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in bundled), (
+        'look-check and preview projects must not enter the shipped example catalogue'
     )
     assert 'constraint_samples' not in cmake, (
         'the application packaging list must exclude the temporary relation samples'

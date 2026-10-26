@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import TableIdTests 1.0
 
@@ -15,10 +16,21 @@ Item {
         when: windowShown
         function init() {
             failOnWarning(/.*/);
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), Session.lastError);
         }
         function cleanup() {
             Session.closeProject();
+        }
+        function test_example_precondition_rejects_an_unbundled_identity() {
+            const checks = [];
+            let opened = false;
+            const witness = {verify: function(condition, message) { checks.push([condition, message]); }};
+            const session = {examples: Session.examples, openExample: function(id) { opened = true; return true; }};
+            compare(Examples.bundled(witness, session, "unbundled-precondition"), false, "Example precondition: an absent identity is refused before project input");
+            compare(checks.length, 1, "Example precondition: a missing identity emits its own diagnostic");
+            compare(checks[0][0], false, "Example precondition: the missing-bundle diagnostic fails");
+            verify(checks[0][1].includes("unbundled-precondition"), "Example precondition: the failure names the requested identity");
+            compare(opened, false, "Example precondition: refusal cannot reach a native load or later behavioural assertion");
         }
         function test_background_identity_delete_and_roundtrip() {
             let points = Session.project.currentExperiment.background;

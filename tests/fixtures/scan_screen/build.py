@@ -175,7 +175,12 @@ def observer_sources(source):
     cmake = source / 'app/CMakeLists.txt'
     changed['app/CMakeLists.txt'] = (
         cmake.read_text() + '\ntarget_sources(edi_app PRIVATE '
-        '${PROJECT_SOURCE_DIR}/tests/fixtures/scan_screen/observe.cpp)\n'
+        """${PROJECT_SOURCE_DIR}/tests/fixtures/scan_screen/observe.cpp)
+set(scan_fixture "${PROJECT_SOURCE_DIR}/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project")
+file(GLOB_RECURSE scan_fixture_files LIST_DIRECTORIES false "${scan_fixture}/*")
+qt_add_resources(edi_app scan_screen_fixture PREFIX "/test-fixtures/scan-screen"
+                 BASE "${scan_fixture}" FILES ${scan_fixture_files})
+"""
     )
     return changed
 

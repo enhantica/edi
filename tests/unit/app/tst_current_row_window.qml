@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -59,7 +60,7 @@ TestCase {
     }
     function test_input(data) {
         Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-        verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The full-window input check opens a real scientific project");
+        verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The full-window input check opens a real scientific project");
         const atoms = data.table === "atomSites.list";
         Ui.click(test, Probe, appWindow, "appBar.tab." + (atoms ? "structure" : "analysis"));
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");

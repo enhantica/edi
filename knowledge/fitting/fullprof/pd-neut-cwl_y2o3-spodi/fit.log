@@ -1,0 +1,1368 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 20:51:23.733
+ => Reading control file *.PCR ... fit
+==> Give the name of data file (yy for yy.dat)
+ =>                            (yy.uxd, or yy.acq)
+ =>                  (<cr> =fit):
+ => Reading intensity file of pattern  1  fit
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Ordering reflections contributing to each point for pattern:       1
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       1
+ => R-Factors:   14.2      13.9     Chi2:  128.     DW-Stat.:  0.0229   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  77.2     Rwp:  68.3     Rexp:    6.04                        Chi2:  128.
+    => Global user-weigthed Chi2 (Bragg contrib.):   127.7
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=13436.42 abs> 1
+  
+    ===================>>> CYCLE:       2
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       2
+ => R-Factors:   11.4      11.2     Chi2:  82.7     DW-Stat.:  0.0291   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  72.8     Rwp:  61.1     Rexp:    6.72                        Chi2:  82.7
+    => Global user-weigthed Chi2 (Bragg contrib.):   82.67
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=13335.74 abs> 1
+  
+    ===================>>> CYCLE:       3
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       3
+ => R-Factors:   9.23      9.01     Chi2:  53.8     DW-Stat.:  0.0390   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  68.0     Rwp:  53.6     Rexp:    7.31                        Chi2:  53.8
+    => Global user-weigthed Chi2 (Bragg contrib.):   53.82
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=13202.65 abs> 1
+  
+    ===================>>> CYCLE:       4
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       4
+ => R-Factors:   7.48      7.30     Chi2:  35.3     DW-Stat.:  0.0542   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  63.0     Rwp:  46.4     Rexp:    7.82                        Chi2:  35.3
+    => Global user-weigthed Chi2 (Bragg contrib.):   35.30
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=13025.22 abs> 1
+  
+    ===================>>> CYCLE:       5
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       5
+ => R-Factors:   6.08      5.94     Chi2:  23.4     DW-Stat.:  0.0768   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  57.8     Rwp:  39.8     Rexp:    8.23                        Chi2:  23.4
+    => Global user-weigthed Chi2 (Bragg contrib.):   23.39
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=12788.62 abs> 1
+  
+    ===================>>> CYCLE:       6
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       6
+ => R-Factors:   4.96      4.87     Chi2:  15.7     DW-Stat.:  0.1095   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  52.6     Rwp:  33.9     Rexp:    8.55                        Chi2:  15.7
+    => Global user-weigthed Chi2 (Bragg contrib.):   15.70
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=12476.85 abs> 1
+  
+    ===================>>> CYCLE:       7
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       7
+ => R-Factors:   4.07      4.02     Chi2:  10.7     DW-Stat.:  0.1555   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  47.5     Rwp:  28.8     Rexp:    8.80                        Chi2:  10.7
+    => Global user-weigthed Chi2 (Bragg contrib.):   10.73
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=12069.71 abs> 1
+  
+    ===================>>> CYCLE:       8
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       8
+ => R-Factors:   3.36      3.36     Chi2:  7.49     DW-Stat.:  0.2178   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  42.6     Rwp:  24.6     Rexp:    8.99                        Chi2:  7.49
+    => Global user-weigthed Chi2 (Bragg contrib.):   7.494
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=11545.27 abs> 1
+  
+    ===================>>> CYCLE:       9
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle       9
+ => R-Factors:   2.80      2.85     Chi2:  5.39     DW-Stat.:  0.2983   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  38.1     Rwp:  21.2     Rexp:    9.13                        Chi2:  5.39
+    => Global user-weigthed Chi2 (Bragg contrib.):   5.390
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=10885.65 abs> 1
+  
+    ===================>>> CYCLE:      10
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      10
+ => R-Factors:   2.35      2.46     Chi2:  4.01     DW-Stat.:  0.3964   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  34.1     Rwp:  18.5     Rexp:    9.23                        Chi2:  4.01
+    => Global user-weigthed Chi2 (Bragg contrib.):   4.015
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)=10086.58 abs> 1
+  
+    ===================>>> CYCLE:      11
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      11
+ => R-Factors:   2.02      2.17     Chi2:  3.11     DW-Stat.:  0.5077   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  30.8     Rwp:  16.4     Rexp:    9.31                        Chi2:  3.11
+    => Global user-weigthed Chi2 (Bragg contrib.):   3.111
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)= 9163.97 abs> 1
+  
+    ===================>>> CYCLE:      12
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      12
+ => R-Factors:   1.76      1.95     Chi2:  2.51     DW-Stat.:  0.6250   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  28.1     Rwp:  14.9     Rexp:    9.37                        Chi2:  2.51
+    => Global user-weigthed Chi2 (Bragg contrib.):   2.513
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)= 8154.70 abs> 1
+  
+    ===================>>> CYCLE:      13
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      13
+ => R-Factors:   1.58      1.79     Chi2:  2.12     DW-Stat.:  0.7395   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  26.0     Rwp:  13.7     Rexp:    9.42                        Chi2:  2.12
+    => Global user-weigthed Chi2 (Bragg contrib.):   2.115
+ =>  Conv. not yet reached -> [Max] Shift(Bck_5_pat1)/(eps*Sigma)= 7110.31 abs> 1
+  
+    ===================>>> CYCLE:      14
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      14
+ => R-Factors:   1.45      1.67     Chi2:  1.85     DW-Stat.:  0.8440   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  24.6     Rwp:  12.9     Rexp:    9.45                        Chi2:  1.85
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.847
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-6370.16 abs> 1
+  
+    ===================>>> CYCLE:      15
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      15
+ => R-Factors:   1.36      1.58     Chi2:  1.66     DW-Stat.:  0.9339   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  23.6     Rwp:  12.2     Rexp:    9.48                        Chi2:  1.66
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.665
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-5998.99 abs> 1
+  
+    ===================>>> CYCLE:      16
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      16
+ => R-Factors:   1.29      1.52     Chi2:  1.54     DW-Stat.:  1.0079   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  23.0     Rwp:  11.8     Rexp:    9.50                        Chi2:  1.54
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.539
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-5578.82 abs> 1
+  
+    ===================>>> CYCLE:      17
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      17
+ => R-Factors:   1.25      1.48     Chi2:  1.45     DW-Stat.:  1.0670   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  22.6     Rwp:  11.5     Rexp:    9.52                        Chi2:  1.45
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.451
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-5136.14 abs> 1
+  
+    ===================>>> CYCLE:      18
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      18
+ => R-Factors:   1.22      1.45     Chi2:  1.39     DW-Stat.:  1.1131   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  22.3     Rwp:  11.2     Rexp:    9.53                        Chi2:  1.39
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.388
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-4693.13 abs> 1
+  
+    ===================>>> CYCLE:      19
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      19
+ => R-Factors:   1.20      1.42     Chi2:  1.34     DW-Stat.:  1.1487   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  22.2     Rwp:  11.1     Rexp:    9.54                        Chi2:  1.34
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.343
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-4266.91 abs> 1
+  
+    ===================>>> CYCLE:      20
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      20
+ => R-Factors:   1.18      1.41     Chi2:  1.31     DW-Stat.:  1.1761   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  22.0     Rwp:  10.9     Rexp:    9.55                        Chi2:  1.31
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.310
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-3866.47 abs> 1
+  
+    ===================>>> CYCLE:      21
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      21
+ => R-Factors:   1.17      1.39     Chi2:  1.29     DW-Stat.:  1.1972   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  22.0     Rwp:  10.8     Rexp:    9.55                        Chi2:  1.29
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.286
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-3487.99 abs> 1
+  
+    ===================>>> CYCLE:      22
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      22
+ => R-Factors:   1.16      1.38     Chi2:  1.27     DW-Stat.:  1.2136   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.9     Rwp:  10.8     Rexp:    9.56                        Chi2:  1.27
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.267
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-3144.58 abs> 1
+  
+    ===================>>> CYCLE:      23
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      23
+ => R-Factors:   1.15      1.37     Chi2:  1.25     DW-Stat.:  1.2262   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.9     Rwp:  10.7     Rexp:    9.56                        Chi2:  1.25
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.253
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-2829.09 abs> 1
+  
+    ===================>>> CYCLE:      24
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      24
+ => R-Factors:   1.15      1.37     Chi2:  1.24     DW-Stat.:  1.2361   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.8     Rwp:  10.7     Rexp:    9.56                        Chi2:  1.24
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.242
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-2540.67 abs> 1
+  
+    ===================>>> CYCLE:      25
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      25
+ => R-Factors:   1.14      1.36     Chi2:  1.23     DW-Stat.:  1.2439   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.8     Rwp:  10.6     Rexp:    9.57                        Chi2:  1.23
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.233
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-2282.74 abs> 1
+  
+    ===================>>> CYCLE:      26
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      26
+ => R-Factors:   1.14      1.36     Chi2:  1.23     DW-Stat.:  1.2500   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.8     Rwp:  10.6     Rexp:    9.57                        Chi2:  1.23
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.227
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-2047.66 abs> 1
+  
+    ===================>>> CYCLE:      27
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      27
+ => R-Factors:   1.14      1.36     Chi2:  1.22     DW-Stat.:  1.2548   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.8     Rwp:  10.6     Rexp:    9.57                        Chi2:  1.22
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.221
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1836.73 abs> 1
+  
+    ===================>>> CYCLE:      28
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      28
+ => R-Factors:   1.13      1.35     Chi2:  1.22     DW-Stat.:  1.2588   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.8     Rwp:  10.6     Rexp:    9.57                        Chi2:  1.22
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.217
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1644.90 abs> 1
+  
+    ===================>>> CYCLE:      29
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      29
+ => R-Factors:   1.13      1.35     Chi2:  1.21     DW-Stat.:  1.2618   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.21
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.213
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1474.85 abs> 1
+  
+    ===================>>> CYCLE:      30
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      30
+ => R-Factors:   1.13      1.35     Chi2:  1.21     DW-Stat.:  1.2641   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.21
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.211
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1322.54 abs> 1
+  
+    ===================>>> CYCLE:      31
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      31
+ => R-Factors:   1.13      1.35     Chi2:  1.21     DW-Stat.:  1.2662   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.21
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.208
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1181.09 abs> 1
+  
+    ===================>>> CYCLE:      32
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      32
+ => R-Factors:   1.13      1.35     Chi2:  1.21     DW-Stat.:  1.2676   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.21
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.207
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=-1064.40 abs> 1
+  
+    ===================>>> CYCLE:      33
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      33
+ => R-Factors:   1.13      1.35     Chi2:  1.21     DW-Stat.:  1.2688   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.21
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.205
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -952.73 abs> 1
+  
+    ===================>>> CYCLE:      34
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      34
+ => R-Factors:   1.13      1.35     Chi2:  1.20     DW-Stat.:  1.2698   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.204
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -851.40 abs> 1
+  
+    ===================>>> CYCLE:      35
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      35
+ => R-Factors:   1.13      1.35     Chi2:  1.20     DW-Stat.:  1.2706   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.203
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -762.05 abs> 1
+  
+    ===================>>> CYCLE:      36
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      36
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2712   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.202
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -684.86 abs> 1
+  
+    ===================>>> CYCLE:      37
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      37
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2717   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.202
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -615.07 abs> 1
+  
+    ===================>>> CYCLE:      38
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      38
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2720   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.201
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -548.53 abs> 1
+  
+    ===================>>> CYCLE:      39
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      39
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2724   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.201
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -492.13 abs> 1
+  
+    ===================>>> CYCLE:      40
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      40
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2726   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.200
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -438.54 abs> 1
+  
+    ===================>>> CYCLE:      41
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      41
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2728   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.200
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -394.16 abs> 1
+  
+    ===================>>> CYCLE:      42
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      42
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2729   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.200
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -355.15 abs> 1
+  
+    ===================>>> CYCLE:      43
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      43
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.7     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.200
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -314.52 abs> 1
+  
+    ===================>>> CYCLE:      44
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      44
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -279.90 abs> 1
+  
+    ===================>>> CYCLE:      45
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      45
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -253.34 abs> 1
+  
+    ===================>>> CYCLE:      46
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      46
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -224.43 abs> 1
+  
+    ===================>>> CYCLE:      47
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      47
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -200.35 abs> 1
+  
+    ===================>>> CYCLE:      48
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      48
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -181.47 abs> 1
+  
+    ===================>>> CYCLE:      49
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      49
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -160.03 abs> 1
+  
+    ===================>>> CYCLE:      50
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      50
+ => R-Factors:   1.12      1.35     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -145.44 abs> 1
+  
+    ===================>>> CYCLE:      51
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      51
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -131.46 abs> 1
+  
+    ===================>>> CYCLE:      52
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      52
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -117.82 abs> 1
+  
+    ===================>>> CYCLE:      53
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      53
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)= -103.15 abs> 1
+  
+    ===================>>> CYCLE:      54
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      54
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -92.59 abs> 1
+  
+    ===================>>> CYCLE:      55
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      55
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -81.77 abs> 1
+  
+    ===================>>> CYCLE:      56
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      56
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -74.22 abs> 1
+  
+    ===================>>> CYCLE:      57
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      57
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -66.45 abs> 1
+  
+    ===================>>> CYCLE:      58
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      58
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -59.96 abs> 1
+  
+    ===================>>> CYCLE:      59
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      59
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -52.30 abs> 1
+  
+    ===================>>> CYCLE:      60
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      60
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -45.34 abs> 1
+  
+    ===================>>> CYCLE:      61
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      61
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -45.12 abs> 1
+  
+    ===================>>> CYCLE:      62
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      62
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -40.04 abs> 1
+  
+    ===================>>> CYCLE:      63
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      63
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -35.98 abs> 1
+  
+    ===================>>> CYCLE:      64
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      64
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -34.82 abs> 1
+  
+    ===================>>> CYCLE:      65
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      65
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -31.36 abs> 1
+  
+    ===================>>> CYCLE:      66
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      66
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -24.81 abs> 1
+  
+    ===================>>> CYCLE:      67
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      67
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -21.92 abs> 1
+  
+    ===================>>> CYCLE:      68
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      68
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -22.80 abs> 1
+  
+    ===================>>> CYCLE:      69
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      69
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -19.45 abs> 1
+  
+    ===================>>> CYCLE:      70
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      70
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -17.39 abs> 1
+  
+    ===================>>> CYCLE:      71
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      71
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -14.27 abs> 1
+  
+    ===================>>> CYCLE:      72
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      72
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -14.58 abs> 1
+  
+    ===================>>> CYCLE:      73
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      73
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -12.48 abs> 1
+  
+    ===================>>> CYCLE:      74
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      74
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -12.31 abs> 1
+  
+    ===================>>> CYCLE:      75
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      75
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -10.11 abs> 1
+  
+    ===================>>> CYCLE:      76
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      76
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=  -10.18 abs> 1
+  
+    ===================>>> CYCLE:      77
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      77
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -6.64 abs> 1
+  
+    ===================>>> CYCLE:      78
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      78
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -6.63 abs> 1
+  
+    ===================>>> CYCLE:      79
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      79
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -6.45 abs> 1
+  
+    ===================>>> CYCLE:      80
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      80
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -3.94 abs> 1
+  
+    ===================>>> CYCLE:      81
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      81
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -3.94 abs> 1
+  
+    ===================>>> CYCLE:      82
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      82
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -3.93 abs> 1
+  
+    ===================>>> CYCLE:      83
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      83
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2731   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -3.92 abs> 1
+  
+    ===================>>> CYCLE:      84
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      84
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -4.18 abs> 1
+  
+    ===================>>> CYCLE:      85
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      85
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -4.16 abs> 1
+  
+    ===================>>> CYCLE:      86
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      86
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(Zero_pat1)/(eps*Sigma)=   -4.16 abs> 1
+  
+    ===================>>> CYCLE:      87
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      87
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ =>  Conv. not yet reached -> [Max] Shift(X_Y1_ph1)/(eps*Sigma)=   -1.00 abs> 1
+  
+    ===================>>> CYCLE:      88
+  
+ => Control file *.pcr: fit
+ => Pattern:   1  fit
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ =>  Solving L.S. equations...
+ => Writing results for cycle      88
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.      88
+ => R-Factors:   1.12      1.34     Chi2:  1.20     DW-Stat.:  1.2730   Patt#:  1
+ => Expected :            1.23                                1.9107
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  21.6     Rwp:  10.5     Rexp:    9.57                        Chi2:  1.20
+    => Global user-weigthed Chi2 (Bragg contrib.):   1.199
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+  
+  
+ =>               CPU Time:     7.797 seconds
+ =>                             0.130 minutes
+  
+ => END   Date:22/10/2026  Time => 20:51:31.520
+  
+ => Data Files :
+ =>             - fit.dat
+ => PCR  File  : fit
+ => Do you want to continue (<cr>=N)? 
+forrtl: severe (24): end-of-file during read, unit -4, file /proc/2988549/fd/0
+Image              PC                Routine            Line        Source             
+fp2k               0000000000D6EEBC  Unknown               Unknown  Unknown
+fp2k               000000000068C8CB  Unknown               Unknown  Unknown
+fp2k               0000000000405B3D  Unknown               Unknown  Unknown
+libc.so.6          00007F8AA993BD90  Unknown               Unknown  Unknown
+libc.so.6          00007F8AA993BE40  __libc_start_main     Unknown  Unknown
+fp2k               0000000000405A55  Unknown               Unknown  Unknown
+         (s:same, a:another problem): 

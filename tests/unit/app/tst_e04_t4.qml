@@ -2,6 +2,7 @@ import QtQuick
 import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -332,8 +333,10 @@ TestCase {
         tryVerify(() => list.contentY > 0, 2000, "final Messages feedback: overflowing messages can actually scroll");
     }
     function test_demo_example_has_three_messages() {
-        verify(Session.openExample("pd-neut-tof_fe_pseudo-voigt"), "idea 26: the intentionally unsupported bundled example opens");
+        verify(Examples.fixture(Session, "pd-neut-tof_fe_pseudo-voigt"), "idea 26: the intentionally unsupported retained fixture opens");
         verify(Session.loadWarnings.count >= 3, "idea 26 final widening: example has calculator, minimizer and another unsupported-value message");
+        Session.closeProject();
+        verify(Examples.bundled(this, Session, "pd-neut-cwl_lbco-hrpt"), "The first-Save check opens a bundled measured example");
         verify(Session.needsSaveAs, "final saving feedback: an example's first Save requires Save as");
     }
     function test_messages_status_counts_unviewed_messages() {

@@ -1,0 +1,43 @@
+data_sepd
+
+_edi.schema_version 3
+
+_experiment_type.sample_form powder
+_experiment_type.beam_mode "time-of-flight"
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+
+_instrument.setup_twotheta_bank 144.845
+_instrument.calib_d_to_tof_offset 0
+_instrument.calib_d_to_tof_linear 7476.91
+_instrument.calib_d_to_tof_quadratic -1.54
+
+_peak.type tof-jorgensen
+_peak.broad_gauss_sigma_0 3
+_peak.broad_gauss_sigma_1 40
+_peak.broad_gauss_sigma_2 2
+_peak.broad_gauss_size 0
+_peak.broad_gauss_strain 0
+_peak.decay_beta_0 0.04221
+_peak.decay_beta_1 0.00946
+_peak.rise_alpha_0 0
+_peak.rise_alpha_1 0.5971
+_peak.cutoff_fwhm 12
+
+_data_range.time_of_flight_min 5000
+_data_range.time_of_flight_max 15000
+_data_range.time_of_flight_step 2
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+si 10.0
+
+_background.type line-segment
+
+loop_
+_background.id
+_background.position
+_background.intensity
+1 10000 500
+2 40000 500

@@ -212,9 +212,25 @@ try {
       exampleId, row:await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`),
       list:await evaluate('window.ediControlGeometry("examples.list")'),
     }, null, 2));
+    const row = await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`);
+    assert(row && row.visible && row.enabled, `Example precondition: requested bundled row exists and is actionable: ${exampleId}`);
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
+    // The summary table belongs to the results popup. Use its native rectangle
+    // to sample the surrounding dialog padding; agreement tables may grow below it.
+    const table = await evaluate(`(() => {
+      try { return window.ediControlGeometry('fit.results.list'); }
+      catch (error) {
+        if (String(error).includes('no visible item')) return null;
+        throw error;
+      }
+    })()`);
+    if (table === null) return false;
+    assert(table.visible && table.width > 0 && table.height > 0,
+      'results modal samples require the actually visible summary table');
+    const points = [.25,.75].flatMap(y => [table.x-12,table.x+table.width+12].map(x =>
+      [Math.round(x),Math.round(table.y+table.height*y)]));
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
     const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
     const channels = data[25] === 2 ? 3 : data[25] === 6 ? 4 : 0;
@@ -228,9 +244,11 @@ try {
     }
     const raw = inflateSync(Buffer.concat(compressed)), stride = width * channels;
     assert.equal(raw.length, (stride+1)*height, 'screenshot rows must be complete');
+    assert(points.every(([x,y]) => x >= 0 && x < width && y >= 0 && y < height),
+      'results dialog padding must lie inside the actual screenshot');
     let previous = Buffer.alloc(stride);
     const samples = [];
-    for (let y = 0; y <= Math.round(height*.74); ++y) {
+    for (let y = 0; y <= Math.max(...points.map(point => point[1])); ++y) {
       const filter = raw[y*(stride+1)], row = Buffer.alloc(stride);
       assert(filter <= 4, 'browser PNG row filters must be supported');
       for (let x = 0; x < stride; ++x) {
@@ -239,17 +257,14 @@ try {
         const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a+b)/2) : pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
-      if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
-        for (const fraction of [.28,.72]) {
-          const x = Math.round(width*fraction)*channels;
-          samples.push([...row.subarray(x,x+3)]);
-        }
+      for (const [px,py] of points) {
+        if (py === y) samples.push([...row.subarray(px*channels,px*channels+3)]);
       }
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
-    // Sample the two dialog margins: its central results table can have a selected row.
-    // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
+    // Sample outside both summary-table edges, independent of table height and column layout.
+    // A visible native summary alone is insufficient: these opaque dialog pixels must also exist.
     return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
@@ -265,6 +280,7 @@ try {
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
+    window.__e04PickerAttempts = [];
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
       if (this instanceof HTMLInputElement && this.type === 'file' && this.id === 'edi-open-folder' && type === 'change') {
@@ -278,7 +294,11 @@ try {
     };
     const nativeInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
-      if (this.type === 'file') { this.__e04Picker = ++pickerSequence; window.__e04FileInput = this; }
+      if (this.type === 'file') {
+        this.__e04Picker = ++pickerSequence; window.__e04FileInput = this;
+        window.__e04PickerAttempts.push({sequence:pickerSequence, active:navigator.userActivation.isActive,
+          time:performance.now(), multiple:this.multiple, accept:this.accept});
+      }
       return nativeInputClick.call(this);
     };
     const nativeFocus = HTMLElement.prototype.focus;
@@ -351,8 +371,8 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
-  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish-5bank_start-5' : 'pd-neut-cwl_lbco-hrpt_start-4';
+  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish/i : /lbco.*hrpt/i;
+  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt';
   await openExampleRow(exampleId, exampleName);
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
@@ -452,13 +472,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const saved = await saveArchive();
   const before = inspectArchive(saved);
   assertSavedProject(before.name, fitCase);
-  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
+  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/catalogue-native.json', import.meta.url)))[fitCase];
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
     'the saved project must contain a successful performed fit, not only the unfitted example');
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
-  const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
-  const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
+  const referenceChi = nativeOracle.reduced_chi_square;
+  const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
   assertNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
     project:before.name, chi, referenceChi, chiTolerance,
@@ -469,8 +489,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     'The successful saved fit must confirm the progress hook\'s actual final iteration');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
-    assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
-      'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
+    assert(iterations === nativeOracle.iterations && Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
+      'the five-bank browser fit must retain the catalogue native parity regression pins for iterations and Rwp');
   }
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons
@@ -524,7 +544,7 @@ oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
 conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
 compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
 pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
-    fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
+    fileURLToPath(new URL(`../../fixtures/e04_t11_wasm/catalogue_scientific/${fitCase}-native.json`, import.meta.url)),
     join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
   assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
@@ -692,8 +712,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
-    await openExampleRow('pd-neut-cwl_cosio-d20_start-1', /cosio.*d20.*start[- ]?1/i);
-    await waitName('cosio_d20_s1');
+    await openExampleRow('pd-neut-cwl_cosio-d20', /cosio.*d20/i);
+    await waitName('pd-neut-cwl_cosio-d20');
     await settleRenderedPage();
     const replacementBefore=await snapshot();
     assert.notEqual(replacementBefore.name,'routing_b','the replacement control must actually replace the old live project');
@@ -762,6 +782,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
       const tree = await send('Accessibility.getFullAXTree');
       await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
+      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
+      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
     } catch { /* The original failure remains the verdict if the target already closed. */ }
   }
   throw error;

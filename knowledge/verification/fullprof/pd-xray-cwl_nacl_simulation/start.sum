@@ -1,0 +1,240 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 22/10/2026  Time: 20:50:00.207                              
+
+ => PCR file code: start
+ => DAT file code: start                -> Relative contribution: 1.0000                                                            
+ => Title: pd-xray-cwl_nacl_simulation
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of X-ray powder diffraction data                                                                              
+ => Global Refinement of X-ray powder diffraction data                                                                              
+    Bragg-Brentano(X-rays) or Debye-Scherrer geometry(Neutrons)
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.54060 1.54060
+ => Cos(Monochromator angle)=   0.8000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   96.00
+ ==> Angular range, step and number of points:
+     2Thmin:      10.000000  2Thmax:     150.000000  Step:       0.020004  No. of points:   7001
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    2.187 g/cm3
+ => Scor: 4.6269
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 nacl                                    F m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    22  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Na      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    4
+ Cl      0.50000(   0)  0.50000(   0)  0.50000(   0)  0.500(  0)  0.021(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              5.62000   0.00000
+                              5.62000   0.00000
+                              5.62000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :  0.5000000      0.000000    
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.10000   0.00000
+                             -0.10000   0.00000
+                              0.10000   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.0000    0.0000
+ => Background Polynomial Parameters ==>
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+ 
+ => Cos( theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  7001
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10
+ => Deviance:  0.732E+08     Dev*  :   15.74    
+ => DW-Stat.:    0.0139     DW-exp:     1.9259
+ => N-sigma of the GoF: ************
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  7001
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10
+ => Deviance:  0.732E+08     Dev*  :   15.74    
+ => DW-Stat.:    0.0139     DW-exp:     1.9259
+ => N-sigma of the GoF: ************
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.159E+10
+ => Scor: 4.6269
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 nacl                                    F m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    22  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Na      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.500(  0)  0.021(  0)    4
+ Cl      0.50000(   0)  0.50000(   0)  0.50000(   0)  0.500(  0)  0.021(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              5.62000   0.00000
+                              5.62000   0.00000
+                              5.62000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :  0.5000000      0.000000    
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.10000   0.00000
+                             -0.10000   0.00000
+                              0.10000   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.0000    0.0000
+ => Background Polynomial Parameters ==>
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+ 
+ => Cos( theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:  1
+ => N-P+C:  7001
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10
+ => Deviance:  0.732E+08     Dev*  :   15.74    
+ => DW-Stat.:    0.0139     DW-exp:     1.9259
+ => N-sigma of the GoF: ************
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  7001
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10  L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp: 0.523E+06 Rwp: 0.399E+07 Rexp:  100.00 Chi2: 0.159E+10
+ => Deviance:  0.732E+08     Dev*  :   15.74    
+ => DW-Stat.:    0.0139     DW-exp:     1.9259
+ => N-sigma of the GoF: ************
+
+ => Global user-weigthed Chi2 (Bragg contrib.):  0.159E+10
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     nacl
+ => Bragg R-factor:  0.545E+06   Vol:  177.504( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor= 0.596E+04         ATZ:         233.771   Brindley:  1.0000
+
+ 
+              CPU Time:     0.391 seconds
+                            0.007 minutes
+
+ => Run finished at:     Date: 22/10/2026  Time: 20:50:00.605                              

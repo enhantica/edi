@@ -607,29 +607,31 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
+    # New catalogue images await the UI tier; retain the historical image inventory.
+    registry = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/retained-projects.json').read_text()
+    )
+    example_names = {f'ex-{project["id"]}.png' for project in registry['projects']}
     oracle = json.loads(
         (ROOT / 'tests/fixtures/e04_t1/oracle.js')
         .read_text()
         .split('var frozen = ', 1)[1]
         .removesuffix(';\n')
     )
-    bundled = {
+    retained_single_crystal = {
         row['id']
         for row in oracle['projects']
-        if row['metadata']['_metadata.purpose'] != 'verification'
+        if any(
+            case['project'] == row['path'] and case.get('singleCrystal')
+            for case in oracle['corpus']
+        )
+        and row['metadata']['_metadata.purpose'] != 'verification'
     }
-    retained_verification = {
-        'pd-neut-cwl_lab6-echidna_fcj-asymmetry',
-        'pd-neut-cwl_y2o3_beta-adp',
-        'pd-neut-tof_diamond-dream_basic',
-        'pd-neut-tof_fe_pseudo-voigt',
-        'pd-xray-cwl_lif_single',
-    }
-    assert bundled | retained_verification <= {
+    assert retained_single_crystal <= {
         row['id']
         for row in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
-    }, 'Image subjects must remain registered; historical verification captures remain required'
-    example_names = {f'ex-{identity}.png' for identity in bundled | retained_verification}
+    }, 'Image subjects from the existing single-crystal fixtures must remain registered'
+    example_names.update(f'ex-{identity}.png' for identity in retained_single_crystal)
     example_names.add('ex-pd-xray-cwl_lif.png')
     captures = json.loads((ROOT / 'docs/dev/design/app-review-captures.json').read_text())[
         'captures'
@@ -742,6 +744,37 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
     ids = [p['id'] for p in registry['projects']]
+    selection = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    expected_app_ids = [row['id'] for row in selection]
+    app_only_ids = [
+        'sc-neut-cwl_tb2ti2o7-heidi_fit',
+        'sc-neut-cwl_pr2nio4-5c2_fit',
+        'sc-neut-tof_taurine_fit',
+    ]
+    assert oracle['app_only_ids'] == app_only_ids, (
+        'The app oracle must retain exactly the declared single-crystal app-only list'
+    )
+    assert [row['id'] for row in registry['projects'] if row.get('app-only')] == app_only_ids, (
+        'The registry must refuse every app-only entry outside the declared list'
+    )
+    assert oracle['app_ids'] == [*expected_app_ids, *app_only_ids], (
+        'The complete app oracle must be exactly the catalogue followed by '
+        'the declared app-only list'
+    )
+    metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
+    assert list(metadata['examples']) == oracle['app_ids'], (
+        'App metadata must contain every declared catalogue and app-only identity in order'
+    )
+    assert oracle['catalogue_ids'] == expected_app_ids, (
+        'The app oracle must follow the independent owner selection'
+    )
+    assert [
+        row['id'] for row in registry['projects'] if row.get('user-facing')
+    ] == expected_app_ids, (
+        'App membership must agree with the independent catalogue; fixtures remain registered'
+    )
     assert [p['id'] for p in oracle['projects']] == ids, (
         'I19: fixture follows registry order without executing/offline filters'
     )

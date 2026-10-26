@@ -456,14 +456,26 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
         'pd-neut-cwl_cosio-d20_biso-tied',
         'pd-neut-cwl_y2o3_beta-adp',
     }
+    catalogue = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    catalogue_verification = {row['id'] for row in catalogue}
+    catalogue_fitting = {
+        row['id'] for row in catalogue if row['group'] != 'Calculations without data'
+    }
     for home, names in [
         (
             'verification',
-            set(BASE) | added_verification_projects | {'pd-neut-tof_duplex-beer_pseudo-voigt'},
+            set(BASE)
+            | added_verification_projects
+            | {'pd-neut-tof_duplex-beer_pseudo-voigt'}
+            | catalogue_verification,
         ),
         (
             'fitting',
-            FITTING | {'pd-neut-tof_duplex-beer_pseudo-voigt', 'pd-neut-cwl_cosio-d20_biso-tied'},
+            FITTING
+            | {'pd-neut-tof_duplex-beer_pseudo-voigt', 'pd-neut-cwl_cosio-d20_biso-tied'}
+            | catalogue_fitting,
         ),
     ]:
         root = ROOT / f'knowledge/{home}/fullprof'
@@ -473,9 +485,10 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
             ' LiF,  polarization,  LBCO texture and fitting twins'
         )
     for pcr in (ROOT / 'knowledge').rglob('*.pcr'):
-        assert pcr.parts[-4:-2] in {('verification', 'fullprof'), ('fitting', 'fullprof')}, (
-            ' no FullProf project may remain outside the two homes'
-        )
+        assert pcr.relative_to(ROOT / 'knowledge').parts[:2] in {
+            ('verification', 'fullprof'),
+            ('fitting', 'fullprof'),
+        }, ' no FullProf project may remain outside the two homes'
 
 
 @pytest.mark.parametrize(('home', 'name'), PROJECTS)

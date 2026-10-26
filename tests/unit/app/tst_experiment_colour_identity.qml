@@ -4,6 +4,7 @@ import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -65,17 +66,19 @@ Item {
             const subjects = [
                 {
                     kind: "single",
-                    example: "pd-neut-cwl_lbco-hrpt_start-2",
+                    example: "pd-neut-cwl_lbco-hrpt",
                     count: 1
                 },
                 {
                     kind: "joint",
                     example: "pd-neut-tof_ncaf-wish-3bank_start-5",
+                    fixture: true,
                     count: 3
                 },
                 {
                     kind: "scan",
                     example: "pd-neut-cwl_cosio-d20_scan-162f",
+                    fixture: true,
                     count: 162
                 }
             ];
@@ -91,7 +94,7 @@ Item {
             return rows;
         }
         function test_one_experiment_colour_across_pages(data) {
-            verify(Session.openExample(data.example), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
+            verify(Examples.open(this, Session, data.example, data.fixture === true), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
             Approved.setSchemes(Preferences, data.scheme);
