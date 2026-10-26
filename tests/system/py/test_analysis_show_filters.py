@@ -95,7 +95,7 @@ def test_python_keeps_inputs_hidden_by_every_app_group(tmp_path, monkeypatch):
         'independently of app visibility'
     )
     assert project.experiments['bank'].extinction.crystal_radius.value == 0.12, (
-        'Python retains descriptor values when Fixed settings is hidden in the app'
+        'Python retains descriptor values when Setup values is hidden in the app'
     )
 
 
