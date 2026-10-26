@@ -150,6 +150,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AliasesGroup.qml
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
+        qml/Pages/Analysis/FitResultsGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
         qml/Pages/Analysis/FreeHeaderMenu.qml

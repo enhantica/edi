@@ -37,8 +37,8 @@ QtObject {
     property bool analysisShowBySymmetry: false
     property bool analysisShowByConstraint: false
     property bool analysisShowFixedSettings: true
-    // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
-    // still opens it.
+    // Whether a finished fit opens its results window (Analysis, Settings; the owner, 2026-10-26). Off, the status bar's
+    // fit status still opens it.
     property bool showFitResults: true
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
