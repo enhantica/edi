@@ -5,7 +5,7 @@ import {readFile, writeFile, mkdir, access} from 'node:fs/promises';
 import {resolve, extname, sep, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
-import {restoreCanvasViewport} from './web_control_geometry.mjs';
+import {restoreCanvasViewport,waitControlGeometry} from './web_control_geometry.mjs';
 import {installDownloadBoundary,assertPendingNotice,checkNoticeControls,assertFallbackChoices,assertBrowserWarning,checkChoiceAndWarningControls} from './browser_download_boundary.mjs';
 checkNoticeControls();checkChoiceAndWarningControls();
 
@@ -45,7 +45,7 @@ assert(!offersProjectRecord({types:[{description:'project.edi archive',accept:{'
   'A picker description cannot impersonate an offered project record extension');
 assert(offersProjectRecord({types:[{accept:{'application/octet-stream':['.edi']}}]})&&
   offersProjectRecord({types:[{accept:{'application/octet-stream':['.EDI']}}]})&&!offersProjectRecord({}),
-  'Only an explicitly accepted project record extension satisfies the file-route requirement');
+  'The Open picker filter identifies real record extensions, regardless of case or description');
 const receipts = {}, failures = {};
 const logicalMembers=members=>{
   const logical={...members};const text=Buffer.from(members['project.edi'],'base64').toString();
@@ -75,9 +75,10 @@ print(json.dumps([c for c in candidates if sys.argv[1].encode() in base64.b64dec
   return matches;
 };
 try {
-  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip,example-private,example-private-save,example-warning,example-warning-save-as').split(',')) {
+  for (const scenario of (process.env.EDI_BROWSER_STORAGE_SCENARIOS || 'example-folder,example-zip,upload-fallback,disk-folder,disk-record,disk-zip,example-private,example-private-save,example-warning,example-warning-save-as,disk-chooser-folder-copy,disk-chooser-folder-move,disk-chooser-zip-copy,disk-chooser-zip-move').split(',')) {
     console.log(mode,scenario,'starting');
     const privateStorage=scenario.startsWith('example-private'),warningScenario=scenario.startsWith('example-warning');
+    const chooserScenario=scenario.startsWith('disk-chooser-');
     const boundary=privateStorage||warningScenario;
     const fallback=scenario==='upload-fallback'||boundary;
     const context=await browser.newContext({viewport:{width:1280,height:768},acceptDownloads:true});
@@ -115,14 +116,16 @@ try {
         for(const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
           Object.defineProperty(window,name,{value:undefined,configurable:true});
       } else {
-        window.showDirectoryPicker=async()=>{++window.__storagePicks.directory;return await window.__storageHandles;};
+        const pickerFacts=async options=>({suggestedName:options?.suggestedName??null,startIn:typeof options?.startIn==='string'?options.startIn:null,
+        sameWorkingDirectory:options?.startIn?.kind==='directory'?await options.startIn.isSameEntry(await window.__storageHandles):false});
+      window.showDirectoryPicker=async options=>{window.__storageDirectoryOptions=await pickerFacts(options);++window.__storagePicks.directory;return await window.__storageHandles;};
         window.showOpenFilePicker=async options=>{
           window.__storageOpenOptions=options;
           ++window.__storagePicks.open;
           const folder=await window.__storageHandles;
-          return [await folder.getFileHandle(scenario==='disk-zip'?'picked.zip':'project.edi')];
+          return [await folder.getFileHandle('picked.zip')];
         };
-        window.showSaveFilePicker=async()=>{++window.__storagePicks.save;return await (await window.__storageExportHandles).getFileHandle('destination.zip',{create:true});};
+        window.showSaveFilePicker=async options=>{window.__storageSaveOptions=await pickerFacts(options);++window.__storagePicks.save;return await (await window.__storageExportHandles).getFileHandle('destination.zip',{create:true});};
 
       }
     },{initial,scenario,fallback,boundary});
@@ -154,25 +157,24 @@ try {
       }
       throw Error('The real browser UI must expose '+regex);
     };
-    let lastDialogControl;
-    let selectedExample='sc-neut-cwl_tb2ti2o7-heidi_fit';
+    let selectedExample='sc-neut-cwl_tb2ti2o7-heidi';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
-      // Qt's shipped Popup controls are drawn but absent from the web AX tree.
+      // I-0335 tracks Qt's closed dialog DOM; observe native controls until Qt supports their AX tree.
       // Resolve the declared native radio/checkbox, then use trusted input; the
       // subsequent real picker/write proves that the dialog accepted the choice.
       if(role==='radio'||role==='checkbox') {
-        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}catch{return false}});
+        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}
+          catch(error){if(/no visible item|no item is named/.test(error.message))return false;throw error;}});
         const objectName=role==='checkbox'?'saveAs.copy':(opening?'open.':'saveAs.')+(regex.test('Zip archive')?'zip':'folder');
-        lastDialogControl=objectName;
         const rect=await geometry(objectName);console.log(mode,scenario,'native choice',objectName);
         await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();return;
       }
       if(regex.source==='^OK$') {
-        const tabs=lastDialogControl==='saveAs.folder'?3:lastDialogControl==='saveAs.zip'||lastDialogControl==='open.folder'?2:1;
-        console.log(mode,scenario,'accept real dialog with keyboard',tabs);
-        for(let i=0;i<tabs;++i)await page.keyboard.press('Tab');
-        await page.keyboard.press('Space');await frame();return;
+        // The dialog's declared default action owns acceptance. A mouse click
+        // on a radio does not establish a portable keyboard focus starting point.
+        console.log(mode,scenario,'accept real dialog with default Enter');
+        await settle();await page.keyboard.press('Enter');await frame();return;
       }
       const item=await control(regex,role);console.log(mode,scenario,'click',item.node.name?.value);
       let point=item;
@@ -190,10 +192,9 @@ try {
       await page.mouse.move(point.x,point.y);await page.mouse.down();await frame();await page.mouse.up();await frame();
       if(/^(Start|Project|Structure|Experiment|Analysis|Report)$/.test(item.node.name?.value||'')||/(Examples|Recent projects|Get started)$/.test(item.node.name?.value||''))await settle();
     };
-    const geometry=async(name)=>{
+    const geometry=async(name,timeout=45000)=>{
       console.log(mode,scenario,'geometry',name);
-      await page.waitForFunction(name=>{try{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}},name);
-      return evaluate(name=>window.ediControlGeometry(name),name);
+      return waitControlGeometry(expression=>evaluate(expression),frame,name,{timeoutMs:timeout});
     };
     const location=async regex=>{
       const rect=await geometry('project.location');
@@ -249,11 +250,23 @@ try {
       if(/no visible item/.test(error.message))return {visible:false,exists:true};
       if(/no item is named/.test(error.message))return {visible:false,exists:false};throw error;
     }},name);
-    const pointer=async name=>{const r=await geometry(name);await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();};
+    const pointer=async name=>{
+      await restoreCanvasViewport(expression=>evaluate(expression));await settle();
+      const r=await geometry(name),x=r.x+r.width/2,y=r.y+r.height/2;
+      console.log(mode,scenario,'pointer',name,x,y);
+      await page.mouse.move(x,y);await page.mouse.down();await frame();await page.mouse.up();await frame();
+    };
+    const hidden=async name=>page.waitForFunction(name=>{
+      try{return window.ediControlGeometry(name).visible===false;}
+      catch(error){if(/no visible item/.test(error.message))return true;throw error;}
+    },name,{timeout:5000});
     const warning=async(privateStorage=false)=>{
+      await geometry(observation.warningText,5000);
       const text=await native(observation.warningText),icon=await native(observation.warningIcon);
       assert(text.visible,'The first Save into browser storage must show the warning dialog before later short notices');
       assertBrowserWarning(text.text,icon,privateStorage);
+      assert(Math.abs(icon.y+icon.height/2-text.y-text.height/2)<=1,'The warning icon must be vertically centred on its text block');
+      assert(/<b>Save project as(?:…|\.\.\.)<\/b>/.test(text.text),'The warning must emphasize Save project as in its actual styled text');
       await geometry(observation.warningOk);await geometry(observation.warningSaveAs);
       return {text,icon};
     };
@@ -274,8 +287,6 @@ try {
         const tooltip=await native(observation.folderTooltip);
         assertFallbackChoices(folder,zip,copy,tooltip.text);
         await click(/^Zip archive$/,'radio');
-        // Disabled Save-a-copy is skipped in the real dialog focus order.
-        lastDialogControl='saveAs.copy';
       }
       return zip;
     };
@@ -312,8 +323,8 @@ try {
     await activate();
     if(scenario.startsWith('example')){
       // Find the real catalogue row through its actual search field, then real pointer input.
-      await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi_fit');
-      await click(/^sc-neut-cwl_tb2ti2o7-heidi_fit:/,'button');
+      await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi');
+      await click(/^sc-neut-cwl_tb2ti2o7-heidi:/,'button');
     } else if(fallback){
       await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');await click(/^Zip archive$/,'radio');
       const chooser=page.waitForEvent('filechooser');chooser.catch(()=>{});await click(/^OK$/,'button');await(await chooser).setFiles(fixture);
@@ -322,16 +333,34 @@ try {
         const file=await(await window.__storageHandles).getFileHandle('picked.zip',{create:true});const stream=await file.createWritable();await stream.write(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));await stream.close();
       },(await readFile(fixture)).toString('base64'));
       await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');
-      await click(scenario==='disk-folder'?/^Folder$/:/^Zip archive$/,'radio');await click(/^OK$/,'button');
+      await click(scenario==='disk-folder'||chooserScenario?/^Folder$/:/^Zip archive$/,'radio');await click(/^OK$/,'button');
       if(scenario==='disk-record') {
         const options=await page.evaluate(()=>window.__storageOpenOptions);
         await writeFile(join(output,scenario+'-picker-options.json'),JSON.stringify(options??null,null,2));
-        assert(offersProjectRecord(options),'The Chromium Open file route must offer the project.edi record declared by the working-place contract');
+        assert(!offersProjectRecord(options),'The unified Open dialog must never offer project.edi in its file chooser');
+        assert(options?.types?.some(type=>Object.values(type.accept??{}).some(exts=>exts.includes('.zip'))),'The ZIP Open chooser must explicitly accept ZIP archives');
+        assert.equal(await evaluate(()=>window.__storagePicks.directory),0,'ZIP Open must not invoke the retired record-then-folder route');
       }
     }
     await control(/^Analysis$/,'tab');
     if(scenario==='disk-folder')assert((await page.evaluate(()=>window.__storagePicks.directory))>0,'The disk-folder case actually reaches the directory picker');
-    if(scenario==='disk-record'||scenario==='disk-zip')assert((await page.evaluate(()=>window.__storagePicks.open))>0,'Record and ZIP opening actually reach the file-handle picker');
+    if(scenario==='disk-record'||scenario==='disk-zip')assert((await page.evaluate(()=>window.__storagePicks.open))>0,'Each ZIP Open regression route reaches the actual file-handle picker');
+    if(chooserScenario){
+      const folder=scenario.includes('-folder-'),copy=scenario.endsWith('-copy');
+      const name='Chosen browser name 19';await edit('project.name',name);
+      const before=await evaluate(()=>({...window.__storagePicks}));
+      await click(/^Save project as/);await formatChoice();
+      await click(folder?/^Folder$/:/^Zip archive$/,'radio');
+      if(copy)await click(/^Save a copy/,'checkbox');
+      await click(/^OK$/,'button');
+      await page.waitForFunction(({folder,before})=>folder?window.__storagePicks.directory>before.directory:window.__storagePicks.save>before.save,{folder,before});
+      const facts=await evaluate(folder=>folder?window.__storageDirectoryOptions:window.__storageSaveOptions,folder);
+      receipts[scenario]={facts,name,folder,copy};
+      await writeFile(join(output,scenario+'-picker.json'),JSON.stringify(receipts[scenario],null,2));
+      assert.equal(facts.sameWorkingDirectory,true,'Chrome and Edge Save-as pickers must start at the opened real project directory handle');
+      if(!folder)assert.equal(facts.suggestedName,name+'.zip','Each browser ZIP chooser must receive the project name through suggestedName, with or without Save-a-copy');
+      console.log(mode,scenario,'PASS');continue;
+    }
     if(privateStorage) {
       // Opening an example may have reported failed automatic storage. Clear that
       // dialog before attributing anything to this separate Save-as action.
@@ -344,7 +373,11 @@ try {
       await click(/^Save current state of the project$/,'button');
       await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
       await frame();
-      try{await warning(true);}catch(error){storageErrors.push(error.message);}
+      let saveWarning;
+      try{saveWarning=await warning(true);}catch(error){
+        saveWarning={missing:error.message,errorPopup:await native(observation.error)};
+        storageErrors.push('First failed Save must show the storage warning with Save-as; observed '+JSON.stringify(saveWarning));
+      }
       await page.keyboard.press('Escape');await frame();
       await location(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
       const actualLocation=await control(/^In this browser only$|^Only in this tab:|^.*\bmemory\b.*$/i);
@@ -384,7 +417,7 @@ try {
       // Cancellation proves that even a refused download cannot have been reported as finished.
       await evaluate(()=>window.__downloadBoundary.cancel());await frame();
       assert.equal(events.downloads,0,'Cancelling permission must not create a finished download');
-      receipts[scenario]={held,beforeStorage,errorBefore,errorAfter,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
+      receipts[scenario]={held,beforeStorage,saveWarning,errorBefore,errorAfter,notice,text,errors,events,browser:'real Chromium',capability:'Throwing OPFS and IndexedDB in main/worker contexts; disk APIs absent; browser anchor held then cancelled'};
       assert.deepEqual(errors,[],'Save-as from an example must bypass failing storage and report only an unconfirmed download request without original-file guidance');
       console.log(mode,scenario,'PASS');continue;
     }
@@ -403,7 +436,7 @@ try {
         receipts[scenario]={first,events,action:'Save project as from actual first-Save warning'};
         console.log(mode,scenario,'PASS');continue;
       }
-      await pointer(observation.warningOk);
+      await pointer(observation.warningOk);await hidden(observation.warningText);
       assert.equal((await native(observation.warningText)).visible,false,'OK must close the first-Save browser warning');
       await edit('project.name','later-browser-save');
       await click(/^Save current state of the project$/,'button');
@@ -411,13 +444,13 @@ try {
       assert.equal((await native(observation.warningText)).visible,false,'A later Save of the same project must use the short notice');
       await geometry(observation.notice);await page.keyboard.press('Escape');await frame();
       // Warning suppression belongs to the project, not the whole tab session.
-      selectedExample='sc-neut-tof_taurine_fit';
+      selectedExample='sc-neut-tof_taurine-senju';
       await click(/Examples$/,'button');await edit('examples.search',selectedExample);
-      await click(/^sc-neut-tof_taurine_fit:/,'button');await control(/^Analysis$/,'tab');
+      await click(/^sc-neut-tof_taurine-senju:/,'button');await control(/^Analysis$/,'tab');
       await edit('project.name','another-project-first-save');
       await click(/^Save current state of the project$/,'button');
       await awaitStored('another-project-first-save');await clean();
-      const another=await warning(false);await pointer(observation.warningOk);
+      const another=await warning(false);await pointer(observation.warningOk);await hidden(observation.warningText);
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
       await click(/^Save project as/);await formatChoice();await click(/^OK$/,'button');
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
@@ -446,7 +479,7 @@ try {
     } else {
       const deadline=Date.now()+30000;let candidates=[];
       while(Date.now()<deadline){try{candidates=pythonStore(await readFiles(true),name);break;}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}await frame();}
-      assert(candidates.length>0,'Chromium ordinary Save writes the opened real file or folder in place');stored=candidates;await location(scenario==='disk-zip'?/^picked\.zip$/:/^test-picked-output$/);
+      assert(candidates.length>0,'Chromium ordinary Save writes the opened real file or folder in place');stored=candidates;await location((scenario==='disk-zip'||scenario==='disk-record')?/^picked\.zip$/:/^test-picked-output$/);
     }
     await clean();
     assert.deepEqual(events,before,'Ordinary Save has no download, file chooser or browser dialog');
@@ -467,7 +500,7 @@ try {
       'Save-as retains the saved project record, complete member inventory and every carried report byte');
     await page.reload();await activate();
     await click(/Recent projects$/,'button');
-    const diskName=scenario==='disk-zip'?'picked.zip':'test-picked-output';
+    const diskName=(scenario==='disk-zip'||scenario==='disk-record')?'picked.zip':'test-picked-output';
     const diskLabel=new RegExp('^'+diskName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+' · on this computer$');
     const recent=await control(browserPlace?/ · in this browser$/:diskLabel);
     await click(new RegExp('^'+recent.node.name.value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$'));await control(/^Analysis$/,'tab');

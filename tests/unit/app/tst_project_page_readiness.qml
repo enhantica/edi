@@ -128,10 +128,10 @@ TestCase {
         recording = true;
     }
     function runOpening(route, phase) {
-        const source = Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine_fit/project");
-        const input = route === "folder" ? source : route === "project.edi" ? source + "/project.edi" : Probe.repoUrl("tests/fixtures/project_archive/sc-neut-tof_taurine_fit.zip");
+        const source = Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine-senju/project");
+        const input = route === "folder" ? source : route === "project.edi" ? source + "/project.edi" : Probe.repoUrl("tests/fixtures/project_archive/sc-neut-tof_taurine-senju.zip");
         begin();
-        const opened = route === "example" ? Session.openExample("sc-neut-tof_taurine_fit") : Session.openProject(input);
+        const opened = route === "example" ? Session.openExample("sc-neut-tof_taurine-senju") : Session.openProject(input);
         verify(opened, "Every readiness measurement opens the independently committed taurine project");
         capture();
         // Hover an actual disabled tab while it is being prepared, without activating it.

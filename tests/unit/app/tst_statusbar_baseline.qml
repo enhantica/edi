@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtTest
+import "ExampleProjects.js" as Examples
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import edi.app
@@ -36,7 +37,7 @@ Item {
             EaStyle.Colors.theme = savedTheme;
         }
         function test_fitted_numbers_share_rendered_baseline_and_arrow_ink() {
-            verify(Session.openExample("pd-neut-cwl_lbco-hrpt_start-2"), Session.lastError);
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_lbco-hrpt"), Session.lastError);
             const fit = Session.project.fit;
             tryCompare(Session.project, "calculating", false, 10000);
             verify(fit.available);

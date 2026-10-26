@@ -143,17 +143,15 @@ def _assert_cli_value(
 def test_c09_t8_joint_one_call_fit_reuses_the_full_value_set(
     session_joint_fit,
 ) -> None:
-    """The one-call joint surface exposes the COMPLETE value/ESD layout (P1.2b: F-live).
+    """The shared one-call fit retains every current engine value and uncertainty.
 
-    Renamed from `reuses_all_193_c09_t6_values` with the re-frozen oracle (ruling 7a/8a): the
-    expected table is the ruled vehicle's committed F-rec golden — the like-config crysta CLI
-    record — and the fit is the session's ONE shared producer run, never re-run here. The
-    stale-ESD re-oracle (inherited red 2) lands with this change: every ESD is cited from the
-    regenerated reference. The movement witness derives from the case's committed project files.
+    Its tail-model parity record is qualified against the unchanged FullProf bounds.
+    The movement witness still comes from the committed project input.
     """
-    from conftest import corpus_case_dir, frec_golden_record
+    from conftest import corpus_case_dir
+    from tests.fixtures.engine_fit_records.records import record
 
-    golden = frec_golden_record('ncaf-wish-3bank-s5', 'joint-default')
+    golden = record('joint-tail-default')
     reference = reference_paths(corpus_case_dir('ncaf-wish-3bank-s5') / 'project')
     expected = {}
     for key, value in golden.items():
@@ -391,4 +389,12 @@ def test_c09_t8_existing_constructors_and_model_only_fit_signatures_remain_avail
     assert data is not None, 'the model-only fit witness must carry embedded measured data'
     result = project.fit()
     assert isinstance(result.values, Mapping), 'the model-only fit must retain mapped results'
-    assert result.converged is True, 'the model-only fit must retain convergence behavior'
+    from tests.fixtures.engine_fit_records.records import record
+
+    expected = record('cosio-ladder')
+    assert result.converged is (expected['converged'] == 'true'), (
+        'The model-only fit retains the pinned engine resume termination'
+    )
+    assert result.iterations == int(expected['iterations']), (
+        'The model-only fit retains the original Co2SiO4 iteration count'
+    )

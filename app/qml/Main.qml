@@ -20,6 +20,10 @@ import edi.app
 EaComponents.ApplicationWindow {
     id: window
 
+    // The supported minimum (AppSizes): the window cannot be made smaller than every page is made for.
+    minimumWidth: AppSizes.minimumAppWidth
+    minimumHeight: AppSizes.minimumAppHeight
+
     // A leading "•" while the open project has unsaved changes (edi ADR-0017 §13).
     title: (Session.project && Session.project.modified ? "• " : "") + ApplicationInfo.name
     appName: ApplicationInfo.name
@@ -91,46 +95,14 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    // A workflow tab as wide when it is the current page's as when it is not: the base sets the current tab's name in
-    // bold, so the tab bar changed width with every page switch, which moved the Experiment button the sidebar is
-    // measured from, resized every page's main area and drew each shown chart a second time.
-    component WorkflowTab: EaElements.AppBarTabButton {
-        id: tab
-
-        // The tab's page: while it is being built in the background the tab stays disabled and says so (edi ADR-0052).
-        property Loader page: null
-        property bool pageWanted: false
-        readonly property bool preparing: page !== null && pageWanted && Session.hasProject && page.status !== Loader.Ready
-
-        // The base binds the width to the name's width in its current weight; this is the wider of the two.
-        width: implicitWidth
-        implicitWidth: Math.ceil(Math.max(plainName.advanceWidth, boldName.advanceWidth) + font.pixelSize * 1.5)
-
-        TextMetrics {
-            id: plainName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            text: tab.text
-        }
-        TextMetrics {
-            id: boldName
-
-            font.family: tab.font.family
-            font.pixelSize: tab.font.pixelSize * 0.95
-            font.bold: true
-            text: tab.text
-        }
-    }
-
     appBarCentralTabs.contentData: [
-        WorkflowTab {
+        WorkflowTabButton {
             objectName: "appBar.tab.home"
             fontIcon: "home"
             text: qsTr("Home")
             ToolTip.text: qsTr("Home page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: projectTab
             objectName: "appBar.tab.project"
             page: projectLoader
@@ -140,7 +112,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: structureTab
             objectName: "appBar.tab.structure"
             page: structureLoader
@@ -150,7 +122,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: experimentTab
             objectName: "appBar.tab.experiment"
             page: experimentLoader
@@ -160,7 +132,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: analysisTab
             objectName: "appBar.tab.analysis"
             page: analysisLoader
@@ -170,7 +142,7 @@ EaComponents.ApplicationWindow {
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
-        WorkflowTab {
+        WorkflowTabButton {
             id: reportTab
             objectName: "appBar.tab.report"
             page: reportLoader
@@ -223,7 +195,7 @@ EaComponents.ApplicationWindow {
         HoverHandler {
             id: tabBarHover
         }
-        readonly property WorkflowTab preparingTab: {
+        readonly property WorkflowTabButton preparingTab: {
             if (!tabBarHover.hovered)
                 return null;
             for (const tab of [projectTab, structureTab, experimentTab, analysisTab, reportTab]) {
@@ -313,6 +285,32 @@ EaComponents.ApplicationWindow {
     }
 
     AppPreferencesDialog {}
+
+    // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
+    // background and a request for more room, over everything, dialogs included. Nothing beneath is torn down, so
+    // growing the page back shows the same page, tab, selection and scroll position.
+    Rectangle {
+        objectName: "app.tooSmall"
+        parent: Overlay.overlay
+        anchors.fill: parent
+        z: 1000000
+        visible: window.width < AppSizes.minimumAppWidth || window.height < AppSizes.minimumAppHeight
+        color: EaStyle.Colors.contentBackground
+
+        // The content beneath takes no pointer input while it is hidden.
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            onWheel: wheel => wheel.accepted = true
+        }
+        EmptyStateLabel {
+            objectName: "app.tooSmall.text"
+            anchors.centerIn: parent
+            width: parent.width - 2 * EaStyle.Sizes.fontPixelSize
+            text: qsTr("Increase the window size")
+        }
+    }
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
     // shows the core's message.
@@ -426,6 +424,7 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
+        enterAccepts: true
         property bool zip: false
         property bool copy: false
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
@@ -460,10 +459,9 @@ EaComponents.ApplicationWindow {
                 implicitWidth: saveAsFolder.implicitWidth
                 implicitHeight: saveAsFolder.implicitHeight
 
-                EaElements.RadioButton {
+                ChoiceRadioButton {
                     id: saveAsFolder
                     objectName: "saveAs.folder"
-                    verticalPadding: AppSizes.choiceRowPadding
                     enabled: saveAsChoice.diskWritable
                     text: qsTr("Folder")
                     checked: !saveAsChoice.zip
@@ -473,13 +471,13 @@ EaComponents.ApplicationWindow {
                     id: saveAsFolderHover
                 }
                 EaElements.ToolTip {
+                    Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
                     text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
                     visible: text !== "" && saveAsFolderHover.hovered && EaGlobals.Vars.showToolTips
                 }
             }
-            EaElements.RadioButton {
+            ChoiceRadioButton {
                 objectName: "saveAs.zip"
-                verticalPadding: AppSizes.choiceRowPadding
                 text: qsTr("Zip archive")
                 checked: saveAsChoice.zip
                 onClicked: saveAsChoice.zip = true
@@ -594,7 +592,8 @@ EaComponents.ApplicationWindow {
     // keeps nothing, only in this tab. Save project as… is the way onto the disk.
     AppDialog {
         id: browserSaved
-        objectName: "browserSaved"
+        objectName: "webStorageWarning"
+        enterAccepts: true
         property var warnedFor: null
         property bool kept: true
         parent: Overlay.overlay
@@ -602,7 +601,11 @@ EaComponents.ApplicationWindow {
         standardButtons: Dialog.Apply | Dialog.Ok
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: browserSavedRow.implicitHeight
-        Component.onCompleted: standardButton(Dialog.Apply).text = qsTr("Save project as…")
+        Component.onCompleted: {
+            standardButton(Dialog.Apply).text = qsTr("Save project as…");
+            standardButton(Dialog.Apply).objectName = "webStorageWarning.saveAs";
+            standardButton(Dialog.Ok).objectName = "webStorageWarning.ok";
+        }
         onApplied: {
             close();
             window.saveProjectAs();
@@ -612,16 +615,21 @@ EaComponents.ApplicationWindow {
             id: browserSavedRow
             spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
+            // Centred on the text, however many lines it wraps to (owner, 2026-10-25).
             EaElements.Label {
+                objectName: "webStorageWarning.icon"
+                anchors.verticalCenter: parent.verticalCenter
                 font.family: EaStyle.Fonts.iconsFamily
                 color: EaStyle.Colors.orange
                 text: "exclamation-triangle"
             }
             EaElements.Label {
-                objectName: "browserSaved.text"
+                objectName: "webStorageWarning.text"
                 width: browserSaved.contentWidth - x
                 wrapMode: Text.Wrap
-                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use Save project as… to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use Save project as… to keep it on your disk.")
+                // The way out in bold (owner, 2026-10-25).
+                textFormat: Text.StyledText
+                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use <b>Save project as…</b> to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use <b>Save project as…</b> to keep it on your disk.")
             }
         }
     }

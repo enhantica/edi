@@ -1,6 +1,7 @@
 """Numerical and owner-baseline controls independent of the web implementation."""
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -33,6 +34,20 @@ def test_web_fit_native_reference_covers_parameters_and_calculated_pattern(case)
     assert compare_scientific(
         oracle['scientific'], oracle['scientific'], conditioning=conditioning
     ), 'Native conditioning must certify its unchanged scientific reference'
+    encoding = oracle.get('token_encoding')
+    if encoding:
+        restored = copy.deepcopy(oracle['scientific'])
+        for document, row, column, before, after in encoding['changes']:
+            assert restored[document][row][column] == after and before == f'np.float64({after})', (
+                'Native token normalization may only remove the recorded scalar repr wrapper'
+            )
+            float(after)
+            restored[document][row][column] = before
+        assert (
+            hashlib.sha256(json.dumps(restored, sort_keys=True).encode()).hexdigest()
+            == encoding['previous_scientific_sha256']
+        ), 'Reversing the token encoding must restore every original native scientific byte'
+
     changed = copy.deepcopy(oracle['scientific'])
     for document in changed.values():
         for row in document:

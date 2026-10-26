@@ -7,9 +7,13 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QQuickWindow>
+#include <QSGRectangleNode>
+#include <QThreadPool>
+#include <QtConcurrent/QtConcurrentMap>
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numeric>
 
 #include "edi/palette.hpp"
 #include "edi/presentation.hpp"
@@ -81,6 +85,91 @@ ScanLayer::ScanLayer(QQuickItem* parent)
             QMetaObject::invokeMethod(this, &ScanLayer::redrawCountChanged, Qt::QueuedConnection);
         },
         Qt::DirectConnection);
+    // The labels shown follow the rows, the axis range, the plot's height and the current dataset.
+    for (const auto changed : {&ScanLayer::placementChanged, &ScanLayer::yMinChanged, &ScanLayer::yMaxChanged,
+                               &ScanLayer::currentChanged, &ScanLayer::modeChanged, &ScanLayer::modelChanged}) {
+        connect(this, changed, this, &ScanLayer::labelsMoved);
+    }
+    connect(this, &QQuickItem::heightChanged, this, &ScanLayer::labelsMoved);
+}
+
+void ScanLayer::labelsMoved() {
+    // Made again now, and announced only when the choice changed: a selection that leaves every label where it was
+    // re-binds no label.
+    shown_labels_stale_ = true;
+    const QVariantList before = shown_labels_;
+    if (shownLabels() != before) {
+        emit shownLabelsChanged();
+    }
+}
+
+void ScanLayer::setLabelled(bool labelled) {
+    if (labelled != labelled_) {
+        labelled_ = labelled;
+        emit labelledChanged();
+        labelsMoved();
+    }
+}
+
+void ScanLayer::setLabelGap(double gap) {
+    if (gap != label_gap_) {
+        label_gap_ = gap;
+        emit labelGapChanged();
+        labelsMoved();
+    }
+}
+
+QVariantList ScanLayer::shownLabels() const {
+    if (!shown_labels_stale_) {
+        return shown_labels_;
+    }
+    shown_labels_stale_ = false;
+    shown_labels_.clear();
+    const int count = model_ ? model_->count() : 0;
+    if (!labelled_ || count == 0 || !(pattern_height_ > 0.0) || !(y_max_ > y_min_) || height() <= 0.0) {
+        return shown_labels_;
+    }
+    // Each row inside the axis range at its pixel row from the top, top first.
+    struct Placed {
+        int index;
+        double px;
+    };
+    std::vector<Placed> placed;
+    std::vector<bool> shown(static_cast<std::size_t>(count), false);
+    for (int i = 0; i < count; ++i) {
+        const double at = rowOf(i);
+        if (std::isfinite(at) && at >= y_min_ && at <= y_max_) {
+            placed.push_back({i, (y_max_ - at) / (y_max_ - y_min_) * height()});
+        }
+    }
+    std::stable_sort(placed.begin(), placed.end(), [](const Placed& a, const Placed& b) { return a.px < b.px; });
+    // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
+    const auto apart = [&placed, this](std::size_t k) {
+        for (std::size_t n = k; n < placed.size(); n += k) {
+            if (placed[n].px - placed[n - k].px < label_gap_) {
+                return false;
+            }
+        }
+        return true;
+    };
+    std::size_t stride = 1;
+    while (stride < placed.size() && !apart(stride)) {
+        ++stride;
+    }
+    const auto current = std::find_if(placed.begin(), placed.end(), [this](const Placed& row) { return row.index == current_; });
+    for (std::size_t n = 0; n < placed.size(); n += stride) {
+        if (current == placed.end() || std::abs(placed[n].px - current->px) >= label_gap_ || placed[n].index == current_) {
+            shown[static_cast<std::size_t>(placed[n].index)] = true;
+        }
+    }
+    if (current != placed.end()) {
+        shown[static_cast<std::size_t>(current_)] = true;
+    }
+    shown_labels_.reserve(count);
+    for (const bool row : shown) {
+        shown_labels_.append(row);
+    }
+    return shown_labels_;
 }
 
 void ScanLayer::setModel(ScanViewModel* model) {
@@ -150,6 +239,13 @@ void ScanLayer::setCurrent(int dataset) {
 
 void ScanLayer::setHighlight(bool on) { assign(highlight_, on, &ScanLayer::highlightChanged); }
 void ScanLayer::setFaded(double opacity) { assign(faded_, std::clamp(opacity, 0.0, 1.0), &ScanLayer::fadedChanged); }
+
+void ScanLayer::setBusy(bool busy) {
+    if (busy != busy_) {
+        busy_ = busy;
+        emit busyChanged();
+    }
+}
 
 int ScanLayer::highlighted() const {
     return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
@@ -324,12 +420,15 @@ double ScanLayer::stackedY(std::size_t dataset, double value) const {
 }
 
 ScanLayer::ReductionKey ScanLayer::reductionKey() const {
-    return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width()))), included_only_,
+    // The Stacked lines at the screen's device pixels, so a high-DPI screen gets its full resolution; the Map's pixel
+    // columns are the item's own.
+    const double ratio = mode_ == QLatin1String("map") || window() == nullptr ? 1.0 : window()->effectiveDevicePixelRatio();
+    return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width() * ratio))), included_only_,
             static_cast<int>(scale_of(scale_))};
 }
 
-// Each dataset's reduction for the range shown at the plot's pixel columns, made again only for a dataset whose points
-// changed, or for every dataset when what they all depend on changed.
+// Each dataset's reduction for the range shown at the plot's pixel columns (device pixels for the Stacked lines), made
+// again only for a dataset whose points changed, or for every dataset when what they all depend on changed.
 void ScanLayer::reduce() {
     if (!model_) {
         reductions_.clear();
@@ -373,28 +472,25 @@ void ScanLayer::reduce() {
             }
             continue;
         }
-        // Each column a vertical stroke from its lowest to its highest value, joined column to column, so a narrow
-        // peak stays at its height whatever the width; a column reaching into an excluded region is a break, as the
-        // map's pixels are.
-        const edi::ScanTrace trace = edi::scan_trace(drawn.x, drawn.intensity, x_min_, x_max_, columns);
-        reduction.x.reserve(2 * trace.x.size());
-        reduction.v.reserve(2 * trace.x.size());
+        // The line through the points as it looks at the device pixels, so a narrow peak stays at its height whatever
+        // the width and the line is as smooth as the pattern chart's (edi::scan_polyline); a point in an excluded
+        // region is a break, as the map's pixels are.
+        const edi::ScanTrace trace = edi::scan_polyline(drawn.x, drawn.intensity, x_min_, x_max_, columns);
+        reduction.x.reserve(trace.x.size());
+        reduction.v.reserve(trace.x.size());
         const auto add = [&reduction](double x, double v) {
             reduction.x.push_back(static_cast<float>(x));
             reduction.v.push_back(static_cast<float>(v));
         };
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double low = edi::to_display(trace.low[k], scale), high = edi::to_display(trace.high[k], scale);
+            const double v = edi::to_display(trace.low[k], scale);
             const double x = (trace.x[k] - x_min_) / (x_max_ - x_min_) * width();
             if (!std::isfinite(trace.x[k]) || column_excluded(pattern, included_only_, trace.x[k], column_width) ||
-                !std::isfinite(low) || !std::isfinite(high)) {
+                !std::isfinite(v)) {
                 add(kNaN, kNaN);
                 continue;
             }
-            add(x, low);
-            if (high != low) {
-                add(x, high);
-            }
+            add(x, v);
         }
     }
     if (built > 0) {
@@ -439,6 +535,16 @@ void ScanLayer::recolour() {
     ++colours_revision_;
     emit coloursRevisionChanged();
     redraw();
+}
+
+QColor ScanLayer::fadedColour(const QColor& colour) const {
+    // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
+    // stays one even colour, as the pattern chart's opaque lines do.
+    const double keep = faded_;
+    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
+    return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
+                            static_cast<float>(mix(colour.greenF(), background_.greenF())),
+                            static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
 }
 
 QColor ScanLayer::colourOf(int dataset) const {
@@ -607,8 +713,10 @@ void ScanLayer::feedLines() {
         const double span = highs_[d] - lows_[d];
         const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
         QColor colour = colourOf(static_cast<int>(d));
-        if (top >= 0) {
-            colour.setAlphaF(static_cast<float>(static_cast<int>(d) == top ? 0.0 : faded_));
+        if (top >= 0 && static_cast<int>(d) == top) {
+            colour.setAlphaF(0.0F);  // drawn by the line over the others
+        } else if (top >= 0) {
+            colour = fadedColour(colour);
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -784,9 +892,17 @@ void ScanLayer::paint(QPainter* painter) {
             drawn.push_back(static_cast<std::size_t>(top));
         }
     }
+    // Each dataset's line, its colour and its extent down the plot, in item pixels.
+    struct Line {
+        QPainterPath path;
+        QColor colour;
+        double top = 0.0, bottom = 0.0;
+    };
+    std::vector<Line> lines;
+    lines.reserve(drawn.size());
     for (const std::size_t d : drawn) {
         const Reduction& reduction = reductions_[d];
-        QPainterPath path;
+        Line line;
         bool drawing = false;
         for (std::size_t k = 0; k < reduction.x.size(); ++k) {
             const double x = reduction.x[k];
@@ -794,25 +910,145 @@ void ScanLayer::paint(QPainter* painter) {
             if (!std::isfinite(x) || !std::isfinite(y)) {
                 drawing = false;
             } else if (drawing) {
-                path.lineTo(x, y);
+                line.path.lineTo(x, y);
             } else {
-                path.moveTo(x, y);
+                line.path.moveTo(x, y);
                 drawing = true;
             }
         }
-        QColor colour = colourOf(static_cast<int>(d));
-        if (top >= 0 && static_cast<int>(d) != top) {
-            colour.setAlphaF(static_cast<float>(faded_));
+        if (line.path.isEmpty()) {
+            continue;
         }
-        QPen pen(colour);
-        pen.setWidthF(width_px);
-        pen.setCosmetic(true);
-        // Ends stop at their points: a square cap reaches half the width past a break and fills a one-pixel gap.
-        pen.setCapStyle(Qt::FlatCap);
-        painter->setPen(pen);
-        painter->setBrush(Qt::NoBrush);
-        painter->drawPath(path);
+        const QRectF bounds = line.path.boundingRect();
+        line.top = bounds.top() - width_px;
+        line.bottom = bounds.bottom() + width_px;
+        line.colour = colourOf(static_cast<int>(d));
+        if (top >= 0 && static_cast<int>(d) != top) {
+            line.colour = fadedColour(line.colour);
+        }
+        lines.push_back(std::move(line));
     }
+    // Stroked in horizontal tiles, one per thread: every core, one while a fit runs; EDI_SCAN_PAINT_THREADS sets the
+    // count to compare the drawings (never set in use). Each thread strokes, in order, the lines that cross its tile into
+    // an image of the whole plot clipped to the tile; Qt's strokers place a line by the image, not by the clip, so each
+    // pixel is drawn exactly as one image of the whole plot would draw it, whatever the number of tiles. The width in
+    // item pixels, as the pattern chart's lines, whatever the device pixel ratio: a cosmetic pen (Qt's fast stroker) as
+    // wide in device pixels as the line is in item pixels times the ratio. Joins round, so a peak keeps its tip; ends
+    // stop at their points, as a square cap would reach half the width past a break and fill a one-pixel gap.
+    const qreal ratio = painter->device()->devicePixelRatioF();
+    const int device_width = std::max(1, static_cast<int>(std::ceil(width() * ratio)));
+    const int device_height = std::max(1, static_cast<int>(std::ceil(height() * ratio)));
+    const int forced = qEnvironmentVariableIntValue("EDI_SCAN_PAINT_THREADS");
+    const int threads = forced > 0 ? forced : busy_ ? 1 : QThreadPool::globalInstance()->maxThreadCount();
+    const int tiles = std::clamp(threads, 1, std::max(1, device_height / 16));
+    const bool smooth = painter->testRenderHint(QPainter::Antialiasing);
+    std::vector<QImage> images(static_cast<std::size_t>(tiles));
+    std::vector<int> firsts(static_cast<std::size_t>(tiles) + 1);
+    for (int t = 0; t <= tiles; ++t) {
+        firsts[static_cast<std::size_t>(t)] = static_cast<int>(static_cast<long long>(device_height) * t / tiles);
+    }
+    std::vector<int> indices(static_cast<std::size_t>(tiles));
+    std::iota(indices.begin(), indices.end(), 0);
+    QThreadPool pool;
+    pool.setMaxThreadCount(tiles);
+    QtConcurrent::blockingMap(&pool, indices, [&](int t) {
+        const int first = firsts[static_cast<std::size_t>(t)], last = firsts[static_cast<std::size_t>(t) + 1];
+        QImage& image = images[static_cast<std::size_t>(t)];
+        image = QImage(device_width, device_height, QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(ratio);
+        QPainter tile(&image);
+        tile.setCompositionMode(QPainter::CompositionMode_Source);
+        tile.fillRect(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio), Qt::transparent);
+        tile.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        tile.setRenderHint(QPainter::Antialiasing, smooth);
+        tile.setClipRect(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio));
+        const double from = first / ratio, to = last / ratio;
+        for (const Line& line : lines) {
+            if (line.bottom < from || line.top > to) {
+                continue;
+            }
+            QPen pen(line.colour);
+            pen.setWidthF(width_px * ratio);
+            pen.setCosmetic(true);
+            pen.setCapStyle(Qt::FlatCap);
+            pen.setJoinStyle(Qt::RoundJoin);
+            tile.setPen(pen);
+            tile.setBrush(Qt::NoBrush);
+            tile.drawPath(line.path);
+        }
+    });
+    // Each tile copied pixel for pixel: no smoothing or antialiasing at a tile's edge, which may fall inside an item pixel.
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+    for (int t = 0; t < tiles; ++t) {
+        const int first = firsts[static_cast<std::size_t>(t)], last = firsts[static_cast<std::size_t>(t) + 1];
+        painter->drawImage(QRectF(0.0, first / ratio, device_width / ratio, (last - first) / ratio),
+                           images[static_cast<std::size_t>(t)], QRectF(0, first, device_width, last - first));
+    }
+    painter->restore();
+}
+
+ScanRowTicks::ScanRowTicks(QQuickItem* parent) : QQuickItem(parent) { setFlag(ItemHasContents, true); }
+
+void ScanRowTicks::setScanLayer(ScanLayer* layer) {
+    if (layer == layer_) {
+        return;
+    }
+    if (layer_) {
+        disconnect(layer_, nullptr, this, nullptr);
+    }
+    layer_ = layer;
+    if (layer_) {
+        for (const auto changed : {&ScanLayer::placementChanged, &ScanLayer::yMinChanged, &ScanLayer::yMaxChanged,
+                                   &ScanLayer::coloursRevisionChanged, &ScanLayer::modelChanged, &ScanLayer::modeChanged}) {
+            connect(layer_, changed, this, [this] { update(); });
+        }
+    }
+    emit scanLayerChanged();
+    update();
+}
+
+void ScanRowTicks::setTickWidth(double width) {
+    if (width != tick_width_) {
+        tick_width_ = width;
+        emit tickWidthChanged();
+        update();
+    }
+}
+
+void ScanRowTicks::setPlotHeight(double height) {
+    if (height != plot_height_) {
+        plot_height_ = height;
+        emit plotHeightChanged();
+        update();
+    }
+}
+
+QSGNode* ScanRowTicks::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/) {
+    auto* root = old != nullptr ? old : new QSGNode;
+    while (QSGNode* child = root->firstChild()) {
+        root->removeChildNode(child);
+        delete child;
+    }
+    const ScanViewModel* model = layer_ ? layer_->model() : nullptr;
+    const double low = layer_ ? layer_->property("yMin").toDouble() : 0.0;
+    const double high = layer_ ? layer_->property("yMax").toDouble() : 0.0;
+    if (model == nullptr || window() == nullptr || !(high > low) || plot_height_ < 1.0) {
+        return root;
+    }
+    for (int d = 0; d < model->count(); ++d) {
+        const double at = layer_->rowOf(d);
+        if (!std::isfinite(at) || at < low || at > high) {
+            continue;
+        }
+        const double row = std::clamp(std::floor((high - at) / (high - low) * plot_height_), 0.0, plot_height_ - 1.0);
+        QSGRectangleNode* tick = window()->createRectangleNode();
+        tick->setRect(QRectF(0.0, row, tick_width_, 1.0));
+        tick->setColor(layer_->colourOf(d));
+        root->appendChildNode(tick);
+    }
+    return root;
 }
 
 ScanColourBar::ScanColourBar(QQuickItem* parent) : QQuickPaintedItem(parent) {}

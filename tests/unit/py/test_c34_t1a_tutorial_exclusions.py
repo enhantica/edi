@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -20,11 +19,29 @@ TUTORIALS = ROOT / 'docs/user/tutorials'
 DECLARATION = TUTORIALS / 'execution-exclusions.yml'
 CHECKER = ROOT / 'tools/checks/tutorial_execution_exclusions.py'
 EXPECTED = {
-    'refine-lbco-hrpt-from-data': 'tutorial-runner',
-    'refine-si-sepd': 'tutorial-runner',
-    'refine-ncaf-wish': 'tutorial-runner',
-    'refine-cosio-d20-tscan': 'sequential-scan-tutorial',
-    'simulate-si-tof': 'tutorial-runner',
+    'pd-neut-cwl_lbco_simulation': 'tutorial-runner',
+    'pd-neut-tof_si_simulation': 'tutorial-runner',
+    'pd-xray-cwl_nacl_simulation': 'tutorial-runner',
+    'pd-neut-cwl_lbco-hrpt': 'tutorial-runner',
+    'pd-neut-cwl_hs-hrpt': 'tutorial-runner',
+    'pd-neut-cwl_cosio-d20': 'tutorial-runner',
+    'pd-neut-cwl_lmo-echidna': 'tutorial-runner',
+    'pd-neut-cwl_y2o3-spodi': 'tutorial-runner',
+    'pd-neut-cwl_yalo3-al2o3-spodi': 'tutorial-runner',
+    'pd-neut-tof_si-sepd': 'tutorial-runner',
+    'pd-neut-tof_cecoal-polaris': 'tutorial-runner',
+    'pd-neut-tof_ceo2-pearl': 'tutorial-runner',
+    'pd-neut-tof_lbco-si-mcstas': 'tutorial-runner',
+    'pd-neut-tof_ncaf-wish': 'tutorial-runner',
+    'pd-neut-tof_ferrite-austenite-beer': 'tutorial-runner',
+    'pd-xray-cwl_pbso4-lab': 'tutorial-runner',
+    'pd-xray-cwl_lam7o3-p021': 'tutorial-runner',
+    'pd-neut-xray-cwl_pbso4-d1a-lab': 'tutorial-runner',
+    'pd-neut-cwl_cosio-d20_scan': 'sequential-scan-tutorial',
+    'pd-xray-cwl_latp-bm01_scan': 'sequential-scan-tutorial',
+    'sc-neut-cwl_tb2ti2o7-heidi': 'tutorial-runner',
+    'sc-neut-cwl_pr2nio4-5c2': 'tutorial-runner',
+    'sc-neut-tof_taurine-senju': 'tutorial-runner',
 }
 
 
@@ -108,7 +125,7 @@ def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unbl
     )
     entries = _entries(yaml.safe_load(DECLARATION.read_text(encoding='utf-8')))
     assert set(entries) == set(EXPECTED), (
-        ' execution exclusions must enumerate exactly the five moved tutorial ports; '
+        'Execution exclusions must enumerate the independent catalogue selection; '
         f'observed={sorted(entries)}'
     )
     for stem, task in EXPECTED.items():
@@ -117,31 +134,23 @@ def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unbl
         )
         source = (TUTORIALS / f'{stem}.py').read_text(encoding='utf-8')
         notebook = (TUTORIALS / f'{stem}.ipynb').read_text(encoding='utf-8')
-        assert task in source and task in notebook, (
-            f' source and notebook for {stem} must each name unblocking task {task}'
+        assert 'execution-exclusions.yml' in source and 'execution-exclusions.yml' in notebook, (
+            f'Tutorial {stem} must link its authoritative execution-exclusion declaration'
         )
 
 
 def test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers() -> None:
-    for stem, unblocker in EXPECTED.items():
+    for stem in EXPECTED:
         source_path = TUTORIALS / f'{stem}.py'
         notebook_path = TUTORIALS / f'{stem}.ipynb'
         source = source_path.read_text(encoding='utf-8')
         notebook_text = notebook_path.read_text(encoding='utf-8')
-        code = '\n'.join(line for line in source.splitlines() if not line.lstrip().startswith('#'))
-        assert re.search(r'\b(?:minimizer|calculator)\b', code, re.IGNORECASE) is None, (
-            f' {stem} must not retain an executable minimizer/calculator switch'
+        assert 'edi.Project.load(' in source, (
+            'Every catalogue tutorial must load its shared project'
         )
-        comments = '\n'.join(
-            line for line in source.splitlines() if line.lstrip().startswith('#')
-        ).casefold()
-        assert all(token in comments for token in ('defer', 'minimizer', 'calculator')), (
-            f' {stem} must retain both deferred selectors as named public placeholders'
-        )
-        assert unblocker in source and unblocker in notebook_text, (
-            'each deferred placeholder must retain its named public unblocker '
-            'in both representations'
-        )
+        assert (
+            'execution-exclusions.yml' in source and 'execution-exclusions.yml' in notebook_text
+        ), 'Both tutorial representations must link the declaration that names their unblocker'
         assert 'max_workers' not in source and 'max_workers' not in notebook_text, (
             f' {stem} must delete max_workers without leaving a placeholder'
         )

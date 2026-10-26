@@ -1,0 +1,48 @@
+COMM pd-neut-cwl_lbco-hrpt
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+1 7 1 5 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+2 2 1 0 2 0 4 0 0 2 10 1 1 0 0 1 1
+! Lambda1 Lambda2 Ratio Bkpos Wdt Cthm muR AsyLim Rpolarz 2nd-muR for Pattern# 1
+1.494 1.494 0 87.425 60 0 0 180 0 0
+!NCY Eps R_at R_an R_pr R_gl
+1 0.001 0.2 0.2 0.2 0.2 10 0.05 164.85 0 0
+!2Theta/TOF/E(Kev) Background for Pattern# 1
+10 160 0
+30 160 0
+50 160 0
+110 160 0
+165 160 0
+! Excluded regions (LowT HighT) for Pattern# 1
+0 !Number of refined parameters
+! Zero Code SyCos Code SySin Code Lambda Code MORE -> Patt# 1
+0.3 0 0 0 0 0 0 0 0
+! Data for PHASE number: 1
+lbco
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More
+4 0 0 0 0 1 0 0 0 0 0 0 0 7 0
+P m -3 m <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+La LA 0 0 0 0.5 0.01041666667 0 0 0 0
+0 0 0 0 0
+Ba BA 0 0 0 0.5 0.01041666667 0 0 0 0
+0 0 0 0 0
+Co CO 0.5 0.5 0.5 0.5 0.02083333333 0 0 0 0
+0 0 0 0 0
+O O 0 0.5 0.5 0.5 0.0625 0 0 0 0
+0 0 0 0 0
+! Profile Parameters for Pattern # 1 Phase lbco
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+9 0 0 0 0 0 0
+0 0 0 0 0 0
+! U V W X Y GauSiz LorSiz Size-Model
+0.08 -0.1 0.1 0 0.08 0 0 0
+0 0 0 0 0 0 0
+! a b c alpha beta gamma
+3.88 3.88 3.88 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 Asy1 Asy2 Asy3 Asy4 S_L D_L
+0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+10 164.85 1

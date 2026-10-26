@@ -15,6 +15,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSocketNotifier>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QUrl>
 #include <QtGraphs/QXYSeries>
@@ -33,6 +34,7 @@
 #include <unistd.h>
 
 #include "analysis_view_model.hpp"
+#include "demo_driver.hpp"
 #include "app_build_info.hpp"
 #include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
@@ -319,8 +321,13 @@ bool pattern_updates_shown(ScreenObservation& o) {
 }
 
 void drive(ScreenObservation& o) {
-    if (!o.session->openExample("pd-neut-cwl_cosio-d20_scan-162f")) {
-        o.result["error"] = o.session->lastError();
+    // The 162-file test scan, which the app does not bundle: a copy of the CLI project, as the demo opens one.
+    static QTemporaryDir copies;
+    const QString scan = copies.isValid() ? copy_cli_project(QStringLiteral("pd-neut-cwl_cosio-d20_scan-162f"),
+                                                             QDir(copies.path()))
+                                          : QString();
+    if (scan.isEmpty() || !o.session->openProject(QUrl::fromLocalFile(scan))) {
+        o.result["error"] = scan.isEmpty() ? QStringLiteral("cannot copy the 162-file test scan") : o.session->lastError();
         publish(o.result);
         return;
     }

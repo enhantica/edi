@@ -6,6 +6,7 @@
 #include <QPointer>
 #include <QQuickPaintedItem>
 #include <QString>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 #include <atomic>
 #include <cstdint>
@@ -57,6 +58,8 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
+    // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
+    Q_PROPERTY(bool busy MEMBER busy_ WRITE setBusy NOTIFY busyChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
     // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
@@ -72,6 +75,12 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(double displayMax READ displayMax NOTIFY displayMaxChanged)
     // Bumped whenever the datasets' colours (colourOf) change, for what shows them to read them again.
     Q_PROPERTY(int coloursRevision READ coloursRevision NOTIFY coloursRevisionChanged)
+    // Which rows' labels show, true by dataset, while `labelled`: all while they fit; when they would come closer than
+    // `labelGap` pixels, an evenly spread share of them, the current dataset's always among them. Zooming in spreads the
+    // rows, and the rest come back as they fit. Made again when what it depends on changes, announced when it differs.
+    Q_PROPERTY(bool labelled MEMBER labelled_ WRITE setLabelled NOTIFY labelledChanged)
+    Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
+    Q_PROPERTY(QVariantList shownLabels READ shownLabels NOTIFY shownLabelsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
     // many times the drawing was rendered.
     Q_PROPERTY(int traceBuildCount READ traceBuildCount NOTIFY traceBuildCountChanged)
@@ -100,8 +109,12 @@ class ScanLayer : public QQuickPaintedItem {
     void setGpu(bool on);
     void setHighlight(bool on);
     void setFaded(double opacity);
+    void setBusy(bool busy);
     void setOffset(double offset);
     void setHeightShare(double share);
+    void setLabelled(bool labelled);
+    void setLabelGap(double gap);
+    QVariantList shownLabels() const;
     double patternHeight() const { return pattern_height_; }
     // A dataset's row on the vertical axis: on the stacked view its baseline, on the map its scan value or place (the
     // model's). NaN when it has none. The labels, the ticks and the clicks all take it from here.
@@ -114,6 +127,8 @@ class ScanLayer : public QQuickPaintedItem {
     Q_INVOKABLE double peakOf(int dataset) const;
     // The colour the stacked view draws a dataset's line in, by the colour choice: what its row label takes.
     Q_INVOKABLE QColor colourOf(int dataset) const;
+    // A line's colour faded to `faded` over the background, opaque.
+    QColor fadedColour(const QColor& colour) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     int coloursRevision() const { return colours_revision_; }
@@ -126,6 +141,9 @@ class ScanLayer : public QQuickPaintedItem {
 
    signals:
     void modelChanged();
+    void labelledChanged();
+    void labelGapChanged();
+    void shownLabelsChanged();
     void modeChanged();
     void xMinChanged();
     void xMaxChanged();
@@ -144,6 +162,7 @@ class ScanLayer : public QQuickPaintedItem {
     void gpuChanged();
     void highlightChanged();
     void fadedChanged();
+    void busyChanged();
     void offsetChanged();
     void heightShareChanged();
     void placementChanged();
@@ -210,7 +229,14 @@ class ScanLayer : public QQuickPaintedItem {
     bool gpu_ = false;
     bool highlight_ = false;
     double faded_ = 0.3;
+    bool busy_ = false;
     double offset_ = 0.1, height_share_ = 0.0;
+    bool labelled_ = false;
+    double label_gap_ = 1.0;
+    // shownLabels, and whether what it depends on changed since it was made.
+    mutable QVariantList shown_labels_;
+    mutable bool shown_labels_stale_ = true;
+    void labelsMoved();
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
     std::vector<double> lows_, highs_, baselines_;
@@ -241,6 +267,39 @@ class ScanLayer : public QQuickPaintedItem {
 
 // The map's colour bar: the map's colours from the low end at the bottom to the high end at the top, each pixel row
 // coloured by the lookup the map's own pixels take (edi::scan_colour_table), so the key and the image agree.
+// A short tick at each dataset's row just right of the plot, in the dataset's Stacked colour (the owner, 2026-10-22):
+// one item for every row, the layer's rows and colours, each tick a scene-graph rectangle a pixel high, as a QML
+// Rectangle draws it, on the plot's pixel rows and kept between its top and bottom rows, so a row a fraction of a pixel
+// past an axis end is not drawn beyond it.
+class ScanRowTicks : public QQuickItem {
+    Q_OBJECT
+    QML_ELEMENT
+    Q_PROPERTY(edi_app::ScanLayer* scanLayer READ scanLayer WRITE setScanLayer NOTIFY scanLayerChanged)
+    Q_PROPERTY(double tickWidth MEMBER tick_width_ WRITE setTickWidth NOTIFY tickWidthChanged)
+    // The plot's height, which the rows are placed on.
+    Q_PROPERTY(double plotHeight MEMBER plot_height_ WRITE setPlotHeight NOTIFY plotHeightChanged)
+
+   public:
+    explicit ScanRowTicks(QQuickItem* parent = nullptr);
+    ScanLayer* scanLayer() const { return layer_; }
+    void setScanLayer(ScanLayer* layer);
+    void setTickWidth(double width);
+    void setPlotHeight(double height);
+
+   signals:
+    void scanLayerChanged();
+    void tickWidthChanged();
+    void plotHeightChanged();
+
+   private:
+    QPointer<ScanLayer> layer_;
+    double tick_width_ = 1.0;
+    double plot_height_ = 0.0;
+
+   protected:
+    QSGNode* updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) override;
+};
+
 class ScanColourBar : public QQuickPaintedItem {
     Q_OBJECT
     QML_ELEMENT

@@ -178,3 +178,228 @@ Every-pattern choices, the catch-up timing bound, stable parameter y ranges
 and first-group sidebar defaults. The rendering-detection singleton is now
 named `RenderingInfo`; its earlier name `GraphicsInfo` shadowed Qt Quick's
 attached graphics API type used by the Structure view.
+
+
+## Toolbar centre and plot hover placement
+
+Every toolbar line on Experiment and Analysis Pattern, Stacked and Map shares
+the horizontal centre of the visible `mainArea.blocks` dataset selector line.
+The reference is the entire selector row, including its navigation buttons,
+not the plot area offset by axis or row labels. The gate previously compared
+with the plot centre. It now maps both lines into common chart coordinates
+and checks each row within one logical pixel. Historical numeric case tags
+now select an actual wide, middle or supported-minimum application width;
+the gate no longer detaches a narrow chart beneath an unchanged wider selector.
+Wrapping and whole-control containment remain checked. If the comboboxes'
+combined width exceeds the available row, multiple combobox rows are required
+above the button row.
+
+The named `scanView.<mode>.hover` tooltip follows the actual pointer inside
+the plot. Its complete background stays inside the plot at interior and edge
+positions, its nearest edge lies within two standard font sizes of the pointer,
+and it intersects no toolbar control. Geometry is observed on the rendered
+popup background, not inferred from a requested x/y value. The text must name
+the independently targeted dataset. Its actual background and visible text
+use the app's shared tooltip background, foreground and font; the border and
+shadow token must also match. These observations cover both Stacked and Map.
+
+The centre witness waits for stable mapped positions and sizes of the selector,
+chart and controls across successive event-loop samples. One completed frame
+does not prove that the selector’s resize animation has finished. Seq 19 found
+that the previous one-frame witness read a moving selector; the settled witness
+retains the one-logical-pixel tolerance.
+
+
+## Stacked line quality against Pattern
+
+The reference is the actual Pattern chart's Qt Graphs measured-line rendering,
+not the retired painter or an existing capture. A paired capture loads the same
+independent dense polyline into Pattern and Stacked: a sharp triangular peak and
+a narrow peak whose feet straddle device-pixel columns. More than 4096 samples
+exercise reduction, rather than a sparse path that can bypass it. The matrix is
+DPR 1 and 2, each with effective GPU and software Stacked drawing. The approved
+measured palette assignment remains the colour reference.
+
+Both actual plots have equal physical grids and equal data ranges. Only their
+line subtrees are captured over white. The triangular join witness uses opacity
+0.3, exposing overlapping joins; the narrow reduction witness is opaque, so
+coverage of its closely spaced arms measures geometry without opacity stacking.
+The tolerances are engineering allowances for different antialiasing kernels:
+
+- Integrated stroke coverage and local cross-sections sampled at seven positions
+  along the segments (outside the vertex disk) differ by at most
+  15 percent from Pattern; the local checks also reject uneven thickness.
+- Absolute coverage error, after a half-physical-pixel smoothing kernel, is at
+  most 12 percent of Pattern's integrated coverage. No logical-pixel rescaling
+  or registration is allowed, including at DPR 2.
+- Every reference core pixel has candidate ink within one physical pixel; the
+  same rule applies inside a five-logical-pixel disk at the sharp vertex. This
+  permits antialiasing edge placement, not a missing segment or vertex notch.
+- Maximum opacity at the vertex exceeds Pattern's maximum there by at most
+  0.08. Comparing maxima within the vertex area avoids treating different edge
+  coverage as doubled alpha.
+
+The receipt retains both PNGs, actual Qt API/renderer, input and reference point
+counts, all metric values, and eight elapsed frame-delivery samples for each
+path. These elapsed samples include event delivery and the test's frame wait;
+they are not isolated GPU timings or quiet-machine performance claims.
+Controlled thinning, a gap, excessive alpha and a physical displacement of the
+actual Pattern reference must each fail the comparator; identity must pass.
+
+## Legend visibility and range preference
+
+Experiment and Analysis Pattern and single-crystal charts use the actual
+`chart.legend` or `singleCrystal.legend`. Every `chart.legend.entry` has a curve
+`key`, `hidden` state and drawn name and symbol. Clicking either part toggles the
+corresponding rendered curve, not just the legend metadata. Powder series have
+no drawable points while hidden; single-crystal reflection layers become
+invisible. Both name and symbol paint the chart's disabled foreground colour.
+A real hover uses the shared app tooltip and says exactly `Click to hide` or
+`Click to show`.
+
+`preferences.hiddenRange` offers `Keep the y range` (default, stored `keep`) and
+`Fit the range to visible curves` (stored `fit`), backed by
+`Preferences.chartHiddenRange` in machine settings. The former keeps both axis
+endpoints on hide and show; a later reset still counts hidden curves. The latter
+fits the visible data once on hide or show, and a later reset continues to leave
+hidden curves out. Showing everything restores the full-data fitted range.
+Visibility remains independent per chart across navigation in the running app
+and resets when another project opens.
+
+Disabled entries retain their own symbols as well as their names: the measured,
+calculated, background and residual samples keep their geometry, and each Bragg
+entry keeps both its tick and its `layer-group` structure icon. The named
+`chart.legend.entry` supplies the actionable row; its actual `IconLine` pieces
+must draw the same symbols with the shared disabled foreground. A hidden
+structure's `chart.bragg.label` beside the tick strip remains shown, with both
+its structure icon and name in the disabled foreground. One- and two-structure
+saved projects exercise every structure independently on Experiment and Analysis
+Pattern; both single-crystal charts exercise their own entry too.
+
+The symbol gate compares actual enabled and disabled drawing as a round-trip
+invariant, not a generated correctness golden. It checks semantic symbol and
+loaded icon-font identity, then rendered ink over each piece's actual underlay:
+physical dimensions within one pixel, normalised ink area within 15 percent,
+and at least 95 percent bidirectional shape coverage within one physical pixel
+for antialiasing placement. Each name and symbol must contribute visible ink in
+the declared foreground. Merely retaining a segment or a colour property does
+not satisfy this contract.
+
+An `IconLine` segment without a `color` inherits the row's `textColor`. In
+particular, the separate `Bragg peaks` and structure-name text pieces may use
+that inherited disabled colour. The range/visibility gate resolves this fallback
+and also checks every instantiated drawing piece's actual `color`; requiring an
+explicit colour field on every segment would incorrectly reject that rendering.
+
+Before the amended owner record, the legend rule would have required an
+unchanged range for every click. The gates now separate the default keep rule
+from visible-only fits and test both actual preference choices and persistence.
+
+
+## Supported minimum and undersize overlay
+
+ADR-0017 section 2 fixes the supported app area at 1024 by 640 logical pixels.
+`AppSizes.minimumAppWidth` and `minimumAppHeight` supply both the native window's
+`minimumWidth`/`minimumHeight` and the undersize predicate. The inherited GUI
+library's minimum-size tokens are not the reference for this app-specific size.
+
+The window owns the named Rectangle `app.tooSmall`, visually parented to
+`Overlay.overlay`, above the entire application, including dialogs. It is visible
+when the actual window width is below 1024 **or** its height is below 640, and
+hidden exactly at both minima. Its `EmptyStateLabel` child is named
+`app.tooSmall.text`, says `Increase the window size`, and is centred in the
+complete window area. It uses the same font as the ordinary empty-view label;
+the cover uses the shared empty-view background colour.
+
+The acceptance observer finds these names from the actual window's QObject
+hierarchy, checks their visual ancestry in `Overlay.overlay`, and captures the
+window's complete visual root. An application content-item-only text traversal
+can miss an overlay sibling. Discovering controls beneath the cover does not
+mean they are exposed: the observer checks that the cover fills and paints the
+whole window and that a real pointer click cannot activate a covered control.
+The same control must work after the area grows again.
+
+The cover leaves the existing application underneath alive. Crossing either
+boundary and returning to the minimum retains the project and page instances,
+page and chart tabs, selected dataset and existing scroll positions. The native
+actor temporarily relaxes the window-manager minimum properties to exercise the
+same production predicate at browser-reachable sizes; this is not a claim of a
+WebAssembly runtime capture. Native minimum publication is checked separately.
+
+Before this adaptation, the gate searched only `win.contentItem` and required
+underlying controls to disappear. It now observes the named overlay, its actual
+pixels and pointer interception while requiring the underlying state to survive.
+
+
+The two window-level cases are independently runnable through
+`tests/system/py/test_app_minimum.py`; the native case names remain
+`test_desktop_minimum` and `test_placeholder_boundary_and_state`. Their separate
+capture fixture lets the canonical runtime bank measure this scope without
+replacing the broader chart module's full recorded capture cost with a partial
+run. The six existing per-page minimum cases remain in the chart driver.
+
+
+## Timing limits by actual backend and change
+
+The hub's conductor decision of 2026-10-26 (`19e74c0e8`, owner unanswered after
+one heartbeat) amends gate 1 as follows. Medians use repeated real samples on the
+324-file scan, on a quiet machine with its load stated.
+
+| Change | GPU | Software rendering |
+| --- | --- | --- |
+| Data | below 100 ms | at most 250 ms |
+| Zoom | below 100 ms | at most 115 ms |
+| Pan | below 100 ms | at most 100 ms |
+| Restyle | below 100 ms | at most 100 ms |
+| Select | below 100 ms | at most 100 ms |
+
+The actual Qt API and observed CPU renderer identify the software case; an
+OpenGL API alone does not mean hardware rendering. Each backend and operation
+keeps its own samples and verdict, including the strict GPU and inclusive
+software boundary conventions. `tests/fixtures/fast_chart_redraws/README.md`
+names the complete row schema, including quiet confirmation and measured load.
+The former generic strict-under-100 result is retired; rows missing any of the
+five operations are refused. Fit-update bounds are unchanged by this amendment.
+
+Nothing drawn is dropped to obtain these times: the complete-rendering,
+placement, annotation, colour and line-quality requirements still apply. A
+numeric timing result is not evidence of rendering completeness, and synthetic
+arithmetic tests are not performance measurements. Loaded local diagnostics
+cannot establish the packet's quiet-machine performance acceptance.
+
+Legacy scan acceptance observations follow the same selection contract. Palette
+and all-pattern witnesses explicitly turn highlighting off before sampling
+unfaded ink; the default-on setting is checked by the dedicated highlight gate.
+`scanView.<mode>.current` no longer exists. Selection witnesses read the visible
+`scanView.<mode>.rowLabel.<dataset>` IconLine, its bold text segment, the loaded
+bold font face, accent colour and actual text pixels. Evolution's position line
+retains its own gate. Former open-rectangle geometry, minimum-height, border and
+clipping cases are retired with the rectangle; selection and dense-label gates
+cover the replacement behaviour.
+
+Dataset ticks are now one scene-graph strip, `scanView.<mode>.rowTicks`, rather
+than QObject children `rowTick.N`. Gates read its plot-relative rectangle and
+actual pixels. Expected dataset locations and colours remain independent: Map
+uses the authored scientific rows; Stacked uses the closed-form placement above.
+At coincident raster rows, later dataset ticks paint over earlier ticks. The
+strip starts one logical pixel right of the plot; a tick is one logical pixel
+high and clips to the plot at boundary rows. Empty strip pixels between expected
+rows must remain the chart background.
+
+The legacy tick raster allows at most two byte levels per RGB channel for
+capture/quantisation at a logical-pixel centre; it does not infer drawing from
+metadata or a tick count. Palette row positions use independently anchored
+intensities. The older excluded-region and Map edge oracles retain their
+requirements; these are separate from the selection and tick observations.
+
+### Startup report and project diagnostics
+
+The renderer's startup report is distinct from project-load diagnostics. Its
+complete line is `edi: graphics: <API>[, renderer <OpenGL renderer>], <classification>`,
+where classification is `hardware rendering` or `software rendering (no GPU)`.
+The optional renderer string belongs to OpenGL. Embedded, prefixed, incomplete
+or contradictory lookalikes are not exempt diagnostics. Project-loading gates
+allow these complete report lines on stderr and still reject every other stderr
+byte; project warnings continue through the warning model. The normal-app
+startup gate independently compares its single report with Qt's actual API and
+renderer, without enabling Qt debug logs.

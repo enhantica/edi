@@ -263,9 +263,11 @@ Project.calculate	model-operation
 Project.descent	other-public
 Project.experiment	other-public
 Project.experiments	other-public
+Project.export_zip	other-public
 Project.fitting_mode	other-public
 Project.free_parameters	other-public
 Project.load	other-public
+Project.location	other-public
 Project.metadata	other-public
 Project.name	other-public
 Project.parameters	other-public

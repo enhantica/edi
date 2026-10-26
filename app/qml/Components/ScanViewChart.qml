@@ -37,6 +37,8 @@ Item {
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
+    // Where the toolbar and the block selector row above it end, from the chart's right edge.
+    readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
@@ -121,8 +123,31 @@ Item {
         if (shown && scan !== null)
             scan.wanted = true;
     }
-    Component.onCompleted: if (shown && scan !== null)
-        scan.wanted = true
+    Component.onCompleted: {
+        if (shown && scan !== null)
+            scan.wanted = true;
+        reportShown();
+    }
+    Component.onDestruction: {
+        presentedTo?.setScanViewShown(chart, false);
+        presentedTo = null;
+    }
+    // On screen, the view is where a scan whose every pattern is waited for shows each file, as the current dataset
+    // (edi ADR-0029, 8): the project it told so.
+    property ProjectViewModel presentedTo: null
+    readonly property bool presenting: shown && project !== null
+    function reportShown() {
+        if (presentedTo !== null && (!presenting || presentedTo !== project)) {
+            presentedTo.setScanViewShown(chart, false);
+            presentedTo = null;
+        }
+        if (presenting && presentedTo === null) {
+            project.setScanViewShown(chart, true);
+            presentedTo = project;
+        }
+    }
+    onPresentingChanged: reportShown()
+    onProjectChanged: reportShown()
     onScanChanged: {
         resetZoom();
         if (shown && scan !== null)
@@ -348,10 +373,15 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // The row labels' choice (shownLabels): only while the view is shown and labels its rows; a label's text item is
+            // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
+            labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0
+            labelGap: Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height))
             // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
             // datasets (the owner, 2026-10-24).
             highlight: Preferences.chartHighlightSelected
             faded: Preferences.chartFadedOpacity
+            busy: chart.project !== null && chart.project.fit !== null && chart.project.fit.running
             // The stacked patterns' offset and height, app settings in percent (Fit: 0).
             offset: Preferences.scanStackedOffset / 100
             heightShare: Preferences.scanStackedSize / 100
@@ -433,81 +463,77 @@ Item {
                     chart.project.currentExperimentIndex = dataset;
             }
 
-            EaElements.ToolTip {
-                objectName: "scanView." + chart.mode + ".hover"
-                visible: parent.hovered >= 0 && parent.containsMouse
-                text: parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(parent.hovered) : ""
+            // The hovered dataset's name next to the pointer (the owner, 2026-10-25): above it while that fits inside the
+            // plot, else below it, and kept between the plot's sides, so it never covers the toolbar. Its arrow points
+            // at the pointer.
+            Item {
+                id: hoverPoint
+
+                x: parent.mouseX
+                y: parent.mouseY
+                width: 0
+                height: 0
+
+                EaElements.ToolTip {
+                    id: hoverTip
+
+                    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+                    readonly property real plotWidth: hoverPoint.parent.width
+
+                    objectName: "scanView." + chart.mode + ".hover"
+                    visible: hoverPoint.parent.hovered >= 0 && hoverPoint.parent.containsMouse
+                    text: hoverPoint.parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(hoverPoint.parent.hovered) : ""
+                    x: Math.max(-hoverPoint.x, Math.min(plotWidth - hoverPoint.x - implicitWidth, -implicitWidth / 2))
+                    // Below, clear of the cross cursor.
+                    y: hoverPoint.y >= implicitHeight + gap ? -implicitHeight - gap : 3 * gap
+                }
             }
         }
     }
 
     // The rows labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22): the
     // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
-    // dataset's colour, at its row's height. The widest label sets the room left for them, measured once after the
-    // labels' widths change (a binding over every label ran again for each label that changed).
+    // dataset's colour, at its row's height. The widest label sets the room left for them, worked out from the font
+    // with the texts (an IconLine: the icon, its spacing, the text), so the plot takes its room in the frame that changed
+    // the labels, never a frame later. Each text is measured bold, as the shown dataset's may be, so choosing another
+    // dataset or turning the highlight off never moves the plot. A view not shown keeps the room it had: its labels are
+    // blank until it shows.
     readonly property real rowLabelGap: Math.round(em * 0.4)
     property real rowLabelsRoom: 0
-    function measureRowLabels() {
-        let widest = 0;
-        for (let i = 0; i < rowLabelRepeater.count; ++i) {
-            const label = rowLabelRepeater.itemAt(i);
-            if (label)
-                widest = Math.max(widest, label.width);
-        }
-        rowLabelsRoom = Math.ceil(widest);
+    Binding {
+        target: chart
+        property: "rowLabelsRoom"
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
     }
-    // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
-    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. A view
-    // not shown chooses none: a followed scan moves the shown dataset with every file.
-    readonly property var shownRowLabels: {
-        const shown = [];
-        const texts = chart.shown && rowLabels && scan !== null ? scan.rowTexts : [];
-        if (texts.length === 0 || scan.revision < 0 || !(layer.patternHeight > 0) || !(axisY.max > axisY.min) || plot.height <= 0)
-            return shown;
-        // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
-        // the label is given.
-        const gap = Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height));
-        const placed = [];
-        for (let i = 0; i < texts.length; ++i) {
-            const at = layer.rowOf(i);
-            shown.push(false);
-            if (!isNaN(at) && at >= axisY.min && at <= axisY.max)
-                placed.push({
-                    "index": i,
-                    "px": (axisY.max - at) / (axisY.max - axisY.min) * plot.height
-                });
-        }
-        placed.sort((a, b) => a.px - b.px);
-        // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
-        let stride = 1;
-        const apart = k => {
-            for (let n = k; n < placed.length; n += k)
-                if (placed[n].px - placed[n - k].px < gap)
-                    return false;
-            return true;
-        };
-        while (stride < placed.length && !apart(stride))
-            ++stride;
-        const current = project ? project.currentExperimentIndex : -1;
-        const currentPlace = placed.find(row => row.index === current);
-        for (let n = 0; n < placed.length; n += stride) {
-            if (!currentPlace || Math.abs(placed[n].px - currentPlace.px) >= gap || placed[n].index === current)
-                shown[placed[n].index] = true;
-        }
-        if (currentPlace)
-            shown[current] = true;
-        return shown;
+    // The row label's pieces' fonts, as IconLine sets them.
+    TextMetrics {
+        id: labelIcon
+        font.family: EaStyle.Fonts.iconsFamily
+        font.pixelSize: chart.em
+        text: "microscope"
     }
+    FontMetrics {
+        id: labelBold
+        font.family: EaStyle.Fonts.ptSansBold.name
+        font.styleName: "Bold"
+        font.pixelSize: chart.em
+    }
+    // Which labels show (ScanLayer.shownLabels): all while they fit, else an evenly spread share with the shown dataset
+    // always among them. A view not shown chooses none: a followed scan moves the shown dataset with every file.
+    readonly property var shownRowLabels: layer.shownLabels
     Repeater {
         id: rowLabelRepeater
 
-        // One label per dataset, kept while the rows are placed again: only its text, place and colour follow.
-        model: chart.rowLabels && chart.scan !== null ? chart.scan.count : 0
-        onCountChanged: Qt.callLater(chart.measureRowLabels)
+        // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
+        // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
+        model: chart.scan !== null ? chart.scan.count : 0
         delegate: IconLine {
             required property int index
-            readonly property string rowText: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
+            // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
+            readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
+            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
             // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
             // read here, so the label follows the colour choice and the theme.
             readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
@@ -528,7 +554,6 @@ Item {
                     "bold": marked
                 }
             ]
-            onWidthChanged: Qt.callLater(chart.measureRowLabels)
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
             // On Stacked a label stands on its curve's baseline, its bottom at the row (the owner, 2026-10-22); on the
             // Map it is centred on its band.
@@ -560,23 +585,17 @@ Item {
     }
 
     // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
-    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour. Kept between the plot's top and bottom
-    // border rows, so a row a fraction of a pixel above the axis's end is not drawn below the x axis line.
-    Repeater {
-        model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
-        delegate: Rectangle {
-            required property int index
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
-
-            objectName: "scanView." + chart.mode + ".rowTick." + index
-            visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
-            x: plot.x + plot.width + 1
-            y: plot.y + Math.max(0, Math.min(plot.height - 1, Math.floor((axisY.max - at) / (axisY.max - axisY.min) * plot.height)))
-            width: Math.round(chart.em * 0.4)
-            height: 1
-            // The colours' revision is read here, so the tick follows the colour choice and the theme.
-            color: layer.coloursRevision >= 0 ? layer.colourOf(index) : "transparent"
-        }
+    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour, all drawn by one item (ScanRowTicks).
+    ScanRowTicks {
+        objectName: "scanView." + chart.mode + ".rowTicks"
+        visible: chart.hasData
+        scanLayer: layer
+        x: plot.x + plot.width + 1
+        y: plot.y
+        width: tickWidth
+        height: plot.height
+        plotHeight: plot.height
+        tickWidth: Math.round(chart.em * 0.4)
     }
 
     // The map's colour bar: the colour map from bottom to top, labelled at its ends with the intensities they stand for.
@@ -654,21 +673,20 @@ Item {
         text: chart.scan ? chart.scan.xTitle : ""
     }
     // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
-    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the axes'
-    // types (x is the project's axis, shared with the pattern chart; y places the rows by the extracted value or by file
-    // index, shared with the Evolution tab's x; z, the intensity scale, is the pattern chart's y scale), the Stacked
-    // offset and height, and the Map's colours. The buttons: the colours' reversal, the Map's smooth edges, the included
-    // range, the highlight, the zoom, always on here, and the reset.
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the axes' types (x is the project's axis, shared with the pattern chart; y places the rows by the
+    // extracted value or by file index, shared with the Evolution tab's x; z, the intensity scale, is the pattern
+    // chart's y scale), the Stacked offset and height, and the Map's colours. The buttons: the colours' reversal, the
+    // Map's smooth edges, the included range, the highlight, the zoom, always on here, and the reset.
     ToolbarLines {
         id: scanToolbar
 
         objectName: "scanView." + chart.mode + ".toolbar"
-        // Across the chart, each line centred on the plot and kept inside the chart.
+        // Across the chart, each line centred between its side margins, where the block selector row is.
         x: 0
         width: chart.width
         y: chart.toolbarTop
         height: implicitHeight
-        centre: view.x + view.plotArea.x + view.plotArea.width / 2
         leftEdge: chart.sideMargin
         rightEdge: chart.width - chart.sideMargin
 

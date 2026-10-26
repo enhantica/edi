@@ -3,6 +3,7 @@
 
 #include <QCoreApplication>
 #include <QFileInfo>
+#include <QFontMetricsF>
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
@@ -383,10 +384,14 @@ void ScanViewModel::placeRows() {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }
     }
-    if (texts != row_texts_) {
+    const bool changed = texts != row_texts_;
+    if (changed) {
         ++row_texts_revision_;
     }
     publish(row_texts_, texts, &ScanViewModel::rowTextsChanged);
+    if (changed) {
+        emit rowTextsRevisionChanged();
+    }
     emit orderNameChanged();
     double low = 0.0, high = 1.0;
     if (!spans_.empty()) {
@@ -458,6 +463,17 @@ void ScanViewModel::setIncludedOnly(bool on) {
         ++revision_;
         emit revisionChanged();
     }
+}
+
+double ScanViewModel::widestRowText(const QVariantList& shown, const QFont& font) const {
+    const QFontMetricsF metrics(font);
+    double widest = 0.0;
+    for (qsizetype i = 0; i < shown.size() && i < row_texts_.size(); ++i) {
+        if (shown.at(i).toBool()) {
+            widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(i)));
+        }
+    }
+    return widest;
 }
 
 void ScanViewModel::setRowsByIndex(bool on) {

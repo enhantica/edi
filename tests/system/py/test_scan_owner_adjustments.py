@@ -51,7 +51,8 @@ def button_states(text):
         'const group={fit:null},buttons={scanMode:false};',
     )
     assert reset_visibility == [False, False, True], (
-        'Reset fits: the actual row shows its reset action only in a scan fitting mode'
+        'Reset fits: the actual row shows its reset action only for a sequential '
+        'or independent fitting mode'
     )
     calls = evaluate(
         '(()=>{(' + property_value(reset, 'onClicked') + ');return calls;})()',

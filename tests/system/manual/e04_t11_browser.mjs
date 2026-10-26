@@ -10,13 +10,14 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
-import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
-import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
+import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const saveRouteOnly = process.argv.includes('--save-route-only');
+const exampleOnly = process.argv.includes('--example-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
@@ -28,6 +29,8 @@ const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control=
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
 assert(!reopenControl || ['noop', 'refuse'].includes(reopenControl),
   'reopen counterfactual must be the explicit no-op or refused-open case');
+assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase === 'none'),
+  'The example-only scope must omit file requests, save-only and reopen controls');
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -116,7 +119,13 @@ try {
   if (mode === 'singlethread') await send('Network.setBlockedURLs', { urls: ['*coi-serviceworker.js*'] });
   const evaluate = async expression => {
     const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception');
+    if (result.exceptionDetails) {
+      await writeFile(join(output, `${mode}-evaluation-error.json`), JSON.stringify({
+        expression, exceptionDetails:result.exceptionDetails,
+      }, null, 2));
+    }
+    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception: ' +
+      (result.exceptionDetails?.exception?.description || result.exceptionDetails?.text || ''));
     return result.result.value;
   };
   const frame = async () => {
@@ -161,29 +170,36 @@ try {
     throw Error('page navigation must finish rendering before the next pointer action');
   };
   const waitNative = async objectName => {
-    const deadline=Date.now()+45000;
-    do {
-      const ready=await evaluate(`(() => {try {const r=window.ediControlGeometry(${JSON.stringify(objectName)});return r.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}})()`);
-      if(ready)return await controlPointer(evaluate,objectName);
-      await frame();
-    } while(Date.now()<deadline);
-    throw Error('The real dialog must expose its declared native control '+objectName);
+    await waitControlGeometry(evaluate,frame,objectName);
+    return controlPointer(evaluate,objectName);
   };
-  let lastDialogTarget;
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
+    const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
+      /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
+    if(projectAction) {
+      const shown=await evaluate(`(() => {const group=window.ediControlGeometry('group.getStarted');
+        const item=window.ediControlGeometry(${JSON.stringify(projectAction)});
+        return item.x>=group.x && item.y>=group.y && item.x+item.width<=group.x+group.width && item.y+item.height<=group.y+group.height;})()`);
+      if(!shown)await click(/Get started$/,'button');
+      nativeObjectName=projectAction;containerName='group.getStarted';
+    }
     if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
-      const target=regex.test('Folder')?'open.folder':'saveAs.zip';
-      lastDialogTarget=target;
+      const opening=await evaluate(`(() => {try {return window.ediControlGeometry('open.folder').visible;}
+        catch(error) {if (/no visible item|no item is named/.test(error.message)) return false; throw error;}})()`);
+      const target=(opening?'open.':'saveAs.')+(regex.test('Folder')?'folder':'zip');
+      await settleRenderedPage();
       const point=await waitNative(target);
+      console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
       for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
       return;
     }
     if(regex.source==='^OK$') {
-      const count=lastDialogTarget==='saveAs.zip'||lastDialogTarget==='open.folder'?2:1;
-      for(let i=0;i<count;++i) for(const type of ['keyDown','keyUp'])
-        await send('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
-      for(const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',{type,key:' ',code:'Space',windowsVirtualKeyCode:32});
+      // The default shortcut activates only after the dialog's entry transition.
+      await settleRenderedPage();
+      console.log(`browser ${mode}: accept real dialog with default Enter`);
+      for(const type of ['keyDown','keyUp'])
+        await send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await frame();return;
     }
     const node = await waitAX(regex, true, role);
@@ -194,7 +210,21 @@ try {
     const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
     nativeObjectName ||= names[node.name?.value];
     let x, y;
-    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    const groupName=/(?:^| )Examples$/.test(node.name?.value||'')?'group.examples':
+      /Get started$/.test(node.name?.value||'')?'group.getStarted':
+      /Recent projects$/.test(node.name?.value||'')?'group.recentProjects':null;
+    if (groupName) {
+      const rect=await evaluate(`window.ediControlGeometry(${JSON.stringify(groupName)})`);
+      const model=await send('DOM.getBoxModel',{backendNodeId:node.backendDOMNodeId});
+      assert(rect?.objectName===groupName&&rect.visible===true&&rect.enabled===true&&
+        [rect.x,rect.y,rect.width,rect.height,model.model.width,model.model.height].every(Number.isFinite)&&
+        rect.width>0&&rect.height>0&&model.model.width>0&&model.model.height>0,
+        'The group header pointer must use its fresh native group origin and real button extent');
+      x=rect.x+Math.min(rect.width,model.model.width)/2;
+      y=rect.y+Math.min(rect.height,model.model.height)/2;
+      assert(x>=0&&x<1280&&y>=0&&y<768,
+        'The real group header pointer must lie inside the fixed browser viewport');
+    } else if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
@@ -226,7 +256,7 @@ try {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
     // Qt's recycled AX name remains a witness; fresh native geometry locates the actual input.
     await restoreCanvasViewport(evaluate);
-    const search = await controlPointer(evaluate, 'examples.search');
+    const search = await waitNative('examples.search');
     for (const type of ['mousePressed', 'mouseReleased'])
       await send('Input.dispatchMouseEvent', {type, ...search, button:'left', clickCount:1});
     for (const type of ['keyDown','keyUp'])
@@ -239,9 +269,25 @@ try {
       exampleId, row:await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`),
       list:await evaluate('window.ediControlGeometry("examples.list")'),
     }, null, 2));
+    const row = await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`);
+    assert(row && row.visible && row.enabled, `Example precondition: requested bundled row exists and is actionable: ${exampleId}`);
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
+    // The summary table belongs to the results popup. Use its native rectangle
+    // to sample the surrounding dialog padding; agreement tables may grow below it.
+    const table = await evaluate(`(() => {
+      try { return window.ediControlGeometry('fit.results.list'); }
+      catch (error) {
+        if (String(error).includes('no visible item')) return null;
+        throw error;
+      }
+    })()`);
+    if (table === null) return false;
+    assert(table.visible && table.width > 0 && table.height > 0,
+      'results modal samples require the actually visible summary table');
+    const points = [.25,.75].flatMap(y => [table.x-12,table.x+table.width+12].map(x =>
+      [Math.round(x),Math.round(table.y+table.height*y)]));
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
     const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
     const channels = data[25] === 2 ? 3 : data[25] === 6 ? 4 : 0;
@@ -255,9 +301,11 @@ try {
     }
     const raw = inflateSync(Buffer.concat(compressed)), stride = width * channels;
     assert.equal(raw.length, (stride+1)*height, 'screenshot rows must be complete');
+    assert(points.every(([x,y]) => x >= 0 && x < width && y >= 0 && y < height),
+      'results dialog padding must lie inside the actual screenshot');
     let previous = Buffer.alloc(stride);
     const samples = [];
-    for (let y = 0; y <= Math.round(height*.74); ++y) {
+    for (let y = 0; y <= Math.max(...points.map(point => point[1])); ++y) {
       const filter = raw[y*(stride+1)], row = Buffer.alloc(stride);
       assert(filter <= 4, 'browser PNG row filters must be supported');
       for (let x = 0; x < stride; ++x) {
@@ -266,17 +314,14 @@ try {
         const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a+b)/2) : pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
-      if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
-        for (const fraction of [.28,.72]) {
-          const x = Math.round(width*fraction)*channels;
-          samples.push([...row.subarray(x,x+3)]);
-        }
+      for (const [px,py] of points) {
+        if (py === y) samples.push([...row.subarray(px*channels,px*channels+3)]);
       }
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
-    // Sample the two dialog margins: its central results table can have a selected row.
-    // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
+    // Sample outside both summary-table edges, independent of table height and column layout.
+    // A visible native summary alone is insufficient: these opaque dialog pixels must also exist.
     return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
@@ -295,6 +340,7 @@ try {
       Object.defineProperty(window,name,{value:undefined,configurable:true});
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
+    window.__e04PickerAttempts = [];
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
       if (this instanceof HTMLInputElement && this.type === 'file' && ['edi-open-folder','edi-open-project'].includes(this.id) && type === 'change') {
@@ -308,7 +354,11 @@ try {
     };
     const nativeInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
-      if (this.type === 'file') { this.__e04Picker = ++pickerSequence; window.__e04FileInput = this; }
+      if (this.type === 'file') {
+        this.__e04Picker = ++pickerSequence; window.__e04FileInput = this;
+        window.__e04PickerAttempts.push({sequence:pickerSequence, active:navigator.userActivation.isActive,
+          time:performance.now(), multiple:this.multiple, accept:this.accept});
+      }
       return nativeInputClick.call(this);
     };
     const nativeFocus = HTMLElement.prototype.focus;
@@ -381,8 +431,8 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
-  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish-5bank_start-5' : 'pd-neut-cwl_lbco-hrpt_start-4';
+  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish/i : /lbco.*hrpt/i;
+  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt';
   await openExampleRow(exampleId, exampleName);
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
@@ -392,10 +442,10 @@ try {
     // A completed event from the first save cannot satisfy the second save.
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
+    download.catch(()=>{});
     await click(/^Save project as/);
     // The app's format choice precedes the browser download, including the fallback.
     await click(/^Zip archive$/,'radio');
-    lastDialogTarget='saveAs.copy';
     await click(/^OK$/,'button');
     return join(output, (await download).guid);
   };
@@ -433,7 +483,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     await writeFile(join(output, `${mode}-save-route.json`), JSON.stringify({completed:true, archive, state},null,2));
     console.log(`${mode}: actual fallback Save project as download passed`);
   } else {
-  if (!fileRequestsOnly) {
+  if (!fileRequestsOnly && !exampleOnly) {
   await click(/^Analysis$/);
   await waitModal(false);
   await evaluate(`(() => {
@@ -458,15 +508,24 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const fitStarted = await evaluate('performance.now()');
   await click(/^Start fitting$/);
 
-  await waitAX(/^Success$/);
+  // I-0335: Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
+  const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
+  assert.equal(outcome.text,'Success',
+    'The actual rendered fit-results Overall status must report successful fitting');
+  await writeFile(join(output,`${mode}-fit-outcome.json`),JSON.stringify(outcome,null,2));
   const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
   const nativeProgress = await endFitProgress(evaluate);
   const progressAfter = await evaluate('window.ediFitProgress()');
   const finalIteration = Number(progressAfter.text.match(/\bit\s+(\d+)$/i)?.[1]);
+  // NCAF is the sustained frame-liveness vehicle. The catalogue LBCO fit can
+  // finish its remaining iterations within one frame; frame sampling cannot
+  // establish which individual callbacks that frame coalesced (record 0275560a4).
+  const frameLivenessRequired = fitCase === 'ncaf';
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify({accessibility:progress,
-    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs},null,2));
+    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs,
+    frameLivenessRequired,frameAdvancementObserved:advancesLiveFitProgress(nativeProgress,finalIteration)},null,2));
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
     advancesLiveFitProgress(states,final);
@@ -482,8 +541,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
     !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress,finalIteration),
-    'multithread fitting must publish a running control and advance live through intermediate iterations');
+  if (mode !== 'singlethread') {
+    assert(progress.some(value => fittingObservationKind(value) === 'control') &&
+      observesOrderedFitProgress(nativeProgress,finalIteration),
+      'Multithread fitting must expose its actual running control and ordered visible native counters');
+    if (frameLivenessRequired) assert(runningProgress(progress,nativeProgress,finalIteration),
+      'The sustained five-bank NCAF fit must advance live through intermediate frame samples');
+  }
   assert.equal(progressAfter.running,false,
     'The native fit must stop running when the actual successful results popup is displayed');
   await evaluate('window.__e04ProgressObserver.disconnect()');
@@ -493,17 +557,16 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await waitModal(false);
   await click(/^Project$/);
-  await click(/Get started$/, 'button');
   const saved = await saveArchive();
   const before = inspectArchive(saved);
   assertSavedProject(before.name, fitCase);
-  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
+  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/catalogue-native.json', import.meta.url)))[fitCase];
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
     'the saved project must contain a successful performed fit, not only the unfitted example');
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
-  const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
-  const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
+  const referenceChi = nativeOracle.reduced_chi_square;
+  const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
   assertNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
     project:before.name, chi, referenceChi, chiTolerance,
@@ -514,8 +577,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     'The successful saved fit must confirm the progress hook\'s actual final iteration');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
-    assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
-      'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
+    assert(iterations === nativeOracle.iterations && Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
+      'the five-bank browser fit must retain the catalogue native parity regression pins for iterations and Rwp');
   }
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons
@@ -571,7 +634,7 @@ oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
 conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
 compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
 pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
-    fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
+    fileURLToPath(new URL(`../../fixtures/e04_t11_wasm/catalogue_scientific/${fitCase}-native.json`, import.meta.url)),
     join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
   assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
@@ -596,7 +659,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
   await click(/^Analysis$/); await waitAX(/^Start fitting$/); await shot('reopened');
   }
-  if (!reopenControl && fileRequestCase !== 'none') {
+  if (!exampleOnly && !reopenControl && fileRequestCase !== 'none') {
     const inputs = join(scratch,'routing');
     const generator = spawnSync('python', [fileURLToPath(new URL('../../fixtures/e04_t11_wasm/routing.py', import.meta.url)),inputs],
       {encoding:'utf8',timeout:10000});
@@ -743,8 +806,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
-    await openExampleRow('pd-neut-cwl_cosio-d20_start-1', /cosio.*d20.*start[- ]?1/i);
-    await waitName('cosio_d20_s1');
+    await openExampleRow('pd-neut-cwl_cosio-d20', /cosio.*d20/i);
+    await waitName('pd-neut-cwl_cosio-d20');
     await settleRenderedPage();
     const replacementBefore=await snapshot();
     assert.notEqual(replacementBefore.name,'routing_b','the replacement control must actually replace the old live project');
@@ -800,8 +863,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
   assert.equal(errors.length, 0, 'both browser workflows must complete without runtime exceptions');
-  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
-  if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
+  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase, exampleOnly }, null, 2));
+  if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
+  else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
   }
   }
@@ -814,6 +878,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
       const tree = await send('Accessibility.getFullAXTree');
       await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
+      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
+      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
     } catch { /* The original failure remains the verdict if the target already closed. */ }
   }
   throw error;

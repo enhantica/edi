@@ -90,6 +90,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
+        qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
@@ -136,6 +137,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/Wordmark.qml
         qml/Components/WordmarkWithVersion.qml
         qml/Components/WorkflowPage.qml
+        qml/Components/WorkflowTabButton.qml
         qml/Globals/AppState.qml
         qml/Globals/FactorText.qml
         qml/Globals/FieldTitles.qml
@@ -216,38 +218,39 @@ if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
 
-# The Examples: every refinement and simulation project edi's CLI registry lists, in registry order, then the
-# app's own X-ray example, each with its scan data (a scan's datasets are browsed in the app). Verification
-# projects stay CLI projects only (ADR-0031). The web app leaves out the 324-file scan (19 MB); the 162-file
-# cooling run is its scan example. Configuration fails when the registry and the project directories disagree.
+# The Examples: the user-facing projects of edi's CLI registry (`user-facing: true`) and its declared app-only
+# ones (`app-only: <reason>`, ADR-0048), in registry order, each with its scan data (a scan's datasets are
+# browsed in the app). Every other registered project is a test fixture, and verification projects stay CLI
+# projects only (ADR-0031). Configuration fails when the registry and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
-file(STRINGS ${_cli}/projects.yml _id_lines REGEX "^  - id: ")
+file(STRINGS ${_cli}/projects.yml _registry_lines REGEX "^  - id: |^    user-facing: |^    app-only: ")
+set(_registered_ids)
 set(EDI_APP_EXAMPLE_IDS)
-foreach(line IN LISTS _id_lines)
-    string(REGEX REPLACE "^  - id: *" "" id "${line}")
-    if(NOT IS_DIRECTORY ${_cli}/${id}/project)
-        message(FATAL_ERROR "docs/user/cli/projects.yml lists '${id}', which has no docs/user/cli/${id}/project/")
+foreach(line IN LISTS _registry_lines)
+    if(line MATCHES "^  - id: *(.+)$")
+        set(id ${CMAKE_MATCH_1})
+        if(NOT IS_DIRECTORY ${_cli}/${id}/project)
+            message(FATAL_ERROR "docs/user/cli/projects.yml lists '${id}', which has no docs/user/cli/${id}/project/")
+        endif()
+        list(APPEND _registered_ids ${id})
+    elseif(line MATCHES "^    user-facing: *true$" OR line MATCHES "^    app-only: ")
+        list(APPEND EDI_APP_EXAMPLE_IDS ${id})
     endif()
-    list(APPEND EDI_APP_EXAMPLE_IDS ${id})
 endforeach()
 file(GLOB _cli_entries LIST_DIRECTORIES true RELATIVE ${_cli} CONFIGURE_DEPENDS ${_cli}/*)
 foreach(entry IN LISTS _cli_entries)
-    if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST EDI_APP_EXAMPLE_IDS)
+    if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST _registered_ids)
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
-if(EMSCRIPTEN)
-    list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS pd-neut-cwl_cosio-d20_scan-324f)
-endif()
-set(EDI_APP_OWN_EXAMPLES pd-xray-cwl_lif)
 # Metadata belongs to the app presentation; the CLI registry retains its execution contract.
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json" _example_metadata)
 string(JSON _metadata_schema GET "${_example_metadata}" schema)
 if(NOT _metadata_schema EQUAL 1)
     message(FATAL_ERROR "Unsupported example metadata schema")
 endif()
-foreach(id IN LISTS EDI_APP_EXAMPLE_IDS EDI_APP_OWN_EXAMPLES)
+foreach(id IN LISTS EDI_APP_EXAMPLE_IDS)
     string(JSON _purpose ERROR_VARIABLE _metadata_error GET "${_example_metadata}" examples "${id}" values purpose 0)
     if(_metadata_error)
         message(FATAL_ERROR "Example '${id}' has no app metadata")
@@ -265,12 +268,10 @@ function(edi_app_bundle_examples root)
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
-edi_app_bundle_examples(${CMAKE_CURRENT_SOURCE_DIR}/examples ${EDI_APP_OWN_EXAMPLES})
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
-list(JOIN EDI_APP_OWN_EXAMPLES "\n" _own)
-file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n${_own}\n")
+file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n")
 qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_BINARY_DIR}/examples FILES ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt)
 
@@ -365,7 +366,7 @@ target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
-# The demo opens a verification project the app does not bundle from the source tree (ADR-0031).
+# The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
 set_source_files_properties(src/demo_driver.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE

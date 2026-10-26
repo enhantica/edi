@@ -194,6 +194,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A calculation is in flight or owed (edi ADR-0020): the pattern, the texts and the report show the last
     // published one until `recalculated`.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
+    // A parameter's slider is held (the owner, 2026-10-25): the pattern charts hold their y range, widening it only
+    // when the calculated curve leaves it, and fit it once again when the slider is let go. A typed value or a
+    // spin-box step fits it at once.
+    Q_PROPERTY(bool adjusting READ adjusting WRITE setAdjusting NOTIFY adjustingChanged)
     // ADR-0017 §16: the structure view's options, one object for the open project, shared by the toolbar, the
     // Appearance group and every structure's view; a new project starts at the defaults.
     Q_PROPERTY(edi_app::StructureViewOptions* structureViewOptions READ structureViewOptions CONSTANT)
@@ -268,6 +272,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
+    bool adjusting() const { return adjusting_; }
+    void setAdjusting(bool adjusting);
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
@@ -281,6 +287,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::string savedFile(const std::string& relative) const;
     SavedFile savedFileFunction() const;
 
+    // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
+    // file on it as the current dataset (edi ADR-0029, 8).
+    Q_INVOKABLE void setScanViewShown(QObject* view, bool shown);
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
@@ -362,6 +371,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
+    // current dataset, counted once a frame is synchronised with it.
+    void followScanSelection(const std::string& file, std::uint64_t token);
+    // A Stacked view or Map is on screen (setScanViewShown).
+    bool scanViewShown() const { return !scan_views_shown_.empty(); }
+    // No dataset read is in flight or waits to be applied.
+    bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -380,6 +396,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
+    // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
+    // shown as its row gives it (scanEnded waits for this).
+    void scanCaughtUp();
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
@@ -425,6 +444,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A calculation was published; each experiment's pattern holds its outcome (Session's message list).
     void recalculated();
     void calculatingChanged();
+    void adjustingChanged();
     // A calculation began, and ended, on the worker (edi::LivePreview's `calculating` and `calculated` hooks):
     // every one it runs, a superseded one included, in order, each before its publication or rejection. What
     // counts the calculations an input costs (the owner's one-calculation rule).
@@ -595,6 +615,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
     std::uint64_t follow_generation_ = 0;
     bool follow_issuing_ = false;  // the followed file's own view request is being made
+    bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
+    std::set<const QObject*> scan_views_shown_;
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; the render thread clears it at the next synchronisation.
     std::atomic<bool> render_armed_{false};
@@ -654,6 +676,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::unique_ptr<edi::LivePreview> preview_;
     bool pending_structural_ = false;
     bool calculating_ = false;
+    bool adjusting_ = false;
     bool modified_ = false;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;

@@ -28,7 +28,7 @@ QtObject {
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
     // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
     property int engineThreads: 0
-    // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
+    // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
@@ -81,6 +81,7 @@ QtObject {
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHighlightSelected = true;
+        preferences.chartHiddenRange = "keep";
     }
 
     property Settings settings: Settings {
@@ -154,6 +155,9 @@ QtObject {
     // owner, 2026-10-24).
     property bool chartHighlightSelected: true
     readonly property real chartFadedOpacity: 0.3
+    // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
+    // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
+    property string chartHiddenRange: "keep"
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -161,6 +165,7 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
         property alias highlightSelected: preferences.chartHighlightSelected
+        property alias hiddenRange: preferences.chartHiddenRange
     }
 
     property Settings analysisSettings: Settings {
@@ -244,6 +249,13 @@ QtObject {
     onScanRendererChanged: {
         scanViewSettings.setValue("renderer", scanRenderer);
         scanViewSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
+    onScanPatternUpdatesChanged: {
+        analysisSettings.setValue("scanPatternUpdates", scanPatternUpdates);
+        analysisSettings.sync();
         ApplicationInfo.storeSettings();
     }
 

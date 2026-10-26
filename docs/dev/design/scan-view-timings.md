@@ -258,3 +258,93 @@ What the tables say:
 - **The Pattern chart already reduces its curves.** `present_pattern` keeps each pixel column's lowest and highest point
   (`decimate`), so a pattern of a million points reaches Qt Graphs as at most two points per column per curve, the
   `pattern` workload's case: 85 to 119 ms per update on the M2 and 350 to 500 ms without a GPU for 14 curves.
+
+## The Stacked lines' quality
+
+The owner compared Stacked with the Pattern tab on an M2 (2026-10-25): the Stacked lines were stair-stepped, uneven
+and notched at peaks. The causes, read from captures of the same three cosio patterns on both charts
+(`edi_app --demo <dir> --demo-only lines-` at `QT_SCALE_FACTOR` 1 and 2, with `EDI_DEMO_ANY_RATIO=1`):
+
+- the trace was reduced to item pixel columns, half a device pixel ratio 2 screen's, and each column drawn as a
+  vertical stroke from its lowest to its highest value, which drew stairs where the Pattern chart draws the points;
+- on the GPU each segment was a quad ending at its points, leaving a notch at every outer join and overlapping at the
+  inner one, and faded lines were translucent, so every overlap was darker;
+- the painter's pen was cosmetic, its width in device pixels, so at ratio 2 its line was half the Pattern chart's.
+
+[ADR-0041](../adrs/0041-scan-pattern-views.md) §9 says how each is fixed. At ratio 2, before (left) and after (right):
+
+![Stacked lines at device pixel ratio 2, before and after](scan-view-timings/lines/stacked-dpr2-before-after.png)
+
+The Pattern chart's line (left) and the Stacked lines after (right), same scale, both 2 px wide:
+
+![Pattern and Stacked lines at device pixel ratio 2](scan-view-timings/lines/pattern-vs-stacked-dpr2.png)
+
+**What it costs**, on the no-GPU machine above, 324 patterns, the two builds run in turn three times (edi 5cb96806,
+the lines as they were, against 5e8f2d0d), medians of the three runs' medians in milliseconds; every run's medians are
+in [frames.tsv](scan-view-timings/lines/frames.tsv) and when each ran in [runs.tsv](scan-view-timings/lines/runs.tsv):
+
+| Path | Change | Before | After | After / before |
+| --- | --- | ---: | ---: | ---: |
+| Painter (no GPU, the default here) | zoom | 142.0 | 170.3 | 1.20 |
+| | pan | 123.7 | 122.6 | 0.99 |
+| | restyle | 108.3 | 112.2 | 1.04 |
+| | select | 96.1 | 83.0 | 0.86 |
+| | data | 763.6 | 1 001.8 | 1.31 |
+| GPU lines on llvmpipe | zoom | 446.9 | 635.5 | 1.42 |
+| | pan | 308.4 | 422.1 | 1.37 |
+| | restyle | 457.4 | 688.8 | 1.51 |
+| | select | 291.4 | 378.2 | 1.30 |
+| | data | 1 067.8 | 1 786.0 | 1.67 |
+
+The painter now strokes every point while a column holds no more than four, about 1.5 times as many on this scan,
+which is most of the zoom and data cost. The GPU rows are the shader rasterised on the CPU, slower per pixel and with
+quads a pixel longer at each end; that path is not the default without a GPU. Its cost on a real GPU is taken with
+`edi_app --demo <dir> --demo-only perf-gpu-views` on the M2. The load average was 6.6 to 22 during these runs (runs.tsv), so the shares are approximate.
+
+## Gate 1: a change redrawn
+
+With a GPU every change is drawn in under 100 ms (the owner, 2026-10-25); without one, a data change in at most 250 ms
+and a zoom, pan, restyle or selection in about 100 ms, a zoom up to 115 ms. Each figure is the time from the change to
+its frame on the 324-file D20 scan, in milliseconds.
+
+### With a GPU
+
+The owner's M2 (macOS, Metal, "edi: graphics: Metal, hardware rendering"), 2026-10-26 about 06:14 CET, edi 65f05185 (the
+branch as pulled then; crysta SDK 844a30d5, gui-components b008de4e), with
+`pixi run -e app app --demo <dir> --demo-only perf-gpu-views`. The timings as the app wrote them are in
+[m2-gpu-timings.tsv](scan-view-timings/gate1/m2-gpu-timings.tsv); the per-frame file stayed on the M2.
+
+| View | Change | Median | p95 | Max | Missing |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Stacked | zoom | 45.1 | 57.5 | 60.5 | 0 |
+|  | pan | 37.1 | 43.2 | 45.2 | 0 |
+|  | restyle | 27.7 | 42.8 | 45.2 | 0 |
+|  | select | 28.2 | 37.8 | 50.0 | 0 |
+|  | data | 76.8 | 89.2 | 108.6 | 0 |
+| Map | zoom | 45.0 | 48.3 | 56.9 | 0 |
+|  | pan | 17.3 | 64.1 | 103.4 | 0 |
+|  | restyle | 17.2 | 23.4 | 23.8 | 0 |
+|  | select | 16.9 | 23.4 | 23.8 | 1 |
+|  | data | 70.8 | 80.6 | 112.1 | 0 |
+
+Every median and every p95 is under 100 ms; the slowest p95 is a Stacked data change, 89.2 ms. Three single frames went
+over: a Stacked data change at 108.6 ms, a Map data change at 112.1 ms and a Map pan at 103.4 ms. One Map selection had
+no frame measured (missing 1).
+
+## The 162-file fit with the two Every-pattern choices
+
+"Every pattern" became two choices (the owner, 2026-10-24; [ADR-0029](../adrs/0029-following-a-scan-latest-finished-file.md)
+§8): **fit waits for the display**, as before, and **display catches up**, which never makes the fit wait. Gate 2 bounds
+the second at 1.05 times Adaptive. The fit is timed from its start to its end, without the drawing a catching-up display
+still does after it (`edi_app --demo <dir> --demo-only perf-fit-`, the `perf-fit-catchup-` steps). Edi e974b6ed on the
+no-GPU machine above, the modes run in turn, in seconds; every run is in [fits.tsv](scan-view-timings/gate2/fits.tsv):
+
+| Tab shown | Display catches up | Fit waits for the display | Adaptive | Catches up / Adaptive |
+| --- | ---: | ---: | ---: | ---: |
+| Pattern (3 rounds) | 17.39 (17.01–22.15) | 35.07 (26.67–62.55) | 19.28 (19.19–19.54) | 0.90 |
+| Stacked (6 rounds) | 17.00 (16.44–19.14) | 16.21 (15.84–16.67), 3 rounds | 16.10 (15.90–17.44) | 1.06 |
+
+On Stacked the round-by-round ratio was 1.06, 1.18, 1.08 with the machine's load average at 4 to 24, then 1.02, 1.02 and
+1.05 at 2 to 8: each file the display catches up with is the Stacked view's shown dataset
+redrawn, a full repaint of its lines without a GPU, and that competes with the fit for the same cores. On the Pattern
+tab the drawing is a pattern chart's and the fit is not slower than Adaptive's.
