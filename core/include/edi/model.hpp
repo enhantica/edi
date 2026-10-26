@@ -4619,6 +4619,10 @@ inline constexpr const char* kDefaultSuRule = "iucr_99";
 // The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
 inline constexpr const char* kReportSuRule = "iucr_19";
 
+// What a calculation does with a due background estimate (ADR-0040): run it first, as a calculation asked for does,
+// or defer it, so the experiment calculates with its own points, as a save's recalculation does.
+enum class DueEstimates { Run, Defer };
+
 class Project : public detail::ProjectAnchor {
    public:
     // A default project holds ONE default structure and ONE default experiment, so the
@@ -4643,7 +4647,7 @@ class Project : public detail::ProjectAnchor {
     // experiment's computed `data` columns and `refln`, never returned alongside the model.
     // Every bank gets its results, or none does. Fails closed (std::invalid_argument -> Python
     // ValueError) on an experiment without a data node.
-    void calculate();
+    void calculate(DueEstimates due = DueEstimates::Run);
 
     // The fit and undo POSTCONDITION: make the stored calculated pattern describe the model it
     // sits beside. Ordinarily `calculate()` at the current state. A model can legitimately have NO
@@ -4654,7 +4658,7 @@ class Project : public detail::ProjectAnchor {
     // the old series would be a stale pattern nothing marks stale and propagating would make a
     // CONVERGED fit raise after writing its values. Absorbs only the declared
     // std::invalid_argument "cannot be calculated" failure; anything else propagates.
-    void refresh_calculated_pattern();
+    void refresh_calculated_pattern(DueEstimates due = DueEstimates::Run);
 
     // THE FIT-COMPLETION CONTRACT, binding on every `fit*` entry below. Completing a fit writes BOTH
     // halves of the model: the fitted values AND the stored calculated pattern beside them. Each fit
@@ -4906,7 +4910,7 @@ class Project : public detail::ProjectAnchor {
     friend bool unchanged_since(const Project& live, const WorkStamps& stamps);
     friend PublishOutcome publish(Project& live, CalculationResult&& result);
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.
-    void publish_calculation();
+    void publish_calculation(DueEstimates due);
     detail::EditLog edits_;
     // edi ADR-0024: every collection of the project, and every collection inside its structures and
     // experiments, holds the project's record. ProjectTail calls it after a build or an assignment.

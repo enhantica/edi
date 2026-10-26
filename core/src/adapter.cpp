@@ -3491,13 +3491,15 @@ bool ExperimentBase::computed_current() const {
                                source->constraints, source->relations);
 }
 
-void Project::calculate() {
+void Project::calculate(DueEstimates due) {
     // A single crystal's reflection table is admitted before anything is touched: a refused one leaves every
     // computed column and the geometry as they were.
     if (const std::string why = detail::reflection_refusal(*this); !why.empty()) {
         throw std::invalid_argument(why);
     }
-    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
+    if (due == DueEstimates::Run) {
+        refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
+    }
     // The reference shape (diffraction-lib Analysis.calculate): no arguments — every input is
     // read from the model (grid = the data node's engaged axis, bank angle and
     // cutoff = the experiment's declared values, scattering = the structure's declared map or the
@@ -3546,7 +3548,7 @@ void Project::calculate() {
         }
     }
     try {
-        publish_calculation();
+        publish_calculation(due);
     } catch (...) {
         clear_banks();
         throw;
@@ -3947,7 +3949,7 @@ std::uint64_t engine_structure_factor_evaluations() noexcept {
     return crysta::structure_factor_evaluations();
 }
 
-void Project::publish_calculation() {
+void Project::publish_calculation(DueEstimates due) {
     const BuiltExperiments banks = calculation_banks(experiments);
     std::vector<std::shared_ptr<const detail::ComputedSource>> sources;
     sources.reserve(experiments.size());
@@ -3966,7 +3968,9 @@ void Project::publish_calculation() {
     data.reserve(experiments.size());
     reflections.reserve(experiments.size());
     for (std::size_t index = 0; index < experiments.size(); ++index) {
-        const crysta::ComputedUnits& units = crysta::current(engine, engine.experiments[index]);
+        const crysta::ComputedUnits& units = crysta::current(
+            engine, engine.experiments[index],
+            due == DueEstimates::Run ? crysta::DueEstimates::Run : crysta::DueEstimates::Defer);
         if (experiments[index]->reflections) {
             // A single crystal: its calculated F² and geometry, one value per measured reflection.
             const crysta::ComputedRefln& refln = units.refln();
@@ -4304,11 +4308,11 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
     return PublishOutcome::Published;
 }
 
-void Project::refresh_calculated_pattern() {
+void Project::refresh_calculated_pattern(DueEstimates due) {
     // / crysta — contract in model.hpp. A refusal clears EVERY bank: no computed column may
     // describe a model the calculation refused (calculate() clears them itself).
     try {
-        calculate();
+        calculate(due);
     } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — cleared, not raised
     }
 }
