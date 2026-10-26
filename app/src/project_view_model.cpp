@@ -1964,7 +1964,7 @@ void ProjectViewModel::awaitRender() {
             }
             // This frame synchronises the file's points: its name and count go with them now, and the receipt that
             // releases the next file once the frame has taken them.
-            render_synced_.store(true);
+            render_synced_.store(follow_token_);
             if (fit_ != nullptr) {
                 fit_->followPresented(follow_token_, follow_file_);
             }
@@ -1972,11 +1972,13 @@ void ProjectViewModel::awaitRender() {
         render_sync_connection_ = connect(
             window, &QQuickWindow::afterSynchronizing, this,
             [this] {
-                if (render_synced_.exchange(false)) {
+                // The receipt names the hand-over its frame took: by the time it reaches this thread another file may
+                // have been handed over, and that one has not been drawn.
+                if (const std::uint64_t token = render_synced_.exchange(0); token != 0) {
                     QMetaObject::invokeMethod(
                         this,
-                        [this] {
-                            if (render_swaps_ > 0) {
+                        [this, token] {
+                            if (token == follow_token_ && render_swaps_ > 0) {
                                 followRendered(presentedFollowed());
                             }
                         },
@@ -2004,7 +2006,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_selection_ = false;
     render_swaps_ = -1;
     render_armed_.store(false);
-    render_synced_.store(false);
+    render_synced_.store(0);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
