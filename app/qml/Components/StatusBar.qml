@@ -187,13 +187,6 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        // First in the area: the Fit button, what the Analysis page's fit button does (the owner, 2026-10-26).
-        StatusBarFitButton {
-            id: fitButton
-            objectName: "statusBar.fit.button"
-            shown: AppState.analysisPageEnabled
-            fit: bar.fit
-        }
         // The last fit's outcome, in its colour, framed as a button that opens its results.
         FitStatusItem {
             id: statusItem
@@ -299,7 +292,7 @@ EaElements.StatusBar {
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
         }
-        // Last, at the far right: the live values before it change width, and the bar stays where it is.
+        // Before the Fit button, at the right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
             id: progress
             objectName: "statusBar.fit.progress"
@@ -313,6 +306,14 @@ EaElements.StatusBar {
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+        }
+        // Last, at the bar's right end whatever the area's width: the Fit button, what the Analysis page's fit button does
+        // (the owner, 2026-10-26).
+        StatusBarFitButton {
+            id: fitButton
+            objectName: "statusBar.fit.button"
+            shown: AppState.analysisPageEnabled
+            fit: bar.fit
         }
     }
 

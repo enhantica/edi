@@ -899,14 +899,15 @@ refuses to write its bank rows into it.
   bar's width with their keys, measured from the items themselves; otherwise each shows its icon and value. (It
   replaced a fixed window-width threshold.)
 - **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows the
-  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside at the far right, where the
-  values' changing width does not move it (owner, 2026-10-06): a single fit
+  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside, at the right before the Fit
+  button, where the values' changing width does not move it (owner, 2026-10-06): a single fit
   fills the bar with moving stripes and reads `fitting · it 12`, then `4s · χ² 12.40 → 7.50`; a scan will fill it by
   file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
   12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
   ` · ` (`FitOutcomes.separator`).
-- **The status bar's Fit button** (the owner, 2026-10-26) is the fit area's first item, shown on every page whenever
-  the Analysis page is available, so a fit can be run again after changing a value elsewhere. It does what Start
+- **The status bar's Fit button** (the owner, 2026-10-26) is the status bar's last item, at its right end after the
+  outcome, the values and, while a fit runs, the progress bar, shown on every page whenever the Analysis page is
+  available, so a fit can be run again after changing a value elsewhere. It does what Start
   fitting does at that moment, with its icon and the short form of its text: *Fit*, *Continue* or *Stop*, which stops
   the running fit. It is as tall and as round as the progress bar, near-black with white text in light mode and the
   other way round in dark mode (`Components/StatusBarFitButton.qml`). The outcome beside it is framed as a button of
