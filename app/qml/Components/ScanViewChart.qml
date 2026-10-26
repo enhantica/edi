@@ -123,8 +123,31 @@ Item {
         if (shown && scan !== null)
             scan.wanted = true;
     }
-    Component.onCompleted: if (shown && scan !== null)
-        scan.wanted = true
+    Component.onCompleted: {
+        if (shown && scan !== null)
+            scan.wanted = true;
+        reportShown();
+    }
+    Component.onDestruction: {
+        presentedTo?.setScanViewShown(chart, false);
+        presentedTo = null;
+    }
+    // On screen, the view is where a scan whose every pattern is waited for shows each file, as the current dataset
+    // (edi ADR-0029, 8): the project it told so.
+    property ProjectViewModel presentedTo: null
+    readonly property bool presenting: shown && project !== null
+    function reportShown() {
+        if (presentedTo !== null && (!presenting || presentedTo !== project)) {
+            presentedTo.setScanViewShown(chart, false);
+            presentedTo = null;
+        }
+        if (presenting && presentedTo === null) {
+            project.setScanViewShown(chart, true);
+            presentedTo = project;
+        }
+    }
+    onPresentingChanged: reportShown()
+    onProjectChanged: reportShown()
     onScanChanged: {
         resetZoom();
         if (shown && scan !== null)
