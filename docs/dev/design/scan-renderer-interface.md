@@ -366,3 +366,15 @@ capture/quantisation at a logical-pixel centre; it does not infer drawing from
 metadata or a tick count. Palette row positions use independently anchored
 intensities. The older excluded-region and Map edge oracles retain their
 requirements; these are separate from the selection and tick observations.
+
+### Startup report and project diagnostics
+
+The renderer's startup report is distinct from project-load diagnostics. Its
+complete line is `edi: graphics: <API>[, renderer <OpenGL renderer>], <classification>`,
+where classification is `hardware rendering` or `software rendering (no GPU)`.
+The optional renderer string belongs to OpenGL. Embedded, prefixed, incomplete
+or contradictory lookalikes are not exempt diagnostics. Project-loading gates
+allow these complete report lines on stderr and still reject every other stderr
+byte; project warnings continue through the warning model. The normal-app
+startup gate independently compares its single report with Qt's actual API and
+renderer, without enabling Qt debug logs.

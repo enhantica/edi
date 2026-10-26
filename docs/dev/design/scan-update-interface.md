@@ -120,3 +120,39 @@ with its SHA-256 recorded in the log. A concurrent build may relink the
 original path; later captures continue using the same retained artifact.
 The fixture refuses a copy that straddles a relink, and cleans up its own
 snapshots. Unit controls exercise both races.
+
+## Fit-waits on each shown view
+
+The wait choice keeps the every-file requirement. A Pattern chart draws each
+file's pattern; Stacked and Map present that file as the current dataset and
+acknowledge the first frame synchronised after that selection (ADR-0029 §8).
+A fit may compute its next file while the previous one draws. With no Pattern,
+Stacked or Map view shown, it requires no display acknowledgement. The functional
+actor covers Stacked, Map and a complete scan with no window able to draw; the
+latter invents no presentation receipts. Worker completion and display receipts
+remain distinct. Fit-waits has no comparative performance bound; catch-up alone
+keeps the five-percent bound against Adaptive.
+
+## One timing case per native process
+
+The old data-driven `test_timing` entry point could run six fits if invoked
+without a row. The producer already normally requested individual rows. Each
+combination now has its own non-parameterised entry point:
+`ScanUpdates::test_timing_<pattern|stacked>_<catchup|wait|adaptive>`. The aggregate
+entry point is retired. Every producer call selects exactly one entry, requires
+one complete 162-file receipt with matching mode/tab/backend, and retains the
+existing 150-second process watchdog. The default comparison uses three
+interleaved repetitions per combination, with a fresh process per fit; the Qt
+backend reference is observed separately. No larger watchdog or fit-waits speed
+bound is introduced.
+
+## Sidebar observation boundary
+
+First-group and separator observations begin only after the requested sidebar
+tab is selected and its actual four-tab view has settled. Matching a former
+three-item view can yield an empty match and must not count as reaching a pane.
+The SwipeView's internal ListView is not another independent sidebar view.
+Groups are ordered by their real visual positions within each sibling column:
+the first group follows the unfolded/remembered-state rule, and the last shown
+group suppresses its bottom border. Preceding foldable siblings retain their
+separators. The product's last-group rule is unchanged.
