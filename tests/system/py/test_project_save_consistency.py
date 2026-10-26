@@ -55,8 +55,9 @@ def test_values_without_uncertainty_use_six_significant_digits(tmp_path, value, 
         'Fixed and free values without an uncertainty save with six significant digits'
     )
     assert parameter.value == actual.value, 'Save adopts the six-digit value in the open project'
-    assert actual.uncertainty is None, (
-        'Absent uncertainty remains absent after rounding and reopen'
+    expected_su = None if free else 0.0
+    assert actual.uncertainty == expected_su, (
+        'Free absent uncertainty stays absent; a bare fixed token retains its engaged-zero decode'
     )
     assert actual.free is free, 'Rounding never changes a parameter free flag'
 
