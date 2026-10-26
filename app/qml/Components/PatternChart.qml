@@ -906,8 +906,10 @@ Item {
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
+        id: chartLegend
+
         objectName: "chart.legend"
-        // Over the pointer's area, so a click on an entry hides its curve.
+        // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
         z: 1
         colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
@@ -951,6 +953,10 @@ Item {
                 hoverLabel.show("", 0, 0);
         }
         onReleased: mouse => {
+            // A click, not a drag, on a legend row hides or shows its curve.
+            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            if (mouse.button === Qt.LeftButton && still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
+                return;
             if (mouse.button === Qt.RightButton)
                 controller.reset();
             else if (toolbar.pointerMode === "zoom")
