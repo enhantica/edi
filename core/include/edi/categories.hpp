@@ -28,7 +28,6 @@ struct CategoryField {
     Parameter* parameter = nullptr;  // the model field
     bool used_by_profile = true;     // false: outside the profile's set, shown because it is free
     bool refinable = true;           // false: symmetry fixes it or ties it to another parameter
-    bool fittable = true;            // false: a fixed setting (is_fixed_setting): editable, never fitted
 };
 
 struct Category {
@@ -126,9 +125,6 @@ inline Category peak_category(ExperimentBase& experiment) {
         detail::add_optional(category.asymmetry, "asym_beba_a1", peak.asym_beba_a1);
         detail::add_optional(category.asymmetry, "asym_beba_b1", peak.asym_beba_b1);
         detail::add_optional(category.asymmetry, "asym_beba_limit", peak.asym_beba_limit);
-        if (peak.asym_beba_limit) {
-            category.asymmetry.back().fittable = false;  // a fixed setting (is_fixed_setting)
-        }
         for (const auto& [name, member] : detail::tof_peak_fields()) {  // inert on CW: only if free
             detail::add_if_shown(category.fields, name, peak.*member, false);
         }
@@ -199,9 +195,6 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
                                  : Category{"instrument"});
         Category extinction{"extinction"};
         detail::add_optional(extinction.fields, "crystal_radius", experiment.extinction.crystal_radius);
-        if (experiment.extinction.crystal_radius) {
-            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
-        }
         detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
         detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
         detail::add_optional(extinction.fields, "coefficient", experiment.extinction.coefficient);

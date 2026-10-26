@@ -3,9 +3,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "category_list_model.hpp"
 #include "edi/display.hpp"
+#include "edi/fittability.hpp"
 #include "edi/parameter_spec.hpp"
 #include "project_editor.hpp"
 
@@ -19,7 +21,6 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
       uncertainty_(entry.parameter->uncertainty),
       free_(entry.parameter->free),
       refinable_(entry.refinable),
-      fittable_(entry.fittable),
       path_(QString::fromStdString(entry.path)),
       block_kind_(QString::fromStdString(entry.block_kind)),
       block_name_(QString::fromStdString(entry.block_name)),
@@ -36,6 +37,49 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
     category_icon_ = category_presentation(category_).icon;
+}
+
+ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& editor, QObject* parent)
+    : QObject(parent),
+      editor_(editor),
+      own_(std::make_unique<edi::Parameter>(entry.value)),
+      parameter_(own_.get()),
+      value_(entry.value),
+      uncertainty_(0.0),
+      free_(false),
+      refinable_(false),
+      fittable_(false),
+      fit_reason_(QString::fromStdString(edi::fit_reason(edi::FitBlocker::Descriptor))),
+      path_(QString::fromStdString(entry.path)),
+      uid_(QString::fromStdString(entry.uid)),
+      block_kind_(QString::fromStdString(entry.block_kind)),
+      block_name_(QString::fromStdString(entry.block_name)),
+      category_(QString::fromStdString(entry.category)),
+      row_label_(QString::fromStdString(entry.row_label)),
+      name_(QString::fromStdString(entry.name)) {
+    display_name_ = QString::fromStdString(edi::label(entry.uid));
+    display_units_ = QString::fromStdString(edi::units_label(entry.uid));
+    short_name_ = display_name_;
+    minimum_ = -std::numeric_limits<double>::infinity();
+    maximum_ = std::numeric_limits<double>::infinity();
+    category_icon_ = category_presentation(category_).icon;
+}
+
+void ParameterItem::setFittability(bool fittable, const QString& reason) {
+    if (fittable_ != fittable) {
+        fittable_ = fittable;
+        emit fittableChanged();
+    }
+    if (fit_reason_ != reason) {
+        fit_reason_ = reason;
+        emit fitReasonChanged();
+    }
+}
+
+void ParameterItem::setDescriptorValue(double value) {
+    if (own_ != nullptr) {
+        own_->value = value;
+    }
 }
 
 void ParameterItem::setBlockIndex(int index) {
@@ -72,7 +116,7 @@ void ParameterItem::setVariant(const QString& variant) {
 }
 
 QString ParameterItem::toolTip() const {
-    if (parameter_->spec == nullptr) {
+    if (parameter_->spec == nullptr && own_ == nullptr) {
         return {};
     }
     return QString::fromStdString(edi::tooltip(uid_.toStdString(), variant_.toStdString()));
@@ -90,7 +134,9 @@ void ParameterItem::refreshFileText() {
     // Empty for a parameter the dictionary does not know; a page then shows the value itself.
     QString value;
     QString su;
-    if (parameter_->spec != nullptr && !su_rule_.empty()) {
+    if (own_ != nullptr) {
+        value = QString::fromStdString(edi::display_text(uid_.toStdString(), value_));
+    } else if (parameter_->spec != nullptr && !su_rule_.empty()) {
         const edi::FileText text = edi::file_text(*parameter_, su_rule_, exact_);
         value = QString::fromStdString(text.value);
         su = QString::fromStdString(text.su);
@@ -154,6 +200,10 @@ QString symmetry_refusal() { return QObject::tr("the space group fixes this para
 }  // namespace
 
 void ParameterItem::setValue(double value) {
+    if (own_ != nullptr) {
+        setLastError(tr("a descriptor: its value is edited on its page"));
+        return;
+    }
     if (!refinable_) {
         setLastError(symmetry_refusal());
         return;
@@ -168,12 +218,13 @@ void ParameterItem::setValue(double value) {
 }
 
 void ParameterItem::setFree(bool free) {
-    if (!refinable_) {
-        setLastError(symmetry_refusal());
+    // A flag is set only where a fit can vary it; one set before a change that blocked it can still be cleared.
+    if (free && !fittable_) {
+        setLastError(tr("Cannot be fitted: %1").arg(fit_reason_));
         return;
     }
-    if (!fittable_) {
-        setLastError(tr("this is a fixed setting, never fitted"));
+    if (!refinable_) {
+        setLastError(symmetry_refusal());
         return;
     }
     if (const QString refusal = editor_.free_refusal(); !refusal.isEmpty()) {

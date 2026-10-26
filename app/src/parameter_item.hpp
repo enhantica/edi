@@ -6,6 +6,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
+#include <memory>
 #include <string>
 
 #include "edi/parameter_walk.hpp"
@@ -25,12 +26,13 @@ class ParameterItem : public QObject {
     Q_PROPERTY(double uncertainty READ uncertainty NOTIFY uncertaintyChanged)
     Q_PROPERTY(bool hasUncertainty READ hasUncertainty NOTIFY hasUncertaintyChanged)
     Q_PROPERTY(bool free READ isFree WRITE setFree NOTIFY freeChanged)
-    // False while the space group fixes the parameter or ties it to another (edi ADR-0019): a page shows
-    // it disabled, with the value symmetry implies, and the Analysis table does not list it.
+    // False while the space group fixes the parameter or ties it to another (edi ADR-0019), and for a
+    // descriptor that is no parameter: a page shows it disabled, with the value symmetry implies.
     Q_PROPERTY(bool refinable READ isRefinable NOTIFY refinableChanged)
-    // False for a fixed setting (the Berar-Baldinozzi limit angle): its value is edited, it is never fitted,
-    // so a page shows no fit toggle and the Analysis table does not list it.
-    Q_PROPERTY(bool fittable READ isFittable CONSTANT)
+    // Whether a fit of the project can vary it, by crysta's rule (edi ADR-0053); when not, fitReason says why. The
+    // free toggle is enabled while it is fittable or free, so a flag set before a change can still be cleared.
+    Q_PROPERTY(bool fittable READ isFittable NOTIFY fittableChanged)
+    Q_PROPERTY(QString fitReason READ fitReason NOTIFY fitReasonChanged)
     // True for an auto-mode background's point intensity or term coefficient (ADR-0040): the estimate owns the value,
     // so a page shows it locked and a value write refuses; it can still be freed or fixed.
     Q_PROPERTY(bool estimated READ isEstimated NOTIFY estimatedChanged)
@@ -76,6 +78,8 @@ class ParameterItem : public QObject {
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
 
     ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& editor, QObject* parent);
+    // A descriptor that is no parameter (edi::model_descriptors): its value is shown, never typed or fitted.
+    ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& editor, QObject* parent);
 
     double value() const { return value_; }
     void setValue(double value);
@@ -85,6 +89,12 @@ class ParameterItem : public QObject {
     void setFree(bool free);
     bool isRefinable() const { return refinable_; }
     bool isFittable() const { return fittable_; }
+    QString fitReason() const { return fit_reason_; }
+    // Set by the registry at each publish from the parameter's mark (edi::refresh_fittability).
+    void setFittability(bool fittable, const QString& reason);
+    bool isDescriptorValue() const { return own_ != nullptr; }
+    // A descriptor row's value, as the model holds it now; set by the registry before each publish.
+    void setDescriptorValue(double value);
     // Set by the registry at each rebuild and publish: a space-group edit changes it while the parameter
     // stays shown.
     void setRefinable(bool refinable);
@@ -148,6 +158,8 @@ class ParameterItem : public QObject {
     void hasUncertaintyChanged();
     void freeChanged();
     void refinableChanged();
+    void fittableChanged();
+    void fitReasonChanged();
     void estimatedChanged();
     void domainWarningChanged();
     void lastErrorChanged();
@@ -166,12 +178,14 @@ class ParameterItem : public QObject {
     void refreshFileText();
 
     ProjectEditor& editor_;
+    std::unique_ptr<edi::Parameter> own_;  // a descriptor row's value; parameter_ points at it
     edi::Parameter* parameter_;
     double value_;
     std::optional<double> uncertainty_;
     bool free_;
     bool refinable_;
-    bool fittable_;
+    bool fittable_ = true;
+    QString fit_reason_;
     bool estimated_ = false;
     QString domain_warning_;
     QString last_error_;

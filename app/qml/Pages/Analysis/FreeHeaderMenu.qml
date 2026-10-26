@@ -28,7 +28,20 @@ EaElements.Menu {
             return rows;
         for (let i = 0; i < menu.filter.rowCount(); ++i) {
             const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && parameter.fittable && parameter.refinable)
+            if (parameter !== null && parameter.fittable)
+                rows.push(parameter);
+        }
+        return rows;
+    }
+
+    // The shown rows that are free, fittable or not: Fixed clears a flag set before a change that blocked it too.
+    function freeRows() {
+        const rows = [];
+        if (menu.filter === null || menu.project === null)
+            return rows;
+        for (let i = 0; i < menu.filter.rowCount(); ++i) {
+            const parameter = menu.filter.parameterAt(i);
+            if (parameter !== null && parameter.free)
                 rows.push(parameter);
         }
         return rows;
@@ -44,7 +57,7 @@ EaElements.Menu {
     // Free or Fixed acts on the rows shown when it is chosen.
     function apply(free) {
         if (menu.project !== null)
-            menu.project.setParametersFree(menu.fittableRows(), free);
+            menu.project.setParametersFree(free ? menu.fittableRows() : menu.freeRows(), free);
         menu.close();
     }
 
