@@ -112,7 +112,7 @@ Rectangle {
             if (count !== 3)
                 Input.dense(SettingsProof, location, false, count);
             let text = SettingsProof.text(location, "experiments/d20.edi");
-            text = text.replace(/_background.type[^\n]+[\s\S]*?(?=\n_[a-z]|$)/, noBackground ? "" : "_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 0 17\n2 180 17\n");
+            text = text.replace(/_background.type[^\n]+[\s\S]*?(?=\n_(?!background\.)[a-z]|$)/, noBackground ? "" : "_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 0 17\n2 180 17\n");
             verify(SettingsProof.write(location, "experiments/d20.edi", text), "The background witness is the project's explicit constant line segment, never an estimate");
             verify(Session.openProject(location), "The production session opens the independent scan project");
             chart = scanFactory.createObject(surface, {
