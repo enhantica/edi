@@ -19,7 +19,9 @@ def fit_button_states(text):
         '[null,{running:false,available:true,continuable:false},'
         '{running:false,available:true,continuable:true},'
         '{running:false,available:false,continuable:false},'
-        '{running:true,available:false,continuable:true}].map(fit=>{'
+        '{running:true,available:false,continuable:true,outOfDate:true},'
+        '{running:false,available:true,continuable:false,outOfDate:true},'
+        '{running:false,available:true,continuable:true,outOfDate:true}].map(fit=>{'
         'const running=!!fit&&fit.running;return ['
         + property_value(text, 'valueText')
         + ','
@@ -33,7 +35,12 @@ def fit_button_states(text):
         ['Continue', True],
         ['Fit', False],
         ['Stop', True],
-    ], 'Status Fit labels and availability follow absent, idle, partial, complete and running fits'
+        ['Refit', True],
+        ['Refit', True],
+    ], (
+        'Status Fit labels and availability follow absent, idle, partial, '
+        'complete, running and outdated fits'
+    )
 
 
 def button_states(text):
@@ -83,8 +90,9 @@ def progress_edge(text):
     children = [(a, b) for a, b in spans(area) if a > 0]
     direct = [(a, b) for a, b in children if not any(c < a < b < d for c, d in children)]
     button = item(area, 'statusBar.fit.button')
-    assert direct and area[direct[-1][0] : direct[-1][1]] == button, (
-        'Fit is the last displayed child after progress, Reset and Follow'
+    start = area.index(button)
+    assert direct and direct[-1][0] <= start < start + len(button) <= direct[-1][1], (
+        'Fit belongs to the last displayed item after progress, Reset and Follow'
     )
 
 

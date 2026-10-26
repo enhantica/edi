@@ -552,7 +552,6 @@ def assert_stale_marker(consumer, results=None):
 
 
 def test_old_scan_results_are_retained_with_out_of_date_state():
-    assert_stale_marker(item(source('qml/Components/StatusBar.qml'), 'statusBar.fit'))
     assert_stale_marker(evolution_component())
 
 

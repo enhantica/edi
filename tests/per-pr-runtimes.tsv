@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T20:10:38Z
+# measured_utc = 2026-10-26T21:09:09Z
 #
-# Recorded from: measured test run (10 node(s) measured once, 16047 banked, 0 stale row(s) dropped)
-# Collected tests: 18072; with a reported duration: 10612
+# Recorded from: measured test run (6 node(s) measured once, 16046 banked, 0 stale row(s) dropped)
+# Collected tests: 18077; with a reported duration: 10611
 # Module-scoped fixture costs recorded: 76
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18072
+# inventory_python = 18077
 # inventory_cpp = 396
-# inventory_measured = 16047
-# inventory_unmeasured = 2421
+# inventory_measured = 16046
+# inventory_unmeasured = 2427
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -16079,7 +16079,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
 0.180	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.630	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
-0.610	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[status]
 0.270	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[labels]
 0.290	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[model]
 0.180	tests/system/py/test_scan_projection_wiring_escapes.py::test_header_observer_rejects_disconnected_model_and_displayed_labels[number-label]
@@ -16421,7 +16420,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_
 0.000	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_existing_completion:single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_fit_tooltip:off]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_fit_tooltip:on]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_outdated_outcome:independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_outdated_outcome:sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_outdated_results_banner:independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_outdated_results_banner:sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_preference_default_and_user_store]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_refit_and_undo:independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_refit_and_undo:sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:scan-off]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:scan-on]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:single-off]
@@ -18579,7 +18584,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 111.635	tests/system/py/test_status_fit_controls.py
+# module-cost: 133.169	tests/system/py/test_status_fit_controls.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py

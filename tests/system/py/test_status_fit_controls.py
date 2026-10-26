@@ -23,6 +23,15 @@ CASES = [
         for kind in ('single', 'scan')
         for choice in ('on', 'off')
     ),
+    *(
+        f'{action}:{mode}'
+        for action in (
+            'test_outdated_outcome',
+            'test_outdated_results_banner',
+            'test_refit_and_undo',
+        )
+        for mode in ('sequential', 'independent')
+    ),
     'test_existing_analysis_start',
     *(
         f'test_scan_controls:{kind}'
