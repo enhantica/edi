@@ -114,3 +114,20 @@ preserves adjacent project diagnostics and malformed lookalikes. Pure boundary
 cases exercise those refusals; actual startup values still come from the
 independent Qt observer. Sidebar gates use the actual selected tab and settled
 view, rather than accepting an empty filter for the former tab count.
+
+
+The wheel gate uses real input on the page-owned Stacked chart on Experiment and
+Analysis. Twelve independently authored triangles at 50% fixed height and 100%
+offset have baselines `i / 2` and top `6`. The wheel must move a span-one viewport
+from `[0, 1]` to `[5, 6]`, allow actual selection of the last triangle, and return
+to `[0, 1]` without resizing the traces.
+
+The joint-exclusion gate uses the saved two-bank joint project with independently
+specified TOF calibrations and disjoint native exclusions `[1213, 1513]` and
+`[5481, 6231]`. It checks both forced Stacked GPU and painter paths under Qt's
+normal capture API. At offset/height 100%/20% the vertical spans are `[0, .2]`
+and `[.2, .4]`; at 50%/40% they are `[0, .4]` and `[.2, .6]`. Interior pixels
+must be tinted and pixels immediately outside the corresponding extent must
+match untinted included columns away from the analytic triangle's peak. The
+expected spans never come from `rowOf`, `peakOf` or Map row extents. Pixel
+coordinates scale with the captured image, preserving DPR handling.

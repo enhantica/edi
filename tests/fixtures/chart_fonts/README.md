@@ -15,6 +15,13 @@ visibility; their actual shown dataset row names are checked alongside numeric
 ticks, titles and both per-axis theme fonts. Empty inventories fail. No replacement chart or
 app-generated correctness golden supplies the expected font.
 
+Both single-crystal observers find the chart's own dictionary-backed title
+objects by `singleCrystal.title.x` and `singleCrystal.title.y`. They require
+both objects to be visible, nonempty text with positive geometry, and compare
+their actual font fields. The inventory's `quantity` selects F or F-squared;
+it is not a property used to discover a title. Literal translated title text
+and the retired chart `quantity` property are not lookup interfaces.
+
 Each case checks the default, changes the one shared app font to another bundled
 family and adds five pixels to its size, then restores it. This nontrivial
 stimulus rejects a hardcoded default that only happens to match initially. The
