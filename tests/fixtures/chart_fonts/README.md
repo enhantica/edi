@@ -20,7 +20,9 @@ family and adds five pixels to its size, then restores it. This nontrivial
 stimulus rejects a hardcoded default that only happens to match initially. The
 Structure painter's two actual font properties are checked independently.
 
-The native driver uses the normal Qt Quick Test runner. The web producer uses
+The native driver uses the normal Qt Quick Test runner. Its compiled helper
+and QML witness must be from matching inputs; an explicit shared-inventory API
+check reports an outdated helper before any chart case attempts its method. The web producer uses
 an ordinary nonblocking Qt application loop with the production module; a small
 Timer samples ready chart objects rather than suspending the browser's main
 thread. Both read the same declared inventory. The browser records actual font

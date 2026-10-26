@@ -68,6 +68,7 @@ Rectangle {
             compare(font.pixelSize, expected.pixelSize, "Every actual chart tick and label uses its axis title's pixel size: " + role);
         }
         function test_fonts_data() {
+            verify(typeof probe.cases === "function", "The current native font probe must be rebuilt with its shared-inventory API before loading this QML witness");
             return Array.from(probe.cases());
         }
         function open(data) {

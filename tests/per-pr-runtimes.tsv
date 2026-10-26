@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T11:17:28Z
+# measured_utc = 2026-10-26T13:58:14Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 15843 banked, 0 stale row(s) dropped)
+# Recorded from: scoped completed-node remeasurement; complete-module budgets retained for partial cohorts
 # Collected tests: 17536; with a reported duration: 10114
 # Module-scoped fixture costs recorded: 85
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 17536
 # inventory_cpp = 393
-# inventory_measured = 15843
-# inventory_unmeasured = 2086
+# inventory_measured = 15844
+# inventory_unmeasured = 2085
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -4675,7 +4675,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
-0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
+0.190	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
 0.030	tests/integration/py/test_e01_scaffold.py::test_core_and_lib_are_qt_free[core]
@@ -10323,7 +10323,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_de
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-f]
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-squared]
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[stacked]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-axis-letters]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-axis-letters]
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-labels]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[correlations]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[evolution]
@@ -17973,7 +17973,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 5.172	tests/integration/app/test_about_components.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 48.023	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 666.578	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
@@ -18006,7 +18006,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 18.263	tests/system/py/test_chart_fonts.py
+# module-cost: 15.254	tests/system/py/test_chart_fonts.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
 # module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 353.159	tests/system/py/test_current_row_input.py
