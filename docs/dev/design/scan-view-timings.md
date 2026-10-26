@@ -301,6 +301,36 @@ which is most of the zoom and data cost. The GPU rows are the shader rasterised 
 quads a pixel longer at each end; that path is not the default without a GPU. Its cost on a real GPU is taken with
 `edi_app --demo <dir> --demo-only perf-gpu-views` on the M2. The load average was 6.6 to 22 during these runs (runs.tsv), so the shares are approximate.
 
+## Gate 1: a change redrawn
+
+With a GPU every change is drawn in under 100 ms (the owner, 2026-10-25); without one, a data change in at most 250 ms
+and a zoom, pan, restyle or selection in about 100 ms, a zoom up to 115 ms. Each figure is the time from the change to
+its frame on the 324-file D20 scan, in milliseconds.
+
+### With a GPU
+
+The owner's M2 (macOS, Metal, "edi: graphics: Metal, hardware rendering"), 2026-10-26 about 06:14 CET, edi 65f05185 (the
+branch as pulled then; crysta SDK 844a30d5, gui-components b008de4e), with
+`pixi run -e app app --demo <dir> --demo-only perf-gpu-views`. The timings as the app wrote them are in
+[m2-gpu-timings.tsv](scan-view-timings/gate1/m2-gpu-timings.tsv); the per-frame file stayed on the M2.
+
+| View | Change | Median | p95 | Max | Missing |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Stacked | zoom | 45.1 | 57.5 | 60.5 | 0 |
+|  | pan | 37.1 | 43.2 | 45.2 | 0 |
+|  | restyle | 27.7 | 42.8 | 45.2 | 0 |
+|  | select | 28.2 | 37.8 | 50.0 | 0 |
+|  | data | 76.8 | 89.2 | 108.6 | 0 |
+| Map | zoom | 45.0 | 48.3 | 56.9 | 0 |
+|  | pan | 17.3 | 64.1 | 103.4 | 0 |
+|  | restyle | 17.2 | 23.4 | 23.8 | 0 |
+|  | select | 16.9 | 23.4 | 23.8 | 1 |
+|  | data | 70.8 | 80.6 | 112.1 | 0 |
+
+Every median and every p95 is under 100 ms; the slowest p95 is a Stacked data change, 89.2 ms. Three single frames went
+over: a Stacked data change at 108.6 ms, a Map data change at 112.1 ms and a Map pan at 103.4 ms. One Map selection had
+no frame measured (missing 1).
+
 ## The 162-file fit with the two Every-pattern choices
 
 "Every pattern" became two choices (the owner, 2026-10-24; [ADR-0029](../adrs/0029-following-a-scan-latest-finished-file.md)
