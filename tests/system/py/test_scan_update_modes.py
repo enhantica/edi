@@ -33,7 +33,15 @@ def update_captures(request):
 
 
 @pytest.mark.parametrize(
-    'case', ['test_choices_and_legacy', 'test_catchup:pattern', 'test_catchup:stacked']
+    'case',
+    [
+        'test_choices_and_legacy',
+        'test_catchup:pattern',
+        'test_catchup:stacked',
+        'test_wait_views:stacked',
+        'test_wait_views:map',
+        'test_wait_without_a_pattern_view',
+    ],
 )
 def test_real_scan_update_contract(update_captures, case):
     status, output = update_captures[case]

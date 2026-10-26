@@ -12,19 +12,24 @@ LABELS = {
     'wait': 'Every pattern, fit waits for the display',
     'adaptive': 'Adaptive',
 }
+CASE_TIMEOUT_SECONDS = 150
 
 
 def run_sample(destination, mode, tab, backend):
+    if mode not in LABELS or tab not in {'pattern', 'stacked'}:
+        raise ValueError('A fit timing actor needs one declared mode and chart tab')
     destination.mkdir(parents=True, exist_ok=False)
+    case = 'ScanUpdates::test_timing_' + tab + '_' + mode
     command = [
         Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests')),
         '-input',
         ROOT / 'tests/system/app/ScanUpdates.qml',
         '-o',
         '-,txt',
-        'ScanUpdates::test_timing:' + tab + '-' + mode,
+        case,
     ]
-    status, log = capture(command, timeout=150)
+    print(f'Fit timing actor: {case}; one case, watchdog {CASE_TIMEOUT_SECONDS} s', flush=True)
+    status, log = capture(command, timeout=CASE_TIMEOUT_SECONDS)
     if status != 0:
         raise RuntimeError('The real sequential-fit timing actor must finish: ' + log)
     observed = qt_reference(log)
