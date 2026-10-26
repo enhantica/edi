@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -30,9 +31,15 @@ Item {
             const button = Ui.control(Probe, app, name);
             verify(button !== null && button.enabled, "The sidebar inventory revisits an actual enabled tab");
             if (!button.checked) Ui.click(test, Probe, app, name);
+            tryCompare(button, "checked", true, 2000, "The requested sidebar tab is selected before first-group inventory");
             tryVerify(() => !Ui.moving(app.contentItem), 2000, "The selected sidebar tab settles before group observations");
             verify(waitForPolish(app), "The selected sidebar tab completes its actual group layout");
-            tryVerify(() => Render.descendants(Ui.page(app)).filter(item => item.interactive === false && item.count === sidebarTabCount && item.currentItem).every(item => Math.abs(item.currentItem.mapToItem(item, 0, 0).x) < 0.1), 2000, "The selected sidebar pane reaches its viewport before first-group observations");
+            const views = Render.descendants(Ui.page(app)).filter(item => item.interactive === false && item.count === sidebarTabCount && item.currentItem && item.currentItem.sourceComponent !== undefined && item.contentItem && item.contentItem.currentItem === item.currentItem);
+            compare(views.length, 1, "The first-group inventory locates one real sidebar view rather than an empty match");
+            const index = button.TabBar.index;
+            verify(index >= 0 && index < sidebarTabCount, "The inventory tab has its actual toolkit position among every sidebar tab");
+            tryCompare(views[0], "currentIndex", index, 2000, "The first-group inventory reads the requested sidebar tab");
+            tryVerify(() => Math.abs(views[0].currentItem.mapToItem(views[0], 0, 0).x) < 0.1, 2000, "The selected sidebar pane reaches its viewport before first-group observations");
         }
         function firstGroup() {
             const groups = Render.descendants(Ui.page(app)).filter(item => typeof item.collapsed === "boolean" && item.titleArea && Ui.inPane(item.titleArea));
