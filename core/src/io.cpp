@@ -3121,6 +3121,7 @@ std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
     }
     for (const std::string& path : paths) {
         BraggPdExperiment experiment = load_experiment_file(path, on_warning);
+        require_held_links(project, experiment, path + ": ");
         if (!names.insert(KeyTraits<BraggPdExperiment>::canonical(experiment.name)).second) {
             throw IoError(path + ": an experiment named '" +
                           detail::printable_id(experiment.name) + "' is already " +
@@ -3143,11 +3144,28 @@ void add_loaded_structure(Project& project, Structure structure) {
     project.structures.push_back(std::move(structure));
 }
 
+void require_held_links(const Project& project, const BraggPdExperiment& experiment, const std::string& where,
+                        const std::string& source) {
+    // An empty id spells `structure`, as crysta's loader reads it.
+    const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
+    for (const auto& link : experiment.linked_structures) {
+        const std::string wanted = spelled(link->structure_id.value());
+        const bool held = std::any_of(project.structures.begin(), project.structures.end(),
+                                      [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
+        if (!held) {
+            throw IoError(where + "experiment '" + experiment.name + "'" + (source.empty() ? "" : " (" + source + ")") +
+                          " links the structure '" + detail::printable_id(wanted) +
+                          "' (_linked_structure.structure_id), which the project does not hold");
+        }
+    }
+}
+
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment) {
     if (holds_experiment(project, experiment.name)) {
         throw IoError("an experiment named '" + detail::printable_id(experiment.name) +
                       "' is already in the project");
     }
+    require_held_links(project, experiment);
     project.experiments.push_back(std::move(experiment));
 }
 
@@ -3358,19 +3376,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
         }
-        // Every linked structure names a structure of the project, as crysta's loader requires (an empty
-        // id spells `structure`).
-        const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
-        for (const auto& link : experiment.linked_structures) {
-            const std::string wanted = spelled(link->structure_id.value());
-            const bool held = std::any_of(project.structures.begin(), project.structures.end(),
-                                          [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
-            if (!held) {
-                throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
-                              ") links the structure '" + detail::printable_id(wanted) +
-                              "' (_linked_structure.structure_id), which the project does not hold");
-            }
-        }
+        require_held_links(project, experiment, "project " + directory + ": ", file.string());
         project.experiments.push_back(std::move(experiment));
     }
 

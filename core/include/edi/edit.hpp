@@ -605,14 +605,15 @@ class Edit {
     }
 
     // Loaded experiments added, all or none: every name is checked against the project and against
-    // the others (add_loaded_experiment's rule and message), then the collection takes them in one
-    // mutation.
+    // the others, and every linked structure against the project's (add_loaded_experiment's rules
+    // and messages), then the collection takes them in one mutation.
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
             require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
+                require_held_links(project, experiment);
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
                 for (const auto& held : all) {
                     if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {
