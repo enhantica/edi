@@ -1,0 +1,73 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:22/10/2026  Time => 21:09:47.957
+ => Reading control file *.PCR ... start
+ => Reading intensity file of pattern  1  start_1.dat
+ => Reading intensity file of pattern  2  start_2.dat
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       2
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       2
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: start
+ => Pattern:   1  start_1
+ => Pattern:   2  start_2
+ => Ordering reflections contributing to each point for pattern:       1
+ => Ordering reflections contributing to each point for pattern:       2
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Calculation for pattern:       2
+ => Writing results for cycle       1
+ => R-Factors:   30.8      38.9     Chi2:  403.     DW-Stat.:  0.1110   Patt#:  1
+ => Expected :            1.94                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  31.9     Rwp:  40.2     Rexp:    2.00                        Chi2:  403.
+ => R-Factors:   33.0      42.6     Chi2:  486.     DW-Stat.:  0.1128   Patt#:  2
+ => Expected :            1.93                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.99                        Chi2:  486.
+    => Global user-weigthed Chi2 (Bragg contrib.):   458.4
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   30.8      38.9     Chi2:  403.     DW-Stat.:  0.1110   Patt#:  1
+ => Expected :            1.94                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  31.9     Rwp:  40.2     Rexp:    2.00                        Chi2:  403.
+ => R-Factors:   33.0      42.6     Chi2:  486.     DW-Stat.:  0.1128   Patt#:  2
+ => Expected :            1.93                                1.8830
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  34.1     Rwp:  44.0     Rexp:    1.99                        Chi2:  486.
+    => Global user-weigthed Chi2 (Bragg contrib.):   458.6
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+  
+  
+ =>               CPU Time:     0.188 seconds
+ =>                             0.003 minutes
+  
+ => END   Date:22/10/2026  Time => 21:09:48.148
+  
+ => Data Files :
+ =>             - start_1.dat
+ =>             - start_2.dat
+ => PCR  File  : start
+ => Do you want to continue (<cr>=N)? 
+         (s:same, a:another problem):  => END

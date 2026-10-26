@@ -1,0 +1,344 @@
+COMM pd-neut-tof_ncaf-wish
+NPATT 5 1 1 1 1 1
+W_PAT 1 1 1 1 1
+!Nph Dum Ias Nre Cry Opt Aut
+1 0 0 0 0 1 1
+!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int
+-1 9 36 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 1
+-1 9 22 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 2
+-1 9 22 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 3
+-1 9 28 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 4
+-1 9 28 0 0 0 0 0 0 0 1 0 0 0 !-> Patt#: 5
+!File names of data(patterns) files
+start_1.dat
+start_2.dat
+start_3.dat
+start_4.dat
+start_5.dat
+!Mat Pcr NLI Rpa Sym Sho
+0 2 0 1 1 1
+!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 1
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 2
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 3
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 4
+2 2 1 0 4 0 2 10 0 0 1 !-> Patt#: 5
+! Bkpos Wdt Iabscor for Pattern# 1
+65918.7453 48 2
+! Bkpos Wdt Iabscor for Pattern# 2
+43010.80404 48 2
+! Bkpos Wdt Iabscor for Pattern# 3
+41855.77175 48 2
+! Bkpos Wdt Iabscor for Pattern# 4
+39834.81665 48 2
+! Bkpos Wdt Iabscor for Pattern# 5
+38677.27276 48 2
+!NCY Eps R_at R_an R_pr R_gl
+1 0.1 0.2 0.2 0.2 0.2
+! Range minimum step maximum for Pattern# 1
+4862.5732 33.3554 256691.6094
+! Range minimum step maximum for Pattern# 2
+6075.1914 21.3769 135112.4062
+! Range minimum step maximum for Pattern# 3
+7549.5366 20.5118 116924.6406
+! Range minimum step maximum for Pattern# 4
+7468.4165 18.93455 109083.4844
+! Range minimum step maximum for Pattern# 5
+7305.1274 17.7109 103417.6719
+!2Theta/TOF/E(Kev) Background for Pattern# 1
+6056.0952 210 0
+7099.4761 210 0
+8008.2271 210 0
+8816.0059 210 0
+9724.7568 210 0
+10532.5352 210 0
+11710.5459 210 0
+12619.2969 210 0
+13393.418 210 0
+14470.4561 210 0
+15614.8096 210 0
+17264.0254 210 0
+19283.4707 210 0
+20192.2207 210 0
+22346.2969 210 0
+24433.0586 210 0
+27563.2012 210 0
+30356.7695 210 0
+33049.3672 210 0
+35203.4414 210 0
+38826.4766 210 0
+44447.2695 210 0
+50068.0625 210 0
+55587.8828 210 0
+63586.3867 210 0
+74289.4531 210 0
+86385.1953 210 0
+98097.9844 210 0
+114791.3281 210 0
+128630.5156 210 0
+147091.25 210 0
+167026.9219 210 0
+187448.0156 210 0
+208808.5312 210 0
+231077.7812 210 0
+252332.8281 210 0
+! Excluded regions (LowT HighT) for Pattern# 1
+!2Theta/TOF/E(Kev) Background for Pattern# 2
+7246.0732 220 0
+9265.5195 220 0
+11097.9795 220 0
+13080.0303 220 0
+15473.4473 220 0
+16931.9355 220 0
+18614.8086 220 0
+20596.8594 220 0
+22504.1133 220 0
+26169.0332 220 0
+28113.6875 220 0
+30320.1172 220 0
+34770.3828 220 0
+40155.5703 220 0
+48341.8086 220 0
+58540.0156 220 0
+69139.8672 220 0
+80953.6328 220 0
+94214.6562 220 0
+107677.6328 220 0
+120889.3047 220 0
+132602.0938 220 0
+! Excluded regions (LowT HighT) for Pattern# 2
+!2Theta/TOF/E(Kev) Background for Pattern# 3
+9089.7529 240 0
+11580.4033 240 0
+13667.165 240 0
+15551.9824 240 0
+17739.7168 240 0
+20364.9961 240 0
+22653.7031 240 0
+24740.4648 240 0
+27130.1406 240 0
+29957.3672 240 0
+32616.3047 240 0
+36150.3359 240 0
+40963.3516 240 0
+47265.5195 240 0
+53391.1758 240 0
+62005.2383 240 0
+71866.8672 240 0
+82913.9922 240 0
+90385.9375 240 0
+99649.2188 240 0
+107356.7656 240 0
+115337.3203 240 0
+! Excluded regions (LowT HighT) for Pattern# 3
+!2Theta/TOF/E(Kev) Background for Pattern# 4
+9089.7529 250 0
+10671.6523 250 0
+12287.21 250 0
+14037.3975 250 0
+15451.0088 250 0
+16763.6504 250 0
+18076.291 250 0
+19456.2461 250 0
+20465.9688 250 0
+21879.5801 250 0
+23798.0566 250 0
+25447.2715 250 0
+28072.5508 250 0
+30058.3418 250 0
+32582.6504 250 0
+34804.0391 250 0
+37160.0625 250 0
+40323.8594 250 0
+46894.5391 250 0
+50630.5156 250 0
+54602.0938 250 0
+58439.043 250 0
+66519.8203 250 0
+75001.5 250 0
+83649.2188 250 0
+92770.3828 250 0
+101524.3047 250 0
+107313.3906 250 0
+! Excluded regions (LowT HighT) for Pattern# 4
+!2Theta/TOF/E(Kev) Background for Pattern# 5
+11136.874 260 0
+13313.3877 260 0
+9162.3037 260 0
+14906.5078 260 0
+16454.75 260 0
+17352.2812 260 0
+18743.4551 260 0
+20179.5078 260 0
+21368.7363 260 0
+22176.0391 260 0
+22827.2266 260 0
+24644.7285 260 0
+26439.791 260 0
+28257.293 260 0
+31196.7109 260 0
+34034.4062 260 0
+37265.5195 260 0
+41214.6602 260 0
+44827.2266 260 0
+49830.9648 260 0
+52905.0117 260 0
+58204.9375 260 0
+62916.9805 260 0
+70186.9844 260 0
+74204.9375 260 0
+82103.2188 260 0
+91958.8672 260 0
+102712.0391 260 0
+! Excluded regions (LowT HighT) for Pattern# 5
+0 !Number of refined parameters
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 1
+0 0 4985.32 0 1.85733 0 0 0 27.081
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 2
+0 0 10389.9 0 1.85233 0 0 0 58.33
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 3
+0 0 15105.5 0 1.00785 0 0 0 90
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 4
+0 0 18660.1 0 -0.47488 0 0 0 121.66
+! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# 5
+0 0 20772.9 0 -1.08308 0 0 0 152.827
+! Data for PHASE number: 1
+ncaf
+!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More
+6 0 0 0 0 0 0 0 0 0
+!Contributions (0/1) of this phase to the patterns
+1 1 1 1 1
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 1
+0 9 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 1
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 2
+0 9 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 2
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 3
+0 9 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 3
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 4
+0 9 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 4
+0 0 1 1 0 0 0
+!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# 5
+0 9 -1 0 0
+! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# 5
+0 0 1 1 0 0 0
+I 21 3 <--Space group symbol
+!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes
+Ca1 CA 0.47 0 0.25 0.5 0.5 0 0 0 0
+0 0 0 0 0
+Al1 AL 0.25 0.25 0.25 0.5 0.3333333333 0 0 0 0
+0 0 0 0 0
+Na1 NA 0.09 0.09 0.09 0.5 0.3333333333 0 0 0 0
+0 0 0 0 0
+F1 F 0.14 0.31 0.12 0.5 1 0 0 0 0
+0 0 0 0 0
+F2 F 0.36 0.36 0.19 0.5 1 0 0 0 0
+0 0 0 0 0
+F3 F 0.46 0.46 0.46 0.5 0.3333333333 0 0 0 0
+0 0 0 0 0
+! Profile Parameters for Pattern # 1 Phase ncaf
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+40 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+15.4063 0 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 8.2904 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+10.250256 10.250256 10.250256 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0.014439 0.004707 0.05507 0.137368 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 2 Phase ncaf
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+40 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+11 34 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 1 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+10.250256 10.250256 10.250256 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 0.053 0.0061 0.031 0.096 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 3 Phase ncaf
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+40 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+8.3 30 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0.0002 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+10.250256 10.250256 10.250256 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 -0.016 0.0069 0.16 0.032 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 4 Phase ncaf
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+40 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+8.9 14 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+10.250256 10.250256 10.250256 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 -0.015 0.0074 0.16 0.017 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! Profile Parameters for Pattern # 5 Phase ncaf
+! Scale Shape1 Bov Str1 Str2 Str3 Strain-Model
+40 0 0 0 0 0 0
+0 0 0 0 0 0
+! Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model
+7.7 0 0 0 0 0 0 0
+0 0 0 0 0 0 0
+! Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize
+0 0.0019 0 0 0
+0 0 0 0 0
+! a b c alpha beta gamma
+10.250256 10.250256 10.250256 90 90 90
+0 0 0 0 0 0
+! Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ
+0 0 -0.012 0.0077 0.14 0.012 0 0
+0 0 0 0 0 0 0 0
+!Absorption correction parameters
+0 0 0 0 ABS: ABSCOR1 ABSCOR2
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+7004.1436 239884.0469 1
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+7000.5215 133914.2812 2
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+9002.7334 115960 3
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+9004.8154 107931.7656 4
+! 2Th1/TOF1 2Th2/TOF2 Pattern to plot
+9001.083 103417.6719 5

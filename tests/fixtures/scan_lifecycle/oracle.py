@@ -23,8 +23,11 @@ STATE = (
 
 def signals():
     header = (ROOT / 'app/src/fit_view_model.hpp').read_text()
-    model = header.split('class FitViewModel :', 1)[1]
-    block = model.split('   signals:', 1)[1].split('   private:', 1)[0]
+    declaration = re.search(r'class\s+FitViewModel\s*:\s*public\s+QObject\s*\{', header)
+    if declaration is None:
+        raise ValueError('The public FitViewModel declaration is missing')
+    body = header[declaration.end() :].split('\n};', 1)[0]
+    block = body.split('   signals:', 1)[1].split('   private:', 1)[0]
     return sorted(re.findall(r'void\s+(\w+)\s*\(', block))
 
 
