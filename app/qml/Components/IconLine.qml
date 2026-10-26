@@ -108,7 +108,8 @@ Item {
                 // A piece with `factors` writes its agreement factors with their subscripts (FactorText).
                 readonly property bool factors: !isIcon && modelData.factors === true && FactorText.has(modelData.text)
                 textFormat: factors ? Text.RichText : modelData.rich === true ? Text.StyledText : Text.AutoText
-                text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text
+                // A piece past a shortened line's end reads no segment until its delegate goes: it shows nothing.
+                text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text ?? ""
                 // A text not cut keeps its own width (undefined resets it to the implicit width), so a piece changed
                 // in place never reads its own layout while it is laid out again.
                 width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.fixedWidth(modelData)
