@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "category_list_model.hpp"
+#include "edi/display.hpp"
 #include "edi/parameter_spec.hpp"
 #include "project_editor.hpp"
 
@@ -28,12 +29,13 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     const edi::ParameterSpec* spec = entry.parameter->spec;
     uid_ = spec != nullptr ? QStringLiteral("%1.%2").arg(QString::fromUtf8(spec->category), QString::fromUtf8(spec->name))
                            : category_ + QLatin1Char('.') + name_;
-    display_name_ = spec != nullptr ? QString::fromUtf8(spec->display_name) : name_;
-    display_units_ = spec != nullptr ? QString::fromUtf8(spec->display_units) : QString();
-    short_name_ = spec != nullptr ? QString::fromStdString(edi::parameter_symbol(spec)) : name_;
+    // Every name the parameter shows comes from crysta's dictionary through the core's bridge.
+    display_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
+    display_units_ = spec != nullptr ? QString::fromStdString(edi::units_label(uid_.toStdString())) : QString();
+    short_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
-    category_icon_ = QString::fromUtf8(category_presentation(category_).icon);
+    category_icon_ = category_presentation(category_).icon;
 }
 
 void ParameterItem::setBlockIndex(int index) {
@@ -59,6 +61,62 @@ void ParameterItem::setLabel(const QString& short_name, const QString& units) {
         display_units_ = units;
         emit displayUnitsChanged();
     }
+}
+
+void ParameterItem::setVariant(const QString& variant) {
+    if (variant_ != variant) {
+        variant_ = variant;
+        emit sliderStepChanged();
+        emit toolTipChanged();
+    }
+}
+
+QString ParameterItem::toolTip() const {
+    if (parameter_->spec == nullptr) {
+        return {};
+    }
+    return QString::fromStdString(edi::tooltip(uid_.toStdString(), variant_.toStdString()));
+}
+
+void ParameterItem::setSpelling(const std::string& rule, bool exact) {
+    if (su_rule_ != rule || exact_ != exact) {
+        su_rule_ = rule;
+        exact_ = exact;
+        refreshFileText();
+    }
+}
+
+void ParameterItem::refreshFileText() {
+    // Empty for a parameter the dictionary does not know; a page then shows the value itself.
+    QString value;
+    QString su;
+    if (parameter_->spec != nullptr && !su_rule_.empty()) {
+        const edi::FileText text = edi::file_text(*parameter_, su_rule_, exact_);
+        value = QString::fromStdString(text.value);
+        su = QString::fromStdString(text.su);
+    }
+    if (value != file_value_) {
+        file_value_ = value;
+        emit fileValueChanged();
+    }
+    if (su != file_su_) {
+        file_su_ = su;
+        emit fileSuChanged();
+    }
+}
+
+double ParameterItem::sliderStep() const {
+    if (parameter_->spec == nullptr) {
+        return 0.0;
+    }
+    return edi::display_step(*parameter_, variant_.toStdString());
+}
+
+QString ParameterItem::displayText(double value) const {
+    if (parameter_->spec == nullptr) {
+        return {};
+    }
+    return QString::fromStdString(edi::display_text(uid_.toStdString(), value, variant_.toStdString()));
 }
 
 void ParameterItem::setPhaseIndex(int index) {
@@ -144,6 +202,7 @@ int ParameterItem::publish() {
     }
     if ((changed & ValueField) != 0) {
         emit valueChanged();
+        emit sliderStepChanged();
         if (outsideRange() != was_outside) {
             emit outsideRangeChanged();
         }
@@ -157,6 +216,8 @@ int ParameterItem::publish() {
     if ((changed & FreeField) != 0) {
         emit freeChanged();
     }
+    // A symmetry change alters how a value is written without changing it, so the text is read again each time.
+    refreshFileText();
     return changed;
 }
 

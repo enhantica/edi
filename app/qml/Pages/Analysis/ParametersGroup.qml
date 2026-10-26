@@ -6,7 +6,6 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -469,7 +468,7 @@ EaElements.GroupBox {
                 }
                 NumberLabel {
                     horizontalAlignment: Text.AlignRight
-                    number: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
+                    number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
                     full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
                 }
@@ -497,8 +496,9 @@ EaElements.GroupBox {
 
         // The slider of the selected row with its limits in a read-only box on each side (the original's
         // Fittables.qml slider row). The limits are set when a row is selected, when the value changes other
-        // than by the slider, and when the slider is released, as there: a drag moves the value within them.
-        // Shown at the base's default precision; the value keeps its full precision.
+        // than by the slider, and when the slider is released, as there: a drag moves the value within them, by one
+        // unit of the last digit the item's display format shows. The limits show in that format, the value as the
+        // file spells it.
         Row {
             id: sliderRow
 
@@ -536,7 +536,7 @@ EaElements.GroupBox {
                 width: EaStyle.Sizes.fontPixelSize * 6
                 readOnly: true
                 enabled: sliderRow.selected !== null
-                text: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(slider.from) : ""
+                text: sliderRow.selected ? sliderRow.selected.displayText(slider.from) : ""
             }
             EaElements.Slider {
                 id: slider
@@ -552,7 +552,8 @@ EaElements.GroupBox {
                 value: sliderRow.selected ? Math.min(Math.max(sliderRow.selected.value, sliderRow.lower), sliderRow.upper) : 0
                 // No thumb while no parameter is current, so the empty slider shows no value.
                 handle.visible: sliderRow.selected !== null
-                toolTipText: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(value) : ""
+                stepSize: sliderRow.selected ? sliderRow.selected.sliderStep : 0
+                toolTipText: sliderRow.selected ? sliderRow.selected.fileValue : ""
                 onMoved: sliderRow.selected.value = value
                 onPressedChanged: if (!pressed)
                     sliderRow.updateLimits()
@@ -562,7 +563,7 @@ EaElements.GroupBox {
                 width: EaStyle.Sizes.fontPixelSize * 6
                 readOnly: true
                 enabled: sliderRow.selected !== null
-                text: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(slider.to) : ""
+                text: sliderRow.selected ? sliderRow.selected.displayText(slider.to) : ""
             }
         }
     }

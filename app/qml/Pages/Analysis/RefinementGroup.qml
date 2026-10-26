@@ -20,7 +20,7 @@ Grid {
     ValueField {
         objectName: "refine_ls.thresholdSigma"
         width: row.fieldWidth
-        label: qsTr("fit reflections above (su)")
+        uid: "refine_ls.threshold_sigma"
         fieldValue: row.analysis && !isNaN(row.analysis.refineLsThresholdSigma) ? row.analysis.refineLsThresholdSigma : ""
         placeholderText: qsTr("all")
         accepts: "number"

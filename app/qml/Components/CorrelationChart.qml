@@ -90,7 +90,7 @@ Item {
             label: qsTr("Correlation level:")
             toolTip: qsTr("Shows the parameters with a correlation of at least this size, 0 to 1, and every pair among them")
             widestText: "0.00"
-            shown: chart.correlations ? chart.correlations.level.toFixed(2) : ""
+            shown: chart.correlations ? Session.display("correlation_chart.threshold", chart.correlations.level) : ""
             validator: DoubleValidator {
                 bottom: 0
                 top: 1
@@ -305,7 +305,7 @@ Item {
                         anchors.centerIn: parent
                         visible: !isNaN(parent.value) && area.cell >= chart.em * 2.6
                         color: Math.abs(parent.value) >= 0.5 ? "#f5f5f5" : EaStyle.Colors.chartLabels
-                        text: isNaN(parent.value) ? "" : parent.value.toFixed(2)
+                        text: isNaN(parent.value) ? "" : Session.display("fit_parameter_correlation.correlation", parent.value)
                     }
                 }
             }
@@ -356,7 +356,7 @@ Item {
                     EaElements.ToolTip {
                         objectName: "correlations.toolTip"
                         visible: pointer.containsMouse && !isNaN(pointer.value)
-                        text: visible ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(pointer.value.toFixed(2)) : ""
+                        text: visible ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(Session.display("fit_parameter_correlation.correlation", pointer.value)) : ""
                     }
                 }
             }

@@ -703,6 +703,7 @@ Report	other-public
 Report.as_html	other-public
 Report.check	other-public
 Report.cif	other-public
+Report.save_cif	other-public
 Report.correlation_threshold	other-public
 Report.excluded	other-public
 Report.html	other-public

@@ -492,7 +492,9 @@ TEST_CASE("E05-T1 gate 6 data and Bragg hover contain all independently specifie
     point.rows = {0};
     point.points = {{12.371, 83.637}};
     const auto text = e05_t1::readout(source, point);
-    for (const auto& value : {"12.37", "83.64", "7.25", "78.12", "5.52"})
+    // ADR-0051: intensity readouts use the data category's six significant digits.
+    for (const auto& value :
+         {"x: 12.371", "meas: 83.637", "bkg: 7.251", "calc: 78.121", "meas − calc: 5.516"})
         CHECK_MESSAGE((text.find(value) != std::string::npos),
                       " gate 6 data hover reports x measured background calculated and signed "
                       "residual at the same source index");
@@ -509,7 +511,7 @@ TEST_CASE("E05-T1 gate 6 data and Bragg hover contain all independently specifie
     CHECK_MESSAGE(
         ((tick.find("Garnet") != std::string::npos || tick.find("garnet") != std::string::npos)),
         " gate 6 Bragg hover names its independent structure");
-    CHECK_MESSAGE((tick.find("12.37") != std::string::npos &&
+    CHECK_MESSAGE((tick.find("x: 12.371\n") != std::string::npos &&
                    tick.find("Miller indices: (2 -1 3)") != std::string::npos),
                   " gate 6 Bragg hover includes x and the signed Miller tuple");
 }

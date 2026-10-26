@@ -330,8 +330,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "lbco_hrpt_s2",
-        "_metadata.title": " graded start s2 of refine-lbco-hrpt",
-        "_metadata.description": "?"
+        "_metadata.title": "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+        "_metadata.description": "Cubic perovskite · Preferred orientation · Starting model 2",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "HRPT",
+        "_metadata.facility": "PSI",
+        "_metadata.polarisation": "none"
       }
     },
     {
@@ -452,8 +457,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "si_sepd_s2",
-        "_metadata.title": " graded start s2 of refine-si-sepd",
-        "_metadata.description": "?"
+        "_metadata.title": "Silicon [Fd-3m] · SEPD @ Argonne",
+        "_metadata.description": "Silicon standard · Jorgensen–Von Dreele profile · Starting model 2",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "SEPD",
+        "_metadata.facility": "Argonne",
+        "_metadata.polarisation": "none"
       }
     },
     {
@@ -751,8 +761,13 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_s1",
-        "_metadata.title": " graded start s1 of refine-cosio-d20",
-        "_metadata.description": "?"
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Olivine structure and profile refinement · Starting model 1",
+        "_metadata.purpose": "refinement",
+        "_metadata.dimensionality": "1D",
+        "_metadata.instrument": "D20",
+        "_metadata.facility": "ILL",
+        "_metadata.polarisation": "none"
       }
     }
   ],
@@ -794,6 +809,14 @@ var frozen = {
           "name": "cosio",
           "atoms": 6,
           "cellA": 10.3,
+          "displayCell": [
+            10.3,
+            6.0,
+            4.8,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             10.3,
@@ -854,6 +877,14 @@ var frozen = {
           "name": "cosio",
           "atoms": 6,
           "cellA": 10.3,
+          "displayCell": [
+            10.3,
+            6.0,
+            4.8,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             10.3,
@@ -887,6 +918,8 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "09 Sep 2026 07:34:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -943,8 +976,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_verbosity.fit": "short",
-        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "_metadata.description": "Temperature scan · 3 patterns at 52.3, 299.4 and 497.4 K",
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "D20",
@@ -979,6 +1010,14 @@ var frozen = {
           "name": "cosio",
           "atoms": 6,
           "cellA": 10.31,
+          "displayCell": [
+            10.31,
+            6.0,
+            4.79,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             10.31,
@@ -1121,6 +1160,8 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan_162f",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Cooling scan · 162 patterns from 497.4 to 50.4 K",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "23 Sep 2026 14:06:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -1177,8 +1218,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_verbosity.fit": "short",
-        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "_metadata.description": "Cooling scan · 162 patterns from 497.4 to 50.4 K",
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "D20",
@@ -1206,6 +1245,14 @@ var frozen = {
           "name": "cosio",
           "atoms": 6,
           "cellA": 10.335842071204308,
+          "displayCell": [
+            10.3358,
+            6.02969,
+            4.79757,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             10.335842071204308,
@@ -2938,6 +2985,8 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "cosio_d20_scan",
+        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+        "_metadata.description": "Cooling and warming scan · 324 patterns between 50.4 and 497.4 K",
         "_metadata.created": "09 Sep 2026 07:33:40",
         "_metadata.last_modified": "23 Sep 2026 14:06:27",
         "_metadata.timestamp": "2026-09-09T07:34:35+00:00",
@@ -2994,8 +3043,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_verbosity.fit": "short",
-        "_metadata.title": "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "_metadata.description": "Cooling and warming scan · 324 patterns between 50.4 and 497.4 K",
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "D20",
@@ -3023,6 +3070,14 @@ var frozen = {
           "name": "cosio",
           "atoms": 6,
           "cellA": 10.335842071204308,
+          "displayCell": [
+            10.3358,
+            6.02969,
+            4.79757,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             10.335842071204308,
@@ -6402,6 +6457,14 @@ var frozen = {
           "name": "lbco",
           "atoms": 4,
           "cellA": 3.88,
+          "displayCell": [
+            3.88,
+            3.88,
+            3.88,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m -3 m",
           "cell": [
             3.88,
@@ -6462,6 +6525,14 @@ var frozen = {
           "name": "lbco",
           "atoms": 4,
           "cellA": 3.88,
+          "displayCell": [
+            3.88,
+            3.88,
+            3.88,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m -3 m",
           "cell": [
             3.88,
@@ -6527,6 +6598,14 @@ var frozen = {
           "name": "ncaf",
           "atoms": 6,
           "cellA": 10.250256,
+          "displayCell": [
+            10.250256,
+            10.250256,
+            10.250256,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I 21 3",
           "cell": [
             10.250256,
@@ -6583,6 +6662,14 @@ var frozen = {
           "name": "ncaf",
           "atoms": 6,
           "cellA": 10.250256,
+          "displayCell": [
+            10.250256,
+            10.250256,
+            10.250256,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I 21 3",
           "cell": [
             10.250256,
@@ -6646,6 +6733,14 @@ var frozen = {
           "name": "ncaf",
           "atoms": 6,
           "cellA": 10.250256,
+          "displayCell": [
+            10.250256,
+            10.250256,
+            10.250256,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I 21 3",
           "cell": [
             10.250256,
@@ -6713,6 +6808,14 @@ var frozen = {
           "name": "ncaf",
           "atoms": 6,
           "cellA": 10.250256,
+          "displayCell": [
+            10.250256,
+            10.250256,
+            10.250256,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I 21 3",
           "cell": [
             10.250256,
@@ -6786,6 +6889,14 @@ var frozen = {
           "name": "si",
           "atoms": 1,
           "cellA": 5.431,
+          "displayCell": [
+            5.431,
+            5.431,
+            5.431,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F d -3 m",
           "cell": [
             5.431,
@@ -6851,6 +6962,14 @@ var frozen = {
           "name": "si",
           "atoms": 1,
           "cellA": 5.431,
+          "displayCell": [
+            5.431,
+            5.431,
+            5.431,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F d -3 m",
           "cell": [
             5.431,
@@ -6884,11 +7003,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_diamond_dream",
+        "_metadata.title": "Diamond [Fd-3m] · DREAM @ ESS",
+        "_metadata.description": "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement",
         "_metadata.created": "24 Sep 2026 18:42:48",
         "_metadata.last_modified": "24 Sep 2026 18:42:49",
         "_metadata.timestamp": "?",
-        "_metadata.title": "Diamond [Fd-3m] · DREAM @ ESS",
-        "_metadata.description": "McStas-simulated 90° bank · Jorgensen profile · Scale-only refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "DREAM",
@@ -6908,6 +7027,14 @@ var frozen = {
           "name": "diamond",
           "atoms": 1,
           "cellA": 3.567,
+          "displayCell": [
+            3.567,
+            3.567,
+            3.567,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F d -3 m",
           "cell": [
             3.567,
@@ -6941,11 +7068,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_lab6_echidna_fcj",
+        "_metadata.title": "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
+        "_metadata.description": "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement",
         "_metadata.created": "26 Sep 2026 10:29:37",
         "_metadata.last_modified": "26 Sep 2026 10:29:38",
         "_metadata.timestamp": "?",
-        "_metadata.title": "LaB₆ [Pm-3m] · ECHIDNA @ ANSTO",
-        "_metadata.description": "TCH pseudo-Voigt with FCJ axial divergence · Scale-only refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "ECHIDNA",
@@ -6965,6 +7092,14 @@ var frozen = {
           "name": "lab6",
           "atoms": 2,
           "cellA": 4.156885,
+          "displayCell": [
+            4.156885,
+            4.156885,
+            4.156885,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m -3 m",
           "cell": [
             4.156885,
@@ -6998,11 +7133,11 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_cwl_pbso4_beba",
+        "_metadata.title": "PbSO₄ [Pnma] · D1A @ ILL",
+        "_metadata.description": "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement",
         "_metadata.created": "26 Sep 2026 10:28:28",
         "_metadata.last_modified": "26 Sep 2026 10:28:29",
         "_metadata.timestamp": "?",
-        "_metadata.title": "PbSO₄ [Pnma] · D1A @ ILL",
-        "_metadata.description": "Rietveld round-robin data · Bérar-Baldinozzi asymmetry refinement",
         "_metadata.purpose": "refinement",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "D1A",
@@ -7022,6 +7157,14 @@ var frozen = {
           "name": "pbso4",
           "atoms": 5,
           "cellA": 8.479506,
+          "displayCell": [
+            8.479506,
+            5.397256,
+            6.958973,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             8.479506,
@@ -7086,6 +7229,14 @@ var frozen = {
           "name": "Al2O3",
           "atoms": 2,
           "cellA": 4.756614,
+          "displayCell": [
+            4.756614,
+            4.756614,
+            12.973036,
+            90.0,
+            90.0,
+            120.0
+          ],
           "spaceGroup": "R -3 c",
           "cell": [
             4.756614,
@@ -7100,6 +7251,14 @@ var frozen = {
           "name": "YAlO3",
           "atoms": 4,
           "cellA": 5.172418,
+          "displayCell": [
+            5.172418,
+            5.32659,
+            7.360847,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P b n m",
           "cell": [
             5.172418,
@@ -7368,12 +7527,12 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_metadata.name": "pd_neut_tof_fe_pseudo_voigt",
+        "_metadata.title": "Iron [Im-3m] · BEER @ ESS",
+        "_metadata.description": "90° bank · Non-convoluted pseudo-Voigt · Scale-only refinement",
         "_metadata.created": "26 Sep 2026 10:28:28",
         "_metadata.last_modified": "26 Sep 2026 10:28:29",
         "_metadata.timestamp": "?",
         "_rendering_plot.type": "plotly",
-        "_metadata.title": "Iron [Im-3m] · BEER @ ESS",
-        "_metadata.description": "90° bank · Non-convoluted pseudo-Voigt · Scale-only refinement",
         "_metadata.purpose": "verification",
         "_metadata.dimensionality": "1D",
         "_metadata.instrument": "BEER",
@@ -7394,6 +7553,14 @@ var frozen = {
           "name": "fe",
           "atoms": 1,
           "cellA": 2.886,
+          "displayCell": [
+            2.886,
+            2.886,
+            2.886,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I m -3 m",
           "cell": [
             2.886,
@@ -7459,6 +7626,14 @@ var frozen = {
           "name": "cecoal",
           "atoms": 5,
           "cellA": 7.65038,
+          "displayCell": [
+            7.65038,
+            4.051332,
+            6.90536,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m m a",
           "cell": [
             7.65038,
@@ -7524,6 +7699,14 @@ var frozen = {
           "name": "ceo2",
           "atoms": 2,
           "cellA": 5.410495,
+          "displayCell": [
+            5.410495,
+            5.410495,
+            5.410495,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F m -3 m",
           "cell": [
             5.410495,
@@ -7589,6 +7772,14 @@ var frozen = {
           "name": "lab6",
           "atoms": 2,
           "cellA": 4.156885,
+          "displayCell": [
+            4.156885,
+            4.156885,
+            4.156885,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m -3 m",
           "cell": [
             4.156885,
@@ -7645,6 +7836,14 @@ var frozen = {
           "name": "lif",
           "atoms": 2,
           "cellA": 4.0267,
+          "displayCell": [
+            4.0267,
+            4.0267,
+            4.0267,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F m -3 m",
           "cell": [
             4.0267,
@@ -7710,6 +7909,14 @@ var frozen = {
           "name": "austenite",
           "atoms": 1,
           "cellA": 3.6468,
+          "displayCell": [
+            3.6468,
+            3.6468,
+            3.6468,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F m -3 m",
           "cell": [
             3.6468,
@@ -7724,6 +7931,14 @@ var frozen = {
           "name": "ferrite",
           "atoms": 1,
           "cellA": 2.886,
+          "displayCell": [
+            2.886,
+            2.886,
+            2.886,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I m -3 m",
           "cell": [
             2.886,
@@ -7784,6 +7999,14 @@ var frozen = {
           "name": "y2o3",
           "atoms": 3,
           "cellA": 10.605744,
+          "displayCell": [
+            10.605744,
+            10.605744,
+            10.605744,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "I a -3",
           "cell": [
             10.605744,
@@ -7840,6 +8063,14 @@ var frozen = {
           "name": "pbso4",
           "atoms": 5,
           "cellA": 8.4859,
+          "displayCell": [
+            8.4859,
+            5.402259,
+            6.964587,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P n m a",
           "cell": [
             8.4859,
@@ -7901,6 +8132,14 @@ var frozen = {
           "name": "lab6",
           "atoms": 2,
           "cellA": 4.156885,
+          "displayCell": [
+            4.156885,
+            4.156885,
+            4.156885,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "P m -3 m",
           "cell": [
             4.156885,
@@ -7962,6 +8201,14 @@ var frozen = {
           "name": "diamond",
           "atoms": 1,
           "cellA": 3.57,
+          "displayCell": [
+            3.57,
+            3.57,
+            3.57,
+            90.0,
+            90.0,
+            90.0
+          ],
           "spaceGroup": "F d -3 m",
           "cell": [
             3.57,
@@ -13141,6 +13388,121 @@ var frozen = {
       "loops": {}
     },
     {
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project",
+      "experiment": "echidna",
+      "sha256": "f8fcbd4544ac9fca609567f985863f5fbe380c73c6968f417f54721b4089bde4",
+      "peakType": "cwl-tch-pseudo-voigt-fcj",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y",
+        "asym_fcj_1",
+        "asym_fcj_2"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "calib_sample_displacement",
+        "calib_sample_transparency"
+      ],
+      "range": [
+        3.86396,
+        163.75638,
+        0.04998200062519538,
+        3200
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
+        "_peak.broad_gauss_u": {
+          "value": 0.09,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.4,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.05,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_fcj_1": {
+          "value": 0.08,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_fcj_2": {
+          "value": 0.08,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.622,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_sample_displacement": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_sample_transparency": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.7,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "polynomial",
+        "_background.origin": {
+          "value": 80.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
       "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
       "experiment": "echidna",
       "sha256": "a51359be4b97bed9f488f4022c9efaba6267d954a8ca110c2ed39deb5b9c5eb6",
@@ -13289,6 +13651,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
+        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_peak.broad_gauss_u": {
           "value": 0.143431,
@@ -13343,7 +13706,6 @@ var frozen = {
         },
         "_absorption.type": "none",
         "_background.type": "line-segment",
-        "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.sample_form": "powder",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"
@@ -13385,6 +13747,8 @@ var frozen = {
         "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg",
+        "_background_estimate.mode": "manual",
+        "_background_estimate.method": "arpls",
         "_peak.broad_gauss_u": {
           "value": 0.1,
           "free": true,
@@ -13716,6 +14080,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
+        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_calculator.type": "crysta",
         "_peak.broad_gauss_u": {
@@ -13786,7 +14151,6 @@ var frozen = {
         },
         "_absorption.type": "none",
         "_background.type": "line-segment",
-        "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.sample_form": "powder",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"
@@ -13912,6 +14276,7 @@ var frozen = {
           "free": false,
           "uncertainty": 0.0
         },
+        "_experiment_type.beam_mode": "constant wavelength",
         "_scattering_source.neutron_scattering_length": "sears1992",
         "_instrument.setup_wavelength": {
           "value": 1.54816,
@@ -13986,7 +14351,6 @@ var frozen = {
           "uncertainty": 0.0
         },
         "_background.type": "line-segment",
-        "_experiment_type.beam_mode": "constant wavelength",
         "_experiment_type.sample_form": "powder",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"
@@ -14483,6 +14847,155 @@ var frozen = {
         "_experiment_type.beam_mode": "time-of-flight",
         "_experiment_type.radiation_probe": "neutron",
         "_experiment_type.scattering_type": "bragg"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project",
+      "experiment": "dream",
+      "sha256": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea",
+      "peakType": "tof-jorgensen",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        8530.1009,
+        66503.6911,
+        29.001295747873936,
+        2000
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen",
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.02,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 50000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 5000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 28385.86133,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
       },
       "loops": {}
     },
@@ -18028,300 +18541,6 @@ var frozen = {
       "loops": {}
     },
     {
-      "project": "tests/fixtures/e04_t1/eta-project",
-      "experiment": "experiment",
-      "sha256": "ea9233a144911683df0059636a1511c5dc9a38365e066fb177793e2aa0b90664",
-      "peakType": "cwl-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        20.25,
-        80.25,
-        30.0,
-        3
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_peak.type": "cwl-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.048457,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.083053,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.04,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54056,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_background.type": "line-segment",
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.4,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 20.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.37,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0023,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "tests/fixtures/e04_t1/gaussian-project",
-      "experiment": "experiment",
-      "sha256": "882fae1d1e7511d1ea39e6eec8c68659ad8687fbcfc8ec0497b6559c11740fcb",
-      "peakType": "cwl-gaussian",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        20.25,
-        80.25,
-        30.0,
-        3
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_peak.type": "cwl-gaussian",
-        "_peak.broad_gauss_u": {
-          "value": 0.048457,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.083053,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.04,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54056,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_background.type": "line-segment",
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.4,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 20.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "tests/fixtures/e04_t1/lorentzian-project",
-      "experiment": "experiment",
-      "sha256": "67d398886934ceda26fc55fa765859ddc0f80d1e673aba8aa38e41c7531e9f27",
-      "peakType": "cwl-lorentzian",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        20.25,
-        80.25,
-        30.0,
-        3
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_peak.type": "cwl-lorentzian",
-        "_peak.broad_gauss_u": {
-          "value": 0.048457,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.083053,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.04,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54056,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_background.type": "line-segment",
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.4,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 20.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
       "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
       "experiment": "pbsox",
       "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
@@ -18458,3764 +18677,6 @@ var frozen = {
         "_background.type": "polynomial",
         "_background.origin": {
           "value": 50.0,
-          "free": false,
-          "uncertainty": 0.0
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project",
-      "experiment": "echidna",
-      "sha256": "f8fcbd4544ac9fca609567f985863f5fbe380c73c6968f417f54721b4089bde4",
-      "peakType": "cwl-tch-pseudo-voigt-fcj",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y",
-        "asym_fcj_1",
-        "asym_fcj_2"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
-      ],
-      "range": [
-        3.86396,
-        163.75638,
-        0.04998200062519538,
-        3200
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
-        "_peak.broad_gauss_u": {
-          "value": 0.09,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.4,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.05,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_fcj_1": {
-          "value": 0.08,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_fcj_2": {
-          "value": 0.08,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 12.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.622,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_sample_displacement": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_sample_transparency": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.type": "cylinder-hewat",
-        "_absorption.mu_r": {
-          "value": 0.7,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "polynomial",
-        "_background.origin": {
-          "value": 80.0,
-          "free": false,
-          "uncertainty": 0.0
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project",
-      "experiment": "dream",
-      "sha256": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea",
-      "peakType": "tof-jorgensen",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        8530.1009,
-        66503.6911,
-        29.001295747873936,
-        2000
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen",
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.02,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 50000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 5000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 90.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 28385.86133,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "none",
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_cosio-d20/project",
-      "experiment": "d20",
-      "sha256": "c8d4fdecf1deb36ac5b190425365067c4e71714c071340c7c4cc5e22a2d8f786",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        8.0953,
-        150.0953,
-        0.10021171489061398,
-        1418
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.2,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.4,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.87,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project",
-      "experiment": "d20",
-      "sha256": "841aa1a1ca4c6f39c3eb82664ebc9832c47ca4fe53650da29c62a43626b54393",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        0.0953,
-        150.6953,
-        0.10006644518272424,
-        1506
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_data_source.file_name": "01_001_497p3790.dat",
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.2,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.4,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.87,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_hs-hrpt/project",
-      "experiment": "hrpt",
-      "sha256": "c2c754ec57afc404092bd505e22dce51bcc17d91f391b378c7559e969e6cd800",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        3.95,
-        164.9,
-        0.05,
-        3220
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_peak.broad_gauss_u": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.2,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.2,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_limit": {
-          "value": 180.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.89,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt/project",
-      "experiment": "hrpt",
-      "sha256": "502941566652e6acfff532d1c9a4b5b73e7827a66d22d3fb8903078d2d310286",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        10.0,
-        164.85,
-        0.049999999999999996,
-        3098
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.08,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.08,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.494,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.3,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_lbco_simulation/project",
-      "experiment": "hrpt",
-      "sha256": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        10.0,
-        160.0,
-        0.05,
-        3001
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_instrument.setup_wavelength": {
-          "value": 1.494,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_min": {
-          "value": 10.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_max": {
-          "value": 160.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_step": {
-          "value": 0.05,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_lmo-echidna/project",
-      "experiment": "echidna",
-      "sha256": "56c050bdeb4188c636ef5afbacc5d1d36353690dfb3c2689ae48b85642612d6d",
-      "peakType": "cwl-tch-pseudo-voigt-fcj",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y",
-        "asym_fcj_1",
-        "asym_fcj_2"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "calib_sample_displacement",
-        "calib_sample_transparency"
-      ],
-      "range": [
-        4.01383,
-        163.9066,
-        0.04998211003438574,
-        3200
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
-        "_peak.broad_gauss_u": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.3,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.4,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_fcj_1": {
-          "value": 0.08,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_fcj_2": {
-          "value": 0.08,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 12.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.6215,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_sample_displacement": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_sample_transparency": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.type": "cylinder-hewat",
-        "_absorption.mu_r": {
-          "value": 0.3,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_y2o3-spodi/project",
-      "experiment": "spodi",
-      "sha256": "54b3966a0f3286aae339911ff388f3280f6552946e312b2ed5258542a565e346",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        0.95,
-        153.9,
-        0.05,
-        3060
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.04,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.07,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 20.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54822,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project",
-      "experiment": "spodi",
-      "sha256": "a0a6cdf5fe6d807a7241f7e68456804c212120119e3bac264293f0c90723fc7c",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        4.05,
-        151.95,
-        0.04999999999999999,
-        2959
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_peak.broad_gauss_u": {
-          "value": 0.04,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.05,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_limit": {
-          "value": 160.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 20.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54816,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.type": "cylinder-hewat",
-        "_absorption.mu_r": {
-          "value": 0.0221,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris/project",
-      "experiment": "polaris",
-      "sha256": "f76663b87db3b3356426a1fd3be25a2e26a8b10fd808978897a4bf15b77df789",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        3001.589,
-        19004.658,
-        4.334525731310943,
-        3693
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 4.2,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.2971,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.043085,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.002867,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 40.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 5.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 145.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 6176.03076,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": -1.92194,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "chebyshev",
-        "_background.x_min": {
-          "value": 3001.5891,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.x_max": {
-          "value": 19004.6582,
-          "free": false,
-          "uncertainty": 0.0
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl/project",
-      "experiment": "pearl",
-      "sha256": "457cf6771c73209cd11a20b4e9e3aed81f0e14fb3f4f082e20bed9248c8ab0ec",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        1500.25,
-        19400.1875,
-        7.094703725723345,
-        2524
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.3,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.03,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.03,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 80.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 4.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 5.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 90.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 4680.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 1.7621,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "polynomial",
-        "_background.origin": {
-          "value": 7000.0,
-          "free": false,
-          "uncertainty": 0.0
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
-      "experiment": "expt_n2",
-      "sha256": "3c963915d618f98cf845e8d45b2b5171debc9628fec033e144df231355c913aa",
-      "peakType": "tof-pseudo-voigt",
-      "mode": "tof",
-      "peakFields": [
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        40094.52341631884,
-        135592.47482202607,
-        31.85388639283096,
-        2999
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-pseudo-voigt",
-        "_peak.cutoff_fwhm": {
-          "value": 12.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 900.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 1000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 300.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 5.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 90.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 54902.1875,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "none",
-        "_background.type": "line-segment",
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
-      "experiment": "expt_s2",
-      "sha256": "ec5dcf452a79597dfb7d97c2ff4b3d44100dbba834c5da8b914329d5f21fe792",
-      "peakType": "tof-pseudo-voigt",
-      "mode": "tof",
-      "peakFields": [
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        40094.52341631884,
-        135592.47482202607,
-        31.85388639283096,
-        2999
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-pseudo-voigt",
-        "_peak.cutoff_fwhm": {
-          "value": 12.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 900.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 1000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 300.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 5.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 90.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 54902.1875,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "none",
-        "_background.type": "line-segment",
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project",
-      "experiment": "mcstas",
-      "sha256": "6479750462101d7af25eb5f73226347791e788535c1253abb286086e9c97dc0e",
-      "peakType": "tof-jorgensen",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        41168.12859292999,
-        146787.37361476864,
-        105.72496999183048,
-        1000
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen",
-        "_peak.broad_gauss_sigma_0": {
-          "value": 50000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": -50000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 20000.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.006,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.004,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 94.90931761529106,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 58724.76869981215,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
-      "experiment": "wish_1_10",
-      "sha256": "24dd6b5278ac7369ad528da944b324e3a5d0472cd2f448c289faeb57ec78bd27",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        4862.5732,
-        256691.6094,
-        60.231771394403246,
-        4182
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 15.4063,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 8.2904,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.004707,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.137368,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.014439,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.05507,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 27.081,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 4985.32,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 1.85733,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
-      "experiment": "wish_2_9",
-      "sha256": "cc447addb349b2956750e4e8d4da74e42325acd3be70163c533f2a2b76beca65",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        6075.1914,
-        135112.4062,
-        30.981324081632653,
-        4166
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 34.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 11.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 1.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.0061,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.096,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.053,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.031,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 58.33,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 10389.9,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 1.85233,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
-      "experiment": "wish_3_8",
-      "sha256": "14265d219fe6a6efa50b4b074d33ac8713ad6cb7d3cd7b013f13085cb976857f",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        7549.5366,
-        116924.6406,
-        27.557345427059712,
-        3970
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 30.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 8.3,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0002,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.0069,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.032,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_0": {
-          "value": -0.016,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.16,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 90.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 15105.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": 1.00785,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
-      "experiment": "wish_4_7",
-      "sha256": "a3833fabd3d3c4b59403d5c0d995e7ece5db4e40efcdc208024d1f0fd19c8c5f",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        7468.4165,
-        109083.4844,
-        25.139799084611578,
-        4043
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 14.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 8.9,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.0074,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.017,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_0": {
-          "value": -0.015,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.16,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 121.66,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 18660.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": -0.47488,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
-      "experiment": "wish_5_6",
-      "sha256": "2db147368b28fac20b85d9dd62479e73cf6c1c620e3d97c7a65224f34a29836d",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        7305.1274,
-        103417.6719,
-        23.367990396304403,
-        4114
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 7.7,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 0.0019,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.0077,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.012,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_0": {
-          "value": -0.012,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.14,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 152.827,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 20772.9,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": -1.08308,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "cylinder",
-        "_absorption.abscor1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_absorption.abscor2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_si-sepd/project",
-      "experiment": "sepd",
-      "sha256": "5720646987f9ce601cfa32532c369d2fb7e5997a7635004b856c1103dde7a6b8",
-      "peakType": "tof-jorgensen-von-dreele",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain",
-        "broad_lorentz_gamma_0",
-        "broad_lorentz_gamma_1",
-        "broad_lorentz_gamma_2",
-        "broad_lorentz_size",
-        "broad_lorentz_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        2000.0,
-        29995.0,
-        5.0,
-        5600
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "tof-jorgensen-von-dreele",
-        "_peak.cutoff_fwhm": {
-          "value": 8.2,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.5971,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.04,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_0": {
-          "value": 3.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 30.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_gamma_1": {
-          "value": 3.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_gamma_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_twotheta_bank": {
-          "value": 144.845,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 7476.91,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": -1.54,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_reciprocal": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_absorption.type": "none",
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-tof_si_simulation/project",
-      "experiment": "sepd",
-      "sha256": "93449e1da42b2bdd244727e0d11234a906f950691f431e2e7b9e54323ba8a4f3",
-      "peakType": "tof-jorgensen",
-      "mode": "tof",
-      "peakFields": [
-        "rise_alpha_0",
-        "rise_alpha_1",
-        "decay_beta_0",
-        "decay_beta_1",
-        "broad_gauss_sigma_0",
-        "broad_gauss_sigma_1",
-        "broad_gauss_sigma_2",
-        "broad_gauss_size",
-        "broad_gauss_strain"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_twotheta_bank",
-        "calib_d_to_tof_offset",
-        "calib_d_to_tof_linear",
-        "calib_d_to_tof_quadratic",
-        "calib_d_to_tof_reciprocal"
-      ],
-      "range": [
-        5000.0,
-        15000.0,
-        2.0,
-        5001
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "time-of-flight",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_instrument.setup_twotheta_bank": {
-          "value": 144.845,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_linear": {
-          "value": 7476.91,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_d_to_tof_quadratic": {
-          "value": -1.54,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.type": "tof-jorgensen",
-        "_peak.broad_gauss_sigma_0": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_1": {
-          "value": 40.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_sigma_2": {
-          "value": 2.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_size": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_strain": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_0": {
-          "value": 0.04221,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.decay_beta_1": {
-          "value": 0.00946,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_0": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.rise_alpha_1": {
-          "value": 0.5971,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 12.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.time_of_flight_min": {
-          "value": 5000.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.time_of_flight_max": {
-          "value": 15000.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.time_of_flight_step": {
-          "value": 2.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
-      "experiment": "d1a",
-      "sha256": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset"
-      ],
-      "range": [
-        10.0,
-        155.45,
-        0.049999999999999996,
-        2910
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "neutron",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.neutron_scattering_length": "sears1992",
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_peak.broad_gauss_u": {
-          "value": 0.2,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.4,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_limit": {
-          "value": 180.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.91,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment"
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
-      "experiment": "lab",
-      "sha256": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        10.0,
-        160.0,
-        0.025,
-        6001
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_peak.broad_gauss_u": {
-          "value": 0.02,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.02,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.008,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_limit": {
-          "value": 160.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54056,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 1.5444,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.5,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.5,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 26.5650511771,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "chebyshev",
-        "_background.x_min": {
-          "value": 15.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.x_max": {
-          "value": 160.0,
-          "free": false,
-          "uncertainty": 0.0
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-xray-cwl_lam7o3-p021/project",
-      "experiment": "p021",
-      "sha256": "d166c4fa0b68e1ce01791d070d96bdde27b5ed69f750a5c8bd14a1919647a01b",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        0.0052581048,
-        15.337892,
-        0.010516209804663924,
-        1459
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.04,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.01,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.001,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.1,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 30.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 0.207109,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "line-segment",
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
-      "experiment": "bm01",
-      "sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        3.67257,
-        63.0724,
-        0.018785524984187223,
-        3163
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "wk1995",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_data_source.file_name": "latp_312.dat",
-        "_calculator.type": "crysta",
-        "_peak.broad_gauss_u": {
-          "value": 0.019,
-          "free": true,
-          "uncertainty": 0.009000000000000001
-        },
-        "_peak.broad_gauss_v": {
-          "value": 0.019,
-          "free": true,
-          "uncertainty": 0.006
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.0156,
-          "free": true,
-          "uncertainty": 0.0009000000000000001
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.374,
-          "free": true,
-          "uncertainty": 0.016
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.088,
-          "free": true,
-          "uncertainty": 0.005
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0043,
-          "free": true,
-          "uncertainty": 0.0011
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_limit": {
-          "value": 180.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_instrument.setup_wavelength": {
-          "value": 0.69687,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": -0.0388,
-          "free": true,
-          "uncertainty": 0.0014
-        },
-        "_absorption.type": "cylinder-hewat",
-        "_absorption.mu_r": {
-          "value": 0.3,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment",
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "experiment": "bm01",
-      "sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        3.67257,
-        63.0724,
-        0.018785524984187223,
-        3163
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "wk1995",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_data_source.file_name": "latp_312.dat",
-        "_calculator.type": "crysta",
-        "_peak.broad_gauss_u": {
-          "value": 0.019,
-          "free": true,
-          "uncertainty": 0.009000000000000001
-        },
-        "_peak.broad_gauss_v": {
-          "value": 0.019,
-          "free": true,
-          "uncertainty": 0.006
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.0156,
-          "free": true,
-          "uncertainty": 0.0009000000000000001
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.374,
-          "free": true,
-          "uncertainty": 0.016
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.088,
-          "free": true,
-          "uncertainty": 0.005
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0043,
-          "free": true,
-          "uncertainty": 0.0011
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_limit": {
-          "value": 180.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 8.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_instrument.setup_wavelength": {
-          "value": 0.69687,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": -0.0388,
-          "free": true,
-          "uncertainty": 0.0014
-        },
-        "_absorption.type": "cylinder-hewat",
-        "_absorption.mu_r": {
-          "value": 0.3,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.type": "line-segment",
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-xray-cwl_nacl_simulation/project",
-      "experiment": "lab",
-      "sha256": "219e05053736474497f7a37b2a16f273feef817129aa860ee9289bba4fb9fe8e",
-      "peakType": "cwl-tch-pseudo-voigt",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "broad_lorentz_x",
-        "broad_lorentz_y"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        10.0,
-        150.0,
-        0.02,
-        7001
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_instrument.setup_wavelength": {
-          "value": 1.5406,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.5,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 26.5650511771,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.type": "cwl-tch-pseudo-voigt",
-        "_peak.broad_gauss_u": {
-          "value": 0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.1,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_x": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.broad_lorentz_y": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_min": {
-          "value": 10.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_max": {
-          "value": 150.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_data_range.two_theta_step": {
-          "value": 0.02,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": null
-        }
-      },
-      "loops": {}
-    },
-    {
-      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab/project",
-      "experiment": "lab",
-      "sha256": "ca3f995c61a0af07ffb660b5cef344a87f87ed79c7918704a595538c41662230",
-      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
-      "mode": "cwl",
-      "peakFields": [
-        "broad_gauss_u",
-        "broad_gauss_v",
-        "broad_gauss_w",
-        "mixing_eta_0",
-        "mixing_eta_1",
-        "asym_beba_a0",
-        "asym_beba_b0",
-        "asym_beba_a1",
-        "asym_beba_b1",
-        "asym_beba_limit"
-      ],
-      "unusedFreeFields": [],
-      "peakDefaults": {},
-      "instrumentFields": [
-        "setup_wavelength",
-        "calib_twotheta_offset",
-        "setup_polarization_coefficient",
-        "setup_monochromator_twotheta",
-        "setup_wavelength_2",
-        "setup_wavelength_2_to_1_ratio"
-      ],
-      "range": [
-        10.0,
-        160.0,
-        0.025,
-        6001
-      ],
-      "scalars": {
-        "_edi.schema_version": {
-          "value": 3.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_experiment_type.sample_form": "powder",
-        "_experiment_type.beam_mode": "constant wavelength",
-        "_experiment_type.radiation_probe": "xray",
-        "_experiment_type.scattering_type": "bragg",
-        "_scattering_source.xray_form_factor": "it1992",
-        "_scattering_source.xray_dispersion": "sasaki1989",
-        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
-        "_peak.broad_gauss_u": {
-          "value": 0.02,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_v": {
-          "value": -0.02,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.broad_gauss_w": {
-          "value": 0.008,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_0": {
-          "value": 0.5,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.mixing_eta_1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_a0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_b0": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_peak.asym_beba_a1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_b1": {
-          "value": 0.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.asym_beba_limit": {
-          "value": 160.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_peak.cutoff_fwhm": {
-          "value": 48.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength": {
-          "value": 1.54056,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2": {
-          "value": 1.5444,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_wavelength_2_to_1_ratio": {
-          "value": 0.5,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_polarization_coefficient": {
-          "value": 0.5,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.setup_monochromator_twotheta": {
-          "value": 26.5650511771,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_instrument.calib_twotheta_offset": {
-          "value": 0.0,
-          "free": true,
-          "uncertainty": null
-        },
-        "_background.type": "chebyshev",
-        "_background.x_min": {
-          "value": 15.0,
-          "free": false,
-          "uncertainty": 0.0
-        },
-        "_background.x_max": {
-          "value": 160.0,
           "free": false,
           "uncertainty": 0.0
         }
@@ -127070,29 +123531,3795 @@ var frozen = {
           }
         ]
       }
+    },
+    {
+      "project": "tests/fixtures/e04_t1/eta-project",
+      "experiment": "experiment",
+      "sha256": "ea9233a144911683df0059636a1511c5dc9a38365e066fb177793e2aa0b90664",
+      "peakType": "cwl-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.37,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0023,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "tests/fixtures/e04_t1/gaussian-project",
+      "experiment": "experiment",
+      "sha256": "882fae1d1e7511d1ea39e6eec8c68659ad8687fbcfc8ec0497b6559c11740fcb",
+      "peakType": "cwl-gaussian",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-gaussian",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "tests/fixtures/e04_t1/lorentzian-project",
+      "experiment": "experiment",
+      "sha256": "67d398886934ceda26fc55fa765859ddc0f80d1e673aba8aa38e41c7531e9f27",
+      "peakType": "cwl-lorentzian",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        20.25,
+        80.25,
+        30.0,
+        3
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_peak.type": "cwl-lorentzian",
+        "_peak.broad_gauss_u": {
+          "value": 0.048457,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.083053,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.04,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_background.type": "line-segment",
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.4,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20/project",
+      "experiment": "d20",
+      "sha256": "c8d4fdecf1deb36ac5b190425365067c4e71714c071340c7c4cc5e22a2d8f786",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        8.0953,
+        150.0953,
+        0.10021171489061398,
+        1418
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.2,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.4,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.87,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project",
+      "experiment": "d20",
+      "sha256": "841aa1a1ca4c6f39c3eb82664ebc9832c47ca4fe53650da29c62a43626b54393",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        0.0953,
+        150.6953,
+        0.10006644518272424,
+        1506
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_data_source.file_name": "01_001_497p3790.dat",
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.2,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.4,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.87,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_hs-hrpt/project",
+      "experiment": "hrpt",
+      "sha256": "c2c754ec57afc404092bd505e22dce51bcc17d91f391b378c7559e969e6cd800",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        3.95,
+        164.9,
+        0.05,
+        3220
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.broad_gauss_u": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.2,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.2,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_limit": {
+          "value": 180.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.89,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt/project",
+      "experiment": "hrpt",
+      "sha256": "502941566652e6acfff532d1c9a4b5b73e7827a66d22d3fb8903078d2d310286",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        10.0,
+        164.85,
+        0.049999999999999996,
+        3098
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.08,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.08,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.494,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.3,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_lbco_simulation/project",
+      "experiment": "hrpt",
+      "sha256": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        10.0,
+        160.0,
+        0.05,
+        3001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_instrument.setup_wavelength": {
+          "value": 1.494,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_min": {
+          "value": 10.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_max": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_step": {
+          "value": 0.05,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_lmo-echidna/project",
+      "experiment": "echidna",
+      "sha256": "56c050bdeb4188c636ef5afbacc5d1d36353690dfb3c2689ae48b85642612d6d",
+      "peakType": "cwl-tch-pseudo-voigt-fcj",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y",
+        "asym_fcj_1",
+        "asym_fcj_2"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "calib_sample_displacement",
+        "calib_sample_transparency"
+      ],
+      "range": [
+        4.01383,
+        163.9066,
+        0.04998211003438574,
+        3200
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "cwl-tch-pseudo-voigt-fcj",
+        "_peak.broad_gauss_u": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.3,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.4,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_fcj_1": {
+          "value": 0.08,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_fcj_2": {
+          "value": 0.08,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.6215,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_sample_displacement": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_sample_transparency": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.3,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_y2o3-spodi/project",
+      "experiment": "spodi",
+      "sha256": "54b3966a0f3286aae339911ff388f3280f6552946e312b2ed5258542a565e346",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        0.95,
+        153.9,
+        0.05,
+        3060
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.04,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.07,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54822,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project",
+      "experiment": "spodi",
+      "sha256": "a0a6cdf5fe6d807a7241f7e68456804c212120119e3bac264293f0c90723fc7c",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        4.05,
+        151.95,
+        0.04999999999999999,
+        2959
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.broad_gauss_u": {
+          "value": 0.04,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.05,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_limit": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 20.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54816,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.0221,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris/project",
+      "experiment": "polaris",
+      "sha256": "f76663b87db3b3356426a1fd3be25a2e26a8b10fd808978897a4bf15b77df789",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        3001.589,
+        19004.658,
+        4.334525731310943,
+        3693
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 4.2,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.2971,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.043085,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.002867,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 40.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 5.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 145.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 6176.03076,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": -1.92194,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "chebyshev",
+        "_background.x_min": {
+          "value": 3001.5891,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.x_max": {
+          "value": 19004.6582,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl/project",
+      "experiment": "pearl",
+      "sha256": "457cf6771c73209cd11a20b4e9e3aed81f0e14fb3f4f082e20bed9248c8ab0ec",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        1500.25,
+        19400.1875,
+        7.094703725723345,
+        2524
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.3,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.03,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.03,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 80.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 4.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 5.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 4680.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 1.7621,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "polynomial",
+        "_background.origin": {
+          "value": 7000.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
+      "experiment": "expt_n2",
+      "sha256": "3c963915d618f98cf845e8d45b2b5171debc9628fec033e144df231355c913aa",
+      "peakType": "tof-pseudo-voigt",
+      "mode": "tof",
+      "peakFields": [
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        40094.52341631884,
+        135592.47482202607,
+        31.85388639283096,
+        2999
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-pseudo-voigt",
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 900.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 1000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 300.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 5.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 54902.1875,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
+      "experiment": "expt_s2",
+      "sha256": "ec5dcf452a79597dfb7d97c2ff4b3d44100dbba834c5da8b914329d5f21fe792",
+      "peakType": "tof-pseudo-voigt",
+      "mode": "tof",
+      "peakFields": [
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        40094.52341631884,
+        135592.47482202607,
+        31.85388639283096,
+        2999
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-pseudo-voigt",
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 900.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 1000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 300.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 5.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 54902.1875,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment",
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project",
+      "experiment": "mcstas",
+      "sha256": "6479750462101d7af25eb5f73226347791e788535c1253abb286086e9c97dc0e",
+      "peakType": "tof-jorgensen",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        41168.12859292999,
+        146787.37361476864,
+        105.72496999183048,
+        1000
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen",
+        "_peak.broad_gauss_sigma_0": {
+          "value": 50000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": -50000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 20000.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.006,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.004,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 94.90931761529106,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 58724.76869981215,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
+      "experiment": "wish_1_10",
+      "sha256": "24dd6b5278ac7369ad528da944b324e3a5d0472cd2f448c289faeb57ec78bd27",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        4862.5732,
+        256691.6094,
+        60.231771394403246,
+        4182
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 15.4063,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 8.2904,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.004707,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.137368,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.014439,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.05507,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 27.081,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 4985.32,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 1.85733,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
+      "experiment": "wish_2_9",
+      "sha256": "cc447addb349b2956750e4e8d4da74e42325acd3be70163c533f2a2b76beca65",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        6075.1914,
+        135112.4062,
+        30.981324081632653,
+        4166
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 34.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 11.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 1.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.0061,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.096,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.053,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.031,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 58.33,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 10389.9,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 1.85233,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
+      "experiment": "wish_3_8",
+      "sha256": "14265d219fe6a6efa50b4b074d33ac8713ad6cb7d3cd7b013f13085cb976857f",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        7549.5366,
+        116924.6406,
+        27.557345427059712,
+        3970
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 30.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 8.3,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0002,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.0069,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.032,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_0": {
+          "value": -0.016,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.16,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 90.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 15105.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": 1.00785,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
+      "experiment": "wish_4_7",
+      "sha256": "a3833fabd3d3c4b59403d5c0d995e7ece5db4e40efcdc208024d1f0fd19c8c5f",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        7468.4165,
+        109083.4844,
+        25.139799084611578,
+        4043
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 14.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 8.9,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.0074,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.017,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_0": {
+          "value": -0.015,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.16,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 121.66,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 18660.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": -0.47488,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish/project",
+      "experiment": "wish_5_6",
+      "sha256": "2db147368b28fac20b85d9dd62479e73cf6c1c620e3d97c7a65224f34a29836d",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        7305.1274,
+        103417.6719,
+        23.367990396304403,
+        4114
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 7.7,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 0.0019,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.0077,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.012,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_0": {
+          "value": -0.012,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.14,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 152.827,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 20772.9,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": -1.08308,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "cylinder",
+        "_absorption.abscor1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_absorption.abscor2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_si-sepd/project",
+      "experiment": "sepd",
+      "sha256": "5720646987f9ce601cfa32532c369d2fb7e5997a7635004b856c1103dde7a6b8",
+      "peakType": "tof-jorgensen-von-dreele",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain",
+        "broad_lorentz_gamma_0",
+        "broad_lorentz_gamma_1",
+        "broad_lorentz_gamma_2",
+        "broad_lorentz_size",
+        "broad_lorentz_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        2000.0,
+        29995.0,
+        5.0,
+        5600
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "tof-jorgensen-von-dreele",
+        "_peak.cutoff_fwhm": {
+          "value": 8.2,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.5971,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.04,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_0": {
+          "value": 3.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 30.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_gamma_1": {
+          "value": 3.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_gamma_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_twotheta_bank": {
+          "value": 144.845,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 7476.91,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": -1.54,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_reciprocal": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_absorption.type": "none",
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-tof_si_simulation/project",
+      "experiment": "sepd",
+      "sha256": "93449e1da42b2bdd244727e0d11234a906f950691f431e2e7b9e54323ba8a4f3",
+      "peakType": "tof-jorgensen",
+      "mode": "tof",
+      "peakFields": [
+        "rise_alpha_0",
+        "rise_alpha_1",
+        "decay_beta_0",
+        "decay_beta_1",
+        "broad_gauss_sigma_0",
+        "broad_gauss_sigma_1",
+        "broad_gauss_sigma_2",
+        "broad_gauss_size",
+        "broad_gauss_strain"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_twotheta_bank",
+        "calib_d_to_tof_offset",
+        "calib_d_to_tof_linear",
+        "calib_d_to_tof_quadratic",
+        "calib_d_to_tof_reciprocal"
+      ],
+      "range": [
+        5000.0,
+        15000.0,
+        2.0,
+        5001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "time-of-flight",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_instrument.setup_twotheta_bank": {
+          "value": 144.845,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_linear": {
+          "value": 7476.91,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_d_to_tof_quadratic": {
+          "value": -1.54,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "tof-jorgensen",
+        "_peak.broad_gauss_sigma_0": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_1": {
+          "value": 40.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_sigma_2": {
+          "value": 2.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_size": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_strain": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_0": {
+          "value": 0.04221,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.decay_beta_1": {
+          "value": 0.00946,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_0": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.rise_alpha_1": {
+          "value": 0.5971,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 12.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.time_of_flight_min": {
+          "value": 5000.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.time_of_flight_max": {
+          "value": 15000.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.time_of_flight_step": {
+          "value": 2.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
+      "experiment": "d1a",
+      "sha256": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset"
+      ],
+      "range": [
+        10.0,
+        155.45,
+        0.049999999999999996,
+        2910
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.broad_gauss_u": {
+          "value": 0.2,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.4,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_limit": {
+          "value": 180.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.91,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment"
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
+      "experiment": "lab",
+      "sha256": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        10.0,
+        160.0,
+        0.025,
+        6001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.broad_gauss_u": {
+          "value": 0.02,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.02,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.008,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_limit": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 1.5444,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 26.5650511771,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "chebyshev",
+        "_background.x_min": {
+          "value": 15.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.x_max": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_lam7o3-p021/project",
+      "experiment": "p021",
+      "sha256": "d166c4fa0b68e1ce01791d070d96bdde27b5ed69f750a5c8bd14a1919647a01b",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        0.0052581048,
+        15.337892,
+        0.010516209804663924,
+        1459
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.04,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.01,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.001,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.1,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 30.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 0.207109,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "line-segment",
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
+      "experiment": "bm01",
+      "sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        3.67257,
+        63.0724,
+        0.018785524984187223,
+        3163
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "wk1995",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_data_source.file_name": "latp_312.dat",
+        "_calculator.type": "crysta",
+        "_peak.broad_gauss_u": {
+          "value": 0.019,
+          "free": true,
+          "uncertainty": 0.009000000000000001
+        },
+        "_peak.broad_gauss_v": {
+          "value": 0.019,
+          "free": true,
+          "uncertainty": 0.006
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.0156,
+          "free": true,
+          "uncertainty": 0.0009000000000000001
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.374,
+          "free": true,
+          "uncertainty": 0.016
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.088,
+          "free": true,
+          "uncertainty": 0.005
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0043,
+          "free": true,
+          "uncertainty": 0.0011
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_limit": {
+          "value": 180.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_instrument.setup_wavelength": {
+          "value": 0.69687,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": -0.0388,
+          "free": true,
+          "uncertainty": 0.0014
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.3,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment",
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "experiment": "bm01",
+      "sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        3.67257,
+        63.0724,
+        0.018785524984187223,
+        3163
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "wk1995",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_data_source.file_name": "latp_312.dat",
+        "_calculator.type": "crysta",
+        "_peak.broad_gauss_u": {
+          "value": 0.019,
+          "free": true,
+          "uncertainty": 0.009000000000000001
+        },
+        "_peak.broad_gauss_v": {
+          "value": 0.019,
+          "free": true,
+          "uncertainty": 0.006
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.0156,
+          "free": true,
+          "uncertainty": 0.0009000000000000001
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.374,
+          "free": true,
+          "uncertainty": 0.016
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.088,
+          "free": true,
+          "uncertainty": 0.005
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0043,
+          "free": true,
+          "uncertainty": 0.0011
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_limit": {
+          "value": 180.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 8.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_instrument.setup_wavelength": {
+          "value": 0.69687,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": -0.0388,
+          "free": true,
+          "uncertainty": 0.0014
+        },
+        "_absorption.type": "cylinder-hewat",
+        "_absorption.mu_r": {
+          "value": 0.3,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.type": "line-segment",
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_nacl_simulation/project",
+      "experiment": "lab",
+      "sha256": "219e05053736474497f7a37b2a16f273feef817129aa860ee9289bba4fb9fe8e",
+      "peakType": "cwl-tch-pseudo-voigt",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "broad_lorentz_x",
+        "broad_lorentz_y"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        10.0,
+        150.0,
+        0.02,
+        7001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_instrument.setup_wavelength": {
+          "value": 1.5406,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 26.5650511771,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.type": "cwl-tch-pseudo-voigt",
+        "_peak.broad_gauss_u": {
+          "value": 0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.1,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_x": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.broad_lorentz_y": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_min": {
+          "value": 10.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_max": {
+          "value": 150.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_data_range.two_theta_step": {
+          "value": 0.02,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": null
+        }
+      },
+      "loops": {}
+    },
+    {
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab/project",
+      "experiment": "lab",
+      "sha256": "ca3f995c61a0af07ffb660b5cef344a87f87ed79c7918704a595538c41662230",
+      "peakType": "cwl-pseudo-voigt-berar-baldinozzi",
+      "mode": "cwl",
+      "peakFields": [
+        "broad_gauss_u",
+        "broad_gauss_v",
+        "broad_gauss_w",
+        "mixing_eta_0",
+        "mixing_eta_1",
+        "asym_beba_a0",
+        "asym_beba_b0",
+        "asym_beba_a1",
+        "asym_beba_b1",
+        "asym_beba_limit"
+      ],
+      "unusedFreeFields": [],
+      "peakDefaults": {},
+      "instrumentFields": [
+        "setup_wavelength",
+        "calib_twotheta_offset",
+        "setup_polarization_coefficient",
+        "setup_monochromator_twotheta",
+        "setup_wavelength_2",
+        "setup_wavelength_2_to_1_ratio"
+      ],
+      "range": [
+        10.0,
+        160.0,
+        0.025,
+        6001
+      ],
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "powder",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "xray",
+        "_experiment_type.scattering_type": "bragg",
+        "_scattering_source.xray_form_factor": "it1992",
+        "_scattering_source.xray_dispersion": "sasaki1989",
+        "_peak.type": "cwl-pseudo-voigt-berar-baldinozzi",
+        "_peak.broad_gauss_u": {
+          "value": 0.02,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_v": {
+          "value": -0.02,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.broad_gauss_w": {
+          "value": 0.008,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_0": {
+          "value": 0.5,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.mixing_eta_1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_a0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_b0": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_peak.asym_beba_a1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_b1": {
+          "value": 0.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.asym_beba_limit": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_peak.cutoff_fwhm": {
+          "value": 48.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength": {
+          "value": 1.54056,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2": {
+          "value": 1.5444,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_wavelength_2_to_1_ratio": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_polarization_coefficient": {
+          "value": 0.5,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.setup_monochromator_twotheta": {
+          "value": 26.5650511771,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_instrument.calib_twotheta_offset": {
+          "value": 0.0,
+          "free": true,
+          "uncertainty": null
+        },
+        "_background.type": "chebyshev",
+        "_background.x_min": {
+          "value": 15.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_background.x_max": {
+          "value": 160.0,
+          "free": false,
+          "uncertainty": 0.0
+        }
+      },
+      "loops": {}
     }
-  ],
-  "catalogue_ids": [
-    "pd-neut-cwl_lbco_simulation",
-    "pd-neut-tof_si_simulation",
-    "pd-xray-cwl_nacl_simulation",
-    "pd-neut-cwl_lbco-hrpt",
-    "pd-neut-cwl_hs-hrpt",
-    "pd-neut-cwl_cosio-d20",
-    "pd-neut-cwl_lmo-echidna",
-    "pd-neut-cwl_y2o3-spodi",
-    "pd-neut-cwl_yalo3-al2o3-spodi",
-    "pd-neut-tof_si-sepd",
-    "pd-neut-tof_cecoal-polaris",
-    "pd-neut-tof_ceo2-pearl",
-    "pd-neut-tof_lbco-si-mcstas",
-    "pd-neut-tof_ncaf-wish",
-    "pd-neut-tof_ferrite-austenite-beer",
-    "pd-xray-cwl_pbso4-lab",
-    "pd-xray-cwl_lam7o3-p021",
-    "pd-neut-xray-cwl_pbso4-d1a-lab",
-    "pd-neut-cwl_cosio-d20_scan",
-    "pd-xray-cwl_latp-bm01_scan"
   ],
   "app_only_ids": [
     "sc-neut-cwl_tb2ti2o7-heidi_fit",
@@ -127123,5 +127350,27 @@ var frozen = {
     "sc-neut-cwl_tb2ti2o7-heidi_fit",
     "sc-neut-cwl_pr2nio4-5c2_fit",
     "sc-neut-tof_taurine_fit"
+  ],
+  "catalogue_ids": [
+    "pd-neut-cwl_lbco_simulation",
+    "pd-neut-tof_si_simulation",
+    "pd-xray-cwl_nacl_simulation",
+    "pd-neut-cwl_lbco-hrpt",
+    "pd-neut-cwl_hs-hrpt",
+    "pd-neut-cwl_cosio-d20",
+    "pd-neut-cwl_lmo-echidna",
+    "pd-neut-cwl_y2o3-spodi",
+    "pd-neut-cwl_yalo3-al2o3-spodi",
+    "pd-neut-tof_si-sepd",
+    "pd-neut-tof_cecoal-polaris",
+    "pd-neut-tof_ceo2-pearl",
+    "pd-neut-tof_lbco-si-mcstas",
+    "pd-neut-tof_ncaf-wish",
+    "pd-neut-tof_ferrite-austenite-beer",
+    "pd-xray-cwl_pbso4-lab",
+    "pd-xray-cwl_lam7o3-p021",
+    "pd-neut-xray-cwl_pbso4-d1a-lab",
+    "pd-neut-cwl_cosio-d20_scan",
+    "pd-xray-cwl_latp-bm01_scan"
   ]
 };

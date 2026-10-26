@@ -80,6 +80,8 @@ def test_every_status_column_is_in_the_convention_census():
         start = declaration.start()
         header = contents[start : start + len(block(mask(contents[start:]), 'header:'))]
         headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
+        if re.search(r'HeaderLabel\s*\{[^}]*uid:\s*"data.calc_status"', header):
+            headings.append('status')
         if headings:
             actual[path.relative_to(PAGES).as_posix()] = headings
     assert actual == {path: [heading] for path, (heading, _) in COLUMNS.items()}, (

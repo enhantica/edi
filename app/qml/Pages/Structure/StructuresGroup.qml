@@ -115,7 +115,7 @@ EaElements.GroupBox {
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
-                        group.webRequest = WebFiles.openFiles(".edi", false);
+                        group.webRequest = WebFiles.openFiles(".cif,.edi", false);
                     } else {
                         loadDialog.open();
                     }
@@ -172,8 +172,8 @@ EaElements.GroupBox {
 
     FileDialog {
         id: loadDialog
-        title: qsTr("Load a structure from an .edi block file")
-        nameFilters: [qsTr("edi block files (*.edi)")]
+        title: qsTr("Load a structure from a CIF or .edi file")
+        nameFilters: [qsTr("Structure files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadStructure(selectedFile)
     }
 }

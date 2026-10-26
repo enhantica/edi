@@ -45,6 +45,11 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString beamModeToken READ beamModeToken CONSTANT)
     Q_PROPERTY(QString radiationProbeToken READ radiationProbeToken CONSTANT)
     Q_PROPERTY(QString scatteringTypeToken READ scatteringTypeToken CONSTANT)
+    // Each type axis's values by their dictionary names, for the Experiment type group's selectors.
+    Q_PROPERTY(edi_app::OptionListModel* sampleFormOptions READ sampleFormOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* beamModeOptions READ beamModeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* radiationProbeOptions READ radiationProbeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* scatteringTypeOptions READ scatteringTypeOptions CONSTANT)
     Q_PROPERTY(QString peakType READ peakType WRITE setPeakType NOTIFY peakTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
@@ -162,6 +167,10 @@ class ExperimentViewModel : public QObject {
     QString beamModeToken() const;
     QString radiationProbeToken() const;
     QString scatteringTypeToken() const;
+    OptionListModel* sampleFormOptions() const { return sample_form_options_; }
+    OptionListModel* beamModeOptions() const { return beam_mode_options_; }
+    OptionListModel* radiationProbeOptions() const { return radiation_probe_options_; }
+    OptionListModel* scatteringTypeOptions() const { return scattering_type_options_; }
     QString peakType() const { return peak_type_; }
     void setPeakType(const QString& token);
     OptionListModel* peakTypeOptions() const { return peak_type_options_; }
@@ -354,6 +363,10 @@ class ExperimentViewModel : public QObject {
     QString name_, peak_type_, absorption_type_, background_type_, linked_structure_id_, last_error_, fit_outcome_;
     double background_origin_ = qQNaN(), background_x_min_ = qQNaN(), background_x_max_ = qQNaN();
     double cutoff_fwhm_ = 0.0, dataset_weight_ = 1.0;
+    OptionListModel* sample_form_options_;
+    OptionListModel* beam_mode_options_;
+    OptionListModel* radiation_probe_options_;
+    OptionListModel* scattering_type_options_;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
     OptionListModel* extinction_type_options_;

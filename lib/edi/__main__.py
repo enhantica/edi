@@ -398,6 +398,7 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
         tally = _ScanTally()
         prior = [0]
         previous = [0.0]
+        variant = edi._edi._metric_variant(project)
 
         def _emit_progress(line: str) -> None:
             if tty:
@@ -443,7 +444,7 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
             )
 
         def on_scan_iteration(record: object) -> None:
-            sys.stdout.write(edi.iteration_line(record, previous[0]) + '\n')
+            sys.stdout.write(edi.iteration_line(record, previous[0], variant) + '\n')
             sys.stdout.flush()
             previous[0] = record.reduced_chi_square
 
@@ -546,21 +547,23 @@ def _stream_single_fit(project: edi.Project, verbosity, project_name: str) -> in
     # The `change` basis is the previous row's reduced chi2; iteration 1's basis is the pre-fit
     # row's, so it shows its improvement over the initial model. Boxed for the callbacks.
     previous = [0.0]
+    # The metrics are named by the fit's sample form: a single crystal's are R(F²) and wR(F²).
+    variant = edi._edi._metric_variant(project)
 
     def on_start(preamble: object) -> None:
-        sys.stdout.write(edi.stream_header(preamble, project_name))
+        sys.stdout.write(edi.stream_header(preamble, project_name, variant))
         sys.stdout.flush()
         previous[0] = preamble.pre_fit.reduced_chi_square
 
     def on_iteration(record: object) -> None:
-        sys.stdout.write(edi.iteration_line(record, previous[0]) + '\n')
+        sys.stdout.write(edi.iteration_line(record, previous[0], variant) + '\n')
         sys.stdout.flush()
         previous[0] = record.reduced_chi_square
 
     outcome = _fit(project, on_iteration=on_iteration, on_start=on_start)
-    sys.stdout.write(edi.summary_line(outcome))
+    sys.stdout.write(edi.summary_line(outcome, variant))
     if verbosity == edi.VerbosityEnum.FULL:
-        sys.stdout.write(edi.parameter_table(outcome))
+        sys.stdout.write(edi.parameter_table(outcome, project))
     sys.stdout.flush()
     return _exit_code(outcome)
 
@@ -780,10 +783,12 @@ def main(argv: list[str] | None = None) -> int:
         if record:
             print(record, end='')
         print(f'edi fit: {error}', file=sys.stderr)
-        # An engine refusal keeps its catalogue code, so a script can tell the causes apart.
+        # An engine refusal keeps its catalogue code, so a script can tell the causes apart. A file
+        # refusal (IoError) carries its diagnostics as mappings, an engine one as objects.
         for diagnostic in getattr(error, 'diagnostics', ()):
-            if diagnostic.code:
-                print(f'edi fit: {diagnostic.code}', file=sys.stderr)
+            code = diagnostic.get('code') if isinstance(diagnostic, dict) else diagnostic.code
+            if code:
+                print(f'edi fit: {code}', file=sys.stderr)
         return 1
 
 

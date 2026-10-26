@@ -64,6 +64,11 @@ var frozen = {
     "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/structures/YAlO3.edi": "7a4c6c27b6314bca5d179350c2ee75e1e27565a6c59629c17ed11662e29a2ccb",
     "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/experiments/spodi.edi": "524a651bf9680b706da031ee998f1f8be52d6c1e2bf9038124ee89a5d3890279",
     "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/analysis/analysis.edi": "8cae35fd43bf1ae284f382fb2156e824f67d8a4ee2bd5ad0e47a5ae21785506f",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
     "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29",
     "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi": "830696bd336668d52a2d0358fae8748d7447a2e01fb21df34953a4475ab0607f",
     "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi": "7936851a579a0171a425595f5090909d327362a0da203615725f2f2ceacbf642",
@@ -87,15 +92,6 @@ var frozen = {
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382",
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d",
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/analysis/analysis.edi": "64a5254af5f390f3c3a49e84affc9bd4a6a074d2fe50ea5f97e5864c444c7f71",
-    "tests/fixtures/e04_t1/xray-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
-    "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi": "9f3b4594e75fea493d53bcad9dcdc5a813c8052043102130691b8956c141fc30",
-    "tests/fixtures/e04_t1/xray-project/analysis/analysis.edi": "7515093456b82f2f2b413642dc503ce3cf723cf0951d25bc23ddddc26ddafcce",
-    "tests/fixtures/e04_t1/editable-project/structures/lbco.edi": "7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2",
-    "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
-    "tests/fixtures/e04_t1/editable-project/analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
-    "tests/fixtures/e04_t1/warning-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
-    "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi": "9f3b4594e75fea493d53bcad9dcdc5a813c8052043102130691b8956c141fc30",
-    "tests/fixtures/e04_t1/warning-project/analysis/analysis.edi": "33c098eabbed069d94371c84c54edd22ba57e04c41fd100032bde29f45e2e167",
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401",
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
@@ -105,11 +101,6 @@ var frozen = {
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/structures/diamond.edi": "82e667fcdfa28dc58d2222fe03df3b9bac6f15bf598ab6ffeb236cc0f7d21c86",
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/experiments/dream.edi": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea",
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
-    "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi": "c4cd9712556b9d39513b186e86d5c87a04455111c0e34ca064875e36ba5eabff",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a",
     "docs/user/cli/pd-neut-cwl_lbco_simulation/project/analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
@@ -209,7 +200,16 @@ var frozen = {
     "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77",
     "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
     "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
-    "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
+    "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
+    "tests/fixtures/e04_t1/xray-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
+    "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi": "9f3b4594e75fea493d53bcad9dcdc5a813c8052043102130691b8956c141fc30",
+    "tests/fixtures/e04_t1/xray-project/analysis/analysis.edi": "7515093456b82f2f2b413642dc503ce3cf723cf0951d25bc23ddddc26ddafcce",
+    "tests/fixtures/e04_t1/editable-project/structures/lbco.edi": "7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2",
+    "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
+    "tests/fixtures/e04_t1/editable-project/analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+    "tests/fixtures/e04_t1/warning-project/structures/structure.edi": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
+    "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi": "9f3b4594e75fea493d53bcad9dcdc5a813c8052043102130691b8956c141fc30",
+    "tests/fixtures/e04_t1/warning-project/analysis/analysis.edi": "33c098eabbed069d94371c84c54edd22ba57e04c41fd100032bde29f45e2e167"
   },
   "cases": [
     {
@@ -2848,6 +2848,201 @@ var frozen = {
       ]
     },
     {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_c2221",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_c2221",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "20",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "C 2 2 21",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_p63mc",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "alpo4_p63mc",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "hexagonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "186",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P 63 m c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:latp",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "latp",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "trigonal",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "167",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "R -3 c",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "h",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:experiment_type:bm01",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "bm01",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:data:bm01",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "bm01",
+      "fields": [
+        [
+          "range.minimum",
+          3.67257,
+          "number"
+        ],
+        [
+          "range.maximum",
+          63.0724,
+          "number"
+        ],
+        [
+          "range.step",
+          0.018785524984187223,
+          "number"
+        ],
+        [
+          "range.points",
+          3163,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:sequential_fit",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "experiments/bm01_scan",
+          "readonly"
+        ],
+        [
+          "sequentialFit.filePattern",
+          "*.dat",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "true",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:engines",
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
       "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project:space_group:fe",
       "path": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
       "page": "structure",
@@ -3708,336 +3903,6 @@ var frozen = {
       ]
     },
     {
-      "tag": "tests/fixtures/e04_t1/xray-project:space_group:structure",
-      "path": "tests/fixtures/e04_t1/xray-project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "structure",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "cubic",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "225",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "F m -3 m",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "1",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/xray-project:experiment_type:experiment",
-      "path": "tests/fixtures/e04_t1/xray-project",
-      "page": "experiment",
-      "tier": "basic",
-      "group": "experiment_type",
-      "selection": "experiment",
-      "fields": [
-        [
-          "experimentType.sampleForm",
-          "powder",
-          "disabled"
-        ],
-        [
-          "experimentType.beamMode",
-          "constant wavelength",
-          "disabled"
-        ],
-        [
-          "experimentType.radiationProbe",
-          "xray",
-          "disabled"
-        ],
-        [
-          "experimentType.scatteringType",
-          "bragg",
-          "disabled"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/xray-project:data:experiment",
-      "path": "tests/fixtures/e04_t1/xray-project",
-      "page": "experiment",
-      "tier": "extras",
-      "group": "data",
-      "selection": "experiment",
-      "fields": [
-        [
-          "range.minimum",
-          20.25,
-          "number"
-        ],
-        [
-          "range.maximum",
-          80.25,
-          "number"
-        ],
-        [
-          "range.step",
-          30.0,
-          "number"
-        ],
-        [
-          "range.points",
-          3,
-          "number"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/xray-project:engines",
-      "path": "tests/fixtures/e04_t1/xray-project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "engines",
-      "selection": null,
-      "fields": [
-        [
-          "statusBar.calculator",
-          "crysta",
-          "label"
-        ],
-        [
-          "statusBar.minimizer",
-          "crysta",
-          "label"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/editable-project:space_group:lbco",
-      "path": "tests/fixtures/e04_t1/editable-project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "lbco",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "cubic",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "221",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "P m -3 m",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "1",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/editable-project:experiment_type:hrpt",
-      "path": "tests/fixtures/e04_t1/editable-project",
-      "page": "experiment",
-      "tier": "basic",
-      "group": "experiment_type",
-      "selection": "hrpt",
-      "fields": [
-        [
-          "experimentType.sampleForm",
-          "powder",
-          "disabled"
-        ],
-        [
-          "experimentType.beamMode",
-          "constant wavelength",
-          "disabled"
-        ],
-        [
-          "experimentType.radiationProbe",
-          "neutron",
-          "disabled"
-        ],
-        [
-          "experimentType.scatteringType",
-          "bragg",
-          "disabled"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/editable-project:data:hrpt",
-      "path": "tests/fixtures/e04_t1/editable-project",
-      "page": "experiment",
-      "tier": "extras",
-      "group": "data",
-      "selection": "hrpt",
-      "fields": [
-        [
-          "range.minimum",
-          10.0,
-          "number"
-        ],
-        [
-          "range.maximum",
-          164.85,
-          "number"
-        ],
-        [
-          "range.step",
-          0.049999999999999996,
-          "number"
-        ],
-        [
-          "range.points",
-          3098,
-          "number"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/editable-project:engines",
-      "path": "tests/fixtures/e04_t1/editable-project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "engines",
-      "selection": null,
-      "fields": [
-        [
-          "statusBar.calculator",
-          "crysta",
-          "label"
-        ],
-        [
-          "statusBar.minimizer",
-          "crysta",
-          "label"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/warning-project:space_group:structure",
-      "path": "tests/fixtures/e04_t1/warning-project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "structure",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "cubic",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "225",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "F m -3 m",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "1",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/warning-project:experiment_type:experiment",
-      "path": "tests/fixtures/e04_t1/warning-project",
-      "page": "experiment",
-      "tier": "basic",
-      "group": "experiment_type",
-      "selection": "experiment",
-      "fields": [
-        [
-          "experimentType.sampleForm",
-          "powder",
-          "disabled"
-        ],
-        [
-          "experimentType.beamMode",
-          "constant wavelength",
-          "disabled"
-        ],
-        [
-          "experimentType.radiationProbe",
-          "xray",
-          "disabled"
-        ],
-        [
-          "experimentType.scatteringType",
-          "bragg",
-          "disabled"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/warning-project:data:experiment",
-      "path": "tests/fixtures/e04_t1/warning-project",
-      "page": "experiment",
-      "tier": "extras",
-      "group": "data",
-      "selection": "experiment",
-      "fields": [
-        [
-          "range.minimum",
-          20.25,
-          "number"
-        ],
-        [
-          "range.maximum",
-          80.25,
-          "number"
-        ],
-        [
-          "range.step",
-          30.0,
-          "number"
-        ],
-        [
-          "range.points",
-          3,
-          "number"
-        ]
-      ]
-    },
-    {
-      "tag": "tests/fixtures/e04_t1/warning-project:engines",
-      "path": "tests/fixtures/e04_t1/warning-project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "engines",
-      "selection": null,
-      "fields": [
-        [
-          "statusBar.calculator",
-          "crysta",
-          "label"
-        ],
-        [
-          "statusBar.minimizer",
-          "crysta",
-          "label"
-        ]
-      ]
-    },
-    {
       "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project:space_group:pbso4",
       "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
       "page": "structure",
@@ -4350,201 +4215,6 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project:engines",
       "path": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "engines",
-      "selection": null,
-      "fields": [
-        [
-          "statusBar.calculator",
-          "crysta",
-          "label"
-        ],
-        [
-          "statusBar.minimizer",
-          "crysta",
-          "label"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_c2221",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "alpo4_c2221",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "orthorhombic",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "20",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "C 2 2 21",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "abc",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:alpo4_p63mc",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "alpo4_p63mc",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "hexagonal",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "186",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "P 63 m c",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "h",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:space_group:latp",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "structure",
-      "tier": "basic",
-      "group": "space_group",
-      "selection": "latp",
-      "fields": [
-        [
-          "spaceGroup.crystalSystem",
-          "trigonal",
-          "readonly"
-        ],
-        [
-          "spaceGroup.itNumber",
-          "167",
-          "text"
-        ],
-        [
-          "spaceGroup.nameHM",
-          "R -3 c",
-          "text"
-        ],
-        [
-          "spaceGroup.coordSystemCode",
-          "h",
-          "text"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:experiment_type:bm01",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "experiment",
-      "tier": "basic",
-      "group": "experiment_type",
-      "selection": "bm01",
-      "fields": [
-        [
-          "experimentType.sampleForm",
-          "powder",
-          "disabled"
-        ],
-        [
-          "experimentType.beamMode",
-          "constant wavelength",
-          "disabled"
-        ],
-        [
-          "experimentType.radiationProbe",
-          "xray",
-          "disabled"
-        ],
-        [
-          "experimentType.scatteringType",
-          "bragg",
-          "disabled"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:data:bm01",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "experiment",
-      "tier": "extras",
-      "group": "data",
-      "selection": "bm01",
-      "fields": [
-        [
-          "range.minimum",
-          3.67257,
-          "number"
-        ],
-        [
-          "range.maximum",
-          63.0724,
-          "number"
-        ],
-        [
-          "range.step",
-          0.018785524984187223,
-          "number"
-        ],
-        [
-          "range.points",
-          3163,
-          "number"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:sequential_fit",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
-      "page": "analysis",
-      "tier": "extras",
-      "group": "sequential_fit",
-      "selection": null,
-      "fields": [
-        [
-          "sequentialFit.dataDir",
-          "experiments/bm01_scan",
-          "readonly"
-        ],
-        [
-          "sequentialFit.filePattern",
-          "*.dat",
-          "readonly"
-        ],
-        [
-          "sequentialFit.reverse",
-          "true",
-          "readonly"
-        ]
-      ]
-    },
-    {
-      "tag": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project:engines",
-      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",
@@ -8430,6 +8100,336 @@ var frozen = {
     {
       "tag": "docs/user/cli/sc-neut-tof_taurine_fit/project:engines",
       "path": "docs/user/cli/sc-neut-tof_taurine_fit/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project:space_group:structure",
+      "path": "tests/fixtures/e04_t1/xray-project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "structure",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "225",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F m -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project:experiment_type:experiment",
+      "path": "tests/fixtures/e04_t1/xray-project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "experiment",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project:data:experiment",
+      "path": "tests/fixtures/e04_t1/xray-project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "experiment",
+      "fields": [
+        [
+          "range.minimum",
+          20.25,
+          "number"
+        ],
+        [
+          "range.maximum",
+          80.25,
+          "number"
+        ],
+        [
+          "range.step",
+          30.0,
+          "number"
+        ],
+        [
+          "range.points",
+          3,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project:engines",
+      "path": "tests/fixtures/e04_t1/xray-project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project:space_group:lbco",
+      "path": "tests/fixtures/e04_t1/editable-project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "lbco",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "221",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P m -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project:experiment_type:hrpt",
+      "path": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "hrpt",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project:data:hrpt",
+      "path": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "hrpt",
+      "fields": [
+        [
+          "range.minimum",
+          10.0,
+          "number"
+        ],
+        [
+          "range.maximum",
+          164.85,
+          "number"
+        ],
+        [
+          "range.step",
+          0.049999999999999996,
+          "number"
+        ],
+        [
+          "range.points",
+          3098,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project:engines",
+      "path": "tests/fixtures/e04_t1/editable-project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project:space_group:structure",
+      "path": "tests/fixtures/e04_t1/warning-project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "structure",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "225",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F m -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project:experiment_type:experiment",
+      "path": "tests/fixtures/e04_t1/warning-project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "experiment",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project:data:experiment",
+      "path": "tests/fixtures/e04_t1/warning-project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "experiment",
+      "fields": [
+        [
+          "range.minimum",
+          20.25,
+          "number"
+        ],
+        [
+          "range.maximum",
+          80.25,
+          "number"
+        ],
+        [
+          "range.step",
+          30.0,
+          "number"
+        ],
+        [
+          "range.points",
+          3,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project:engines",
+      "path": "tests/fixtures/e04_t1/warning-project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

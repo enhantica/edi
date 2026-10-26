@@ -6,6 +6,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <locale>
 #include <memory>
 #include <mutex>
@@ -28,6 +29,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
+#include "edi/display.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
@@ -53,6 +55,12 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/cif_report.hpp")
+#include "crysta/cif_report.hpp"
+#endif
+#if __has_include("crysta/dictionary_items.hpp")
+#include "crysta/dictionary_items.hpp"
+#endif
 #if __has_include("crysta/report_settings.hpp")
 #include "crysta/report_settings.hpp"
 #endif
@@ -2211,12 +2219,14 @@ std::string report_settings_text(const Project& model) {
 #endif
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
-    // Edi does not write — it asks crysta to. Build the full engine project from the model
-    // through the one conversion choke point (completed cell, start-carrying parameters),
-    // fill the persistence-only fields the calculation conversion never needed, stamp the
-    // loader-grade identity with crysta's own exported stamp, and hand crysta::save_project
-    // the write (staging, atomic publish and fail-closed validation are its own).
+namespace {
+
+// The engine project a save writes, handed to `use`. Edi does not write — it asks crysta to. Build
+// the full engine project from the model through the one conversion choke point (completed cell,
+// start-carrying parameters), fill the persistence-only fields the calculation conversion never
+// needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
+// cannot move, so it is lent rather than returned.
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2466,12 +2476,50 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
     }
+    use(cproject);
+}
+
+}  // namespace
+
+void save_project_via_crysta(const Project& model, const std::string& directory) {
+    // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
+    with_saved_project(model, [&directory](crysta::Project& project) {
+        try {
+            crysta::save_project(project, directory);
+        } catch (const std::exception& error) {
+            raise_coded(error);
+            throw;
+        }
+    });
+}
+
+SaveSpelling save_spelling(const Project& model) {
+    SaveSpelling out;
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    // A project a save would refuse keeps the rule's spelling: there is nothing written to match.
     try {
-        crysta::save_project(cproject, directory);
-    } catch (const std::exception& error) {
-        raise_coded(error);
-        throw;
+        with_saved_project(model, [&out](crysta::Project& project) {
+            const crysta::SaveSpelling spelling = crysta::save_spelling(project);
+            out.all_exact = spelling.all_exact;
+            out.exact_cells.assign(spelling.exact_cells.begin(), spelling.exact_cells.end());
+        });
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the rule's spelling stands
     }
+#else
+    static_cast<void>(model);
+#endif
+    return out;
+}
+
+std::string cif_report_text(const Project& model) {
+#if __has_include("crysta/cif_report.hpp")  // drop the guard when the pin moves
+    std::string text;
+    with_saved_project(model, [&text](crysta::Project& project) { text = crysta::cif_report(project); });
+    return text;
+#else
+    (void)model;
+    throw std::invalid_argument("the CIF report needs a newer crysta");
+#endif
 }
 
 namespace detail {
@@ -2500,6 +2548,65 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
+}
+
+// The names are crysta's dictionary's; against an SDK without them every name is current.
+std::string current_edi_name(const std::string& tag, bool every_name) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::current_edi_name(tag, every_name);
+#else
+    static_cast<void>(every_name);
+    return tag;
+#endif
+}
+
+std::string one_row_category(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::one_row_category(tag);
+#else
+    return tag.rfind("_peak.", 0) == 0 ? "_peak" : std::string();
+#endif
+}
+
+// crysta's check that a text's names are not a CIF's; an SDK without it has no such check.
+void refuse_cif_names(const std::vector<std::string>& tags) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    crysta::refuse_cif_names(tags);
+#else
+    static_cast<void>(tags);
+#endif
+}
+
+#if !__has_include("crysta/dictionary_items.hpp")  // drop with the guards below when the pin moves
+// The `.edi` files of a folder, sorted, as an SDK without crysta's rule lists them.
+static std::vector<std::string> sorted_edi_paths(const std::string& folder) {
+    std::vector<std::string> paths;
+    if (std::filesystem::is_directory(folder)) {
+        for (const auto& entry : std::filesystem::directory_iterator(folder)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".edi") {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    std::sort(paths.begin(), paths.end());
+    return paths;
+}
+#endif
+
+std::vector<std::string> project_structure_files(const std::string& folder) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::project_structure_files(folder);
+#else
+    return sorted_edi_paths(folder);
+#endif
+}
+
+std::vector<std::string> project_experiment_files(const std::string& folder) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::project_experiment_files(folder);
+#else
+    return sorted_edi_paths(folder);
+#endif
 }
 
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
@@ -5119,7 +5226,10 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
-    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (deg)" : "TOF (µs)";
+    // The axis is titled by its data item's dictionary label and units (edi ADR-0051).
+    const char* const axis =
+        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "data.two_theta" : "data.time_of_flight";
+    source.x_title = label(axis) + " (" + units_label(axis) + ")";
     const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
     const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();

@@ -25,7 +25,7 @@
    "code": "U+00B1",
    "font": "PT Sans",
    "sites": [
-    "app/src/experiment_models.cpp"
+    "core/src/display.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -35,8 +35,7 @@
    "code": "U+00B2",
    "font": "PT Mono",
    "sites": [
-    "app/qml/Components/StatusBar.qml",
-    "app/src/fit_view_model.cpp"
+    "app/qml/Components/StatusBar.qml"
    ],
    "drawn_by": "PT Mono",
    "weight": 400
@@ -46,17 +45,14 @@
    "code": "U+00B2",
    "font": "PT Sans",
    "sites": [
+    "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/SingleCrystalChart.qml",
     "app/qml/Components/SingleCrystalTable.qml",
     "app/qml/Components/StatusBar.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
-    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
     "app/src/demo_driver.cpp",
     "app/src/experiment_models.cpp",
-    "app/src/fit_view_model.cpp",
-    "app/src/project_view_model.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "core/src/report_model.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -66,12 +62,7 @@
    "code": "U+00B5",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
-    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
-    "app/src/scan_view_model.cpp",
-    "core/src/adapter.cpp",
-    "core/src/presentation.cpp",
-    "core/src/report_model.cpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -92,6 +83,7 @@
    "code": "U+00B7",
    "font": "PT Sans",
    "sites": [
+    "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
@@ -102,8 +94,7 @@
     "app/src/example_list_model.cpp",
     "app/src/fit_view_model.cpp",
     "app/src/project_view_model.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "core/src/report_model.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -113,8 +104,7 @@
    "code": "U+00B9",
    "font": "PT Sans",
    "sites": [
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -154,16 +144,8 @@
    "code": "U+00C5",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/SingleCrystalTable.qml",
-    "app/qml/Pages/Experiment/InstrumentGroup.qml",
-    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
-    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
-    "app/qml/Pages/Structure/AppearanceGroup.qml",
-    "app/src/scan_view_model.cpp",
-    "core/src/parameter_symbol.cpp",
-    "core/src/presentation.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Pages/Structure/AppearanceGroup.qml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -185,7 +167,7 @@
    "code": "U+00E9",
    "font": "PT Sans",
    "sites": [
-    "core/src/selectors.cpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -225,10 +207,8 @@
    "code": "U+03B1",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Structure/CellGroup.qml",
-    "core/src/parameter_symbol.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Pages/Structure/CellGroup.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -238,10 +218,8 @@
    "code": "U+03B2",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Structure/CellGroup.qml",
-    "core/src/parameter_symbol.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Pages/Structure/CellGroup.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -251,9 +229,8 @@
    "code": "U+03B3",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Structure/CellGroup.qml",
-    "core/src/parameter_symbol.cpp",
-    "core/src/report_model.cpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Pages/Structure/CellGroup.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -263,18 +240,8 @@
    "code": "U+03B8",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/PatternChart.qml",
-    "app/qml/Components/ScanViewChart.qml",
-    "app/qml/Components/SingleCrystalTable.qml",
-    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
-    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
-    "app/src/demo_driver.cpp",
-    "app/src/scan_view_model.cpp",
-    "core/src/adapter.cpp",
-    "core/src/parameter_symbol.cpp",
-    "core/src/presentation.cpp",
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/src/demo_driver.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -284,8 +251,7 @@
    "code": "U+03BB",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/SingleCrystalTable.qml",
-    "core/src/report_model.cpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -295,8 +261,7 @@
    "code": "U+03BC",
    "font": "PT Sans",
    "sites": [
-    "core/src/parameter_symbol.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -306,8 +271,8 @@
    "code": "U+03C3",
    "font": "PT Sans",
    "sites": [
-    "app/src/project_view_model.cpp",
-    "core/src/parameter_symbol.cpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/src/project_view_model.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -317,8 +282,7 @@
    "code": "U+03C7",
    "font": "PT Mono",
    "sites": [
-    "app/qml/Components/StatusBar.qml",
-    "app/src/fit_view_model.cpp"
+    "app/qml/Components/StatusBar.qml"
    ],
    "drawn_by": "Noto Sans Mono",
    "weight": 400
@@ -328,10 +292,8 @@
    "code": "U+03C7",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/StatusBar.qml",
-    "app/src/fit_view_model.cpp",
-    "app/src/project_view_model.cpp",
-    "core/src/report_model.cpp"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/StatusBar.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -406,12 +368,21 @@
    "weight": 400
   },
   {
+   "char": "⁴",
+   "code": "U+2074",
+   "font": "PT Sans",
+   "sites": [
+    "crysta:data/dictionary/parameters.yaml"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
    "char": "⁻",
    "code": "U+207B",
    "font": "PT Sans",
    "sites": [
-    "core/src/report_model.cpp",
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -421,7 +392,7 @@
    "code": "U+2080",
    "font": "PT Sans",
    "sites": [
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -431,7 +402,7 @@
    "code": "U+2081",
    "font": "PT Sans",
    "sites": [
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -441,7 +412,7 @@
    "code": "U+2082",
    "font": "PT Sans",
    "sites": [
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -451,69 +422,9 @@
    "code": "U+2083",
    "font": "PT Sans",
    "sites": [
-    "core/include/edi/parameter_spec.hpp"
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
-   "weight": 400
-  },
-  {
-   "char": "₄",
-   "code": "U+2084",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "PT Sans",
-   "weight": 400
-  },
-  {
-   "char": "₅",
-   "code": "U+2085",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "Noto Sans",
-   "weight": 400
-  },
-  {
-   "char": "₆",
-   "code": "U+2086",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "Noto Sans",
-   "weight": 400
-  },
-  {
-   "char": "₇",
-   "code": "U+2087",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "Noto Sans",
-   "weight": 400
-  },
-  {
-   "char": "₈",
-   "code": "U+2088",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "Noto Sans",
-   "weight": 400
-  },
-  {
-   "char": "₉",
-   "code": "U+2089",
-   "font": "PT Sans",
-   "sites": [
-    "core/include/edi/parameter_spec.hpp"
-   ],
-   "drawn_by": "Noto Sans",
    "weight": 400
   },
   {
