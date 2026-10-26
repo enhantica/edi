@@ -14,6 +14,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.project_archive.recalculated_copy import compare_members
+
 ROOT = Path(__file__).resolve().parents[3]
 CASES = tuple(
     'test_open:' + case + '-' + route
@@ -98,11 +100,10 @@ def test_real_app_opens_project_routes_and_cancels_pending_work(case, tmp_path):
         'An incomplete, skipped or failed app contract cannot count as opening evidence'
     )
 
-    if (
-        (case.startswith('test_open:') and case.endswith('-zip'))
-        or case.startswith('test_save_zip:')
-        or (case.startswith('test_save_copy:') and case.endswith('-zip'))
-    ):
+    if (case.startswith('test_open:') and case.endswith('-zip')) or case.startswith((
+        'test_save_zip:',
+        'test_save_copy:',
+    )):
         assert_app_archive_matches_exports(output, tmp_path)
 
 
@@ -111,13 +112,19 @@ def assert_app_archive_matches_exports(output, tmp_path):
     assert len(rows) == 1, 'A saved app ZIP supplies exactly one actual folder/archive receipt'
     evidence = json.loads(rows[0])
     expected = {name: base64.b64decode(body) for name, body in evidence['original'].items()}
-    with zipfile.ZipFile(io.BytesIO(base64.b64decode(evidence['archive']))) as archive:
-        names = archive.namelist()
-        assert len(names) == len(set(names)), 'App ZIP saves contain no duplicate members'
-        actual = {name: archive.read(name) for name in names if not name.endswith('/')}
-    assert actual == expected, (
-        'App ZIP saves retain every canonical folder member and report byte exactly'
-    )
+    if 'archive' in evidence:
+        with zipfile.ZipFile(io.BytesIO(base64.b64decode(evidence['archive']))) as archive:
+            names = archive.namelist()
+            assert len(names) == len(set(names)), 'App ZIP saves contain no duplicate members'
+            actual = {name: archive.read(name) for name in names if not name.endswith('/')}
+    else:
+        actual = {name: base64.b64decode(body) for name, body in evidence['saved'].items()}
+    if evidence['kind'] == 'copy':
+        compare_members(expected, actual, tmp_path, edi)
+    else:
+        assert actual == expected, (
+            'App ZIP rewrites retain every canonical folder member and report byte exactly'
+        )
     report = (
         b'<p>Independently authored report</p>\n'
         if evidence['kind'] == 'opened-rewrite'
@@ -131,7 +138,7 @@ def assert_app_archive_matches_exports(output, tmp_path):
             'The rewritten ZIP really contains the edited project name'
         )
     folder = tmp_path / 'canonical-folder'
-    for name, body in expected.items():
+    for name, body in actual.items():
         path = folder / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)

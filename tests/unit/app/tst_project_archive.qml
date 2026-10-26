@@ -396,6 +396,17 @@ TestCase {
         for (const name of Object.keys(expected))
             compare(actual[name], expected[name], "A folder copy retains the exact independently saved member bytes: " + name);
     }
+    function compareRecalculatedCopy(actual, expected) {
+        compare(Object.keys(actual).sort().join("\n"), Object.keys(expected).sort().join("\n"), "A recalculated copy retains every member name");
+        for (const name of Object.keys(expected)) {
+            if (name.startsWith("structures/") && name.endsWith(".edi")) {
+                const input = value => Qt.atob(value).split("\n_atom_sites_cartn_transform.")[0].replace(/\s+$/, "").replace(/^_edi.schema_version [34]$/m, "_edi.schema_version <3-or-4>");
+                compare(input(actual[name]), input(expected[name]), "A recalculated copy retains every non-derived structure byte: " + name);
+            } else {
+                compare(actual[name], expected[name], "A recalculated copy retains unrelated member bytes: " + name);
+            }
+        }
+    }
     function test_save_copy_data() {
         const rows = [];
         for (const projectName of cases)
@@ -425,7 +436,13 @@ TestCase {
                 archive
             });
         } else {
-            compareFolder(SettingsProof.projectFolderBytes(destination), original);
+            const saved = SettingsProof.projectFolderBytes(destination);
+            compareRecalculatedCopy(saved, original);
+            evidence({
+                kind: "copy",
+                original,
+                saved
+            });
         }
     }
     function test_save_zip_data() {

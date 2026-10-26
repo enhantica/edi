@@ -881,7 +881,12 @@ def test_app_save_to_preserves_every_due_background_cell_and_publishes_only_curr
     assert row['liveCurrent'] == [1.23457] * 4, (
         'Zero scale and rounded constant background independently fix the live pattern'
     )
-    assert row['fileCurrent'] == row['liveCurrent'], 'The file and live current pattern agree'
+    file_current = [
+        float(cell['_data.intensity_calc']) for cell in loop_rows(row['currentFile'], '_data')
+    ]
+    assert file_current == row['liveCurrent'], (
+        'The actual saved file column and live current pattern agree'
+    )
     assert row['freshCurrent'] == row['liveCurrent'], (
         'A fresh reopen and calculation agrees with the saved current pattern'
     )

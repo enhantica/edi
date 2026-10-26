@@ -1060,7 +1060,7 @@ QJsonObject mixedSave(const QString& source, bool web) {
     QFile analysis(output + "/analysis/analysis.edi");
     need(analysis.open(QIODevice::ReadOnly), "The save writes its actual analysis record");
     const auto analysisText = QString::fromUtf8(analysis.readAll());
-    QJsonArray liveCurrent, fileCurrent, freshCurrent, liveInputs;
+    QJsonArray liveCurrent, freshCurrent, liveInputs;
     const auto currentBank = namedBank(project.project(), "current");
     if (currentBank->background_type == "line-segment")
         for (const auto& point : currentBank->background)
@@ -1076,7 +1076,11 @@ QJsonObject mixedSave(const QString& source, bool web) {
         return out;
     };
     liveCurrent = currentValues(project.project());
-    fileCurrent = currentValues(reopened);
+    // The loader validates carried columns but deliberately leaves its arrays empty.
+    // Observe durable bytes separately from the live and fresh-calculated models.
+    QFile currentFile(output + "/experiments/current.edi");
+    need(currentFile.open(QIODevice::ReadOnly), "The saved current bank remains readable");
+    const auto currentText = QString::fromUtf8(currentFile.readAll());
     for (std::size_t i = 0; i < reopened.experiments.size(); ++i)
         if (reopened.experiments[i]->name.value() == "due") {
             reopened.experiments.erase_at(i);
@@ -1100,7 +1104,7 @@ QJsonObject mixedSave(const QString& source, bool web) {
             {"scientificAfter", scientificState(project.project())},
             {"inputs", liveInputs},
             {"liveCurrent", liveCurrent},
-            {"fileCurrent", fileCurrent},
+            {"currentFile", currentText},
             {"freshCurrent", freshCurrent},
             {"fileScience", scientificState(exactFile)},
             {"freshScience", scientificState(reopened)},
