@@ -150,9 +150,13 @@ WorkflowPage {
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): how a followed scan redraws. The chart's own choices are on the chart.
+    // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, and how a followed scan redraws.
+    // The chart's own choices are on the chart.
     settingsItem: Component {
         EaComponents.SideBarColumn {
+            ShownParametersGroup {
+                project: page.project
+            }
             PatternUpdatesGroup {}
         }
     }

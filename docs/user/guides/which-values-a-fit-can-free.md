@@ -32,5 +32,16 @@ hovering over it shows the reason.
 
 ## Filters and counts
 
-The variability filter above the table shows all rows, the free ones, the fixed ones a fit could vary, or the ones that
-cannot be fitted. The Parameters entry in the status bar counts the values a fit can vary.
+The table always lists the values a fit can vary and every value marked free. Four boxes in the **Parameters shown**
+group on the Analysis page's **Settings** tab add the values that cannot be fitted, one group each, and count them:
+
+- **Not measured in this fit:** this fit's data cannot determine the value, or the fit cannot vary it yet. Shown by
+  default.
+- **Fixed by symmetry:** the space group sets the value. Hidden by default.
+- **Set by a constraint:** one of your constraints computes the value. Hidden by default.
+- **Fixed settings:** descriptors and the values that are not parameters. Shown by default.
+
+The app remembers your choice. It is not saved in the project, and Python and the command line are not filtered.
+
+The variability filter above the table shows all listed rows, the free ones, the fixed ones a fit could vary, or the
+ones that cannot be fitted. The Parameters entry in the status bar counts the values a fit can vary.
