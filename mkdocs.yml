@@ -147,6 +147,7 @@ nav:
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
       - Guides:
           - user/guides/complete-project-loading.md
+          - user/guides/reading-cif-files.md
           - user/guides/sequential-fitting-in-the-app.md
           - user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
