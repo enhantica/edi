@@ -1027,9 +1027,13 @@ refuses to write its bank rows into it.
 - **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
   template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
   carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
-- **Out of date.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
-  template than the one held now stay shown, marked *out of date* in the status bar's summary and on the Evolution
-  tab. The mark survives saving and reopening, and goes when a run of the current template replaces them.
+- **Outdated.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
+  template than the one held now stay shown, and the Evolution tab marks them out of date. The status bar's outcome
+  button reads *Outdated* in amber with the history icon, and its results window shows the previous results under an
+  amber note: *These results are from before your parameter changes. Fit again to update them.* The Fit button reads
+  **Refit** and is enabled even when every dataset is fitted: it fits every file again from the template, the old
+  results going to Undo, which restores them; Reset still clears them without fitting (the owner, 2026-10-26). The
+  mark survives saving and reopening, and goes when a run of the current template replaces them.
 - **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
   above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
   failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the

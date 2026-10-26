@@ -171,11 +171,9 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [outOfDate, progress]) {
-                if (extra.visible) {
-                    width += extra.width;
-                    shown += 1;
-                }
+            if (progress.visible) {
+                width += progress.width;
+                shown += 1;
             }
             if (fitButtons.visible) {
                 width += fitButtons.widthWith(itemWidth);
@@ -191,22 +189,25 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        // The last fit's outcome, in its colour, framed as a button that opens its results.
+        // The last fit's outcome, in its colour, framed as a button that opens its results. Scan results the template
+        // has changed since read Outdated, in amber with the history icon, until the next run replaces them (the
+        // owner, 2026-10-26); the results window then says so above the old results.
         FitStatusItem {
             id: statusItem
             objectName: "statusBar.fit.outcome"
             readonly property string outcome: bar.fit ? bar.fit.outcome : ""
+            readonly property bool outdated: bar.fit !== null && bar.fit.outOfDate
             shown: fitArea.summary && outcome !== ""
             showKey: bar.keysFit
-            keyIcon: FitOutcomes.icon(outcome)
+            keyIcon: outdated ? "history" : FitOutcomes.icon(outcome)
             keyText: qsTr("Status")
-            valueText: FitOutcomes.word(outcome)
-            iconColor: FitOutcomes.color(outcome)
-            valueColor: FitOutcomes.color(outcome)
+            valueText: outdated ? qsTr("Outdated") : FitOutcomes.word(outcome)
+            iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome)
+            valueColor: iconColor
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
             framed: clickable
-            ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+            ToolTip.text: outdated ? qsTr("These results are from before your parameter changes: click to see them") : clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
         Row {
@@ -284,18 +285,6 @@ EaElements.StatusBar {
                 valueText: bar.fit ? bar.fit.goodnessOfFit.replace(/\s*→\s*/g, "→") : ""
                 ToolTip.text: fitArea.scanSummary ? qsTr("Reduced χ² over the scan's files, least to greatest") : qsTr("Reduced χ², before and after the fit")
             }
-        }
-        // Scan results the template has changed since stay, marked out of date until the next run replaces them.
-        Text {
-            id: outOfDate
-            width: Math.ceil(implicitWidth)
-            objectName: "statusBar.fit.outOfDate"
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
-            font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize
-            color: EaStyle.Colors.orange
-            text: qsTr("out of date")
         }
         // Before the fit buttons, at the right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {

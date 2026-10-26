@@ -9,7 +9,7 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 
 // The status bar's Fit button, in its right corner (the owner, 2026-10-26): from any page, it fits the project and reads
-// Fit, Continue or Stop, with the matching icon; a click while a fit runs stops it. Black with white text in light mode
+// Fit, Continue, Refit or Stop, with the matching icon; a click while a fit runs stops it. Black with white text in light mode
 // and the other way round in dark mode while it can act, its background the accent on hover
 // (AppColors.fitButtonBackground); otherwise it looks like Reset and Follow. It keeps its word when the bar runs short of
 // room.
@@ -22,7 +22,8 @@ StatusBarButton {
 
     clickable: fit !== null && (running || fit.available)
     keyIcon: running ? "stop-circle" : "play-circle"
-    valueText: running ? qsTr("Stop") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
+    // Refit while a scan's results are outdated: every file again from the template (the owner, 2026-10-26).
+    valueText: running ? qsTr("Stop") : fit !== null && fit.outOfDate ? qsTr("Refit") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
     iconColor: clickable ? AppColors.fitButtonForeground : EaStyle.Colors.themeForegroundDisabled
     frameColor: clickable ? AppColors.fitButtonBackground : AppColors.statusButtonBackground
     frameHoverColor: clickable ? EaStyle.Colors.themeAccent : frameColor

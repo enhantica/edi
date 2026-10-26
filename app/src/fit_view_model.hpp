@@ -157,8 +157,8 @@ class FitViewModel : public QObject {
     Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
     Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
     Q_PROPERTY(QString eta READ eta NOTIFY etaChanged)
-    // The template changed after the scan results were written: they stay shown, marked out of date, until the
-    // next run replaces them (edi ADR-0017 §19).
+    // The template changed after the scan results were written: they stay shown, marked outdated, until the next run
+    // replaces them; the fit button then refits every file from the template (Refit; edi ADR-0017 §19).
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
     Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)

@@ -22,6 +22,8 @@ AppDialog {
     readonly property FitResultListModel results: Session.project ? Session.project.fit.results : null
     // After a scan the table is the run's summary, with a button to the Evolution tab (edi ADR-0017 §19).
     readonly property bool scan: Session.project !== null && Session.project.fit.scanSummary
+    // Results the template has changed since: an amber note above them says so (the owner, 2026-10-26).
+    readonly property bool outdated: Session.project !== null && Session.project.fit.outOfDate
 
     objectName: "fit.results"
     title: qsTr("Least-squares fit results")
@@ -93,8 +95,44 @@ AppDialog {
         }
     }
 
+    Rectangle {
+        id: outdatedNote
+
+        objectName: "fit.results.outdated"
+        visible: dialog.outdated
+        width: dialog.contentWidth
+        height: outdatedText.implicitHeight + EaStyle.Sizes.fontPixelSize
+        radius: 2
+        color: Qt.rgba(EaStyle.Colors.orange.r, EaStyle.Colors.orange.g, EaStyle.Colors.orange.b, 0.12)
+        border.color: EaStyle.Colors.orange
+
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            x: EaStyle.Sizes.fontPixelSize * 0.5
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            EaElements.Label {
+                id: outdatedIcon
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                color: EaStyle.Colors.orange
+                text: "history"
+            }
+            EaElements.Label {
+                id: outdatedText
+                anchors.verticalCenter: parent.verticalCenter
+                width: outdatedNote.width - outdatedIcon.width - EaStyle.Sizes.fontPixelSize * 1.5
+                wrapMode: Text.Wrap
+                color: EaStyle.Colors.orange
+                text: qsTr("These results are from before your parameter changes. Fit again to update them.")
+            }
+        }
+    }
+
     Item {
         id: listArea
+
+        y: outdatedNote.visible ? outdatedNote.height + EaStyle.Sizes.fontPixelSize : 0
 
         width: table.numberColumnWidth + AppSizes.iconOnlyColumnWidth + dialog.metricColumnWidth + dialog.valueColumnWidth + 3 * EaStyle.Sizes.tableColumnSpacing + 2 * table.rowPadding
         height: table.contentHeight
@@ -179,7 +217,7 @@ AppDialog {
         // A long dataset list scrolls inside the table, so the dialog stays on the screen.
         readonly property real tableHeight: Math.min(agreementTable.contentHeight, agreementTable.headerItem ? agreementTable.headerItem.height + EaStyle.Sizes.tableRowHeight * 8 : agreementTable.contentHeight)
 
-        y: listArea.height + (shown ? EaStyle.Sizes.fontPixelSize : 0)
+        y: listArea.y + listArea.height + (shown ? EaStyle.Sizes.fontPixelSize : 0)
         width: shown ? Math.max(AppSizes.messagesDialogContentWidth, AppSizes.iconOnlyColumnWidth + EaStyle.Sizes.fontPixelSize * 8 + dialog.factorColumns.length * dialog.factorWidth + EaStyle.Sizes.fontPixelSize * 2) : 0
         height: shown ? tableHeight + unitNote.height + EaStyle.Sizes.fontPixelSize * 0.5 : 0
         visible: shown
