@@ -95,10 +95,10 @@ def test_receipt_rechecks_binary_before_publication(namespace, monkeypatch):  # 
 
 @pytest.mark.parametrize('reuse', ['cache', 'prepared'])
 def test_relabelled_receipt_cannot_hide_stale_delivered_binary(
-    dispatch,
+    dispatch,  # noqa: F811
     reuse,
     tmp_path,
-    monkeypatch,  # noqa: F811
+    monkeypatch,
 ):
     first = request('screen', 'desktop', tmp_path / 'first')
     path = tmp_path / 'first/desktop/receipt.json'
