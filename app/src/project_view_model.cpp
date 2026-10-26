@@ -1941,26 +1941,17 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // The pattern is taken for drawing by the first frame synchronised after it was applied: the GUI thread waits
-        // during a synchronisation, so none can be under way while it is armed here. The render thread renders that
-        // frame before it synchronises another, so the pattern is drawn, and the next file can be applied while the
-        // render thread draws this one. The signal comes on the render thread; the receipt goes to this one.
-        render_connection_ = connect(
-            window, &QQuickWindow::afterSynchronizing, this,
-            [this] {
-                if (render_armed_.exchange(false)) {
-                    QMetaObject::invokeMethod(
-                        this,
-                        [this] {
-                            if (render_swaps_ > 0) {
-                                // Hidden, or another pattern replaced it, before it was drawn: not drawn.
-                                followRendered(presentedFollowed());
-                            }
-                        },
-                        Qt::QueuedConnection);
-                }
-            },
-            Qt::DirectConnection);
+        // The pattern is in the scene now, so the next frame synchronises it. Its file name, its count and the receipt
+        // that asks for the next file go at the start of that frame, on this thread before the frame's polish and
+        // synchronisation, so the name a user reads changes in the frame that shows the file's points, never a frame
+        // before or after (edi ADR-0029). The next file then arrives after this frame is synchronised, and is applied
+        // while the render thread draws this one.
+        render_connection_ = connect(window, &QQuickWindow::afterAnimating, this, [this] {
+            if (render_armed_.exchange(false) && render_swaps_ > 0) {
+                // Hidden, or another pattern replaced it, before its frame: not drawn.
+                followRendered(presentedFollowed());
+            }
+        });
     }
     render_swaps_ = 1;
     render_armed_.store(true);
