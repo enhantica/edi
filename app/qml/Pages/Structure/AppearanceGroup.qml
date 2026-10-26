@@ -23,7 +23,7 @@ EaElements.GroupBox {
     objectName: "group.appearance"
     // Open as left, or open when it is the first group shown, as every sidebar group (SideBarGroups).
     collapsed: !SideBarGroups.isOpen(openKey, group)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     title: qsTr("Appearance")
     icon: "palette"
     last: SideBarGroups.isLast(group)
