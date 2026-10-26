@@ -37,19 +37,21 @@ QtObject {
     function webRows(): list<var> {
         const kept = [];
         const saved = [];
-        for (const place of WebStorage.places) {
-            if (place.recovery)
+        const places = WebStorage.places;
+        for (let row = 0; row < places.count; ++row) {
+            const key = places.key(row), name = places.name(row), inBrowser = places.kind(row) === "browser";
+            if (places.recovery(row))
                 kept.push({
-                    "path": "kept:" + place.key,
-                    "label": qsTr("Continue where you left off: %1").arg(place.name),
+                    "path": "kept:" + key,
+                    "label": qsTr("Continue where you left off: %1").arg(name),
                     "inBrowser": false,
                     "available": true
                 });
-            if (place.saved)
+            if (places.saved(row))
                 saved.push({
-                    "path": "place:" + place.key,
-                    "label": place.kind === "browser" ? qsTr("%1 · in this browser").arg(place.name) : qsTr("%1 · on this computer").arg(place.name),
-                    "inBrowser": place.kind === "browser",
+                    "path": "place:" + key,
+                    "label": inBrowser ? qsTr("%1 · in this browser").arg(name) : qsTr("%1 · on this computer").arg(name),
+                    "inBrowser": inBrowser,
                     "available": true
                 });
         }
