@@ -17,9 +17,9 @@
 #include <filesystem>
 
 #include "app_info.hpp"
-#include "edi/display.hpp"
 #include "web_files.hpp"
 #include "web_storage.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
@@ -309,18 +309,62 @@ bool Session::save() {
         // Where the browser keeps nothing, nothing is saved: the project stays unsaved and the window says why
         // (owner, 2026-10-25).
         if (webPlaceInBrowser() && !WebStorage::instance()->usable()) {
+            setLastError({});
             emit webStorageUnavailable();
-            return true;
-        }
-        if (!saveInMemory()) {
             return false;
         }
-        writeWebPlace();
+        if (web_writing_) {
+            setLastError(tr("The project is still being saved: save again once it is written."));
+            return false;
+        }
+        // What the Save writes is staged on a copy and written to the place; the open project takes it only once the
+        // place holds it, and only if it was not edited meanwhile (webSaveFinished says when).
+        QString root;
+        QString folder;
+        if (!stageCopy(root, folder)) {
+            return false;
+        }
+        const WebPlace place = web_place_;
+        const QPointer<ProjectViewModel> saving = project_;
+        const quint64 revision = project_->revision();
+        web_writing_ = true;
+        writeWebPlace(place, folder, [this, saving, revision, root, place](bool written) {
+            QDir(root).removeRecursively();
+            if (saving.isNull() || saving != project_) {
+                return;
+            }
+            web_writing_ = false;
+            const bool saved = written && (project_->revision() != revision || saveInMemory());
+            if (saved && project_->revision() == revision) {
+                // Saved, the changes kept for a reload are no longer needed.
+                WebStorage::instance()->dropRecovery(place.key);
+            }
+            if (saved) {
+                emit webSaved(place.kind);
+            }
+            emit webSaveFinished(saved);
+        });
         return true;
     }
     if (project_ == nullptr || needsSaveAs()) {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
         return false;
+    }
+    if (!archive_location_.isEmpty()) {
+        // The archive is written from a staged copy first: a refused archive leaves the open project as it was.
+        QString root;
+        QString folder;
+        if (!stageCopy(root, folder)) {
+            return false;
+        }
+        try {
+            edi::write_project_archive(folder.toStdString(), archive_location_.toStdString());
+        } catch (const std::exception& refusal) {
+            QDir(root).removeRecursively();
+            setLastError(QString::fromUtf8(refusal.what()));
+            return false;
+        }
+        QDir(root).removeRecursively();
     }
     const QString error = project_->saveTo(project_->path());
     setLastError(error);
@@ -328,10 +372,8 @@ bool Session::save() {
         return false;
     }
     if (!archive_location_.isEmpty()) {
-        try {
-            edi::write_project_archive(project_->path().toStdString(), archive_location_.toStdString());
-        } catch (const std::exception& refusal) {
-            setLastError(QString::fromUtf8(refusal.what()));
+        // Written again from the working folder, with its scan results and the time of this save.
+        if (!rewriteArchive(archive_location_)) {
             return false;
         }
         emit projectDirectoryUsed(archive_location_);
@@ -349,10 +391,11 @@ bool Session::saveAs(const QUrl& directory) {
         setLastError(QStringLiteral("cannot save to %1: only local directories (file: URLs)").arg(directory.toString()));
         return false;
     }
-    archive_location_.clear();
     if (!saveInto(directory.toLocalFile())) {
         return false;
     }
+    archive_location_.clear();
+    leaveTemporaryOrigin();
     releaseTemporaryFolder();
     emit projectLocationChanged();
     emit needsSaveAsChanged();
@@ -362,11 +405,13 @@ bool Session::saveAs(const QUrl& directory) {
 }
 
 bool Session::saveInto(const QString& folder) {
+    // A refused save leaves the project where it worked, unsaved (the core moves it only once written).
     const QString error = project_->saveTo(folder);
     setLastError(error);
-    if (!error.isEmpty()) {
-        return false;
-    }
+    return error.isEmpty();
+}
+
+void Session::leaveTemporaryOrigin() {
     // Saved where the user chose, the project is no longer the example's, the archive's or the read-only tree's
     // temporary copy.
     read_only_copy_ = false;
@@ -375,7 +420,6 @@ bool Session::saveInto(const QString& folder) {
         opened_example_.clear();
         emit openedExampleChanged();
     }
-    return true;
 }
 
 bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
@@ -401,23 +445,63 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
-    if (!saveInto(folder)) {
+    // The archive is written from a staged copy before the project moves to it: a refused archive leaves the open
+    // project where and as it was.
+    try {
+        edi::Project copy = project_->savedModel();
+        edi::save_project_as(copy, folder.toStdString());
+        edi::adopt_saved_project(copy, folder.toStdString());
+        edi::write_project_archive(folder.toStdString(), where.toStdString());
+    } catch (const std::exception& refusal) {
         edi::remove_archive_directory(folder.toStdString());
+        setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
+    if (!saveInto(folder)) {
+        return false;
+    }
+    leaveTemporaryOrigin();
     releaseTemporaryFolder();
     temporary_folder_ = folder;
     archive_location_ = where;
     emit projectLocationChanged();
     emit needsSaveAsChanged();
     emit locationTextChanged();
-    try {
-        edi::write_project_archive(folder.toStdString(), where.toStdString());
-    } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));
+    // Written again from the working folder, with its scan results and the time of this save.
+    if (!rewriteArchive(where)) {
         return false;
     }
     emit projectDirectoryUsed(where);
+    return true;
+}
+
+bool Session::rewriteArchive(const QString& archive) {
+    try {
+        edi::write_project_archive(project_->path().toStdString(), archive.toStdString());
+    } catch (const std::exception& refusal) {
+        // The archive holds the staged save; the working folder's own save is not in it: the project stays unsaved.
+        project_->keepUnsaved();
+        setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    return true;
+}
+
+bool Session::stageCopy(QString& root, QString& folder) {
+    // What a Save writes (round, adopt, recalculate, write), done on a copy in a folder of its own.
+    try {
+        root = QString::fromStdString(edi::fresh_archive_directory("staged"));
+        folder = root + QLatin1Char('/') + folderNameFor(project_->name());
+        edi::Project copy = project_->savedModel();
+        edi::save_project_as(copy, folder.toStdString());
+        edi::adopt_saved_project(copy, folder.toStdString());
+    } catch (const std::exception& refusal) {
+        if (!root.isEmpty()) {
+            QDir(root).removeRecursively();
+        }
+        setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
     return true;
 }
 
@@ -646,6 +730,10 @@ void Session::setOpenedArchive(const QString& name) {
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
     keep_timer_->stop();
+    // A save still being written belongs to the replaced project.
+    web_writing_ = false;
+    // A web open still being read no longer replaces anything.
+    ++open_request_;
     const QString previous_web_copy = std::exchange(web_copy_, QString());
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
@@ -753,17 +841,36 @@ void Session::openWebProject(const QString& kind) {
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
 }
 
-WebStorage::Answer Session::webOpenAnswer(const QString& root) {
-    // A project opened meanwhile is not replaced by the one that arrives late.
+std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString& root) {
+    // Only the latest request opens: a project opened meanwhile, or a later Open, Recent or recovery, supersedes
+    // this one whichever finishes first. Edits made while it was read are not replaced without asking again.
+    const quint64 request = ++open_request_;
     const QPointer<ProjectViewModel> before = project_;
-    return [this, root, before](const WebStorageAnswer& answer) {
-        if (before != project_ || !answer.ok) {
+    const quint64 revision = project_ != nullptr ? project_->revision() : 0;
+    return [this, root, request, before, revision](const WebStorageAnswer& answer) {
+        if (request != open_request_ || before != project_ || !answer.ok) {
             QDir(root).removeRecursively();
-            if (before != project_ || answer.cancelled) {
-                return;
+            if (request == open_request_ && before == project_ && !answer.cancelled) {
+                setLastError(answer.message);
+                emit loadFailed(last_error_);
             }
-            setLastError(answer.message);
+            return false;
+        }
+        if (project_ != nullptr && project_->modified() && project_->revision() != revision) {
+            QDir(root).removeRecursively();
+            setLastError(tr("%1 was not opened: the open project was changed while it was read. Open it again to "
+                            "replace the project.")
+                             .arg(answer.name));
             emit loadFailed(last_error_);
+            return false;
+        }
+        return true;
+    };
+}
+
+WebStorage::Answer Session::webOpenAnswer(const QString& root) {
+    return [this, root, current = openRequest(root)](const WebStorageAnswer& answer) {
+        if (!current(answer)) {
             return;
         }
         const WebPlace place{answer.key,
@@ -778,7 +885,7 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root) {
         // A project uploaded from the disk is kept in the browser at once (owner, 2026-10-25), where it can be.
         web_from_file_ = true;
         if (web_place_.kind == QStringLiteral("browser") && WebStorage::instance()->usable()) {
-            writeWebPlace(false);
+            writeWebPlace(web_place_, project_->path(), nullptr);
         }
     };
 }
@@ -792,14 +899,9 @@ void Session::openStoredProject(const QString& key, bool recovery) {
         emit loadFailed(last_error_);
         return;
     }
-    const QPointer<ProjectViewModel> before = project_;
-    WebStorage::instance()->load(key, recovery, root, [this, root, before, recovery](const WebStorageAnswer& answer) {
-        if (before != project_ || !answer.ok) {
-            QDir(root).removeRecursively();
-            if (before == project_) {
-                setLastError(answer.message);
-                emit loadFailed(last_error_);
-            }
+    WebStorage::instance()->load(key, recovery, root, [this, root, recovery, current = openRequest(root)](
+                                                          const WebStorageAnswer& answer) {
+        if (!current(answer)) {
             return;
         }
         const WebPlace place{answer.key,
@@ -841,32 +943,32 @@ bool Session::saveInMemory() {
 }
 
 
-void Session::writeWebPlace(bool announce) {
+void Session::writeWebPlace(const WebPlace& place, const QString& folder, const std::function<void(bool)>& done) {
     keep_timer_->stop();
-    const WebPlace place = web_place_;
-    WebStorage::instance()->write(place.key, place.kind, place.name, project_->path(), false,
-                                  [this, place, announce](const WebStorageAnswer& answer) {
-                                      if (!answer.ok) {
-                                          // The browser's own words ("UnknownError", "QuotaExceededError") say
-                                          // nothing to the user: the place is named instead.
-                                          if (place.kind == QStringLiteral("browser")) {
-                                              WebStorage::instance()->markUnusable();
-                                              emit webSaveFailed(
-                                                  tr("This browser would not keep the project: its storage is not "
-                                                     "available here (a private window, for example) or is full. Use "
-                                                     "Save project as… to download it."));
-                                          } else {
-                                              emit webSaveFailed(tr("The project could not be written to %1: %2")
-                                                                     .arg(place.name, answer.message));
-                                          }
-                                          return;
-                                      }
-                                      // Saved, the changes kept for a reload are no longer needed.
-                                      WebStorage::instance()->dropRecovery(place.key);
-                                      if (announce) {
-                                          emit webSaved(place.kind);
-                                      }
-                                  });
+    // The page writes one place's jobs in the order they are sent, so a later keep or discard is never overtaken.
+    const QPointer<ProjectViewModel> project = project_;
+    WebStorage::instance()->write(
+        place.key, place.kind, place.name, folder, false, [this, place, project, done](const WebStorageAnswer& answer) {
+            if (!answer.ok) {
+                // The browser's own words ("UnknownError", "QuotaExceededError") say nothing to the user: the place
+                // is named instead.
+                if (place.kind == QStringLiteral("browser")) {
+                    WebStorage::instance()->markUnusable();
+                    emit webSaveFailed(tr("This browser would not keep the project: its storage is not available here "
+                                          "(a private window, for example) or is full. Use Save project as… to "
+                                          "download it."));
+                } else {
+                    emit webSaveFailed(
+                        tr("The project could not be written to %1: %2").arg(place.name, answer.message));
+                }
+                if (!project.isNull() && project == project_) {
+                    keepChanges();
+                }
+            }
+            if (done) {
+                done(answer.ok);
+            }
+        });
 }
 
 QString Session::downloadName() const {
@@ -878,13 +980,23 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
     if (project_ == nullptr) {
         return;
     }
+    // One save at a time moves the project: a second waits until the first is written.
+    const QString busy = tr("The project is still being saved: save again once it is written.");
+    if (!copy && web_writing_) {
+        emit webSaveFailed(busy);
+        return;
+    }
     const QPointer<ProjectViewModel> before = project_;
-    WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy](
+    WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy, busy](
                                                                                const WebStorageAnswer& answer) {
         if (before != project_ || project_ == nullptr || !answer.ok) {
             if (before == project_ && !answer.cancelled) {
                 emit webSaveFailed(answer.message);
             }
+            return;
+        }
+        if (!copy && web_writing_) {
+            emit webSaveFailed(busy);
             return;
         }
         const WebPlace place{answer.key, kind,
@@ -920,19 +1032,52 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
                                           });
             return;
         }
-        // The project moves there: saved into a memory folder of its own, which it works in from now on.
-        if (!saveInto(folder)) {
+        // The project moves there once the place holds it. What the Save writes is staged on a copy in a memory folder
+        // of its own; the open project keeps its own place, folder and values until the write succeeds, and works in
+        // that folder from then on, taking the saved values unless it was edited meanwhile.
+        try {
+            edi::Project staged = project_->savedModel();
+            edi::save_project_as(staged, folder.toStdString());
+            edi::adopt_saved_project(staged, folder.toStdString());
+        } catch (const std::exception& refusal) {
             QDir(root).removeRecursively();
-            emit webSaveFailed(last_error_);
+            emit webSaveFailed(QString::fromUtf8(refusal.what()));
             return;
         }
-        releaseTemporaryFolder();
-        if (!web_copy_.isEmpty()) {
-            QDir(web_copy_).removeRecursively();
-        }
-        web_copy_ = root;
-        setWebPlace(place);
-        writeWebPlace();
+        const QPointer<ProjectViewModel> moving = project_;
+        const quint64 revision = project_->revision();
+        web_writing_ = true;
+        writeWebPlace(place, folder, [this, moving, revision, root, folder, place, kind](bool written) {
+            if (moving.isNull() || moving != project_) {
+                QDir(root).removeRecursively();
+                return;
+            }
+            web_writing_ = false;
+            if (!written) {
+                QDir(root).removeRecursively();
+                emit webSaveFinished(false);
+                return;
+            }
+            if (project_->revision() == revision) {
+                const QString error = project_->saveTo(folder);
+                setLastError(error);
+                if (!error.isEmpty()) {
+                    project_->workIn(folder);
+                    project_->keepUnsaved();
+                }
+            } else {
+                project_->workIn(folder);
+            }
+            leaveTemporaryOrigin();
+            releaseTemporaryFolder();
+            if (!web_copy_.isEmpty()) {
+                QDir(web_copy_).removeRecursively();
+            }
+            web_copy_ = root;
+            setWebPlace(place);
+            emit webSaved(kind);
+            emit webSaveFinished(true);
+        });
     });
 }
 

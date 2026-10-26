@@ -4,7 +4,7 @@
 
 #include <QFont>
 #include <QObject>
-#include <QVariantList>
+#include <QList>
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
@@ -138,7 +138,7 @@ class ScanViewModel : public QObject {
         return dataset >= 0 && dataset < row_texts_.size() ? row_texts_.at(dataset) : QString();
     }
     // The widest label text of the rows `shown` marks (true by dataset), in `font`; in pixels.
-    Q_INVOKABLE double widestRowText(const QVariantList& shown, const QFont& font) const;
+    Q_INVOKABLE double widestRowText(const QList<bool>& shown, const QFont& font) const;
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.

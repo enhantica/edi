@@ -87,17 +87,25 @@ def test_app_is_one_option_gated_cpp_qml_host() -> None:
 
     qml_files = list((ROOT / 'app').rglob('*.qml'))
     assert qml_files, 'the app host must declare one QML source tree'
-    # Before: every QML file was host source.  P6 adds exactly one
-    # separately built benchmark resource; all product QML keeps its one root.
-    benchmark = ROOT / 'app/tools/ChartBench.qml'
-    assert all(path.is_relative_to(ROOT / 'app/qml') or path == benchmark for path in qml_files), (
-        'ADR-0002/0015  P6: product QML stays in app/qml; the named benchmark is tooling'
+    # Separately built benchmark resources are tooling; product QML keeps one root.
+    benchmarks = {
+        'ChartBench.qml': ('edi_app_chart_bench', 'chart_bench.cpp'),
+        'ScanBench.qml': ('edi_app_scan_bench', 'scan_bench.cpp'),
+        'PlotBench.qml': ('edi_app_plot_bench', 'plot_bench.cpp'),
+    }
+    tooling = {ROOT / 'app/tools' / name for name in benchmarks}
+    assert all(path.is_relative_to(ROOT / 'app/qml') or path in tooling for path in qml_files), (
+        'ADR-0002/0015: product QML stays in app/qml; only explicitly named benchmarks are tooling'
     )
-    assert benchmark.is_file() and re.search(
-        r'qt_add_resources\s*\(\s*edi_app_chart_bench\b[^)]*\bFILES\s+tools/ChartBench\.qml\b',
-        app_cmake,
-        re.DOTALL,
-    ), ' P6: the benchmark QML must be an explicit resource of its separate executable'
+    for name, (target, source) in benchmarks.items():
+        assert (ROOT / 'app/tools' / name).is_file() and re.search(
+            rf'qt_add_resources\s*\(\s*{target}\b[^)]*\bFILES\s+tools/{re.escape(name)}\b',
+            app_cmake,
+            re.DOTALL,
+        ), 'Every named benchmark QML is an explicit resource of its separate executable: ' + name
+        assert re.search(
+            rf'qt_add_executable\s*\(\s*{target}\s+tools/{re.escape(source)}\s*\)', app_cmake
+        ), 'Each tooling QML resource has its own declared benchmark host: ' + name
 
     forbidden = re.compile(r'PySide|pyside', re.IGNORECASE)
     offenders = [

@@ -38,7 +38,8 @@ the time holds the QML bindings, the drawing and the frame. Each view change run
 | pan | a window half the x range wide, moved a fiftieth of the range per step |
 | restyle | the colours reversed (Stacked) or the colour map reversed (Map) |
 | select | another dataset shown |
-| data | the rows placed again, by file and by scan value: every dataset's row moves |
+| data | every dataset's points published again (the x axis placed anew, d and back where a calculation gives d): each trace reduced and drawn from scratch; the demo fails the step unless every Stacked trace is rebuilt |
+| rows | the rows placed again, by file and by scan value: every dataset's row moves, its trace kept (what `data` timed before edi cc48501a) |
 
 A slider step moves the selected parameter (the LBCO cell length a) by 1 to 5 % of the slider's range and is timed to
 the frame after its calculation ended ("shown"), and to the calculation's end ("calculated"). A fit is timed from its
@@ -327,9 +328,10 @@ branch as pulled then; crysta SDK 844a30d5, gui-components b008de4e), with
 |  | select | 16.9 | 23.4 | 23.8 | 1 |
 |  | data | 70.8 | 80.6 | 112.1 | 0 |
 
-Every median and every p95 is under 100 ms; the slowest p95 is a Stacked data change, 89.2 ms. Three single frames went
-over: a Stacked data change at 108.6 ms, a Map data change at 112.1 ms and a Map pan at 103.4 ms. One Map selection had
-no frame measured (missing 1).
+Every median and every p95 is under 100 ms; the slowest p95 is the Stacked "data" row, 89.2 ms. Three single frames went
+over: that Stacked row at 108.6 ms, the Map's at 112.1 ms and a Map pan at 103.4 ms. One Map selection had no frame
+measured (missing 1). The "data" rows here timed the row reorder (now `rows`, the table above), not a data change; the
+data change is measured again with the step that rebuilds every trace.
 
 ### Without a GPU
 
@@ -350,8 +352,9 @@ run's median, in milliseconds ([timings](scan-view-timings/gate1/software-timing
 |  | select | 38.0 | 38.8 | 41.9 | 38.8 | about 100 |
 |  | data | 181.9 | 202.8 | 208.5 | 202.8 | ≤ 250 |
 
-Every median of the runs is within its bound. One run's figure is not: the third run's Stacked data change, 251.1 ms,
-with the load rising from 5.3 to 8.4.
+Every median of the runs is within its bound. One run's figure is not: the third run's Stacked "data" row, 251.1 ms,
+with the load rising from 5.3 to 8.4. As above, the "data" rows timed the row reorder (now `rows`), not a data change,
+which is measured again with the step that rebuilds every trace.
 
 ## The 162-file fit with the two Every-pattern choices
 

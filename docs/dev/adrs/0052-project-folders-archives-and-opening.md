@@ -27,7 +27,9 @@ not the project being read (measured with the app's software renderer, as on the
 
 1. **The archive.** A project archive is a `.zip` of the folder with each member named relative to it, deflated and
    carrying its file's time. Build and cache files are left out: any name starting with `.`, `build` and `__pycache__`
-   folders, `*.pyc` and a save's `*.edi-staged` files. The core writes it (`project_archive_bytes`,
+   folders, `*.pyc` and a save's `*.edi-staged` files. A member is named by where it is in the folder: a link to a
+   file is archived as that file under the link's name, and a link to a folder or to nothing refuses the archive. The
+   core writes it (`project_archive_bytes`,
    `write_project_archive`) with miniz, compiled into the core. Reading accepts `project.edi` at the archive's top or
    inside its one top folder, so archives zipped by hand open too. Every member name is checked before anything is
    written: an absolute name, a drive, a backslash or a `..` component refuses the whole archive; a link is not

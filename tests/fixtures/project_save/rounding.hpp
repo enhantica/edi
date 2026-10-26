@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -44,9 +45,10 @@ inline double six_digits(double value) {
             digits.insert(0, "1");
     }
     const std::string token = (negative ? "-" : "") + digits + "e" + std::to_string(exponent);
-    double result = 0;
-    const auto read = std::from_chars(token.data(), token.data() + token.size(), result);
-    if (read.ec != std::errc{} || read.ptr != token.data() + token.size())
+    // An integer significand and exponent contain no locale-dependent decimal separator.
+    char* end = nullptr;
+    const double result = std::strtod(token.c_str(), &end);
+    if (end != token.c_str() + token.size() || !std::isfinite(result) || result == 0.0)
         throw std::runtime_error("The independent saved-value conversion must consume its token");
     return result;
 }

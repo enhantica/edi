@@ -9,7 +9,10 @@ through xcb/OpenGL. Model scan-value rows are used only for Map. The visible
 names the units, defaults and exact-text selector activation.
 The input generator writes independent triangular traces into private scan files.
 
-The toolbar oracle uses control types and their actual mapped rectangles. It
+The toolbar oracle uses control types and their actual mapped rectangles.
+The wide viewport reserves room for the actual chart after the adaptive sidebar,
+and a physical control-width check precedes the one-line assertion. Minimum and
+intermediate sizes still exercise wrapping and each line's selector-aligned centre. It
 requires a single centred line when the controls fit; otherwise combo-only lines
 above button-only lines. It visits both chart pages through Main.
 

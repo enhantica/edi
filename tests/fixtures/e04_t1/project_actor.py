@@ -9,17 +9,22 @@ from pathlib import Path
 from tests.fixtures.fast_chart_redraws.rendering import native_arguments
 
 ROOT = Path(__file__).resolve().parents[3]
-PROJECTS = json.loads(
+ORACLE = json.loads(
     (ROOT / 'tests/fixtures/e04_t1/oracle.js')
     .read_text()
     .split('var frozen = ', 1)[1]
     .rstrip(';\n')
-)['projects']
+)
+PROJECTS = ORACLE['projects']
 PROJECT_CASES = [
     (
-        'test_verification_directories_keep_their_independent_project_population'
-        if project['metadata']['_metadata.purpose'] == 'verification'
-        else 'test_every_example_opens_through_its_page_row'
+        'test_every_example_opens_through_its_page_row'
+        if project['id'] in ORACLE['app_ids']
+        else (
+            'test_verification_directories_keep_their_independent_project_population'
+            if project['metadata']['_metadata.purpose'] == 'verification'
+            else 'test_retained_fixture_directories_keep_their_independent_project_population'
+        )
     )
     + ':'
     + project['id']

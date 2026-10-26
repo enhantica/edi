@@ -6,7 +6,7 @@
 #include <QPointer>
 #include <QQuickPaintedItem>
 #include <QString>
-#include <QVariantList>
+#include <QList>
 #include <QtQml/qqmlregistration.h>
 #include <atomic>
 #include <cstdint>
@@ -70,6 +70,9 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(double heightShare MEMBER height_share_ WRITE setHeightShare NOTIFY heightShareChanged)
     // How tall each stacked pattern is, on the vertical axis: heightShare, or the Fit height.
     Q_PROPERTY(double patternHeight READ patternHeight NOTIFY placementChanged)
+    // The top of the highest stacked pattern on the vertical axis: above 1 when a fixed height makes the stack taller
+    // than the plot.
+    Q_PROPERTY(double stackTop READ stackTop NOTIFY placementChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
     Q_PROPERTY(double displayMin READ displayMin NOTIFY displayMinChanged)
     Q_PROPERTY(double displayMax READ displayMax NOTIFY displayMaxChanged)
@@ -80,7 +83,7 @@ class ScanLayer : public QQuickPaintedItem {
     // rows, and the rest come back as they fit. Made again when what it depends on changes, announced when it differs.
     Q_PROPERTY(bool labelled MEMBER labelled_ WRITE setLabelled NOTIFY labelledChanged)
     Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
-    Q_PROPERTY(QVariantList shownLabels READ shownLabels NOTIFY shownLabelsChanged)
+    Q_PROPERTY(QList<bool> shownLabels READ shownLabels NOTIFY shownLabelsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
     // many times the drawing was rendered.
     Q_PROPERTY(int traceBuildCount READ traceBuildCount NOTIFY traceBuildCountChanged)
@@ -114,8 +117,11 @@ class ScanLayer : public QQuickPaintedItem {
     void setHeightShare(double share);
     void setLabelled(bool labelled);
     void setLabelGap(double gap);
-    QVariantList shownLabels() const;
+    QList<bool> shownLabels() const;
     double patternHeight() const { return pattern_height_; }
+    double stackTop() const { return stack_top_; }
+    // Each stacked pattern's extent on the vertical axis, baseline to top, by dataset: NaN for one with no place.
+    std::vector<edi::ScanRowSpan> stackedSpans() const;
     // A dataset's row on the vertical axis: on the stacked view its baseline, on the map its scan value or place (the
     // model's). NaN when it has none. The labels, the ticks and the clicks all take it from here.
     Q_INVOKABLE double rowOf(int dataset) const;
@@ -234,13 +240,14 @@ class ScanLayer : public QQuickPaintedItem {
     bool labelled_ = false;
     double label_gap_ = 1.0;
     // shownLabels, and whether what it depends on changed since it was made.
-    mutable QVariantList shown_labels_;
+    mutable QList<bool> shown_labels_;
     mutable bool shown_labels_stale_ = true;
     void labelsMoved();
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
     std::vector<double> lows_, highs_, baselines_;
     double pattern_height_ = 1.0;
+    double stack_top_ = 1.0;
 
     // The reductions, by dataset, and what they were made for.
     std::vector<Reduction> reductions_;

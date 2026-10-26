@@ -84,6 +84,7 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Globals/RecentProjects.qml",
@@ -156,19 +157,8 @@
    "code": "U+00D7",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/ScanViewChart.qml",
     "app/src/demo_driver.cpp",
     "app/src/structure_view_controller.cpp"
-   ],
-   "drawn_by": "PT Sans",
-   "weight": 400
-  },
-  {
-   "char": "é",
-   "code": "U+00E9",
-   "font": "PT Sans",
-   "sites": [
-    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -293,7 +283,6 @@
    "code": "U+03C7",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/StatusBar.qml"
    ],
    "drawn_by": "Noto Sans",
@@ -424,16 +413,6 @@
   {
    "char": "₂",
    "code": "U+2082",
-   "font": "PT Sans",
-   "sites": [
-    "crysta:data/dictionary/parameters.yaml"
-   ],
-   "drawn_by": "PT Sans",
-   "weight": 400
-  },
-  {
-   "char": "₃",
-   "code": "U+2083",
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml"
