@@ -123,14 +123,18 @@ def read_prf(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def measured_cases(root: Path) -> list[str]:
-    """The catalogue's cases with measured data, in registry order."""
+    """The catalogue's cases with measured data (an experiment with a data loop), in order."""
     rows = yaml.safe_load((root / REGISTRY).read_text(encoding='utf-8'))['projects']
     cases = []
     for row in rows:
         if row.get('user-facing') is not True:
             continue
-        project = root / REGISTRY.parent / row['id'] / 'project' / 'project.edi'
-        if not re.search(r'(?m)^_metadata\.purpose "?simulation"?$', project.read_text('utf-8')):
+        experiments = (root / REGISTRY.parent / row['id'] / 'project' / 'experiments').glob(
+            '*.edi'
+        )
+        if any(
+            re.search(r'(?m)^_(data|refln)\.', path.read_text('utf-8')) for path in experiments
+        ):
             cases.append(str(row['id']))
     return cases
 
