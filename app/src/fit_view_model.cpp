@@ -431,11 +431,12 @@ void FitViewModel::start() {
         emit refused(pending);
         return;
     }
-    // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
-    // to Undo); otherwise it continues from the first dataset without a row (edi ADR-0017 §17).
+    // A scan runs from the template. With no dataset fitted, or with outdated results (Refit), it starts afresh (the
+    // previous result files, if any, go to Undo); otherwise it continues from the first dataset without a row (edi
+    // ADR-0017 §17, §19).
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
     if (scan) {
-        const QString error = owner_.prepareScan(scan_.processed() == 0);
+        const QString error = owner_.prepareScan(scan_.processed() == 0 || out_of_date_);
         if (!error.isEmpty()) {
             emit refused(error);
             return;
@@ -511,7 +512,8 @@ void FitViewModel::sync() {
         reason = tr("A fit needs measured data: no experiment in this project has any");
     } else if (scan) {
         reason = owner_.scanRefusal();
-        if (reason.isEmpty() && !running_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
+        // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).
+        if (reason.isEmpty() && !running_ && !out_of_date_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
             reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
         }
     } else if (mode == QLatin1String("joint") && declared) {
@@ -795,6 +797,7 @@ void FitViewModel::setOutOfDate(bool out_of_date) {
     if (out_of_date != out_of_date_) {
         out_of_date_ = out_of_date;
         emit outOfDateChanged();
+        sync();  // outdated results make a fully fitted scan fittable again
     }
 }
 
