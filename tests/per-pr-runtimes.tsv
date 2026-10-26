@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T18:29:48Z
+# measured_utc = 2026-10-26T18:56:23Z
 #
-# Recorded from: F7 request-boundary actors explicitly unmeasured; previous completed-row measurements retained
+# Recorded from: Scoped snapshot and displayed-fraction binding replay; unchanged resource work retained by owner cadence
 # Collected tests: 17894; with a reported duration: 10277
 # Module-scoped fixture costs recorded: 90
 #
@@ -500,7 +500,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.080	tests/integration/py/test_app_build_cache.py::test_cached_app_build_rebuilds_on_each_exact_input_seam[source-identity]
 0.030	tests/integration/py/test_app_build_cache.py::test_captured_app_observations_reuse_only_the_same_qualified_binary
 0.060	tests/integration/py/test_app_build_cache.py::test_failed_or_mutating_app_build_cannot_cache_success
-0.290	tests/integration/py/test_app_build_cache.py::test_real_app_fixtures_build_once_per_owner_and_backend
+0.300	tests/integration/py/test_app_build_cache.py::test_real_app_fixtures_build_once_per_owner_and_backend
 0.080	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-screen]
 0.060	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-selector]
 0.580	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[prepared-screen]
@@ -2448,7 +2448,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::te
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[selector]
-0.100	tests/integration/py/test_compiled_app_environment.py::test_normal_screen_capture_provisions_an_absent_app_prefix
+0.080	tests/integration/py/test_compiled_app_environment.py::test_normal_screen_capture_provisions_an_absent_app_prefix
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
 0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
@@ -7671,7 +7671,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract
 0.150	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_four_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.270	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
-0.018	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
+0.312	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
 0.210	tests/integration/py/test_weight_fraction_app.py::test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting
 0.020	tests/integration/py/test_weight_fraction_app.py::test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_unity
 0.070	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[False]
@@ -18352,10 +18352,10 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.299	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 1.002	tests/integration/py/test_weight_fraction_app.py
+# module-cost: 1.158	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
