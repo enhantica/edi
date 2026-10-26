@@ -910,15 +910,17 @@ refuses to write its bank rows into it.
   elsewhere. The Fit button reads *Fit*, *Continue* or *Stop* with the matching icon. While it can act it is black
   with white text in light mode and white with black text in dark mode, its background turning the accent blue on
   hover with the base's colour animation (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`);
-  otherwise it looks like the other buttons. The outcome, Reset and Follow (`Components/StatusBarButton.qml`) are white
-  with a 1 px border in the bar's border colour in light mode and black with a border just off the bar's background in
-  dark mode, the theme's text, the accent while Follow is on and the disabled colour while a button cannot act; on
-  hover their icon and word turn the accent blue (`AppColors.statusButtonBackground`, `statusButtonBorder`). The Fit
-  button's tool tip, shown only while tool tips are on, says *Fit the free parameters*. When the bar runs short of room
-  Reset and Follow drop their words before the Fit button does. All are framed fit-area items whose body is as tall and
-  as round as the progress bar, the outlined ones drawing their 1 px border outside it and the Fit button having none
-  while it can act, so every button's body is the same height (the owner, 2026-10-26); they share one spacing: half a font size before the icon, a little less between icon and word, a little
-  more after the word, so the three look even. The status bar has the tab bars' height, three font sizes, with the buttons centred in it
+  otherwise it looks like the other buttons. The outcome, Reset and Follow (`Components/StatusBarButton.qml`) are
+  white with a 1 px border in the bar's border colour in light mode and black with a border just off the bar's
+  background in dark mode, the theme's text, the accent while Follow is on and the disabled colour while a button
+  cannot act; on hover their icon and word turn the accent blue (`AppColors.statusButtonBackground`,
+  `statusButtonBorder`). The Fit button's tool tip, shown only while tool tips are on, says *Fit the free parameters*.
+  When the bar runs short of room Reset and Follow drop their words before the Fit button does, each then a circle
+  round its icon. All are framed fit-area items whose body is two font sizes tall and as round as the progress bar,
+  which has that height too, the outlined ones drawing their 1 px border outside it and the Fit button having none
+  while it can act, so every button's body is the same height (the owner, 2026-10-26); they share one spacing: half a
+  font size before the icon, a little less between icon and word, a little more after the word, so the three look
+  even. The status bar has the tab bars' height, three font sizes, with the buttons centred in it
   (`Base/Gui/Style/Sizes.qml`, which edi builds in place of the base's; the owner, 2026-10-26).
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*

@@ -41,23 +41,31 @@ Control {
     property bool showWord: true
     property bool dropsWord: false
     property bool shown: valueText !== ""
-    // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13).
-    readonly property real frameHeight: Math.round(font.pixelSize * 1.8)
+    // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13): two font sizes, so a
+    // framed item that shows its icon alone is a circle (the owner, 2026-10-26).
+    readonly property real frameHeight: Math.round(font.pixelSize * 2)
     readonly property bool wordShown: framed && (showWord || !dropsWord)
+    readonly property bool iconOnly: framed && !wordShown
+    // A framed item's padding before its icon and after its word.
+    readonly property real sidePadding: Math.round(font.pixelSize * 0.5)
+    readonly property real afterWordPadding: Math.round(font.pixelSize * 0.65)
     // The item's width with its key shown, whether or not it is, and with its icon and value only: what the bar
-    // measures. A framed item has no key; its word goes in the compact width unless it drops it.
+    // measures. A framed item has no key; its word goes in the compact width unless it drops it, when it is a circle.
     readonly property real valueWidth: framed ? word.implicitWidth : value.implicitWidth
-    readonly property real labelledWidth: framed ? iconLabel.implicitWidth + contentRow.spacing + word.implicitWidth + leftPadding + Math.round(font.pixelSize * 0.65) : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
-    readonly property real compactWidth: framed && dropsWord ? iconLabel.implicitWidth + 2 * leftPadding : iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + (framed ? Math.round(font.pixelSize * 0.65) : rightPadding)
+    readonly property real labelledWidth: framed ? iconLabel.implicitWidth + contentRow.spacing + word.implicitWidth + sidePadding + afterWordPadding : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
+    readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : iconLabel.implicitWidth + valueWidth + contentRow.spacing + sidePadding + afterWordPadding
     signal clicked
 
     visible: shown
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+    // Whole pixels, so the fit area's items, the round buttons among them, sit on the pixel grid.
+    implicitWidth: Math.ceil(Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding))
     padding: 0
     // A clickable or framed item keeps its frame clear of its icon and text (the owner, 2026-10-13). A framed one has
-    // less space between its icon and word and more after the word, so the three look even (the owner, 2026-10-26).
-    leftPadding: clickable || framed ? Math.round(font.pixelSize * 0.5) : 0
-    rightPadding: wordShown ? Math.round(font.pixelSize * 0.65) : leftPadding
+    // less space between its icon and word and more after the word, so the three look even, and with its icon alone it
+    // is as wide as it is tall, the icon centred (the owner, 2026-10-26).
+    leftPadding: iconOnly ? (frameHeight - iconLabel.implicitWidth) / 2 : clickable || framed ? sidePadding : 0
+    rightPadding: iconOnly ? leftPadding : wordShown ? afterWordPadding : leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 

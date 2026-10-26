@@ -144,7 +144,7 @@ EaElements.StatusBar {
         anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
-        spacing: EaStyle.Sizes.fontPixelSize * 1.2
+        spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
         // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one.
         visible: bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
@@ -288,6 +288,7 @@ EaElements.StatusBar {
         // Scan results the template has changed since stay, marked out of date until the next run replaces them.
         Text {
             id: outOfDate
+            width: Math.ceil(implicitWidth)
             objectName: "statusBar.fit.outOfDate"
             anchors.verticalCenter: parent.verticalCenter
             visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
