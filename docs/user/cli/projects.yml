@@ -8,6 +8,8 @@
 # (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
 # `user-facing` set to `true`: one of the example catalogue's cases, listed in the app's examples in registry
 # order; every other project is a test fixture.
+# `verification: true`: a project whose model is exactly another program's, fitted only for its scale or against
+# that program's own calculation (ADR-0031); it stays a CLI project and is never one of the app's examples.
 schema: 1
 projects:
   - id: pd-neut-cwl_cosio-d20_start-1
@@ -42,10 +44,12 @@ projects:
     executing: true
   - id: pd-neut-tof_diamond-dream_basic
     executing: true
+    verification: true
   - id: pd-neut-cwl_lab6-echidna_fcj-asymmetry
     # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
     # page's list).
     executing: false
+    verification: true
   - id: pd-neut-cwl_pbso4_beba-asymmetry
     # The pseudo-Voigt with Berar-Baldinozzi re-fitted (profile, mixing, asymmetry, scale) since FullProf's TCH pair left edi.
     executing: false
@@ -58,6 +62,7 @@ projects:
     # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
     # page's list).
     executing: false
+    verification: true
   - id: pd-neut-tof_cecoal-polaris_chebyshev
     # CeCoAl3 with FullProf's Chebyshev background (Nba -5), against a FullProf fit.
     executing: true
@@ -71,12 +76,14 @@ projects:
     # Fits the two X-ray polarization parameters against FullProf's calculated profile; executing since edi
     # declared the two parameters.
     executing: true
+    verification: true
   - id: pd-neut-tof_ferrite-austenite-beer_joint
     # Ferrite and austenite against two BEER banks, fitted jointly, each bank's phase scales free.
     executing: true
   - id: pd-neut-cwl_y2o3_beta-adp
     # Y2O3 with anisotropic beta ADPs tied by site symmetry; the scale alone against FullProf's fit.
     executing: true
+    verification: true
   - id: pd-xray-cwl_pbso4-lab_round-robin
     executing: true
   - id: pd-neut-cwl_lab6-11b-echidna_basic
@@ -148,12 +155,16 @@ projects:
     user-facing: true
   - id: sc-neut-cwl_pr2nio4-5c2_basic
     executing: true
+    verification: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_basic
     executing: true
+    verification: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
     executing: true
+    verification: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
     executing: true
+    verification: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_fit
     executing: false
     app-only: "its tutorial and reference values come later; until then it is an app example only"
@@ -162,6 +173,7 @@ projects:
     app-only: "its tutorial and reference values come later; until then it is an app example only"
   - id: sc-neut-tof_taurine-unknown_basic
     executing: true
+    verification: true
   - id: sc-neut-tof_taurine_fit
     executing: false
     app-only: "its tutorial and reference values come later; until then it is an app example only"
