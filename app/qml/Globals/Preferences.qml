@@ -28,9 +28,12 @@ QtObject {
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
     // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
     property int engineThreads: 0
-    // How a followed scan redraws the pattern (Analysis, Extras; edi ADR-0029): FitViewModel.patternUpdates, 2 is
+    // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
+    // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
+    // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
+    property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
@@ -56,6 +59,7 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
+        preferences.scanRenderer = "auto";
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
@@ -71,11 +75,13 @@ QtObject {
         preferences.scanMapColours = "ramp:ediNatural";
         preferences.scanMapSmooth = true;
         preferences.scanMapReversed = false;
-        preferences.scanStackedHeight = 2;
+        preferences.scanStackedOffset = 10;
+        preferences.scanStackedSize = 0;
         preferences.scanStackedReversed = false;
         preferences.chartIncludedOnly = false;
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHighlightSelected = true;
+        preferences.chartHiddenRange = "keep";
     }
 
     property Settings settings: Settings {
@@ -133,8 +139,11 @@ QtObject {
     property bool scanMapSmooth: true
     // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
     property bool scanMapReversed: false
-    // How high a Stacked pattern rises, in multiples of four rows, 1 to 5 (the owner, 2026-10-22).
-    property int scanStackedHeight: 2
+    // The Stacked patterns' placing (edi ADR-0041 §4; the owner, 2026-10-24): each baseline's offset above the one
+    // below it, in percent of a pattern's own height (0 to 100 by 10), and each pattern's height, in percent of the
+    // plot's (10 to 100 by 10), 0 for Fit, which fills the plot with the whole stack.
+    property int scanStackedOffset: 10
+    property int scanStackedSize: 0
     // The Stacked colours reversed, last dataset first (the owner, 2026-10-22).
     property bool scanStackedReversed: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
@@ -146,6 +155,9 @@ QtObject {
     // owner, 2026-10-24).
     property bool chartHighlightSelected: true
     readonly property real chartFadedOpacity: 0.3
+    // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
+    // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
+    property string chartHiddenRange: "keep"
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -153,6 +165,7 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
         property alias highlightSelected: preferences.chartHighlightSelected
+        property alias hiddenRange: preferences.chartHiddenRange
     }
 
     property Settings analysisSettings: Settings {
@@ -179,8 +192,10 @@ QtObject {
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias mapReversed: preferences.scanMapReversed
-        property alias stackedHeight: preferences.scanStackedHeight
+        property alias stackedOffset: preferences.scanStackedOffset
+        property alias stackedSize: preferences.scanStackedSize
         property alias stackedReversed: preferences.scanStackedReversed
+        property alias renderer: preferences.scanRenderer
     }
 
     property Binding fitPatternUpdates: Binding {
@@ -227,6 +242,20 @@ QtObject {
     onChartIncludedOnlyChanged: {
         chartSettings.setValue("includedOnly", chartIncludedOnly);
         chartSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: the renderer choice is read by the next start, which may follow at once.
+    onScanRendererChanged: {
+        scanViewSettings.setValue("renderer", scanRenderer);
+        scanViewSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+
+    // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
+    onScanPatternUpdatesChanged: {
+        analysisSettings.setValue("scanPatternUpdates", scanPatternUpdates);
+        analysisSettings.sync();
         ApplicationInfo.storeSettings();
     }
 

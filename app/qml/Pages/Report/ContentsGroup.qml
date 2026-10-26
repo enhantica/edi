@@ -25,8 +25,8 @@ EaElements.GroupBox {
     objectName: "group.reportContents"
     title: qsTr("Contents")
     icon: "list"
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     enabled: report !== null
 
