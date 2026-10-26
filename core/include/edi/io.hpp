@@ -64,16 +64,23 @@ Structure load_structure_edi_file(const std::string& path);
 Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning = {});
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
-// A batch, checked as a whole before anything is added: every file as above, and each name
-// unique against the project and within the batch. The first refusal names its file.
+// A batch, checked as a whole before anything is added: every file as above, each name unique
+// against the project and within the batch, and each linked structure one the project holds. The
+// first refusal names its file.
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
                                                          const std::vector<std::string>& paths,
                                                          const WarningSink& on_warning = {});
 // Add a loaded structure: refused when the project already holds one (edi persists one structure
 // per project — load_project reads one, save_project refuses more).
 void add_loaded_structure(Project& project, Structure structure);
+// Refuses an experiment that links a structure the project does not hold, before a project-aware
+// import adds it: `where` leads the message, and `source` names the file it came from. A detached
+// experiment, from a factory, is checked when it is saved or calculated instead.
+void require_held_links(const Project& project, const BraggPdExperiment& experiment,
+                        const std::string& where = {}, const std::string& source = {});
 // Add a loaded experiment: refused when its name is already in the project (upstream's collection
-// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k).
+// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k), or when it
+// links a structure the project does not hold.
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment);
 // Rename an experiment of the project, the adder's rule: refused when the new name is already in the
 // project, so a rename never makes two experiments share one name.

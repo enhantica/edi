@@ -1390,6 +1390,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built =
                 nb::module_::import_("edi").attr("ExperimentFactory").attr("from_cif_str")(cif_str);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1401,6 +1403,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(cif_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1412,6 +1416,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(edi_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
