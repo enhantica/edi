@@ -132,19 +132,18 @@ Column {
                 objectName: `linkedStructure.weightFraction.${row.index}`
                 enabled: row.model.enabled
                 readOnly: true
-                parameter: known ? {
-                    "value": Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError),
-                    "error": Session.suText("linked_structure.weight_fraction", fractionValue, fractionError),
-                    "enabled": true,
-                    "fittable": false,
-                    "fit": false,
-                    "category": "linked_structure",
-                    "name": "weight_fraction",
-                    "units": ""
-                } : {
-                    "value": "",
-                    "error": ""
-                }
+                // One map whose values depend on `known`: a choice between two maps, compiled ahead of time, is
+                // undefined while the cell is made, and the base component's bindings warn on it.
+                parameter: ({
+                        "value": known ? Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError) : "",
+                        "error": known ? Session.suText("linked_structure.weight_fraction", fractionValue, fractionError) : "",
+                        "enabled": true,
+                        "fittable": false,
+                        "fit": false,
+                        "category": "linked_structure",
+                        "name": "weight_fraction",
+                        "units": ""
+                    })
                 color: EaStyle.Colors.themeForegroundMinor
                 ToolTip.text: Session.tooltip("linked_structure.weight_fraction")
             }
