@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T00:23:41Z
+# measured_utc = 2026-10-26T02:20:30Z
 #
-# Recorded from: measured test run (8307 node(s) measured once, 15525 banked, 24 stale row(s) dropped)
-# Collected tests: 25605; with a reported duration: 10389
+# Recorded from: measured test run (26 node(s) measured once, 16166 banked, 0 stale row(s) dropped)
+# Collected tests: 25631; with a reported duration: 10389
 # Module-scoped fixture costs recorded: 73
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 25605
+# inventory_python = 25631
 # inventory_cpp = 393
-# inventory_measured = 16166
+# inventory_measured = 16192
 # inventory_unmeasured = 9832
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -110,7 +110,33 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.p
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp-bm01_scan]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_nacl_simulation]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2_fit]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_fit]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-tof_taurine_fit]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-1]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-4]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_lab6-11b-echidna_basic]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_yap-spodi_3k]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_diamond-dream_mcstas]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ferrite-austenite-beer_joint]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ncaf-wish-2bank_start-3]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ncaf-wish-3bank_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-xray-cwl_pbso4-lab_round-robin]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_diamond-dream_basic]
@@ -26043,8 +26069,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 285.715	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 927.726	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 27.200	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.214	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py

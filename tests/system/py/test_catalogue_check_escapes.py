@@ -179,8 +179,12 @@ def test_owner_selection_rejects_coordinated_consumer_changes(tmp_path, change):
     by_id = {row['id']: row for row in record['projects']}
     for row in record['projects']:
         row.pop('user-facing', None)
-    fixtures = [row for row in record['projects'] if row['id'] not in expected]
-    record['projects'] = fixtures + [{**by_id[case], 'user-facing': True} for case in expected]
+    fixtures = [row for row in record['projects'] if row['id'] not in expected + APP_ONLY]
+    record['projects'] = (
+        fixtures
+        + [{**by_id[case], 'user-facing': True} for case in expected]
+        + [by_id[case] for case in APP_ONLY]
+    )
     text = 'schema: 1\nprojects:\n'
     for row in record['projects']:
         text += f'  - id: {row["id"]}\n'
