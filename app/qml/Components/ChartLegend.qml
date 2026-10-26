@@ -33,6 +33,20 @@ Rectangle {
 
     signal toggled(string key)
 
+    // A click at (x, y) in `item`, the chart's pointer area, on a row: its curve hidden or shown again. The legend takes
+    // no press, so a drag that starts on it still zooms, and the pointer area passes its clicks here; true when a row
+    // took the click.
+    function toggleAt(item, x, y) {
+        if (!legend.toggles || !legend.visible)
+            return false;
+        const at = item.mapToItem(column, x, y);
+        const row = column.childAt(at.x, at.y);
+        if (row === null || row.key === undefined)
+            return false;
+        legend.toggled(row.key);
+        return true;
+    }
+
     // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
     // title is, never by the line's gaps between pieces.
     function richLabel(pieces) {
@@ -127,13 +141,15 @@ Rectangle {
                     }
                 ]
 
+                // The row's hover cue only: no button, so a press goes on to the chart's pointer area, which passes a
+                // click back (toggleAt).
                 MouseArea {
                     objectName: "chart.legend.toggle"
                     anchors.fill: parent
                     enabled: legend.toggles
+                    acceptedButtons: Qt.NoButton
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: legend.toggled(entry.key)
 
                     EaElements.ToolTip {
                         visible: parent.containsMouse

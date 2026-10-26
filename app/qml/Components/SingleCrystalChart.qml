@@ -441,7 +441,10 @@ Item {
 
     // The legend, inside the plot's top left corner, behind the toolbar's legend button.
     ChartLegend {
+        id: chartLegend
+
         objectName: "singleCrystal.legend"
+        // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
         z: 1
         colors: chart.colors
         x: view.x + view.plotArea.x + chart.em
@@ -650,8 +653,12 @@ Item {
                     chart.zoom = [];
                     return;
                 }
+                const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+                // A click, not a drag, on a legend row hides or shows its curve.
+                if (still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
+                    return;
                 // A click on the Stacked chart (not a drag) selects the experiment of the reflection under it.
-                if (chart.stacked && chart.project && Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3) {
+                if (chart.stacked && chart.project && still) {
                     const hit = hoverLabel.nearest(mouse.x, mouse.y);
                     if (hit !== null)
                         chart.project.currentExperimentIndex = hit.model;
