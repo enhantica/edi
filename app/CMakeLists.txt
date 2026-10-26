@@ -120,6 +120,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
+        qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml

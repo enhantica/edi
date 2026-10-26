@@ -904,6 +904,12 @@ refuses to write its bank rows into it.
   file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
   12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
   ` · ` (`FitOutcomes.separator`).
+- **The status bar's Fit button** (the owner, 2026-10-26) is the fit area's first item, shown on every page whenever
+  the Analysis page is available, so a fit can be run again after changing a value elsewhere. It reads *Fit* and does
+  what Start fitting does at that moment, with its icon: it starts or continues a fit, and while one runs it shows the
+  stop icon and a click stops it. It is as tall and as round as the progress bar, near-black with white text in light
+  mode and the other way round in dark mode (`Components/StatusBarFitButton.qml`). The outcome beside it is framed as
+  a button of the same height and shape, in the light hover colour, and darker on hover.
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
@@ -919,7 +925,8 @@ refuses to write its bank rows into it.
   fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
   table is built from the result the project records (`_fit_result`), so a project opened with one shows its last
   fit too: the status bar's iterations, reduced χ² and stop reason, and the same table from the Fit status item,
-  outcome, which opens it on a click.
+  outcome, which opens it on a click. The *Show fit results after fitting* preference (Prompts, on by default; the
+  owner, 2026-10-26) keeps the pop-up closed when a fit ends; the outcome still opens it.
 - **A refused or failed fit** shows its reason in a message dialog; the project is unchanged.
 - **A fitted value outside its admissible range** (the table's min and max) is kept, as the CLI keeps it, and shown in
   red with a tooltip naming the range, as diffraction-lib's table of fitted parameters does (the owner, 2026-10-02).
