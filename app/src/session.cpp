@@ -330,11 +330,11 @@ bool Session::save() {
         const quint64 revision = project_->revision();
         web_writing_ = true;
         writeWebPlace(place, staged.folder, [this, saving, revision, staged, place](bool written) {
+            web_writing_ = false;
             if (saving.isNull() || saving != project_) {
                 QDir(staged.root).removeRecursively();
                 return;
             }
-            web_writing_ = false;
             if (!written) {
                 QDir(staged.root).removeRecursively();
                 emit webSaveFinished(false);
@@ -454,10 +454,7 @@ bool Session::publishArchive(const Staged& staged, const QString& archive) {
         return false;
     }
     // The archive holds the staged snapshot: the open project takes it and works in its folder from now on.
-    if (const QString error = project_->adoptSave(staged.folder, staged.metadata); !error.isEmpty()) {
-        setLastError(error);
-        return false;
-    }
+    project_->takeStaged(staged.folder, *staged.project);
     releaseTemporaryFolder();
     temporary_folder_ = staged.root;
     return true;
@@ -474,11 +471,7 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
         emit webSaveFailed(tr("The project was written to its place, but it stays unsaved here: %1").arg(refusal));
         return false;
     }
-    if (const QString error = project_->adoptSave(staged.folder, staged.metadata); !error.isEmpty()) {
-        setLastError(error);
-        emit webSaveFailed(error);
-        return false;
-    }
+    project_->takeStaged(staged.folder, *staged.project);
     releaseTemporaryFolder();
     if (!web_copy_.isEmpty()) {
         QDir(web_copy_).removeRecursively();
@@ -497,10 +490,10 @@ bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged
     try {
         staged.root = QString::fromStdString(edi::fresh_archive_directory(purpose));
         staged.folder = name.isEmpty() ? staged.root : staged.root + QLatin1Char('/') + name;
-        edi::Project copy = project_->savedModel();
-        edi::save_project_as(copy, staged.folder.toStdString());
-        edi::adopt_saved_project(copy, staged.folder.toStdString());
-        staged.metadata = copy.metadata;
+        auto copy = std::make_shared<edi::Project>(project_->savedModel());
+        edi::save_project_as(*copy, staged.folder.toStdString());
+        edi::adopt_saved_project(*copy, staged.folder.toStdString());
+        staged.project = std::move(copy);
     } catch (const std::exception& refusal) {
         if (!staged.root.isEmpty()) {
             QDir(staged.root).removeRecursively();
@@ -508,12 +501,22 @@ bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
+    // Everything that can refuse happens before the save is published: a scan's results too.
+    if (const QString refusal = project_->stageScanRun(staged.folder); !refusal.isEmpty()) {
+        QDir(staged.root).removeRecursively();
+        setLastError(refusal);
+        return false;
+    }
     return true;
 }
 
 bool Session::saveCopy(const QString& target, bool zip) {
     // What a Save writes (round, adopt, recalculate, write), done on a copy of the project: the open project keeps its
-    // own location and values.
+    // own location and values. A running fit owns where the project works, which a copy may name: it refuses first.
+    if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return false;
+    }
     try {
         edi::Project copy = project_->project();
         const auto write = [&copy](const std::string& folder) {
@@ -736,8 +739,6 @@ void Session::setOpenedArchive(const QString& name) {
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
     keep_timer_->stop();
-    // A save still being written belongs to the replaced project.
-    web_writing_ = false;
     // A web open still being read no longer replaces anything.
     ++open_request_;
     const QString previous_web_copy = std::exchange(web_copy_, QString());
@@ -1000,11 +1001,11 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
         const quint64 revision = project_->revision();
         web_writing_ = true;
         writeWebPlace(place, staged.folder, [this, saving, revision, staged, place, copy](bool written) {
+            web_writing_ = false;
             if (saving.isNull() || saving != project_) {
                 QDir(staged.root).removeRecursively();
                 return;
             }
-            web_writing_ = false;
             // A copy leaves the project where it is; a moving Save as moves it only if it takes the written snapshot.
             if (copy || !written || !takeWebSave(staged, revision)) {
                 QDir(staged.root).removeRecursively();

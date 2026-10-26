@@ -2512,6 +2512,52 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     return adoptSave(directory, saved.metadata);
 }
 
+QString ProjectViewModel::stageScanRun(const QString& directory) {
+    // A processed scan's results are part of what a save writes: written into a staged save's folder before it is
+    // published, so taking the save afterwards writes nothing.
+    if (scan_session_ == nullptr || !scanProcessed() || scan_session_->run().identity.empty()) {
+        return {};
+    }
+    edi::Project shown = *project_;
+    shown.path = directory.toStdString();
+    shown.metadata.path = shown.path;
+    shown.scan_data_root.clear();
+    return scan_session_->writeRun(shown, scan_session_->run());
+}
+
+void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& staged) {
+    // The staged save already wrote, adopted and calculated what the project takes: nothing here reads or writes a
+    // file, so nothing can refuse after the save was published.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    saved.metadata = staged.metadata;
+    saved.path = directory.toStdString();
+    saved.metadata.path = saved.path;
+    saved.scan_data_root.clear();
+    if (scan_template_) {
+        project_->path = scan_template_->path;
+        project_->metadata = scan_template_->metadata;
+        project_->scan_data_root = scan_template_->scan_data_root;
+    }
+    if (edi::adopt_values(saved, staged)) {
+        // Calculated with due background estimates deferred, as the staged save was (ADR-0040).
+        saved.refresh_calculated_pattern(edi::DueEstimates::Defer);
+        publish(false);
+        publishCalculating();
+    }
+    setLastError({});
+    emit pathChanged();
+    if (scan_session_ != nullptr) {
+        scan_refusal_ = scan_session_->load(*project_);
+        syncScanAdmission();
+        showScanResults();
+    }
+    publishMetadata();
+    saved_files_.reset();
+    invalidateTexts();
+    report_->refresh();
+    setModified(false);
+}
+
 QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
     if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);

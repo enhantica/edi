@@ -238,9 +238,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void workIn(const QString& folder);
     // Why the project cannot be saved now (a fit is running), or empty.
     QString saveRefusal() const;
-    // The project takes a save already written into `directory` (by itself or a staged copy of it, which wrote
-    // `metadata`): it works there and holds what the files hold. An empty string, else why not (also `lastError`).
+    // The project takes a save already written into `directory` (by itself, which wrote `metadata`): it works there
+    // and holds what the files hold. An empty string, else why not (also `lastError`).
     QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata);
+    // A processed scan's results written into a staged save's `directory`, before it is published. Why not, or empty.
+    QString stageScanRun(const QString& directory);
+    // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
+    // there and holds the staged values and results. Reads and writes no file.
+    void takeStaged(const QString& directory, const edi::Project& staged);
     // The model a save writes: a scan's template while a dataset is shown, else the project.
     const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).

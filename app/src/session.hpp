@@ -258,13 +258,14 @@ class Session : public QObject {
     bool openWebCopy(const QString& path, const WebPlace& place);
     // Writes `folder` into `place`; `done` hears whether it was written.
     void writeWebPlace(const WebPlace& place, const QString& folder, const std::function<void(bool)>& done);
-    // A browser Save or Save as is being written to a place: another waits until it is.
+    // A browser Save, Save as or copy is being written to a place: another waits until it is, whatever project is open
+    // by then. Only the write's own completion releases it.
     bool web_writing_ = false;
     // A save staged on a copy: its folder inside a new `root` and the metadata it wrote.
     struct Staged {
         QString root;
         QString folder;
-        edi::ProjectMetadata metadata;
+        std::shared_ptr<const edi::Project> project;  // the staged copy: what the open project takes once published
     };
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
