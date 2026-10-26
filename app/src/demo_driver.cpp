@@ -1015,7 +1015,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
             views << "timed-frames:" + mode + ":zoom:40" << "timed-frames:" + mode + ":pan:50"
                   << "timed-frames:" + mode + ":restyle:20" << "timed-frames:" + mode + ":select:20"
-                  << "timed-frames:" + mode + ":data:10";
+                  << "timed-frames:" + mode + ":data:10" << "timed-frames:" + mode + ":rows:10";
         }
         steps_.push_back({"perf-views-324f", views});
         // A data change alone on the Stacked view, to profile it.
@@ -1899,16 +1899,34 @@ bool DemoDriver::timed_frames(const QString& mode, const QString& kind, int coun
         } else if (kind == QLatin1String("select")) {
             change = [layer, i, model] { layer->setProperty("current", (i * 37) % model->count()); };
         } else if (kind == QLatin1String("data")) {
-            // The rows placed again (by file, by scan value): every dataset's row moves.
+            // Every dataset's points published again (the x axis placed anew: d and back where a calculation gives d,
+            // else the same axis): each trace is reduced and drawn from scratch, as for a dataset that changed.
+            change = [model] { model->setDSpacing(!model->dSpacing()); };
+        } else if (kind == QLatin1String("rows")) {
+            // The rows placed again (by file, by scan value): every dataset's row moves, its trace kept.
             change = [model] { model->setRowsByIndex(!model->rowsByIndex()); };
         } else {
             fail(QStringLiteral("step %1: no timed change '%2'").arg(steps_[current_].image, kind));
             return false;
         }
+        const int built = layer->property("traceBuildCount").toInt();
         samples.push_back(frame_after(change));
+        if (kind == QLatin1String("data") && mode == QLatin1String("stacked") &&
+            layer->property("traceBuildCount").toInt() - built < model->count()) {
+            fail(QStringLiteral("step %1: a data change rebuilt %2 of %3 traces")
+                     .arg(steps_[current_].image)
+                     .arg(layer->property("traceBuildCount").toInt() - built)
+                     .arg(model->count()));
+            return false;
+        }
         // Each change from an idle window, so one frame's work does not run into the next change's.
         QThread::msleep(20);
         QCoreApplication::processEvents();
+    }
+    if (kind == QLatin1String("data")) {
+        // What the data change republished: the points on d and back, or on the same axis.
+        std::fprintf(stderr, "edi_app --demo: %s data changes %s\n", qPrintable(mode),
+                     model->dAvailable() ? "alternate the x axis with d" : "republish the same axis (no d)");
     }
     record_samples(mode + QLatin1Char(' ') + kind, samples);
     return true;
