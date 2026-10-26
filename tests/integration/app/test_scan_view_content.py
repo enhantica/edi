@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
+
 ROOT = Path(__file__).resolve().parents[3]
 CASES = (
     [
@@ -37,8 +39,9 @@ CASES = (
         ],
         'test_map_key_and_image_use_frozen_interior_samples',
         'test_map_interpolates_between_neighboring_patterns',
-        'test_selected_map_rectangle_is_always_drawn',
+        'test_selected_map_label_is_always_drawn',
         'test_antialiased_ink_observer',
+        'test_private_copy_required',
         'test_map_interpolation_default',
         *[
             f'test_map_reverse_and_key:{direction}-{theme}'
@@ -82,6 +85,7 @@ def case_variants(case):
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Scan content acceptance requires the actual native test host'
+    binary = Path(native_arguments([binary])[0])
     groups = {}
     for item in request.session.items:
         if item.module is request.module and hasattr(item, 'callspec'):
