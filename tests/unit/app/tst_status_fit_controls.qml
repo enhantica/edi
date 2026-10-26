@@ -138,28 +138,29 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "Completion handlers and popup layout reach a frame before visibility is checked");
     }
     function preference() {
-        Ui.click(test, Probe, appWindow, "appBar.button.preferences");
-        const dialog = findChild(appWindow, "preferences");
-        verify(dialog !== null, "The real application owns its Preferences dialog");
-        tryCompare(dialog, "opened", true, 1000, "Preferences finishes opening before its fit-results choice is inspected");
-        const label = View.descendants(dialog.contentItem).find(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
-        verify(label !== undefined, "App preferences expose Show fit results after fitting with the owner's label");
+        Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.settings");
+        const page = Ui.page(appWindow);
+        const labels = View.descendants(page).filter(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
+        compare(labels.length, 1, "Analysis Settings exposes Show fit results after fitting once with the owner's label");
+        const label = labels[0];
         let box = label;
         if (typeof box.checked !== "boolean") {
             const siblings = label.parent.children;
             box = siblings.slice(siblings.indexOf(label) + 1).find(item => typeof item.checked === "boolean");
         }
         verify(box !== undefined && typeof box.toggled === "function", "The fit-results preference is an actual user-toggleable checkbox");
-        const tabs = View.descendants(dialog.contentItem).filter(item => item.objectName.startsWith("preferences.tab."));
-        for (const tab of tabs) {
-            if (Ui.exposed(box))
-                break;
-            click(tab);
-            verify(waitForPolish(dialog.contentItem), "The selected Preferences tab lays out its actual fit-results checkbox");
+        for (let group = box.parent; group; group = group.parent) {
+            if (group.collapsed !== true || !group.titleArea)
+                continue;
+            click(group.titleArea);
+            tryCompare(group, "collapsed", false, 1000, "The Analysis Settings group opens through its real header");
+            tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < .01, 2000, "The fit-results settings group finishes expanding before checkbox input");
         }
-        verify(Ui.exposed(box), "The fit-results preference is reachable on a visible Preferences tab");
+        Ui.scrollIntoView(box);
+        verify(waitForPolish(page), "Analysis Settings lays out its actual fit-results checkbox");
+        tryVerify(() => Ui.exposed(box), 1000, "The fit-results preference is reachable on the visible Analysis Settings tab");
         return {
-            dialog: dialog,
             box: box
         };
     }
@@ -171,8 +172,7 @@ TestCase {
             click(control.box);
         tryCompare(control.box, "checked", enabled, 1000, "Actual checkbox input selects the user's automatic results-window choice");
         compare(Session.project.modified, modified, "The app preference never modifies the scientific project");
-        control.dialog.close();
-        tryCompare(control.dialog, "visible", false, 1000, "Preferences closes before the actual fit starts");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
     }
     function test_visibility_tracks_analysis_on_every_page() {
         const empty = View.descendants(area()).filter(item => typeof item.clicked === "function" && item.text === "Fit");
@@ -501,6 +501,14 @@ TestCase {
     }
     function test_preference_default_and_user_store() {
         open("single");
+        Ui.click(test, Probe, appWindow, "appBar.button.preferences");
+        const dialog = findChild(appWindow, "preferences");
+        verify(dialog !== null, "The application retains its real Preferences dialog");
+        tryCompare(dialog, "opened", true, 1000, "App Preferences opens before checking the relocated option");
+        const oldLabels = View.descendants(dialog.contentItem).filter(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
+        compare(oldLabels.length, 0, "The relocated fit-results option no longer appears in App Preferences");
+        dialog.close();
+        tryCompare(dialog, "visible", false, 1000, "App Preferences closes before opening Analysis Settings");
         const control = preference();
         compare(control.box.checked, true, "Show fit results after fitting is on in a fresh user store");
         const before = {};
@@ -508,8 +516,10 @@ TestCase {
             if (typeof Preferences[key] === "boolean")
                 before[key] = Preferences[key];
         });
+        const modified = Session.project.modified;
         click(control.box);
         compare(control.box.checked, false, "The actual preference checkbox accepts the user's off choice");
+        compare(Session.project.modified, modified, "The Analysis Settings choice leaves the scientific project unchanged");
         const changed = Object.keys(before).filter(key => before[key] === true && Preferences[key] === false);
         compare(changed.length, 1, "The preference checkbox changes one actual application preference");
         const source = 'import QtQuick; import edi.app; QtObject { property bool saved: Preferences[' + JSON.stringify(changed[0]) + '] }';
