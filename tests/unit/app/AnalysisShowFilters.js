@@ -2,7 +2,7 @@
 .import "UiInteraction.js" as Ui
 .import "E04Review.js" as View
 
-var titles = ["Not measured in this fit", "Fixed by symmetry", "Set by a constraint", "Fixed settings"];
+var titles = ["Not measured in this fit", "Fixed by symmetry", "Set by a constraint", "Setup values"];
 var defaults = [true, false, false, true];
 
 function controls(test, root) {

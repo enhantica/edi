@@ -101,8 +101,8 @@ TestCase {
     function test_defaults_and_grid() {
         open("cubic-constrained");
         const controls = boxes();
-        compare(controls.map(box => box.checked), Show.defaults, "Not measured and Fixed settings default on; symmetry and constraint default off");
-        const actual = View.descendants(appWindow.analysisPage).filter(item => typeof item.text === "string" && typeof item.checked === "boolean" && /^(Can be fitted|Not measured in this fit|Fixed by symmetry|Set by a constraint|Fixed settings)(\s|$)/.test(item.text));
+        compare(controls.map(box => box.checked), Show.defaults, "Not measured and Setup values default on; symmetry and constraint default off");
+        const actual = View.descendants(appWindow.analysisPage).filter(item => typeof item.text === "string" && typeof item.checked === "boolean" && /^(Can be fitted|Not measured in this fit|Fixed by symmetry|Set by a constraint|Setup values)(\s|$)/.test(item.text));
         compare(actual.length, 4, "The always-included fittable group has no fifth checkbox");
         const at = controls.map(box => box.mapToItem(appWindow.contentItem, 0, 0));
         fuzzyCompare(at[0].y, at[1].y, 0.5, "The first two show-checkboxes share the first grid row");
