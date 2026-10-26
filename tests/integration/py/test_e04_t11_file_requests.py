@@ -48,6 +48,7 @@ def violations(text, case):
 
     opener = section('session', 'void Session::openWebProject(')
     receiver = section('session', 'WebStorage::Answer Session::webOpenAnswer(')
+    stored = section('session', 'void Session::openStoredProject(')
     picker = section('storage', 'void WebStorage::pickOpen(')
     begin = section('storage', 'int WebStorage::begin(Reply reply)')
     finish = section('storage', 'void WebStorage::finish(')
@@ -134,6 +135,17 @@ def violations(text, case):
         ],
     }
     problems = [message for body, pattern, message in specs[case] if not re.search(pattern, body)]
+    if case == 'overlapping-folder-uploads':
+        # Callback identity and distinct roots cannot confer replacement authority.
+        # The request counter is shared by Open, Recent and recovery, before reads begin.
+        for route, body in [('Open', opener), ('Recent/recovery', stored)]:
+            if not re.search(r'\+\+open_request_|open_request_\+\+', body):
+                problems.append(route + ' advances the shared replacement intent before reading')
+        for route, body in [('Open', receiver), ('Recent/recovery', stored)]:
+            guard = re.search(r'\b\w+\s*!=\s*open_request_|open_request_\s*!=\s*\w+', body)
+            load = body.find('openWebCopy(')
+            if guard is None or load < 0 or guard.start() > load:
+                problems.append(route + ' rejects superseded intent before project replacement')
     if case == 'replacement-during-upload':
         guard = receiver.find('if (before != project_ || !answer.ok)')
         load = receiver.find('openWebCopy(answer.path, place)')
@@ -177,6 +189,7 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
                 'pickOpen(kind, root, unusedAnswer(root))',
             ),
             ('session', 'fresh_archive_directory("web")', 'shared_archive_directory("web")'),
+            ('session', '++open_request_', 'open_request_'),
         ],
         'replacement-during-upload': [
             ('session', 'before != project_ || !answer.ok', 'before == project_ || !answer.ok'),
