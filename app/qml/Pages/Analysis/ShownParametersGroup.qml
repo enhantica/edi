@@ -64,10 +64,10 @@ EaElements.GroupBox {
         }
         ShowBox {
             objectName: "analysis.show.fixedSettings"
-            text: qsTr("Fixed settings (%1)").arg(group.counts[3])
+            text: qsTr("Setup values (%1)").arg(group.counts[3])
             checked: Preferences.analysisShowFixedSettings
             onToggled: Preferences.analysisShowFixedSettings = checked
-            ToolTip.text: qsTr("Values that describe the setup and are never fitted")
+            ToolTip.text: qsTr("Values that describe the setup, which no fit ever varies")
         }
     }
 }

@@ -50,9 +50,9 @@ crysta may have no derivative for it yet, such as the wavelength of an X-ray exp
    fit can vary.
 7. **Show-filters.** Which of the values a fit cannot free the table lists is chosen on the Analysis page's Settings
    tab, with four boxes, two to a row, one per group of crysta's reasons: not measured in this fit (this fit's data
-   cannot determine it, or crysta cannot vary it yet), fixed by symmetry, set by a constraint, and fixed settings (the
-   descriptors). Each box adds its group's rows to those a fit can free, and its label counts them. A value marked free
-   is always listed, so its flag can be cleared. By default the values not measured in this fit and the fixed settings
+   cannot determine it, or crysta cannot vary it yet), fixed by symmetry, set by a constraint, and setup values (the
+   descriptors, which no fit ever varies). Each box adds its group's rows to those a fit can free, and its label counts them. A value marked free
+   is always listed, so its flag can be cleared. By default the values not measured in this fit and the setup values
    are listed, the other two groups are not. The choice is remembered per user by the app and never saved in the
    project; Python and the command line are not filtered. The variability filter's counts are of the rows the
    show-filters leave.

@@ -32,7 +32,7 @@ QtObject {
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // Which rows the Analysis table adds on top of what a fit can free (Analysis, Settings; the owner, 2026-10-26): the
-    // values this fit cannot determine and the fixed settings by default, those symmetry or a constraint sets on request.
+    // values this fit cannot determine and the setup values by default, those symmetry or a constraint sets on request.
     property bool analysisShowNotMeasured: true
     property bool analysisShowBySymmetry: false
     property bool analysisShowByConstraint: false
