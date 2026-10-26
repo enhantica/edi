@@ -236,8 +236,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
     // (edi ADR-0052). Not a save and not an edit.
     void workIn(const QString& folder);
+    // Where the project works: its folder and where it reads scan data from.
+    struct Location {
+        std::string path;
+        std::string scan_data_root;
+    };
+    Location location() const { return {project_->path, project_->scan_data_root}; }
+    // Back to `location` after a save whose destination was then refused (its archive or its place was not written):
+    // the project, a scan's template and its listed datasets work there again. Not an edit.
+    void returnTo(const Location& location);
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).
     void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
+    // A save that wrote the project's own folder but not yet its place: still unsaved, and not an edit.
+    void keepUnsaved();
+    // The place holds what the save at `revision` wrote, and the project has not changed since.
+    void markSavedAt(quint64 revision);
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -653,6 +668,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool pending_structural_ = false;
     bool calculating_ = false;
     bool modified_ = false;
+    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

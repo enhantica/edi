@@ -291,7 +291,8 @@ EaComponents.ApplicationWindow {
             window.saveProjectAs();
             return;
         }
-        if (!Session.save())
+        // Where the browser keeps nothing, Save says so itself (webStorageUnavailable) with no error of its own.
+        if (!Session.save() && Session.lastError !== "")
             saveError.open();
     }
     // Save project as asks first, on every surface (edi ADR-0052 §6, §9). A browser that cannot write the disk offers
@@ -353,14 +354,29 @@ EaComponents.ApplicationWindow {
         contentWidth: unsavedRow.implicitWidth
         contentHeight: unsavedRow.implicitHeight
         // Save writes in place; a project with nowhere to write yet opens Save as, and the action waits for the user to
-        // ask again.
+        // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
+        // dropped if it is not (the window says why).
+        property var afterSave: null
         onAccepted: {
             if (Session.needsSaveAs) {
                 window.saveProjectAs();
             } else if (Session.save()) {
-                Qt.callLater(action);
-            } else {
+                if (WebFiles.available)
+                    afterSave = action;
+                else
+                    Qt.callLater(action);
+            } else if (Session.lastError !== "") {
                 saveError.open();
+            }
+        }
+        Connections {
+            target: Session
+            function onWebSaveFinished(saved) {
+                const waiting = unsavedChanges.afterSave;
+                unsavedChanges.afterSave = null;
+                // An edit made while the place was written is asked about again.
+                if (saved && waiting !== null)
+                    AppState.afterChanges(waiting);
             }
         }
         onDiscarded: {

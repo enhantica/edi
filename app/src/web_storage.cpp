@@ -31,7 +31,7 @@ EM_JS(int, edi_storage_install, (), {
     if (globalThis.ediStorage) {
         return globalThis.ediStorage.disk ? 1 : 0;
     }
-    const S = {handles : new Map(), loaded : new Map(), staged : new Map(), workerJobs : new Map(), next : 1};
+    const S = {handles : new Map(), loaded : new Map(), staged : new Map(), workerJobs : new Map(), queues : new Map(), next : 1};
     globalThis.ediStorage = S;
     S.disk = typeof globalThis.showDirectoryPicker === "function" && typeof globalThis.showOpenFilePicker === "function"
              && typeof globalThis.showSaveFilePicker === "function";
@@ -47,6 +47,19 @@ EM_JS(int, edi_storage_install, (), {
         }
     };
     S.key = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+    // One place's writes and drops run one after another, in the order the app sent them: a Save that finishes later
+    // never overtakes a newer keep, and a discard is never undone by a keep still in flight.
+    S.serial = (key, run) => {
+        const next = (S.queues.get(key) || Promise.resolve()).then(run, run);
+        const tail = next.catch(() => {});
+        S.queues.set(key, tail);
+        tail.then(() => {
+            if (S.queues.get(key) === tail) {
+                S.queues.delete(key);
+            }
+        });
+        return next;
+    };
 
     S.db = () => S.opened || (S.opened = new Promise((resolve, reject) => {
         const request = indexedDB.open("edi-projects", 1);
@@ -116,6 +129,25 @@ EM_JS(int, edi_storage_install, (), {
         } catch (error) {
             // Already gone.
         }
+    };
+    // The documents a project save writes in a folder and replaces there (as the app's desktop save does): the entity
+    // documents directly in structures/ and experiments/, and the analysis document. Anything else stays.
+    S.owned = async folder => {
+        const owned = [ "analysis/analysis.edi" ];
+        for (const category of [ "structures", "experiments" ]) {
+            let at;
+            try {
+                at = await folder.getDirectoryHandle(category);
+            } catch (error) {
+                continue;
+            }
+            for await (const [name, handle] of at.entries()) {
+                if (handle.kind === "file" && name.toLowerCase().endsWith(".edi")) {
+                    owned.push(category + "/" + name);
+                }
+            }
+        }
+        return owned;
     };
     S.permitted = async handle => {
         const mode = {mode : "readwrite"};
@@ -326,7 +358,8 @@ EM_JS(void, edi_storage_pick_save, (int job, const char* kind_utf8, const char* 
         const key = S.key();
         S.handles.set(key, handle);
         if (kind === "folder") {
-            S.loaded.set(key, new Set());
+            // A folder holding another project: its documents the save does not write again are removed with it.
+            S.loaded.set(key, new Set(await S.owned(handle)));
         }
         return {ok : true, key : key, kind : kind, name : handle.name};
     })().then(value => S.answer(job, value), error => S.fail(job, error));
@@ -339,7 +372,7 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
     const name = UTF8ToString(name_utf8);
     const files = S.staged.get(job) || [];
     S.staged.delete(job);
-    (async () => {
+    S.serial(key, async () => {
         let handle = null;
         if (recovery || kind === "browser") {
             await S.writeBrowser([ "edi", recovery ? "recovery" : "projects", key ], files);
@@ -380,7 +413,7 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
         }
         await S.put(record);
         return {ok : true};
-    })().then(value => S.answer(job, value), error => S.fail(job, error));
+    }).then(value => S.answer(job, value), error => S.fail(job, error));
 });
 
 EM_JS(void, edi_storage_load, (int job, const char* key_utf8, int recovery, const char* root_utf8), {
@@ -432,7 +465,7 @@ EM_JS(void, edi_storage_list, (int job), {
 EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
     const S = globalThis.ediStorage;
     const key = UTF8ToString(key_utf8);
-    (async () => {
+    S.serial(key, async () => {
         const record = await S.record(key);
         const parts = whole ? [ "recovery", "projects" ] : ["recovery"];
         for (const part of parts) {
@@ -452,7 +485,7 @@ EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
         }
         S.handles.delete(key);
         return {ok : true};
-    })().then(value => S.answer(job, value), error => S.fail(job, error));
+    }).then(value => S.answer(job, value), error => S.fail(job, error));
 });
 
 extern "C" EMSCRIPTEN_KEEPALIVE void edi_storage_answered(int job, char* json) {

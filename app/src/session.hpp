@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -185,6 +186,9 @@ class Session : public QObject {
     void webStorageUnavailable();
     // A write to the project's place, or a download, failed: why.
     void webSaveFailed(const QString& message);
+    // A Save or a moving Save as in the web app finished: `saved` once its place holds the project. A replacement
+    // or a quit waiting on the Save goes on only then.
+    void webSaveFinished(bool saved);
 
    private:
     bool openProjectAt(const QUrl& directory);
@@ -197,6 +201,8 @@ class Session : public QObject {
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
+    // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
+    void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
 
     ProjectViewModel* project_ = nullptr;
@@ -232,8 +238,12 @@ class Session : public QObject {
     WebStorage::Answer webOpenAnswer(const QString& root);
     // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
     bool openWebCopy(const QString& path, const WebPlace& place);
-    // Writes the saved project folder into its place; `announce` says so when it is written (webSaved).
-    void writeWebPlace(bool announce = true);
+    // Writes the saved project folder into `place`; `done` hears whether it was written.
+    void writeWebPlace(const WebPlace& place, const std::function<void(bool)>& done);
+    // A web open request: its answer replaces the project only if no later request or open came meanwhile, and the
+    // project was not edited while it was read.
+    std::function<bool(const WebStorageAnswer&)> openRequest(const QString& root);
+    quint64 open_request_ = 0;
     // The name a .zip of the project is offered under: the place's own name, or the project's.
     QString downloadName() const;
     // Whether the project's place is the browser's own storage (not a folder or .zip on the disk).

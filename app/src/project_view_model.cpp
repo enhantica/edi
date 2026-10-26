@@ -2463,10 +2463,25 @@ void ProjectViewModel::syncUndo() {
 
 void ProjectViewModel::setModified(bool modified) {
     if (modified) {
+        ++revision_;
         emit edited();
     }
     if (modified != modified_) {
         modified_ = modified;
+        emit modifiedChanged();
+    }
+}
+
+void ProjectViewModel::keepUnsaved() {
+    if (!modified_) {
+        modified_ = true;
+        emit modifiedChanged();
+    }
+}
+
+void ProjectViewModel::markSavedAt(quint64 revision) {
+    if (revision == revision_ && modified_) {
+        modified_ = false;
         emit modifiedChanged();
     }
 }
@@ -2476,6 +2491,22 @@ void ProjectViewModel::workIn(const QString& folder) {
     project_->metadata.path = project_->path;
     project_->scan_data_root.clear();
     emit pathChanged();
+}
+
+void ProjectViewModel::returnTo(const Location& location) {
+    for (edi::Project* project : {&*project_, scan_template_ ? &*scan_template_ : nullptr}) {
+        if (project != nullptr) {
+            project->path = location.path;
+            project->metadata.path = location.path;
+            project->scan_data_root = location.scan_data_root;
+        }
+    }
+    emit pathChanged();
+    if (scan_session_ != nullptr) {
+        scan_refusal_ = scan_session_->load(*project_);
+        syncScanAdmission();
+        showScanResults();
+    }
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {
