@@ -1006,7 +1006,12 @@ void PatternChartController::refresh() {
     // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
     QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
-        labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre});
+        // Hidden with its row's ticks, which share its style.
+        const auto ticks = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
+            return series.kind == edi::SeriesKind::BraggTicks && series.style == label.style;
+        });
+        labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre,
+                       ticks != shown_.series.end() && hiddenId(ticks->id)});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
