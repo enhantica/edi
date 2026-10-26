@@ -2,11 +2,11 @@
 #ifndef EDI_APP_WEB_STORAGE_HPP
 #define EDI_APP_WEB_STORAGE_HPP
 
+#include <QAbstractListModel>
 #include <QHash>
-#include <QJsonObject>
+#include <QList>
 #include <QObject>
 #include <QString>
-#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 
@@ -21,33 +21,82 @@ namespace edi_app {
 // browser's IndexedDB (its kind, name and, for the disk, the handle), which is what Recent projects lists; the latest
 // unsaved state of a project is kept beside it, so a reload or a closed tab can continue where it left off.
 //
-// Each call starts a job whose one answer arrives later, on the app's own turn, as a JSON object: `ok`, or
-// `cancelled`, or a `message` saying why not. On the desktop every job answers that it is the browser's.
+// Each call starts a job whose one answer arrives later, on the app's own turn: done, or cancelled, or a message
+// saying why not. On the desktop every job answers that it is the browser's.
+// A job's answer, and the place and the copy in memory it made, where it made one.
+struct WebStorageAnswer {
+    bool ok = false;
+    bool cancelled = false;
+    QString message;
+    QString key;
+    QString kind;
+    QString name;
+    // The project folder in memory or, for a "zip" place, the archive.
+    QString path;
+};
+
+// The stored places, most recent first: each its key, kind ("browser", "folder" or "zip") and name, whether it has
+// been saved and whether unsaved changes are kept for it.
+class WebPlaceListModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to WebStorage")
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+   public:
+    enum Role { KeyRole = Qt::UserRole + 1, KindRole, NameRole, SavedRole, RecoveryRole };
+    struct Place {
+        QString key;
+        QString kind;
+        QString name;
+        bool saved = false;
+        bool recovery = false;
+    };
+
+    using QAbstractListModel::QAbstractListModel;
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+    int count() const { return static_cast<int>(places_.size()); }
+    Q_INVOKABLE QString key(int row) const;
+    Q_INVOKABLE QString kind(int row) const;
+    Q_INVOKABLE QString name(int row) const;
+    Q_INVOKABLE bool saved(int row) const;
+    Q_INVOKABLE bool recovery(int row) const;
+    void setPlaces(QList<Place> places);
+
+   signals:
+    void countChanged();
+
+   private:
+    const Place* at(int row) const;
+    QList<Place> places_;
+};
+
 class WebStorage : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
     // Whether the browser can open and write folders and files on the disk (Chrome and Edge on the desktop).
     Q_PROPERTY(bool diskAccess READ diskAccess CONSTANT)
-    // The stored places, most recent first: each a map of key, kind ("browser", "folder" or "zip"), name, time and
-    // whether unsaved changes are kept for it (`recovery`).
-    Q_PROPERTY(QVariantList places READ places NOTIFY placesChanged)
+    // The stored places, most recent first.
+    Q_PROPERTY(edi_app::WebPlaceListModel* places READ places CONSTANT)
     // Whether the browser lets the page keep projects: false until a small write proves it, and for good in a
     // window that refuses it (a private window may). Without it a project lives only in the tab.
     Q_PROPERTY(bool usable READ usable NOTIFY usableChanged)
 
    public:
-    using Answer = std::function<void(const QJsonObject&)>;
+    using Answer = std::function<void(const WebStorageAnswer&)>;
 
     static WebStorage* instance();
     static WebStorage* create(QQmlEngine*, QJSEngine*);
 
     static bool diskAccess();
-    QVariantList places() const { return places_; }
+    WebPlaceListModel* places() const { return places_; }
     bool usable() const { return usable_; }
     // A write to the browser's storage failed: it is not used again in this tab.
     void markUnusable();
-    QVariantMap place(const QString& key) const;
 
     // Asks the user for a project to open, a "folder" or a "file" (a .zip), and copies it into `root` in memory: a folder's files
     // under root/<its name>, an archive as root/<its name>. With disk access the answer's `key` names the new place on
@@ -71,7 +120,7 @@ class WebStorage : public QObject {
     // Reads the places again.
     Q_INVOKABLE void refresh();
 
-    // A job's answer, from the page's script.
+    // A job's answer, from the page's script, as its JSON text.
     static void answered(int job, const QString& json);
 
    signals:
@@ -79,13 +128,17 @@ class WebStorage : public QObject {
     void usableChanged();
 
    private:
-    explicit WebStorage(QObject* parent = nullptr);
-    int begin(Answer answer);
-    void finish(int job, const QJsonObject& answer);
+    // A job's own handler reads the script's answer as it was sent.
+    using Reply = std::function<void(const QString&)>;
 
-    QHash<int, Answer> jobs_;
+    explicit WebStorage(QObject* parent = nullptr);
+    int begin(Reply reply);
+    int begin(Answer answer);
+    void finish(int job, const QString& json);
+
+    QHash<int, Reply> jobs_;
     int last_ = 0;
-    QVariantList places_;
+    WebPlaceListModel* places_;
     bool usable_ = false;
 };
 
