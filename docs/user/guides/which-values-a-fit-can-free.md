@@ -27,6 +27,8 @@ hovering over it shows the reason.
 - **When the project changes,** for example when you remove the powder pattern that let a single crystal's cell be
   fitted, a value you freed stays free. Its checkbox stays enabled so you can clear it, and starting a fit says which
   value cannot be fitted and why.
+- **When you disable a link,** its scale and texture, and a structure that no enabled link uses, keep their free
+  marks. The fit leaves them out until a link uses them again, and opening the project keeps them free.
 - **In Python,** setting `free = True` on such a value raises an error with the reason. On a value that symmetry or a
   constraint sets, it is ignored with a warning.
 

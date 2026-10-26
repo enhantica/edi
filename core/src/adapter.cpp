@@ -3599,10 +3599,11 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         crysta::BraggPdExperiment& built = build_on_heap(converted.banks, *bank_item, true);
         // crysta's project needs every bank to link a structure. A bank with no link has no scale
-        // of its own, so here it links the first structure under a scale no edi parameter names.
+        // of its own, so here it links the first structure, disabled, under a scale no edi parameter
+        // names: the link reads nothing.
         if (bank_item->linked_structures.empty() && !structures.empty()) {
             built.linked_structures.assign(std::vector<crysta::LinkedStructure>{crysta::LinkedStructure(
-                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), true)});
+                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), false)});
         }
     }
     converted.project =
@@ -3773,9 +3774,10 @@ FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
 }
 
 // crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
-void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}) {
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
     parameter.fit_blocker = fit_blocker_of(blocker);
     parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
+    parameter.fit_idle = idle;
 }
 }  // namespace
 
@@ -3839,7 +3841,7 @@ void refresh_fittability(Project& project) {
         if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
             continue;
         }
-        mark(*parameter, status->blocker, status->reason());
+        mark(*parameter, status->blocker, status->reason(), status->idle);
         answered.insert(parameter);
     }
     // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit

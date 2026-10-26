@@ -38,7 +38,9 @@ crysta may have no derivative for it yet, such as the wavelength of an X-ray exp
    `crysta.domain.unfittable_free_ignored` note each on the loader's warning route.
 5. **The fit.** `Project.fit`, `fit_joint` and the scan entries refuse a free flag the rule blocks, naming the
    parameter and the reason. Such a flag can survive a change to the project, for example removing the powder pattern
-   that let a single crystal's cell be fitted; only a load clears it.
+   that let a single crystal's cell be fitted; only a load clears it. A value no enabled link reads (a disabled link's
+   scale and texture, a structure no enabled link names) is the exception, marked idle by crysta's rule: its flag is
+   kept for when a link reads it again, so the fit leaves it out and neither the fit nor a load refuses or clears it.
 6. **The Analysis table** can list every numerical input of the structures and experiments, fittable or not: each
    parameter, and each value that is no parameter (a background point's position, a polynomial term's order, the peak
    cutoff, a texture direction's indices, a scattering length), which is shown read-only and edited on its page.
