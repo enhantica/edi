@@ -137,9 +137,8 @@ class ScanViewModel : public QObject {
     Q_INVOKABLE QString rowText(int dataset) const {
         return dataset >= 0 && dataset < row_texts_.size() ? row_texts_.at(dataset) : QString();
     }
-    // The widest label text of the rows `shown` marks (true by dataset), in `font`, the row `bold` in `boldFont`; in
-    // pixels.
-    Q_INVOKABLE double widestRowText(const QVariantList& shown, const QFont& font, const QFont& boldFont, int bold) const;
+    // The widest label text of the rows `shown` marks (true by dataset), in `font`; in pixels.
+    Q_INVOKABLE double widestRowText(const QVariantList& shown, const QFont& font) const;
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.

@@ -472,7 +472,9 @@ Item {
     // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
     // dataset's colour, at its row's height. The widest label sets the room left for them, worked out from the font
     // with the texts (an IconLine: the icon, its spacing, the text), so the plot takes its room in the frame that changed
-    // the labels, never a frame later. A view not shown keeps the room it had: its labels are blank until it shows.
+    // the labels, never a frame later. Each text is measured bold, as the shown dataset's may be, so choosing another
+    // dataset or turning the highlight off never moves the plot. A view not shown keeps the room it had: its labels are
+    // blank until it shows.
     readonly property real rowLabelGap: Math.round(em * 0.4)
     property real rowLabelsRoom: 0
     Binding {
@@ -480,7 +482,7 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelFont.font, labelBold.font, Preferences.chartHighlightSelected || chart.project === null ? -1 : chart.project.currentExperimentIndex)) : 0
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
     }
     // The row label's pieces' fonts, as IconLine sets them.
     TextMetrics {
@@ -488,11 +490,6 @@ Item {
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: chart.em
         text: "microscope"
-    }
-    FontMetrics {
-        id: labelFont
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: chart.em
     }
     FontMetrics {
         id: labelBold
