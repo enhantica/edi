@@ -249,7 +249,10 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
         child = node->nextSibling();
     }
     traces_changed_ = false;
-    emit rendered();
+    // A hidden item draws nothing: a size change syncs it while the painter draws the view.
+    if (isVisible()) {
+        emit rendered();
+    }
     return root;
 }
 
