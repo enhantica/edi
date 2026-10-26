@@ -191,9 +191,8 @@ EaElements.StatusBar {
         StatusBarFitButton {
             id: fitButton
             objectName: "statusBar.fit.button"
-            visible: AppState.analysisPageEnabled
+            shown: AppState.analysisPageEnabled
             fit: bar.fit
-            frameHeight: statusItem.frameHeight
         }
         // The last fit's outcome, in its colour, framed as a button that opens its results.
         FitStatusItem {
@@ -209,7 +208,7 @@ EaElements.StatusBar {
             valueColor: FitOutcomes.color(outcome)
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
-            framed: true
+            framed: clickable
             ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
