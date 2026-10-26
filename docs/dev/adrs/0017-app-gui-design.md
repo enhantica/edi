@@ -937,9 +937,8 @@ refuses to write its bank rows into it.
   fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
   table is built from the result the project records (`_fit_result`), so a project opened with one shows its last
   fit too: the status bar's iterations, reduced χ² and stop reason, and the same table from the Fit status item,
-  outcome, which opens it on a click. The *Show fit results after fitting* box (the Analysis page's Settings tab, a
-  setting of the user, on by default; the owner, 2026-10-26) keeps the pop-up closed when a fit ends; the outcome
-  still opens it.
+  outcome, which opens it on a click. The *Show fit results after fitting* preference (Prompts, beside Enable tool
+  tips, on by default; the owner, 2026-10-26) keeps the pop-up closed when a fit ends; the outcome still opens it.
 - **A refused or failed fit** shows its reason in a message dialog; the project is unchanged.
 - **A fitted value outside its admissible range** (the table's min and max) is kept, as the CLI keeps it, and shown in
   red with a tooltip naming the range, as diffraction-lib's table of fitted parameters does (the owner, 2026-10-02).
