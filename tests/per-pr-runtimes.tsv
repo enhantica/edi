@@ -10,13 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T06:35:29Z
+# measured_utc = 2026-10-26T08:14:09Z
 #
-# Three-way union of runtime-bank index stages; independently changed live rows and module costs retained.
-# Merge parents: 14554999 and 56457f29; intentional removals relative to the common base retained.
-# Stale Python identities dropped by the canonical bank retention rule against the merged pytest collection.
-#
-# Existing local Linux measurements and declared-unmeasured reasons carried; no timings remeasured.
+# Recorded from: measured test run (30 node(s) measured once, 15802 banked, 0 stale row(s) dropped)
+# Collected tests: 17511; with a reported duration: 10114
+# Module-scoped fixture costs recorded: 84
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -31,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17481
+# inventory_python = 17511
 # inventory_cpp = 393
-# inventory_measured = 15802
+# inventory_measured = 15832
 # inventory_unmeasured = 2072
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -13203,6 +13201,36 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[multiphase]
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[single]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:analysis-many-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:analysis-many-bragg1]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:analysis-one-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:experiment-many-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:experiment-many-bragg1]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_strip:experiment-one-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-bkg]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-bragg1]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-calc]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-meas]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-many-resid]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-one-bkg]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-one-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-one-calc]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-one-meas]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-one-resid]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:analysis-single]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-bkg]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-bragg1]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-calc]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-meas]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-many-resid]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-bkg]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-bragg0]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-calc]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-meas]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-resid]
+0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-single]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-powder-fit]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-powder-keep]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-single-fit]
@@ -17968,6 +17996,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 263.960	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 205.663	tests/system/py/test_legend_symbols.py
 # module-cost: 212.277	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
