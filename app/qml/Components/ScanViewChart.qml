@@ -272,19 +272,8 @@ Item {
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
-        theme: GraphsTheme {
-            colorScheme: GraphsTheme.ColorScheme.Light
-            backgroundVisible: false
-            plotAreaBackgroundVisible: false
+        theme: ChartTheme {
             labelTextColor: chart.colors.chartLabels
-            labelFont.family: EaStyle.Fonts.fontFamily
-            labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-            axisX.mainColor: "transparent"
-            axisX.subColor: "transparent"
-            axisY.mainColor: "transparent"
-            axisY.subColor: "transparent"
-            grid.mainColor: "transparent"
-            grid.subColor: "transparent"
         }
         axisX: ValueAxis {
             id: axisX
@@ -697,7 +686,8 @@ Item {
             toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
             // A joint fit whose experiments share no native axis has d only.
             readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
-            readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
+            readonly property string dEntry: qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))
+            readonly property var entries: nativeOffered ? [Session.label(chart.scan !== null && chart.scan.timeOfFlight ? "data.time_of_flight" : "data.two_theta"), dEntry] : [dEntry]
             model: entries
             closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
             shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0

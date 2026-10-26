@@ -41,7 +41,9 @@ try. A slow scan (a file every few seconds) can show every file and should.
    being counted, so the scan moves on. While no pattern chart is shown (another tab, such as Evolution, or another
    page) the view asks for no pattern and applies none, so the chart does not hold an older file than it could show;
    when one is shown again the view asks for the next file's pattern, a file that finishes after that. Only a drawn
-   file moves the pattern count and the file name the scan's status gives for the chart. The receipt belongs to one
+   file moves the pattern count and the file name the scan's status gives for the chart, and they move at the start
+   of the frame that synchronises the file's points, so the name a user reads and the points change in the same
+   frame: never a file's points under the previous file's name. The receipt belongs to one
    hand-over: each followed file is handed over with its own token, and its swaps count only while the model still
    holds that file's dataset and a shown chart has drawn the pattern its application set. A late frame of an earlier
    file counts nothing, and choosing another dataset, turning Follow off or starting a scan drops a receipt still

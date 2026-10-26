@@ -100,7 +100,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
+        qml/Components/ChartTheme.qml
         qml/Components/FigureColors.qml
+        qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
         qml/Components/IconCell.qml

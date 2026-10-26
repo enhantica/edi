@@ -47,6 +47,7 @@ struct PatternSource {
         std::vector<std::size_t> rows;
     };
     std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
+    std::string x_item;                    // the dictionary item of x, whose format its readouts take
     Column x, meas, su, calc, bkg, resid;  // null: the column is absent
     std::vector<Phase> phases;
     // Each linked structure's calculated curve above the background (crysta's component_intensities_net), in the

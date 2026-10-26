@@ -25,19 +25,19 @@ Column {
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
         sourceModel: group.lengths
 
-        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", Session.label("scattering_length.type_symbol")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("type")
+                uid: "scattering_length.type_symbol"
             }
-            EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("b (fm)")
+            HeaderLabel {
+                uid: "scattering_length.length_fm"
+                withUnits: true
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -64,6 +64,7 @@ Column {
             TextCell {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.lengthFm.${row.index}`
+                uid: "scattering_length.length_fm"
                 value: row.lengthFm
                 accepts: "number"
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))

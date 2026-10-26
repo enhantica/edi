@@ -10,6 +10,8 @@ from pathlib import Path
 import edi as engine
 import pytest
 
+from tests.fixtures.project_save.reference import six_digits
+
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = json.loads((ROOT / 'tests/fixtures/report_units/reference.json').read_text())
 INPUT = ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'
@@ -179,9 +181,9 @@ def test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions(fre
     destination = tmp_path / 'saved'
     loaded.save_as(destination)
     restored = engine.Project.load(destination).experiments['bank'].background[0].intensity
-    assert struct.pack('>d', restored.value) == struct.pack('>d', 0.10000000000000002), (
-        'Fixed, absent, zero and nonfinite uncertainty must retain the exact round-trip value'
-    )
+    assert struct.pack('>d', restored.value) == struct.pack(
+        '>d', six_digits(0.10000000000000002)
+    ), 'Fixed, absent, zero and nonfinite uncertainty use the independent six-digit saved value'
     assert restored.free == free, 'Uncertainty spelling must retain the parameter free state'
     wanted = 0.0 if not free or (su is not None and not su) else None
     assert restored.uncertainty == wanted, (

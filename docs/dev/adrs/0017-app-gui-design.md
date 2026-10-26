@@ -10,6 +10,9 @@
 - **Forward constraint (binding on new features):** a new page, group, field or button follows the layout,
   naming, colour and icon rules below; a change to one of them changes this ADR in the same commit.
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** the titles, icons and field names of §3, §5, §8 and §21 are crysta dictionary values
+read through the display bridge, not app code; the choices themselves are unchanged.
+
 ## Context
 
 ADR-0015 fixes the app's stack: easydiffractionbeta v0.9.9 is the layout authority, gui-components v0.9.1 is the
@@ -654,7 +657,7 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   hover coordinates on, the pointer shows diffraction-lib's read-out of a point within plotly's default hover distance, 20 px (a Bragg tick by its
   x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `meas`, `bkg`, `calc` and
   `meas − calc` at that row, each value in its series' colour, `meas − calc` named and coloured as the residual pane's title (the owner, 2026-10-21); over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
-  indices alone in the tick's colour (the owner, 2026-10-03). Numbers have two decimals and a comma between thousands (`edi::hover_readout`).
+  indices alone in the tick's colour (the owner, 2026-10-03). Numbers take their items' display formats with a comma between thousands (`edi::hover_readout`, ADR-0051).
 - **Y scales.** Square root and log are display mappings (ADR-0021 §5), and the y-scale button cycles linear,
   square root, log. On each the main y axis labels original values. A square-root axis has its ticks at round
   display values, so its labels are their squares (0, 2 500, 10 000, 22 500). A log axis has its ticks at whole
@@ -1051,8 +1054,9 @@ the toolbar and the matrix (the owner, 2026-10-13).
 
 ### 21. Standard uncertainties follow the project's rule
 
-A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded up to one digit, or two
-from 10 to 19 (`iucr_19`, the default), or always two (`iucr_99`), and the value rounded to the same digit. The value
+A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded to two digits
+(`iucr_99`, the default since the owner's record of 2026-10-24) or by IUCr recommendation 12, one digit or two from 10
+to 19 (`iucr_19`), and the value rounded to the same digit. The value
 and s.u. cells, and the report, take both texts from one core function (`edi::su_text`, over crysta's), so the screen,
 the Text tab and the files agree. A value the cells write in scientific notation (at or above a million, or below 1e-4;
 the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard

@@ -35,12 +35,7 @@ struct ParameterSpec {
     const char* category;   // e.g. "cell", "peak" — uid is "<category>.<name>"
     const char* name;       // leaf name, e.g. "broad_gauss_sigma_0"
     const char* units;      // normalised code, upstream vocabulary (e.g. "microseconds_squared")
-    const char* description;
     ParameterRange range;   // admissible values, +/-inf when unbounded
-    const char* display_name;
-    const char* display_units;  // e.g. "μs²" ("" = unitless display)
-    const char* latex_name;
-    const char* latex_units;
     std::span<const char* const> edi_names;  // ordered; [0] canonical
     std::span<const char* const> cif_names;  // ordered; [0] canonical; may be empty
 };
@@ -193,350 +188,130 @@ inline constexpr const char* kMarchRandomFractCif[] = {
 
 namespace spec {
 
-inline const ParameterSpec cell_length_a{
-    "cell", "length_a", "angstroms", "Length of the a axis of the unit cell",
-    {0.0, 30.0}, "length_a", "Å", "$a$", "\\AA", detail::kCellLengthA, {}};
-inline const ParameterSpec cell_length_b{
-    "cell", "length_b", "angstroms", "Length of the b axis of the unit cell",
-    {0.0, 30.0}, "length_b", "Å", "$b$", "\\AA", detail::kCellLengthB, {}};
-inline const ParameterSpec cell_length_c{
-    "cell", "length_c", "angstroms", "Length of the c axis of the unit cell",
-    {0.0, 30.0}, "length_c", "Å", "$c$", "\\AA", detail::kCellLengthC, {}};
-inline const ParameterSpec cell_angle_alpha{
-    "cell", "angle_alpha", "degrees", "Angle between edges b and c",
-    {0.0, 180.0}, "angle_alpha", "deg", "$\\alpha$", "\\mathrm{deg}", detail::kCellAngleAlpha, {}};
-inline const ParameterSpec cell_angle_beta{
-    "cell", "angle_beta", "degrees", "Angle between edges a and c",
-    {0.0, 180.0}, "angle_beta", "deg", "$\\beta$", "\\mathrm{deg}", detail::kCellAngleBeta, {}};
-inline const ParameterSpec cell_angle_gamma{
-    "cell", "angle_gamma", "degrees", "Angle between edges a and b",
-    {0.0, 180.0}, "angle_gamma", "deg", "$\\gamma$", "\\mathrm{deg}", detail::kCellAngleGamma, {}};
+inline const ParameterSpec cell_length_a{"cell", "length_a", "angstroms", {0.0, 30.0}, detail::kCellLengthA, {}};
+inline const ParameterSpec cell_length_b{"cell", "length_b", "angstroms", {0.0, 30.0}, detail::kCellLengthB, {}};
+inline const ParameterSpec cell_length_c{"cell", "length_c", "angstroms", {0.0, 30.0}, detail::kCellLengthC, {}};
+inline const ParameterSpec cell_angle_alpha{"cell", "angle_alpha", "degrees", {0.0, 180.0}, detail::kCellAngleAlpha, {}};
+inline const ParameterSpec cell_angle_beta{"cell", "angle_beta", "degrees", {0.0, 180.0}, detail::kCellAngleBeta, {}};
+inline const ParameterSpec cell_angle_gamma{"cell", "angle_gamma", "degrees", {0.0, 180.0}, detail::kCellAngleGamma, {}};
 
-inline const ParameterSpec atom_site_fract_x{
-    "atom_site", "fract_x", "dimensionless",
-    "Fractional x-coordinate of the atom site within the unit cell",
-    detail::kUnbounded, "fract_x", "", "$x$", "", detail::kFractX, {}};
-inline const ParameterSpec atom_site_fract_y{
-    "atom_site", "fract_y", "dimensionless",
-    "Fractional y-coordinate of the atom site within the unit cell",
-    detail::kUnbounded, "fract_y", "", "$y$", "", detail::kFractY, {}};
-inline const ParameterSpec atom_site_fract_z{
-    "atom_site", "fract_z", "dimensionless",
-    "Fractional z-coordinate of the atom site within the unit cell",
-    detail::kUnbounded, "fract_z", "", "$z$", "", detail::kFractZ, {}};
-inline const ParameterSpec atom_site_occupancy{
-    "atom_site", "occupancy", "dimensionless", "Occupancy of the atom site",
-    {0.0, 1.0}, "occupancy", "", "Occ.", "", detail::kOccupancy, {}};
-inline const ParameterSpec atom_site_adp_iso{
-    // The value is in the site's declared type: B for Biso, U for Uiso, and an anisotropic site's
-    // equivalent isotropic value (U_eq for Uani, B_eq for Bani and beta).
-    "atom_site", "adp_iso", "angstrom_squared",
-    "Isotropic atomic displacement parameter (ADP) for the atom site, in its declared type",
-    {0.0, 10.0}, "adp_iso", "Å²", "$B_{\\mathrm{iso}}$", "\\AA$^2$", detail::kAdpIso, detail::kAdpIsoCif};
+inline const ParameterSpec atom_site_fract_x{"atom_site", "fract_x", "dimensionless", detail::kUnbounded, detail::kFractX, {}};
+inline const ParameterSpec atom_site_fract_y{"atom_site", "fract_y", "dimensionless", detail::kUnbounded, detail::kFractY, {}};
+inline const ParameterSpec atom_site_fract_z{"atom_site", "fract_z", "dimensionless", detail::kUnbounded, detail::kFractZ, {}};
+inline const ParameterSpec atom_site_occupancy{"atom_site", "occupancy", "dimensionless", {0.0, 1.0}, detail::kOccupancy, {}};
+// The value is in the site's declared type: B for Biso, U for Uiso, and an anisotropic site's
+// equivalent isotropic value (U_eq for Uani, B_eq for Bani and beta).
+inline const ParameterSpec atom_site_adp_iso{"atom_site", "adp_iso", "angstrom_squared", {0.0, 10.0}, detail::kAdpIso, detail::kAdpIsoCif};
 // An anisotropic site's tensor components, in its declared type: U (Uani) or B (Bani) in A^2, or
 // the dimensionless beta.
-inline const ParameterSpec atom_site_aniso_adp_11{
-    "atom_site_aniso", "adp_11", "angstrom_squared",
-    "Anisotropic displacement tensor component 11, in the site's declared type",
-    {0.0, detail::kInf}, "ani11", "Å²", "$U_{11}$", "\\AA$^2$", detail::kAdp11, {}};
-inline const ParameterSpec atom_site_aniso_adp_22{
-    "atom_site_aniso", "adp_22", "angstrom_squared",
-    "Anisotropic displacement tensor component 22, in the site's declared type",
-    {0.0, detail::kInf}, "ani22", "Å²", "$U_{22}$", "\\AA$^2$", detail::kAdp22, {}};
-inline const ParameterSpec atom_site_aniso_adp_33{
-    "atom_site_aniso", "adp_33", "angstrom_squared",
-    "Anisotropic displacement tensor component 33, in the site's declared type",
-    {0.0, detail::kInf}, "ani33", "Å²", "$U_{33}$", "\\AA$^2$", detail::kAdp33, {}};
-inline const ParameterSpec atom_site_aniso_adp_12{
-    "atom_site_aniso", "adp_12", "angstrom_squared",
-    "Anisotropic displacement tensor component 12, in the site's declared type",
-    detail::kUnbounded, "ani12", "Å²", "$U_{12}$", "\\AA$^2$", detail::kAdp12, {}};
-inline const ParameterSpec atom_site_aniso_adp_13{
-    "atom_site_aniso", "adp_13", "angstrom_squared",
-    "Anisotropic displacement tensor component 13, in the site's declared type",
-    detail::kUnbounded, "ani13", "Å²", "$U_{13}$", "\\AA$^2$", detail::kAdp13, {}};
-inline const ParameterSpec atom_site_aniso_adp_23{
-    "atom_site_aniso", "adp_23", "angstrom_squared",
-    "Anisotropic displacement tensor component 23, in the site's declared type",
-    detail::kUnbounded, "ani23", "Å²", "$U_{23}$", "\\AA$^2$", detail::kAdp23, {}};
+inline const ParameterSpec atom_site_aniso_adp_11{"atom_site_aniso", "adp_11", "angstrom_squared", {0.0, detail::kInf}, detail::kAdp11, {}};
+inline const ParameterSpec atom_site_aniso_adp_22{"atom_site_aniso", "adp_22", "angstrom_squared", {0.0, detail::kInf}, detail::kAdp22, {}};
+inline const ParameterSpec atom_site_aniso_adp_33{"atom_site_aniso", "adp_33", "angstrom_squared", {0.0, detail::kInf}, detail::kAdp33, {}};
+inline const ParameterSpec atom_site_aniso_adp_12{"atom_site_aniso", "adp_12", "angstrom_squared", detail::kUnbounded, detail::kAdp12, {}};
+inline const ParameterSpec atom_site_aniso_adp_13{"atom_site_aniso", "adp_13", "angstrom_squared", detail::kUnbounded, detail::kAdp13, {}};
+inline const ParameterSpec atom_site_aniso_adp_23{"atom_site_aniso", "adp_23", "angstrom_squared", detail::kUnbounded, detail::kAdp23, {}};
 
-inline const ParameterSpec peak_rise_alpha_0{
-    "peak", "rise_alpha_0", "microseconds", "Back-to-back exponential rise α₀",
-    detail::kUnbounded, "rise_alpha_0", "μs", "$\\alpha_0$", "$\\mu\\mathrm{s}$", detail::kRiseAlpha0, detail::kRiseAlpha0Cif};
-inline const ParameterSpec peak_rise_alpha_1{
-    "peak", "rise_alpha_1", "microseconds_per_angstrom", "Back-to-back exponential rise α₁",
-    detail::kUnbounded, "rise_alpha_1", "μs/Å", "$\\alpha_1$", "$\\mu\\mathrm{s}/\\mathrm{\\AA}$",
-    detail::kRiseAlpha1, detail::kRiseAlpha1Cif};
-inline const ParameterSpec peak_decay_beta_0{
-    "peak", "decay_beta_0", "microseconds", "Back-to-back exponential decay β₀",
-    detail::kUnbounded, "decay_beta_0", "μs", "$\\beta_0$", "$\\mu\\mathrm{s}$", detail::kDecayBeta0, detail::kDecayBeta0Cif};
-inline const ParameterSpec peak_decay_beta_1{
-    "peak", "decay_beta_1", "microseconds_per_angstrom", "Back-to-back exponential decay β₁",
-    detail::kUnbounded, "decay_beta_1", "μs/Å", "$\\beta_1$", "$\\mu\\mathrm{s}/\\mathrm{\\AA}$",
-    detail::kDecayBeta1, detail::kDecayBeta1Cif};
-inline const ParameterSpec peak_broad_gauss_sigma_0{
-    "peak", "broad_gauss_sigma_0", "microseconds_squared",
-    "Gaussian broadening (instrumental resolution)",
-    detail::kUnbounded, "broad_gauss_sigma_0", "μs²", "$\\sigma_0$", "$\\mu\\mathrm{s}^2$",
-    detail::kGaussSigma0, detail::kGaussSigma0Cif};
-inline const ParameterSpec peak_broad_gauss_sigma_1{
-    "peak", "broad_gauss_sigma_1", "microseconds_per_angstrom",
-    "Gaussian broadening (dependent on d-spacing)",
-    detail::kUnbounded, "broad_gauss_sigma_1", "μs/Å", "$\\sigma_1$", "$\\mu\\mathrm{s}/\\mathrm{\\AA}$",
-    detail::kGaussSigma1, detail::kGaussSigma1Cif};
-inline const ParameterSpec peak_broad_gauss_sigma_2{
-    "peak", "broad_gauss_sigma_2", "microseconds_squared_per_angstrom_squared",
-    "Gaussian broadening (instrument-dependent term)",
-    detail::kUnbounded, "broad_gauss_sigma_2", "μs²/Å²", "$\\sigma_2$",
-    "$\\mu\\mathrm{s}^2/\\mathrm{\\AA}^2$", detail::kGaussSigma2, detail::kGaussSigma2Cif};
-inline const ParameterSpec peak_broad_gauss_size{
-    "peak", "broad_gauss_size", "microseconds_squared_per_angstrom_squared",
-    "Gaussian isotropic size broadening (adds to sigma2)",
-    detail::kUnbounded, "broad_gauss_size", "μs²/Å²", "$\\mathrm{size}_G$",
-    "$\\mu\\mathrm{s}^2/\\mathrm{\\AA}^2$", detail::kGaussSize, detail::kGaussSizeCif};
-inline const ParameterSpec peak_broad_gauss_strain{
-    "peak", "broad_gauss_strain", "microseconds_per_angstrom",
-    "Gaussian isotropic strain broadening (adds to sigma1)",
-    detail::kUnbounded, "broad_gauss_strain", "μs/Å", "$\\mathrm{strain}_G$",
-    "$\\mu\\mathrm{s}/\\mathrm{\\AA}$", detail::kGaussStrain, detail::kGaussStrainCif};
-inline const ParameterSpec peak_broad_lorentz_gamma_0{
-    "peak", "broad_lorentz_gamma_0", "microseconds", "Lorentzian broadening (microstrain effects)",
-    detail::kUnbounded, "broad_lorentz_gamma_0", "μs", "$\\gamma_0$", "$\\mu\\mathrm{s}$",
-    detail::kLorentzGamma0, detail::kLorentzGamma0Cif};
-inline const ParameterSpec peak_broad_lorentz_gamma_1{
-    "peak", "broad_lorentz_gamma_1", "microseconds_per_angstrom",
-    "Lorentzian broadening (dependent on d-spacing)",
-    detail::kUnbounded, "broad_lorentz_gamma_1", "μs/Å", "$\\gamma_1$",
-    "$\\mu\\mathrm{s}/\\mathrm{\\AA}$", detail::kLorentzGamma1, detail::kLorentzGamma1Cif};
-inline const ParameterSpec peak_broad_lorentz_gamma_2{
-    "peak", "broad_lorentz_gamma_2", "microseconds_squared_per_angstrom_squared",
-    "Lorentzian broadening (instrument-dependent term)",
-    detail::kUnbounded, "broad_lorentz_gamma_2", "μs²/Å²", "$\\gamma_2$",
-    "$\\mu\\mathrm{s}^2/\\mathrm{\\AA}^2$", detail::kLorentzGamma2, detail::kLorentzGamma2Cif};
-inline const ParameterSpec peak_broad_lorentz_size{
-    "peak", "broad_lorentz_size", "microseconds_squared_per_angstrom_squared",
-    "Lorentzian isotropic size broadening (adds to gamma2)",
-    detail::kUnbounded, "broad_lorentz_size", "μs²/Å²", "$\\mathrm{size}_L$",
-    "$\\mu\\mathrm{s}^2/\\mathrm{\\AA}^2$", detail::kLorentzSize, detail::kLorentzSizeCif};
-inline const ParameterSpec peak_broad_lorentz_strain{
-    "peak", "broad_lorentz_strain", "microseconds_per_angstrom",
-    "Lorentzian isotropic strain broadening (adds to gamma1)",
-    detail::kUnbounded, "broad_lorentz_strain", "μs/Å", "$\\mathrm{strain}_L$",
-    "$\\mu\\mathrm{s}/\\mathrm{\\AA}$", detail::kLorentzStrain, detail::kLorentzStrainCif};
+inline const ParameterSpec peak_rise_alpha_0{"peak", "rise_alpha_0", "microseconds", detail::kUnbounded, detail::kRiseAlpha0, detail::kRiseAlpha0Cif};
+inline const ParameterSpec peak_rise_alpha_1{"peak", "rise_alpha_1", "microseconds_per_angstrom", detail::kUnbounded, detail::kRiseAlpha1, detail::kRiseAlpha1Cif};
+inline const ParameterSpec peak_decay_beta_0{"peak", "decay_beta_0", "microseconds", detail::kUnbounded, detail::kDecayBeta0, detail::kDecayBeta0Cif};
+inline const ParameterSpec peak_decay_beta_1{"peak", "decay_beta_1", "microseconds_per_angstrom", detail::kUnbounded, detail::kDecayBeta1, detail::kDecayBeta1Cif};
+inline const ParameterSpec peak_broad_gauss_sigma_0{"peak", "broad_gauss_sigma_0", "microseconds_squared", detail::kUnbounded, detail::kGaussSigma0, detail::kGaussSigma0Cif};
+inline const ParameterSpec peak_broad_gauss_sigma_1{"peak", "broad_gauss_sigma_1", "microseconds_per_angstrom", detail::kUnbounded, detail::kGaussSigma1, detail::kGaussSigma1Cif};
+inline const ParameterSpec peak_broad_gauss_sigma_2{"peak", "broad_gauss_sigma_2", "microseconds_squared_per_angstrom_squared", detail::kUnbounded, detail::kGaussSigma2, detail::kGaussSigma2Cif};
+inline const ParameterSpec peak_broad_gauss_size{"peak", "broad_gauss_size", "microseconds_squared_per_angstrom_squared", detail::kUnbounded, detail::kGaussSize, detail::kGaussSizeCif};
+inline const ParameterSpec peak_broad_gauss_strain{"peak", "broad_gauss_strain", "microseconds_per_angstrom", detail::kUnbounded, detail::kGaussStrain, detail::kGaussStrainCif};
+inline const ParameterSpec peak_broad_lorentz_gamma_0{"peak", "broad_lorentz_gamma_0", "microseconds", detail::kUnbounded, detail::kLorentzGamma0, detail::kLorentzGamma0Cif};
+inline const ParameterSpec peak_broad_lorentz_gamma_1{"peak", "broad_lorentz_gamma_1", "microseconds_per_angstrom", detail::kUnbounded, detail::kLorentzGamma1, detail::kLorentzGamma1Cif};
+inline const ParameterSpec peak_broad_lorentz_gamma_2{"peak", "broad_lorentz_gamma_2", "microseconds_squared_per_angstrom_squared", detail::kUnbounded, detail::kLorentzGamma2, detail::kLorentzGamma2Cif};
+inline const ParameterSpec peak_broad_lorentz_size{"peak", "broad_lorentz_size", "microseconds_squared_per_angstrom_squared", detail::kUnbounded, detail::kLorentzSize, detail::kLorentzSizeCif};
+inline const ParameterSpec peak_broad_lorentz_strain{"peak", "broad_lorentz_strain", "microseconds_per_angstrom", detail::kUnbounded, detail::kLorentzStrain, detail::kLorentzStrainCif};
 
-inline const ParameterSpec peak_broad_gauss_u{
-    "peak", "broad_gauss_u", "degrees_squared", "Gaussian broadening from sample size and resolution",
-    detail::kUnbounded, "broad_gauss_u", "deg²", "$U$", "\\mathrm{deg}^2", detail::kGaussU, detail::kGaussUCif};
-inline const ParameterSpec peak_broad_gauss_v{
-    "peak", "broad_gauss_v", "degrees_squared", "Gaussian broadening, angle-dependent term",
-    detail::kUnbounded, "broad_gauss_v", "deg²", "$V$", "\\mathrm{deg}^2", detail::kGaussV, detail::kGaussVCif};
-inline const ParameterSpec peak_broad_gauss_w{
-    "peak", "broad_gauss_w", "degrees_squared", "Gaussian broadening, constant term",
-    detail::kUnbounded, "broad_gauss_w", "deg²", "$W$", "\\mathrm{deg}^2", detail::kGaussW, detail::kGaussWCif};
-inline const ParameterSpec peak_broad_lorentz_x{
-    "peak", "broad_lorentz_x", "degrees", "Lorentzian broadening from sample strain effects",
-    detail::kUnbounded, "broad_lorentz_x", "deg", "$X$", "\\mathrm{deg}", detail::kLorentzX, detail::kLorentzXCif};
-inline const ParameterSpec peak_broad_lorentz_y{
-    "peak", "broad_lorentz_y", "degrees", "Lorentzian broadening from sample size effects",
-    detail::kUnbounded, "broad_lorentz_y", "deg", "$Y$", "\\mathrm{deg}", detail::kLorentzY, detail::kLorentzYCif};
+inline const ParameterSpec peak_broad_gauss_u{"peak", "broad_gauss_u", "degrees_squared", detail::kUnbounded, detail::kGaussU, detail::kGaussUCif};
+inline const ParameterSpec peak_broad_gauss_v{"peak", "broad_gauss_v", "degrees_squared", detail::kUnbounded, detail::kGaussV, detail::kGaussVCif};
+inline const ParameterSpec peak_broad_gauss_w{"peak", "broad_gauss_w", "degrees_squared", detail::kUnbounded, detail::kGaussW, detail::kGaussWCif};
+inline const ParameterSpec peak_broad_lorentz_x{"peak", "broad_lorentz_x", "degrees", detail::kUnbounded, detail::kLorentzX, detail::kLorentzXCif};
+inline const ParameterSpec peak_broad_lorentz_y{"peak", "broad_lorentz_y", "degrees", detail::kUnbounded, detail::kLorentzY, detail::kLorentzYCif};
 
 // The pseudo-Voigt mixing eta = eta_0 + eta_1 2theta, 2theta in degrees (FullProf Eta0 and X of
 // Npr 5). No diffraction-lib counterpart.
-inline const ParameterSpec peak_mixing_eta_0{
-    "peak", "mixing_eta_0", "none", "Pseudo-Voigt mixing at 2theta = 0",
-    detail::kUnbounded, "Eta0", "", "$\\eta_0$", "", detail::kMixingEta0, {}};
-inline const ParameterSpec peak_mixing_eta_1{
-    "peak", "mixing_eta_1", "none", "Pseudo-Voigt mixing slope per degree 2theta",
-    detail::kUnbounded, "Eta1", "1/deg", "$\\eta_1$", "\\mathrm{deg}^{-1}", detail::kMixingEta1, {}};
+inline const ParameterSpec peak_mixing_eta_0{"peak", "mixing_eta_0", "none", detail::kUnbounded, detail::kMixingEta0, {}};
+inline const ParameterSpec peak_mixing_eta_1{"peak", "mixing_eta_1", "none", detail::kUnbounded, detail::kMixingEta1, {}};
 
 // Diffraction-lib's FcjAsymmetryMixin and BerarBaldinozziAsymmetryMixin, verbatim.
-inline const ParameterSpec peak_asym_fcj_1{
-    "peak", "asym_fcj_1", "none", "Finger-Cox-Jephcoat asymmetry parameter 1",
-    detail::kUnbounded, "asym_fcj_1", "", "asym_fcj_1", "", detail::kAsymFcj1, detail::kAsymFcj1Cif};
-inline const ParameterSpec peak_asym_fcj_2{
-    "peak", "asym_fcj_2", "none", "Finger-Cox-Jephcoat asymmetry parameter 2",
-    detail::kUnbounded, "asym_fcj_2", "", "asym_fcj_2", "", detail::kAsymFcj2, detail::kAsymFcj2Cif};
-inline const ParameterSpec peak_asym_beba_a0{
-    "peak", "asym_beba_a0", "none", "Berar-Baldinozzi asymmetry coefficient A0 (Fa/tan theta)",
-    detail::kUnbounded, "asym_beba_a0", "", "$A_0$", "", detail::kAsymBebaA0, detail::kAsymBebaA0Cif};
-inline const ParameterSpec peak_asym_beba_b0{
-    "peak", "asym_beba_b0", "none", "Berar-Baldinozzi asymmetry coefficient B0 (Fb/tan theta)",
-    detail::kUnbounded, "asym_beba_b0", "", "$B_0$", "", detail::kAsymBebaB0, detail::kAsymBebaB0Cif};
-inline const ParameterSpec peak_asym_beba_a1{
-    "peak", "asym_beba_a1", "none", "Berar-Baldinozzi asymmetry coefficient A1 (Fa/tan 2theta)",
-    detail::kUnbounded, "asym_beba_a1", "", "$A_1$", "", detail::kAsymBebaA1, detail::kAsymBebaA1Cif};
-inline const ParameterSpec peak_asym_beba_b1{
-    "peak", "asym_beba_b1", "none", "Berar-Baldinozzi asymmetry coefficient B1 (Fb/tan 2theta)",
-    detail::kUnbounded, "asym_beba_b1", "", "$B_1$", "", detail::kAsymBebaB1, detail::kAsymBebaB1Cif};
+inline const ParameterSpec peak_asym_fcj_1{"peak", "asym_fcj_1", "none", detail::kUnbounded, detail::kAsymFcj1, detail::kAsymFcj1Cif};
+inline const ParameterSpec peak_asym_fcj_2{"peak", "asym_fcj_2", "none", detail::kUnbounded, detail::kAsymFcj2, detail::kAsymFcj2Cif};
+inline const ParameterSpec peak_asym_beba_a0{"peak", "asym_beba_a0", "none", detail::kUnbounded, detail::kAsymBebaA0, detail::kAsymBebaA0Cif};
+inline const ParameterSpec peak_asym_beba_b0{"peak", "asym_beba_b0", "none", detail::kUnbounded, detail::kAsymBebaB0, detail::kAsymBebaB0Cif};
+inline const ParameterSpec peak_asym_beba_a1{"peak", "asym_beba_a1", "none", detail::kUnbounded, detail::kAsymBebaA1, detail::kAsymBebaA1Cif};
+inline const ParameterSpec peak_asym_beba_b1{"peak", "asym_beba_b1", "none", detail::kUnbounded, detail::kAsymBebaB1, detail::kAsymBebaB1Cif};
 
 // FullProf's AsyLim — reflections at or above it get no Berar-Baldinozzi correction; default
 // 180. No diffraction-lib counterpart (register row D62).
-inline const ParameterSpec peak_asym_beba_limit{
-    "peak", "asym_beba_limit", "degrees",
-    "Berar-Baldinozzi limit angle: reflections at or above it get no asymmetry correction",
-    ParameterRange{0.0, 180.0}, "asym_beba_limit", "deg", "AsyLim", "\\mathrm{deg}",
-    detail::kAsymBebaLimit, {}};
+inline const ParameterSpec peak_asym_beba_limit{"peak", "asym_beba_limit", "degrees", ParameterRange{0.0, 180.0}, detail::kAsymBebaLimit, {}};
 
-inline const ParameterSpec instrument_d_to_tof_offset{
-    "instrument", "calib_d_to_tof_offset", "microseconds", "TOF offset",
-    detail::kUnbounded, "calib_d_to_tof_offset", "μs", "TOF offset", "$\\mu\\mathrm{s}$",
-    detail::kDtofOffset, detail::kDtofOffsetCif};
-inline const ParameterSpec instrument_d_to_tof_linear{
-    "instrument", "calib_d_to_tof_linear", "microseconds_per_angstrom", "TOF linear conversion",
-    detail::kUnbounded, "calib_d_to_tof_linear", "μs/Å", "TOF linear", "$\\mu\\mathrm{s}/\\mathrm{\\AA}$",
-    detail::kDtofLinear, detail::kDtofLinearCif};
-inline const ParameterSpec instrument_d_to_tof_quadratic{
-    "instrument", "calib_d_to_tof_quadratic", "microseconds_per_angstrom_squared",
-    "TOF quadratic correction",
-    detail::kUnbounded, "calib_d_to_tof_quadratic", "μs/Å²", "TOF quadratic",
-    "$\\mu\\mathrm{s}/\\mathrm{\\AA}^2$", detail::kDtofQuadratic, detail::kDtofQuadraticCif};
+inline const ParameterSpec instrument_d_to_tof_offset{"instrument", "calib_d_to_tof_offset", "microseconds", detail::kUnbounded, detail::kDtofOffset, detail::kDtofOffsetCif};
+inline const ParameterSpec instrument_d_to_tof_linear{"instrument", "calib_d_to_tof_linear", "microseconds_per_angstrom", detail::kUnbounded, detail::kDtofLinear, detail::kDtofLinearCif};
+inline const ParameterSpec instrument_d_to_tof_quadratic{"instrument", "calib_d_to_tof_quadratic", "microseconds_per_angstrom_squared", detail::kUnbounded, detail::kDtofQuadratic, detail::kDtofQuadraticCif};
 // The fourth TOF calibration term, TOF = ... + reciprocal/d. diffraction-lib's TofPdInstrument
 // carries it and crysta names it, so edi-py must too (crysta-py ⊆ edi-py); until now edi accepted
 // the tag on read and dropped it on rewrite (deviation register D15).
-inline const ParameterSpec instrument_d_to_tof_reciprocal{
-    "instrument", "calib_d_to_tof_reciprocal", "microsecond_angstroms",
-    "TOF reciprocal velocity correction",
-    detail::kUnbounded, "calib_d_to_tof_reciprocal", "μs·Å", "TOF reciprocal",
-    "$\\mu\\mathrm{s}\\,\\mathrm{\\AA}$", detail::kDtofReciprocal, detail::kDtofReciprocalCif};
-inline const ParameterSpec instrument_wavelength{
-    "instrument", "setup_wavelength", "angstroms", "Incident neutron or X-ray wavelength",
-    {0.0, detail::kInf}, "setup_wavelength", "Å", "Wavelength", "\\AA", detail::kWavelength, detail::kWavelengthCif};
-inline const ParameterSpec instrument_twotheta_bank{
-    "instrument", "setup_twotheta_bank", "degrees",
-    "Bank take-off angle (the unit lives here, not in the name)",
-    detail::kUnbounded, "setup_twotheta_bank", "deg", "$2\\theta_{\\mathrm{bank}}$", "\\mathrm{deg}",
-    detail::kTwothetaBank, detail::kTwothetaBankCif};
-const ParameterSpec instrument_twotheta_offset{
-    "instrument", "calib_twotheta_offset", "degrees", "InstrumentBase misalignment offset",
-    detail::kUnbounded, "calib_twotheta_offset", "deg", "$2\\theta$ offset", "\\mathrm{deg}",
-    detail::kTwothetaOffset, detail::kTwothetaOffsetCif};
+inline const ParameterSpec instrument_d_to_tof_reciprocal{"instrument", "calib_d_to_tof_reciprocal", "microsecond_angstroms", detail::kUnbounded, detail::kDtofReciprocal, detail::kDtofReciprocalCif};
+inline const ParameterSpec instrument_wavelength{"instrument", "setup_wavelength", "angstroms", {0.0, detail::kInf}, detail::kWavelength, detail::kWavelengthCif};
+inline const ParameterSpec instrument_twotheta_bank{"instrument", "setup_twotheta_bank", "degrees", detail::kUnbounded, detail::kTwothetaBank, detail::kTwothetaBankCif};
+inline const ParameterSpec instrument_twotheta_offset{"instrument", "calib_twotheta_offset", "degrees", detail::kUnbounded, detail::kTwothetaOffset, detail::kTwothetaOffsetCif};
 // The CW line shifts FullProf calls SyCos and SySin, each added to every reflection's centre as
 // coefficient * cos(2theta_B) / sin(2theta_B) (Debye-Scherrer). Upstream
 // CwlPdInstrumentBase.calib_sample_displacement / .calib_sample_transparency (tags, units and the
 // unbounded range mirrored; crysta dictionary rows instrument.calib_sample_*, family cwl).
-inline const ParameterSpec instrument_sample_displacement{
-    "instrument", "calib_sample_displacement", "degrees",
-    "Specimen displacement from the diffractometer axis (FullProf SyCos: adds the value times "
-    "cos 2theta to each reflection's position)",
-    detail::kUnbounded, "Sample displacement", "deg", "Sample displacement", "\\mathrm{deg}",
-    detail::kSampleDisplacement, detail::kSampleDisplacementCif};
-inline const ParameterSpec instrument_sample_transparency{
-    "instrument", "calib_sample_transparency", "degrees",
-    "Sample transparency (beam penetration) shift (FullProf SySin: adds the value times sin 2theta "
-    "to each reflection's position)",
-    detail::kUnbounded, "Sample transparency", "deg", "Sample transparency", "\\mathrm{deg}",
-    detail::kSampleTransparency, detail::kSampleTransparencyCif};
+inline const ParameterSpec instrument_sample_displacement{"instrument", "calib_sample_displacement", "degrees", detail::kUnbounded, detail::kSampleDisplacement, detail::kSampleDisplacementCif};
+inline const ParameterSpec instrument_sample_transparency{"instrument", "calib_sample_transparency", "degrees", detail::kUnbounded, detail::kSampleTransparency, detail::kSampleTransparencyCif};
 // The X-ray CW monochromator polarization, P = 1 - K + K cos^2(2theta_m) cos^2(2theta). Upstream
 // CwlPdXrayInstrument.setup_polarization_coefficient / .setup_monochromator_twotheta (tags, units, display names
 // and the [0, 1] / [0, 180) ranges mirrored, the open end closed as crysta's dictionary rows instrument.setup_*
 // are, family cwl, X-ray only). Fit parameters here; upstream holds them fixed.
-inline const ParameterSpec instrument_polarization_coefficient{
-    "instrument", "setup_polarization_coefficient", "dimensionless",
-    "CW Lorentz-polarization coefficient (0 disables the polarization correction)",
-    ParameterRange{0.0, 1.0}, "Polarization coefficient", "", "Polarization coefficient", "",
-    detail::kPolarizationCoefficient, detail::kPolarizationCoefficientCif};
-inline const ParameterSpec instrument_monochromator_twotheta{
-    "instrument", "setup_monochromator_twotheta", "degrees",
-    "Pre-specimen monochromator 2theta angle (0 means no monochromator)",
-    ParameterRange{0.0, 180.0}, "Monochromator 2θ", "deg", "Monochromator $2\\theta$", "\\mathrm{deg}",
-    detail::kMonochromatorTwotheta, detail::kMonochromatorTwothetaCif};
+inline const ParameterSpec instrument_polarization_coefficient{"instrument", "setup_polarization_coefficient", "dimensionless", ParameterRange{0.0, 1.0}, detail::kPolarizationCoefficient, detail::kPolarizationCoefficientCif};
+inline const ParameterSpec instrument_monochromator_twotheta{"instrument", "setup_monochromator_twotheta", "degrees", ParameterRange{0.0, 180.0}, detail::kMonochromatorTwotheta, detail::kMonochromatorTwothetaCif};
 // The X-ray CW K-alpha doublet: the pattern is the first wavelength's plus the ratio times the second's.
 // Upstream CwlInstrumentBase.setup_wavelength_2 / .setup_wavelength_2_to_1_ratio (tags, units, display names
 // and the ratio's [0, 1] range mirrored), X-ray only here. Fit parameters here; upstream holds them fixed.
-inline const ParameterSpec instrument_wavelength_2{
-    "instrument", "setup_wavelength_2", "angstroms",
-    "Second incident wavelength (e.g. X-ray K-alpha2)",
-    {0.0, detail::kInf}, "Wavelength 2", "Å", "Wavelength 2", "\\AA",
-    detail::kWavelength2, detail::kWavelength2Cif};
-inline const ParameterSpec instrument_wavelength_2_to_1_ratio{
-    "instrument", "setup_wavelength_2_to_1_ratio", "dimensionless",
-    "Relative intensity of wavelength_2 to wavelength (I2/I1); 0 means a single wavelength",
-    ParameterRange{0.0, 1.0}, "Wavelength 2/1 ratio", "", "Wavelength 2/1 ratio", "",
-    detail::kWavelengthRatio, detail::kWavelengthRatioCif};
+inline const ParameterSpec instrument_wavelength_2{"instrument", "setup_wavelength_2", "angstroms", {0.0, detail::kInf}, detail::kWavelength2, detail::kWavelength2Cif};
+inline const ParameterSpec instrument_wavelength_2_to_1_ratio{"instrument", "setup_wavelength_2_to_1_ratio", "dimensionless", ParameterRange{0.0, 1.0}, detail::kWavelengthRatio, detail::kWavelengthRatioCif};
 
-inline const ParameterSpec linked_structure_scale{
-    "linked_structure", "scale", "dimensionless", "Scale factor of the linked structure",
-    detail::kUnbounded, "scale", "", "Scale", "", detail::kScale, detail::kScaleCif};
-inline const ParameterSpec background_intensity{
-    "background", "intensity", "arbitrary", "Background intensity at a line-segment anchor",
-    detail::kUnbounded, "intensity", "", "Intensity", "", detail::kBackgroundIntensity, detail::kBackgroundIntensityCif};
+inline const ParameterSpec linked_structure_scale{"linked_structure", "scale", "dimensionless", detail::kUnbounded, detail::kScale, detail::kScaleCif};
+inline const ParameterSpec background_intensity{"background", "intensity", "arbitrary", detail::kUnbounded, detail::kBackgroundIntensity, detail::kBackgroundIntensityCif};
 
 // A polynomial or Chebyshev background term's coefficient (diffraction-lib
 // `PolynomialTerm.coef`).
-inline const ParameterSpec background_coef{
-    "background", "coef", "arbitrary", "Coefficient of a polynomial or Chebyshev background term",
-    detail::kUnbounded, "coef", "", "Coefficient", "", detail::kBackgroundCoef, detail::kBackgroundCoefCif};
+inline const ParameterSpec background_coef{"background", "coef", "arbitrary", detail::kUnbounded, detail::kBackgroundCoef, detail::kBackgroundCoefCif};
 
 // edi-only (no upstream counterpart — diffraction-lib has no TOF absorption category).
-inline const ParameterSpec absorption_abscor1{
-    "absorption", "abscor1", "reciprocal_angstroms",
-    "TOF cylinder Hewat absorption, wavelength-linear muR coefficient (muR = abscor1 * lambda)",
-    detail::kUnbounded, "abscor1", "1/Å", "ABSCOR1", "\\mathrm{\\AA}^{-1}", detail::kAbscor1, {}};
-inline const ParameterSpec absorption_abscor2{
-    "absorption", "abscor2", "undetermined",
-    "FullProf ABSCOR2, round-tripped but not kernel-wired; its lambda-power is unpinned",
-    detail::kUnbounded, "abscor2", "", "ABSCOR2", "", detail::kAbscor2, {}};
+inline const ParameterSpec absorption_abscor1{"absorption", "abscor1", "reciprocal_angstroms", detail::kUnbounded, detail::kAbscor1, {}};
+inline const ParameterSpec absorption_abscor2{"absorption", "abscor2", "undetermined", detail::kUnbounded, detail::kAbscor2, {}};
 // The CW cylinder body — upstream CylinderHewatAbsorption.mu_r (diffraction-lib tags and
 // ge-0 range mirrored; crysta dictionary row absorption.mu_r, family cwl).
-inline const ParameterSpec absorption_mu_r{
-    "absorption", "mu_r", "dimensionless",
-    "Absorption coefficient times sample radius (muR), R the cylinder RADIUS, evaluated at "
-    "each reflection's Bragg theta",
-    {0.0, detail::kInf}, "μR", "", "\\mu R", "", detail::kMuR, detail::kMuRCif};
+inline const ParameterSpec absorption_mu_r{"absorption", "mu_r", "dimensionless", {0.0, detail::kInf}, detail::kMuR, detail::kMuRCif};
 // A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the domain radius r in micrometres and the
 // mosaic spread g in inverse radians, the inverse width of the mosaic distribution (larger is narrower), a plain
 // number like any other.
-inline const ParameterSpec extinction_domain_radius{
-    "extinction", "domain_radius", "micrometres", "Becker-Coppens domain radius of the crystal",
-    {0.0, detail::kInf}, "Domain radius", "μm", "", "\\mu\\mathrm{m}", detail::kExtinctionDomainRadius,
-    detail::kExtinctionDomainRadiusCif};
-inline const ParameterSpec extinction_mosaic_spread{
-    "extinction", "mosaic_spread", "reciprocal_radians",
-    "Becker-Coppens mosaic spread of the crystal, the inverse width of its mosaic distribution",
-    {0.0, detail::kInf}, "Mosaic spread", "rad⁻¹", "", "\\mathrm{rad}^{-1}",
-    detail::kExtinctionMosaicSpread, detail::kExtinctionMosaicSpreadCif};
+inline const ParameterSpec extinction_domain_radius{"extinction", "domain_radius", "micrometres", {0.0, detail::kInf}, detail::kExtinctionDomainRadius, detail::kExtinctionDomainRadiusCif};
+inline const ParameterSpec extinction_mosaic_spread{"extinction", "mosaic_spread", "reciprocal_radians", {0.0, detail::kInf}, detail::kExtinctionMosaicSpread, detail::kExtinctionMosaicSpreadCif};
 // The crystal taken as a sphere, in millimetres as `_exptl_crystal.size_rad`: each reflection's mean path through it.
-inline const ParameterSpec extinction_crystal_radius{
-    "extinction", "crystal_radius", "millimetres", "Radius of the crystal, which sets the mean path length",
-    {0.0, detail::kInf}, "Crystal radius", "mm", "", "\\mathrm{mm}", detail::kExtinctionCrystalRadius,
-    detail::kExtinctionCrystalRadiusCif};
+inline const ParameterSpec extinction_crystal_radius{"extinction", "crystal_radius", "millimetres", {0.0, detail::kInf}, detail::kExtinctionCrystalRadius, detail::kExtinctionCrystalRadiusCif};
 // Larson's empirical extinction coefficient x, SHELXL's EXTI: F² calc is multiplied by [1 + 0.001 x F² λ³ / sin 2θ]^(-1/2).
-inline const ParameterSpec extinction_coefficient{
-    "extinction", "coefficient", "dimensionless", "Larson's empirical extinction coefficient",
-    {0.0, detail::kInf}, "Extinction coefficient", "", "", "", detail::kExtinctionCoefficient,
-    detail::kExtinctionCoefficientCif};
+inline const ParameterSpec extinction_coefficient{"extinction", "coefficient", "dimensionless", {0.0, detail::kInf}, detail::kExtinctionCoefficient, detail::kExtinctionCoefficientCif};
 // Larson's anisotropic tensor (FullProf's model 4; Qureshi, Mag2Pol manual 5.1.3, eq. 3.2): x_aniso =
 // x11 h² + x22 k² + x33 l² + x12 hk + x13 hl + x23 kl in place of 4 x (sin θ/λ)².
-inline const ParameterSpec extinction_coefficient_11{
-    "extinction", "coefficient_11", "dimensionless", "The h² term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x11", "", "x_{11}", "", detail::kExtinctionCoefficient11, detail::kExtinctionCoefficient11Cif};
-inline const ParameterSpec extinction_coefficient_22{
-    "extinction", "coefficient_22", "dimensionless", "The k² term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x22", "", "x_{22}", "", detail::kExtinctionCoefficient22, detail::kExtinctionCoefficient22Cif};
-inline const ParameterSpec extinction_coefficient_33{
-    "extinction", "coefficient_33", "dimensionless", "The l² term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x33", "", "x_{33}", "", detail::kExtinctionCoefficient33, detail::kExtinctionCoefficient33Cif};
-inline const ParameterSpec extinction_coefficient_12{
-    "extinction", "coefficient_12", "dimensionless", "The hk term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x12", "", "x_{12}", "", detail::kExtinctionCoefficient12, detail::kExtinctionCoefficient12Cif};
-inline const ParameterSpec extinction_coefficient_13{
-    "extinction", "coefficient_13", "dimensionless", "The hl term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x13", "", "x_{13}", "", detail::kExtinctionCoefficient13, detail::kExtinctionCoefficient13Cif};
-inline const ParameterSpec extinction_coefficient_23{
-    "extinction", "coefficient_23", "dimensionless", "The kl term of Larson's anisotropic extinction tensor",
-    detail::kUnbounded, "x23", "", "x_{23}", "", detail::kExtinctionCoefficient23, detail::kExtinctionCoefficient23Cif};
+inline const ParameterSpec extinction_coefficient_11{"extinction", "coefficient_11", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient11, detail::kExtinctionCoefficient11Cif};
+inline const ParameterSpec extinction_coefficient_22{"extinction", "coefficient_22", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient22, detail::kExtinctionCoefficient22Cif};
+inline const ParameterSpec extinction_coefficient_33{"extinction", "coefficient_33", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient33, detail::kExtinctionCoefficient33Cif};
+inline const ParameterSpec extinction_coefficient_12{"extinction", "coefficient_12", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient12, detail::kExtinctionCoefficient12Cif};
+inline const ParameterSpec extinction_coefficient_13{"extinction", "coefficient_13", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient13, detail::kExtinctionCoefficient13Cif};
+inline const ParameterSpec extinction_coefficient_23{"extinction", "coefficient_23", "dimensionless", detail::kUnbounded, detail::kExtinctionCoefficient23, detail::kExtinctionCoefficient23Cif};
 // Upstream PrefOrient.march_r / .march_random_fract (diffraction-lib tags; crysta dictionary
 // rows preferred_orientation.*, family cwl, ADR-0068). march_r is strictly positive — the loader
 // and the setters refuse 0, which a closed range cannot say.
-inline const ParameterSpec preferred_orientation_march_r{
-    "preferred_orientation", "march_r", "dimensionless",
-    "March-Dollase coefficient r (1 = no preferred orientation, < 1 platy, > 1 needle)",
-    {0.0, detail::kInf}, "r", "", "r", "", detail::kMarchR, detail::kMarchRCif};
-inline const ParameterSpec preferred_orientation_march_random_fract{
-    "preferred_orientation", "march_random_fract", "dimensionless",
-    "Random (untextured) fraction mixed with the March-Dollase term (0 = pure March-Dollase)",
-    {0.0, 1.0}, "f_rand", "", "f_{\\mathrm{rand}}", "", detail::kMarchRandomFract,
-    detail::kMarchRandomFractCif};
+inline const ParameterSpec preferred_orientation_march_r{"preferred_orientation", "march_r", "dimensionless", {0.0, detail::kInf}, detail::kMarchR, detail::kMarchRCif};
+inline const ParameterSpec preferred_orientation_march_random_fract{"preferred_orientation", "march_random_fract", "dimensionless", {0.0, 1.0}, detail::kMarchRandomFract, detail::kMarchRandomFractCif};
 
 }  // namespace spec
 
@@ -559,39 +334,6 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
     }
 }
 
-/// A parameter's short symbol as the app's tables and the report show it: its LaTeX name in plain text
-/// (`$\sigma_1$` is "σ₁", `$B_{\mathrm{iso}}$` is "B iso"), the FCJ asymmetry under FullProf's names "S/L" and "D/L",
-/// the doublet's ratio as "Intensity ratio 2/1", or the display name where the LaTeX name uses anything this does not
-/// spell.
-std::string parameter_symbol(const ParameterSpec* parameter_spec);
-
-// How an ADP parameter shows for its site's declared type. The isotropic value is B iso or U iso, or the
-// read-only equivalent of an anisotropic site: U eq for Uani, B eq for Bani and beta. A tensor component
-// (`component` 11, 22, 33, 12, 13 or 23) is U11 or B11 in Å², or the unitless β11.
-struct AdpDisplay {
-    std::string short_name;  // plain text, as the tables show it
-    std::string latex_name;
-    std::string display_units;
-    std::string latex_units;
-};
-inline AdpDisplay adp_display(const std::string& adp_type, const std::string& component) {
-    if (component == "iso") {
-        const bool u = adp_type == "Uiso" || adp_type == "Uani";
-        const std::string tail = adp_type == "Biso" || adp_type == "Uiso" ? "iso" : "eq";
-        return {std::string(u ? "U " : "B ") + tail, std::string(u ? "$U_{\\mathrm{" : "$B_{\\mathrm{") + tail + "}}$",
-                "Å²", "\\AA$^2$"};
-    }
-    // "₁₂" from "12": the subscript digits the tables use.
-    std::string subscript;
-    for (const char digit : component) {
-        subscript += std::string("₀₁₂₃₄₅₆₇₈₉").substr(static_cast<std::size_t>(digit - '0') * 3, 3);
-    }
-    if (adp_type == "beta") {
-        return {"β" + subscript, "$\\beta_{" + component + "}$", "", ""};
-    }
-    const std::string letter = adp_type == "Bani" ? "B" : "U";
-    return {letter + subscript, "$" + letter + "_{" + component + "}$", "Å²", "\\AA$^2$"};
-}
 
 }  // namespace edi
 

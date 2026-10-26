@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -10,13 +11,17 @@ import edi.app
 // toggle): a name, a token, a number. `committed` carries what the user typed; the owner writes it
 // through the view-model, whose value then comes back through `value`. A refused commit (text that
 // is not of the kind the field `accepts`, or a value the core refuses) returns the field to the
-// model's value and shows why, as ParameterField does.
+// model's value and shows why, as ParameterField does. A field of a `.edi` item names it by `uid` (and `variant`):
+// its label and units then come from crysta's dictionary, a number shows as the project file spells it, and its
+// tooltip names the item it shows (edi ADR-0051).
 EaElements.ParamTextField {
     id: field
 
-    property string label: ""
+    property string uid: ""
+    property string variant: ""
+    property string label: uid !== "" ? Session.label(uid, variant) : ""
     property var fieldValue: ""
-    property string unit: ""
+    property string unit: uid !== "" ? Session.units(uid, variant) : ""
     property bool editable: true
     // "text", "number" or "integer": what the field accepts before anything reaches the model.
     property string accepts: "text"
@@ -31,11 +36,11 @@ EaElements.ParamTextField {
     property string refusal: ""
     signal committed(string text)
 
-    // A number the field accepts as a number is shown by the app's one rule for numbers (NumberText).
-    // Display only: the model keeps the full value, and an unedited field commits nothing. Anything else (a
-    // name, a token, a whole number) is shown as it is.
+    // A number of an item shows as the project file spells it, any other number by the app's rule for numbers
+    // (NumberText). Display only: the model keeps the full value, and an unedited field commits nothing. Anything
+    // else (a name, a token, a whole number) is shown as it is.
     parameter: ({
-            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? NumberText.plain(field.fieldValue, 10) : String(field.fieldValue),
+            "value": field.accepts === "number" && typeof field.fieldValue === "number" ? (field.uid !== "" ? Session.written(field.uid, field.fieldValue) : NumberText.plain(field.fieldValue, 10)) : String(field.fieldValue),
             "error": 0,
             "enabled": field.editable,
             "fittable": false,
@@ -44,7 +49,8 @@ EaElements.ParamTextField {
         })
     readOnly: !editable
     warned: refusal !== "" || !typedAdmitted
-    ToolTip.text: refusal
+    ToolTip.text: uid !== "" ? Session.tooltip(uid, variant) : ""
+    ToolTip.visible: ToolTip.text !== "" && hovered && refusal === "" && EaGlobals.Vars.showToolTips
     WarningToolTip {
         text: field.refusal
         visible: text !== "" && (field.hovered || field.activeFocus)

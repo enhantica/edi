@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
 
 
-def run_functions(source, names, calls, *, fit=None, consumer=None):
+def run_functions(source, names, calls, *, fit=None, consumer=None, bridge=None):
     node = shutil.which('node')
     assert node, 'Scientific display gates require the declared Node runtime'
     request = {
@@ -28,6 +28,7 @@ def run_functions(source, names, calls, *, fit=None, consumer=None):
         'calls': calls,
         'fit': fit,
         'consumer': consumer,
+        'bridge': bridge,
     }
     result = subprocess.run(
         [node, str(RUNNER)],

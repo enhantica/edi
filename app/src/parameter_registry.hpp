@@ -41,6 +41,7 @@ class ParameterRegistry : public QObject {
     void refreshElements(const edi::Project& project);
     void refreshRefinable(edi::Project& project);
     void refreshEstimated(const edi::Project& project);
+    void refreshSpelling(const edi::Project& project);
     void refreshDefiniteness(const edi::Project& project);
     ProjectEditor& editor_;
     QList<ParameterItem*> items_;

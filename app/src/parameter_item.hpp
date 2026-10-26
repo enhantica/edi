@@ -6,6 +6,8 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
+#include <string>
+
 #include "edi/parameter_walk.hpp"
 
 namespace edi_app {
@@ -60,6 +62,15 @@ class ParameterItem : public QObject {
     // For a parameter one phase owns (its scale, its texture) in a project of several structures, the place
     // of that structure in the project's list (its colour); -1 otherwise.
     Q_PROPERTY(int phaseIndex READ phaseIndex NOTIFY phaseIndexChanged)
+    // The value and its s.u. as the project file and the Text tab spell them under the project's rule
+    // (edi::file_text): what a field, the slider and the Analysis table show. The s.u. is empty without one.
+    Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileValueChanged)
+    Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileSuChanged)
+    // One unit of the last digit the item's display format shows: the slider's step (edi::display_step).
+    Q_PROPERTY(double sliderStep READ sliderStep NOTIFY sliderStepChanged)
+    // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
+    // empty for a parameter the dictionary does not know.
+    Q_PROPERTY(QString toolTip READ toolTip NOTIFY toolTipChanged)
 
    public:
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
@@ -106,12 +117,24 @@ class ParameterItem : public QObject {
     QString categoryIcon() const { return category_icon_; }
     QString elementSymbol() const { return element_symbol_; }
     int phaseIndex() const { return phase_index_; }
+    QString fileValue() const { return file_value_; }
+    QString fileSu() const { return file_su_; }
+    double sliderStep() const;
+    QString toolTip() const;
+    // A number of this item, a slider limit, in its display format; empty for a parameter the dictionary does not know.
+    Q_INVOKABLE QString displayText(double value) const;
     // Set by the registry at each rebuild: a block's place and a site's element can change while the
     // parameter stays shown.
     void setBlockIndex(int index);
     void setElementSymbol(const QString& symbol);
     void setPhaseIndex(int index);
     void setLabel(const QString& short_name, const QString& units);
+    // The token the label and format follow (an ADP's site type, an active doublet), set at each publish.
+    void setVariant(const QString& variant);
+    const QString& variant() const { return variant_; }
+    // The project's `_su_format.rule`, set at each rebuild and publish; the file text follows it.
+    // The project's s.u. rule, and whether its save writes this value exactly (edi::save_spelling).
+    void setSpelling(const std::string& rule, bool exact);
 
     const edi::Parameter* parameter() const { return parameter_; }
     // Emit a signal for each field whose core value differs from the last published one; returns
@@ -133,9 +156,14 @@ class ParameterItem : public QObject {
     void phaseIndexChanged();
     void shortNameChanged();
     void displayUnitsChanged();
+    void fileValueChanged();
+    void fileSuChanged();
+    void sliderStepChanged();
+    void toolTipChanged();
 
    private:
     void setLastError(const QString& error);
+    void refreshFileText();
 
     ProjectEditor& editor_;
     edi::Parameter* parameter_;
@@ -148,7 +176,9 @@ class ParameterItem : public QObject {
     QString domain_warning_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
-        short_name_, category_icon_, element_symbol_;
+        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_;
+    std::string su_rule_;
+    bool exact_ = false;
     double minimum_, maximum_;
     int block_index_ = -1;
     int phase_index_ = -1;

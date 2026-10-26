@@ -176,18 +176,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                        "_instrument.calib_sample_displacement 0.05\\n_instrument.calib_sample_transparency -0.02",
                        "group.instrument"}});
     // ... and every Example's Experiment page with its peak group open, where the types differ most; a single
-    // crystal has no peak, so its extinction group instead, opened from Home so `--demo-only ex-sc-` runs them
-    // alone. The first returns to the light theme the rest are captured in.
+    // crystal has no peak, so its extinction group instead, in the light theme. The first returns to the light theme
+    // the rest are captured in. Each opens its example from Home, so `--demo-only ex-<id>` captures one alone.
+    const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start"),
+                               QStringLiteral("expand:group.examples")};
     for (const QString& id : ExampleListModel::bundledIds()) {
-        const QStringList theme = steps_.back().image.startsWith(QLatin1String("t2-")) ? QStringList{"theme:light"}
-                                                                                        : QStringList{};
-        if (id.startsWith(QLatin1String("sc-"))) {
-            const QStringList home{"theme:light", "appBar.tab.home", "home.start", "expand:group.examples"};
-            steps_.push_back({QStringLiteral("ex-") + id,
-                              home + open_example(id) + QStringList{experiment, basic, "group.extinction"}});
-        } else {
-            steps_.push_back({QStringLiteral("ex-") + id, theme + open_example(id) + QStringList{experiment, basic, "group.peak"}});
-        }
+        const bool crystal = id.startsWith(QLatin1String("sc-"));
+        const QStringList theme = crystal || steps_.back().image.startsWith(QLatin1String("t2-"))
+                                      ? QStringList{"theme:light"}
+                                      : QStringList{};
+        const QString group = crystal ? QStringLiteral("group.extinction") : QStringLiteral("group.peak");
+        steps_.push_back({QStringLiteral("ex-") + id, theme + start + open_example(id) + QStringList{experiment, basic, group}});
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
@@ -239,8 +238,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // ... and the fit area, the fitting buttons, the block selector in the main view's tab bar, the Experiments
     // explorer with its Fit column, type selectors and Create experiment, and a searchable combo box. Each
     // opens its example from Home, so `--demo-only t16-` runs them alone.
-    const QStringList start = {QStringLiteral("appBar.tab.home"), QStringLiteral("home.start"),
-                               QStringLiteral("expand:group.examples")};
     steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20") + QStringList{analysis, basic}});
     steps_.push_back({"t16-02-fit-running", {"fitting.start", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});

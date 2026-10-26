@@ -17,32 +17,32 @@ DataTable {
 
     property AnalysisViewModel analysis: null
 
-    // A start value by the app's one rule for numbers in cells (NumberText); the model keeps it whole.
-    function shown(value) {
-        return value === undefined ? "" : NumberText.plain(value, 8);
+    // A start value or error in its item's display format; the model keeps it whole.
+    function shown(uid, value) {
+        return value === undefined ? "" : Session.display(uid, value);
     }
 
     objectName: "fitStart.list"
     defaultInfoText: qsTr("No fit start state")
     sourceModel: analysis ? analysis.fitStart : null
 
-    columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
+    columnWidths: [numberColumnWidth, textColumnWidth("id", Session.label("fit_parameter.id")), -1, -1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.ListViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignLeft
-            text: qsTr("parameter")
+            uid: "fit_parameter.id"
         }
-        EaComponents.ListViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("start value")
+            uid: "fit_parameter.start_value"
         }
-        EaComponents.ListViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("start error")
+            uid: "fit_parameter.start_uncertainty"
         }
     }
 
@@ -65,12 +65,12 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.startValue)
+            number: table.shown("fit_parameter.start_value", row.model.startValue)
             full: NumberText.plainFull(row.model.startValue)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.shown(row.model.startUncertainty)
+            number: table.shown("fit_parameter.start_uncertainty", row.model.startUncertainty)
             full: NumberText.plainFull(row.model.startUncertainty)
         }
     }

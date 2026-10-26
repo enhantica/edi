@@ -42,17 +42,17 @@ Column {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "linked_structure.structure_id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("scale")
+                uid: "linked_structure.scale"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("weight fraction")
+                uid: "linked_structure.weight_fraction"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -117,9 +117,8 @@ Column {
                 enabled: row.model.enabled
                 item: row.model.scale
             }
-            // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
-            // the value's menu, never edited or fitted. A fraction keeps its decimal point, so a lone phase shows 1.0
-            // as the saved file writes it.
+            // Read-only, as a parameter the scales imply: the dictionary's weight fraction, rounded by its s.u. under the
+            // project's rule, else by its display format, the s.u. in the value's menu, never edited or fitted.
             EaComponents.ListViewParameter {
                 id: fraction
 
@@ -134,8 +133,8 @@ Column {
                 enabled: row.model.enabled
                 readOnly: true
                 parameter: known ? {
-                    "value": (text => /[.e]/.test(text) ? text : text + ".0")(NumberText.parameter(fractionValue, fractionError)),
-                    "error": NumberText.error(fractionError, 0, fractionValue),
+                    "value": Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError),
+                    "error": Session.suText("linked_structure.weight_fraction", fractionValue, fractionError),
                     "enabled": true,
                     "fittable": false,
                     "fit": false,
@@ -147,7 +146,7 @@ Column {
                     "error": ""
                 }
                 color: EaStyle.Colors.themeForegroundMinor
-                ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
+                ToolTip.text: Session.tooltip("linked_structure.weight_fraction")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.ListViewButton {

@@ -21,7 +21,7 @@ Grid {
     ValueField {
         objectName: "reflns.thresholdSigma"
         width: row.fieldWidth
-        label: qsTr("observed above (su)")
+        uid: "reflns.threshold_sigma"
         fieldValue: row.experiment && !isNaN(row.experiment.reflnsThresholdSigma) ? row.experiment.reflnsThresholdSigma : ""
         placeholderText: "2"
         accepts: "number"
@@ -31,7 +31,7 @@ Grid {
     SelectorField {
         objectName: "reflns.thresholdBasis"
         width: row.fieldWidth
-        label: qsTr("on")
+        uid: "reflns.threshold_basis"
         options: row.experiment ? row.experiment.reflnsThresholdBasisOptions : null
         token: row.experiment ? (row.experiment.reflnsThresholdBasis || "intensity") : ""
         onSelected: token => row.experiment.reflnsThresholdBasis = token
@@ -39,7 +39,7 @@ Grid {
     ValueField {
         objectName: "reflns.thresholdExpression"
         width: row.fieldWidth
-        label: qsTr("threshold")
+        uid: "reflns.threshold_expression"
         fieldValue: row.experiment ? row.experiment.reflnsThresholdExpression : ""
         editable: false
     }

@@ -42,6 +42,10 @@ def test_data_table_declares_named_component_columns():
     assert property_value(repeater, 'model') == 'row.model.componentIntensities', (
         'Each point supplies all of its ordered structure intensities'
     )
-    assert property_value(label, 'text') == 'group.intensity(modelData)', (
-        'Structure contributions use the same plain numeric display as other calculated columns'
+    assert (
+        property_value(label, 'text')
+        == 'group.shown("pd_calc.component_intensities_net", modelData)'
+    ), 'Structure contributions use the same plain numeric display as other calculated columns'
+    assert 'Session.display(uid, value)' in block(qml, 'function shown('), (
+        'Calculated component cells must use their dictionary item through the shared bridge'
     )

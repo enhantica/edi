@@ -24,23 +24,23 @@ Column {
         defaultInfoText: qsTr("No excluded regions")
         sourceModel: group.regions
 
-        columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("excluded_region.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
+                uid: "excluded_region.id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("start")
+                uid: "excluded_region.start"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("end")
+                uid: "excluded_region.end"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -68,6 +68,7 @@ Column {
             TextCell {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.start.${row.index}`
+                uid: "excluded_region.start"
                 value: row.start
                 accepts: "number"
                 onCommitted: text => group.regions.setStart(row.index, Number(text))
@@ -75,6 +76,7 @@ Column {
             TextCell {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `excludedRegion.end.${row.index}`
+                uid: "excluded_region.end"
                 value: row.end
                 accepts: "number"
                 onCommitted: text => group.regions.setEnd(row.index, Number(text))

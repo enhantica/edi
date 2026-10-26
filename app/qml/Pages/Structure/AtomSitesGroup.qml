@@ -44,39 +44,39 @@ Column {
         defaultInfoText: qsTr("No atom sites defined")
         sourceModel: group.sites
 
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
+                uid: "atom_site.id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("type")
+                uid: "atom_site.type_symbol"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "x"
+                uid: "atom_site.fract_x"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "y"
+                uid: "atom_site.fract_y"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "z"
+                uid: "atom_site.fract_z"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("WP")
+                uid: "atom_site.wyckoff_letter"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("occ")
+                uid: "atom_site.occupancy"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter

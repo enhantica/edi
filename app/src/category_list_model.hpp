@@ -31,7 +31,8 @@ class CategoryListModel : public QAbstractListModel {
         ItemCountRole,
         IsLoopRole,
         AdmittedRole,
-        ExtrasPartRole
+        ExtrasPartRole,
+        ToolTipRole
     };
 
     explicit CategoryListModel(QObject* parent = nullptr);
@@ -65,9 +66,10 @@ class CategoryListModel : public QAbstractListModel {
 // (`peak`'s `cutoff_fwhm`).
 struct CategoryPresentation {
     CategoryListModel::Tier tier;
-    const char* title;
-    const char* icon;
+    QString title;
+    QString icon;
     bool extras_part = false;
+    QString tool_tip;  // the title and the `.edi` name, from the dictionary
 };
 CategoryPresentation category_presentation(const QString& id);
 

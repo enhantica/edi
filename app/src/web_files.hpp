@@ -55,7 +55,8 @@ class WebFiles : public QObject {
     static QByteArray siteFile(const QString& path);
 
     // The archive format, on every platform (the unit tier proves it natively). `pack` stores every file
-    // under `directory`, with paths relative to its parent: one top-level folder named as the directory.
+    // under `directory`, with paths relative to its parent: one top-level folder named as the directory, made by
+    // the unzip tool from those paths, as no folder entry is stored. Files are stored rw-r--r--.
     static QByteArray pack(const QString& directory);
     // An archive of the given files, each stored under its path (e.g. reports/<name>.html), in the order given.
     static QByteArray packFiles(const QList<QPair<QString, QByteArray>>& files);

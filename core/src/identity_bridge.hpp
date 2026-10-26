@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // ADR-0016: the loader's reach into crysta's ONE identity decision — the identity-column table and
 // the representable-id domain — defined in adapter.cpp, edi's one crysta
@@ -22,6 +24,25 @@ void require_representable_id(const std::string& value, const std::string& categ
 std::string cell_domain_message(double a, double b, double c, double alpha_deg, double beta_deg,
                                 double gamma_deg);
 std::string wavelength_domain_message(double wavelength);
+
+// The current `.edi` name `tag` reads as by crysta's dictionary: an older `.edi` spelling's, and with `every_name` (a
+// structure or experiment block) any name an item lists, `.edi` or CIF, in either notation; else `tag` itself.
+std::string current_edi_name(const std::string& tag, bool every_name);
+
+// The one-row category (`_peak`, `_cell`) whose item `tag` names by crysta's dictionary, by any of its names; empty for
+// an item of a loop category or a name no item lists. Such an item written as a loop column is refused.
+std::string one_row_category(const std::string& tag);
+
+// Returns unless `tags`, the names a structure or experiment text spells as edi's reader reads
+// them, are a CIF's by crysta's rule; crysta throws std::invalid_argument for a CIF, as reading
+// CIF files is not supported yet.
+void refuse_cif_names(const std::vector<std::string>& tags);
+
+// A project's structure files by crysta's rule, sorted: each `.edi` in `folder`; any other file is
+// passed over.
+std::vector<std::string> project_structure_files(const std::string& folder);
+// A project's experiment files by the same rule.
+std::vector<std::string> project_experiment_files(const std::string& folder);
 
 }  // namespace edi::detail
 

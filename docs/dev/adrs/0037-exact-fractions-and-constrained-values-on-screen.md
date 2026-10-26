@@ -5,6 +5,9 @@
 - **Implementation:** ⏳ Planned, with the parameter display precision work
 - **Priority:** Medium
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** read-only surfaces apply these rules through the display bridge; input fields show
+the file's spelling instead. A constrained value without an s.u. takes its own item's display format (§2).
+
 ## Context
 
 A coordinate on a special position is shown in full, `0.3333333333333333`, in the app, in its text mode and in the

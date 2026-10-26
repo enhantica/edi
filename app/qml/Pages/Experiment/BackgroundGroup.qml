@@ -62,7 +62,7 @@ Column {
             id: typeSelector
             width: settingsRow.fieldWidth
             objectName: "background.type"
-            label: qsTr("type")
+            uid: "background.type"
             options: group.experiment ? group.experiment.backgroundTypeOptions : null
             token: group.experiment ? group.experiment.backgroundType : ""
             onSelected: token => group.chooseType(token)
@@ -72,7 +72,7 @@ Column {
         SelectorField {
             objectName: "background_estimate.mode"
             width: settingsRow.fieldWidth
-            label: qsTr("estimation mode")
+            uid: "background_estimate.mode"
             options: group.experiment ? group.experiment.backgroundEstimateModes : null
             token: group.experiment ? group.experiment.backgroundEstimateMode : ""
             onSelected: token => group.experiment.backgroundEstimateMode = token
@@ -83,7 +83,7 @@ Column {
             objectName: "background.origin"
             visible: settingsRow.kind === "polynomial"
             width: settingsRow.fieldWidth
-            label: qsTr("origin")
+            uid: "background.origin"
             accepts: "number"
             fieldValue: group.experiment ? group.experiment.backgroundOrigin : ""
             onCommitted: text => group.experiment.backgroundOrigin = Number(text)
@@ -92,7 +92,7 @@ Column {
             objectName: "background.xMin"
             visible: settingsRow.kind === "chebyshev"
             width: settingsRow.fieldWidth
-            label: qsTr("x min")
+            uid: "background.x_min"
             accepts: "number"
             fieldValue: group.experiment ? group.experiment.backgroundXMin : ""
             onCommitted: text => group.experiment.backgroundXMin = Number(text)
@@ -101,7 +101,7 @@ Column {
             objectName: "background.xMax"
             visible: settingsRow.kind === "chebyshev"
             width: settingsRow.fieldWidth
-            label: qsTr("x max")
+            uid: "background.x_max"
             accepts: "number"
             fieldValue: group.experiment ? group.experiment.backgroundXMax : ""
             onCommitted: text => group.experiment.backgroundXMax = Number(text)
@@ -147,23 +147,23 @@ Column {
                 defaultInfoText: qsTr("No background points")
                 sourceModel: group.points
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignLeft
-                        text: qsTr("id")
+                        uid: "background.id"
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("position")
+                        uid: "background.position"
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("intensity")
+                        uid: "background.intensity"
                     }
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
@@ -193,6 +193,7 @@ Column {
                         locked: group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
+                        uid: "background.position"
                         value: row.position
                         accepts: "number"
                         onCommitted: text => group.points.setPosition(row.index, Number(text))
@@ -268,23 +269,23 @@ Column {
                 defaultInfoText: qsTr("No background terms")
                 sourceModel: group.terms
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), Math.min(textColumnWidth("order", qsTr("order")), width * 0.25), -1, AppSizes.iconColumnWidth]
+                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignLeft
-                        text: qsTr("id")
+                        uid: "background.id"
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("order")
+                        uid: "background.order"
                     }
-                    EaComponents.ListViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("coefficient")
+                        uid: "background.coef"
                     }
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter

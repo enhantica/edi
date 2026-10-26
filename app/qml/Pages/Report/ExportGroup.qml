@@ -11,8 +11,8 @@ import edi.app
 
 // Saving the report, the sidebar's top group (edi ADR-0036 §7): one row per format, its box and its report's path, the
 // interactive HTML with whether it embeds plotly.js and three.js (online by default) on its own row under it, then the
-// static PDF (A4, the preview's figures as images) and the CIF report (disabled until its writer exists); one Save
-// report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
+// static PDF (A4, the preview's figures as images) and the CIF report (every item under its official CIF name); one
+// Save report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
 // downloads them, one file or one zip).
 EaElements.GroupBox {
     id: group
@@ -123,7 +123,7 @@ EaElements.GroupBox {
                 objectName: "report.writesHtml"
                 width: group.boxWidth
                 enabled: group.report !== null
-                text: qsTr("HTML")
+                text: Session.label("report.html")
                 checked: group.report ? group.report.writesHtml : false
                 onToggled: group.report.writesHtml = checked
                 ToolTip.text: qsTr("Save the report as one HTML file with interactive charts")
@@ -155,7 +155,7 @@ EaElements.GroupBox {
                 objectName: "report.writesPdf"
                 width: group.boxWidth
                 enabled: group.report !== null && group.preview !== null
-                text: qsTr("PDF")
+                text: Session.label("report.pdf")
                 checked: group.report ? group.report.writesPdf : false
                 onToggled: group.report.writesPdf = checked
                 ToolTip.text: qsTr("Save the report as a PDF on A4 pages, its charts as images")
@@ -175,10 +175,11 @@ EaElements.GroupBox {
                 leftPadding: 0
                 objectName: "report.writesCif"
                 width: group.boxWidth
-                enabled: false
-                text: qsTr("CIF")
+                enabled: group.report !== null
+                text: Session.label("report.cif")
                 checked: group.report ? group.report.writesCif : false
-                ToolTip.text: qsTr("The CIF report is not available yet")
+                onToggled: group.report.writesCif = checked
+                ToolTip.text: qsTr("Save the report as a CIF, every item under its official CIF name")
             }
             ReportPath {
                 format: "cif"
@@ -190,7 +191,7 @@ EaElements.GroupBox {
         EaElements.SideBarButton {
             objectName: "report.save"
             wide: true
-            enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf)
+            enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf || group.report.writesCif)
             fontIcon: "download"
             text: qsTr("Save report")
             ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")

@@ -85,6 +85,9 @@ Firefox, `credentialless`, leaves Safari without isolation on every load after t
 cannot run, the single-thread build loads, and a start that fails names the build it chose and why. The page keeps why
 it chose a build in `window.ediBuildInfo`, which the app's diagnostics view (Preferences, Develop) shows. The site is one folder: the page, both builds, the shim, a README naming the
 hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack.sh`, `build/wasm/edi-webapp.zip`).
+A dispatch of `pages.yml` may name a crysta commit (`crysta_commit`): the web app is then built from that commit's
+source instead of the pinned SDK's, to preview crysta work no SDK carries yet, and the notebooks are published
+unexecuted, since the native build would use the pin (owner, 2026-10-23).
 
 ### 5. The browser's files and settings
 
@@ -99,8 +102,9 @@ hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack
   a project (none current lacks it); the first build asked for a `.zip`, whose native picker entered a folder
   instead of opening it.
 - **Saving a project** writes it into memory and downloads its `.zip` archive (`WebFiles`): a page cannot write a
-  folder on the user's disk. To open it again the user unpacks it. Data files are asked for as files: one structure
-  file, as on the desktop, or several experiment files.
+  folder on the user's disk. To open it again the user unpacks it. The archive stores no folder entries and its files
+  as `rw-r--r--`, so an unzip tool, macOS's included, makes folders that open (owner, 2026-10-23). Data files are asked
+  for as files: one structure file, as on the desktop, or several experiment files.
 - **Requests and their answers.** A browser file chooser answers later, or never when it is dismissed, so each
   request (a folder, data files) has an id and exactly one answer carrying it: the files, a failure, or a
   cancellation. One request is active at a time, as the browser shows one chooser: a new request cancels the one

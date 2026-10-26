@@ -24,6 +24,7 @@
 #include "background.hpp"
 #include "engine_setup.hpp"
 #include "edi/background_estimate.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
@@ -620,7 +621,11 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::load_structure_edi_file(file.toLocalFile().toStdString())),
+        // Either loader refuses a CIF, as reading CIF files is not supported yet.
+        const std::string path = file.toLocalFile().toStdString();
+        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
+        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
+                                                            : edi::load_structure_edi_file(path)),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -1224,8 +1229,9 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     // A fitted dataset's χ² from its results row, as a single fit's reliability shows it.
     const auto& results = scan_session_->index().rows;
     if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
-        dataset.reliability = QStringLiteral("χ² ") +
-                              QString::number(results[static_cast<std::size_t>(index)].reduced_chi_square, 'f', 2);
+        dataset.reliability = QString::fromStdString(edi::label("fit_result.reduced_chi_square") + " ") +
+                              QString::fromStdString(edi::display_text(
+                                  "fit_result.reduced_chi_square", results[static_cast<std::size_t>(index)].reduced_chi_square));
     }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
     if (dataset.outcome.isEmpty() && dataset.is_template && scanTemplateOrModel().fit_result.held()) {
@@ -1949,26 +1955,17 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // The pattern is taken for drawing by the first frame synchronised after it was applied: the GUI thread waits
-        // during a synchronisation, so none can be under way while it is armed here. The render thread renders that
-        // frame before it synchronises another, so the pattern is drawn, and the next file can be applied while the
-        // render thread draws this one. The signal comes on the render thread; the receipt goes to this one.
-        render_connection_ = connect(
-            window, &QQuickWindow::afterSynchronizing, this,
-            [this] {
-                if (render_armed_.exchange(false)) {
-                    QMetaObject::invokeMethod(
-                        this,
-                        [this] {
-                            if (render_swaps_ > 0) {
-                                // Hidden, or another pattern replaced it, before it was drawn: not drawn.
-                                followRendered(presentedFollowed());
-                            }
-                        },
-                        Qt::QueuedConnection);
-                }
-            },
-            Qt::DirectConnection);
+        // The pattern is in the scene now, so the next frame synchronises it. Its file name, its count and the receipt
+        // that asks for the next file go at the start of that frame, on this thread before the frame's polish and
+        // synchronisation, so the name a user reads changes in the frame that shows the file's points, never a frame
+        // before or after (edi ADR-0029). The next file then arrives after this frame is synchronised, and is applied
+        // while the render thread draws this one.
+        render_connection_ = connect(window, &QQuickWindow::afterAnimating, this, [this] {
+            if (render_armed_.exchange(false) && render_swaps_ > 0) {
+                // Hidden, or another pattern replaced it, before its frame: not drawn.
+                followRendered(presentedFollowed());
+            }
+        });
     }
     render_swaps_ = 1;
     render_armed_.store(true);

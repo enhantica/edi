@@ -11,6 +11,9 @@
   group is one `.edi` category of the block (or a named non-category part); a selector offers the core's
   supported set for the block's type. New pages, groups and selectors follow the same shape.
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** every label, selector value and number a page shows comes through the core's display
+bridge from crysta's dictionary; no page or app table keeps a name or a rounding of its own.
+
 ## Context
 
 edi needs a desktop app now and a web app later (ADR-0006) from one source tree (ADR-0009). The owner's

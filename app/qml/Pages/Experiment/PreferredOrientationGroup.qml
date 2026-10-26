@@ -25,35 +25,35 @@ Column {
         defaultInfoText: qsTr("No preferred orientation")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("structureId", Session.label("preferred_orientation.structure_id")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "preferred_orientation.structure_id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "h"
+                uid: "preferred_orientation.index_h"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "k"
+                uid: "preferred_orientation.index_k"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "l"
+                uid: "preferred_orientation.index_l"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "r"
+                uid: "preferred_orientation.march_r"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("random")
+                uid: "preferred_orientation.march_random_fract"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter

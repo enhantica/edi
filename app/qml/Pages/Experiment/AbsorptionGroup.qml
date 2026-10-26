@@ -18,7 +18,7 @@ Column {
         spacing: AppSizes.inputSpacing
         SelectorField {
             objectName: "absorption.type"
-            label: qsTr("type")
+            uid: "absorption.type"
             options: group.experiment ? group.experiment.absorptionTypeOptions : null
             token: group.experiment ? group.experiment.absorptionType : ""
             onSelected: token => group.experiment.absorptionType = token

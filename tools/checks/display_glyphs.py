@@ -11,8 +11,10 @@ logs "Failed to create FreeType font engine". Legend marks are drawn shapes, not
 
 The census reads the string literals of the app's QML and C++ and of the core (whose messages
 and units the app shows), with their escapes decoded: \u and \U, UTF-8 bytes written as \x,
-and HTML numeric references. For each character it records where it is used, the font chain that
-draws it and the font of that chain that has it. --write regenerates
+and HTML numeric references, and every name crysta's dictionary gives the pages (edi ADR-0051),
+read from crysta's source: CRYSTA_CONSUMER_SRC when set, else the pinned fetch in build/crysta-src.
+For each character it records where it is used, the font chain that draws it and the font of
+that chain that has it. --write regenerates
 data/display-glyphs.json from the sources and the fonts, failing on a character no font of its
 chain has. --check scans the sources again and fails when a character or a site is not in the
 census, or when a character is in no font of its chain. Each character's row also records the
@@ -27,10 +29,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import struct
 import sys
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CENSUS = ROOT / 'data' / 'display-glyphs.json'
@@ -74,6 +79,9 @@ SITE_FONTS = {
     # The arrow between two values, drawn in Encode Sans while the digits keep the value's font.
     ('app/qml/Components/DigitText.qml', '\u2192'): ('Encode Sans',),
 }
+# The dictionary's names reach the pages at run time, through the display bridge.
+DICTIONARY = 'data/dictionary/parameters.yaml'
+DICTIONARY_SITE = f'crysta:{DICTIONARY}'
 # The sources whose strings never reach the app's pages: the terminal report and progress line,
 # and the JSON writer, whose line separators are escapes, never shown.
 NOT_SHOWN = {'core/src/report.cpp', 'core/src/json.cpp'}
@@ -136,9 +144,42 @@ def fonts_of(relative: str, ch: str) -> tuple[str, ...]:
     return SITE_FONTS.get((relative, ch), SITE_FONTS.get(relative, ('PT Sans',)))
 
 
+def crysta_source() -> Path:
+    """The crysta source whose dictionary the app links."""
+    named = os.environ.get('CRYSTA_CONSUMER_SRC')
+    return Path(named) if named else ROOT / 'build/crysta-src'
+
+
+def dictionary_characters() -> set[str]:
+    """The non-ASCII characters of the dictionary's titles, labels, units and option names."""
+    path = crysta_source() / DICTIONARY
+    try:
+        data = yaml.safe_load(path.read_text(encoding='utf-8'))
+    except (OSError, yaml.YAMLError) as error:
+        sys.exit(f"display_glyphs: cannot read crysta's dictionary at {path}: {error}")
+    texts = []
+    for category in data.get('categories') or []:
+        texts += [category.get('title'), category.get('loop_title')]
+    for entry in list(data.get('parameters') or []) + list(data.get('items') or []):
+        texts += [entry.get('display_name'), entry.get('display_units')]
+        texts += [option.get('display_name') for option in entry.get('options') or []]
+        for variant in (entry.get('variants') or {}).values():
+            if isinstance(variant, dict):
+                texts += [variant.get('display_name'), variant.get('display_units')]
+    return {ch for text in texts if text for ch in str(text) if ord(ch) >= 128}
+
+
 def scan() -> dict[str, dict]:
     """Each non-ASCII displayed character, by its drawing font, with the files using it."""
     found: dict[str, dict] = {}
+    for ch in sorted(dictionary_characters()):
+        code = f'U+{ord(ch):04X}'
+        found[f'{code} PT Sans'] = {
+            'char': ch,
+            'code': code,
+            'font': 'PT Sans',
+            'sites': [DICTIONARY_SITE],
+        }
     for directory, suffixes in SOURCES:
         for path in sorted((ROOT / directory).rglob('*')):
             relative = path.relative_to(ROOT).as_posix()

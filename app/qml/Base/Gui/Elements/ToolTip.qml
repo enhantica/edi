@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: BSD-3-Clause Pinned gui-components copy; upstream draws its text on one line however long,
-// above its control. Here the text wraps at one width shared by every tooltip in the app, about 45 characters of the
-// app's font, and never past the window; wrapped text aligns left in lines of balanced length, so no short word is left
-// alone on the last one. The tooltip sits below its control, or above it where there is no room below: never over it.
+// SPDX-License-Identifier: BSD-3-Clause
+// Pinned gui-components copy; upstream draws its text on one line however long, above
+// its control. Here the text wraps at one width shared by every tooltip in the app, about 45 characters of the app's
+// font, and never past the window; wrapped text aligns left in lines of balanced length, so no short word is left alone
+// on the last one. The tooltip sits below its control, or above it where there is no room below: never over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects

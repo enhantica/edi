@@ -1,4 +1,4 @@
-"""Owner's fixed-decimal computed columns; closed-form P1 cancellation supplies zero."""
+"""Fixed computed columns against a two-site P1 structure-factor closed form."""
 
 import json
 import re
@@ -8,6 +8,18 @@ from pathlib import Path
 import edi
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def check_phase_sum(rows, index, indices):
+    for row in rows:
+        odd = sum(int(row[indices[k]]) for k in ('h', 'k', 'l')) % 2
+        # Sears La is 8.24 fm, or 0.824 in the reported 10^-12 cm units.
+        # The phase sum of sites separated by (1/2,1/2,1/2) is 0 or 2b.
+        amplitude = 0.0 if odd else 2 * 8.24 / 10
+        expected = amplitude if index == indices['F calc'] else amplitude**2
+        assert row[index] == format(expected, '.3f'), (
+            'F and F squared match the independent two-site phase-sum closed form'
+        )
 
 
 def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html(tmp_path):
@@ -38,6 +50,7 @@ def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_ht
         'Every reflection row supplies every declared table column'
     )
     html = loaded.report.as_html()
+    indices = {name: table['columns'].index(name) for name in ('h', 'k', 'l', 'F calc', 'F² calc')}
     checked = 0
     zero_seen = False
     for index in range(3, len(table['columns'])):
@@ -46,13 +59,18 @@ def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_ht
             continue
         checked += 1
         assert all('e' not in value.lower() for value in cells), (
-            'A computed reflection column never uses exponent notation'
+            'Computed reflection columns use fixed decimals without exponent notation'
         )
         precision = {len(value.partition('.')[2]) for value in cells if float(value) != 0}
         assert len(precision) <= 1, (
-            'Every nonzero number in a computed column has the same fixed decimal precision'
+            'Every computed reflection column retains one decimal precision for all nonzero rows'
         )
-        zero_seen |= any(value == '0' for value in cells)
+        if index in {indices['F calc'], indices['F² calc']}:
+            assert precision == {3}, 'F and F squared use the owner fixed-three report precision'
+            check_phase_sum(table['rows'], index, indices)
+        zero_seen |= index in {indices['F calc'], indices['F² calc']} and any(
+            float(value) == 0 for value in cells
+        )
         assert all(value in html for value in cells), (
             'The HTML writer retains the exact computed-column text used by the preview model'
         )
