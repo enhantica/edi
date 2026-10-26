@@ -15,8 +15,9 @@ import edi.app
 // next, with a colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract
 // rule's) or, without one, the file index; a joint fit's experiments are rows in the project's order, each named. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
 // patterns' palette or the map's colour map (the owner, 2026-10-22). The datasets are read in the background the first
-// time either view shows; a dataset that cannot be read is named above the plot. A line marks the shown dataset at all
-// times and follows it as a running scan moves on; a click on a row shows that dataset, here and on the Pattern tab.
+// time either view shows; a dataset that cannot be read is named above the plot. The shown dataset is highlighted (on
+// top, the others faded) or, with highlighting off, marked by its bold label, and follows a running scan as it moves
+// on; the pointer names the dataset it is over, and a click shows that dataset, here and on the Pattern tab.
 Item {
     id: chart
 
@@ -36,6 +37,8 @@ Item {
     property FigureColors colors: FigureColors {}
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: AppSizes.mainAreaMargin
+    // Where the toolbar and the block selector row above it end, from the chart's right edge.
+    readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
@@ -104,8 +107,10 @@ Item {
         font.pixelSize: EaStyle.Sizes.fontPixelSize
     }
     readonly property int yTicks: Math.max(2, Math.min(8, Math.floor((height - em * 6) / (em * 2.5))))
-    readonly property real yMin: zoomY.length === 2 ? zoomY[0] : scan ? scan.rowMin : 0
-    readonly property real yMax: zoomY.length === 2 ? zoomY[1] : scan ? scan.rowMax + (mode === "stacked" ? scan.stackHeight : 0) : 1
+    // The stacked view's vertical axis is the plot's height, 0 to 1, which the patterns are placed on (edi ADR-0041 §4);
+    // the map's is the rows'.
+    readonly property real yMin: zoomY.length === 2 ? zoomY[0] : mode === "stacked" ? 0 : scan ? scan.rowMin : 0
+    readonly property real yMax: zoomY.length === 2 ? zoomY[1] : mode === "stacked" ? 1 : scan ? scan.rowMax : 1
 
     objectName: "scanView." + mode
 
@@ -118,8 +123,31 @@ Item {
         if (shown && scan !== null)
             scan.wanted = true;
     }
-    Component.onCompleted: if (shown && scan !== null)
-        scan.wanted = true
+    Component.onCompleted: {
+        if (shown && scan !== null)
+            scan.wanted = true;
+        reportShown();
+    }
+    Component.onDestruction: {
+        presentedTo?.setScanViewShown(chart, false);
+        presentedTo = null;
+    }
+    // On screen, the view is where a scan whose every pattern is waited for shows each file, as the current dataset
+    // (edi ADR-0029, 8): the project it told so.
+    property ProjectViewModel presentedTo: null
+    readonly property bool presenting: shown && project !== null
+    function reportShown() {
+        if (presentedTo !== null && (!presenting || presentedTo !== project)) {
+            presentedTo.setScanViewShown(chart, false);
+            presentedTo = null;
+        }
+        if (presenting && presentedTo === null) {
+            project.setScanViewShown(chart, true);
+            presentedTo = project;
+        }
+    }
+    onPresentingChanged: reportShown()
+    onProjectChanged: reportShown()
     onScanChanged: {
         resetZoom();
         if (shown && scan !== null)
@@ -148,13 +176,6 @@ Item {
         target: chart.scan
         property: "dSpacing"
         value: chart.project !== null && chart.project.patternDSpacing
-        when: chart.scan !== null
-    }
-    // How high the stacked patterns rise, an app setting.
-    Binding {
-        target: chart.scan
-        property: "stackScale"
-        value: Preferences.scanStackedHeight
         when: chart.scan !== null
     }
     // Only the included range, the pattern charts' one setting.
@@ -352,6 +373,22 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // The row labels' choice (shownLabels): only while the view is shown and labels its rows; a label's text item is
+            // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
+            labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0
+            labelGap: Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height))
+            // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
+            // datasets (the owner, 2026-10-24).
+            highlight: Preferences.chartHighlightSelected
+            faded: Preferences.chartFadedOpacity
+            busy: chart.project !== null && chart.project.fit !== null && chart.project.fit.running
+            // The stacked patterns' offset and height, app settings in percent (Fit: 0).
+            offset: Preferences.scanStackedOffset / 100
+            heightShare: Preferences.scanStackedSize / 100
+            // On the GPU as detected or chosen (edi ADR-0041); never on Qt Quick's software backend, which cannot draw
+            // the lines' shader.
+            gpu: RenderingInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && RenderingInfo.detected && !RenderingInfo.software))
+            Component.onCompleted: RenderingInfo.observe(Window.window)
         }
         // The plot's border, under the shown dataset's rectangle, so that rectangle's outer line shows at the plot's
         // edges too.
@@ -360,46 +397,6 @@ Item {
             color: "transparent"
             border.color: chart.colors.chartAxis
             border.width: 1
-        }
-        // The shown dataset, at all times, marked by an open rectangle (the owner, 2026-10-22): on the map round its
-        // row's band, halfway to each neighbour; on the stacked view from its row up to its line's highest point in
-        // the range shown. It moves with the shown dataset, so with a followed scan as it runs, and with the rows when
-        // they are placed again (by scan value once every dataset is read), the range and the scale.
-        SelectedPatternBox {
-            readonly property int dataset: chart.project ? chart.project.currentExperimentIndex : -1
-            // What the edges are read from, so the box follows each of them.
-            readonly property var follows: [chart.scan ? chart.scan.revision : -1, layer.xMin, layer.xMax, layer.scale, layer.includedOnly, layer.displayMin, layer.displayMax]
-            readonly property real low: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowLowEdge(dataset) : chart.scan.rowOf(dataset)) : NaN
-            readonly property real high: chart.scan && follows.length > 0 ? (chart.mode === "map" ? chart.scan.rowHighEdge(dataset) : layer.peakOf(dataset)) : NaN
-            readonly property real topPx: (axisY.max - high) / (axisY.max - axisY.min) * plot.height
-            readonly property real bottomPx: (axisY.max - low) / (axisY.max - axisY.min) * plot.height
-            // The stacked line sits inside its box: the border stands three pixels clear of its top and its row.
-            readonly property real clear: chart.mode === "map" ? 0 : 3
-            // Never thinner than its three lines either side and an empty inside (the owner, 2026-10-22): a thinner
-            // band, in a dense part of a scan, takes this height centred on the dataset's row, and a band the zoom
-            // leaves only a sliver of takes it centred on that sliver.
-            readonly property real minimum: 8
-            readonly property real rowPx: chart.scan ? (axisY.max - chart.scan.rowOf(dataset)) / (axisY.max - axisY.min) * plot.height : NaN
-            readonly property real ownTop: Math.round(topPx) - clear
-            readonly property real ownBottom: Math.round(bottomPx) + clear
-            readonly property bool thin: ownBottom - ownTop < minimum
-            // What is left of the band inside the plot: the minimum applies to it, so a tall band zoomed down to a
-            // sliver at an edge keeps a readable box there too.
-            readonly property real shownTop: Math.max(0, ownTop)
-            readonly property real shownBottom: Math.min(plot.height, ownBottom)
-            readonly property bool small: shownBottom - shownTop < minimum
-            readonly property real centre: thin ? rowPx : (shownTop + shownBottom) / 2
-            // Only a dataset whose band reaches into the range shown is marked: one outside it is never drawn at an
-            // edge, where it would mark another row.
-            readonly property bool inView: !isNaN(low) && !isNaN(high) && Math.max(low, high) >= axisY.min && Math.min(low, high) <= axisY.max
-
-            objectName: "scanView." + chart.mode + ".current"
-            dark: chart.colors.isDarkPalette
-            visible: inView && height > 0
-            x: 0
-            y: small ? Math.max(0, Math.min(plot.height - minimum, Math.round(centre - minimum / 2))) : shownTop
-            width: plot.width
-            height: small ? Math.min(minimum, plot.height) : shownBottom - shownTop
         }
         // The box a drag draws, which the view zooms to on release.
         Rectangle {
@@ -416,10 +413,15 @@ Item {
         MouseArea {
             property point start
 
+            // The dataset under the pointer, named while it hovers (the owner, 2026-10-24); -1 for none.
+            property int hovered: -1
+
             objectName: "scanView." + chart.mode + ".pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
             cursorShape: Qt.CrossCursor
+            onExited: hovered = -1
             onPressed: mouse => {
                 if (mouse.button === Qt.RightButton)
                     return;
@@ -428,8 +430,10 @@ Item {
                 zoomBox.height = 0;
             }
             onPositionChanged: mouse => {
-                if (!(mouse.buttons & Qt.LeftButton))
+                if (!(mouse.buttons & Qt.LeftButton)) {
+                    hovered = chart.scan !== null ? layer.datasetNear(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min)) : -1;
                     return;
+                }
                 const x = Math.max(0, Math.min(width, mouse.x)), y = Math.max(0, Math.min(height, mouse.y));
                 zoomBox.x = Math.min(start.x, x);
                 zoomBox.y = Math.min(start.y, y);
@@ -453,91 +457,101 @@ Item {
                 }
                 if (chart.scan === null || chart.project === null)
                     return;
-                // In the stacked view a pattern rises above its row: a click picks the row below it.
-                const dataset = chart.scan.datasetAt(atY(mouse.y / height));
+                // The stacked line nearest the click, or the map's band holding it (one placing: layer.rowOf).
+                const dataset = layer.datasetNear(atX(mouse.x / width), atY(mouse.y / height));
                 if (dataset >= 0)
                     chart.project.currentExperimentIndex = dataset;
+            }
+
+            // The hovered dataset's name next to the pointer (the owner, 2026-10-25): above it while that fits inside the
+            // plot, else below it, and kept between the plot's sides, so it never covers the toolbar. Its arrow points
+            // at the pointer.
+            Item {
+                id: hoverPoint
+
+                x: parent.mouseX
+                y: parent.mouseY
+                width: 0
+                height: 0
+
+                EaElements.ToolTip {
+                    id: hoverTip
+
+                    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+                    readonly property real plotWidth: hoverPoint.parent.width
+
+                    objectName: "scanView." + chart.mode + ".hover"
+                    visible: hoverPoint.parent.hovered >= 0 && hoverPoint.parent.containsMouse
+                    text: hoverPoint.parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(hoverPoint.parent.hovered) : ""
+                    x: Math.max(-hoverPoint.x, Math.min(plotWidth - hoverPoint.x - implicitWidth, -implicitWidth / 2))
+                    // Below, clear of the cross cursor.
+                    y: hoverPoint.y >= implicitHeight + gap ? -implicitHeight - gap : 3 * gap
+                }
             }
         }
     }
 
     // The rows labelled left of the plot as the pattern chart labels a Bragg row (the owner, 2026-10-22): the
     // experiment's icon and the row's text (its scan value with unit, its file's name or its datablock's), in the
-    // dataset's colour, at its row's height. The widest label sets the room left for them.
+    // dataset's colour, at its row's height. The widest label sets the room left for them, worked out from the font
+    // with the texts (an IconLine: the icon, its spacing, the text), so the plot takes its room in the frame that changed
+    // the labels, never a frame later. Each text is measured bold, as the shown dataset's may be, so choosing another
+    // dataset or turning the highlight off never moves the plot. A view not shown keeps the room it had: its labels are
+    // blank until it shows.
     readonly property real rowLabelGap: Math.round(em * 0.4)
-    readonly property real rowLabelsRoom: {
-        let widest = 0;
-        for (let i = 0; i < rowLabelRepeater.count; ++i) {
-            const label = rowLabelRepeater.itemAt(i);
-            if (label)
-                widest = Math.max(widest, label.width);
-        }
-        return Math.ceil(widest);
+    property real rowLabelsRoom: 0
+    Binding {
+        target: chart
+        property: "rowLabelsRoom"
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
     }
-    // Which labels show: all while they fit; when they would come too close to read, an evenly spread share of them,
-    // the shown dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit.
-    readonly property var shownRowLabels: {
-        const shown = [];
-        const texts = rowLabels && scan !== null ? scan.rowTexts : [];
-        if (texts.length === 0 || scan.revision < 0 || !(axisY.max > axisY.min) || plot.height <= 0)
-            return shown;
-        // A label's text item is its font's line tall, rounded up to a whole pixel, which can be more than the row height
-        // the label is given.
-        const gap = Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height));
-        const placed = [];
-        for (let i = 0; i < texts.length; ++i) {
-            const at = scan.rowOf(i);
-            shown.push(false);
-            if (!isNaN(at) && at >= axisY.min && at <= axisY.max)
-                placed.push({
-                    "index": i,
-                    "px": (axisY.max - at) / (axisY.max - axisY.min) * plot.height
-                });
-        }
-        placed.sort((a, b) => a.px - b.px);
-        // The smallest stride through the rows, in order, that keeps neighbouring labels a label's height apart.
-        let stride = 1;
-        const apart = k => {
-            for (let n = k; n < placed.length; n += k)
-                if (placed[n].px - placed[n - k].px < gap)
-                    return false;
-            return true;
-        };
-        while (stride < placed.length && !apart(stride))
-            ++stride;
-        const current = project ? project.currentExperimentIndex : -1;
-        const currentPlace = placed.find(row => row.index === current);
-        for (let n = 0; n < placed.length; n += stride) {
-            if (!currentPlace || Math.abs(placed[n].px - currentPlace.px) >= gap || placed[n].index === current)
-                shown[placed[n].index] = true;
-        }
-        if (currentPlace)
-            shown[current] = true;
-        return shown;
+    // The row label's pieces' fonts, as IconLine sets them.
+    TextMetrics {
+        id: labelIcon
+        font.family: EaStyle.Fonts.iconsFamily
+        font.pixelSize: chart.em
+        text: "microscope"
     }
+    FontMetrics {
+        id: labelBold
+        font.family: EaStyle.Fonts.ptSansBold.name
+        font.styleName: "Bold"
+        font.pixelSize: chart.em
+    }
+    // Which labels show (ScanLayer.shownLabels): all while they fit, else an evenly spread share with the shown dataset
+    // always among them. A view not shown chooses none: a followed scan moves the shown dataset with every file.
+    readonly property var shownRowLabels: layer.shownLabels
     Repeater {
         id: rowLabelRepeater
 
-        model: chart.rowLabels && chart.scan !== null ? chart.scan.rowTexts : []
+        // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
+        // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
+        model: chart.scan !== null ? chart.scan.count : 0
         delegate: IconLine {
-            required property string modelData
             required property int index
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
-            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own.
-            // The colour choice and the theme are read here, so the label follows them.
-            readonly property color colour: chart.mode === "stacked" && [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
+            // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
+            readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
+            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
+            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
+            // read here, so the label follows the colour choice and the theme.
+            readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
 
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
             height: AppSizes.legendRowHeight
-            textColor: colour
+            // Not highlighting, the shown dataset's label is its mark: bold, in the accent colour.
+            readonly property bool marked: !Preferences.chartHighlightSelected && chart.project !== null && chart.project.currentExperimentIndex === index
+            // The icon takes the text's colour, so a new colour changes no piece of the line.
+            textColor: marked ? EaStyle.Colors.themeAccent : colour
             segments: [
                 {
-                    "icon": "microscope",
-                    "color": colour
+                    "icon": "microscope"
                 },
                 {
-                    "text": modelData
+                    "text": rowText,
+                    "bold": marked
                 }
             ]
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
@@ -547,24 +561,41 @@ Item {
         }
     }
 
-    // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
-    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour. Kept between the plot's top and bottom
-    // border rows, so a row a fraction of a pixel above the axis's end is not drawn below the x axis line.
-    Repeater {
-        model: chart.scan !== null && chart.hasData ? chart.scan.count : 0
-        delegate: Rectangle {
-            required property int index
-            readonly property real at: chart.scan !== null && chart.scan.revision >= 0 ? chart.scan.rowOf(index) : NaN
+    // A map whose rows stand at their scan values keeps its numeric scale and labels no row; highlighting off, the shown
+    // dataset is still marked by its bold label (the owner, 2026-10-24), inside the plot's left edge at its row.
+    IconLine {
+        readonly property int dataset: chart.project !== null ? chart.project.currentExperimentIndex : -1
+        readonly property real at: dataset >= 0 && chart.scan !== null && chart.scan.revision >= 0 ? layer.rowOf(dataset) : NaN
 
-            objectName: "scanView." + chart.mode + ".rowTick." + index
-            visible: !isNaN(at) && at >= axisY.min && at <= axisY.max
-            x: plot.x + plot.width + 1
-            y: plot.y + Math.max(0, Math.min(plot.height - 1, Math.floor((axisY.max - at) / (axisY.max - axisY.min) * plot.height)))
-            width: Math.round(chart.em * 0.4)
-            height: 1
-            // The colour choice and the theme are read here, so the tick follows them.
-            color: [layer.colourScheme, layer.dark, layer.stackedReversed].length > 0 ? layer.colourOf(index) : "transparent"
-        }
+        objectName: "scanView." + chart.mode + ".rowLabel." + dataset
+        visible: !chart.rowLabels && chart.hasData && !Preferences.chartHighlightSelected && !isNaN(at) && at >= axisY.min && at <= axisY.max
+        height: AppSizes.legendRowHeight
+        textColor: EaStyle.Colors.themeAccent
+        segments: [
+            {
+                "icon": "microscope"
+            },
+            {
+                "text": dataset >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(dataset) : "",
+                "bold": true
+            }
+        ]
+        x: plot.x + chart.rowLabelGap
+        y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
+    }
+
+    // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
+    // plot's right edge, a pixel clear of it, in the dataset's Stacked colour, all drawn by one item (ScanRowTicks).
+    ScanRowTicks {
+        objectName: "scanView." + chart.mode + ".rowTicks"
+        visible: chart.hasData
+        scanLayer: layer
+        x: plot.x + plot.width + 1
+        y: plot.y
+        width: tickWidth
+        height: plot.height
+        plotHeight: plot.height
+        tickWidth: Math.round(chart.em * 0.4)
     }
 
     // The map's colour bar: the colour map from bottom to top, labelled at its ends with the intensities they stand for.
@@ -641,144 +672,110 @@ Item {
         color: chart.colors.chartLabels
         text: chart.scan ? chart.scan.xTitle : ""
     }
-    // The toolbar line, centred above the plot as the pattern chart's (the owner, 2026-10-22): the axes' types, then the
-    // colours, then the zoom, always on here, and the reset. x is the project's axis, shared with the pattern chart; y
-    // places the rows by the extracted value or by file index, shared with the Evolution tab's x; z, the intensity
-    // scale, is the pattern chart's y scale. The colours are each view's own app setting.
-    Item {
+    // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the axes' types (x is the project's axis, shared with the pattern chart; y places the rows by the
+    // extracted value or by file index, shared with the Evolution tab's x; z, the intensity scale, is the pattern
+    // chart's y scale), the Stacked offset and height, and the Map's colours. The buttons: the colours' reversal, the
+    // Map's smooth edges, the included range, the highlight, the zoom, always on here, and the reset.
+    ToolbarLines {
         id: scanToolbar
 
-        readonly property real spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
-        readonly property real available: chart.width - 2 * chart.sideMargin
-        // The plot's centre, which each line is centred on.
-        readonly property real centre: view.x + view.plotArea.x + view.plotArea.width / 2
-        // The boxes that show, then the colours and the buttons, each a group: what is laid out, and every width it
-        // depends on.
-        readonly property var units: Array.from(selectors.children).filter(unit => unit.visible).concat([colours, buttons])
-        readonly property string measure: available + ":" + centre + ":" + units.map(unit => unit.width).join(",")
-
-        // As many as fit on a line, each group a group's spacing after the one before, each line centred above the plot
-        // as the pattern chart's is (the owner, 2026-10-22) and kept inside the chart on its own, so a wide first line
-        // pushed to the chart's edge leaves the next line centred.
-        function layout() {
-            const lines = [];
-            let line = null;
-            for (const unit of units) {
-                const gap = line === null ? 0 : unit === colours || unit === buttons ? spacing : AppSizes.toolbarSpacing;
-                if (line === null || line.width + gap + unit.width > available) {
-                    line = {
-                        "units": [unit],
-                        "width": unit.width,
-                        "gaps": [0]
-                    };
-                    lines.push(line);
-                } else {
-                    line.units.push(unit);
-                    line.gaps.push(gap);
-                    line.width += gap + unit.width;
-                }
-            }
-            let top = 0;
-            for (const each of lines) {
-                let left = Math.round(Math.max(chart.sideMargin, Math.min(chart.width - chart.sideMargin - each.width, centre - each.width / 2)));
-                for (let i = 0; i < each.units.length; ++i) {
-                    left += each.gaps[i];
-                    each.units[i].x = left;
-                    each.units[i].y = top;
-                    left += each.units[i].width;
-                }
-                top += AppSizes.toolbarControlSize + AppSizes.toolbarSpacing;
-            }
-            height = Math.max(0, top - AppSizes.toolbarSpacing);
-        }
-
         objectName: "scanView." + chart.mode + ".toolbar"
-        // Across the chart: each line places itself (layout).
+        // Across the chart, each line centred between its side margins, where the block selector row is.
         x: 0
         width: chart.width
         y: chart.toolbarTop
-        height: AppSizes.toolbarControlSize
-        onMeasureChanged: Qt.callLater(layout)
-        Component.onCompleted: layout()
+        height: implicitHeight
+        leftEdge: chart.sideMargin
+        rightEdge: chart.width - chart.sideMargin
 
-        Item {
-            id: selectors
-
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.xaxis"
-                // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
-                enabled: chart.scan !== null && chart.scan.dAvailable
-                toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-                // A joint fit whose experiments share no native axis has d only.
-                readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
-                readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
-                model: entries
-                closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
-                shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
-                onActivated: index => {
-                    if (chart.project && nativeOffered)
-                        chart.project.patternDSpacing = index === 1;
-                }
-            }
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.rows"
-                // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
-                // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
-                readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
-                readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
-                // Open with one entry too, so it shows how the rows are placed.
-                toolTip: qsTr("Y axis: the rows' places")
-                readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
-                model: entries
-                closedTexts: entries.map(text => qsTr("y: %1").arg(text))
-                shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
-                onActivated: index => {
-                    if (chart.project && chart.project.evolution)
-                        chart.project.evolution.xMode = hasValue ? index : 1;
-                }
-            }
-            // How high each stacked pattern rises: one to five times four rows, two by default (the owner, 2026-10-22).
-            ToolbarComboBox {
-                readonly property var entries: ["1×", "2×", "3×", "4×", "5×"]
-
-                objectName: "scanView.stacked.toolbar.height"
-                visible: chart.mode === "stacked"
-                toolTip: qsTr("How high each pattern rises")
-                model: entries
-                closedTexts: entries.map(text => qsTr("height: %1").arg(text))
-                shownIndex: Math.max(0, Math.min(4, Preferences.scanStackedHeight - 1))
-                onActivated: index => Preferences.scanStackedHeight = index + 1
-            }
-            ToolbarComboBox {
-                objectName: "scanView." + chart.mode + ".toolbar.yscale"
-                readonly property var tokens: ["linear", "sqrt", "log"]
-                readonly property string axis: "z"
-                toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
-                readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-                model: entries
-                closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
-                shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
-                onActivated: index => Preferences.patternYScale = tokens[index]
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.xaxis"
+            // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
+            enabled: chart.scan !== null && chart.scan.dAvailable
+            toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+            // A joint fit whose experiments share no native axis has d only.
+            readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
+            readonly property var entries: nativeOffered ? [chart.scan !== null && chart.scan.timeOfFlight ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")] : [qsTr("x: d-spacing")]
+            model: entries
+            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
+            onActivated: index => {
+                if (chart.project && nativeOffered)
+                    chart.project.patternDSpacing = index === 1;
             }
         }
-        // The colours, a group of their own (the owner, 2026-10-22): on the Map its colour map and the reverse button;
-        // on Stacked, whose colours are chosen in Preferences, the reverse button alone. Each view's reversal is kept
-        // with its colour setting.
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.rows"
+            // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
+            // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
+            readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
+            readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
+            // Open with one entry too, so it shows how the rows are placed.
+            toolTip: qsTr("Y axis: the rows' places")
+            readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
+            model: entries
+            closedTexts: entries.map(text => qsTr("y: %1").arg(text))
+            shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
+            onActivated: index => {
+                if (chart.project && chart.project.evolution)
+                    chart.project.evolution.xMode = hasValue ? index : 1;
+            }
+        }
+        // How far each stacked pattern's baseline sits above the one below it, in tenths of a pattern's own height:
+        // 0 % puts every baseline on one line, 100 % starts each where the one below it ends (the owner,
+        // 2026-10-24).
+        ToolbarComboBox {
+            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+            objectName: "scanView.stacked.toolbar.offset"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("How far each pattern starts above the one below it, in its own height")
+            model: entries.map(percent => qsTr("%1 %").arg(percent))
+            closedTexts: entries.map(percent => qsTr("offset: %1 %").arg(percent))
+            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedOffset))
+            onActivated: index => Preferences.scanStackedOffset = entries[index]
+        }
+        // How tall each stacked pattern is: Fit, which fills the plot with the whole stack, or a share of the plot's
+        // height; a stack taller than the plot is reached with the zoom (the owner, 2026-10-24).
+        ToolbarComboBox {
+            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+            objectName: "scanView.stacked.toolbar.height"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("How tall each pattern is: Fit, or a share of the plot's height")
+            model: entries.map(percent => percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent))
+            closedTexts: entries.map(percent => qsTr("height: %1").arg(percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent)))
+            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedSize))
+            onActivated: index => Preferences.scanStackedSize = entries[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.yscale"
+            readonly property var tokens: ["linear", "sqrt", "log"]
+            readonly property string axis: "z"
+            toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
+            readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            model: entries
+            closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
+            shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
+            onActivated: index => Preferences.patternYScale = tokens[index]
+        }
+        ToolbarComboBox {
+            objectName: "scanView.map.toolbar.colourMap"
+            visible: chart.mode === "map"
+            toolTip: qsTr("The map's colours")
+            readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
+            model: entries
+            closedTexts: entries
+            shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
+            onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
+        }
         Row {
-            id: colours
+            id: buttons
 
             spacing: AppSizes.toolbarSpacing
 
-            ToolbarComboBox {
-                objectName: "scanView.map.toolbar.colourMap"
-                visible: chart.mode === "map"
-                toolTip: qsTr("The map's colours")
-                readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
-                model: entries
-                closedTexts: entries
-                shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
-                onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
-            }
             ChartToolButton {
                 readonly property bool reversed: chart.mode === "map" ? Preferences.scanMapReversed : Preferences.scanStackedReversed
 
@@ -793,12 +790,6 @@ Item {
                         Preferences.scanStackedReversed = !Preferences.scanStackedReversed;
                 }
             }
-        }
-        Row {
-            id: buttons
-
-            spacing: AppSizes.toolbarSpacing
-
             ChartToolButton {
                 objectName: "scanView.map.toolbar.smooth"
                 visible: chart.mode === "map"
@@ -815,6 +806,15 @@ Item {
                 toolTip: qsTr("Show only the included range")
                 checked: Preferences.chartIncludedOnly
                 onClicked: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            }
+            // The shown dataset on top and the others faded, or all alike with its row label in bold: the one app
+            // setting single-crystal Stacked uses too.
+            ChartToolButton {
+                objectName: "scanView." + chart.mode + ".toolbar.highlight"
+                fontIcon: "highlighter"
+                toolTip: qsTr("Highlight the selected dataset")
+                checked: Preferences.chartHighlightSelected
+                onClicked: Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected
             }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
@@ -836,7 +836,7 @@ Item {
     Column {
         anchors.right: parent.right
         anchors.rightMargin: chart.sideMargin
-        y: chart.toolbarTop + AppSizes.toolbarControlSize + chart.em * 0.2
+        y: chart.toolbarTop + scanToolbar.height + chart.em * 0.2
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
 
         EaElements.Label {

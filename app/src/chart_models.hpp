@@ -33,7 +33,9 @@ class ChartLegendModel : public QAbstractListModel {
         MarkWidthRole,
         LabelTextsRole,
         LabelColorsRole,
-        SelectedRole
+        SelectedRole,
+        KeyRole,
+        HiddenRole
     };
     struct Entry {
         QString label;
@@ -44,6 +46,9 @@ class ChartLegendModel : public QAbstractListModel {
         QStringList labelTexts, labelColors;
         // The selected dataset's entry, shown bold in the accent colour.
         bool selected = false;
+        // What a click on the entry hides or shows (the series' id, or a listed row's label), and whether it is hidden.
+        QString key;
+        bool hidden = false;
         friend bool operator==(const Entry&, const Entry&) = default;
     };
 
@@ -72,7 +77,9 @@ class ListedLegendModel : public ChartLegendModel {
 
    public:
     explicit ListedLegendModel(QObject* parent = nullptr) : ChartLegendModel(parent) {}
-    Q_INVOKABLE void setRows(const QStringList& labels, const QStringList& colors, int selected);
+    // `hidden`: the labels of the rows hidden by a click (each row's key is its label).
+    Q_INVOKABLE void setRows(const QStringList& labels, const QStringList& colors, int selected,
+                             const QStringList& hidden = {});
 };
 
 // A chart's excluded regions inside its view (edi ADR-0021 §4): one row per band. Roles `xMin` and `xMax`,

@@ -57,6 +57,14 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
+- **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
+  and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
+  <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
+  and every chart toolbar keeps whole groups (§15). The desktop window cannot be made smaller (its `minimumWidth` and
+  `minimumHeight`). The browser's page can: below either dimension the app shows only the empty view's background, as
+  *No structures defined* does, with *Increase the window size* centred in the empty view's font, over everything,
+  dialogs included, and takes no pointer input. Nothing beneath is torn down, so growing the page back shows the same
+  page, tab, selection and scroll position. Later work that adds controls keeps this minimum.
 - **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
   ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
   had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Correlations and Evolution (owner, 2026-10-11). The block
@@ -111,13 +119,14 @@ The decisions it rests on, unchanged here:
   | `fit_parameter` | **Fit start values** (was *Fit start state*) | ✓ | `history` |
 
   The block lists keep theirs: `Structures (N)` (`layer-group`) and `Experiments (N)` (`microscope`).
-- **All foldable groups start folded** (owner, 2026-09-29), on every page and tab: every category. **The
-  exceptions are Get started** on Project → Main, which starts open, as the first thing a new user needs (the
-  owner, 2026-09-29), **and the block lists** (Structures, Experiments), open at the start (owner, 2026-10-05). Idea 10 (the top group of Basic and Extras open by
-  default) is **withdrawn**, and with it the block lists' reopening for each new project. The base's
-  auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot fold — the shared
-  block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's groups — are not
-  affected. The demo opens each group its capture shows with a click.
+- **The first group of every tab starts unfolded, every other folded** (the owner, 2026-10-25, replacing
+  "all foldable groups start folded" of 2026-09-29): on every page and every sidebar tab (Main, Extra, Settings and
+  the rest), the first group the tab shows is open while nothing is remembered for it, and a group the user has
+  opened or folded keeps that state, by one rule (`SideBarGroups.isOpen`) every foldable group asks. Get started on
+  Project → Main and the block lists (Structures, Experiments) stay open at the start (owner, 2026-09-29,
+  2026-10-05). The base's auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot
+  fold — the shared block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's
+  groups — are not affected. The demo opens each group its capture shows with a click.
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
   (`presentation_order` in `app/src/category_list_model.cpp`; presentation only — the Analysis table and the
   files keep the core's order): on Experiment → Basic **Background is shown directly above Instrument**
@@ -572,7 +581,13 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   platform's software renderer skips, so a look is checked on a capture from an OpenGL platform (the UI test's).
 - **Ranges and ticks.** Tick labels are round values. A fitted main y range is what is presented and a tenth of
   its span beyond each end (easydiffractionbeta's rule), with about five round ticks inside it; the x axis has about
-  five. A range the user chose keeps its bounds and takes round ticks inside them.
+  five. A range the user chose keeps its bounds and takes round ticks inside them. **While a parameter's slider is
+  held** (the owner, 2026-10-25), a fitted main range holds while the calculated curve stays inside it and grows
+  only when the curve leaves it, so dragging a slider does not lay the axis, the grid and every series out again on
+  each step. Letting the slider go fits the range once to the measured and calculated curves, shrinking as well as
+  growing: a scale set far too high and then pulled down ends with the measured pattern at full height. A typed
+  value or a spin-box step fits it at once. Another experiment, dataset, axis, scale or x range, a fit and a reset
+  fit the range again.
 - **The residual's range.** The residual pane is linear on every scale (ADR-0021 §5), its range centred on 0, with
   three ticks: 0 and the greatest round value inside the range, on either side. **On the linear scale it has the
   main pane's scale:** one intensity unit is as high in it as in the main pane, so its half range is half the main
@@ -611,6 +626,16 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
   list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
   of dictionaries.
+- **Hiding a curve from the legend** (the owner, 2026-10-25, as plotly's legend does): a click on a legend row hides its
+  curve, its row drawn in the disabled colour, and a second click shows it; the row's tooltip says *Click to hide* or
+  *Click to show*. A structure's row hides its ticks and its curve together; on the single-crystal charts a row hides
+  its experiment's reflections. The pattern charts of Experiment and Analysis and the single-crystal charts do this;
+  a report figure does not. The hidden rows are kept per chart while the app runs, not in the project, and cleared
+  when another project opens. What the y range does is a preference, *When a curve is hidden*: **Keep the y range**
+  (the default; the owner wanted nothing to jump), where hiding and showing change nothing and every later fit counts
+  the hidden curves too, or **Fit the range to visible curves**, where hiding and showing fit the range once to the
+  curves still shown and later fits count only those (`edi::PatternView::uncounted`). A hidden curve's points are not
+  read by the pointer.
 - **Each structure's curve** (the owner, 2026-10-14 and 2026-10-21): a toolbar switch with the structure icon, tooltip
   *Show each structure's curve*, draws every linked structure's calculated curve (crysta's
   `component_intensities_net`, its ADR-0096) as a soft fill from the background up to the curve, 0.25 opaque, with a

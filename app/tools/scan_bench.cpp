@@ -1,0 +1,455 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// The scan views' renderer benchmark (edi ADR-0041): how the Stacked view can draw a scan's patterns on the GPU.
+// Candidate a is Qt Graphs, one LineSeries per pattern, each fed its trace reduced at the plot's pixel columns
+// (edi::scan_trace) in one replace() call; candidate b is edi's ScanLines item, a scene-graph node of quads per
+// pattern drawn by a shader, its row, height and colour given to the shader; candidate p is how the view drew before,
+// every pattern stroked with QPainter into one image on each change. For the scan given (by default the bundled 324-file scan) it times, from the
+// change to the swap of the first frame whose scene synchronisation followed it: the first population; a new x range
+// (a zoom or pan step, every trace reduced again); a restyle (every line's colour); and a new stacking offset (every
+// line moved, its trace kept). It prints one table, saves the last frame and reports the reduction's own cost. Test
+// tooling, never part of the host. It stops at once when its window is not drawn, and after three changes in a row
+// draw no frame; it reports each phase on stderr.
+#include <QColor>
+#include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QGuiApplication>
+#include <QImage>
+#include <QPainter>
+#include <QPainterPath>
+#include <QQuickPaintedItem>
+#include <QQmlEngine>
+#include <QQuickItem>
+#include <QQuickView>
+#include <QTimer>
+#include <QtGraphs/QValueAxis>
+#include <QtGraphs/QXYSeries>
+#include <QtQml/qqmlextensionplugin.h>
+#include <algorithm>
+#include <atomic>
+#include <cmath>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstdio>
+#include <functional>
+#include <string>
+#include <vector>
+
+#include "edi/scan.hpp"
+#include "edi/scan_views.hpp"
+#include "engine_setup.hpp"
+#include "scan_lines.hpp"
+
+Q_IMPORT_QML_PLUGIN(edi_appPlugin)
+
+namespace {
+
+constexpr int kRepeats = 30;
+// The first population may take seconds (Qt Graphs without a GPU); every later change waits three times as long as it
+// took, and at least a second. A window the system does not draw (covered or minimised) shows within a few seconds:
+// the run stops when it is not drawn before timing starts, or after three changes in a row draw no frame.
+constexpr int kFirstTimeoutMs = 10000;
+constexpr int kVisibleTimeoutMs = 2000;
+constexpr int kMinChangeTimeoutMs = 1000;
+constexpr int kMaxMisses = 3;
+
+struct Dataset {
+    std::vector<double> x, intensity;
+};
+
+std::vector<Dataset> read_scan(const QString& directory) {
+    QStringList files = QDir(directory).entryList({QStringLiteral("*.dat")}, QDir::Files, QDir::Name);
+    std::vector<Dataset> out;
+    for (const QString& file : files) {
+        const edi::PdDataBase data =
+            edi::read_scan_dataset(directory.toStdString(), file.toStdString(), edi::BeamModeEnum::CONSTANT_WAVELENGTH);
+        Dataset d;
+        d.x = data.axis();
+        d.intensity = data.intensity_meas.get();
+        d.intensity.resize(d.x.size(), std::nan(""));
+        out.push_back(std::move(d));
+    }
+    return out;
+}
+
+struct Stats {
+    double median = -1.0, p95 = -1.0;
+    int missing = 0;
+};
+
+Stats stats(std::vector<double> samples) {
+    Stats s;
+    s.missing = static_cast<int>(std::count_if(samples.begin(), samples.end(), [](double v) { return v < 0.0; }));
+    std::erase_if(samples, [](double v) { return v < 0.0; });
+    std::sort(samples.begin(), samples.end());
+    if (!samples.empty()) {
+        s.median = samples[samples.size() / 2];
+        s.p95 = samples[static_cast<std::size_t>(0.95 * static_cast<double>(samples.size() - 1))];
+    }
+    return s;
+}
+
+// One line of the run's log on stderr, written at once.
+void log(const char* format, ...) {
+    std::va_list args;
+    va_start(args, format);
+    std::fputs("scan_bench: ", stderr);
+    std::vfprintf(stderr, format, args);
+    std::fputc('\n', stderr);
+    std::fflush(stderr);
+    va_end(args);
+}
+
+// The milliseconds from `change` to the swap of the first frame synchronised after it, or -1 after `timeout_ms`.
+double frame_after(QQuickWindow& window, const std::function<void()>& change, int timeout_ms) {
+    std::atomic<bool> synced{false};
+    std::atomic<qint64> swapped{-1};
+    QElapsedTimer clock;
+    QEventLoop loop;
+    const auto sync = QObject::connect(&window, &QQuickWindow::afterSynchronizing, &window, [&] { synced = true; },
+                                       Qt::DirectConnection);
+    const auto swap = QObject::connect(
+        &window, &QQuickWindow::frameSwapped, &window,
+        [&] {
+            if (synced && swapped < 0) {
+                swapped = clock.nsecsElapsed();
+                QMetaObject::invokeMethod(&loop, &QEventLoop::quit, Qt::QueuedConnection);
+            }
+        },
+        Qt::DirectConnection);
+    QTimer guard;
+    guard.setSingleShot(true);
+    QObject::connect(&guard, &QTimer::timeout, &loop, &QEventLoop::quit);
+    guard.start(timeout_ms);
+    clock.start();
+    change();
+    loop.exec();
+    QObject::disconnect(sync);
+    QObject::disconnect(swap);
+    return swapped < 0 ? -1.0 : static_cast<double>(swapped.load()) / 1e6;
+}
+
+// Candidate p: every pattern's trace stroked with a 2 px antialiased pen into the item's image on each change, as
+// ScanLayer draws the Stacked view.
+class Painted : public QQuickPaintedItem {
+   public:
+    explicit Painted(QQuickItem* parent) : QQuickPaintedItem(parent) { setAntialiasing(true); }
+    double width_px = 2.0;
+    std::vector<edi_app::ScanLines::Trace> traces;
+    std::vector<edi_app::ScanLines::Style> styles;
+    double y_min = 0.0, y_max = 1.0;
+    void paint(QPainter* painter) override {
+        const double h = height(), span = y_max - y_min;
+        for (std::size_t d = 0; d < traces.size() && d < styles.size(); ++d) {
+            const double base = (y_max - styles[d].row) / span * h, lift = styles[d].lift / span * h;
+            QPainterPath path;
+            bool drawing = false;
+            for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
+                const double x = traces[d].x[k], y = base - traces[d].v[k] * lift;
+                if (!std::isfinite(x) || !std::isfinite(y)) {
+                    drawing = false;
+                } else if (drawing) {
+                    path.lineTo(x, y);
+                } else {
+                    path.moveTo(x, y);
+                    drawing = true;
+                }
+            }
+            QPen pen(styles[d].colour);
+            pen.setWidthF(width_px);
+            pen.setCosmetic(true);
+            pen.setCapStyle(Qt::FlatCap);
+            painter->setPen(pen);
+            painter->drawPath(path);
+        }
+    }
+};
+
+// Settles between timed changes, so one frame's work does not run into the next.
+void idle(int ms) {
+    QElapsedTimer t;
+    t.start();
+    while (t.elapsed() < ms) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+    }
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    QGuiApplication app(argc, argv);
+    edi_app::use_design_font();
+    const QString directory = argc > 1 ? QString::fromLocal8Bit(argv[1])
+                                       : QStringLiteral("docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/"
+                                                        "experiments/d20_scan");
+    const QString frame_path = argc > 2 ? QString::fromLocal8Bit(argv[2]) : QString();
+    const QString candidate = argc > 3 ? QString::fromLocal8Bit(argv[3]) : QStringLiteral("a");
+    // The line width in pixels: 2 as the pattern chart's line, 1 where the view narrows it for close rows.
+    const double line_width = argc > 5 ? std::atof(argv[5]) : 2.0;
+    // b and p take the same traces and styles.
+    const bool candidate_b = candidate == QLatin1String("b") || candidate == QLatin1String("p");
+    QElapsedTimer read_clock;
+    read_clock.start();
+    const std::vector<Dataset> scan = read_scan(directory);
+    const qint64 read_ms = read_clock.elapsed();
+    if (scan.empty()) {
+        log("no .dat files in %s", qPrintable(directory));
+        return 1;
+    }
+    double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
+    std::size_t points = 0;
+    for (const Dataset& d : scan) {
+        points += d.x.size();
+        for (std::size_t i = 0; i < d.x.size(); ++i) {
+            if (std::isfinite(d.x[i]) && std::isfinite(d.intensity[i])) {
+                lo = std::min(lo, d.x[i]);
+                hi = std::max(hi, d.x[i]);
+                low = std::min(low, d.intensity[i]);
+                high = std::max(high, d.intensity[i]);
+            }
+        }
+    }
+    const auto patterns = static_cast<int>(scan.size());
+    log("read %d files, %zu points, in %lld ms", patterns, points, static_cast<long long>(read_ms));
+
+    QQuickView view;
+    edi_app::configure_engine(*view.engine());
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    view.setSource(QUrl(QStringLiteral("qrc:/edi/bench/ScanBench.qml")));
+    view.resize(1100, 700);
+    view.show();
+    QQuickItem* root = view.rootObject();
+    auto* graphs = root->findChild<QQuickItem*>(QStringLiteral("view"));
+    auto* axis_x = root->findChild<QValueAxis*>(QStringLiteral("axisX"));
+    auto* axis_y = root->findChild<QValueAxis*>(QStringLiteral("axisY"));
+    auto* lines = root->findChild<edi_app::ScanLines*>(QStringLiteral("lines"));
+    lines->setLineWidth(line_width);
+    Painted* painted = nullptr;
+    if (candidate == QLatin1String("p")) {
+        painted = new Painted(root);
+        painted->setParentItem(root);
+        lines->setVisible(false);
+        painted->width_px = line_width;
+        // Over the plot area, as the lines are, once the view has laid it out.
+        const auto follow = [painted, lines] {
+            painted->setPosition(lines->position());
+            painted->setSize(lines->size());
+        };
+        QObject::connect(lines, &QQuickItem::xChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::yChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::widthChanged, painted, follow);
+        QObject::connect(lines, &QQuickItem::heightChanged, painted, follow);
+        follow();
+    }
+    const auto set_traces = [&](std::vector<edi_app::ScanLines::Trace> traces) {
+        if (painted != nullptr) {
+            painted->traces = std::move(traces);
+            painted->update();
+        } else {
+            lines->setTraces(std::move(traces));
+        }
+    };
+    const auto set_styles = [&](std::vector<edi_app::ScanLines::Style> styles) {
+        if (painted != nullptr) {
+            painted->styles = std::move(styles);
+            painted->y_min = lines->yMin();
+            painted->y_max = lines->yMax();
+            painted->update();
+        } else {
+            lines->setStyles(std::move(styles));
+        }
+    };
+    idle(200);
+    if (!candidate_b) {
+        QMetaObject::invokeMethod(root, "makeSeries", Q_ARG(int, patterns), Q_ARG(double, line_width));
+    }
+    std::vector<QXYSeries*> series;
+    for (const QVariant& v : root->property("series").toList()) {
+        series.push_back(qobject_cast<QXYSeries*>(v.value<QObject*>()));
+    }
+    idle(200);
+    // The plot's pixel columns, or fewer when asked (a fourth argument, the share of them), to see how the cost scales.
+    const double share = argc > 4 ? std::atof(argv[4]) : 1.0;
+    const int columns = std::max(1, static_cast<int>(std::ceil(share * graphs->property("plotArea").toRectF().width() *
+                                                                  view.devicePixelRatio())));
+
+    // The traces of the range shown, and their points: each column's lowest and highest value, up from the
+    // pattern's row by `lift` rows over the scan's intensity range, as the Stacked view draws them.
+    std::vector<edi::ScanTrace> traces(scan.size());
+    double reduce_ms = 0.0;
+    const auto reduce = [&](double x_min, double x_max) {
+        QElapsedTimer t;
+        t.start();
+        for (std::size_t d = 0; d < scan.size(); ++d) {
+            traces[d] = edi::scan_trace(scan[d].x, scan[d].intensity, x_min, x_max, static_cast<std::size_t>(columns));
+        }
+        reduce_ms = static_cast<double>(t.nsecsElapsed()) / 1e6;
+    };
+    double lift = 8.0, shown_min = lo, shown_max = hi;
+    std::vector<QColor> colours(scan.size());
+    const auto colour_all = [&](float saturation) {
+        for (std::size_t d = 0; d < colours.size(); ++d) {
+            colours[d] = QColor::fromHsvF(static_cast<float>(d) / static_cast<float>(colours.size()), saturation, 0.7F);
+        }
+    };
+    colour_all(0.8F);
+    const auto styles = [&] {
+        std::vector<edi_app::ScanLines::Style> out(scan.size());
+        for (std::size_t d = 0; d < out.size(); ++d) {
+            out[d] = {static_cast<double>(d), lift, colours[d]};
+        }
+        return out;
+    };
+    const auto points_of = [&](std::size_t d) {
+        QList<QPointF> list;
+        const edi::ScanTrace& trace = traces[d];
+        list.reserve(static_cast<qsizetype>(2 * trace.x.size()));
+        const double row = static_cast<double>(d);
+        for (std::size_t k = 0; k < trace.x.size(); ++k) {
+            const double y_low = row + (trace.low[k] - low) / (high - low) * lift;
+            const double y_high = row + (trace.high[k] - low) / (high - low) * lift;
+            list.append(QPointF(trace.x[k], y_low));
+            if (y_high != y_low) {
+                list.append(QPointF(trace.x[k], y_high));
+            }
+        }
+        return list;
+    };
+    std::size_t drawn_points = 0;
+    const auto fill = [&] {
+        drawn_points = 0;
+        if (candidate_b) {
+            // Each column's lowest and highest value, x in item pixels and v over the scan's intensity range.
+            std::vector<edi_app::ScanLines::Trace> out(scan.size());
+            const double width = lines->width();
+            for (std::size_t d = 0; d < scan.size(); ++d) {
+                const edi::ScanTrace& trace = traces[d];
+                for (std::size_t k = 0; k < trace.x.size(); ++k) {
+                    const auto x = static_cast<float>((trace.x[k] - shown_min) / (shown_max - shown_min) * width);
+                    out[d].x.push_back(x);
+                    out[d].v.push_back(static_cast<float>((trace.low[k] - low) / (high - low)));
+                    if (trace.high[k] != trace.low[k]) {
+                        out[d].x.push_back(x);
+                        out[d].v.push_back(static_cast<float>((trace.high[k] - low) / (high - low)));
+                    }
+                }
+                drawn_points += out[d].x.size();
+            }
+            set_traces(std::move(out));
+            set_styles(styles());
+            return;
+        }
+        for (std::size_t d = 0; d < series.size(); ++d) {
+            const QList<QPointF> list = points_of(d);
+            drawn_points += static_cast<std::size_t>(list.size());
+            series[d]->replace(list);
+        }
+    };
+    const auto set_range = [&](double x_min, double x_max) {
+        shown_min = x_min;
+        shown_max = x_max;
+        axis_x->setRange(x_min, x_max);
+        axis_y->setRange(-1.0, static_cast<double>(patterns) + lift);
+    };
+
+    // The window must be drawn before anything is timed.
+    QElapsedTimer waited;
+    waited.start();
+    while (!view.isExposed() && waited.elapsed() < kVisibleTimeoutMs) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+    if (!view.isExposed() || frame_after(view, [&] { view.update(); }, kVisibleTimeoutMs) < 0.0) {
+        log("the window is not being drawn (keep it visible and uncovered)");
+        return 2;
+    }
+    log("window exposed and drawn; candidate %s, %d columns, %.1f px lines", qPrintable(candidate), columns, line_width);
+    const double first = frame_after(
+        view,
+        [&] {
+            reduce(lo, hi);
+            set_range(lo, hi);
+            fill();
+        },
+        kFirstTimeoutMs);
+    const int timeout_ms = std::max(kMinChangeTimeoutMs, static_cast<int>(std::ceil(3.0 * first)));
+    if (first < 0.0) {
+        log("first population: missed (no frame in %d ms)", kFirstTimeoutMs);
+    } else {
+        log("first population: %.2f ms", first);
+    }
+    idle(500);
+    std::vector<double> range_ms, reduce_samples, restyle_ms, offset_ms;
+    // Each kind of change kRepeats times; the run stops after kMaxMisses changes in a row draw no frame.
+    int misses = first < 0.0 ? kMaxMisses : 0;
+    const auto phase = [&](const char* name, std::vector<double>& samples, const std::function<void(int)>& change) {
+        if (misses >= kMaxMisses) {
+            return;
+        }
+        log("%s: %d changes, each waiting at most %d ms", name, kRepeats, timeout_ms);
+        for (int i = 0; i < kRepeats && misses < kMaxMisses; ++i) {
+            // How long the change itself takes, before Qt Quick polishes, synchronises and draws: the feeding.
+            double applied_ms = 0.0;
+            const double ms = frame_after(
+                view,
+                [&] {
+                    QElapsedTimer applying;
+                    applying.start();
+                    change(i);
+                    applied_ms = static_cast<double>(applying.nsecsElapsed()) / 1e6;
+                },
+                timeout_ms);
+            samples.push_back(ms);
+            misses = ms < 0.0 ? misses + 1 : 0;
+            if (ms < 0.0) {
+                log("%s %d/%d: missed", name, i + 1, kRepeats);
+            } else {
+                log("%s %d/%d: %.2f ms (applied in %.2f ms)", name, i + 1, kRepeats, ms, applied_ms);
+            }
+            idle(50);
+        }
+        if (misses >= kMaxMisses) {
+            log("%d %s changes in a row drew no frame; stopping", kMaxMisses, name);
+        }
+    };
+    phase("x range", range_ms, [&](int i) {
+        const double inset = i % 2 == 0 ? 0.01 * (hi - lo) : 0.0;
+        reduce(lo + inset, hi - inset);
+        set_range(lo + inset, hi - inset);
+        fill();
+        reduce_samples.push_back(reduce_ms);
+    });
+    phase("restyle", restyle_ms, [&](int i) {
+        colour_all(i % 2 == 0 ? 0.9F : 0.6F);
+        if (candidate_b) {
+            set_styles(styles());
+        }
+        for (std::size_t d = 0; d < series.size(); ++d) {
+            series[d]->setColor(colours[d]);
+            // A colour change alone does not make Qt Graphs draw (6.11): the series' own update signal asks for it.
+            emit series[d]->update();
+        }
+    });
+    phase("offset", offset_ms, [&](int i) {
+        lift = i % 2 == 0 ? 4.0 : 8.0;
+        if (candidate_b) {
+            set_styles(styles());
+        } else {
+            fill();
+        }
+    });
+    if (!frame_path.isEmpty()) {
+        log(view.grabWindow().save(frame_path) ? "frame saved to %s" : "could not save the frame to %s",
+            qPrintable(frame_path));
+    }
+    const Stats range = stats(range_ms), reduced = stats(reduce_samples), restyle = stats(restyle_ms),
+                offset = stats(offset_ms);
+    std::printf("candidate\tpatterns\tpoints_read\tpoints_drawn\tcolumns\tfirst_ms\trange_median_ms\trange_p95_ms\t"
+                "reduce_median_ms\trestyle_median_ms\trestyle_p95_ms\toffset_median_ms\toffset_p95_ms\tmissing\tplatform\t"
+                "read_ms\twidth_px\n");
+    std::printf("%s\t%d\t%zu\t%zu\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%d\t%s\t%lld\t%.1f\n",
+                qPrintable(candidate), patterns, points,
+                drawn_points, columns, first, range.median, range.p95, reduced.median, restyle.median, restyle.p95,
+                offset.median, offset.p95, range.missing + restyle.missing + offset.missing,
+                qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms), line_width);
+    return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 && misses < kMaxMisses ? 0 : 1;
+}

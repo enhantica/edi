@@ -25,6 +25,7 @@ def dispatch(namespace, monkeypatch):  # noqa: F811 - shared pytest fixture
         'tests/fixtures/scan_screen/build.py',
         'tests/fixtures/scan_screen/harness.py',
         'tests/fixtures/scan_app/build_probe.py',
+        'tests/fixtures/fast_chart_redraws/rendering.py',
         'tools/ci/app-platform.sh',
         'tests/fixtures/app_environment/closure.py',
         'tests/conftest.py',
@@ -32,9 +33,9 @@ def dispatch(namespace, monkeypatch):  # noqa: F811 - shared pytest fixture
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('transport recipe identity')
+    (root / screen.normal_app.APP).chmod(0o755)
     (fixture / 'harness.py').write_text('transport owner fixture')
-    original_run = subprocess.run
-    delivered_receipt = screen.normal_app.receipt
+    original_run, delivered_receipt = subprocess.run, screen.normal_app.receipt
 
     def prepare_normal_app(*args):
         calls.append(('screen', 'desktop'))
@@ -375,9 +376,11 @@ def test_normal_screen_reuse_refuses_replaced_delivered_binary(
     dispatch, reuse, tmp_path, monkeypatch
 ):
     first = request('screen', 'desktop', tmp_path / 'first')
-    assert Path(first['receipt']['executable']) == dispatch.root / 'build/app/app/edi_app', (
-        'desktop screen receipt controls bind the delivered normal app'
-    )
+    retained = Path(first['receipt']['executable'])
+    delivered = dispatch.root / 'build/app/app/edi_app'
+    assert (
+        retained.parent == delivered.parent and retained.read_bytes() == delivered.read_bytes()
+    ), 'Desktop screen receipts bind an unchanged retained copy of the delivered normal app'
     if reuse == 'prepared':
         monkeypatch.setenv(
             'EDI_SCAN_SCREEN_DESKTOP_RECEIPT', str(tmp_path / 'first/desktop/receipt.json')
@@ -396,4 +399,42 @@ def test_normal_screen_transport_requires_a_delivered_app(dispatch, tmp_path):
         request('screen', 'desktop', tmp_path / 'missing')
     assert not dispatch.captures and not builds.BUILDS, (
         'a missing delivered desktop app fails rather than compiling a private replacement'
+    )
+
+
+@pytest.mark.parametrize('reuse', ['cache', 'prepared'])
+@pytest.mark.parametrize('backend', ['desktop', 'browser'])
+def test_screen_receipt_seals_its_native_retention_recipe(
+    dispatch, reuse, backend, tmp_path, monkeypatch
+):
+    request('screen', backend, tmp_path / 'first')
+    if reuse == 'prepared':
+        monkeypatch.setenv(
+            'EDI_SCAN_SCREEN_' + backend.upper() + '_RECEIPT',
+            str(tmp_path / 'first' / backend / 'receipt.json'),
+        )
+    recipe = dispatch.root / 'tests/fixtures/fast_chart_redraws/rendering.py'
+    recipe.write_text('changed retention recipe')
+    try:
+        request('screen', backend, tmp_path / 'changed')
+    except RuntimeError:
+        refused = True
+    else:
+        refused = False
+    assert refused if reuse == 'prepared' else len(dispatch.calls) == 2, (
+        'Changing the retained-binary recipe refuses prepared evidence or rebuilds cached evidence'
+    )
+
+
+def test_normal_screen_keeps_its_completed_artifact_during_delivery_relink(dispatch, tmp_path):
+    first = request('screen', 'desktop', tmp_path / 'first')
+    retained = Path(first['receipt']['executable'])
+    old = retained.read_bytes()
+    delivered = dispatch.root / 'build/app/app/edi_app'
+    delivered.write_bytes(b'new delivered native artifact')
+    assert retained != delivered and retained.read_bytes() == old, (
+        'The screen driver retains the completed native artifact across a later delivery relink'
+    )
+    assert request('screen', 'desktop', tmp_path / 'second') == first, (
+        'A later delivery relink cannot replace the already qualified screen observation artifact'
     )

@@ -105,6 +105,9 @@ struct PatternView {
     // Only the included range (ADR-0044): the default x range runs from the first to the last included point, and
     // no measured point is drawn inside an excluded region. Reflection ticks are hidden there in both states.
     bool included_only = false;
+    // Series (by id) still presented whose points do not count in the main pane's range: curves hidden from the
+    // chart when the range is to fit the visible ones (edi ADR-0017 §15).
+    std::vector<std::string> uncounted;
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.

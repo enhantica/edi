@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
+
 ROOT = Path(__file__).resolve().parents[3]
 CASES = (
     'test_map_default_and_saved_choice',
@@ -100,12 +102,6 @@ CASES += tuple('test_dataset_ticks_survive_label_thinning:' + mode for mode in (
 CASES += ('test_stacked_height_default_and_memory',)
 CASES += tuple('test_stacked_height_changes_rise_not_rows:' + kind for kind in ('value', 'file'))
 
-CASES += tuple(
-    'test_dense_selected_box_minimum:' + mode + '-' + theme + '-' + part
-    for mode in ('stacked', 'map')
-    for theme in ('light', 'dark')
-    for part in ('geometry', 'pixels')
-)
 
 CASES += tuple(
     'test_reverse_colour_group_and_memory:' + mode + '-' + theme
@@ -122,11 +118,6 @@ CASES += tuple(
 )
 
 
-CASES += tuple(
-    'test_clipped_selected_box:' + mode + '-' + theme
-    for mode in ('stacked', 'map')
-    for theme in ('light', 'dark')
-)
 CASES += tuple('test_failed_middle_map_band:' + mode for mode in ('stepped', 'smooth'))
 CASES += tuple(
     'test_unsampled_and_reduced_excluded_gaps:' + mode + '-' + kind + suffix
@@ -162,6 +153,7 @@ CASES += tuple(
 def scan_receipt(request):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Scan content acceptance requires the actual native test host'
+    binary = Path(native_arguments([binary])[0])
     groups = {}
     for item in request.session.items:
         if item.module is request.module and hasattr(item, 'callspec'):

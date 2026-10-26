@@ -45,8 +45,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    undo) keep what was read. A dataset that cannot be read is not drawn, and the views say so above the plot: how many
    could not be read and the first reason; with none read, the empty view says it. When the scan extracts a value but
    a dataset gives none, the rows stay in order by file and the views name that dataset.
-4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or each pixel column's lowest
-   and highest value, so a narrow peak keeps its height; the highest value of the scan reaches four rows above a row. A toolbar box sets how high the patterns
+4. **Stacked.** Each dataset is drawn as a line rising from its row, joining its points, or, with more than four
+   points to a device pixel column, each column's first, lowest, highest and last point in their order, so a narrow
+   peak keeps its height (§9); the highest value of the scan reaches four rows above a row. A toolbar box sets how high the patterns
    rise, one to five times that, twice by default (the owner, 2026-10-22). Its rows are labelled (§2), not scaled: the height the patterns rise into above the top row stands for no scan value (the owner, 2026-10-22). The datasets take
    the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as the pattern chart's measured
    line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a dense scan's lines never merge;
@@ -124,12 +125,39 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    running scan moves it to each dataset as it is fitted, so the mark moves along the scan. The patterns themselves are the measured data, so they do not change while the scan runs. A click on a row
    shows that dataset, here and on the Pattern tab.
 
+9. **Drawing** (the owner, 2026-10-25; the measurements are in
+   [scan view timings](../design/scan-view-timings.md)). The Stacked lines are drawn on the GPU by `ScanLines`, a
+   scene-graph item whose shader places each pattern's line at its row and height and draws it antialiased: 64
+   patterns to a node, one quad per segment of a reduced trace. A new row placing, height, colour or y range only
+   gives the shader new values. Without a GPU the lines are painted with `QPainter` instead, which is faster there:
+   a software OpenGL renderer such as Mesa's llvmpipe rasterises every quad on the CPU. The app reads what Qt draws
+   with in the first frame it renders (the graphics API and, on OpenGL, the renderer), writes it to stderr at startup
+   and shows it in Preferences, Develop, where the user can choose GPU or the painter instead of Automatic; the choice
+   is kept per machine. Qt Quick's own software backend cannot run the shader, so there the lines are always painted.
+   The Map stays one image of the plot's pixels, made again only when what it shows changes.
+   **The lines are drawn as well as the pattern chart's** (the owner, 2026-10-25): the same width, antialiased, with
+   no notch or doubled colour where segments meet, at the screen's device pixels. The trace is reduced at device pixel
+   columns, not item pixels, so a high-DPI screen gets its full resolution; it follows the points in their order
+   (`edi::scan_polyline`) rather than a stroke from each column's lowest to its highest value, which drew stairs. On
+   the GPU each segment's quad reaches past both ends by half the width and a device pixel, and the shader gives a
+   pixel only to the nearest of the segment and its two neighbours (ties to the earlier), so joins are round and each
+   pixel is drawn once along the line; the fringe fades over one device pixel. The painter strokes each pattern as
+   one path with round joins, its width in item pixels at any ratio. With the shown dataset highlighted, the other
+   lines are faded by blending their colour toward the background, opaque, rather than drawn translucent, so a line
+   crossing itself up and down a narrow peak stays one even colour.
+   Each dataset's reduction (its trace, or the Map's pixel columns) is kept until its points, the x range, the plot's
+   width, the y scale or the included range change: a colour, a reversal or a row placing reduces nothing, and a
+   change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. The row
+   labels are kept while the rows are placed again: only a label's text, place and colour follow, and the room they
+   take is measured once after their widths change.
+
 ## Consequences
 
 - Each dataset costs 24 bytes per measured point in these views (x, intensity and x on the axis shown, in double
   precision): about 12 MB for 162 datasets of 3 000 points, 120 MB for 500 of 10 000.
-- Drawing reduces every dataset again, one pass over its points, so a redraw costs time in proportion to the scan's
-  points.
+- A new x range, plot width or y scale reduces every dataset again, one pass over its points; nothing else does.
+- With a GPU the Stacked view keeps its vertices on the GPU: about 2 million for the 324-file scan, 28 bytes each.
+- Without a GPU a painted redraw of the 324-file scan takes about 125 ms here, over the 100 ms a redraw should take.
 - The views show measured data only. Calculated patterns of a finished scan are not read back for them.
 - Both views draw from the same reads; opening the second costs nothing more.
 
@@ -137,7 +165,9 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
 
 | Alternative | Verdict |
 | --- | --- |
-| Each pattern as its own chart series | Rejected: hundreds of series made the chart slow. |
+| Each pattern as its own Qt Graphs series (measured 2026-10-25) | Rejected: Qt Graphs prepares every point of every series on the GUI thread for each frame. A change took about 0.5 s for 324 patterns and 3.8 s for 1 000 on an Apple M2, and about 2 s for 324 without a GPU. How the series are fed makes little difference: on the M2 a whole-list replace from C++ or from QML and an appended list are within 10 % of each other; appending point by point is up to twice as slow; a model mapper on hundreds of series drew no frame within its timeout. A colour change, which feeds no point, still costs most of an update. |
+| ScanLines everywhere | Rejected without a GPU: llvmpipe takes 240 to 480 ms per change for the 324-file scan at 1 px, the painter about 125 ms. |
+| The painter everywhere | Rejected with a GPU: on an M2 it takes 66 ms per change for 324 patterns and 187 ms for 1 000; ScanLines takes 8 to 36 ms. |
 | Keeping 1024 columns of the whole range per dataset | Replaced (the owner, 2026-10-22): a zoomed view showed the columns as steps, not the measured points. |
 | A rainbow (jet) colour map | Rejected: not perceptually uniform; it shows edges the data do not have and fails in grey. |
 | Rows at equal heights, labelled with the scan value | Rejected while every dataset has a value: unequal steps along the scan would read as equal. |

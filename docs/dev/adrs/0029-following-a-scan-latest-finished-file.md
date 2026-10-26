@@ -34,9 +34,10 @@ try. A slow scan (a file every few seconds) can show every file and should.
 3. The view asks for the next pattern once the window has drawn the one before and at least `kFollowIntervalMs`
    (500 ms, in `app/src/fit_view_model.cpp`) has passed since it was drawn. Files finished in between are not
    drawn. This is the default of the choice in 8. Drawn means a pattern chart of the experiment is shown (on the page
-   and the tab the window shows) and the window swapped two frames after the file's data and pattern were applied to
-   the model (the first may have been under way already). A file whose read or application fails, that the window does
-   not draw within two seconds (a minimised window), or whose chart is hidden before it is drawn, is released without
+   and the tab the window shows) and the first frame synchronised after the file's data and pattern were applied to
+   the model has taken them for drawing: the GUI thread waits while a frame synchronises, and the render thread draws
+   that frame before it synchronises another, so the next file can be applied while this one is drawn. A file whose
+   read or application fails, that the window does not draw within two seconds (a minimised window), or whose chart is hidden before it is drawn, is released without
    being counted, so the scan moves on. While no pattern chart is shown (another tab, such as Evolution, or another
    page) the view asks for no pattern and applies none, so the chart does not hold an older file than it could show;
    when one is shown again the view asks for the next file's pattern, a file that finishes after that. Only a drawn
@@ -45,8 +46,11 @@ try. A slow scan (a file every few seconds) can show every file and should.
    holds that file's dataset and a shown chart has drawn the pattern its application set. A late frame of an earlier
    file counts nothing, and choosing another dataset, turning Follow off or starting a scan drops a receipt still
    waiting, uncounted.
-4. The followed file's data are still read off the GUI thread for the model (its measured points and its row's values
-   in the tables); its pattern is the one the fit sent. A file chosen by hand while the scan runs, the newest file
+4. The followed file's data are read for the model (its measured points and its row's values in the tables); its
+   pattern is the one the fit sent. On the desktop the file the fit has just sent is read on the GUI thread, about a
+   millisecond, so its data, its pattern and the current dataset are applied in one event and drawn in one frame;
+   the browser reads it off the page's thread ([ADR-0030](0030-browser-files-in-wasmfs.md)), and any other
+   file is read off the GUI thread everywhere. A file chosen by hand while the scan runs, the newest file
    when Follow is turned on again, and the last file when the interval skipped it are calculated off the GUI thread
    on a copy of the template. A skipped file costs nothing, and choosing it later calculates it then.
 5. When the scan ends, its last finished file is shown, whatever the interval skipped.
@@ -56,14 +60,25 @@ try. A slow scan (a file every few seconds) can show every file and should.
    evolution's line for the current fit, the highlighted row in the dataset list, the dataset selectors), the file
    name and the counts. A pattern that arrives after newer files have finished leaves the current dataset on the
    newest one. A file chosen by hand moves all of them, as before.
-8. The user chooses how often a followed scan redraws its pattern, under Analysis, Extras, "Pattern updates during a
+8. The user chooses how often a followed scan redraws its pattern, under Analysis, Settings, "Pattern updates during a
    scan", kept on the machine rather than in the project:
    - **Adaptive** (the default): the rule in 3.
    - **About once a second**: the same rule with a second in place of half a second.
-   - **Every pattern**: the job waits after each finished file until the window has drawn its pattern (as in 3), a
-     second at most, so a window that does not draw cannot hold the scan up. It does not wait while no pattern chart
-     is shown. The single-thread kit cannot wait: its scan runs on the
-     thread that draws.
+   - **Every pattern, fit waits for the display**: each finished file's pattern is drawn before the fit goes on. The
+     job fits the next file while the window draws the last one, and waits only before sending that next file's
+     pattern, until the last is drawn (as in 3), a second at most, so a window that does not draw cannot hold the scan
+     up. On the Stacked view or the Map the file is shown as the current dataset, counted at the first frame
+     synchronised after it, and the fit waits for that the same way (the owner, 2026-10-25: each file is shown while
+     it is fitted). It does not wait while no pattern view is shown, as on the Correlations or Evolution tab or another
+     page. The single-thread kit cannot wait: its scan runs on the thread that draws. A saved "Every pattern" from before the split (the stored value 0) is this choice.
+   - **Every pattern, display catches up** (the owner, 2026-10-24): the fit never waits. The job sends every finished
+     file's pattern as it is fitted; the view keeps them in order and shows each once the one before is shown, at the
+     display's pace. With a pattern chart shown the file's pattern is drawn (as in 3); without one (the Stacked or the
+     Map view) the file is shown as the current dataset, counted at the first frame synchronised after it. The
+     current dataset is the file shown last, not the newest finished one (7). While files wait behind the one being
+     shown, the status bar shows "Showing N of M", N the files shown and M those the scan has sent. When the scan
+     ends first, the view shows the rest, then the last dataset as its row gives it (5). Another choice made
+     meanwhile drops the files still waiting. It is stored as 4; the menu lists the choices in this order, each mapped to its stored value.
    - **Only at the end**: no pattern while the scan runs; 5 still shows the last file.
 
 A slow scan therefore shows every file as it finishes. A fast scan shows the newest file about twice a second by

@@ -267,6 +267,12 @@ app-ui-bless = { cmd = ["bash", "tools/ci/app-ui-bless.sh"] }
 # ADR-0017 §15: the measured-layer benchmark, by hand: Qt Graphs' own series against edi's scene-graph
 # item, on the stress dataset's measured series. Prints one table.
 app-chart-bench = { cmd = "EDI_APP_TARGETS=edi_app_chart_bench bash tools/ci/app-build.sh && build/app/app/edi_app_chart_bench" }
+# ADR-0041: the scan views' renderer benchmark, by hand: the 324-file scan drawn by each candidate. Prints one table.
+app-scan-bench = { cmd = "EDI_APP_TARGETS=edi_app_scan_bench bash tools/ci/app-build.sh && build/app/app/edi_app_scan_bench" }
+# ADR-0041: the plotting benchmark, by hand: every way of feeding Qt Graphs on the Stacked and Pattern workloads, its
+# table written to build/plot-bench/; plot-bench-compare prints two tables side by side.
+plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build.sh && bash tools/ci/plot-bench.sh" }
+plot-bench-compare = { cmd = ["python", "app/tools/plot_bench_compare.py"] }
 # app-build's recovery from a stale build/app (another environment's compilers): CI's last app step.
 app-build-recovery = { cmd = ["bash", "tools/ci/app-build-recovery.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 # ADR-0023: the app as a WebAssembly site. `wasm-toolchain` installs Emscripten and Qt's two wasm kits once
