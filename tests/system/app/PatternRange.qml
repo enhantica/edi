@@ -58,7 +58,12 @@ Item {
             settled();
         }
         function fitMatchesReset(expected) {
-            const points = SettingsProof.points(object("chart.measured")).map(point => point.y).filter(Number.isFinite);
+            // The default band clears both the marker and measured-line paths.
+            // On this linear-scale witness, a symmetric measured +/- s.u. band has its measurement at its midpoint.
+            const top = ChartOracle.points(object("chart.series.meas.band.top"));
+            const bottom = ChartOracle.points(object("chart.series.meas.band.bottom"));
+            verify(top.length === bottom.length && top.every((point, i) => point.x === bottom[i].x), "The measured band edges pair at identical physical sample coordinates");
+            const points = SettingsProof.points(object("chart.measured")).concat(ChartOracle.points(object("chart.series.meas"))).concat(top.map((point, i) => ({y: (point.y + bottom[i].y) / 2}))).map(point => point.y).filter(Number.isFinite);
             const calculated = curve();
             verify(points.length > 0, "The refit reference contains the actual measured pattern as well as the calculation");
             verify(expected.low <= Math.min(...points, calculated.low) && expected.high >= Math.max(...points, calculated.high), "The committed range contains both measured and calculated curves");

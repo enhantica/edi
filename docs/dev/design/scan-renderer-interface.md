@@ -360,3 +360,9 @@ At coincident raster rows, later dataset ticks paint over earlier ticks. The
 strip starts one logical pixel right of the plot; a tick is one logical pixel
 high and clips to the plot at boundary rows. Empty strip pixels between expected
 rows must remain the chart background.
+
+The legacy tick raster allows at most two byte levels per RGB channel for
+capture/quantisation at a logical-pixel centre; it does not infer drawing from
+metadata or a tick count. Palette row positions use independently anchored
+intensities. The older excluded-region and Map edge oracles retain their
+requirements; these are separate from the selection and tick observations.
