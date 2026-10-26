@@ -23,6 +23,7 @@ import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
+from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
@@ -141,6 +142,64 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     assert oracle['relative_tolerance'] <= 1e-9, (
         'wasm/native fit parity must retain the declared relative tolerance'
     )
+
+    catalogue = json.loads((FIXTURE / 'catalogue-native.json').read_text())
+    assert set(catalogue) == {'lbco', 'ncaf'}, (
+        'Browser catalogue parity: each live fitting vehicle has its own native input pin'
+    )
+    for case, record in catalogue.items():
+        project = ROOT / record['project']
+        digest = hashlib.sha256()
+        for path in sorted(project.rglob('*')):
+            if path.is_file():
+                digest.update(path.relative_to(project).as_posix().encode() + b'\0')
+                digest.update(path.read_bytes())
+        assert digest.hexdigest() == record['project_sha256'], (
+            'Browser catalogue parity: every native regression pin binds its current input bytes'
+        )
+        assert record['reference'].startswith('Native CLI parity regression pin;'), (
+            'Browser catalogue parity: native output is labelled as a regression pin'
+        )
+        fields = dict(
+            line.split('=', 1)
+            for line in (FIXTURE / f'catalogue-{case}-native-report.txt').read_text().splitlines()
+            if '=' in line
+        )
+        assert fields['status'] == record['status'] == 'done' and fields['converged'] == 'true', (
+            'Browser catalogue parity: native captures complete the same converged fit contract'
+        )
+        assert all(float(fields[key]) == value for key, value in record['parameters'].items()), (
+            'Browser catalogue parity: parameter pins come from the retained native transcript'
+        )
+        assert all(
+            float(fields[key]) == record[key]
+            for key in ('iterations', 'rwp', 'reduced_chi_square')
+        ), 'Browser catalogue parity: saved-fit metrics and iterations match the native transcript'
+
+        operands = json.loads(
+            (FIXTURE / 'catalogue_scientific' / f'{case}-native.json').read_text()
+        )
+        assert (
+            operands['project'] == record['project']
+            and operands['project_sha256'] == record['project_sha256']
+        ), 'Browser catalogue parity: complete saved operands bind the same selected input'
+        assert operands['reference'].startswith('Native CLI parity regression pin;'), (
+            'Browser catalogue parity: complete saved operands are labelled regression pins'
+        )
+        assert (
+            operands['relative_tolerance'] == 1e-9 and operands['absolute_tolerance'] == 1e-11
+        ), 'Browser catalogue parity: complete operands retain the original numerical bounds'
+
+        matrix = json.loads(
+            (FIXTURE / 'catalogue_scientific' / f'{case}-conditioning.json').read_text()
+        )
+        raw = FIXTURE / 'catalogue_scientific' / f'{case}-conditioning-raw.json'
+        assert hashlib.sha256(raw.read_bytes()).hexdigest() == matrix['raw_capture_sha256'], (
+            'Browser catalogue parity: the uncertainty proof binds its retained native matrix'
+        )
+        assert uncertainty_tolerances(operands['scientific'], matrix), (
+            'Browser catalogue parity: each saved uncertainty has its native conditioning bound'
+        )
 
 
 def test_toolchain_tasks_declare_reproducible_pins():

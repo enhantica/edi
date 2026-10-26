@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "edi (regression pins; the FullProf agreement is a test of its own)",
+    "artifact": "machine record (python -m edi calc --report machine)",
+    "provenance": "PROVENANCE.md"
+  },
+  "calc": {
+    "quantities": {
+      "n_points": {
+        "value": 7001.0,
+        "kind": "regression-pin",
+        "tol_abs": 0.0,
+        "tol_rel": null
+      },
+      "checksum": {
+        "value": 36592692.1,
+        "kind": "regression-pin",
+        "tol_abs": null,
+        "tol_rel": 1e-06
+      }
+    }
+  }
+}

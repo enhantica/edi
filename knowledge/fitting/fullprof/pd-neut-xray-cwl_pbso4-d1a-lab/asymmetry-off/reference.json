@@ -1,0 +1,287 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "scope": "asymmetry-off fit",
+  "start_project": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project",
+  "n_free": 45,
+  "converged": true,
+  "r_wp": 0.08941806626784797,
+  "r_wp_by_bank": {
+    "d1a": 0.0529,
+    "lab": 0.156
+  },
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Bck_0_pat1",
+      "value": 210.07449,
+      "uncertainty": 7.849329
+    },
+    "2": {
+      "symbol": "Bck_1_pat1",
+      "value": 196.04199,
+      "uncertainty": 5.6685915
+    },
+    "3": {
+      "symbol": "Bck_2_pat1",
+      "value": 196.9991,
+      "uncertainty": 3.6332655
+    },
+    "4": {
+      "symbol": "Bck_3_pat1",
+      "value": 186.32019,
+      "uncertainty": 2.5120358
+    },
+    "5": {
+      "symbol": "Bck_4_pat1",
+      "value": 199.37535,
+      "uncertainty": 2.6154199
+    },
+    "6": {
+      "symbol": "Bck_5_pat1",
+      "value": 201.2077,
+      "uncertainty": 1.3107928
+    },
+    "7": {
+      "symbol": "Bck_6_pat1",
+      "value": 252.72035,
+      "uncertainty": 2.0939636
+    },
+    "8": {
+      "symbol": "Bck_7_pat1",
+      "value": 230.8665,
+      "uncertainty": 3.6662097
+    },
+    "9": {
+      "symbol": "Zero_pat1",
+      "value": -0.10734424,
+      "uncertainty": 0.0016899473
+    },
+    "10": {
+      "symbol": "Zero_pat2",
+      "value": -0.080030844,
+      "uncertainty": 0.0006203294
+    },
+    "11": {
+      "symbol": "Bck_0_pat2",
+      "value": 143.04732,
+      "uncertainty": 1.4811676
+    },
+    "12": {
+      "symbol": "Bck_1_pat2",
+      "value": 76.189255,
+      "uncertainty": 2.0040972
+    },
+    "13": {
+      "symbol": "Bck_2_pat2",
+      "value": 18.102942,
+      "uncertainty": 1.6168301
+    },
+    "14": {
+      "symbol": "Bck_3_pat2",
+      "value": 7.675715,
+      "uncertainty": 1.5699654
+    },
+    "15": {
+      "symbol": "Bck_4_pat2",
+      "value": -9.126812,
+      "uncertainty": 1.3945843
+    },
+    "16": {
+      "symbol": "Bck_5_pat2",
+      "value": -7.3448491,
+      "uncertainty": 1.3884034
+    },
+    "17": {
+      "symbol": "X_Pb_ph1",
+      "value": 0.18770278,
+      "uncertainty": 0.00013749419
+    },
+    "18": {
+      "symbol": "Z_Pb_ph1",
+      "value": 0.16717818,
+      "uncertainty": 0.0001961283
+    },
+    "19": {
+      "symbol": "Biso_Pb_ph1",
+      "value": 1.5092657,
+      "uncertainty": 0.033722725
+    },
+    "20": {
+      "symbol": "X_S_ph1",
+      "value": 0.065246269,
+      "uncertainty": 0.00053246453
+    },
+    "21": {
+      "symbol": "Z_S_ph1",
+      "value": 0.68426389,
+      "uncertainty": 0.00071056304
+    },
+    "22": {
+      "symbol": "Biso_S_ph1",
+      "value": 0.72702998,
+      "uncertainty": 0.08302591
+    },
+    "23": {
+      "symbol": "X_O1_ph1",
+      "value": 0.90824437,
+      "uncertainty": 0.00040400249
+    },
+    "24": {
+      "symbol": "Z_O1_ph1",
+      "value": 0.59549475,
+      "uncertainty": 0.00042283876
+    },
+    "25": {
+      "symbol": "Biso_O1_ph1",
+      "value": 2.1606326,
+      "uncertainty": 0.070064664
+    },
+    "26": {
+      "symbol": "X_O2_ph1",
+      "value": 0.19400312,
+      "uncertainty": 0.00039537848
+    },
+    "27": {
+      "symbol": "Z_O2_ph1",
+      "value": 0.54380924,
+      "uncertainty": 0.00049822533
+    },
+    "28": {
+      "symbol": "Biso_O2_ph1",
+      "value": 1.7203977,
+      "uncertainty": 0.067172825
+    },
+    "29": {
+      "symbol": "X_O3_ph1",
+      "value": 0.080923975,
+      "uncertainty": 0.00023848475
+    },
+    "30": {
+      "symbol": "Y_O3_ph1",
+      "value": 0.027316414,
+      "uncertainty": 0.00033248577
+    },
+    "31": {
+      "symbol": "Z_O3_ph1",
+      "value": 0.80881804,
+      "uncertainty": 0.00030774629
+    },
+    "32": {
+      "symbol": "Biso_O3_ph1",
+      "value": 1.5393325,
+      "uncertainty": 0.046002228
+    },
+    "33": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 1.5193661,
+      "uncertainty": 0.011459832
+    },
+    "34": {
+      "symbol": "EtaPV_ph1_pat1",
+      "value": 0.33700731,
+      "uncertainty": 0.015517695
+    },
+    "35": {
+      "symbol": "U-Cagl_ph1_pat1",
+      "value": 0.15864648,
+      "uncertainty": 0.0063383458
+    },
+    "36": {
+      "symbol": "V-Cagl_ph1_pat1",
+      "value": -0.4208484,
+      "uncertainty": 0.014548015
+    },
+    "37": {
+      "symbol": "W-Cagl_ph1_pat1",
+      "value": 0.4269017,
+      "uncertainty": 0.0080464594
+    },
+    "38": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 8.4719095,
+      "uncertainty": 0.00016124638
+    },
+    "39": {
+      "symbol": "Cell_B_ph1_pat1",
+      "value": 5.3928585,
+      "uncertainty": 0.00010563154
+    },
+    "40": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 6.9529133,
+      "uncertainty": 0.0001417288
+    },
+    "41": {
+      "symbol": "Scale_ph1_pat2",
+      "value": 0.00048236008,
+      "uncertainty": 1.3598586e-06
+    },
+    "42": {
+      "symbol": "EtaPV_ph1_pat2",
+      "value": 0.63660395,
+      "uncertainty": 0.014155325
+    },
+    "43": {
+      "symbol": "U-Cagl_ph1_pat2",
+      "value": 0.19365619,
+      "uncertainty": 0.012026443
+    },
+    "44": {
+      "symbol": "V-Cagl_ph1_pat2",
+      "value": -0.12183782,
+      "uncertainty": 0.0088166101
+    },
+    "45": {
+      "symbol": "W-Cagl_ph1_pat2",
+      "value": 0.0300839,
+      "uncertainty": 0.0015928097
+    }
+  },
+  "parameter_codes": {
+    "d1a.background.1.intensity": 1,
+    "d1a.background.2.intensity": 2,
+    "d1a.background.3.intensity": 3,
+    "d1a.background.4.intensity": 4,
+    "d1a.background.5.intensity": 5,
+    "d1a.background.6.intensity": 6,
+    "d1a.background.7.intensity": 7,
+    "d1a.background.8.intensity": 8,
+    "d1a.instrument.calib_twotheta_offset": 9,
+    "lab.instrument.calib_twotheta_offset": 10,
+    "lab.background.1.coef": 11,
+    "lab.background.2.coef": 12,
+    "lab.background.3.coef": 13,
+    "lab.background.4.coef": 14,
+    "lab.background.5.coef": 15,
+    "lab.background.6.coef": 16,
+    "pbso4.atom_site.Pb.fract_x": 17,
+    "pbso4.atom_site.Pb.fract_z": 18,
+    "pbso4.atom_site.Pb.adp_iso": 19,
+    "pbso4.atom_site.S.fract_x": 20,
+    "pbso4.atom_site.S.fract_z": 21,
+    "pbso4.atom_site.S.adp_iso": 22,
+    "pbso4.atom_site.O1.fract_x": 23,
+    "pbso4.atom_site.O1.fract_z": 24,
+    "pbso4.atom_site.O1.adp_iso": 25,
+    "pbso4.atom_site.O2.fract_x": 26,
+    "pbso4.atom_site.O2.fract_z": 27,
+    "pbso4.atom_site.O2.adp_iso": 28,
+    "pbso4.atom_site.O3.fract_x": 29,
+    "pbso4.atom_site.O3.fract_y": 30,
+    "pbso4.atom_site.O3.fract_z": 31,
+    "pbso4.atom_site.O3.adp_iso": 32,
+    "d1a.linked_structure.pbso4.scale": 33,
+    "d1a.peak.mixing_eta_0": 34,
+    "d1a.peak.broad_gauss_u": 35,
+    "d1a.peak.broad_gauss_v": 36,
+    "d1a.peak.broad_gauss_w": 37,
+    "pbso4.cell.length_a": 38,
+    "pbso4.cell.length_b": 39,
+    "pbso4.cell.length_c": 40,
+    "lab.linked_structure.pbso4.scale": 41,
+    "lab.peak.mixing_eta_0": 42,
+    "lab.peak.broad_gauss_u": 43,
+    "lab.peak.broad_gauss_v": 44,
+    "lab.peak.broad_gauss_w": 45
+  }
+}

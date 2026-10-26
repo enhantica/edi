@@ -25,6 +25,7 @@ from conftest import (
     crysta_reference_source,
 )
 from tests.fixtures.correlations.machine_record import without_pair_count
+from tests.fixtures.engine_fit_records.records import record as engine_record
 
 ROOT = Path(__file__).resolve().parents[3]
 CRYSTA = crysta_reference_prefix() / 'bin/crysta'
@@ -83,8 +84,11 @@ def _without_elapsed(record: str) -> str:
 
 def _record_fields(record: str) -> dict[str, str]:
     fields = dict(line.split('=', 1) for line in record.splitlines())
-    assert fields.get('record') == 'fit' and fields.get('status') == 'done', (
-        'the real selector route must produce one successful terminal fit record'
+    expected = (
+        engine_record('cosio-ladder')['status'] if fields.get('descent') == 'ladder' else 'done'
+    )
+    assert fields.get('record') == 'fit' and fields.get('status') == expected, (
+        'The real selector route must retain the independent engine terminal status'
     )
     return fields
 

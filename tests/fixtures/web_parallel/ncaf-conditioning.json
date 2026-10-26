@@ -4,7 +4,7 @@
   "sdk_manifest_sha256": "0ee7ed6b10e15578e54bd8cb848c380c476c6b85012598338edfe2a61077c719",
   "executable_sha256": "a3b729441c57b644f8b90ec85a9a9985d70c81cb6b38802632c11d6e484c3d25",
   "raw_capture_sha256": "db2d7585e51df0d641c67486ef0a84a8dd999dee78d948e45d8bb6ed3019f2af",
-  "scientific_sha256": "a9f388d3c937a33aedc203e6e19c931f28616aed60693c7d4174860ecda72bc7",
+  "scientific_sha256": "38f9a5e990b2a0f404d59a8db064b1ec70528524f5d262b3df24972acec74b69",
   "n_data": 18973,
   "labels": [
     "Ca1.fract_x",

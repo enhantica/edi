@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {assertSavedProject, assertNativeChi} from './web_saved_fit.mjs';
 
-for (const [fitCase, name] of [['lbco','lbco_hrpt_s4'], ['ncaf','ncaf_wish_5bank_s5']]) {
+for (const [fitCase, name] of [['lbco','pd-neut-cwl_lbco-hrpt'], ['ncaf','pd-neut-tof_ncaf-wish']]) {
   assertSavedProject(name, fitCase);
   for (const wrong of ['cosio_d20_s1', 'lbco_hrpt_s3', '', undefined,
-    fitCase === 'lbco' ? 'ncaf_wish_5bank_s5' : 'lbco_hrpt_s4'])
+    fitCase === 'lbco' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt'])
     assert.throws(() => assertSavedProject(wrong, fitCase), /actual saved browser project/,
       'A stale label, adjacent starting model, missing name or other fitted project must refuse');
 }
-assert.throws(() => assertSavedProject('lbco_hrpt_s4', 'unknown'), /declared independent reference/,
+assert.throws(() => assertSavedProject('pd-neut-cwl_lbco-hrpt', 'unknown'), /declared independent reference/,
   'An undeclared case cannot select an independent scientific reference');
 const oracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
 const native = oracle.reduced_chi_square;

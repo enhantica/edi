@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -75,6 +76,16 @@ def main():
             source = args.input_path or ROOT / 'docs/user/cli' / entry['id'] / 'project'
             if args.update:
                 require_changed_input(manifest, args.update, source)
+            purpose = next(
+                (
+                    shlex.split(line)[1]
+                    for line in (source / 'project.edi').read_text().splitlines()
+                    if line.startswith('_metadata.purpose ')
+                ),
+                '',
+            )
+            if purpose == 'simulation':
+                continue  # Calculation-only projects have no fit-result category to capture.
             mode = str(edi.Project.load(str(source)).fitting_mode)
             if mode not in {'single', 'joint'}:
                 continue

@@ -62,3 +62,46 @@ MIGRATIONS = {
         )
     },
 }
+
+# ADR-0048 consolidates the old starts and short scans into one published case.
+PROJECT = 'tests/integration/app/test_e04_t1_projects.py::'
+REGISTERED = 'test_each_registered_example_executes_in_the_production_host'
+REPLACED_EXAMPLES = {
+    'pd-neut-cwl_cosio-d20_scan-162f': 'pd-neut-cwl_cosio-d20_scan',
+    'pd-neut-cwl_cosio-d20_scan-324f': 'pd-neut-cwl_cosio-d20_scan',
+    'pd-neut-cwl_cosio-d20_scan-3f': 'pd-neut-cwl_cosio-d20_scan',
+    'pd-neut-cwl_cosio-d20_start-1': 'pd-neut-cwl_cosio-d20',
+    'pd-neut-cwl_cosio-d20_start-4': 'pd-neut-cwl_cosio-d20',
+    'pd-neut-cwl_lbco-hrpt_start-2': 'pd-neut-cwl_lbco-hrpt',
+    'pd-neut-cwl_lbco-hrpt_start-4': 'pd-neut-cwl_lbco-hrpt',
+    'pd-neut-cwl_pbso4_beba-asymmetry': 'pd-neut-xray-cwl_pbso4-d1a-lab',
+    'pd-neut-cwl_yap-spodi_3k': 'pd-neut-cwl_yalo3-al2o3-spodi',
+    'pd-neut-tof_cecoal-polaris_chebyshev': 'pd-neut-tof_cecoal-polaris',
+    'pd-neut-tof_ceo2-pearl_polynomial': 'pd-neut-tof_ceo2-pearl',
+    'pd-neut-tof_ferrite-austenite-beer_joint': 'pd-neut-tof_ferrite-austenite-beer',
+    'pd-neut-tof_ncaf-wish-2bank_start-3': 'pd-neut-tof_ncaf-wish',
+    'pd-neut-tof_ncaf-wish-3bank_start-5': 'pd-neut-tof_ncaf-wish',
+    'pd-neut-tof_ncaf-wish-5bank_start-5': 'pd-neut-tof_ncaf-wish',
+    'pd-neut-tof_ncaf-wish-5bank_start-fullprof': 'pd-neut-tof_ncaf-wish',
+    'pd-neut-tof_si-sepd_start-2': 'pd-neut-tof_si-sepd',
+    'pd-neut-tof_si-sepd_start-5': 'pd-neut-tof_si-sepd',
+    'pd-xray-cwl_latp_scan-4f': 'pd-xray-cwl_latp-bm01_scan',
+}
+MIGRATIONS.update({
+    PROJECT + REGISTERED + f'[{old}]': [PROJECT + REGISTERED + f'[{new}]']
+    for old, new in REPLACED_EXAMPLES.items()
+})
+# LaB6's verification actor remains independently exercised outside the catalogue.
+MIGRATIONS[PROJECT + REGISTERED + '[pd-neut-cwl_lab6-11b-echidna_tch-fcj]'] = [
+    PROJECT + 'test_verification_directory_executes_in_the_production_host'
+    '[pd-neut-cwl_lab6-echidna_fcj-asymmetry]'
+]
+MIGRATIONS[
+    'tests/integration/py/test_c34_t23_cli_projects.py::'
+    'test_executing_registry_refuses_obsolete_and_malformed_ids[pd-neut-cwl_lif]'
+] = [
+    (
+        'tests/integration/py/test_c34_t23_cli_projects.py::'
+        'test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-cwl_lif]'
+    )
+]

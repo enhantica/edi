@@ -13,13 +13,14 @@ from tests.fixtures.fast_chart_redraws.startup import split_renderer_reports
 
 ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
-PROJECTS = json.loads(
+ORACLE = json.loads(
     (ROOT / 'tests/fixtures/e04_t1/oracle.js')
     .read_text()
     .split('var frozen = ', 1)[1]
     .rstrip(';\n')
-)['projects']
-APP_PROJECTS = [p for p in PROJECTS if p['metadata']['_metadata.purpose'] != 'verification']
+)
+PROJECTS = ORACLE['projects']
+APP_PROJECTS = [p for p in PROJECTS if p['id'] in ORACLE['catalogue_ids']]
 VERIFICATION_PROJECTS = [
     p for p in PROJECTS if p['metadata']['_metadata.purpose'] == 'verification'
 ]

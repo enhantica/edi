@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-tof_ncaf-wish/reference.json",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 193.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.07695621127471534,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.Ca1.fract_x.value": {
+      "value": 0.46647102,
+      "kind": "reference",
+      "tol_abs": 0.0003381255862,
+      "tol_rel": null
+    },
+    "param.Ca1.adp_iso.value": {
+      "value": 1.0155257,
+      "kind": "reference",
+      "tol_abs": 0.0909758641,
+      "tol_rel": null
+    },
+    "param.Al1.fract_x.value": {
+      "value": 0.25195885,
+      "kind": "reference",
+      "tol_abs": 0.000560999705,
+      "tol_rel": null
+    },
+    "param.Al1.adp_iso.value": {
+      "value": 0.91221404,
+      "kind": "reference",
+      "tol_abs": 0.09339387184,
+      "tol_rel": null
+    },
+    "param.Na1.fract_x.value": {
+      "value": 0.085183181,
+      "kind": "reference",
+      "tol_abs": 0.0003104071496,
+      "tol_rel": null
+    },
+    "param.Na1.adp_iso.value": {
+      "value": 2.3514626,
+      "kind": "reference",
+      "tol_abs": 0.19065251856,
+      "tol_rel": null
+    },
+    "param.F1.fract_x.value": {
+      "value": 0.13759696,
+      "kind": "reference",
+      "tol_abs": 0.0002293352334,
+      "tol_rel": null
+    },
+    "param.F1.fract_y.value": {
+      "value": 0.30554041,
+      "kind": "reference",
+      "tol_abs": 0.0002199177904,
+      "tol_rel": null
+    },
+    "param.F1.fract_z.value": {
+      "value": 0.11960466,
+      "kind": "reference",
+      "tol_abs": 0.0002595241378,
+      "tol_rel": null
+    },
+    "param.F1.adp_iso.value": {
+      "value": 1.0134559,
+      "kind": "reference",
+      "tol_abs": 0.06602515008,
+      "tol_rel": null
+    },
+    "param.F2.fract_x.value": {
+      "value": 0.36228836,
+      "kind": "reference",
+      "tol_abs": 0.0003103313976,
+      "tol_rel": null
+    },
+    "param.F2.fract_y.value": {
+      "value": 0.36316487,
+      "kind": "reference",
+      "tol_abs": 0.00024492978,
+      "tol_rel": null
+    },
+    "param.F2.fract_z.value": {
+      "value": 0.18696268,
+      "kind": "reference",
+      "tol_abs": 0.0002429399246,
+      "tol_rel": null
+    },
+    "param.F2.adp_iso.value": {
+      "value": 1.5255865,
+      "kind": "reference",
+      "tol_abs": 0.0785180092,
+      "tol_rel": null
+    },
+    "param.F3.fract_x.value": {
+      "value": 0.46108353,
+      "kind": "reference",
+      "tol_abs": 0.00014412326152,
+      "tol_rel": null
+    },
+    "param.F3.adp_iso.value": {
+      "value": 1.024364,
+      "kind": "reference",
+      "tol_abs": 0.09376030376,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 15.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 9.496662872,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    }
+  }
+}

@@ -1,8 +1,8 @@
 schema=8
 record=fit
-status=done
+status=no_step
 mode=single
-converged=true
+converged=false
 n_points_loaded=1418
 n_points_fitted=1418
 n_free=43
