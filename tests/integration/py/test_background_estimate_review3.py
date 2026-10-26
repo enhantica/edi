@@ -144,23 +144,13 @@ def test_delegated_multibank_save_preserves_the_complete_due_host_background(
             intensity_meas_su=np.asarray(data.intensity_meas_su),
         )
     before = [state(e) for e in project.experiments]
-    expected = [
-        (
-            *snapshot[:-1],
-            [
-                (name, coordinate, six_digits(value), free)
-                for name, coordinate, value, free in snapshot[-1]
-            ],
-        )
-        for snapshot in before
-    ]
     project.save_as(tmp_path / 'saved')
-    assert [state(e) for e in project.experiments] == expected, (
-        'Save adopts independently rounded due and current rows without re-estimating either bank'
+    assert [state(e) for e in project.experiments] == before, (
+        'Saving a due series beside a current bank must not mutate any live host background'
     )
     reloaded = engine.Project.load(tmp_path / 'saved')
-    assert [state(e) for e in reloaded.experiments] == expected, (
-        'Delegated save retains rounded terms with exact origin/domain, mode and layout'
+    assert [state(e) for e in reloaded.experiments] == before, (
+        'Delegated save must retain terms, origin/domain, mode and layout exactly as in the host'
     )
     project.analysis.calculate()
     reloaded.analysis.calculate()
