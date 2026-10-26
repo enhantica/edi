@@ -5480,8 +5480,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
-    static constexpr std::array items{"", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::archive};
+    static constexpr std::array items{"", "", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 

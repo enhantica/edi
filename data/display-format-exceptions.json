@@ -303,6 +303,11 @@
    "reason": "a page name (edi ADR-0017), not the _metadata category"
   },
   {
+   "file": "app/qml/Pages/Project/RecentProjectsGroup.qml",
+   "literal": "Project",
+   "reason": "the recent projects list's column of places, not the _metadata category"
+  },
+  {
    "file": "app/qml/Pages/Report/ReportPage.qml",
    "literal": "Report",
    "reason": "a page name (edi ADR-0017), not the _report category"
