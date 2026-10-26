@@ -1,8 +1,13 @@
 """An adopting save recalculates rounded current inputs without consuming due estimates."""
 
 import importlib
+import json
+import os
 import re
 import shutil
+import subprocess
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,6 +15,7 @@ import pytest
 from tests.fixtures.project_save.boundaries import (
     agreement,
     bank_state,
+    mixed_measurements,
     prepared_mixed,
     rounded_bank_state,
 )
@@ -169,4 +175,81 @@ def test_current_bank_inputs_arrays_and_factors_match_independent_rounded_calcul
         ), (
             'Saved agreement factors follow an independent weighted-residual calculation '
             'from rounded current inputs'
+        )
+
+
+@pytest.mark.parametrize('operation', OPERATIONS)
+def test_adopting_save_of_measured_and_axis_only_banks_never_crashes_or_invents_agreement(
+    tmp_path, operation
+):
+    source = mixed_measurements(tmp_path / 'input')
+    destination = source if operation == 'save' else tmp_path / 'saved'
+    paths = [str(Path(next(iter(ENGINE.__path__))).parent), *sys.path]
+    extension = sys.modules[ENGINE.__name__ + '._' + ENGINE.__name__]
+    environment = dict(os.environ)
+    if ENGINE.__name__ == 'edi':
+        environment['EDI_EXTENSION_DIR'] = str(Path(extension.__file__).parent)
+    runner = Path(__file__).resolve().parents[2] / 'fixtures/project_save/measurement_save.py'
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-S',
+            str(runner),
+            json.dumps(paths),
+            ENGINE.__name__,
+            str(source),
+            str(destination),
+            operation,
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+    assert result.returncode == 0, (
+        'Saving a measured bank beside a simulated axis-only bank must finish without '
+        'a native crash or refusal: ' + result.stderr
+    )
+    observed = json.loads(result.stdout.splitlines()[-1])
+    assert observed['extension'] == str(Path(extension.__file__).resolve()), (
+        'The crash-isolated consumer must use the same qualified native extension as its parent'
+    )
+    assert observed['banks']['current']['measured'] == 4, (
+        'The mixed save retains every measured sample in its real observed bank'
+    )
+    simulated_data = loop_rows(observed['simulated_file'], '_data')
+    assert all(row.get('_data.intensity_meas', '.') in {'.', '?'} for row in simulated_data), (
+        'A saved simulated bank writes no invented measured intensities'
+    )
+    assert observed['banks']['due']['measured'] == 0, (
+        'The simulated bank retains an axis without invented measured columns'
+    )
+    assert len(observed['banks']['due']['calculated']) == 4, (
+        'The simulated bank still carries its calculated pattern on every requested axis point'
+    )
+    assert np.isfinite(observed['banks']['due']['calculated']).all(), (
+        'A valid simulated bank retains finite calculated values without inventing measurements'
+    )
+    records = loop_rows(observed['analysis'], '_fit_result_bank')
+    current = next(
+        (row for row in records if row['_fit_result_bank.experiment_id'] == 'current'), None
+    )
+    assert current is not None, 'The real measured bank retains its agreement-factor record'
+    simulated = [row for row in records if row['_fit_result_bank.experiment_id'] == 'due']
+    for row in simulated:
+        assert all(
+            value in {'.', '?'}
+            for key, value in row.items()
+            if key not in {'_fit_result_bank.experiment_id', '_fit_result_bank.n_data_points'}
+        ), 'A simulated bank has no agreement factors, rather than zero or fabricated observations'
+        assert row.get('_fit_result_bank.n_data_points', '0') == '0', (
+            'A simulated axis cannot contribute observed points to agreement statistics'
+        )
+    for key, value in agreement(1.23457).items():
+        assert (
+            float(current['_fit_result_bank.' + key]).hex() == float(format(value, '.6g')).hex()
+        ), (
+            'Measured-bank agreement uses independent residuals '
+            'without reading simulated observations'
         )

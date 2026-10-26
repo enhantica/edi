@@ -206,6 +206,19 @@ MEASURED_ROWS
     return root
 
 
+def mixed_measurements(destination):
+    root = mixed_project(destination)
+    path = root / 'experiments/due.edi'
+    path.write_text(
+        path.read_text().replace(
+            '_background_estimate.mode auto', '_background_estimate.mode manual'
+        )
+    )
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text(re.sub(r'(?m)^due 4 .*\n', '', analysis.read_text()))
+    return root
+
+
 def prepared_mixed(engine, root, *, empty=False, provenance='stale', kind='line-segment'):
     root = mixed_project(root, empty=empty, provenance=provenance, kind=kind)
     return engine.Project.load(root), root

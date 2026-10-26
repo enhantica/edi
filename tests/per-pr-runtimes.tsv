@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T19:00:16Z
+# measured_utc = 2026-10-26T19:33:13Z
 #
-# Recorded from: measured test run (319 node(s) measured once, 15914 banked, 24 stale row(s) dropped)
-# Collected tests: 18456; with a reported duration: 10411
+# Recorded from: measured test run (3 node(s) measured once, 15914 banked, 0 stale row(s) dropped)
+# Collected tests: 18459; with a reported duration: 10411
 # Module-scoped fixture costs recorded: 78
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18456
+# inventory_python = 18459
 # inventory_cpp = 396
 # inventory_measured = 15914
-# inventory_unmeasured = 2938
+# inventory_unmeasured = 2941
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -15138,6 +15138,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_save_exact_values.py::test_no
 UNMEASURED:failed-in-this-run	tests/system/py/test_save_exact_values.py::test_nonterminating_special_positions_remain_exact_on_every_saved_surface[reopened-save]
 0.020	tests/system/py/test_save_exact_values.py::test_nonterminating_special_positions_remain_exact_on_every_saved_surface[report-save-as]
 0.020	tests/system/py/test_save_exact_values.py::test_nonterminating_special_positions_remain_exact_on_every_saved_surface[report-save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_adopting_save_of_measured_and_axis_only_banks_never_crashes_or_invents_agreement[cli-output]
+UNMEASURED:failed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_adopting_save_of_measured_and_axis_only_banks_never_crashes_or_invents_agreement[save-as]
+UNMEASURED:failed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_adopting_save_of_measured_and_axis_only_banks_never_crashes_or_invents_agreement[save]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_current_bank_inputs_arrays_and_factors_match_independent_rounded_calculation[cli-output-absent-empty-chebyshev]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_current_bank_inputs_arrays_and_factors_match_independent_rounded_calculation[cli-output-absent-empty-line-segment]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_save_mixed_backgrounds.py::test_current_bank_inputs_arrays_and_factors_match_independent_rounded_calculation[cli-output-absent-empty-polynomial]

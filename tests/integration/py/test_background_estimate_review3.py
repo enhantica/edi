@@ -155,8 +155,9 @@ def test_delegated_multibank_save_preserves_the_complete_due_host_background(
         for snapshot in before
     ]
     project.save_as(tmp_path / 'saved')
-    assert state(project.experiments[0]) == before[0], (
-        'Saving a due series beside a current bank must not mutate the live due host background'
+    assert state(project.experiments[0]) == expected_saved[0], (
+        'Saving a due series adopts independently rounded coefficients without estimating it; '
+        'identities, free flags, mode and exact basis constants remain unchanged'
     )
     assert state(project.experiments[1]) == expected_saved[1], (
         'Save adopts independently rounded six-digit current-bank coefficients '
