@@ -1300,6 +1300,10 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
         }
         const Loop* position_loop = block.loop_with("_background.position");
         const Loop* intensity_loop = block.loop_with("_background.intensity");
+        // No point loop at all is an empty background, as crysta writes and reads one.
+        if (position_loop == nullptr && intensity_loop == nullptr) {
+            return;
+        }
         if (position_loop == nullptr || intensity_loop == nullptr) {
             fail_schema(where, "background-loop-incomplete",
                         "line-segment background requires a loop declaring both "
@@ -2251,6 +2255,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
         experiment.excluded_regions.assign(std::move(regions));
     }
+
+    experiment.carried_calculation =
+        block_has_tag(block, "_data.intensity_calc") || block_has_tag(block, "_refln.intensity_calc");
 
     // The file's reflections, kept as read (model.hpp ExperimentBase::carried_reflections).
     if (const Loop* refln = block.loop_with("_refln.id"); refln != nullptr) {
@@ -4951,30 +4958,20 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     } catch (const IoError&) {
         return false;
     }
-    const Project& saved = *reopened;
+    return adopt_values(project, *reopened);
+}
+
+bool adopt_values(Project& project, const Project& saved) {
+    // Every bank's values round like any other's, a bank whose background estimate is due included; its estimate is
+    // not run (ADR-0040).
     bool changed = false;
     std::map<std::string, const Parameter*> held;
     for (const auto& slot : parameter_slots(saved)) {
         held.emplace(slot.unique_name, slot.parameter);
     }
-    // A bank whose background estimate is due was written with the engine's estimate and keeps its own points
-    // (ADR-0040): a save does not estimate the open project's background.
-    std::set<const Parameter*> due;
-    std::set<std::string> due_names;
-    for (const auto& experiment : project.experiments) {
-        if (background_estimate_due(*experiment)) {
-            due_names.insert(experiment->name.value());
-            for (const auto& point : experiment->background) {
-                due.insert(&point->intensity);
-            }
-            for (const auto& term : experiment->background_terms) {
-                due.insert(&term->coef);
-            }
-        }
-    }
     for (const auto& slot : parameter_slots(project)) {
         const auto found = held.find(slot.unique_name);
-        if (found == held.end() || due.contains(slot.parameter)) {
+        if (found == held.end()) {
             continue;
         }
         Parameter& parameter = *slot.parameter;
@@ -4991,7 +4988,7 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
     for (const auto& experiment : project.experiments) {
         for (const auto& held : saved.experiments) {
-            if (held->name.value() == experiment->name.value() && !due_names.contains(experiment->name.value()) &&
+            if (held->name.value() == experiment->name.value() &&
                 (experiment->background_estimate_inputs != held->background_estimate_inputs ||
                  experiment->background_estimate_points != held->background_estimate_points)) {
                 experiment->background_estimate_inputs = held->background_estimate_inputs;
@@ -5047,28 +5044,81 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
             changed = true;
         }
     }
+    // The fit's agreement records the save recomputed from the rounded values: each bank's, its phases' and every
+    // bank's together.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& written : saved.experiments) {
+            if (written->name.value() != experiment->name.value()) {
+                continue;
+            }
+            const auto record = std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor,
+                                         experiment->fit_prof_wr_factor, experiment->fit_prof_wr_expected,
+                                         experiment->fit_prof_cr_factor, experiment->fit_prof_cwr_factor,
+                                         experiment->fit_chi_square);
+            const auto kept = std::tie(written->fit_n_data_points, written->fit_prof_r_factor,
+                                       written->fit_prof_wr_factor, written->fit_prof_wr_expected,
+                                       written->fit_prof_cr_factor, written->fit_prof_cwr_factor,
+                                       written->fit_chi_square);
+            if (record != kept) {
+                std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor, experiment->fit_prof_wr_factor,
+                         experiment->fit_prof_wr_expected, experiment->fit_prof_cr_factor,
+                         experiment->fit_prof_cwr_factor, experiment->fit_chi_square) = kept;
+                changed = true;
+            }
+            const std::size_t links = std::min(experiment->linked_structures.size(), written->linked_structures.size());
+            for (std::size_t index = 0; index < links; ++index) {
+                LinkedStructure& link = *experiment->linked_structures[index];
+                const LinkedStructure& held_link = *written->linked_structures[index];
+                if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
+                    link.fit_f_r_factor != held_link.fit_f_r_factor) {
+                    link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
+                    link.fit_f_r_factor = held_link.fit_f_r_factor;
+                    changed = true;
+                }
+            }
+        }
+    }
+    FitResultRecord& result = project.fit_result;
+    const FitResultRecord& kept = saved.fit_result;
+    const auto pooled = std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected,
+                                 result.prof_cr_factor, result.prof_cwr_factor, result.reduced_chi_square,
+                                 result.objective_value, result.n_data_points, result.degrees_of_freedom);
+    const auto pooled_kept = std::tie(kept.prof_wr_factor, kept.prof_r_factor, kept.prof_wr_expected, kept.prof_cr_factor,
+                                      kept.prof_cwr_factor, kept.reduced_chi_square, kept.objective_value,
+                                      kept.n_data_points, kept.degrees_of_freedom);
+    if (!result.result_kind.empty() && pooled != pooled_kept) {
+        std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected, result.prof_cr_factor,
+                 result.prof_cwr_factor, result.reduced_chi_square, result.objective_value, result.n_data_points,
+                 result.degrees_of_freedom) = pooled_kept;
+        changed = true;
+    }
     return changed;
 }
 
 bool adopt_saved_project(Project& project, const std::string& directory) {
-    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one that held a
-    // calculation is calculated again from those values and written once more, so its calculated pattern and R factors
-    // describe the values beside them.
-    if (!adopt_saved_values(project, directory)) {
+    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
+    // results, calculated here or read from its file, is calculated again from those values and written once more, so
+    // its calculated pattern and R factors describe the values beside them.
+    std::optional<Project> reopened;
+    try {
+        reopened.emplace(load_project(directory, [](const std::string&) {}));
+    } catch (const IoError&) {
         return false;
     }
+    const bool changed = adopt_values(project, *reopened);
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
-        return (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+        return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
     });
     if (!calculated) {
-        return true;
+        return changed;
     }
     // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its
     // rounded values, in the open project and in the file, and a due bank keeps and writes its own points.
     project.refresh_calculated_pattern(DueEstimates::Defer);
+    refresh_agreement_records(project);
     save_project(project, directory);
-    return true;
+    return changed;
 }
 
 

@@ -3897,6 +3897,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // (null = never calculated here). A copy shares it, and is never current: see
     // computed_current().
     std::shared_ptr<const detail::ComputedSource> computed_source;
+    // Whether the file it was loaded from held calculated results, which the loader does not keep: a save calculates
+    // them again, as it does results calculated here. Cleared by a calculation.
+    bool carried_calculation = false;
     // This experiment's identity as a calculation input.
     detail::Epoch epoch;
     // Whether `data`'s computed columns and `refln` describe this experiment now: it is still held

@@ -2483,6 +2483,54 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
 
 }  // namespace
 
+void refresh_agreement_records(Project& project) {
+    if (!project.fit_result.held()) {
+        return;
+    }
+    with_saved_project(project, [&project](crysta::Project& engine) {
+        try {
+            crysta::calculate_project(engine, crysta::DueEstimates::Defer);
+        } catch (const std::invalid_argument&) {
+            return;  // nothing calculated: the records stay as they are
+        }
+        crysta::refresh_agreement_records(engine);
+        for (const auto& item : project.experiments) {
+            for (const crysta::BraggPdExperiment& bank : engine.experiments) {
+                if (bank.name.value() != item->name.value()) {
+                    continue;
+                }
+                item->fit_n_data_points = bank.fit_n_data_points.get();
+                item->fit_prof_r_factor = bank.fit_prof_r_factor.get();
+                item->fit_prof_wr_factor = bank.fit_prof_wr_factor.get();
+                item->fit_prof_wr_expected = bank.fit_prof_wr_expected.get();
+                item->fit_prof_cr_factor = bank.fit_prof_cr_factor.get();
+                item->fit_prof_cwr_factor = bank.fit_prof_cwr_factor.get();
+                item->fit_chi_square = bank.fit_chi_square.get();
+                auto link = item->linked_structures.begin();
+                for (const crysta::LinkedStructure& phase : bank.linked_structures) {
+                    if (link == item->linked_structures.end()) {
+                        break;
+                    }
+                    (*link)->fit_bragg_r_factor = phase.fit_bragg_r_factor.get();
+                    (*link)->fit_f_r_factor = phase.fit_f_r_factor.get();
+                    ++link;
+                }
+            }
+        }
+        FitResultRecord& result = project.fit_result;
+        const crysta::FitResultRecord& fitted = engine.fit_result;
+        result.prof_wr_factor = fitted.prof_wr_factor.get();
+        result.prof_r_factor = fitted.prof_r_factor.get();
+        result.prof_wr_expected = fitted.prof_wr_expected.get();
+        result.prof_cr_factor = fitted.prof_cr_factor.get();
+        result.prof_cwr_factor = fitted.prof_cwr_factor.get();
+        result.reduced_chi_square = fitted.reduced_chi_square.get();
+        result.objective_value = fitted.objective_value.get();
+        result.n_data_points = fitted.n_data_points.get();
+        result.degrees_of_freedom = fitted.degrees_of_freedom.get();
+    });
+}
+
 void save_project_via_crysta(const Project& model, const std::string& directory) {
     // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
     with_saved_project(model, [&directory](crysta::Project& project) {
@@ -4027,6 +4075,9 @@ void Project::publish_calculation(DueEstimates due) {
         bank.refln = std::move(reflections[index]);
         bank.computed_source = std::move(sources[index]);
     }
+    for (auto& bank : experiments) {
+        bank->carried_calculation = false;
+    }
 }
 // --- (edi ADR-0020 §1): the publication transaction -------------------------------
 
@@ -4287,6 +4338,7 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
             bank.computed_source.reset();
             continue;
         }
+        bank.carried_calculation = false;
         if (bank.reflections.has_value()) {
             bank.reflections->d_spacing = std::move(result.refln[index].d_spacing);
             bank.reflections->sin_theta_over_lambda = std::move(result.refln[index].sin_theta_over_lambda);
