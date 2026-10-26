@@ -128,14 +128,12 @@ WorkflowPage {
     basicItem: Component {
         EaComponents.SideBarColumn {
             id: analysisSidebar
-            // The fitted inputs are not edited while a fit runs.
+            // The table fills the sidebar down to its value slider: fitting is run from the status bar (the owner,
+            // 2026-10-26). The fitted inputs are not edited while a fit runs.
             ParametersGroup {
-                tableViewportHeight: analysisSidebar.height - fitting.height
+                tableViewportHeight: analysisSidebar.height
                 project: page.project
                 enabled: !(page.project && page.project.fit.running)
-            }
-            FittingGroup {
-                id: fitting
             }
         }
     }

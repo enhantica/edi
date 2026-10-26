@@ -13,8 +13,8 @@ import edi.app
 
 // One item of the status bar's fit area, as the bar's other items look (StatusBarItem: an icon, the key while the bar
 // has room for every key, the value; the owner, 2026-10-13), its value's digits in fixed-width cells (DigitText). A
-// framed item is a button: the Fit button and the fit status (the owner, 2026-10-26), with one padding and its icon and
-// word centred in the frame.
+// framed item is a button: the fit status and the status bar's fit buttons (the owner, 2026-10-26), with one padding
+// and its icon and word centred in the frame.
 Control {
     id: control
 
@@ -31,14 +31,19 @@ Control {
     property bool framed: false
     property color frameColor: AppColors.hoverHighlight
     property color frameHoverColor: AppColors.hoverHighlightStrong
+    // A framed item's word, which one that `dropsWord` gives up while the bar is short of room (`showWord` false),
+    // before the Fit button gives up its own (the owner, 2026-10-26).
+    property bool showWord: true
+    property bool dropsWord: false
     property bool shown: valueText !== ""
     // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13).
     readonly property real frameHeight: Math.round(font.pixelSize * 1.8)
+    readonly property bool wordShown: framed && (showWord || !dropsWord)
     // The item's width with its key shown, whether or not it is, and with its icon and value only: what the bar
-    // measures.
+    // measures. A framed item has no key; its word goes in the compact width unless it drops it.
     readonly property real valueWidth: framed ? word.implicitWidth : value.implicitWidth
-    readonly property real labelledWidth: iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
-    readonly property real compactWidth: iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding
+    readonly property real labelledWidth: framed ? iconLabel.implicitWidth + contentRow.spacing + word.implicitWidth + leftPadding + Math.round(font.pixelSize * 0.65) : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
+    readonly property real compactWidth: framed && dropsWord ? iconLabel.implicitWidth + 2 * leftPadding : iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + (framed ? Math.round(font.pixelSize * 0.65) : rightPadding)
     signal clicked
 
     visible: shown
@@ -47,7 +52,7 @@ Control {
     // A clickable or framed item keeps its frame clear of its icon and text (the owner, 2026-10-13). A framed one has
     // less space between its icon and word and more after the word, so the three look even (the owner, 2026-10-26).
     leftPadding: clickable || framed ? Math.round(font.pixelSize * 0.5) : 0
-    rightPadding: framed ? Math.round(font.pixelSize * 0.65) : leftPadding
+    rightPadding: wordShown ? Math.round(font.pixelSize * 0.65) : leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
@@ -70,7 +75,7 @@ Control {
         }
         EaElements.Label {
             id: keyLabel
-            visible: control.showKey
+            visible: control.showKey && !control.framed
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
             verticalAlignment: Text.AlignVCenter
@@ -95,7 +100,7 @@ Control {
         // ascent, which leaves a word a pixel low in the frame.
         EaElements.Label {
             id: word
-            visible: control.framed
+            visible: control.wordShown
             anchors.verticalCenter: parent.verticalCenter
             font: control.font
             color: control.valueColor
