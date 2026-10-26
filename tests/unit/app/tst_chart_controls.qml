@@ -103,6 +103,7 @@ Rectangle {
             verify(waitForPolish(chart) && waitForRendering(chart), "The production chart completes an actual rendering frame");
         }
         function openScan(mode, count = 3, noBackground = false) {
+            Style.Colors.theme = Style.Colors.LightTheme;
             Preferences.resetToDefaults();
             Preferences.chartHighlightSelected = false;
             Preferences.patternYScale = "linear";
@@ -136,6 +137,8 @@ Rectangle {
             const calculators = items(dialog.contentItem).filter(item => item.fontIcon === "calculator");
             verify(calculators.length > 0, "The calculation marker uses the approved calculator icon");
             const strip = explanation.parent;
+            const colours = items(strip).flatMap(item => [String(item.color), String(item.textColor)]).map(value => value.toUpperCase());
+            verify(owner.palettes[0].light.every(colour => colours.includes(colour)), "The live strip displays all eleven independently recorded palette positions");
             const before = grabImage(strip);
             verify(before.width > 0, "The live order strip renders actual pixels");
             verify(Session.project.createStructure(), "Adding a real project structure exercises the live assignment consumer");
