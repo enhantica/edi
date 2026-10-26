@@ -5,17 +5,27 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import zipfile
+from fractions import Fraction
 from pathlib import Path
 
 import edi
 import pytest
 
 from tests.conftest import crysta_reference_prefix
+from tests.fixtures.project_save.review2 import (
+    agreement,
+    bank_angle,
+    mixed_project,
+    ordinary_position,
+    special_position,
+)
 from tests.fixtures.scan_app.build_probe import fingerprint
 from tests.fixtures.scan_screen.harness import pinned_browser, prepare_browser_toolchain
+from tests.integration.py.test_anisotropic_adps import loop_rows
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -50,6 +60,11 @@ def observer(tmp_path_factory):
     assert receipt['production'] == fingerprint(ROOT), (
         'A transaction receipt must bind the actual production sources under test'
     )
+    for name, expected in receipt['fixture'].items():
+        path = ROOT / 'tests/fixtures/project_transactions' / name
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, (
+            'The observation binary must match the exact fixture sources being exercised'
+        )
     binary = Path(receipt['binary'])
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == receipt['binary_sha256'], (
         'A transaction gate must execute the source-qualified observation binary'
@@ -62,6 +77,11 @@ def observer(tmp_path_factory):
         assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == expected, (
             'The qualified SDK headers and manifest must retain their compiled input bytes'
         )
+    for key in ('original_app_library', 'original_core_library'):
+        original = receipt[key]
+        assert (
+            hashlib.sha256(Path(original['path']).read_bytes()).hexdigest() == original['sha256']
+        ), 'Every wrapped archive retains the identity of its original compiled production library'
     original = receipt['original_app_library']
     assert hashlib.sha256(Path(original['path']).read_bytes()).hexdigest() == original['sha256'], (
         'The observation boundary must retain its original production app archive identity'
@@ -69,15 +89,19 @@ def observer(tmp_path_factory):
     return receipt
 
 
-def observe(observer, group, tmp_path):
+def observe(observer, group, tmp_path, source=None):
     result = subprocess.run(
-        [observer['binary'], str(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'), group],
+        [
+            observer['binary'],
+            str(source or ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'),
+            group,
+        ],
         capture_output=True,
         text=True,
         timeout=45,
         check=False,
     )
-    (tmp_path / (group + '.log')).write_text(result.stdout + result.stderr)
+    (tmp_path / (group.replace('/', '_') + '.log')).write_text(result.stdout + result.stderr)
     assert result.returncode == 0, (
         'Every transaction observation must reach the actual production boundary: ' + result.stderr
     )
@@ -429,3 +453,330 @@ def test_required_browser_cleanup_failures_retain_inventory_and_retry(
         assert row['knownAfterRetry'] == sorted(expected), (
             'Only successful reconciliation replaces the known saved population'
         )
+
+
+@pytest.mark.parametrize('kind', ['folder', 'zip'])
+@pytest.mark.parametrize('second', ['save', 'move-folder', 'move-zip'])
+@pytest.mark.parametrize('first_ok', [False, True])
+@pytest.mark.parametrize('second_first', [False, True])
+@pytest.mark.parametrize('second_ok', [False, True])
+def test_pending_moving_save_refuses_every_competing_save_intent(
+    observer, tmp_path, kind, second, first_ok, second_first, second_ok
+):
+    group = (
+        f'save-conflict/{kind}/{second}/{int(first_ok)}/'
+        f'{int(second_first)}/{int(second_ok)}/0/none'
+    )
+    row = observe(observer, group, tmp_path)[0]
+    assert row['secondJobs'] == 0, (
+        'A held moving save refuses both another destination picker and an ordinary write'
+    )
+    if second == 'save':
+        assert not row['secondReturned'], 'A competing ordinary Save must explicitly refuse'
+    assert row['afterSecond'] == row['pending'], (
+        'A refused overlapping save changes no live scientific state or working place'
+    )
+    assert row['nextReturned'], 'Save authority is released after either first-write outcome'
+    assert row['nextReached'], 'The next Save reaches a real write after settlement'
+    assert not row['final']['modified'], 'The successfully retried next Save commits its revision'
+
+
+@pytest.mark.parametrize('kind', ['folder', 'zip'])
+@pytest.mark.parametrize('ok', [False, True])
+def test_edit_during_moving_save_keeps_new_values_and_recovery(observer, tmp_path, kind, ok):
+    row = observe(observer, f'save-conflict/{kind}/none/{int(ok)}/0/0/1/none', tmp_path)[0]
+    assert row['edited']['modified'], 'The held write overlaps a genuinely newer unsaved edit'
+    assert row['completed']['modified'], 'Older completion must retain the newer unsaved revision'
+    assert row['completed']['parameters'] == row['edited']['parameters'], (
+        'An older write cannot overwrite the new high-precision coordinate or uncertainty'
+    )
+    assert row['completed']['name'] == 'edited-during-moving-save', (
+        'An older write cannot overwrite metadata edited while publication was held'
+    )
+    assert not row['drops'], 'The older completion cannot remove recovery for a newer revision'
+    assert row['completed']['location'] == row['before']['location'], (
+        'A local edit during publication keeps the original durable location'
+    )
+    assert row['completed']['path'] == row['before']['path'], (
+        'A local edit during publication keeps the original working folder'
+    )
+    if ok:
+        assert any('unsaved' in message.casefold() for message in row['messages']), (
+            'A place written before a local refusal reports that the project stays unsaved'
+        )
+    assert row['nextReturned'], 'An edited held move releases save authority when it settles'
+    assert row['nextReached'], 'The newer revision can actually be saved after settlement'
+    assert not row['final']['modified'], 'The next durable success commits the newer revision'
+
+
+@pytest.mark.parametrize('kind', ['folder', 'zip'])
+@pytest.mark.parametrize('ok', [False, True])
+@pytest.mark.parametrize('replacement', ['desktop', 'example', 'new'])
+def test_late_moving_save_answer_cannot_change_a_replacement_project(
+    observer, tmp_path, kind, ok, replacement
+):
+    row = observe(observer, f'save-conflict/{kind}/none/{int(ok)}/0/0/0/{replacement}', tmp_path)[
+        0
+    ]
+    assert row['completed'] == row['replacementBefore'], (
+        'An obsolete save answer changes no value, metadata, array, location or modified flag '
+        'of a replacement project'
+    )
+
+
+@pytest.mark.parametrize('dirty', [False, True], ids=['clean', 'dirty'])
+@pytest.mark.parametrize(
+    ('route', 'kind'),
+    [
+        ('zip-as-missing', 'folder'),
+        ('zip-as-blocked', 'folder'),
+        ('zip-save', 'zip'),
+        ('web-save', 'browser'),
+        ('web-save', 'folder'),
+        ('web-save', 'zip'),
+        ('web-move', 'folder'),
+        ('web-move', 'zip'),
+    ],
+)
+def test_failed_publication_restores_the_complete_high_precision_live_snapshot(
+    observer, tmp_path, route, kind, dirty
+):
+    group = f'rollback/{route}/{kind}/' + ('dirty' if dirty else 'clean')
+    row = observe(observer, group, tmp_path)[0]
+    assert row['before']['modified'] is dirty, (
+        'Rollback covers both a genuinely clean origin and an already unsaved edit'
+    )
+    assert any(
+        p['value'] == 1.23456789 and not p['free'] and not p['uncertainty']
+        for p in row['before']['parameters']
+    ), (
+        'The pre-publication snapshot includes a no-su fixed value '
+        'actually moved by six-digit rounding'
+    )
+    assert any(bank.get('calculated') for bank in row['before']['scientific']['banks']), (
+        'Rollback starts with actual calculated arrays, not an uncalculated placeholder'
+    )
+    assert row['refused'] == row['before'], (
+        'Failed publication restores exact live values, uncertainties, metadata, arrays, '
+        'shown arrays, location and modified flag'
+    )
+    assert row['retry'], 'Removing the independent publication fault permits a real retry'
+    assert not row['afterRetry']['modified'], 'The successful retry commits its durable snapshot'
+    assert any(p['value'] == 1.23457 for p in row['afterRetry']['parameters']), (
+        'Successful retry adopts the independently rounded six-digit witness'
+    )
+
+
+@pytest.mark.parametrize('kind', ['folder', 'zip'])
+@pytest.mark.parametrize(
+    'intents',
+    [
+        (first, second)
+        for first in ('save', 'move', 'copy')
+        for second in ('save', 'move', 'copy')
+        if first != second
+    ],
+)
+@pytest.mark.parametrize('first_ok', [False, True])
+@pytest.mark.parametrize('second_first', [False, True])
+@pytest.mark.parametrize('second_ok', [False, True])
+def test_all_save_intents_share_authority_even_when_the_picker_aliases_the_current_place(
+    observer, tmp_path, kind, intents, first_ok, second_first, second_ok
+):
+    first, second = intents
+    group = (
+        f'save-alias-{first}/{kind}/{second}/{int(first_ok)}/'
+        f'{int(second_first)}/{int(second_ok)}/0/none'
+    )
+    row = observe(observer, group, tmp_path)[0]
+    assert row['secondJobs'] == 0, (
+        'Save, moving Save as and Save a copy share one authority even with a new key '
+        'for the current physical folder or ZIP'
+    )
+    assert row['afterSecond'] == row['edited'], (
+        'Every refused competing intent leaves the newer live revision completely unchanged'
+    )
+    if second == 'save':
+        assert not row['secondReturned'], 'A refused competing Save returns failure'
+    assert row['nextReturned'], 'Either first-write outcome releases authority for another Save'
+    assert row['nextReached'], 'The next Save reaches the actual write boundary'
+    assert not row['final']['modified'], 'A completed next Save is clean'
+    assert row['durableParameters'], 'The acknowledged place contains a real reopenable model'
+    assert row['durableParameters'] == row['final']['parameters'], (
+        'A clean project agrees with the last acknowledged immutable payload in its durable place'
+    )
+
+
+@pytest.mark.parametrize(
+    'route',
+    [
+        'zip-save',
+        'zip-as',
+        'zip-copy',
+        'folder-as',
+        'folder-copy',
+        'web-save-browser',
+        'web-save-folder',
+        'web-save-zip',
+        'web-move-folder',
+        'web-move-zip',
+        'web-copy-folder',
+        'web-copy-zip',
+    ],
+)
+def test_a_running_fit_refuses_every_save_before_staging_or_publication(observer, tmp_path, route):
+    row = observe(observer, f'fit-save/{route}/already', tmp_path)[0]
+    assert row['runningReached'], 'The refusal is observed while a real fit is running'
+    assert not row['returned'], 'A running fit refuses the requested save'
+    assert row['after'] == row['before'], (
+        'A refused save during fitting changes no values, arrays, metadata or working place'
+    )
+    assert row['jobs'] == 0, 'A running fit starts no picker, browser write or recovery write'
+    assert row['publications'] == 0, 'A running fit publishes no archive'
+    assert row['stages'] == 0, 'A running fit creates no staging folder'
+    assert row['folderUnchanged'], 'Refusal leaves all existing working-folder bytes unchanged'
+    assert row['archiveUnchanged'], 'Refusal leaves the existing ZIP bytes unchanged'
+    assert not row['destinationExists'], 'Refusal publishes no Save as destination'
+
+
+@pytest.mark.parametrize(
+    'route',
+    [
+        'web-save-browser',
+        'web-save-folder',
+        'web-save-zip',
+        'web-move-folder',
+        'web-move-zip',
+        'web-copy-folder',
+        'web-copy-zip',
+    ],
+)
+def test_a_fit_started_during_a_browser_write_refuses_local_adoption_and_movement(
+    observer, tmp_path, route
+):
+    row = observe(observer, f'fit-save/{route}/during', tmp_path)[0]
+    assert row['runningReached'], 'A real fit starts before the held write acknowledges success'
+    assert row['after'] == row['before'], (
+        'A write completed during a fit neither adopts values nor changes the live working place'
+    )
+    assert row['after']['modified'], 'A published place cannot make a fitting live project clean'
+    assert row['after']['path'] == row['heldBefore']['path'], (
+        'The live project retains its original working folder after local adoption is refused'
+    )
+    assert not row['drops'], 'Refused local adoption retains recovery'
+    assert any('unsaved' in message.casefold() for message in row['messages']), (
+        'A write completed during a fit reports that the live project stays unsaved'
+    )
+
+
+@pytest.mark.parametrize('route', ['zip-save', 'zip-as'])
+def test_successful_desktop_zip_publication_uses_exactly_one_staged_snapshot(
+    observer, tmp_path, route
+):
+    row = observe(observer, f'fit-save/{route}/success', tmp_path)[0]
+    assert row['returned'], 'The independent writable ZIP destination accepts Save'
+    assert row['publications'] == 1, 'A desktop ZIP save publishes exactly one archive'
+    assert len(row['sources']) == 1, 'The one archive delegates to the actual production writer'
+    assert row['after']['path'] == row['sources'][0], (
+        'The open project works in the same staged snapshot used for the archive'
+    )
+    assert row['after']['parameters'] == row['archivedParameters'], (
+        'The adopted live values, uncertainties and free flags equal an independent archive reopen'
+    )
+    assert not row['after']['modified'], 'Successful publication commits the adopted snapshot'
+
+
+@pytest.mark.parametrize('web', [False, True], ids=['desktop', 'web'])
+@pytest.mark.parametrize('empty', [False, True], ids=['points', 'empty'])
+@pytest.mark.parametrize('provenance', ['stale', 'absent'])
+def test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays(
+    observer, tmp_path, web, empty, provenance
+):
+
+    source = mixed_project(tmp_path / 'input', empty=empty, provenance=provenance)
+    row = observe(observer, 'mixed-web' if web else 'mixed-desktop', tmp_path, source)[0]
+    assert not row['error'], 'The independently valid mixed-bank project accepts Save to'
+    assert row['immediate'] == row['before'], (
+        'Synchronous adoption preserves every due row, term, constant, flag, option and digest'
+    )
+    assert row['after'] == row['before'], (
+        'The save preview never estimates or alters the due bank in the live project'
+    )
+    assert row['file'] == row['before'], (
+        'The persisted due bank retains its complete exact pre-save state'
+    )
+    assert row['shownAfter']['due'] == row['shownBefore']['due'], (
+        'The app publishes no recalculated pattern or background arrays for a due bank'
+    )
+    assert row['shownBefore']['current']['calculated'], (
+        'The app-array observation reaches a populated actual current-bank PatternModel'
+    )
+    assert row['inputs'] == [1.23457, 1.23457], (
+        'The current bank adopts independently rounded six-digit background inputs'
+    )
+    assert row['liveCurrent'] == [1.23457] * 4, (
+        'Zero scale and rounded constant background independently fix the live pattern'
+    )
+    assert row['fileCurrent'] == row['liveCurrent'], 'The file and live current pattern agree'
+    assert row['freshCurrent'] == row['liveCurrent'], (
+        'A fresh reopen and calculation agrees with the saved current pattern'
+    )
+    records = loop_rows(row['analysis'], '_fit_result_bank')
+    current = next((r for r in records if r['_fit_result_bank.experiment_id'] == 'current'), None)
+    assert current is not None, 'The current bank retains its real persisted agreement record'
+    for key, value in agreement(1.23457).items():
+        assert float(current['_fit_result_bank.' + key]) == pytest.approx(
+            float(format(value, '.6g')), rel=1e-12
+        ), 'Saved current-bank factors match independent weighted residuals of the rounded pattern'
+
+
+@pytest.mark.parametrize('kind', ['special', 'ordinary', 'bank-normal', 'bank-exact'])
+@pytest.mark.parametrize('surface', ['field', 'Text'])
+def test_actual_app_fields_and_text_decode_to_exact_save_policy_values(
+    observer, tmp_path, kind, surface
+):
+
+    if kind == 'special':
+        source = special_position(tmp_path / 'input')
+        names = ('fract_x', 'fract_y', 'fract_z')
+        expected = [1 / 3, 2 / 3, 1 / 4]
+    elif kind == 'ordinary':
+        source = ordinary_position(tmp_path / 'input')
+        names, expected = ('fract_x',), [0.123457]
+    else:
+        source = bank_angle(tmp_path / 'input', exact=kind == 'bank-exact')
+        names = ('setup_twotheta_bank',)
+        expected = [94.90931761529106 if kind == 'bank-exact' else 94.9093]
+    row = observe(observer, 'exact-fields', tmp_path, source)[0]
+    if surface == 'field':
+        actual = []
+        for name in names:
+            fields = [
+                item
+                for item in row['fields']
+                if item['name'] == name
+                and (item['block'] == 'bank' if kind.startswith('bank') else item['row'] == 'A')
+            ]
+            assert len(fields) == 1, (
+                'The native QML field binds exactly one independently named live item'
+            )
+            item = fields[0]
+            assert item['text'], 'The actual ParameterField displays a nonempty native text value'
+            assert not item['fileSu'], 'Fixed and symmetry-fixed fields invent no uncertainty'
+            actual.append(float(Fraction(item['text'])))
+            assert float(Fraction(item['editText'])).hex() == expected[len(actual) - 1].hex(), (
+                'Focusing a field retains the exact same saved-policy value'
+            )
+    elif kind.startswith('bank'):
+        match = re.search(r'(?m)^_instrument.setup_twotheta_bank\s+(\S+)', row['experimentText'])
+        assert match is not None, 'The real Experiment Text tab exposes its bank-angle file token'
+        actual = [float(match[1])]
+    else:
+        atoms = loop_rows(row['structureText'], '_atom_site')
+        atom = next((a for a in atoms if a['_atom_site.id'] == 'A'), None)
+        assert atom is not None, 'The real Structure Text tab retains the authored atom A'
+        actual = [float(atom['_atom_site.' + name]) for name in names]
+    assert [value.hex() for value in actual] == [value.hex() for value in expected], (
+        'The actual app surface decodes to canonical thirds, six-digit ordinary values '
+        'or the full-precision bank angle under the all-exact fallback'
+    )

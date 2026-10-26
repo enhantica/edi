@@ -128,6 +128,39 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
         )
     if reached != set(names.values()):
         raise RuntimeError('Every boundary must replace an actual compiled method definition')
+    core_library = next(arg for arg in tokens if arg.endswith('/libedi_core.a'))
+    core_observed = output / 'libedi_core_observed.a'
+    shutil.copy2(native / core_library, core_observed)
+    member = output / 'project_archive.cpp.o'
+    with member.open('wb') as stream:
+        subprocess.run(
+            [str(prefix / 'bin/llvm-ar'), 'p', str(core_observed), member.name],
+            stdout=stream,
+            check=True,
+        )
+    defined = run([str(prefix / 'bin/llvm-nm'), '--defined-only', str(member)])
+    archive_names = {}
+    for spelling, replacement in [
+        ('write_project_archive', 'transaction_real_archive'),
+        ('fresh_archive_directory', 'transaction_real_directory'),
+    ]:
+        matches = [
+            line.split()[-1]
+            for line in defined.splitlines()
+            if len(line.split()) >= 3 and line.split()[-2] == 'T' and spelling in line.split()[-1]
+        ]
+        if len(matches) != 1:
+            raise RuntimeError('Each archive observation delegates exactly one real definition')
+        archive_names[matches[0]] = ('_' if sys.platform == 'darwin' else '') + replacement
+    subprocess.run(
+        [
+            str(prefix / 'bin/llvm-objcopy'),
+            *(f'--redefine-sym={old}={new}' for old, new in archive_names.items()),
+            str(member),
+        ],
+        check=True,
+    )
+    subprocess.run([str(prefix / 'bin/llvm-ar'), 'r', str(core_observed), str(member)], check=True)
     adapted = output / 'probe.cpp'
     text = source.read_text()
     for literal in re.findall(r'__asm__\(\s*((?:"[^"]*"\s*)+)\)', text):
@@ -140,7 +173,10 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
         env=environment,
         check=True,
     )
-    command = [str(observed) if arg == library else arg for arg in tokens]
+    command = [
+        str(observed) if arg == library else str(core_observed) if arg == core_library else arg
+        for arg in tokens
+    ]
     command.insert(command.index(str(observed)), str(observer))
     subprocess.run(command, cwd=native, env=environment, check=True)
     linked = {
@@ -173,6 +209,11 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
             'path': str(native / library),
             'sha256': digest(native / library),
         },
+        'original_core_library': {
+            'path': str(native / core_library),
+            'sha256': digest(native / core_library),
+        },
+        'archive_boundary': archive_names,
         'sdk': {
             str(path): digest(path)
             for parent in ('include', 'share/crysta-sdk')

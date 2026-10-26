@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMap>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlExpression>
@@ -15,6 +16,8 @@
 #include <QThread>
 #include <QtQml>
 #include <QtTest/QSignalSpy>
+#include <bit>
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -26,16 +29,41 @@
 #include "session.hpp"
 #include "web_storage.hpp"
 #undef private
+#include "block_text.hpp"
+#include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
+#include "experiment_view_model.hpp"
+#include "fit_view_model.hpp"
+#include "parameter_item.hpp"
+#include "pattern_model.hpp"
+#include "structure_view_model.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 using namespace edi_app;
 namespace {
+QStringList archiveSources, archiveTargets, stageKinds;
 bool browser = false;
+using Image = QMap<QString, QByteArray>;
+QMap<QString, Image> durable;
+bool aliasPlaces = false;
+void need(bool, const char*);
+Image image(const QString& root) {
+    Image result;
+    QDirIterator files(root, QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const auto name = files.next();
+        QFile input(name);
+        need(input.open(QIODevice::ReadOnly), "Submitted snapshot files remain readable");
+        result.insert(QDir(root).relativeFilePath(name), input.readAll());
+    }
+    return result;
+}
+
 struct Job {
     QString action, key, kind, root;
     bool recovery;
     WebStorage::Answer answer;
+    Image payload;
 };
 std::vector<Job> jobs;
 QStringList drops;
@@ -61,6 +89,75 @@ QString copy(const QString& input, const QString& destination) {
                           std::filesystem::copy_options::recursive);
     return destination;
 }
+QString bits(double value) { return QString::number(std::bit_cast<std::uint64_t>(value), 16); }
+template <typename Column>
+QJsonArray numberBits(const Column& values) {
+    QJsonArray out;
+    for (double value : values) out.append(bits(value));
+    return out;
+}
+QJsonObject scientificState(const edi::Project& project) {
+    const auto& m = project.metadata;
+    const auto text = [](const std::string& value) { return QString::fromStdString(value); };
+    QJsonObject metadata{{"name", text(m.name)},
+                         {"title", text(m.title)},
+                         {"description", text(m.description)},
+                         {"authors", text(m.authors)},
+                         {"path", text(m.path)},
+                         {"created", text(m.created)},
+                         {"lastModified", text(m.last_modified)},
+                         {"timestamp", text(m.timestamp)}};
+    QJsonArray banks;
+    for (const auto& bank : project.experiments) {
+        QJsonObject row{{"name", text(bank->name.value())},
+                        {"inputsDigest", QString::number(bank->background_estimate_inputs, 16)},
+                        {"pointsDigest", QString::number(bank->background_estimate_points, 16)}};
+        if (bank->data) {
+            const auto& data = *bank->data;
+            row["calculated"] = numberBits(data.intensity_calc);
+            row["background"] = numberBits(data.intensity_bkg);
+            row["residual"] = numberBits(data.residual);
+            row["spacing"] = numberBits(data.d_spacing);
+            row["components"] = numberBits(data.component_intensities_net);
+            QJsonArray status;
+            for (const auto& value : data.calc_status) status.append(text(value));
+            row["status"] = status;
+        }
+        banks.append(row);
+    }
+    return {{"metadata", metadata}, {"banks", banks}};
+}
+QJsonObject shownState(ProjectViewModel& project) {
+    QJsonObject shown;
+    for (auto* bank : project.findChildren<ExperimentViewModel*>()) {
+        auto* model = bank->pattern();
+        QJsonArray values, backgrounds;
+        for (int row = 0; row < model->rowCount(); ++row) {
+            const auto index = model->index(row, 0);
+            values.append(bits(model->data(index, PatternModel::IntensityCalcRole).toDouble()));
+            backgrounds.append(
+                bits(model->data(index, PatternModel::IntensityBkgRole).toDouble()));
+        }
+        shown[bank->name()] = QJsonObject{
+            {"calculated", values}, {"background", backgrounds}, {"stale", model->stale()}};
+    }
+    return shown;
+}
+QString preciseInput(const QString& source, const QString& destination) {
+    copy(source, destination);
+    const QString name = destination + "/structures/phase.edi";
+    QFile file(name);
+    need(file.open(QIODevice::ReadOnly), "High-precision author input exists");
+    QByteArray data = file.readAll();
+    file.close();
+    need(data.contains("_cell.length_a 4.1\n"),
+         "The authored cell witness reaches its actual tag");
+    data.replace("_cell.length_a 4.1\n", "_cell.length_a 1.23456789\n");
+    need(file.open(QIODevice::WriteOnly | QIODevice::Truncate),
+         "High-precision author input is writable");
+    file.write(data);
+    return destination;
+}
 QJsonObject state(Session& session) {
     QJsonArray parameters;
     if (session.project()) {
@@ -82,9 +179,12 @@ QJsonObject state(Session& session) {
             {"needsSaveAs", session.needsSaveAs()},
             {"example", session.openedExample()},
             {"archive", session.openedArchive()},
-            {"parameters", parameters}};
+            {"parameters", parameters},
+            {"scientific",
+             session.project() ? scientificState(session.project()->project()) : QJsonObject()},
+            {"shown", session.project() ? shownState(*session.project()) : QJsonObject()}};
 }
-void finish(size_t index, bool ok, const QString& input = {}) {
+void finish(size_t index, bool ok, const QString& input = {}, bool pump = true) {
     need(index < jobs.size(), "A completion must belong to an actually started I/O request");
     Job job = jobs[index];
     jobs[index].answer = {};
@@ -93,11 +193,13 @@ void finish(size_t index, bool ok, const QString& input = {}) {
     answer.ok = ok;
     answer.key = job.key;
     answer.kind = job.kind;
-    answer.name = QFileInfo(input).fileName();
+    answer.name = input.isEmpty() ? job.key : QFileInfo(input).fileName();
     answer.message = "Independent boundary refusal";
     if (!input.isEmpty()) answer.path = copy(input, job.root + "/" + QFileInfo(input).fileName());
+    if (ok && job.action == "write" && !job.recovery)
+        durable[aliasPlaces ? QString("working") : job.key] = job.payload;
     job.answer(answer);
-    turn();
+    if (pump) turn();
 }
 void start(Session& session, const QString& route, const QString& key) {
     if (route == "Open")
@@ -419,7 +521,562 @@ QJsonObject desktopSave(const QString& source, const QString& origin, const QStr
             {"reopened", reopened},
             {"reopenedName", reopened ? session.project()->name() : QString()}};
 }
+std::size_t nextWrite(std::size_t begin) {
+    for (std::size_t i = begin; i < jobs.size(); ++i)
+        if (jobs[i].action == "write" && !jobs[i].recovery && jobs[i].answer) return i;
+    return jobs.size();
+}
+std::size_t beginMove(Session& session, const QString& kind, bool isCopy = false) {
+    const std::size_t before = jobs.size();
+    session.saveWebProjectAs(kind, isCopy);
+    if (jobs.size() == before) return jobs.size();
+    need(jobs[before].action == "pickSave",
+         "A moving save starts at the actual destination picker");
+    finish(before, true);
+    return nextWrite(before + 1);
+}
+void openBrowserInput(Session& session, const QString& source, const QString& kind) {
+    browser = false;
+    need(session.openProject(QUrl::fromLocalFile(source)),
+         "The independent precision input opens");
+    settle(session);
+    browser = true;
+    WebStorage::instance()->usable_ = true;
+    jobs.clear();
+    drops.clear();
+    session.openStoredProject("initial", false);
+    need(jobs.size() == 1, "Opening reaches the held browser read");
+    jobs[0].kind = kind;
+    finish(0, true, source);
+    settle(session);
+    jobs.clear();
+    drops.clear();
+}
+QJsonObject saveConflict(const QString& source, const QStringList& spec) {
+    need(spec.size() == 8,
+         "A save conflict declares kind, second intent, outcomes, order, edit and replacement");
+    const QString kind = spec[1], second = spec[2], replacement = spec[7];
+    const bool alias = spec[0].startsWith("save-alias-");
+    const QString firstAction = alias ? spec[0].mid(11) : QString("move");
+    const bool firstOk = spec[3] == "1", secondFirst = spec[4] == "1", secondOk = spec[5] == "1",
+               edit = spec[6] == "1";
+    QTemporaryDir temp;
+    Session session;
+    const QString input = preciseInput(source, temp.filePath("precision-input"));
+    openBrowserInput(session, input, alias ? kind : QString("folder"));
+    aliasPlaces = alias;
+    durable.clear();
+    if (alias) session.project()->setName("first-submitted-revision");
+    QStringList messages;
+    QObject::connect(&session, &Session::webSaved, &session,
+                     [&](const QString& text) { messages.append(text); });
+    QObject::connect(&session, &Session::webSaveFailed, &session,
+                     [&](const QString& text) { messages.append(text); });
+    const auto before = state(session);
+    std::size_t first;
+    if (firstAction == "save") {
+        const auto start = jobs.size();
+        session.save();
+        first = nextWrite(start);
+    } else
+        first = beginMove(session, kind, firstAction == "copy");
+    need(first < jobs.size(), "The first moving save reaches an actual held write");
+    auto pending = state(session);
+    if (edit || alias) {
+        session.project()->setName("edited-during-moving-save");
+        session.project()->currentStructure()->cell()->lengthA()->setValue(1.45678901);
+        settle(session);
+        session.keepChanges();
+    }
+    const auto edited = state(session);
+    if (replacement != "none") {
+        browser = false;
+        if (replacement == "example")
+            need(session.openExample("pd-neut-cwl_cosio-d20"),
+                 "A real example supersedes the save");
+        else if (replacement == "new")
+            need(session.createProject("replacement", "", temp.filePath("new")),
+                 "A real New project supersedes the save");
+        else
+            need(session.openProject(
+                     QUrl::fromLocalFile(copy(source, temp.filePath("replacement")))),
+                 "A real desktop open supersedes the save");
+        settle(session);
+        browser = true;
+    }
+    const auto replacementBefore = state(session);
+    const auto countBefore = jobs.size();
+    bool secondReturned = false;
+    std::size_t secondWrite = jobs.size();
+    if (!edit && replacement == "none") {
+        if (second == "save") {
+            secondReturned = session.save();
+            secondWrite = nextWrite(countBefore);
+        } else
+            secondWrite = beginMove(session, alias ? kind : second.mid(5), second == "copy");
+    }
+    const auto afterSecond = state(session);
+    const auto secondJobs = jobs.size() - countBefore;
+    const bool acceptedSecond = secondWrite < jobs.size() && jobs[secondWrite].action == "write";
+    QJsonArray after;
+    auto done = [&](std::size_t index, bool ok) {
+        finish(index, ok);
+        settle(session);
+        after.append(state(session));
+    };
+    if (acceptedSecond && secondFirst) done(secondWrite, secondOk);
+    done(first, firstOk);
+    if (acceptedSecond && !secondFirst) done(secondWrite, secondOk);
+    const auto completed = state(session);
+    const auto dropsAfterFirst = drops;
+    const auto messagesAfterFirst = messages;
+    const auto nextStart = jobs.size();
+    bool nextReturned = false;
+    bool nextReached = false;
+    if (replacement == "none") {
+        WebStorage::instance()->usable_ = true;
+        session.project()->setName("next-save-after-settlement");
+        nextReturned = session.save();
+        const auto next = nextWrite(nextStart);
+        nextReached = next < jobs.size();
+        if (nextReached) finish(next, true);
+        settle(session);
+    }
+    const auto final = state(session);
+    QJsonArray durableParameters;
+    if (alias && durable.contains("working")) {
+        const auto root = temp.filePath("durable-reopen");
+        for (auto file = durable["working"].cbegin(); file != durable["working"].cend(); ++file) {
+            const auto path = root + "/" + file.key();
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QFile out(path);
+            need(out.open(QIODevice::WriteOnly), "Materialize the acknowledged boundary payload");
+            out.write(file.value());
+        }
+        auto reopened = edi::load_project(root.toStdString());
+        for (const auto& entry : edi::parameter_entries(reopened)) {
+            const auto& parameter = *entry.parameter;
+            durableParameters.append(QJsonObject{
+                {"path", QString::fromStdString(entry.path)},
+                {"value", static_cast<double>(parameter.value)},
+                {"uncertainty",
+                 parameter.uncertainty ? QJsonValue(*parameter.uncertainty) : QJsonValue()},
+                {"free", static_cast<bool>(parameter.free)}});
+        }
+    }
+    aliasPlaces = false;
+    browser = false;
+    return {{"kind", kind},
+            {"second", second},
+            {"firstAction", firstAction},
+            {"durableParameters", durableParameters},
+            {"firstOk", firstOk},
+            {"secondFirst", secondFirst},
+            {"secondOk", secondOk},
+            {"edit", edit},
+            {"replacement", replacement},
+            {"before", before},
+            {"pending", pending},
+            {"edited", edited},
+            {"replacementBefore", replacementBefore},
+            {"afterSecond", afterSecond},
+            {"secondJobs", int(secondJobs)},
+            {"secondReturned", secondReturned},
+            {"after", after},
+            {"completed", completed},
+            {"messages", QJsonArray::fromStringList(messagesAfterFirst)},
+            {"drops", QJsonArray::fromStringList(dropsAfterFirst)},
+            {"nextReturned", nextReturned},
+            {"nextReached", nextReached},
+            {"final", final}};
+}
+QJsonObject rollback(const QString& source, const QStringList& spec) {
+    need(spec.size() == 4, "A rollback declares route, browser place and clean or dirty start");
+    const QString route = spec[1], kind = spec[2];
+    const bool dirty = spec[3] == "dirty";
+    QTemporaryDir temp;
+    Session session;
+    QString input = preciseInput(source, temp.filePath("precision-input"));
+    browser = false;
+    const bool web = route.startsWith("web-");
+    if (web)
+        openBrowserInput(session, input, kind);
+    else {
+        if (route == "zip-save") {
+            const QString archive = temp.filePath("original.zip");
+            edi::write_project_archive(input.toStdString(), archive.toStdString());
+            input = archive;
+        }
+        need(session.openProject(QUrl::fromLocalFile(input)),
+             "The rollback precision input really opens");
+        settle(session);
+    }
+    if (dirty) session.project()->setName("dirty-before-refusal");
+    const auto before = state(session);
+    bool returned = false;
+    QString blocked;
+    if (web) {
+        const auto start = jobs.size();
+        if (route == "web-move")
+            beginMove(session, kind);
+        else
+            returned = session.save();
+        const auto write = nextWrite(start);
+        need(write < jobs.size(), "Publication refusal reaches the held real write callback");
+        finish(write, false);
+    } else if (route == "zip-save") {
+        need(QFile::remove(input), "The actual archive becomes independently unwritable");
+        need(QDir().mkpath(input),
+             "An existing directory refuses archive replacement even as root");
+        blocked = input;
+        returned = session.save();
+    } else {
+        blocked = temp.filePath("missing-parent/result.zip");
+        if (route == "zip-as-blocked") {
+            QFile blocker(temp.filePath("blocker"));
+            need(blocker.open(QIODevice::WriteOnly),
+                 "An independent non-directory parent is created");
+            blocker.write("keep");
+            blocker.close();
+            blocked = blocker.fileName() + "/result.zip";
+        }
+        returned = session.saveProjectAs(QUrl::fromLocalFile(blocked), true, false);
+    }
+    settle(session);
+    const auto refused = state(session);
+    bool retry = false;
+    if (web) {
+        WebStorage::instance()->usable_ = true;
+        const auto start = jobs.size();
+        if (route == "web-move")
+            beginMove(session, kind);
+        else
+            retry = session.save();
+        const auto write = nextWrite(start);
+        if (write < jobs.size()) {
+            finish(write, true);
+            retry = true;
+        }
+    } else if (route == "zip-save") {
+        need(QDir(blocked).removeRecursively(), "The independent archive obstruction is removed");
+        retry = session.save();
+    } else
+        retry =
+            session.saveProjectAs(QUrl::fromLocalFile(temp.filePath("retry.zip")), true, false);
+    settle(session);
+    const auto afterRetry = state(session);
+    browser = false;
+    return {{"route", route},       {"kind", kind},
+            {"dirty", dirty},       {"before", before},
+            {"returned", returned}, {"refused", refused},
+            {"retry", retry},       {"afterRetry", afterRetry}};
+}
+QJsonValue optionalNumber(const std::optional<double>& value) {
+    return value ? QJsonValue(bits(*value)) : QJsonValue();
+}
+QJsonObject backgroundState(const edi::ExperimentBase& bank) {
+    QJsonArray points, terms;
+    for (const auto& p : bank.background)
+        points.append(QJsonObject{{"id", QString::fromStdString(p->id.value())},
+                                  {"position", bits(p->position)},
+                                  {"value", bits(p->intensity.value)},
+                                  {"su", optionalNumber(p->intensity.uncertainty)},
+                                  {"free", bool(p->intensity.free)}});
+    for (const auto& p : bank.background_terms)
+        terms.append(QJsonObject{{"id", QString::fromStdString(p->id.value())},
+                                 {"order", int(p->order)},
+                                 {"value", bits(p->coef.value)},
+                                 {"su", optionalNumber(p->coef.uncertainty)},
+                                 {"free", bool(p->coef.free)}});
+    const auto text = [](const std::optional<std::string>& value) {
+        return value ? QJsonValue(QString::fromStdString(*value)) : QJsonValue();
+    };
+    return {{"type", QString::fromStdString(bank.background_type)},
+            {"points", points},
+            {"terms", terms},
+            {"origin", optionalNumber(bank.background_origin)},
+            {"minimum", optionalNumber(bank.background_x_min)},
+            {"maximum", optionalNumber(bank.background_x_max)},
+            {"mode", text(bank.background_estimate_mode)},
+            {"method", text(bank.background_estimate_method)},
+            {"width", optionalNumber(bank.background_estimate_width)},
+            {"smoothness", optionalNumber(bank.background_estimate_smoothness)},
+            {"tolerance", optionalNumber(bank.background_estimate_tolerance)},
+            {"inPeaks", text(bank.background_estimate_in_peaks)},
+            {"useModel", text(bank.background_estimate_use_model)},
+            {"nPoints", bank.background_estimate_n_points
+                            ? QJsonValue(*bank.background_estimate_n_points)
+                            : QJsonValue()},
+            {"maxTerms", bank.background_estimate_max_terms
+                             ? QJsonValue(*bank.background_estimate_max_terms)
+                             : QJsonValue()},
+            {"inputs", QString::number(bank.background_estimate_inputs, 16)},
+            {"pointsDigest", QString::number(bank.background_estimate_points, 16)}};
+}
+auto namedBank(const edi::Project& project, const char* name) {
+    for (const auto& bank : project.experiments)
+        if (bank->name.value() == name) return bank;
+    throw std::runtime_error("The authored mixed-bank project retains both named banks");
+}
+QJsonObject mixedSave(const QString& source, bool web) {
+    QTemporaryDir temp;
+    browser = web;
+    auto core = edi::load_project(copy(source, temp.filePath("input")).toStdString());
+    auto due = namedBank(core, "due");
+    const auto mode = due->background_estimate_mode;
+    const auto inputs = due->background_estimate_inputs, points = due->background_estimate_points;
+    // Prepare an already-open model through the public model, without an opening Auto estimate.
+    due->background_estimate_mode = "manual";
+    ProjectViewModel project(std::move(core), nullptr);
+    QElapsedTimer clock;
+    clock.start();
+    while (project.calculating() && clock.elapsed() < 10000) {
+        turn();
+        QThread::msleep(1);
+    }
+    need(!project.calculating(), "Initial Manual preview completes before the save stimulus");
+    due->background_estimate_mode = mode;
+    due->background_estimate_inputs = inputs;
+    due->background_estimate_points = points;
+    const auto before = backgroundState(*due);
+    const auto shownBefore = shownState(project);
+    const auto scientificBefore = scientificState(project.project());
+    const QString output = temp.filePath("saved");
+    const QString error = project.saveTo(output);
+    const auto immediate = backgroundState(*namedBank(project.project(), "due"));
+    clock.restart();
+    while (project.calculating() && clock.elapsed() < 10000) {
+        turn();
+        QThread::msleep(1);
+    }
+    need(!project.calculating(), "The save's publication preview finishes");
+    auto reopened = edi::load_project(output.toStdString());
+    QFile analysis(output + "/analysis/analysis.edi");
+    need(analysis.open(QIODevice::ReadOnly), "The save writes its actual analysis record");
+    const auto analysisText = QString::fromUtf8(analysis.readAll());
+    QJsonArray liveCurrent, fileCurrent, freshCurrent, liveInputs;
+    for (const auto& point : namedBank(project.project(), "current")->background)
+        liveInputs.append(double(point->intensity.value));
+    const auto currentValues = [](const edi::Project& p) {
+        QJsonArray out;
+        const auto& bank = namedBank(p, "current");
+        if (bank->data)
+            for (double value : bank->data->intensity_calc) out.append(value);
+        return out;
+    };
+    liveCurrent = currentValues(project.project());
+    fileCurrent = currentValues(reopened);
+    namedBank(reopened, "due")->background_estimate_mode = "manual";
+    reopened.refresh_calculated_pattern();
+    freshCurrent = currentValues(reopened);
+    const auto after = backgroundState(*namedBank(project.project(), "due"));
+    auto exactFile = edi::load_project(output.toStdString());
+    browser = false;
+    return {{"error", error},
+            {"before", before},
+            {"immediate", immediate},
+            {"after", after},
+            {"file", backgroundState(*namedBank(exactFile, "due"))},
+            {"shownBefore", shownBefore},
+            {"shownAfter", shownState(project)},
+            {"scientificBefore", scientificBefore},
+            {"scientificAfter", scientificState(project.project())},
+            {"inputs", liveInputs},
+            {"liveCurrent", liveCurrent},
+            {"fileCurrent", fileCurrent},
+            {"freshCurrent", freshCurrent},
+            {"analysis", analysisText}};
+}
+QJsonObject exactFields(const QString& source) {
+    QTemporaryDir temp;
+    browser = false;
+    QQmlEngine engine;
+    edi_app::configure_engine(engine);
+    QQmlComponent main(&engine);
+    main.loadFromModule("edi.app", "Main");
+    std::unique_ptr<QObject> window(main.create());
+    need(bool(window), qPrintable(main.errorString()));
+    auto* session = engine.singletonInstance<Session*>("edi.app", "Session");
+    need(
+        session && session->openProject(QUrl::fromLocalFile(copy(source, temp.filePath("input")))),
+        "Exact field input opens through the actual Session");
+    settle(*session);
+    need(session->saveProjectAs(QUrl::fromLocalFile(temp.filePath("saved")), false, false),
+         "The exact field gate reaches actual Save as and adoption");
+    settle(*session);
+    QJsonArray rows;
+    for (auto* item : session->project()->findChildren<ParameterItem*>()) {
+        if (!(item->uid() == "instrument.setup_twotheta_bank" ||
+              (item->blockName() == "phase" &&
+               (item->rowLabel() == "A" || item->category() == "cell"))))
+            continue;
+        QQmlComponent field(&engine,
+                            QUrl("qrc:/qt/qml/edi/app/qml/Components/ParameterField.qml"));
+        std::unique_ptr<QObject> native(
+            field.createWithInitialProperties({{"item", QVariant::fromValue(item)}}));
+        need(bool(native), qPrintable(field.errorString()));
+        rows.append(QJsonObject{{"uid", item->uid()},
+                                {"name", item->name()},
+                                {"row", item->rowLabel()},
+                                {"block", item->blockName()},
+                                {"value", item->value()},
+                                {"fileValue", item->fileValue()},
+                                {"fileSu", item->fileSu()},
+                                {"text", native->property("text").toString()},
+                                {"editText", native->property("editText").toString()}});
+    }
+    return {{"fields", rows},
+            {"structureText", session->project()->currentStructure()->text()->text()},
+            {"experimentText", session->project()->currentExperiment()->text()->text()}};
+}
+QJsonObject fitPublication(const QString& source, const QStringList& spec) {
+    need(spec.size() == 3, "Fit/save observations declare route and timing");
+    const QString route = spec[1], moment = spec[2];
+    const bool web = route.startsWith("web-");
+    const QString kind = route.endsWith("zip")       ? "zip"
+                         : route.endsWith("browser") ? "browser"
+                                                     : "folder";
+    const bool isCopy = route.contains("copy");
+    QTemporaryDir temp;
+    Session session;
+    QString input = preciseInput(source, temp.filePath("precision-input"));
+    browser = false;
+    if (web)
+        openBrowserInput(session, input, kind);
+    else {
+        if (route == "zip-save") {
+            const QString archive = temp.filePath("original.zip");
+            edi::write_project_archive(input.toStdString(), archive.toStdString());
+            input = archive;
+        }
+        need(session.openProject(QUrl::fromLocalFile(input)),
+             "The fit guard opens its actual input");
+        settle(session);
+    }
+    session.project()->setName("publication-fit-witness");
+    const QString destination =
+        temp.filePath(route.startsWith("folder") ? "chosen-folder" : "chosen.zip");
+    const QString workingBefore = session.project()->path();
+    const auto folderBefore = image(workingBefore);
+    QFile archive(input);
+    QByteArray archiveBefore;
+    if (archive.open(QIODevice::ReadOnly)) archiveBefore = archive.readAll();
+    jobs.clear();
+    archiveSources.clear();
+    archiveTargets.clear();
+    stageKinds.clear();
+    QStringList messages;
+    QObject::connect(&session, &Session::webSaved, &session,
+                     [&](const QString& t) { messages.append(t); });
+    QObject::connect(&session, &Session::webSaveFailed, &session,
+                     [&](const QString& t) { messages.append(t); });
+    auto request = [&]() {
+        if (web) {
+            if (route.startsWith("web-save")) return session.save();
+            beginMove(session, kind, isCopy);
+            return !jobs.empty();
+        }
+        if (route == "zip-save") return session.save();
+        return session.saveProjectAs(QUrl::fromLocalFile(destination), !route.startsWith("folder"),
+                                     isCopy);
+    };
+    QJsonObject before, after;
+    bool returned = false, runningReached = false;
+    const auto heldBefore = state(session);
+    std::size_t held = jobs.size();
+    if (moment == "during") {
+        request();
+        held = nextWrite(0);
+        need(held < jobs.size(), "A fit starts during an actual outstanding browser write");
+    }
+    int publicationsAtRequest = -1, stagesAtRequest = -1, jobsAtRequest = -1;
+    auto* fit = session.project()->fit();
+    if (moment != "success") {
+        QObject::connect(fit, &FitViewModel::runningChanged, &session, [&]() {
+            if (!fit->running() || runningReached) return;
+            runningReached = true;
+            before = state(session);
+            if (moment == "during")
+                finish(held, true, {}, false);
+            else
+                returned = request();
+            after = state(session);
+            publicationsAtRequest = archiveSources.size();
+            stagesAtRequest = stageKinds.size();
+            jobsAtRequest = jobs.size();
+        });
+        fit->start();
+        need(runningReached,
+             "The observer reaches the actual running fit, never a fabricated flag");
+        fit->cancel();
+        QElapsedTimer clock;
+        clock.start();
+        while (fit->running() && clock.elapsed() < 10000) {
+            turn();
+            QThread::msleep(1);
+        }
+        need(!fit->running(), "The independent fit witness terminates after its save observation");
+    } else {
+        before = state(session);
+        returned = request();
+        after = state(session);
+        publicationsAtRequest = archiveSources.size();
+        stagesAtRequest = stageKinds.size();
+        jobsAtRequest = jobs.size();
+    }
+    QJsonArray archivedParameters;
+    if (moment == "success" && returned) {
+        const QString target = route == "zip-save" ? input : destination;
+        QFile file(target);
+        need(file.open(QIODevice::ReadOnly), "The published archive is readable independently");
+        const auto bytes = file.readAll().toStdString();
+        auto project = edi::load_project(
+            edi::unpack_project_archive(bytes, temp.filePath("unpacked-check").toStdString()));
+        for (const auto& entry : edi::parameter_entries(project)) {
+            const auto& p = *entry.parameter;
+            archivedParameters.append(QJsonObject{
+                {"path", QString::fromStdString(entry.path)},
+                {"value", static_cast<double>(p.value)},
+                {"uncertainty", p.uncertainty ? QJsonValue(*p.uncertainty) : QJsonValue()},
+                {"free", static_cast<bool>(p.free)}});
+        }
+    }
+    QFile archiveAfterFile(input);
+    QByteArray archiveAfter;
+    if (archiveAfterFile.open(QIODevice::ReadOnly)) archiveAfter = archiveAfterFile.readAll();
+    browser = false;
+    return {{"route", route},
+            {"moment", moment},
+            {"before", before},
+            {"after", after},
+            {"heldBefore", heldBefore},
+            {"returned", returned},
+            {"runningReached", runningReached},
+            {"publications", publicationsAtRequest},
+            {"stages", stagesAtRequest},
+            {"jobs", jobsAtRequest},
+            {"sources", QJsonArray::fromStringList(archiveSources)},
+            {"archivedParameters", archivedParameters},
+            {"folderUnchanged", image(workingBefore) == folderBefore},
+            {"archiveUnchanged", archiveAfter == archiveBefore},
+            {"destinationExists", QFileInfo::exists(destination)},
+            {"messages", QJsonArray::fromStringList(messages)},
+            {"drops", QJsonArray::fromStringList(drops)}};
+}
 }  // namespace
+extern "C" void transaction_real_archive(const std::string&, const std::string&);
+extern "C" std::string transaction_real_directory(const std::string&);
+namespace edi {
+void write_project_archive(const std::string& source, const std::string& target) {
+    archiveSources.append(QString::fromStdString(source));
+    archiveTargets.append(QString::fromStdString(target));
+    transaction_real_archive(source, target);
+}
+std::string fresh_archive_directory(const std::string& kind) {
+    stageKinds.append(QString::fromStdString(kind));
+    return transaction_real_directory(kind);
+}
+}  // namespace edi
 extern "C" bool boundary_available() __asm__("__wrap__ZN7edi_app8WebFiles9availableEv");
 extern "C" bool boundary_available() { return browser; }
 extern "C" void
@@ -443,7 +1100,13 @@ boundary_pick(WebStorage*, const QString& kind, const QString&, const QString&, 
     "16WebStorageAnswerEEE");
 extern "C" void boundary_pick(WebStorage*, const QString& kind, const QString&, const QString&,
                               WebStorage::Answer answer) {
-    jobs.push_back({"pickSave", "destination", kind, {}, false, std::move(answer)});
+    static int picked = 0;
+    jobs.push_back({"pickSave",
+                    "destination-" + QString::number(++picked),
+                    kind,
+                    {},
+                    false,
+                    std::move(answer)});
 }
 extern "C" void
 boundary_write(WebStorage*, const QString& key, const QString& kind, const QString&, const QString& folder, bool recovery, WebStorage::Answer answer) __asm__(
@@ -452,7 +1115,7 @@ boundary_write(WebStorage*, const QString& key, const QString& kind, const QStri
 extern "C" void boundary_write(WebStorage*, const QString& key, const QString& kind,
                                const QString&, const QString& folder, bool recovery,
                                WebStorage::Answer answer) {
-    jobs.push_back({"write", key, kind, folder, recovery, std::move(answer)});
+    jobs.push_back({"write", key, kind, folder, recovery, std::move(answer), image(folder)});
 }
 extern "C" void boundary_drop(WebStorage*, const QString& key) __asm__(
     "__wrap__ZN7edi_app10WebStorage12dropRecoveryERK7QString");
@@ -465,7 +1128,17 @@ int main(int argc, char** argv) {
         need(argc == 3, "Requires the independent project folder and the named observation group");
         QString source = argv[1], group = argv[2];
         QJsonArray rows;
-        if (group == "overlap")
+        if (group.startsWith("save-conflict/") || group.startsWith("save-alias-"))
+            rows.append(saveConflict(source, group.split('/')));
+        else if (group == "exact-fields")
+            rows.append(exactFields(source));
+        else if (group == "mixed-desktop" || group == "mixed-web")
+            rows.append(mixedSave(source, group == "mixed-web"));
+        else if (group.startsWith("fit-save/"))
+            rows.append(fitPublication(source, group.split('/')));
+        else if (group.startsWith("rollback/"))
+            rows.append(rollback(source, group.split('/')));
+        else if (group == "overlap")
             for (const auto& first : {"Open", "Recent", "recovery"})
                 for (const auto& second : {"Open", "Recent", "recovery"})
                     for (bool order : {false, true})
