@@ -241,8 +241,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
     // (edi ADR-0052). Not a save and not an edit.
     void workIn(const QString& folder);
+    // The model a save writes: a scan's template while a dataset is shown, else the project.
+    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).
     void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
+    // A save that wrote the project's own folder but not its archive or place: still unsaved, and not an edit.
+    void keepUnsaved();
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -620,8 +626,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
     std::atomic<bool> render_armed_{false};
+    // Set at the start of the frame that takes a followed file's points; the render thread clears it once that frame is
+    // synchronised, and the receipt follows on this thread.
+    std::atomic<bool> render_synced_{false};
     QTimer render_wait_;
     QMetaObject::Connection render_connection_;
+    QMetaObject::Connection render_sync_connection_;
     void handFollowed(int index, const std::string& file, std::uint64_t token);
     void awaitRender();
     bool presentedFollowed() const;
@@ -678,6 +688,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool calculating_ = false;
     bool adjusting_ = false;
     bool modified_ = false;
+    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

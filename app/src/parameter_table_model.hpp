@@ -12,22 +12,24 @@ namespace edi_app {
 class ParameterItem;
 class ParameterRegistry;
 
-// The parameters a fit can vary, one row each, in page order (packet §3, §2b (iv)): the Analysis
-// page's table. A parameter symmetry fixes or ties is not listed, and in a scan mode (sequential,
-// independent) an experiment's parameters are listed for the selected experiment only (edi
-// ADR-0019). The value, uncertainty and free roles follow each parameter, one dataChanged per row
-// naming the changed roles, so sorting and filtering see edits (I3).
+// Every numerical model input, one row each, in page order: the Analysis page's table. Parameters and descriptors
+// alike, with whether a fit can vary each and why not (edi ADR-0053); in a scan mode (sequential, independent) an
+// experiment's are listed for the selected experiment only (edi ADR-0019). The value, uncertainty and free roles follow
+// each parameter, one dataChanged per row naming the changed roles, so sorting and filtering see edits (I3).
 class ParameterTableModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a project")
     Q_PROPERTY(int freeCount READ freeCount NOTIFY freeCountChanged)
     Q_PROPERTY(int fixedCount READ fixedCount NOTIFY fixedCountChanged)
+    // Rows no fit can vary that are not free; free, fixed and these partition the rows.
+    Q_PROPERTY(int notFittableCount READ notFittableCount NOTIFY notFittableCountChanged)
 
    public:
     ParameterTableModel(ParameterRegistry& registry, QObject* parent);
     int freeCount() const { return free_count_; }
     int fixedCount() const { return fixed_count_; }
+    int notFittableCount() const { return not_fittable_count_; }
     // The one experiment whose parameters are listed; empty lists every experiment's. Takes effect at
     // the next sync.
     void setExperimentScope(const QString& experiment);
@@ -36,6 +38,7 @@ class ParameterTableModel : public RowTableModel {
    signals:
     void freeCountChanged();
     void fixedCountChanged();
+    void notFittableCountChanged();
 
    protected:
     // `value` and `free` write through the row's ParameterItem (assign_value, D5).
@@ -46,6 +49,7 @@ class ParameterTableModel : public RowTableModel {
     QString experiment_scope_;
     int free_count_ = 0;
     int fixed_count_ = 0;
+    int not_fittable_count_ = 0;
 };
 
 // One entry of an Analysis filter picker (datablocks or categories): the filter key, its title with the parameter
@@ -73,7 +77,8 @@ struct CategoryGroup {
     bool operator==(const CategoryGroup&) const = default;
 };
 
-// The Analysis table's filters (edi ADR-0046): the datablock, the category, the variability (all, free or fixed) and a
+// The Analysis table's filters (edi ADR-0046): the datablock, the category, the variability (all, free, fixed, or not
+// fittable: free, fixed and not fittable partition the rows, edi ADR-0053) and a
 // name substring. Each narrows the next: the categories listed are those of the selected datablocks, the variability
 // counts those of the selected datablocks and category, and the name searches only what the three leave. Every count
 // is a number of parameters, and a selection that no longer exists after a change returns to all.
@@ -88,11 +93,11 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
     Q_PROPERTY(QList<edi_app::CategoryGroup> categoryGroups READ categoryGroups NOTIFY categoryGroupsChanged)
-    // The parameters the datablock and category selections leave: all of them, the free ones and the fixed ones.
+    // The parameters the datablock and category selections leave: all, free, fixed and not fittable.
     Q_PROPERTY(QList<int> variabilityCounts READ variabilityCounts NOTIFY variabilityCountsChanged)
 
    public:
-    enum Variability { All, Free, Fixed };
+    enum Variability { All, Free, Fixed, NotFittable };
     Q_ENUM(Variability)
 
     explicit ParameterFilterModel(QObject* parent = nullptr);
@@ -139,7 +144,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     QString datablock_filter_;
     QStringList datablocks_{QString()};
     QList<CategoryGroup> datablock_groups_;
-    QList<int> variability_counts_{0, 0, 0};
+    QList<int> variability_counts_{0, 0, 0, 0};
     QString category_filter_;
     QStringList categories_{QString()};
     QList<CategoryGroup> category_groups_;

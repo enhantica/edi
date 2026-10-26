@@ -6,6 +6,10 @@ _experiment_type.sample_form "powder"
 _experiment_type.beam_mode "constant wavelength"
 _experiment_type.radiation_probe "xray"
 _experiment_type.scattering_type "bragg"
+_experiment_type.dimensionality 1d
+_experiment_type.polarisation .
+_instrument.name ?
+_instrument.facility ?
 _scattering_source.xray_form_factor it1992
 _scattering_source.xray_dispersion sasaki1989
 

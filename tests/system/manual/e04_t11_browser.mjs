@@ -779,6 +779,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       'the actual folder handler must finish before checking its destination');
 
     if (['all','overlap'].includes(fileRequestCase)) {
+    for (const newerFirst of [false,true]) {
+    await openFolder('routing_initial');
     await projectPage(); await armReads();
     const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
@@ -789,11 +791,19 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await send('DOM.setFileInputFiles',{...second,files:[join(inputs,'routing_b')]});
     await waitBrowser('window.__e04Reads.length===2','both folder requests must overlap before either completion');
     await evaluate('window.__e04HoldReads=false; true');
-    await releaseRead(0); await completedPicker(firstId);
-    await releaseRead(1); await completedPicker(secondId);
+    const order=newerFirst?[1,0]:[0,1];
+    const ids=[firstId,secondId];
+    for(const index of order) {
+      await releaseRead(index);await completedPicker(ids[index]);
+      const observed=await snapshot();
+      const expected=newerFirst||index===1?'routing_b':'routing_initial';
+      assert.equal(observed.name,expected,
+        'Only the newest Open intent may publish, even before the other read completes');
+    }
     await waitName('routing_b');
     const overlap=await snapshot();
     assert.equal(overlap.name,'routing_b','a stale completion must not discard or replace the later folder');
+    }
 
     }
     if (['all','replacement'].includes(fileRequestCase)) {

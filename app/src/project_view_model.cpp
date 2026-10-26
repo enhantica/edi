@@ -26,6 +26,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/display.hpp"
 #include "edi/edits.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/presentation.hpp"
@@ -621,11 +622,12 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        // Either loader refuses a CIF, as reading CIF files is not supported yet.
+        // A CIF or a `.edi` file, by its content; what crysta reports about a CIF is shown.
         const std::string path = file.toLocalFile().toStdString();
-        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
-        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
-                                                            : edi::load_structure_edi_file(path)),
+        error = apply(edi::Edit::add_structure(project, edi::load_structure_file(path,
+                                                                                  [this](const std::string& note) {
+                                                                                      emit message(QString::fromStdString(note));
+                                                                                  })),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -652,7 +654,8 @@ bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
     // The files are read and checked as a batch first: a refused file adds nothing, and the batch is one edit.
     QString error;
     try {
-        error = apply(edi::Edit::add_experiments(project, edi::load_experiment_edi_files(project, paths)), true);
+        const auto show = [this](const std::string& note) { emit message(QString::fromStdString(note)); };
+        error = apply(edi::Edit::add_experiments(project, edi::load_experiment_edi_files(project, paths, show)), true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
@@ -1085,8 +1088,8 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     FreeFlags record;
     std::vector<std::pair<std::string, bool>> flags;
     for (const ParameterItem* item : parameters) {
-        if (item == nullptr || !item->isFittable() || !item->isRefinable()) {
-            continue;
+        if (item == nullptr || (free && !item->isFittable())) {
+            continue;  // a flag is set only where a fit can vary the value; any is cleared (ADR-0053)
         }
         const auto found = names.find(item->parameter());
         if (found == names.end() || item->isFree() == free) {
@@ -1918,7 +1921,8 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
 bool ProjectViewModel::presentedFollowed() const {
     // Presented as the current dataset: it still is.
     if (follow_selection_) {
-        return current_dataset_ == follow_index_;
+        // As the current dataset on a shown Stacked view or Map.
+        return current_dataset_ == follow_index_ && scanViewShown();
     }
     // The model still holds the followed dataset, and a shown chart has drawn its pattern (the one its application
     // set, or a later calculation of the same dataset).
@@ -1955,17 +1959,42 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // The pattern is in the scene now, so the next frame synchronises it. Its file name, its count and the receipt
-        // that asks for the next file go at the start of that frame, on this thread before the frame's polish and
-        // synchronisation, so the name a user reads changes in the frame that shows the file's points, never a frame
-        // before or after (edi ADR-0029). The next file then arrives after this frame is synchronised, and is applied
-        // while the render thread draws this one.
+        // The pattern is in the scene now, so the next frame synchronises it. Its file name and count change at the
+        // start of that frame, on this thread before its polish and synchronisation, so the name a user reads changes in
+        // the frame that shows the file's points (edi ADR-0029). The receipt that releases the next file comes once that
+        // frame is synchronised: the render thread signals it, and it reaches this thread after the frame has taken the
+        // points, so the next file is applied while the render thread draws this one, never in the same frame.
         render_connection_ = connect(window, &QQuickWindow::afterAnimating, this, [this] {
-            if (render_armed_.exchange(false) && render_swaps_ > 0) {
+            if (!render_armed_.exchange(false) || render_swaps_ <= 0) {
+                return;
+            }
+            if (!presentedFollowed()) {
                 // Hidden, or another pattern replaced it, before its frame: not drawn.
-                followRendered(presentedFollowed());
+                followRendered(false);
+                return;
+            }
+            // This frame synchronises the file's points: its name and count go with them now, and the receipt that
+            // releases the next file once the frame has taken them.
+            render_synced_.store(true);
+            if (fit_ != nullptr) {
+                fit_->followPresented(follow_token_, follow_file_);
             }
         });
+        render_sync_connection_ = connect(
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                if (render_synced_.exchange(false)) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this] {
+                            if (render_swaps_ > 0) {
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
+                }
+            },
+            Qt::DirectConnection);
     }
     render_swaps_ = 1;
     render_armed_.store(true);
@@ -1986,6 +2015,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_selection_ = false;
     render_swaps_ = -1;
     render_armed_.store(false);
+    render_synced_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
@@ -2547,6 +2577,7 @@ void ProjectViewModel::syncUndo() {
 
 void ProjectViewModel::setModified(bool modified) {
     if (modified) {
+        ++revision_;
         emit edited();
     }
     if (modified != modified_) {
@@ -2554,6 +2585,14 @@ void ProjectViewModel::setModified(bool modified) {
         emit modifiedChanged();
     }
 }
+
+void ProjectViewModel::keepUnsaved() {
+    if (!modified_) {
+        modified_ = true;
+        emit modifiedChanged();
+    }
+}
+
 
 void ProjectViewModel::workIn(const QString& folder) {
     project_->path = folder.toStdString();
@@ -2591,10 +2630,13 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
     // with nothing to undo.
     try {
-        if (edi::adopt_saved_project(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
-            if (scan_template_) {
+        edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+        if (edi::adopt_saved_project(saved, directory.toStdString())) {
+            // A due background is estimated only by a calculation the user asks for (ADR-0040): the shown results stay.
+            const bool estimate_due = edi::background_estimates_due(saved);
+            if (!estimate_due && scan_template_) {
                 scan_template_->refresh_calculated_pattern();
-            } else {
+            } else if (!estimate_due) {
                 preview_->recalculate();
             }
             publish(false);
@@ -2779,6 +2821,8 @@ void ProjectViewModel::completeSymmetry() {
     // the completion a fit itself applies. A structure crysta cannot resolve keeps what it holds — the
     // calculation says why.
     edi::apply_relations(*project_);
+    // What a fit can vary follows the same loads and edits, never a fit's frames (ADR-0053).
+    edi::refresh_fittability(*project_);
 }
 
 void ProjectViewModel::syncParameterTable(bool refresh_report) {

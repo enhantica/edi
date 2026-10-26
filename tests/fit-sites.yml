@@ -221,3 +221,21 @@ sites:
 
   - file: tests/system/py/test_single_crystal_taurine_converged.py
     case: single-crystal-senju-taurine-converged
+
+  - file: tests/integration/py/test_fittability_loading.py
+    case: multiphase-scales
+    why: Authored active-link and dispersion variants exercise only fit-entry admission with one iteration; no convergence endpoint is a correctness oracle.
+    assertion_feed: Preservation of a chosen flag across context changes, the shared refusal reason, and entry under explicit no-dispersion capability.
+    audit: 2026-10-26; every fit entry is bounded by one iteration and uses the same model and link semantics as the corpus anchors.
+
+  - file: tests/integration/py/test_fittability_context.py
+    case: multiphase-scales
+    why: A retained wavelength flag must be refused at entry after dispersion is enabled; no fit result is asserted.
+    assertion_feed: Shared capability reason naming the current dispersion source.
+    audit: 2026-10-26; one negative fit-entry observation after an explicit source change.
+
+  - file: tests/integration/py/test_fittability_saved_bytes.py
+    case: single-crystal-page-cwl-tbti-isotropic-extinction
+    why: Disposable copies of the corresponding CLI extinction project freeze main saved bytes under both uncertainty rules.
+    assertion_feed: Labelled main regression pin plus the nonzero propagated uncertainty of the constrained crystal radius.
+    audit: 2026-10-26; the visible generator and hidden observation use the same constrained-radius corpus case.

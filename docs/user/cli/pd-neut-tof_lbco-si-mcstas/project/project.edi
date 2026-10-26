@@ -4,8 +4,3 @@ _metadata.name pd-neut-tof_lbco-si-mcstas
 _metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation"
 _metadata.description "2 phases · Simulated TOF pattern · Jorgensen profile"
 _metadata.authors .
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "McStas"
-_metadata.facility ?
-_metadata.polarisation "none"

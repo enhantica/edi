@@ -13,12 +13,14 @@ TestCase {
     property var appWindow
     Component {
         id: application
-        Main {}
+        Main { width: 1280; height: 800 }
     }
     function initTestCase() {
         failOnWarning(/.*/);
         appWindow = application.createObject(null);
         verify(appWindow !== null, "GUI: production Main loads");
+        tryCompare(appWindow, "width", 1280, 2000, "GUI layout contracts use the declared full-size viewport independently of the supported minimum");
+        tryCompare(appWindow, "height", 800, 2000, "GUI layout contracts retain their declared full-size viewport height");
         verify(waitForRendering(appWindow.contentItem), "GUI: production window renders");
     }
     function init() {
@@ -64,7 +66,22 @@ TestCase {
         }, 2000, "GUI: declared category belongs to the selected pane: " + group);
         Ui.scrollIntoView(Ui.target(header));
         Ui.expandGroup(test, Probe, appWindow, "group." + group);
-        tryVerify(() => control(name) !== null, 2000, "GUI: category exposes its control: " + name);
+        let wanted = null;
+        tryVerify(() => {
+            wanted = Ui.find(Ui.page(appWindow), name, true);
+            return wanted !== null;
+        }, 2000, "GUI: the expanded category owns its requested control: " + name);
+        Ui.scrollIntoView(Ui.target(wanted));
+        let previous = "", stable = 0;
+        tryVerify(() => {
+            const exposed = control(name);
+            if (!exposed || Ui.moving(appWindow.contentItem)) return false;
+            const point = exposed.mapToItem(appWindow.contentItem, 0, 0);
+            const geometry = JSON.stringify([point.x, point.y, exposed.width, exposed.height]);
+            stable = geometry === previous ? stable + 1 : 0;
+            previous = geometry;
+            return stable >= 2;
+        }, 3000, "GUI: the requested control finishes sidebar and group animations before layout observation: " + name);
         return control(name);
     }
     function search(combo, text) {
@@ -318,15 +335,17 @@ TestCase {
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {
         const scale = reveal("structure", "extras", "appearance", "structure.appearance.atomScale");
-        const location = scale.mapToItem(appWindow.contentItem, 0, 0);
+        const appearance = discover(Ui.page(appWindow), "group.appearance");
+        verify(appearance !== null && !appearance.collapsed, "The replacement-slot geometry belongs to the actual unfolded Appearance group");
+        const location = scale.mapToItem(appearance, 0, 0);
         Session.project.structureViewOptions.atomView = "adp";
         tryVerify(() => control("structure.appearance.adpProbability") !== null, 2000, "owner 2026-10-06: ADP atom view exposes ellipsoid probability");
         const probability = control("structure.appearance.adpProbability");
         compare(Number(probability.text), 0.99, "diffraction-lib v0.21.1: ellipsoid probability defaults to 0.99");
         verify(control("structure.appearance.atomScale") === null, "owner 2026-10-06: ADP view replaces the ball atom scale field");
         verify(waitForPolish(appWindow, 2000), "owner 2026-10-06: replacement field finishes layout");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).x === location.x, 2000, "owner 2026-10-06: probability occupies the atom scale column");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).y === location.y, 2000, "owner 2026-10-06: probability occupies the atom scale row");
+        tryVerify(() => probability.mapToItem(appearance, 0, 0).x === location.x, 2000, "owner 2026-10-06: probability occupies the atom scale column");
+        tryVerify(() => probability.mapToItem(appearance, 0, 0).y === location.y, 2000, "owner 2026-10-06: probability occupies the atom scale row");
     }
     function test_minimizer_is_two_rows_of_two() {
         const type = reveal("analysis", "extras", "minimizer", "minimizer.type");

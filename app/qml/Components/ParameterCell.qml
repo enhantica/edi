@@ -36,8 +36,8 @@ EaComponents.ListViewParameter {
     // tooltip help text (the ADP cells) keeps the warning and its style.
     readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : item !== null ? item.domainWarning : ""
     readonly property bool refinable: item === null || item.refinable
-    // A fixed setting is edited but never fitted: no fit toggle.
-    readonly property bool canFit: refinable && (item === null || item.fittable)
+    // The fit toggle where a fit can vary the value, or while it is free so the flag can be cleared (edi ADR-0053).
+    readonly property bool canFit: item === null || item.fittable || item.free
     // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
     readonly property bool measured: Session.project === null || Session.project.fit.measured
     Binding {

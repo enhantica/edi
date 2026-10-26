@@ -125,21 +125,39 @@ std::vector<std::string> project_archive_members(const std::string& directory) {
     std::vector<std::string> members;
     for (fs::recursive_directory_iterator it(root, error), end; !error && it != end;
          it.increment(error)) {
-        const fs::path relative = fs::relative(it->path(), root);
+        // Named by where the entry is in the folder, never where a link leads.
+        const fs::path relative = it->path().lexically_relative(root);
+        std::error_code status;
         if (excluded(relative)) {
-            if (it->is_directory()) {
+            if (it->is_directory(status)) {
                 it.disable_recursion_pending();
             }
             continue;
         }
-        if (it->is_regular_file()) {
-            members.push_back(relative.generic_string());
+        const std::string name = relative.generic_string();
+        // A link to a file is archived as that file under the link's own name; a link to a folder, or one that
+        // leads nowhere, is refused rather than left out.
+        if (it->is_symlink(status)) {
+            if (fs::is_directory(it->path(), status)) {
+                throw IoError("cannot archive " + name + ": it is a link to a folder");
+            }
+            if (!fs::is_regular_file(it->path(), status)) {
+                throw IoError("cannot archive " + name + ": it is a link to no file");
+            }
+            members.push_back(name);
+        } else if (it->is_regular_file(status)) {
+            members.push_back(name);
         }
     }
     if (error) {
         throw IoError("cannot list " + directory + ": " + error.message());
     }
     std::sort(members.begin(), members.end());
+    for (std::size_t index = 0; index < members.size(); ++index) {
+        if (!inside(members[index]) || (index > 0 && members[index] == members[index - 1])) {
+            throw IoError("cannot archive " + members[index] + ": not a single name inside the project");
+        }
+    }
     return members;
 }
 

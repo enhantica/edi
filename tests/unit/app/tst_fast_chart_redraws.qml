@@ -397,7 +397,8 @@ Item {
             const targetName = data.mode === "pattern" ? "chart" : "scanView." + data.mode;
             chart = Render.descendants(body).find(item => item.objectName === targetName && item.visible && item.shown);
             verify(chart !== undefined && chart !== null, "Toolbar acceptance observes the actual page's live chart instance");
-            const minimum = win.minimumWidth, wide = Math.max(1600, minimum + 600);
+            // A wide application must leave the chart wide after its adaptive sidebar.
+            const minimum = win.minimumWidth, wide = Math.max(2000, minimum + 1000);
             const requested = data.width === 420 ? minimum : data.width === 740 ? Math.round((minimum + wide) / 2) : wide;
             win.width = requested;
             win.height = Math.max(win.minimumHeight, 900);
@@ -447,8 +448,12 @@ Item {
                 console.log("TOOLBAR_CENTRE " + JSON.stringify({page: data.page, mode: data.mode, windowWidth: win.width, chartWidth: chart.width, line: [left, right], actual: (left + right) / 2, selector: centre}));
                 verify(Math.abs((left + right) / 2 - centre) <= 1, "Every actual toolbar line shares the dataset selector line's horizontal centre; actual=" + (left + right) / 2 + "; selector=" + centre);
             }
-            if (data.width === 1200)
-                compare(ys.length, 1, "A wide chart puts all toolbar controls on one centred line");
+            if (data.width === 1200) {
+                const conservativeRoom = items.reduce((sum, item) => sum + item.width, 0)
+                    + (items.length + 1) * Math.max(AppSizes.toolbarSpacing, Style.Sizes.fontPixelSize);
+                verify(chart.width - 2 * AppSizes.mainAreaMargin >= conservativeRoom, "The wide-window scenario leaves actual chart room for every control and its spacing before requiring one line");
+                compare(ys.length, 1, "A chart with room for all controls puts them on one centred line");
+            }
             const comboWidth = items.filter(combo).reduce((sum, item) => sum + item.width, 0);
             if (comboWidth > chart.width - 2 * AppSizes.mainAreaMargin)
                 verify(ys.length >= 3, "Comboboxes that physically cannot fit together wrap onto multiple lines above the buttons");

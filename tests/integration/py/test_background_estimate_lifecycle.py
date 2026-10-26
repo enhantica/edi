@@ -20,6 +20,7 @@ from tests.fixtures.background_estimate.settings import (
     points,
     read_settings,
 )
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = corpus_case_dir('lbco-hrpt-s2') / 'project'
@@ -48,15 +49,16 @@ def test_nonzero_model_delegated_save_keeps_the_visible_estimate(tmp_path):
     project = prime(engine, tmp_path / 'input', SOURCE)
     project.analysis.calculate()
     before = points(project)
+    expected = [(x, six_digits(y), free) for x, y, free in before]
     project.save_as(tmp_path / 'saved')
     assert persisted_points(tmp_path / 'saved', experiment='hrpt') == [
-        row[:2] for row in before
+        row[:2] for row in expected
     ], (
         'Delegated save must serialize the live model-guided points '
         'without a second engine estimate'
     )
-    assert points(project) == before, (
-        'Saving a guided automatic estimate must not mutate live points'
+    assert points(project) == expected, (
+        'Save adopts the independently rounded guided points without a second estimate'
     )
 
 

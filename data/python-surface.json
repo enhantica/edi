@@ -1186,6 +1186,24 @@
     }
    },
    "CwlInstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -1262,6 +1280,24 @@
     }
    },
    "CwlPdInstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -1295,6 +1331,24 @@
      "need": {
       "by": "counterpart",
       "ref": "CwlPdInstrumentBase.calib_twotheta_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1342,6 +1396,24 @@
      "need": {
       "by": "counterpart",
       "ref": "CwlPdInstrumentBase.calib_twotheta_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2203,6 +2275,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "dimensionality": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "polarisation": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "radiation_probe": {
      "need": {
       "by": "counterpart",
@@ -2671,6 +2761,24 @@
     }
    },
    "InstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -5576,6 +5684,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D90",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -6908,6 +7034,8 @@
   "CwlInstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -6926,6 +7054,8 @@
   "CwlPdInstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -6935,6 +7065,8 @@
     "calib_sample_displacement",
     "calib_sample_transparency",
     "calib_twotheta_offset",
+    "facility",
+    "name",
     "parameters",
     "setup_wavelength"
    ]
@@ -6945,6 +7077,8 @@
     "calib_sample_displacement",
     "calib_sample_transparency",
     "calib_twotheta_offset",
+    "facility",
+    "name",
     "parameters",
     "setup_monochromator_twotheta",
     "setup_polarization_coefficient",
@@ -7093,6 +7227,8 @@
    "kind": "class",
    "members": [
     "beam_mode",
+    "dimensionality",
+    "polarisation",
     "radiation_probe",
     "sample_form",
     "scattering_type"
@@ -7184,6 +7320,8 @@
   "InstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -7720,6 +7858,8 @@
     "calib_d_to_tof_offset",
     "calib_d_to_tof_quadratic",
     "calib_d_to_tof_reciprocal",
+    "facility",
+    "name",
     "parameters",
     "setup_twotheta_bank"
    ]

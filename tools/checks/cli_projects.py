@@ -84,6 +84,8 @@ def registry(root: Path) -> list[dict]:
     An optional boolean ``offline`` is only meaningful on an executing project; an optional boolean
     ``user-facing`` puts the project in the app's example list, and an optional ``app-only`` reason
     lists it there before it has its catalogue form (ADR-0048; example_catalogue.py holds the set).
+    An optional boolean ``verification`` marks a verification project (ADR-0031), which is never an
+    app example.
     """
     path = root / REGISTRY
     data = yaml.safe_load(path.read_text(encoding='utf-8'))
@@ -94,25 +96,26 @@ def registry(root: Path) -> list[dict]:
         raise ValueError(f'{path}: projects must be a non-empty list')
     seen: set[str] = set()
     for row in projects:
-        keys = {'id', 'executing', 'offline', 'user-facing', 'app-only'}
+        keys = {'id', 'executing', 'offline', 'user-facing', 'app-only', 'verification'}
         if not isinstance(row, dict) or set(row) - keys:
             raise ValueError(
                 f'{path}: each project is {{id, executing[, offline][, user-facing]'
-                f'[, app-only]}}, got {row!r}'
+                f'[, app-only][, verification]}}, got {row!r}'
             )
         pid = row.get('id')
         if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
             raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>[_<variant>]')
         if not isinstance(row.get('executing'), bool):
             raise TypeError(f'{path}: {pid}: executing must be true or false')
-        if 'offline' in row and not isinstance(row['offline'], bool):
-            raise TypeError(f'{path}: {pid}: offline must be true or false')
-        if 'user-facing' in row and not isinstance(row['user-facing'], bool):
-            raise TypeError(f'{path}: {pid}: user-facing must be true or false')
+        for flag in ('offline', 'user-facing', 'verification'):
+            if flag in row and not isinstance(row[flag], bool):
+                raise TypeError(f'{path}: {pid}: {flag} must be true or false')
         if 'app-only' in row and not (isinstance(row['app-only'], str) and row['app-only']):
             raise TypeError(f'{path}: {pid}: app-only must be its reason')
         if row.get('offline') and not row['executing']:
             raise ValueError(f'{path}: {pid}: offline applies only to an executing project')
+        if row.get('verification') and (row.get('user-facing') or 'app-only' in row):
+            raise ValueError(f'{path}: {pid}: a verification project is not an app example')
         if pid in seen:
             raise ValueError(f'{path}: duplicate project id {pid!r}')
         seen.add(pid)

@@ -1167,6 +1167,11 @@ class CategoryRef {
 // saved.
 enum class Dependence : std::uint8_t { Independent, SymmetryFixed, SymmetryTied, Constrained };
 
+// What keeps a fit from varying a parameter (ADR-0053), the first that applies: a descriptor,
+// symmetry, a declared constraint, no fitted experiment using it that measures what it needs, or no derivative for
+// it in crysta. Set by refresh_fittability (fittability.hpp) from crysta's one rule; never saved.
+enum class FitBlocker : std::uint8_t { None, Descriptor, Symmetry, Constraint, Data, Capability };
+
 // A user-facing scalar with refinement state: value, standard uncertainty (absolute), and a
 // free/fit flag. Maps 1:1 onto the engine's ParameterState.
 struct Parameter {
@@ -1200,6 +1205,10 @@ struct Parameter {
     detail::Epoch epoch;
     // Set by refresh_relations and apply_relations; a dependent's free flag stays false.
     Dependence dependence = Dependence::Independent;
+    // Set by refresh_fittability: what keeps a fit from varying it, and crysta's reason for it (empty when
+    // fittable).
+    FitBlocker fit_blocker = FitBlocker::None;
+    std::string fit_reason;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -1328,11 +1337,27 @@ class OptionalParameter {
     std::vector<std::shared_ptr<ParameterCell>> retired_;
 };
 
-// The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
-// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
+// Why freeing `parameter` is refused, as of its last refresh_fittability: "cannot be fitted: <reason>" for a
+// descriptor, a value no fitted experiment can determine, or one crysta cannot differentiate (edi ADR-0053); empty
+// otherwise. A dependent's flag is ignored instead (edi ADR-0024).
+inline std::string free_refusal(const Parameter& parameter) {
+    const FitBlocker blocker = parameter.fit_blocker;
+    if (blocker != FitBlocker::Descriptor && blocker != FitBlocker::Data && blocker != FitBlocker::Capability) {
+        return {};
+    }
+    return "cannot be fitted: " + parameter.fit_reason;
+}
+
+// The free flag's rule (edi ADR-0024, ADR-0053): a dependent stays dependent, so freeing one changes nothing and
+// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`. Freeing a parameter
+// free_refusal names is refused (std::invalid_argument).
 inline bool set_free(Parameter& parameter, bool free) {
     if (free && parameter.dependence != Dependence::Independent) {
         return false;
+    }
+    if (const std::string refusal = free_refusal(parameter); free && !refusal.empty()) {
+        throw std::invalid_argument((parameter.spec != nullptr ? parameter.spec->name : std::string("parameter")) +
+                                    " " + refusal);
     }
     parameter.free = free;
     return true;
@@ -3279,6 +3304,18 @@ struct ExperimentType {
     ScatteringTypeEnum effective_scattering_type() const {
         return scattering_type.value_or(ScatteringTypeEnum::BRAGG);
     }
+    // The experiment's description (ADR-0052), each held as declared and empty until
+    // declared, `?` and `.` included: the dimensionality (`1d`, the only one) and the polarisation
+    // (`unpolarised` for neutron, the inapplicable `.` for X-ray).
+    std::string dimensionality;
+    std::string polarisation;
+    std::string effective_dimensionality() const { return dimensionality.empty() ? "1d" : dimensionality; }
+    std::string effective_polarisation() const {
+        if (!polarisation.empty()) {
+            return polarisation;
+        }
+        return effective_radiation_probe() == RadiationProbeEnum::XRAY ? "." : "unpolarised";
+    }
     // Renewed by every Python write, whatever value it leaves.
     detail::Epoch epoch;
     // ADR-0018: the row of this object's non-loop categories.
@@ -3439,6 +3476,10 @@ struct InstrumentBase {
     // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
     // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
     OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
+    // The instrument and facility that measured the experiment (ADR-0052), text held as
+    // declared and empty until declared; `?` states an unknown one.
+    std::string name;
+    std::string facility;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -4614,9 +4655,9 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
-// The s.u. rule of a project that states none: two s.u. digits (`iucr_99`).
+// The s.u. rule of a project that states none: always two digits (`iucr_99`).
 inline constexpr const char* kDefaultSuRule = "iucr_99";
-// Reports and their CIF always round by IUCr recommendation 12.
+// The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
 inline constexpr const char* kReportSuRule = "iucr_19";
 
 class Project : public detail::ProjectAnchor {
@@ -4788,7 +4829,8 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_99` (always two digits, the default) or `iucr_19` (IUCr recommendation 12), by crysta's rule.
+    // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
+    // recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
@@ -5232,8 +5274,8 @@ static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::
 struct ExperimentTypeCategory {
     using Owner = ExperimentType;
     static constexpr const char* name = "_experiment_type";
-    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type};
-    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type"};
+    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type, &ExperimentType::dimensionality, &ExperimentType::polarisation};
+    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type", "dimensionality", "polarisation"};
     static constexpr std::array legacy{"_easydiffraction_experiment_type", "_expt_type"};
 };
 static_assert(detail::one_entry_per_column(ExperimentTypeCategory::columns, ExperimentTypeCategory::items));
@@ -5258,8 +5300,8 @@ static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::
 struct InstrumentCategory {
     using Owner = InstrumentBase;
     static constexpr const char* name = "_instrument";
-    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio};
-    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio"};
+    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio, &InstrumentBase::name, &InstrumentBase::facility};
+    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio", "name", "facility"};
     static constexpr std::array legacy{"_instr", "_diffrn_radiation_wavelength", "_pd_calib"};
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));
@@ -5479,8 +5521,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
-    static constexpr std::array items{"", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::archive};
+    static constexpr std::array items{"", "", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 
@@ -5892,7 +5934,7 @@ inline std::vector<Parameter*> ExperimentBase::free_parameters() {
     canonicalize_peak_specs(peak);
     require_peak_slots_fit_type(*this);
     std::vector<Parameter*> out = detail::free_of(parameters());
-    // The limit angle is a fixed setting (is_fixed_setting), known by its slot whatever it carries.
+    // The limit angle is a descriptor (ADR-0053), known by its slot whatever it carries.
     if (peak.asym_beba_limit) {
         std::erase(out, &*peak.asym_beba_limit);
     }

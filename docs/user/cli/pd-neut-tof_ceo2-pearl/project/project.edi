@@ -4,8 +4,3 @@ _metadata.name pd-neut-tof_ceo2-pearl
 _metadata.title "CeO₂ [Fm-3m] · PEARL @ ISIS"
 _metadata.description "NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background"
 _metadata.authors .
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "PEARL"
-_metadata.facility "ISIS"
-_metadata.polarisation "none"

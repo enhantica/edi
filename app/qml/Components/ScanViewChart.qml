@@ -408,6 +408,18 @@ Item {
             objectName: "scanView." + chart.mode + ".pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            // On Stacked the wheel scrolls through a stack taller than the plot (a fixed height), the shown range keeping
+            // its height so each pattern keeps its own: up to the highest pattern's top, down to the lowest baseline.
+            onWheel: wheel => {
+                const top = Math.max(1, layer.stackTop);
+                const span = chart.yMax - chart.yMin;
+                if (chart.mode !== "stacked" || wheel.angleDelta.y === 0 || !(span > 0) || span >= top) {
+                    wheel.accepted = false;
+                    return;
+                }
+                const from = Math.max(0, Math.min(top - span, chart.yMin + wheel.angleDelta.y / 120 * span * 0.2));
+                chart.setZoom(chart.zoomX, [from, from + span]);
+            }
             hoverEnabled: true
             cursorShape: Qt.CrossCursor
             onExited: hovered = -1
@@ -494,11 +506,13 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
     }
-    // The row label's pieces' fonts, as IconLine sets them.
-    TextMetrics {
+    // The row label's pieces as IconLine draws them: the icon a label of the icon font, measured by the width it takes
+    // (an icon is measured in the font of an item drawing it, never one built from the family alone).
+    EaElements.Label {
         id: labelIcon
+        visible: false
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: chart.em
         text: "microscope"
