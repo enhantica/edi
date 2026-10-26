@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T18:12:10Z
+# measured_utc = 2026-10-26T20:10:38Z
 #
-# Recorded from: measured test run (16 node(s) measured once, 16043 banked, 0 stale row(s) dropped)
-# Collected tests: 18062; with a reported duration: 10612
+# Recorded from: measured test run (10 node(s) measured once, 16047 banked, 0 stale row(s) dropped)
+# Collected tests: 18072; with a reported duration: 10612
 # Module-scoped fixture costs recorded: 76
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18062
+# inventory_python = 18072
 # inventory_cpp = 396
 # inventory_measured = 16047
-# inventory_unmeasured = 2411
+# inventory_unmeasured = 2421
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -16414,9 +16414,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_button_style:dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_button_style:light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_continue_matches_analysis]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_disabled_style:dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_disabled_style:light]
 0.000	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_existing_analysis_start]
 0.000	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_existing_completion:scan]
 0.000	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_existing_completion:single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_fit_tooltip:off]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_fit_tooltip:on]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_preference_default_and_user_store]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:scan-off]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:scan-on]
@@ -16424,6 +16428,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_results_preference:single-on]
 0.000	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_running_action:analysis]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_running_action:status]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_scan_controls:independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_scan_controls:joint]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_scan_controls:scan-single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_scan_controls:scan]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_scan_controls:single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_sidebar_table_uses_available_height]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_status_start]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_unavailable_action_matches_analysis]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_visibility_tracks_analysis_on_every_page]
@@ -18569,7 +18579,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
-# module-cost: 60.590	tests/system/py/test_status_fit_controls.py
+# module-cost: 111.635	tests/system/py/test_status_fit_controls.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py

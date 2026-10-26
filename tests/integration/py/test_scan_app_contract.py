@@ -336,20 +336,32 @@ console.log(JSON.stringify(output));"""
 
 
 def assert_follow(text):
-    follow = item(text, 'fitting.follow')
-    assert property_value(follow, 'checkable') == 'true', (
-        'Follow wiring: the actual button must toggle'
+    follow = item(text, 'statusBar.fit.follow')
+    enabled = 'clickable' if re.search(r'(?m)^\s*clickable:', follow) else 'enabled'
+    result = evaluate(
+        '[null,{scanning:false,following:false},{scanning:false,following:true},'
+        '{scanning:true,following:false},{scanning:true,following:true}].map(fit=>{'
+        'const bar={fit};return ['
+        + property_value(follow, enabled)
+        + ','
+        + property_value(follow, 'checked')
+        + '];})',
     )
-    assert property_value(follow, 'enabled') == 'group.fit !== null && group.fit.scanning', (
-        'Follow wiring: its own enabled binding must require a running scan'
+    assert result == [
+        [False, False],
+        [False, False],
+        [False, False],
+        [True, False],
+        [True, True],
+    ], 'Status Follow availability and checked state follow only the running scan'
+    handler = 'onToggled' if re.search(r'(?m)^\s*onToggled:', follow) else 'onClicked'
+    result = evaluate(
+        '[false,true].map(initial=>{const bar={fit:{following:initial}};'
+        + ('const checked=!initial;(' if handler == 'onToggled' else 'const checked=initial;(')
+        + property_value(follow, handler)
+        + ');return bar.fit.following;})',
     )
-    assert (
-        property_value(follow, 'checked')
-        == 'group.fit !== null && group.fit.scanning && group.fit.following'
-    ), 'Follow wiring: its own checked binding must read live follow state'
-    assert property_value(follow, 'onToggled') == 'group.fit.following = checked', (
-        'Follow wiring: toggling must update that fit model'
-    )
+    assert result == [True, False], 'Actual status Follow input toggles its own running fit model'
 
 
 def test_messages_is_first_in_both_layout_and_width_inventory():
@@ -369,56 +381,28 @@ def test_messages_is_first_in_both_layout_and_width_inventory():
 
 
 def test_button_names_and_follow_have_live_model_bindings():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
-    start = item(text, 'fitting.start')
-    assert (
-        property_value(start, 'enabled')
-        == 'group.fit !== null && (group.fit.running || group.fit.available)'
-    ), 'Buttons wiring: availability must guard the actual fit button'
-    assert (
-        property_value(start, 'onClicked')
-        == 'group.fit.running ? group.fit.cancel() : group.fit.start()'
-    ), 'Buttons wiring: the actual fit button dispatches stop or start from live running state'
+    text = source('qml/Components/StatusBarFitButton.qml')
     require(
-        property_value(start, 'text'),
-        r'group\.fit\.running\s*\?\s*qsTr\("Stop fitting"\).*'
-        r'group\.fit\.continuable\s*\?\s*qsTr\("Continue fitting"\).*'
-        r'qsTr\("Start fitting"\)',
-        'Buttons wiring: the actual button label follows running and resumable state',
+        text,
+        r'onClicked:[^\n]*fit\.cancel\(\)[^\n]*fit\.start\(\)',
+        'Status Fit dispatches stop or start from live worker state',
     )
-    assert_follow(text)
-    follow = item(text, 'fitting.follow')
-    assert control_type(text, 'fitting.start') == control_type(text, 'fitting.follow'), (
-        'Buttons wiring: Start and Follow inherit the same button base'
+    require(
+        text,
+        r'valueText:[^\n]*qsTr\("Stop"\)[^\n]*fit\.continuable[^\n]*qsTr\("Continue"\)[^\n]*qsTr\("Fit"\)',
+        'Status Fit labels follow running and resumable state',
     )
-    # Both controls inherit the same base width unless they override it.
-    for name in ('width', 'implicitWidth', 'wide'):
-        a = re.search(r'(?m)^\s*' + name + r':([^\n]+)', start)
-        b = re.search(r'(?m)^\s*' + name + r':([^\n]+)', follow)
-        assert (a.group(1).strip() if a else None) == (b.group(1).strip() if b else None), (
-            'Buttons wiring: Start and Follow share the same base and width override'
-        )
+    assert_follow(source('qml/Components/StatusBar.qml'))
 
 
 def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
+    text = source('qml/Components/StatusBar.qml')
     assert_follow(text)
-    for old, new in [
-        ('checkable: true', 'checkable: false'),
-        ('enabled: group.fit !== null && group.fit.scanning', 'enabled: false'),
-        (
-            'checked: group.fit !== null && group.fit.scanning && group.fit.following',
-            'checked: true',
-        ),
-        ('onToggled: group.fit.following = checked', 'onToggled: {}'),
-    ]:
-        changed = text.replace(old, new)
-        assert changed != text, (
-            'Follow wiring: each escape must actually alter the production control'
-        )
-        changed += (
-            '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
-        )
+    follow = item(text, 'statusBar.fit.follow')
+    for field in ('following', 'scanning'):
+        changed = text.replace(follow, follow.replace('fit.' + field, 'fit.disconnected'))
+        assert changed != text, 'Each Follow escape changes the actual displayed control'
+        changed += '\nButton { onClicked: bar.fit.following = true; enabled: bar.fit.scanning }'
         with pytest.raises(AssertionError):
             assert_follow(changed)
 

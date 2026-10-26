@@ -24,6 +24,15 @@ CASES = [
         for choice in ('on', 'off')
     ),
     'test_existing_analysis_start',
+    *(
+        f'test_scan_controls:{kind}'
+        for kind in ('single', 'joint', 'scan', 'independent', 'scan-single')
+    ),
+    'test_disabled_style:light',
+    'test_disabled_style:dark',
+    'test_fit_tooltip:on',
+    'test_fit_tooltip:off',
+    'test_sidebar_table_uses_available_height',
     'test_existing_completion:single',
     'test_existing_completion:scan',
 ]
@@ -47,7 +56,7 @@ def fit_control_actors():
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=600,
         check=False,
     )
     output = result.stdout + result.stderr
