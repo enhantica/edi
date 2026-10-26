@@ -98,3 +98,16 @@ persistence and the difference between llvmpipe OpenGL and Qt Quick's Software
 backend. The gate previously inferred the path from the wrapper's superclass;
 it now observes the selected path and rendered contribution, allowing a painted
 wrapper to host the GPU line child.
+
+Each fit-timing combination now has a separate native entry point, as specified
+in the scan update contract. A caller cannot select a six-fit aggregate timing
+function; the existing per-process watchdog still bounds one case. Fit-waits is
+reported without the catch-up ratio bound. Its functional view cases include
+Stacked, Map and scientific completion with no shown pattern view.
+
+The startup-report parser is shared by the existing-project stderr gate and the
+normal-app renderer gate. It exempts only complete renderer report lines and
+preserves adjacent project diagnostics and malformed lookalikes. Pure boundary
+cases exercise those refusals; actual startup values still come from the
+independent Qt observer. Sidebar gates use the actual selected tab and settled
+view, rather than accepting an empty filter for the former tab count.
