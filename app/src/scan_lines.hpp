@@ -51,6 +51,9 @@ class ScanLines : public QQuickItem {
     void setYMin(double value);
     void setYMax(double value);
     void setLineWidth(double width);
+    /// Whether the owning view is shown. While it is not, a scene update (one asked for before it was hidden, or a
+    /// resize) leaves the lines as they were drawn, and comes once the view is shown again.
+    void setActive(bool active);
 
    signals:
     void yMinChanged();
@@ -71,6 +74,7 @@ class ScanLines : public QQuickItem {
     double line_width_ = 2.0;
     bool traces_changed_ = true;
     bool bands_changed_ = true;
+    bool active_ = true, pending_ = false;
 };
 
 }  // namespace edi_app

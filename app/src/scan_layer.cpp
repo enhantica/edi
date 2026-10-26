@@ -252,6 +252,8 @@ void ScanLayer::setActive(bool active) {
     if (active != active_) {
         active_ = active;
         emit activeChanged();
+        lines_->setActive(active_);
+        top_->setActive(active_);
         if (active_ && stale_) {
             update();  // the painted image too: a renderer chosen while hidden may need it cleared
             redraw();
@@ -373,7 +375,11 @@ void ScanLayer::place() {
     for (std::size_t i = 0; i < order.size(); ++i) {
         baselines_[order[i]] = static_cast<double>(i) * pattern_height_ * offset_;
     }
-    stack_top_ = std::max(0.0, count - 1.0) * pattern_height_ * offset_ + pattern_height_;
+    const double top = std::max(0.0, count - 1.0) * pattern_height_ * offset_ + pattern_height_;
+    if (top != stack_top_) {
+        stack_top_ = top;
+        emit stackTopChanged();
+    }
     emit placementChanged();
     redraw();
 }
@@ -816,6 +822,9 @@ QSGNode* ScanLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) {
 }
 
 void ScanLayer::paint(QPainter* painter) {
+    if (deferred()) {
+        return;
+    }
     if (!model_ || lines_on_gpu() || !(x_max_ > x_min_) || !(y_max_ > y_min_) || width() <= 0.0 || height() <= 0.0) {
         return;
     }

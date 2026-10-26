@@ -75,7 +75,7 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(double patternHeight READ patternHeight NOTIFY placementChanged)
     // The top of the highest stacked pattern on the vertical axis: above 1 when a fixed height makes the stack taller
     // than the plot.
-    Q_PROPERTY(double stackTop READ stackTop NOTIFY placementChanged)
+    Q_PROPERTY(double stackTop READ stackTop NOTIFY stackTopChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
     Q_PROPERTY(double displayMin READ displayMin NOTIFY displayMinChanged)
     Q_PROPERTY(double displayMax READ displayMax NOTIFY displayMaxChanged)
@@ -177,6 +177,7 @@ class ScanLayer : public QQuickPaintedItem {
     void offsetChanged();
     void heightShareChanged();
     void placementChanged();
+    void stackTopChanged();
     void displayMinChanged();
     void displayMaxChanged();
     void coloursRevisionChanged();
@@ -218,8 +219,8 @@ class ScanLayer : public QQuickPaintedItem {
     // While the view is not shown: notes that its drawing is out of date and says to do no work, whatever asked for it
     // (a change, a polish or paint already queued, a resize).
     bool deferred();
-    // The GPU lines are in the scene while they draw the view. They sync only what the polish feeds them, so a view not
-    // shown costs them nothing.
+    // The GPU lines are in the scene while they draw the view; while it is not shown they do no work of their own
+    // (ScanLines::setActive).
     void showLines();
     void measure();
     void place();
