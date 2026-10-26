@@ -202,8 +202,8 @@ EaElements.StatusBar {
             keyIcon: outdated ? "history" : FitOutcomes.icon(outcome)
             keyText: qsTr("Status")
             valueText: outdated ? qsTr("Outdated") : FitOutcomes.word(outcome)
-            iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome)
-            valueColor: iconColor
+            iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome, EaStyle.Colors.statusBarIconForeground)
+            valueColor: outdated ? EaStyle.Colors.orange : FitOutcomes.textColor(outcome)
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
             framed: clickable

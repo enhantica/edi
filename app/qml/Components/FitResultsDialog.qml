@@ -203,7 +203,7 @@ AppDialog {
                     objectName: `fit.results.value.${row.index}`
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
-                    color: row.outcome !== "" ? FitOutcomes.color(row.outcome) : EaStyle.Colors.themeForeground
+                    color: row.outcome !== "" ? FitOutcomes.textColor(row.outcome) : EaStyle.Colors.themeForeground
                     text: row.outcome !== "" ? FitOutcomes.word(row.outcome) : row.value
                 }
             }

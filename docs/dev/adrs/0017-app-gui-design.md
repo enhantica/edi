@@ -925,7 +925,8 @@ refuses to write its bank rows into it.
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
-  (grey stop circle), *Superseded* (grey minus circle) and *Failed* (red cross circle). No underline; the summary's
+  (stop circle) and *Superseded* (minus circle), whose word is in the text colour and icon in the grey of the icons
+  around it so they never look disabled (the owner, 2026-10-26), and *Failed* (red cross circle). No underline; the summary's
   outcome highlights on hover, as every clickable status-bar item does, and opens the results.
 - **The Fit column** of the Experiments table, and each experiment's line in the block selector, show the outcome
   icon on each experiment the last fit fitted: the first after a single fit, every bank after a joint fit. Any
