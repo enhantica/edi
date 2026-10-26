@@ -32,7 +32,7 @@ Item {
     readonly property bool available: correlations !== null && correlations.available >= 2
     // The two toggles change only how shown correlations look: disabled whenever the filter shows none (owner,
     // 2026-10-13).
-    readonly property bool showsAny: available && count >= 2
+    readonly property bool showsAny: available && correlations.labels.length >= 2
     // The toolbar's two toggles.
     property bool namesShown: false
     property bool fullMatrix: false
