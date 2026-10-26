@@ -35,6 +35,7 @@
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
 #include "edi/edits.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
@@ -952,6 +953,31 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
     }
     warn_dependents(*project);
     return parameter.dependence;
+}
+
+// A parameter's fit mark as the project holding it is now (ADR-0053); one no project holds is judged by its
+// dictionary entry alone, a descriptor or not.
+static void fittability_now(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        edi::refresh_fittability(*project);
+        return;
+    }
+    const bool descriptor =
+        parameter.spec != nullptr && edi::is_descriptor(std::string(parameter.spec->category) + "." + parameter.spec->name);
+    parameter.fit_blocker = descriptor ? edi::FitBlocker::Descriptor : edi::FitBlocker::None;
+    parameter.fit_reason = descriptor ? edi::fit_reason(edi::FitBlocker::Descriptor) : std::string();
+}
+
+// A parameter's name in a refusal: its unique name in the project holding it, else its own name.
+static std::string parameter_name(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
+            if (slot.parameter == &parameter) {
+                return slot.unique_name;
+            }
+        }
+    }
+    return parameter.spec != nullptr ? parameter.spec->name : std::string("parameter");
 }
 
 // The structure holding the row of a parameter (a site's, a tensor's), in a project or not; null otherwise.
@@ -2160,11 +2186,11 @@ NB_MODULE(_edi, m) {
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
-                if (free && edi::is_fixed_setting(p.spec)) {
-                    throw std::invalid_argument(std::string(p.spec->name) +
-                                                " is a fixed setting, not a refinable parameter");
-                }
                 (void)dependence_now(p);  // the marks as the relations are now
+                fittability_now(p);       // and as the fit rule is now (ADR-0053)
+                if (const std::string refusal = edi::free_refusal(p); free && !refusal.empty()) {
+                    throw std::invalid_argument(parameter_name(p) + " " + refusal);
+                }
                 if (!edi::set_free(p, free)) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
@@ -2172,7 +2198,8 @@ NB_MODULE(_edi, m) {
                         (p.dependence == edi::Dependence::Constrained ? "set by a constraint"
                          : p.dependence == edi::Dependence::SymmetryFixed ? "fixed by symmetry"
                                                                           : "constrained by symmetry") +
-                        "; free = True is ignored and it stays dependent";
+                        "; free = True is ignored and it stays dependent" +
+                        (p.fit_reason.empty() ? std::string() : " (cannot be fitted: " + p.fit_reason + ")");
                     if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                         throw nb::python_error();
                     }
