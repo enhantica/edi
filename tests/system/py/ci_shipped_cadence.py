@@ -242,12 +242,32 @@ def linux_closure_errors(snapshot, actual_manifest, read_source, event):
         old = task_commands(manifest, environment)
         actual = task_commands(actual_manifest, environment)
         for task, commands in old.items():
-            if task in selected and actual.get(task) != commands:
+            if task in selected and not catalogue_task_extension(actual.get(task), commands):
                 errors.append('changed Linux task closure ' + environment + ':' + task)
     for path, source in snapshot['execution_sources'].items():
         if not retains_work(path, source, read_source(path)):
             errors.append('reduced frozen execution work ' + path)
     return errors
+
+
+def catalogue_task_extension(actual, expected):
+    """ADR-0048 adds two checks; every original command and environment stays exact."""
+    if actual == expected:
+        return True
+    prefix = (
+        'python tools/checks/example_catalogue.py --check && '
+        'python tools/dev/example_metadata.py --check && '
+        'python tools/comparison/fit_quality.py --check && '
+    )
+    old = 'python tools/dev/example_metadata.py --check && python tools/checks/cli_projects.py'
+    if actual is None or len(actual) != len(expected):
+        return False
+    return actual == [
+        (name, prefix + 'python tools/checks/cli_projects.py', env)
+        if name == 'cli-projects' and command == old
+        else (name, command, env)
+        for name, command, env in expected
+    ]
 
 
 def selected_linux_tasks(workflow, event):

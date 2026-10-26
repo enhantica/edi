@@ -1,69 +1,79 @@
 ---
-title: CLI projects
+title: Examples
 description: >-
-  Complete edi projects you fit from the command line with python -m edi, each checked in CI
-  against its expected results.
+  The example catalogue: 20 complete projects, each fitted or calculated from the command line, opened in the app
+  and worked through in a tutorial.
 ---
 
-# CLI projects
+# Examples
 
-Complete projects you can fit from the command line — structure, experiments with their
-measured data, and the analysis settings, in one directory:
+Twenty complete projects, from a calculation without data to sequential fits of whole scans. Each is one project
+you can use three ways: fit it from the command line, open it in the app from the Examples on the Home page, or work
+through its tutorial, which loads the same files.
 
 ```bash
-python -m edi fit docs/user/cli/<project>/project --dry
+python -m edi fit docs/user/cli/<case>/project --dry
 ```
 
-Every project here also carries an `expected.json`, and CI and `pixi run verify` run each one
-through `python -m edi` on every pull request and compare the results: a project in the
-executing set is known to fit the way it says. Every project here is in it. The set grows with edi — a new feature adds a project or extends
-one that exercises it.
+Fitted cases start the way your own measurement would, not next to their answer; each page says where a case starts
+differently and why.
 
-⛔ The first nine are edi's internal fitting-regression cases, copied from crysta's fitting corpus;
-whether they are the right user-facing examples is still open. Their expected values are mostly
-**regression pins** (they catch drift, not errors); each page and `PROVENANCE.md` says which values
-are independent references.
+## Calculations without data
 
-| project | what it fits |
-| --- | --- |
-| [pd-neut-cwl_cosio-d20_start-1](pd-neut-cwl_cosio-d20_start-1/index.md) | Co2SiO4 on D20 (constant wavelength), 43 parameters, start-1 |
-| [pd-neut-cwl_cosio-d20_start-4](pd-neut-cwl_cosio-d20_start-4/index.md) | the same fit from start-4 |
-| [pd-neut-cwl_cosio-d20_scan-3f](pd-neut-cwl_cosio-d20_scan-3f/index.md) | Co2SiO4 sequential scan over three D20 temperatures |
-| [pd-neut-cwl_cosio-d20_scan-162f](pd-neut-cwl_cosio-d20_scan-162f/index.md) | Co2SiO4 sequential scan over 162 D20 files, cooling |
-| [pd-neut-cwl_cosio-d20_scan-324f](pd-neut-cwl_cosio-d20_scan-324f/index.md) | Co2SiO4 sequential scan over 324 D20 files, down and up |
-| [pd-neut-cwl_lbco-hrpt_start-2](pd-neut-cwl_lbco-hrpt_start-2/index.md) | La0.5Ba0.5CoO3 on HRPT (constant wavelength), 17 parameters (preferred orientation), start-2 |
-| [pd-neut-cwl_lbco-hrpt_start-4](pd-neut-cwl_lbco-hrpt_start-4/index.md) | the same fit from start-4 |
-| [pd-neut-tof_ncaf-wish-2bank_start-3](pd-neut-tof_ncaf-wish-2bank_start-3/index.md) | Na2Ca3Al2F14 joint two-bank WISH (time of flight), 20 parameters |
-| [pd-neut-tof_ncaf-wish-3bank_start-5](pd-neut-tof_ncaf-wish-3bank_start-5/index.md) | Na2Ca3Al2F14 joint three-bank WISH, 108 parameters, FullProf-verified |
-| [pd-neut-tof_si-sepd_start-2](pd-neut-tof_si-sepd_start-2/index.md) | Si on SEPD (time of flight), 23 parameters, start-2 |
-| [pd-neut-tof_si-sepd_start-5](pd-neut-tof_si-sepd_start-5/index.md) | the same fit from start-5 |
-| [pd-neut-tof_diamond-dream_basic](pd-neut-tof_diamond-dream_basic/index.md) | diamond on DREAM (time of flight), scale only, against FullProf |
-| [pd-neut-cwl_lab6-echidna_fcj-asymmetry](pd-neut-cwl_lab6-echidna_fcj-asymmetry/index.md) | LaB6 on Echidna (constant wavelength), FCJ asymmetry, scale only, against FullProf |
-| [pd-neut-cwl_pbso4_beba-asymmetry](pd-neut-cwl_pbso4_beba-asymmetry/index.md) | PbSO4 on D1A (constant wavelength), the pseudo-Voigt with Bérar-Baldinozzi asymmetry, profile and scale re-fitted |
-| [pd-neut-cwl_yap-spodi_3k](pd-neut-cwl_yap-spodi_3k/index.md) | YAlO3 and Al2O3 on SPODI (constant wavelength), two phases, pseudo-Voigt with Bérar-Baldinozzi, against FullProf |
-| [pd-neut-tof_fe_pseudo-voigt](pd-neut-tof_fe_pseudo-voigt/index.md) | ferrite on BEER (time of flight), TOF pseudo-Voigt, scale only, against FullProf |
-| [pd-neut-tof_cecoal-polaris_chebyshev](pd-neut-tof_cecoal-polaris_chebyshev/index.md) | CeCoAl3 on POLARIS (time of flight), Chebyshev background, 32 parameters, against FullProf |
-| [pd-neut-tof_ceo2-pearl_polynomial](pd-neut-tof_ceo2-pearl_polynomial/index.md) | CeO2 on PEARL (time of flight), polynomial background, 19 parameters, against FullProf |
-| [pd-neut-cwl_lab6-11b-echidna_tch-fcj](pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md) | 11B LaB6 on ECHIDNA (constant wavelength), TCH x FCJ, polynomial background, 17 parameters, against FullProf |
-| [pd-xray-cwl_lif_single](pd-xray-cwl_lif_single/index.md) | LiF with Cu Kα X-rays (constant wavelength), the doublet's intensity ratio and the absorption's muR, against FullProf |
-| [pd-xray-cwl_pbso4-lab_round-robin](pd-xray-cwl_pbso4-lab_round-robin/index.md) | PbSO4 from the X-ray round robin (constant wavelength), the Kα doublet and the pseudo-Voigt with Bérar-Baldinozzi asymmetry, profile and scale fitted |
-| [pd-neut-cwl_y2o3_beta-adp](pd-neut-cwl_y2o3_beta-adp/index.md) | Y2O3 (constant wavelength), anisotropic beta ADPs tied by site symmetry, scale only, against FullProf |
-| [pd-xray-cwl_latp_scan-4f](pd-xray-cwl_latp_scan-4f/index.md) | LATP with two AlPO4 phases, synchrotron X-ray sequential scan over four files, 54 parameters, against FullProf |
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco_simulation/index.md) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI | [pd-neut-cwl_lbco_simulation](../tutorials/pd-neut-cwl_lbco_simulation.ipynb) |
+| [Calculation without data: Si, time of flight](pd-neut-tof_si_simulation/index.md) | Silicon [Fd-3m] · SEPD @ Argonne | [pd-neut-tof_si_simulation](../tutorials/pd-neut-tof_si_simulation.ipynb) |
+| [Calculation without data: NaCl, laboratory X-ray](pd-xray-cwl_nacl_simulation/index.md) | NaCl [Fm-3m] · Laboratory X-ray | [pd-xray-cwl_nacl_simulation](../tutorials/pd-xray-cwl_nacl_simulation.ipynb) |
 
-The single-crystal projects below reproduce diffraction-lib's verification pages against FullProf's fits; all five execute, and the three app examples are registered without reference values.
+## Constant-wavelength neutron
 
-| project | what it fits |
-| --- | --- |
-| [sc-neut-cwl_pr2nio4-5c2_basic](sc-neut-cwl_pr2nio4-5c2_basic/index.md) | Pr2NiO4 single crystal (constant wavelength), anisotropic displacements, scale only |
-| [sc-neut-cwl_tb2ti2o7-heidi_basic](sc-neut-cwl_tb2ti2o7-heidi_basic/index.md) | Tb2Ti2O7 on HEiDi (constant wavelength), scale only |
-| [sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp](sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/index.md) | Tb2Ti2O7 on HEiDi, anisotropic displacements, scale only |
-| [sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction](sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/index.md) | Tb2Ti2O7 on HEiDi, Becker-Coppens extinction, scale and domain radius |
-| [sc-neut-tof_taurine-unknown_basic](sc-neut-tof_taurine-unknown_basic/index.md) | taurine single crystal (time of flight), scale only |
-| [sc-neut-cwl_tb2ti2o7-heidi_fit](sc-neut-cwl_tb2ti2o7-heidi_fit/index.md) | Tb2Ti2O7 on HEiDi from a rough start (app example) |
-| [sc-neut-cwl_pr2nio4-5c2_fit](sc-neut-cwl_pr2nio4-5c2_fit/index.md) | Pr2NiO4 on 5C2 from a rough start (app example) |
-| [sc-neut-tof_taurine_fit](sc-neut-tof_taurine_fit/index.md) | taurine (time of flight) from a rough start (app example) |
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco-hrpt/index.md) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI | [pd-neut-cwl_lbco-hrpt](../tutorials/pd-neut-cwl_lbco-hrpt.ipynb) |
+| [Rietveld fit: herbertsmithite, HRPT](pd-neut-cwl_hs-hrpt/index.md) | ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI | [pd-neut-cwl_hs-hrpt](../tutorials/pd-neut-cwl_hs-hrpt.ipynb) |
+| [Rietveld fit: Co₂SiO₄, D20](pd-neut-cwl_cosio-d20/index.md) | Co₂SiO₄ [Pnma] · D20 @ ILL | [pd-neut-cwl_cosio-d20](../tutorials/pd-neut-cwl_cosio-d20.ipynb) |
+| [Rietveld fit: LiNiO₂, ECHIDNA](pd-neut-cwl_lmo-echidna/index.md) | LiNiO₂ [R-3m] · ECHIDNA @ ANSTO | [pd-neut-cwl_lmo-echidna](../tutorials/pd-neut-cwl_lmo-echidna.ipynb) |
+| [Rietveld fit: Y₂O₃, SPODI](pd-neut-cwl_y2o3-spodi/index.md) | Y₂O₃ [Ia-3] · SPODI @ FRM II | [pd-neut-cwl_y2o3-spodi](../tutorials/pd-neut-cwl_y2o3-spodi.ipynb) |
+| [Two-phase fit: YAlO₃ and Al₂O₃, SPODI](pd-neut-cwl_yalo3-al2o3-spodi/index.md) | YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II | [pd-neut-cwl_yalo3-al2o3-spodi](../tutorials/pd-neut-cwl_yalo3-al2o3-spodi.ipynb) |
 
-The registry of projects and which of them execute is [`projects.yml`](projects.yml).
+## Time-of-flight neutron
 
-The measured runtime of each executing project is banked in [`runtimes.tsv`](runtimes.tsv)
-(`python tools/checks/cli_projects.py --bank docs/user/cli/runtimes.tsv`).
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Rietveld fit: Si, SEPD](pd-neut-tof_si-sepd/index.md) | Silicon [Fd-3m] · SEPD @ Argonne | [pd-neut-tof_si-sepd](../tutorials/pd-neut-tof_si-sepd.ipynb) |
+| [Rietveld fit: CeCoAl₃, POLARIS](pd-neut-tof_cecoal-polaris/index.md) | CeCoAl₃ [Pmma] · POLARIS @ ISIS | [pd-neut-tof_cecoal-polaris](../tutorials/pd-neut-tof_cecoal-polaris.ipynb) |
+| [Calibration fit: CeO₂, PEARL](pd-neut-tof_ceo2-pearl/index.md) | CeO₂ [Fm-3m] · PEARL @ ISIS | [pd-neut-tof_ceo2-pearl](../tutorials/pd-neut-tof_ceo2-pearl.ipynb) |
+| [Two-phase fit: La₀.₅Ba₀.₅CoO₃ and Si, McStas](pd-neut-tof_lbco-si-mcstas/index.md) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation | [pd-neut-tof_lbco-si-mcstas](../tutorials/pd-neut-tof_lbco-si-mcstas.ipynb) |
+| [Joint fit: Na₂Ca₃Al₂F₁₄, WISH](pd-neut-tof_ncaf-wish/index.md) | Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS | [pd-neut-tof_ncaf-wish](../tutorials/pd-neut-tof_ncaf-wish.ipynb) |
+| [Joint fit: ferrite and austenite, BEER](pd-neut-tof_ferrite-austenite-beer/index.md) | Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS | [pd-neut-tof_ferrite-austenite-beer](../tutorials/pd-neut-tof_ferrite-austenite-beer.ipynb) |
+
+## X-ray
+
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Rietveld fit: PbSO₄, laboratory X-ray](pd-xray-cwl_pbso4-lab/index.md) | PbSO₄ [Pnma] · Laboratory X-ray | [pd-xray-cwl_pbso4-lab](../tutorials/pd-xray-cwl_pbso4-lab.ipynb) |
+| [Rietveld fit: high-entropy perovskite, P02.1](pd-xray-cwl_lam7o3-p021/index.md) | La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III | [pd-xray-cwl_lam7o3-p021](../tutorials/pd-xray-cwl_lam7o3-p021.ipynb) |
+
+## Neutron and X-ray joint
+
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Joint fit: PbSO₄, neutron and X-ray](pd-neut-xray-cwl_pbso4-d1a-lab/index.md) | PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray | [pd-neut-xray-cwl_pbso4-d1a-lab](../tutorials/pd-neut-xray-cwl_pbso4-d1a-lab.ipynb) |
+
+## Scans
+
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan/index.md) | Co₂SiO₄ [Pnma] · D20 @ ILL | [pd-neut-cwl_cosio-d20_scan](../tutorials/pd-neut-cwl_cosio-d20_scan.ipynb) |
+| [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan/index.md) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF | [pd-xray-cwl_latp-bm01_scan](../tutorials/pd-xray-cwl_latp-bm01_scan.ipynb) |
+
+## Single crystal
+
+| example | app title | tutorial |
+| --- | --- | --- |
+| [Single-crystal fit: Tb₂Ti₂O₇, HEiDi](sc-neut-cwl_tb2ti2o7-heidi/index.md) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) | [sc-neut-cwl_tb2ti2o7-heidi](../tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb) |
+| [Single-crystal fit: Pr₂NiO₄, 5C2](sc-neut-cwl_pr2nio4-5c2/index.md) | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB | [sc-neut-cwl_pr2nio4-5c2](../tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb) |
+| [Single-crystal fit: taurine, SENJU](sc-neut-tof_taurine-senju/index.md) | Taurine [P2₁/c] · SENJU @ J-PARC | [sc-neut-tof_taurine-senju](../tutorials/sc-neut-tof_taurine-senju.ipynb) |
+
+The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.

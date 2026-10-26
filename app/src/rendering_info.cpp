@@ -87,6 +87,9 @@ void RenderingInfo::setDetected(const QString& api, const QString& renderer) {
     std::fprintf(stderr, "edi: graphics: %s%s%s, %s\n", qPrintable(api_), renderer_.isEmpty() ? "" : ", renderer ",
                  qPrintable(renderer_), software_ ? "software rendering (no GPU)" : "hardware rendering");
     std::fflush(stderr);
+    emit apiChanged();
+    emit rendererChanged();
+    emit softwareChanged();
     emit detectedChanged();
 }
 

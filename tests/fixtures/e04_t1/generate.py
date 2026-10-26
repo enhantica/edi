@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import re
@@ -21,6 +22,10 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
+REFERENCE = ROOT / 'tests/fixtures/report_units/iucr_reference.py'
+SPEC = importlib.util.spec_from_file_location('display_rounding_reference', REFERENCE)
+IUCR = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(IUCR)
 CW = ['broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_x', 'broad_lorentz_y']
 GAUSS = [
     'broad_gauss_sigma_0',
@@ -149,7 +154,13 @@ def tables(path, extra=()):
 def measured_range(path):
     data = tables(path, ('_data',)).get('data', [])
     if not data:
-        return []
+        values = scalars(path)
+        axis = 'two_theta' if '_data_range.two_theta_min' in values else 'time_of_flight'
+        keys = [f'_data_range.{axis}_{field}' for field in ('min', 'max', 'step')]
+        if not all(key in values for key in keys):
+            return []
+        low, high, step = [values[key]['value'] for key in keys]
+        return [low, high, step, round((high - low) / step) + 1]
     axis = 'two_theta' if 'two_theta' in data[0] else 'time_of_flight'
     values = [row[axis]['value'] for row in data]
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
@@ -198,7 +209,7 @@ def scan_inputs(project, analysis):
                 {
                     'index': index,
                     'values': [
-                        round(rows[index][0], 4),
+                        rows[index][0],
                         rows[index][1],
                         1.0 if rows[index][2] < 0.0001 else rows[index][2],
                     ],
@@ -244,11 +255,44 @@ def profile_fixtures():
     return projects
 
 
-def generate(warning_project=None, added_project=None, updated_project=None, output_dir=None):  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old witnesses
+def report_cell(file):
+    values = scalars(file)
+    fields = ('length_a', 'length_b', 'length_c', 'angle_alpha', 'angle_beta', 'angle_gamma')
+    shown = [
+        IUCR.rounded_pair(values['_cell.' + key]['value'], values['_cell.' + key]['uncertainty'])[
+            0
+        ]
+        for key in fields
+    ]
+    group = values['_space_group.name_h_m']
+    if group in {'P m -3 m', 'F m -3 m', 'F d -3 m', 'I m -3 m', 'I a -3', 'I 21 3'}:
+        shown[1:3] = [shown[0], shown[0]]
+    elif group.startswith(('R ', 'P 6')):
+        shown[1] = shown[0]
+    return shown
+
+
+def app_only_ids(registry):
+    identities = [row['id'] for row in registry if row.get('app-only')]
+    if identities:
+        message = 'Every user example now has its catalogue form; app-only rows are retired'
+        raise ValueError(message)
+    return identities
+
+
+def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old witnesses
+    warning_project=None,
+    added_project=None,
+    updated_project=None,
+    output_dir=None,
+    *,
+    catalogue=False,
+):
     new_ids = [added_project] if isinstance(added_project, str) else (added_project or [])
     selected_project = new_ids or updated_project
     projects = []
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    app_only = app_only_ids(registry)
     selected = [
         entry
         for entry in registry
@@ -263,6 +307,7 @@ def generate(warning_project=None, added_project=None, updated_project=None, out
                 'name': file.stem,
                 'atoms': len(tables(file)['atom_site']),
                 'cellA': scalars(file)['_cell.length_a']['value'],
+                'displayCell': report_cell(file),
                 'spaceGroup': scalars(file)['_space_group.name_h_m'],
                 'cell': [
                     scalars(file)['_cell.' + field]['value']
@@ -478,7 +523,23 @@ def generate(warning_project=None, added_project=None, updated_project=None, out
         retained['projects'] = [by_id[entry['id']] for entry in registry]
         retained['corpus'].extend(corpus)
         data = retained
-    data = update_project_oracle(output, projects, corpus, updated_project, data)
+    data = update_project_oracle(
+        output, projects, corpus, updated_project, data, catalogue=catalogue
+    )
+    catalogue_ids = data.get('catalogue_ids') or [
+        row['id']
+        for row in json.loads(
+            (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+        )['cases']
+    ]
+    data['app_only_ids'] = app_only
+    data['app_ids'] = [*catalogue_ids, *app_only]
+    if catalogue:
+        metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
+        if list(metadata['examples']) != data['app_ids']:
+            raise ValueError(
+                'Regenerate app metadata for the declared catalogue and app-only list'
+            )
     extend_xray_instrument_oracle(data)
     output.write_text(
         '// Independent category oracle. Regenerate only with generate.py.\nvar frozen = '
@@ -487,7 +548,11 @@ def generate(warning_project=None, added_project=None, updated_project=None, out
     )
 
 
-def update_project_oracle(output, projects, corpus, project_id, data):
+def update_project_oracle(output, projects, corpus, project_id, data, *, catalogue=False):
+    if catalogue:
+        from catalogue_oracle import merge_category  # noqa: PLC0415
+
+        return merge_category(output, data)
     if project_id is None:
         return data
     retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
@@ -572,6 +637,7 @@ def loader_warning(analysis, experiments, metadata, project_id=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--catalogue', action='store_true')
     parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
     parser.add_argument('--add-project', metavar='PROJECT_ID', nargs='+')
     parser.add_argument('--update-project', metavar='PROJECT_ID')
@@ -584,4 +650,6 @@ if __name__ == '__main__':
         > 1
     ):
         parser.error('warning adaptation and project addition are separate operations')
-    generate(args.loader_warning_only, args.add_project, args.update_project)
+    generate(
+        args.loader_warning_only, args.add_project, args.update_project, catalogue=args.catalogue
+    )

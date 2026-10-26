@@ -52,8 +52,9 @@ int main(int argc, char* argv[]) {
     if (demo) {
         // The images are 1280x768 at a device-pixel ratio of 1 on every platform: a Retina screen (2) is
         // scaled back by QT_SCALE_FACTOR, which Qt reads only at start, so the demo restarts itself once.
+        // EDI_DEMO_ANY_RATIO keeps the screen's ratio, for a look at a high-DPI screen's drawing (`--demo-only lines-`).
         const qreal ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
-        if (!qFuzzyCompare(ratio, 1.0)) {
+        if (!qFuzzyCompare(ratio, 1.0) && qEnvironmentVariableIsEmpty("EDI_DEMO_ANY_RATIO")) {
 #if defined(Q_OS_UNIX)
             if (qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR")) {
                 qputenv("QT_SCALE_FACTOR", QByteArray::number(1.0 / ratio));

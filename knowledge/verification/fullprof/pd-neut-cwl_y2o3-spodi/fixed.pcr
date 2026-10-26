@@ -1,0 +1,82 @@
+COMM pd-neut-cwl_y2o3-spodi
+! Current global Chi2 (Bragg contrib.) =      1.199    
+! Files => DAT-file: fit.dat,  PCR-file: fit
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+   1   7   1  21   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1
+!
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+   2   2   1   0   2   0   4   0   0   2  10   1   1   0   0   1   1
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1
+ 1.548220 1.548220  0.00000   74.750  48.000  0.0000  0.0000  180.00    0.0000  0.0000
+!
+!NCY  Eps  R_at  R_an  R_pr  R_gl     Thmin       Step       Thmax    PSD    Sent0
+1 0.00 0.20 0.20 0.20 0.20 12.0500 0.050023 137.4500 0.000 0.000
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+12.5856 9861.4951 0
+19.4181 9440.0059 0
+21.8751 9155.1016 0
+27.8998 8836.5840 0
+32.9147 8633.1924 0
+39.1152 8243.2627 0
+45.7120 7922.6953 0
+51.9387 7786.4102 0
+60.5580 7496.7598 0
+68.1982 7273.7285 0
+81.3276 7118.7437 0
+88.7996 6865.9170 0
+94.3171 6796.4658 0
+98.1541 6646.5151 0
+100.9813 6605.3501 0
+104.3134 6522.6060 0
+108.7225 6419.2622 0
+116.0673 6511.2358 0
+121.4862 6288.5459 0
+131.2805 6333.6196 0
+135.7928 6519.8350 0
+! 
+!
+0 !Number of refined parameters
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1
+-0.04423 0 0.00000 0 0.00000 0 0.000000 0 0
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   0.0000
+!-------------------------------------------------------------------------------
+y2o3
+!
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More
+   3   0   0 0.0 0.0 1.0   0   0   0   0   0       3612.960   0   7   0
+!
+!
+I a -3                   <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+!    beta11   beta22   beta33   beta12   beta13   beta23  /Codes
+Y1     Y      -0.03227  0.00000  0.25000  0.00000   0.50000   0   0   2    0  
+0 0 0 0 0
+      0.00061  0.00036  0.00062  0.00000  0.00000  -0.00026
+0 0 0 0 0 0
+Y2     Y       0.25000  0.25000  0.25000  0.00000   0.16667   0   0   2    0  
+0 0 0 0 0
+      0.00069  0.00069  0.00069 -0.00009 -0.00009  -0.00009
+0 0 0 0 0 0
+O1     O       0.39074  0.15200  0.38028  0.00000   1.00000   0   0   2    0  
+0 0 0 0 0
+      0.00058  0.00077  0.00035 -0.00008 -0.00017   0.00001
+0 0 0 0 0 0
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Shape1      Bov      Str1      Str2      Str3   Strain-Model
+ 0.9689172E-01   0.00000   0.00000   0.00000   0.00000   0.00000       0
+0 0 0 0 0 0
+!       U            V            W             X            Y         GauSiz      LorSiz    Size-Model
+     0.034699    -0.062302     0.128860     0.000000     0.000000     0.000000     0.000000       0
+0 0 0 0 0 0 0
+!     a          b         c        alpha      beta       gamma      # Cell Info
+  10.604454  10.604454  10.604454  90.000000  90.000000  90.000000   
+0 0 0 0 0 0
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L
+  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+0 0 0 0 0 0 0 0
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+      12.050     137.450       1

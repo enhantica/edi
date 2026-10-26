@@ -1,0 +1,14 @@
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_tb2ti2o7-heidi
+_metadata.title "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)"
+_metadata.description "Single crystal · Anisotropic displacements and extinction from a rough start"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "HEiDi"
+_metadata.facility "MLZ (FRM II)"
+_metadata.polarisation "none"

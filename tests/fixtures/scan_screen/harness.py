@@ -80,7 +80,9 @@ def observation(backend, scratch):
         ]
 
         def prepare():
-            if backend == 'desktop':  # the normal app observes itself; nothing is compiled
+            if (
+                backend == 'desktop'
+            ):  # qualify the delivered binary; never infer its build from HEAD
                 return normal_app.receipt(
                     ROOT, directory, crysta_reference_prefix(), crysta_reference_source()
                 )
@@ -121,14 +123,22 @@ def observation(backend, scratch):
     executable = Path(receipt['executable'])
     if hashlib.sha256(executable.read_bytes()).hexdigest() != receipt['binary']:
         raise RuntimeError('A screen gate refuses a replaced observation executable')
+    if backend == 'desktop':
+        normal_app.validate_identity(receipt, ROOT)
 
     def qualified_capture():
+        if backend == 'desktop':
+            normal_app.validate_identity(receipt, ROOT)
         result = capture(receipt, scratch, env)
+        if backend == 'desktop':
+            normal_app.validate_identity(receipt, ROOT)
         validate_dependencies(receipt, 'screen', ROOT)
         validate_bundle(receipt)
         return result
 
     result = capture_once(receipt, qualified_capture)
+    if backend == 'desktop':
+        normal_app.validate_identity(receipt, ROOT)
     validate_dependencies(receipt, 'screen', ROOT)
     validate_bundle(receipt)
     result['receipt_path'] = str(receipt_path)

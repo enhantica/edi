@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtTest
+import "ExampleProjects.js" as Examples
 import EasyApplication.Gui.Style as Style
 import edi.app
 import "UiInteraction.js" as Ui
@@ -44,7 +45,7 @@ Item {
             supplied.clear();
             supplied.stale = false;
             supplied.calculationError = "";
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "The independently named measured example opens");
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The independently named measured example opens");
         }
         function cleanup() {
             Session.closeProject();

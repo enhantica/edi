@@ -39,6 +39,20 @@ last χ². A failed count above zero is red.
 **Follow**, next to the fitting button, is on when a run starts: the pattern tab shows each file
 as it is fitted. Choosing another dataset turns it off; press it to turn it on again.
 
+How often the pattern is redrawn is set on the Analysis page's Settings tab, under **Pattern
+updates during a scan**, and kept on this computer:
+
+- **Adaptive** (the default): the newest fitted file whenever the screen is free, at most twice a
+  second. A slow scan shows every file, a fast one skips some.
+- **About once a second**: the same, at most once a second.
+- **Every pattern, fit waits for the display**: every file is drawn, and the fit waits for each
+  drawing. On the Stacked view or the Map, each file in turn becomes the shown dataset. On a slow
+  display this makes the run longer.
+- **Every pattern, display catches up**: every file is drawn in order, but the fit never waits.
+  When the display falls behind, the status bar shows **Showing N of M**, and the remaining files
+  are drawn after the run ends.
+- **Only at the end**: no pattern while the run fits; the last file is shown when it ends.
+
 The fitting button reads **Start fitting** while no file is fitted and **Continue fitting** while
 some are not, for example after **Stop fitting**, which keeps the files fitted so far. Continuing
 fits from the first unfitted file. Once every file is fitted the button is disabled. **Reset

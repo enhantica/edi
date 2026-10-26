@@ -6,7 +6,6 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
-#include <QJsonObject>
 #include <QStandardPaths>
 #include <QPointer>
 #include <QUuid>
@@ -750,40 +749,23 @@ void Session::openWebProject(const QString& kind) {
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
 }
 
-void Session::openWebRecordFolder() {
-    QString root;
-    try {
-        root = QString::fromStdString(edi::fresh_archive_directory("web"));
-    } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));
-        emit loadFailed(last_error_);
-        return;
-    }
-    WebStorage::instance()->pickRecordFolder(root, webOpenAnswer(root));
-}
-
 WebStorage::Answer Session::webOpenAnswer(const QString& root) {
     // A project opened meanwhile is not replaced by the one that arrives late.
     const QPointer<ProjectViewModel> before = project_;
-    return [this, root, before](const QJsonObject& answer) {
-        if (before != project_ || !answer.value(QStringLiteral("ok")).toBool()) {
+    return [this, root, before](const WebStorageAnswer& answer) {
+        if (before != project_ || !answer.ok) {
             QDir(root).removeRecursively();
-            if (before != project_ || answer.value(QStringLiteral("cancelled")).toBool()) {
+            if (before != project_ || answer.cancelled) {
                 return;
             }
-            // A project.edi needs its folder, picked with a click of its own.
-            if (answer.value(QStringLiteral("needsFolder")).toBool()) {
-                emit webFolderNeeded(answer.value(QStringLiteral("name")).toString());
-                return;
-            }
-            setLastError(answer.value(QStringLiteral("message")).toString());
+            setLastError(answer.message);
             emit loadFailed(last_error_);
             return;
         }
-        const WebPlace place{answer.value(QStringLiteral("key")).toString(),
-                             answer.value(QStringLiteral("kind")).toString(),
-                             answer.value(QStringLiteral("name")).toString()};
-        if (!openWebCopy(answer.value(QStringLiteral("path")).toString(), place)) {
+        const WebPlace place{answer.key,
+                             answer.kind,
+                             answer.name};
+        if (!openWebCopy(answer.path, place)) {
             QDir(root).removeRecursively();
             emit loadFailed(last_error_);
             return;
@@ -807,19 +789,19 @@ void Session::openStoredProject(const QString& key, bool recovery) {
         return;
     }
     const QPointer<ProjectViewModel> before = project_;
-    WebStorage::instance()->load(key, recovery, root, [this, root, before, recovery](const QJsonObject& answer) {
-        if (before != project_ || !answer.value(QStringLiteral("ok")).toBool()) {
+    WebStorage::instance()->load(key, recovery, root, [this, root, before, recovery](const WebStorageAnswer& answer) {
+        if (before != project_ || !answer.ok) {
             QDir(root).removeRecursively();
             if (before == project_) {
-                setLastError(answer.value(QStringLiteral("message")).toString());
+                setLastError(answer.message);
                 emit loadFailed(last_error_);
             }
             return;
         }
-        const WebPlace place{answer.value(QStringLiteral("key")).toString(),
-                             answer.value(QStringLiteral("kind")).toString(),
-                             answer.value(QStringLiteral("name")).toString()};
-        if (!openWebCopy(answer.value(QStringLiteral("path")).toString(), place)) {
+        const WebPlace place{answer.key,
+                             answer.kind,
+                             answer.name};
+        if (!openWebCopy(answer.path, place)) {
             QDir(root).removeRecursively();
             emit loadFailed(last_error_);
             return;
@@ -859,8 +841,8 @@ void Session::writeWebPlace(bool announce) {
     keep_timer_->stop();
     const WebPlace place = web_place_;
     WebStorage::instance()->write(place.key, place.kind, place.name, project_->path(), false,
-                                  [this, place, announce](const QJsonObject& answer) {
-                                      if (!answer.value(QStringLiteral("ok")).toBool()) {
+                                  [this, place, announce](const WebStorageAnswer& answer) {
+                                      if (!answer.ok) {
                                           // The browser's own words ("UnknownError", "QuotaExceededError") say
                                           // nothing to the user: the place is named instead.
                                           if (place.kind == QStringLiteral("browser")) {
@@ -871,7 +853,7 @@ void Session::writeWebPlace(bool announce) {
                                                      "Save project as… to download it."));
                                           } else {
                                               emit webSaveFailed(tr("The project could not be written to %1: %2")
-                                                                     .arg(place.name, answer.value(QStringLiteral("message")).toString()));
+                                                                     .arg(place.name, answer.message));
                                           }
                                           return;
                                       }
@@ -894,15 +876,15 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
     }
     const QPointer<ProjectViewModel> before = project_;
     WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy](
-                                                                               const QJsonObject& answer) {
-        if (before != project_ || project_ == nullptr || !answer.value(QStringLiteral("ok")).toBool()) {
-            if (before == project_ && !answer.value(QStringLiteral("cancelled")).toBool()) {
-                emit webSaveFailed(answer.value(QStringLiteral("message")).toString());
+                                                                               const WebStorageAnswer& answer) {
+        if (before != project_ || project_ == nullptr || !answer.ok) {
+            if (before == project_ && !answer.cancelled) {
+                emit webSaveFailed(answer.message);
             }
             return;
         }
-        const WebPlace place{answer.value(QStringLiteral("key")).toString(), kind,
-                             answer.value(QStringLiteral("name")).toString()};
+        const WebPlace place{answer.key, kind,
+                             answer.name};
         QString root;
         try {
             root = QString::fromStdString(edi::fresh_archive_directory(copy ? "copy" : "web"));
@@ -924,12 +906,12 @@ void Session::saveWebProjectAs(const QString& kind, bool copy) {
                 return;
             }
             WebStorage::instance()->write(place.key, place.kind, place.name, folder, false,
-                                          [this, root, kind](const QJsonObject& written) {
+                                          [this, root, kind](const WebStorageAnswer& written) {
                                               QDir(root).removeRecursively();
-                                              if (written.value(QStringLiteral("ok")).toBool()) {
+                                              if (written.ok) {
                                                   emit webSaved(kind);
                                               } else {
-                                                  emit webSaveFailed(written.value(QStringLiteral("message")).toString());
+                                                  emit webSaveFailed(written.message);
                                               }
                                           });
             return;
@@ -1010,7 +992,7 @@ void Session::keepChanges() {
     }
     const WebPlace place = web_place_;
     WebStorage::instance()->write(place.key, place.kind, place.name, root, true,
-                                  [root](const QJsonObject&) { QDir(root).removeRecursively(); });
+                                  [root](const WebStorageAnswer&) { QDir(root).removeRecursively(); });
 }
 
 void Session::setLastError(const QString& error) {

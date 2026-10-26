@@ -323,6 +323,8 @@ Item {
         structureColourScheme: Preferences.structureColours
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
+        // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
+        hiddenFitsRange: Preferences.chartHiddenRange === "fit"
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
         includedOnly: !chart.report && Preferences.chartIncludedOnly
@@ -423,9 +425,9 @@ Item {
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
     // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
-    // centred above the plot, when they fit; else the comboboxes above and the buttons below. The comboboxes: the y
-    // scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner,
-    // 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the y scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or
+    // d-spacing (owner, 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
     ToolbarLines {
         id: toolbarLines
 
@@ -434,7 +436,6 @@ Item {
         width: chart.width
         height: implicitHeight
         visible: !chart.report
-        centre: mainView.x + mainView.plotArea.x + mainView.plotArea.width / 2
         leftEdge: chart.toolbarLeft
         rightEdge: chart.width - chart.toolbarRightInset
 
@@ -854,14 +855,17 @@ Item {
         delegate: IconLine {
             required property var modelData
 
+            // Disabled with its ticks hidden from the legend, as the legend's entry is.
+            readonly property color ink: modelData.hidden ? chart.colors.themeForegroundDisabled : modelData.color
+
             objectName: "chart.bragg.label"
             visible: braggView.visible
             height: AppSizes.legendRowHeight
-            textColor: modelData.color
+            textColor: ink
             segments: [
                 {
                     "icon": "layer-group",
-                    "color": modelData.color
+                    "color": ink
                 },
                 {
                     "text": modelData.text
@@ -905,12 +909,18 @@ Item {
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
+        id: chartLegend
+
         objectName: "chart.legend"
+        // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
+        z: 1
         colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend
+        toggles: !chart.report
+        onToggled: key => controller.toggleSeries(key)
     }
 
     // The pointer over the main plot area: a box zoom or a pan by dragging, a zoom about the pointer by the
@@ -946,6 +956,10 @@ Item {
                 hoverLabel.show("", 0, 0);
         }
         onReleased: mouse => {
+            // A click, not a drag, on a legend row hides or shows its curve.
+            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            if (mouse.button === Qt.LeftButton && still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
+                return;
             if (mouse.button === Qt.RightButton)
                 controller.reset();
             else if (toolbar.pointerMode === "zoom")

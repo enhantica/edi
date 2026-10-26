@@ -27,6 +27,10 @@ TestCase {
         height: 500
         project: test.project
     }
+    Component {
+        id: descriptionFactory
+        DescriptionTab { width: 1000; height: 600; project: test.project }
+    }
     property int largestFitted: 0
     Connections {
         target: test.project ? test.project.fit : null
@@ -36,7 +40,21 @@ TestCase {
     }
     function test_observe() {
         const expected = JSON.parse(Probe.readFile(decodeURIComponent(String(Probe.referenceUrl("expected.json")).slice(7))));
+        const openedAt = Date.now();
         Session.openProject(Probe.referenceUrl("project"));
+        if (expected.refusal_budget_ms !== undefined)
+            verify(Date.now() - openedAt < expected.refusal_budget_ms, "Unsupported notes are refused within the I/O bound after app startup");
+        if (expected.kind === "authors") {
+            compare(project.authors, expected.authors, "The app keeps the literal committed author value");
+            const description = createTemporaryObject(descriptionFactory, test);
+            verify(description !== null, "The actual Description tab must instantiate");
+            verify(waitForRendering(description), "The Description tab must render before observing authors");
+            const field = Probe.visibleControl(description, "project.authors");
+            verify(field !== null, "The visible Description tab owns the Authors field");
+            compare(field.text, expected.authors, "CIF null author values remain literal in the app field");
+            Session.closeProject();
+            return;
+        }
         if (expected.kind === "state-open") {
             if (expected.valid) {
                 verify(Session.hasProject, "Absent and regular symlink state opens through the actual app");

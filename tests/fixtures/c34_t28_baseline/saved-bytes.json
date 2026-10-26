@@ -806,8 +806,440 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
+    "repo:docs/user/cli/pd-neut-cwl_cosio-d20/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace",
+        "experiments/d20.edi": "a74850c9e285373da9b86095a7f52d8980c239133bb38317d9f4cfd5a726406e",
+        "project.edi": "f5122560b7ac87cd06b76f4d19a3573ef1f54a2d281b01c5d7388aa01d7b05be",
+        "structures/cosio.edi": "ed3e7f5594f4cab7b193440098431f483428082499f191b4d8640dd12a2d6c84"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_cosio-d20_scan/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "f3be9aaf7a450a964908736076414946c1dbe77087030fe2cb632d679f5e362b",
+        "experiments/d20.edi": "6c1bfd4d1c3b18d623b01ef64544eec221654e5d5af45415c6b6717d2d426b11",
+        "experiments/d20_scan/01_001_497p3790.dat": "22db61d0c3782c2614c6fccb92e1b9861010bfdb391ff87fa7ab0f53abcfc37f",
+        "experiments/d20_scan/01_002_497p3410.dat": "ef3eaf0029ac15202d49952f66caf1d30a8d4ca3adf82e76f3a89ef4a843728d",
+        "experiments/d20_scan/01_003_497p2280.dat": "12df6cee20e6241e84a392053ef1ad6cb9cc153d96ddbd95b025ba79f4c22734",
+        "experiments/d20_scan/01_004_497p0360.dat": "943ff86fb9bf5d264f4a2d41e64b1d5711f26ab76de4cb90c0545900e92c674e",
+        "experiments/d20_scan/01_005_496p5900.dat": "5f3023b3820eb243fe8186c8f9ff953e1325c0d767097174f77e94419f1d8094",
+        "experiments/d20_scan/01_006_495p3740.dat": "f2025c68fdd8fc3de28b057382d9087ea6c0b92dbec0c1b9eca54dc0ef41f2d4",
+        "experiments/d20_scan/01_007_489p9560.dat": "2898a2b6434c15f02eff1c1994fa8c896c6d92b93d15a15994854e75be060aef",
+        "experiments/d20_scan/01_008_485p7350.dat": "de3f00765f6765b80157d75947c7517e997dfea579adcc76251fe644a9a7ba70",
+        "experiments/d20_scan/01_009_481p2260.dat": "021d76aad5f57879aefa516eefc96418536d0f42af793e6a0d47d6f407e05005",
+        "experiments/d20_scan/01_010_476p9800.dat": "1dc012ecb202cb10c04d5a70be15c2a9734c2b37d547f564ecee9d2c9abedefa",
+        "experiments/d20_scan/01_011_472p5840.dat": "acd16e373fdfe9e3cc5c597be55ec304109578badf82df8743d69f07a58ca9c0",
+        "experiments/d20_scan/01_012_468p2800.dat": "f78b5d3d9da83a3f003535847f2610e52e7dfd8374ee5950a0c3c34109f56462",
+        "experiments/d20_scan/01_013_463p8850.dat": "d5c22e9a92bfaf425cd6ab3633325319d7a62db6e65d3916e97447c6422fd30c",
+        "experiments/d20_scan/01_014_459p2510.dat": "dd07ea491ebb2a9fd37a9b0a6204e82367ea4a1954315778ceb2fe585d93bbd4",
+        "experiments/d20_scan/01_015_454p8870.dat": "48231f25702a2c8e550c09f6272b5305549297e7647b59b7a3d8d6b28810b1a4",
+        "experiments/d20_scan/01_016_450p3320.dat": "6e363f78be7d54a57830bca46b5bd0a18f768f6b15dd8a68ed6c1d292216fb03",
+        "experiments/d20_scan/01_017_446p0030.dat": "89c898df19634d5672e76798c37bc9e8551bb5678767e988bc41d735173483e0",
+        "experiments/d20_scan/01_018_441p4020.dat": "aca3572c999b8cf60592ea7b884f67ecc8a90664361f4e6aa15590b6ef8ea6e0",
+        "experiments/d20_scan/01_019_437p1320.dat": "f6418e949ff522365390f777c197ab7fbd9d76cded8c04d7d4a509a51e8b877b",
+        "experiments/d20_scan/01_020_433p0150.dat": "a3d5a690e7a7b31263035b240181507e751f6b7f0ba35b77c29cd82d6bb535fd",
+        "experiments/d20_scan/01_021_428p4870.dat": "b80cc00f57695d56589aa857d1c72fd921acc2ec2c45adecc4d2901e49e3bff4",
+        "experiments/d20_scan/01_022_424p1020.dat": "458d5d83a455d35efe65f3a9a518cf0b66d677b280be587868a6cb9e7af2db38",
+        "experiments/d20_scan/01_023_419p4530.dat": "33611d2a5959694b1dbe9d228db99613afe5431bc35a43e61764267a73be83d4",
+        "experiments/d20_scan/01_024_415p1880.dat": "7a9fdd55cf98f32e0ec00e042999c4555b5c818c9429d6daf41fc7a166bac478",
+        "experiments/d20_scan/01_025_410p7830.dat": "d0e151a4805a8c29be88b33249f11e1f5414e9de25dffde20869b202cdeb72ec",
+        "experiments/d20_scan/01_026_406p1830.dat": "7fa18447b1981382d68d30c896b87af509f6bba264bc1013af1650cb5b34383e",
+        "experiments/d20_scan/01_027_402p1390.dat": "a68b8fae71666b66d6139375978379ab63ce7facb1f4c63a343262c47e81270b",
+        "experiments/d20_scan/01_028_397p5640.dat": "450d09ba353d52cf88805f153913f308ec51428aa279649911a5297dd4106f25",
+        "experiments/d20_scan/01_029_393p2660.dat": "6ebb10a745535d973fbaa3aa16bcf57f163ad99d67cedb123f6739cc0d19989a",
+        "experiments/d20_scan/01_030_388p8760.dat": "2fe4da899cfec93b4685f5ddf48cb98f639901dc2239bced310739522ed301ba",
+        "experiments/d20_scan/01_031_384p6000.dat": "c051142ae04c23efe2323ca6ffbbdf39ee6571371d26dcc00c1cf592ff97ee55",
+        "experiments/d20_scan/01_032_380p2820.dat": "e03e997f68637b4df7b60513c7845a260b01726f3f67fa804b355a71b94de8f5",
+        "experiments/d20_scan/01_033_375p8110.dat": "a56ff8f5849e1e3fe67b6858352fcc88c24a53cfe579df98e97d48c2e2d9f055",
+        "experiments/d20_scan/01_034_371p4350.dat": "76e2fd2646d8c37d1d357e4479b20e29a47c41ee357614f7d947a8c1fcbb7ce3",
+        "experiments/d20_scan/01_035_362p8190.dat": "424bea57f499991eb8aa7d224373a6bd73d0107c0977c06f0db15ed1eaab8ccc",
+        "experiments/d20_scan/01_036_358p4140.dat": "1006fc6e31bbd16528ac73eccd0e115148bcdfb75b397df5a11a5849d96131bc",
+        "experiments/d20_scan/01_037_354p1160.dat": "0e6a05e598dadc199dd04823bed2db908f96e104cbb5359fc824893a657adc1f",
+        "experiments/d20_scan/01_038_349p8060.dat": "206f085b19fa066d2b473479221c460287a40f19f5e7c1f0320c2979c8ffe32a",
+        "experiments/d20_scan/01_039_345p2570.dat": "5f1b51a111b63db9d3154dd6fa9e2dfc1c18cdaccfcd38a0f6cc97dae5e79615",
+        "experiments/d20_scan/01_040_340p7230.dat": "7855c5f97795bcb99310acd974b65fc6aad8a5d157f41aec9bdf2802533414ac",
+        "experiments/d20_scan/01_041_336p6280.dat": "10d3cb20af02ac533a17e0966dd41f3fb80f80bfdc5e2763d4e92b08485640f0",
+        "experiments/d20_scan/01_042_332p2660.dat": "03fe53d66954d3935bbbca3c39dda6ec625c1f5627c6eb6d89e94d0364ade80e",
+        "experiments/d20_scan/01_043_327p9190.dat": "f8dbe59316ee34514cf8ddd5502b5b53609276ce3117e05d87ac7ac9afd97aec",
+        "experiments/d20_scan/01_044_323p3350.dat": "c038f2e38226ad3fd2281b55fbb39cf04a6ef2dc3d4f0276b5c8bf0ba393024f",
+        "experiments/d20_scan/01_045_319p0710.dat": "5c2058a222ef253a0f46235b9615cf957e6414b4e52f4138dfb64be5fd173af4",
+        "experiments/d20_scan/01_046_314p8200.dat": "08d4bf74090bd142686ba02fe36c6642f4117480d0f9026b3e3a307ca64b6ed8",
+        "experiments/d20_scan/01_047_310p9350.dat": "fec1490aaf6f59a7464c3b21cdedf6333cb3d764f8d9a13ac62478cb2d981afa",
+        "experiments/d20_scan/01_048_306p6800.dat": "29e6848c38f889e1bc839bac949c3b2404abe2f9a652a604fc4542fe55d52dc3",
+        "experiments/d20_scan/01_049_303p0940.dat": "70240b3346e701baaa43629897aeb121f54cd19aff707eabe45d2524844ca664",
+        "experiments/d20_scan/01_050_300p4240.dat": "92e8342610fa5d0f5a749a9b4dc29479c3ac75b052db2c9a2393155bf354b28c",
+        "experiments/d20_scan/01_051_299p3940.dat": "dd2bf75b4d8e3ae22bf9643d3be77773d3b5317b6ab8a273b802bb3640059874",
+        "experiments/d20_scan/01_052_299p2050.dat": "4565452f1baca8f389bcf7d8e47faef032fc945105c95923f74ddd4b6709c410",
+        "experiments/d20_scan/01_053_298p8330.dat": "841b483ddd09b3c2e767db9bb9890c5ac2d1d3a937b51da72f3bc18871e3e79b",
+        "experiments/d20_scan/01_054_298p0250.dat": "eb716b2eecde0c12d3329a5651ab8d3945e07d0929a802c164b15868861dd689",
+        "experiments/d20_scan/01_055_296p4040.dat": "acf75bbc5a6a1e60f2fec3d8e7d6101374ee8528af85817d84a816c2681eca6a",
+        "experiments/d20_scan/01_056_290p7210.dat": "940bcd89b8fe5ac1ac574ac558dcc921e82ea8b40238c76209b0bc786ad22eee",
+        "experiments/d20_scan/01_057_286p2140.dat": "90525f159ad2e7b5dba17ba5e5a817b03e81b9bb850373e34de26fc30e00bd8d",
+        "experiments/d20_scan/01_058_281p9010.dat": "243f7d2144ece905f6de4f72acbff36fad21f42706937370f63b21afdd3ba325",
+        "experiments/d20_scan/01_059_277p4860.dat": "7283650bc9654d294ddb40e2e97f293f9be346e04dc3b01ab80def0c379ddba1",
+        "experiments/d20_scan/01_060_273p0910.dat": "6e6045caf495e42b716d4a14b0544ae4465e7f61b9db4200b8740f2137c33043",
+        "experiments/d20_scan/01_061_268p6170.dat": "56ae5f39aff745c323b4143c019c828b649dd24cb38b6dd995710f747cdea63b",
+        "experiments/d20_scan/01_062_264p2270.dat": "cac5e46d43612d7f3e44829e0b83606258443922c94ab58cf5f5da9767e1eef3",
+        "experiments/d20_scan/01_063_259p8830.dat": "7d831ef5c563487fead89e89d0b2f663265a34c8d8d1ca8615f7147fa88926d9",
+        "experiments/d20_scan/01_064_255p4710.dat": "9b7bee4d7bce1b21a6c949784dcc77cbe1c4f68dac20b6e1f5403d7e416892ff",
+        "experiments/d20_scan/01_065_250p8860.dat": "5f1d25db589640730d6dfb7c267af35b6c0d108e30e927467c780335b65b711c",
+        "experiments/d20_scan/01_066_246p4910.dat": "1475795b475c580b6bebef7a47b544c125adb53e056c5e0234cc04943212fdda",
+        "experiments/d20_scan/01_067_242p0240.dat": "a809c348dc88901c28d6a2bba6675fdcd92759739b52287aef810827d9350872",
+        "experiments/d20_scan/01_068_237p6280.dat": "17bc9c32998fc52f5a707528e0bb34a5f5a3c758460c06a680106d7f8b15d509",
+        "experiments/d20_scan/01_069_233p1580.dat": "353eb5a64530acc7d801ff266b4c26a28edf1f0d106cb53f31b1dabb0784cac1",
+        "experiments/d20_scan/01_070_228p8500.dat": "fa65084b98954849ab8c758c025c9d54844eccf44191b4a17f0af0048cc2aafb",
+        "experiments/d20_scan/01_071_224p4280.dat": "1d3a611527ac7c9e20d2630f570ba3d2501d06c203f30b135d59d71dc6c24607",
+        "experiments/d20_scan/01_072_220p0320.dat": "b96c8d59b7f83d69264b2f0b9d788f510424ba4b05ab05877b3f378ea28971ea",
+        "experiments/d20_scan/01_073_215p5290.dat": "2bb93ecf6d608b203a456fc6105f09a4da91fabdb918040bdca1f376e4eb20e1",
+        "experiments/d20_scan/01_074_211p2050.dat": "de09bfbe03355eb1707e5a3f9782e5e8264b6306003ea3c43340853cd98378e1",
+        "experiments/d20_scan/01_075_206p8010.dat": "b25f8a037ebda34163d413ad3f86663a10c2de1e16479dbcd0213318421cdb6b",
+        "experiments/d20_scan/01_076_202p4320.dat": "850dc3873eb6e1351365d111421a6dd56965d3f13096f8a99761fdaf45939b6f",
+        "experiments/d20_scan/01_077_198p0270.dat": "821331225f83ffebfd52964851dc3d87b99f2767afc0229014d755b2ad93961a",
+        "experiments/d20_scan/01_078_193p7040.dat": "0f3bd513597e7753ac9be045536f431e00616e13b7d4d7a69d94bf9bb5660ed6",
+        "experiments/d20_scan/01_079_189p3940.dat": "9fd207d48eb77ecf979aaaa1cfcb1efe09edfa7259a5b26150a9669a70b5ec86",
+        "experiments/d20_scan/01_080_184p9760.dat": "be54656813c1d4be8e78e622770e4bbc63e2f78e8600097dbae0337a2ace7f15",
+        "experiments/d20_scan/01_081_180p6510.dat": "a35ba186cfd2383fc5610becdcd625108a38e3606c48aab96cff1f1a6d49d0cb",
+        "experiments/d20_scan/01_082_176p5080.dat": "99e844a0e5fcf2cabb3afcb4e54e7b6685d3678191371241417600b878b78e9d",
+        "experiments/d20_scan/01_083_172p2020.dat": "adab65cb6294027bb3ae955a72eb27eec38f463125f8747d5ca95c22f6f7d7b2",
+        "experiments/d20_scan/01_084_167p8070.dat": "cccb96e06d3430b50321be31f750bce1d93c9577e8baf8fe6b5571e838e9d483",
+        "experiments/d20_scan/01_085_163p5550.dat": "b49dda0e6f80077784a6e3075d6f3e5c277b2ea61c381fb54eeca92abcf088c3",
+        "experiments/d20_scan/01_086_159p2290.dat": "e0412cd8d7fc27c4a70276f921cf3bd2fc42216399bc37347529045cbabd3bf2",
+        "experiments/d20_scan/01_087_154p8790.dat": "786ec6d894d6c72e98bcd75a6f6d33f79e67380ecd6f1306518cd702ced85776",
+        "experiments/d20_scan/01_088_150p5940.dat": "9bef7dde185a0e05295b7b2cfc571759148a38b5a9e7d20c2ebb7155ce77b9f6",
+        "experiments/d20_scan/01_089_146p2570.dat": "187774183b67a14b26fd9ca37fd2c83e1499c685aeacca49d269875e4f27fe21",
+        "experiments/d20_scan/01_090_142p0530.dat": "2f52bfef144edebe852b12e23351f05f97e50a573181c1f2c14383444bd16987",
+        "experiments/d20_scan/01_091_137p9060.dat": "9cbb27d5e6862e44010e27b37e2e6bc092eff833555d83a6bb40c2ff4ddc7b2c",
+        "experiments/d20_scan/01_092_133p7450.dat": "ed8e8a37b1b57b1ec606e2c5ee57d40d946d34249e879ab44fd5505c79f1da45",
+        "experiments/d20_scan/01_093_129p5840.dat": "48b543ba633903102e0be89434ef4269cfec2faabddcc4209471a1228d63491e",
+        "experiments/d20_scan/01_094_125p4340.dat": "a5fc59c5920f766e8057cde53301488b64fb737f2fe69ea2db029d8a1d6c6124",
+        "experiments/d20_scan/01_095_121p3580.dat": "31e9e79b02c15a215dfb9d25f79e69a9989b8f69413608a04954c3392733de27",
+        "experiments/d20_scan/01_096_117p1490.dat": "1e9cd3e8c1ec347cb153e9cef1754912b90d64919206cba528ec107579b7f71b",
+        "experiments/d20_scan/01_097_113p0630.dat": "04e9db3d4b807c246171fa9efc761987edd89b8e4c0bbbc4db58149e2e21d61f",
+        "experiments/d20_scan/01_098_109p2600.dat": "fe318a1be180fe8bb36553072a06fcb914716f775e4178c57196c3f54bbe7440",
+        "experiments/d20_scan/01_099_105p6360.dat": "a1db92e7f37ab2530b18f9c979e7626e81d320fdc62e0a99ad6b55257912ea08",
+        "experiments/d20_scan/01_100_103p0030.dat": "2c963c020313193b28e64a42e7d217b52e3548dbd22e17a6bb1ce212b19ecc99",
+        "experiments/d20_scan/01_101_101p9130.dat": "b60e169864b4fcc0a34c5cd18bdcda39eb73565319b70d1dcea644602e266bcf",
+        "experiments/d20_scan/01_102_101p8800.dat": "fce7aae98c761517eab36c3435fad63f1b54b42cfeed5d9aa3dd6cc52507cade",
+        "experiments/d20_scan/01_103_101p8220.dat": "380ec121a9e49a470b3cb567c66739ccba346c9959ea8ac3e7f5d5866d7aec8c",
+        "experiments/d20_scan/01_104_101p6830.dat": "660fd2627db86042128122ba1979627462e9787bed8746fb3683891a726bf9b4",
+        "experiments/d20_scan/01_105_101p3630.dat": "122de03f7e29f0ba58bfa1e62a16d21f1d70ac179f7150af95825078a1b377d4",
+        "experiments/d20_scan/01_106_100p5400.dat": "2cdd6346481323006d05564bdd8c58cc7522e6440ef5333d785abf2def2f9efa",
+        "experiments/d20_scan/01_107_099p5650.dat": "28eaf543a7cc252ac4e9f82c0c449071c9892e3306483c929232a28efe10f4f0",
+        "experiments/d20_scan/01_108_098p5500.dat": "6a23ea8bcc2c3014e7d5fb60d525105a6c1ba1d4908f6042535ee90192b77219",
+        "experiments/d20_scan/01_109_097p5340.dat": "f1fb0335a3df055a0dd1d468f23c430aef3d41c33555c684d8e4ced5ed4ba78e",
+        "experiments/d20_scan/01_110_096p4920.dat": "bb9babfd6b49b4cb019f007ac4f9683a14c8dc9f89fc9eddd092677094bf41de",
+        "experiments/d20_scan/01_111_095p5170.dat": "23e84372a799fba239ccc6e3c7beac018b9c17c73c3ebf43ccf1d332cddb677b",
+        "experiments/d20_scan/01_112_094p4880.dat": "fbb59687dfec327ef1368e073bdf04a3b61fc071a78f89803751235ea32ab9fb",
+        "experiments/d20_scan/01_113_093p4840.dat": "91e30e877319e41a9a13e9ea2171d71f9de992c31e9ec6bd063f92e7c9c3e228",
+        "experiments/d20_scan/01_114_092p4800.dat": "341c1a1e0b27ed7b8182971ab13b4cf68657d5b9f40e78e9f68efea059fb3e67",
+        "experiments/d20_scan/01_115_091p4890.dat": "d4b270af7d468e0cb960a7b8a1e821a7e5565e65c7f9cdd2596ac325e63ae415",
+        "experiments/d20_scan/01_116_090p4890.dat": "fdff650c5d456acb17b8d145c38c0bc0929eccd291570e39d734711bfd2ccb35",
+        "experiments/d20_scan/01_117_089p4800.dat": "a9a99d3e263c724b28b8b945b30e7846101952a87cad1458138e43a8adca77fe",
+        "experiments/d20_scan/01_118_088p4620.dat": "a5971a3ea8bd0c09c26df43e41f00ba736066fc4d8d052b74b7196f0658780ef",
+        "experiments/d20_scan/01_119_087p4450.dat": "6fe2f51b48a833d73b7be41dab21f6cda08a054dcb817a9601671c323f8d988e",
+        "experiments/d20_scan/01_120_086p4230.dat": "c69586ac805e3af61a33d90b87e635e7f895b724c78f32f02211b28203fe4a13",
+        "experiments/d20_scan/01_121_085p3880.dat": "356f9e9f7f7d96f760a789bb577e15d5e42ede954fffaefb21fbc6cc8c8e1424",
+        "experiments/d20_scan/01_122_084p3500.dat": "5546c302c3af0bd2bb86386677de6e13c30a8808fca1271631cb228a7f4d650f",
+        "experiments/d20_scan/01_123_083p2780.dat": "ab54111a4bad28e9b194ea9c79b824204b9fe57cd2e3592c9037d2217118e957",
+        "experiments/d20_scan/01_124_082p1890.dat": "b5426601315463137a772b5a2f38cc75bfca98a567d576b24ca4cc53c2721933",
+        "experiments/d20_scan/01_125_081p1590.dat": "0d8bfe903fe180e35e3ab9644d9ae95290807d660c0bd555186fc782091c9311",
+        "experiments/d20_scan/01_126_080p1810.dat": "f436500faab79ac06a477f25279e666fc395aa1309f6206c4cfc370e5ab236dc",
+        "experiments/d20_scan/01_127_079p2110.dat": "565eb4a52e8001ab11d847cabe6c71db3de5288b55044202d1bead9792dc96aa",
+        "experiments/d20_scan/01_128_078p2390.dat": "32338a8411205faf0cdbb6c740df2867df4140f25564f687a87ed4f9e6b8457d",
+        "experiments/d20_scan/01_129_077p2590.dat": "9f6ed717261d3de98b96991b91ca1fb2b54eca19b47ec16838867caef8915dbb",
+        "experiments/d20_scan/01_130_076p2370.dat": "61a7e8264179201cf1419b47c7ae62cbea5ce243810c7415e974efee7f58948f",
+        "experiments/d20_scan/01_131_075p2470.dat": "641c94352867e68da1ac3169da18b4b95e5fcb04356bc23f6bcbcc2393546968",
+        "experiments/d20_scan/01_132_074p2460.dat": "f8523d6cc3107326f4336d080b447d1ba2c6a065e51189ea14fa01401871f7da",
+        "experiments/d20_scan/01_133_073p2490.dat": "0d2b0add7aa63374321bcadeb41c09b21b1619cba288b9595d6b0cd1abf3fdad",
+        "experiments/d20_scan/01_134_072p2520.dat": "d0591e7013ac0001709d1d1b21f9fa3d9be0ca6f0b0f2101ebecf861b4da3728",
+        "experiments/d20_scan/01_135_071p2550.dat": "803b7a6ff8dd28c8f728105f00ca2cee7e73cc53137ba96de8974282143e975d",
+        "experiments/d20_scan/01_136_070p2250.dat": "798255d0b928feaead4de0698608821eb06915c5a4dd67b99a4815986b9557a1",
+        "experiments/d20_scan/01_137_069p2340.dat": "be0e5eabb2dcdf28b310958cda178b9777e974370c651e4f9d792adc049ef4b0",
+        "experiments/d20_scan/01_138_068p2110.dat": "0c9777ed8db46f31ebef1aa1c4b8ffb59f01208158e492151a65aa83770793d4",
+        "experiments/d20_scan/01_139_067p1860.dat": "67e114cf9eb3ac20e1325b2271e20c9fa612ace8188d0056aecd232545054cf0",
+        "experiments/d20_scan/01_140_066p2090.dat": "29daac593288f93fb1c6f3c9633c3306571c1ab66bb37f3dcc64f606ab0a9e35",
+        "experiments/d20_scan/01_141_065p2420.dat": "fad943baa9b1621d072a1a2ffccc85e3091000062a45e2abf33637d5a002fc80",
+        "experiments/d20_scan/01_142_064p2810.dat": "fd6f185b182b286b474bca2959a1a74c05125b7b6da907e1c1fc4f6b64119738",
+        "experiments/d20_scan/01_143_063p2750.dat": "67f4d6e158ec69618c5be22eb762be95da14e754a0cfb5378dfa12518116d94e",
+        "experiments/d20_scan/01_144_062p3420.dat": "ed46ce55bfc090d19cff03c8583c977b76beea36d3ca9c73dc7fb443106c4dd0",
+        "experiments/d20_scan/01_145_061p3970.dat": "7a2da67d3d162992697ae55962ec0b05f4dc23df10a487fe3d3293e66d312779",
+        "experiments/d20_scan/01_146_060p4590.dat": "6ae57bb627d9d02c5ff29b2c704252a8d3a6db30740e3c3ef15176f1b8df12d0",
+        "experiments/d20_scan/01_147_059p5330.dat": "795069a1c843c39047fa93a06d5470de4a455a1766ac46f3256dc969b10c6be4",
+        "experiments/d20_scan/01_148_058p6120.dat": "1b01909c754668e190702a9e431c1e6261ade0bde50c7c2ff2732b3c4c262e7b",
+        "experiments/d20_scan/01_149_057p6970.dat": "c669aa6aa7081b786c150c8f6b0ba3e85d25e637e907ba4f0b12ceee4b532d92",
+        "experiments/d20_scan/01_150_056p7860.dat": "11d5df33f66162035b7475748d6f0eb50fef402628e35baef9527ccb86999dcc",
+        "experiments/d20_scan/01_151_055p8750.dat": "6d0fcc54e30995618e087169d843308e2edcf43198da06723237e67eb2bae203",
+        "experiments/d20_scan/01_152_054p9730.dat": "fc0630582ea6a255ff3933ab0db9a5a6102dba721ccbf5edfb4727403790f15a",
+        "experiments/d20_scan/01_153_054p0730.dat": "f5cb618b08438919701e21e20051c3aa95cd3d48aadfdfedf5a2699b7f4da0e0",
+        "experiments/d20_scan/01_154_053p1720.dat": "b1a9779c8a27da47bb1975645c7257101878758e16c1f5ea40b8a94f4f97f0a9",
+        "experiments/d20_scan/01_155_052p3450.dat": "c6ddfe0309c55ce450cdb1b9a0a009b1dd2a66b0616b3f39f911bc86fd64cc19",
+        "project.edi": "e457fc6ef52ce696fbf6a766486d5ba2fe4af4ab9c7c15925a557c490db29786",
+        "structures/cosio.edi": "db297a9cb8148c8be36f3d5d52d5151e9b0f67e31ffcf92e52854a678c4f24d6"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_hs-hrpt/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/hrpt.edi": "c2c754ec57afc404092bd505e22dce51bcc17d91f391b378c7559e969e6cd800",
+        "project.edi": "bb5499875dd9375029109f20ce61e37e3e40bddaedd670229e1f99d4b1217380",
+        "structures/hs.edi": "3d18bdb07a5053f136abe3e69b51940389e439aea3ba47c2251fe5ce998a0e8b"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/echidna.edi": "ffe37dac4ac8ccd260318418a908b5270e4b6d13b3a3864b35cdcb4fe9fe4ccc",
+        "project.edi": "918045d0046e6067fb03ef03c7166467fe0fd4b9377ee06fb4a2980cd1845f54",
+        "structures/lab6.edi": "e4882f46d2cbb6f4bf18d28865d16b09ec23f81db06775bd3f05aa1ef5671718"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_lbco-hrpt/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "a4d2395b2606f9ba4730de91f87aa0cb92167c5b5d0680c0a8d8bb32f5dd8959",
+        "experiments/hrpt.edi": "cf439fae008d8f76d802dab86a7e79d7a0b16cd3f49046e13c99e71964784cb4",
+        "project.edi": "55a1f672b1825145203ea9e39399e8cb3f9df106ac390a8b58258a03ba222aa2",
+        "structures/lbco.edi": "d1c245e00052e5ba22a07a5f26d645d97bc4576e369599467bfc85af224bfb04"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_lbco_simulation/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+        "experiments/hrpt.edi": "c924bb2cf9b928faa563008a514b844c1a39f3b25bac94141fc5555aefc65d7d",
+        "project.edi": "c4a32320129dd599fa16240792760b0099a38556a917d73fc049b9e5bf9f4509",
+        "structures/lbco.edi": "c4cd9712556b9d39513b186e86d5c87a04455111c0e34ca064875e36ba5eabff"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_lmo-echidna/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "15de9a58c3c93c2e535daeeefe2973c5ea43b7e6a2e389c356d82b4fa9a058a3",
+        "experiments/echidna.edi": "f74313b18441bc9a1ecdb72b573677f743640284b8714ec55dccb35affb84779",
+        "project.edi": "4aa689feef827ee8de58921b970ea639720550330301b7f92f582aec419720c0",
+        "structures/lmo.edi": "e9d889ae30298b4df82d49720b6ef23c181646c8afd8b8a44a68e455cf93f61d"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_y2o3-spodi/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/spodi.edi": "e55a6817d1f87f2403240dd90af4681057a052610e4a8bc2bab25adf93dae173",
+        "project.edi": "525caaf8272cd074bf63438c5600d57b65411c64250af602f569d4c9622f8fd5",
+        "structures/y2o3.edi": "0035a2409b1fa26521d4b59c9520c37d8c4bb8c2ec9e53c50ff227ad87d53ccf"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/spodi.edi": "a0a6cdf5fe6d807a7241f7e68456804c212120119e3bac264293f0c90723fc7c",
+        "project.edi": "4fe45a231bbed80e49a7fecae6f6e051965bb6edb8678f8afc7d6af5fdabe8cc",
+        "structures/Al2O3.edi": "37791064fcee7bd1e29a0b64b03c7f7b326c4b37ab97d4b01098e7e49aedb6b0",
+        "structures/YAlO3.edi": "582a5e23201b519fced17407e697e46d11718a9b4d6b260c12df2ccaab5b1580"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_cecoal-polaris/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+        "experiments/polaris.edi": "f76663b87db3b3356426a1fd3be25a2e26a8b10fd808978897a4bf15b77df789",
+        "project.edi": "2d3fd04ef008e237bf6c9b7595ea87ba870b86b91f0aa2523bdc9295e5d3c7fb",
+        "structures/cecoal.edi": "def09ded57c181a601e481deef7bf49b135374646e4b05a7e6939e44a5a6acf4"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_ceo2-pearl/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+        "experiments/pearl.edi": "457cf6771c73209cd11a20b4e9e3aed81f0e14fb3f4f082e20bed9248c8ab0ec",
+        "project.edi": "aeca211016c2558bee106fdf77ac1d54cc436173c3d98394e39f3406ba42880b",
+        "structures/ceo2.edi": "c0736a60e1ee6a225e5d068304ba28caf8f86b0ab1fd104c6b4fa67117f7e60e"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/dream.edi": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea",
+        "project.edi": "fcf596965f487360c0f598acf5d9cfd5d58d6a572b6084207d01e1648b0390e0",
+        "structures/diamond.edi": "82e667fcdfa28dc58d2222fe03df3b9bac6f15bf598ab6ffeb236cc0f7d21c86"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b",
+        "experiments/expt_n2.edi": "3c963915d618f98cf845e8d45b2b5171debc9628fec033e144df231355c913aa",
+        "experiments/expt_s2.edi": "ec5dcf452a79597dfb7d97c2ff4b3d44100dbba834c5da8b914329d5f21fe792",
+        "project.edi": "431d213ca71f62f608cc3ebd9b78c10e015f1e3ac1dd547f7c44eb65ce14f052",
+        "structures/austenite.edi": "8a0d6a8a8b3c20dea4553d4eec01e109d3e7f142038baaabe2d9f19442cb74eb",
+        "structures/ferrite.edi": "ec49d823d61e5c7224a554dd51a842edd9465868af93a6b94209ae775e20d5d0"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_lbco-si-mcstas/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/mcstas.edi": "6479750462101d7af25eb5f73226347791e788535c1253abb286086e9c97dc0e",
+        "project.edi": "99b430ebb5188462e1c65635297b9659d5cedc023f38f38eb668ef4c0d7666af",
+        "structures/lbco.edi": "924577a5d681aa43253ffbc435048da628318f7d0290fedd3ca6bc9602dcdf4b",
+        "structures/si.edi": "d266b86077ac8cf3a8e35f802fcae5728244b9189f30dd17b8479f132e406304"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_ncaf-wish/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7c81ec972ad81fe5eae0e540805e3a5d28cf10f9c88cd1d6dc8eaff82a0a40b5",
+        "experiments/wish_1_10.edi": "24dd6b5278ac7369ad528da944b324e3a5d0472cd2f448c289faeb57ec78bd27",
+        "experiments/wish_2_9.edi": "cc447addb349b2956750e4e8d4da74e42325acd3be70163c533f2a2b76beca65",
+        "experiments/wish_3_8.edi": "14265d219fe6a6efa50b4b074d33ac8713ad6cb7d3cd7b013f13085cb976857f",
+        "experiments/wish_4_7.edi": "a3833fabd3d3c4b59403d5c0d995e7ece5db4e40efcdc208024d1f0fd19c8c5f",
+        "experiments/wish_5_6.edi": "2db147368b28fac20b85d9dd62479e73cf6c1c620e3d97c7a65224f34a29836d",
+        "project.edi": "075fc2c6b70a7588dd716e34b83a9deb965592bf3fa04dfcd77ba602887c465f",
+        "structures/ncaf.edi": "7eefbd591ab966a95b10bf062be50d0302820a06b62f5207371857c408a0be99"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_si-sepd/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/sepd.edi": "5720646987f9ce601cfa32532c369d2fb7e5997a7635004b856c1103dde7a6b8",
+        "project.edi": "50da0bb240d60f01d8e954de95ea03d66813ea3dc91c3453207075d142ad2930",
+        "structures/si.edi": "a873319a522398a2c26fbd3b155bb8974a9af54f4fe381277f66f72777f448bc"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-tof_si_simulation/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+        "experiments/sepd.edi": "93449e1da42b2bdd244727e0d11234a906f950691f431e2e7b9e54323ba8a4f3",
+        "project.edi": "e4e6788b1c5006848fd82e0f6e34a8afdad50dd53936b03fcf1b22dec3f7e150",
+        "structures/si.edi": "1923e98e340ce5c3a6eb8f1febb921014d10df79310fab98574e8c0b6bd68bbd"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e",
+        "experiments/d1a.edi": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111",
+        "experiments/lab.edi": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff",
+        "project.edi": "7e8257868dac01bd2aee23562171eeb2c18d9d1563a58ee9da7d6dbef64c2c42",
+        "structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_lam7o3-p021/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36",
+        "experiments/p021.edi": "740f8ad9a6a8f1da6ad348643c1de5fe831a17ba068e9bfa3c9342b29067de79",
+        "project.edi": "2dd84c953128d99c58a15736feabbf4bcb753b2c10cd741290949d74ef428580",
+        "structures/lam7o3.edi": "f3ac01debabaf3539ce5bb66a3cbb5f4974bd89ddec736b82bd94f2c10be4e47"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_latp-bm01_scan/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
+        "experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+        "experiments/bm01_scan/latp_240.dat": "3b9d988630366da767e4b12f28e2124050d7a997ae7071e170ee97a5577f4728",
+        "experiments/bm01_scan/latp_241.dat": "25b576445e35b49c9ae8e9247518c05f3705cd97ec14dcc7823d86ceebc6163b",
+        "experiments/bm01_scan/latp_242.dat": "1670502096c41689fc935fc41ba910008206422aad385b6f56a3bee32b712cc6",
+        "experiments/bm01_scan/latp_243.dat": "865aaf40320ff185c267842492faad4273f9d82f350c114035f362170f88978d",
+        "experiments/bm01_scan/latp_244.dat": "157e14c1deee032ec2724a719f606c9de3e0485418e86be0cf2b65b05e6a6483",
+        "experiments/bm01_scan/latp_245.dat": "4b01694748ef95a354dd7f5aa2b5cfb6598ab9eef0596e0624764ab92cf3d85b",
+        "experiments/bm01_scan/latp_246.dat": "b0b80be9e1988f6fb52f5caf7339d3a57709996e1060b42afa947a5757082aa7",
+        "experiments/bm01_scan/latp_247.dat": "cf3d7e12a7b7d69fcfa1164b87c9ca785e3eb20d5662dbda9cd51623039475ed",
+        "experiments/bm01_scan/latp_248.dat": "c96bb957fe558976d57a1ea8084e2c91d0ea9f5e34ec2e40ec7f1e2f48d36e2c",
+        "experiments/bm01_scan/latp_249.dat": "0fcc676638e227d203c7e76d547bcc7edf88be23d878617bf728bbda6a3cfb47",
+        "experiments/bm01_scan/latp_250.dat": "1ab67e88cceb3f20f4cfe516ddcd9b17eca3a02b6a4c4848c71071855c39dc46",
+        "experiments/bm01_scan/latp_251.dat": "a5d740471dffe7252f37a17e1fa31a77bb283ad98fab76136c135798b6585676",
+        "experiments/bm01_scan/latp_252.dat": "c1617690307d098fb4fc0008f9f2fea2232c41619d50830a7773eae0bc8fa8fe",
+        "experiments/bm01_scan/latp_253.dat": "5c7a04c8d24ceaa9938d5430ff87f09e4fb104b7708184252c6bbeea52f272d5",
+        "experiments/bm01_scan/latp_254.dat": "fd65a3d05bc066fbebdde4bf87e8e5ad6ef6e35dbd2b503a755fa47d705c22e6",
+        "experiments/bm01_scan/latp_255.dat": "e9e2a5e259cd26b5e6a29d779f20df858c907b89a133b1bc59e9eb2a5b6e7aad",
+        "experiments/bm01_scan/latp_256.dat": "f7018bba3c2fe1c09f54674fd7a984d0469054c8cecb38218a65b19cb26ec69d",
+        "experiments/bm01_scan/latp_257.dat": "83152d67060f754dddbb3ea384371346203d743de58198a33a4345888d622431",
+        "experiments/bm01_scan/latp_258.dat": "dba168b82a57ce0feea2f631f0791985a7f6f2400235ad0fd6c05783a239b1b1",
+        "experiments/bm01_scan/latp_259.dat": "c77ee7d4fa994e59b30f7de2bf2d64799bd0ceb5c84b3e2e8eaeaeec1b592f16",
+        "experiments/bm01_scan/latp_260.dat": "70d3863ee1ca9b7418fd81322dbbfee2ca2523b3fabdcfed28d68653ea58149e",
+        "experiments/bm01_scan/latp_261.dat": "7b85c597f10c4463b00745957fcd118e8e8882c91489104668d8fab8277503a6",
+        "experiments/bm01_scan/latp_262.dat": "3d3fce2b7cfe6c3d3a8859a92f970570f8c7df17d05889de4535819dd4c1c496",
+        "experiments/bm01_scan/latp_263.dat": "cac138f145a6f12768dd00d710e90cbfb53a0d5fe26ecd829d0c904cfbff7278",
+        "experiments/bm01_scan/latp_264.dat": "64afde298e0bd34f8e098886572b44f2450b148b63360f4692e2c0456e0b783d",
+        "experiments/bm01_scan/latp_265.dat": "82eab61ac54177f86a6ab7db2b9331d710054a870586cf95c92d3bf7d69ebff5",
+        "experiments/bm01_scan/latp_266.dat": "904833ab1a2bc7b17f90892b537cbc9f1ed01684297cbe5aaaa68b24476c1f29",
+        "experiments/bm01_scan/latp_267.dat": "b04822521fb9152b7770b7b31d06d69f353afceddfa1da59faa54849c42d0375",
+        "experiments/bm01_scan/latp_268.dat": "81d95619043a6b3b9a89b81918acb586044b2f2cb4c8eec20b4490292160798d",
+        "experiments/bm01_scan/latp_269.dat": "e3933645aa72a91a523b9aa2f716869c4b085f9f143b8688226052d5279288af",
+        "experiments/bm01_scan/latp_270.dat": "fa7ec964987eec63d6236bd0cf0aef98cc02d859a936efabe15c94f9fc402e8d",
+        "experiments/bm01_scan/latp_271.dat": "dbdde893605cab68a6ad14a8e5f8f35f28a9373ac98c78e8d999d9a3b6f5d364",
+        "experiments/bm01_scan/latp_272.dat": "696a7f4148c15704666c29f2d01cd739db680c5a21ae25aff0a1620f12662291",
+        "experiments/bm01_scan/latp_273.dat": "c2a26b75e4b8f06bcf4f9b4a16046333b0ff673784859a68af657bd8de2522f9",
+        "experiments/bm01_scan/latp_274.dat": "7fc54b849420978c1b531166a90d5e5bcfa8c1e67dada09c6236709020049a36",
+        "experiments/bm01_scan/latp_275.dat": "fc10c8360bd02a24a1c3f914978df480dc2962185023eee5de659a4df22dd58d",
+        "experiments/bm01_scan/latp_276.dat": "f11d15a339772a97bbd66bf002bae69fe9684af1387a975d43b7128adfab1eb2",
+        "experiments/bm01_scan/latp_277.dat": "a9d9a947f58ea9e48c256ef002e6e28998fca92ddd35426c7a965ab85cedcd8c",
+        "experiments/bm01_scan/latp_278.dat": "1da075fb35617097af73bdcd534d05bd6462e45212713a9f2b0ff47ef2bc5043",
+        "experiments/bm01_scan/latp_279.dat": "b6e7ad7012dc948ba849718254f37a1696c9f809ca2cb7a1077979fc59f16fd6",
+        "experiments/bm01_scan/latp_280.dat": "1e30f9276fe15c106adb2a7c81ff1cf77dc9555c1aad4e134398e8726d92ac56",
+        "experiments/bm01_scan/latp_281.dat": "d0ea90c5b8b87bb88eb1f0eb9e4c0e3e1816a36ad29e980005015de0be43427b",
+        "experiments/bm01_scan/latp_282.dat": "0fb8d0a138bea39124e5e380748e9daf79d9fcdea689f6b542783d25416930e2",
+        "experiments/bm01_scan/latp_283.dat": "9a75c89b8dbea5a5ed6569d3ab957e35d9d4aead528b0e48fe314a91bb4f61f3",
+        "experiments/bm01_scan/latp_284.dat": "77b3bfa9fe5dbb66d21de403a7d97e55c7a4679ad471dc6d92f6a8db01e33a7d",
+        "experiments/bm01_scan/latp_285.dat": "32f16bc1047e43b1a1130fc282ccee952077f3e5eeb88c9dc36d0cfa77a196df",
+        "experiments/bm01_scan/latp_286.dat": "d5dc54d2c4e182b6c7bb43867561d8e23f3a7bed81832bc8cf7971f946e7c16c",
+        "experiments/bm01_scan/latp_287.dat": "680ff2690c20fdac323c3f4e744e5eb379e0364718015edc208ab679d8064108",
+        "experiments/bm01_scan/latp_288.dat": "1fe408408d40d238d013afd8138646143fdb8bd76be7ad9891cfd8e3c7b83ecd",
+        "experiments/bm01_scan/latp_289.dat": "e22c5b18834adcc67e409c5230297d279bf5c725809d4ea5c16586ca35fd07b3",
+        "experiments/bm01_scan/latp_290.dat": "586fa1d78a5f866eef08c1eb146c308db02ae3027e0f666ab86dfabecb2d626b",
+        "experiments/bm01_scan/latp_291.dat": "dd0905f4b7610c9f102cb7039c30ac2fe1dc8d69ff2fccd8a106cbf2a0214f71",
+        "experiments/bm01_scan/latp_292.dat": "af32a1a4b6a4ccc94e5bdcb5b14109e3e2a4b6c4baf6a3564b2941e2942f23ad",
+        "experiments/bm01_scan/latp_293.dat": "56eea771a448e2051179620deff4494d9692bdcab981601fc1513ac6538b2cf5",
+        "experiments/bm01_scan/latp_294.dat": "604e81e0447837df88ce53d309f6bcb0c3c6122e530cf0445bb45ceb89a3a19b",
+        "experiments/bm01_scan/latp_295.dat": "b5a6e719296bc3b34775149419f22e2936d1eacf9e4810edb33134023a303a13",
+        "experiments/bm01_scan/latp_296.dat": "66a5f34554e79943f4b056cfa67f4af48c0c962f3509f2f2693c3a46b9acba9e",
+        "experiments/bm01_scan/latp_297.dat": "001eebfbfdd16ce3e8a23f21dd307714a2d5be492b79d89f5cc378ed85c7e51c",
+        "experiments/bm01_scan/latp_298.dat": "8493bb29aac751d2080eabc681515fa292af1745a3937631d1ff45c8a8eb86ad",
+        "experiments/bm01_scan/latp_299.dat": "de32f4da3d9b70a5e80df1008731bfafdd670b055e559b6eb2b61c886c47b927",
+        "experiments/bm01_scan/latp_300.dat": "cd60091d7234955ecc0e11d895176a2e0fd2b91670d98feb64b88df37146eb26",
+        "experiments/bm01_scan/latp_301.dat": "0c868e3ba7b3f4877c5d48d19e015801952bb74ccb2a4b2f8b5d890770200796",
+        "experiments/bm01_scan/latp_302.dat": "7b7c69a722e93829317f692d5636fa404e95d5b44d6ecf814e9faec371ef40c3",
+        "experiments/bm01_scan/latp_303.dat": "e7dce12320374b1852afa8d865195cd36dbc9c7bf6b7696b650a69cc419d63e0",
+        "experiments/bm01_scan/latp_304.dat": "bb777343b334e2317c0d74f085ba70552da2eb813a11a19b06383b360ded02f2",
+        "experiments/bm01_scan/latp_305.dat": "e221c7d1484f718bda49ff0059eec0af08a724592d27c50a1a985d25e916b82d",
+        "experiments/bm01_scan/latp_306.dat": "1c15258a3b4fe43a02e422b37d39ad6034ed36bc95d9878f85c64a2c7d5215c1",
+        "experiments/bm01_scan/latp_307.dat": "e8d12faab8d68abaa9ec2c10f162070c0887b46c7aba47cd24ace3d32445f8e5",
+        "experiments/bm01_scan/latp_308.dat": "84471889a6d91b78532f99995219198945f58d4b8805acd7f36f89d8209747e4",
+        "experiments/bm01_scan/latp_309.dat": "ef861319c4b48a66f6c7f0037d6e9ba1018b20f6499383cecb478dd1d4b01c63",
+        "experiments/bm01_scan/latp_310.dat": "1e96b9c9336dbef7bc5df88104d618163de2b4d2931d0c2d81657adf997fc454",
+        "experiments/bm01_scan/latp_311.dat": "5a332ab8d4901c54e4126ae0e153c4452ae1b5babe4bdaeae7cd6b8e43750e0e",
+        "experiments/bm01_scan/latp_312.dat": "cd3dc944fa035058af4caba8773f4247c955d5e5c29bfaef1504d70aacc05794",
+        "project.edi": "82efe3c81670c76bddd479db7f913da03a3bfa0d3096b790d910ea3495302810",
+        "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
+        "structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
+        "structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
     "repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project": {
       "input_sha256": {
+        "analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
+        "experiments/bm01.edi": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3",
+        "experiments/bm01_scan/latp_288.dat": "1fe408408d40d238d013afd8138646143fdb8bd76be7ad9891cfd8e3c7b83ecd",
+        "experiments/bm01_scan/latp_296.dat": "66a5f34554e79943f4b056cfa67f4af48c0c962f3509f2f2693c3a46b9acba9e",
+        "experiments/bm01_scan/latp_304.dat": "bb777343b334e2317c0d74f085ba70552da2eb813a11a19b06383b360ded02f2",
+        "experiments/bm01_scan/latp_312.dat": "cd3dc944fa035058af4caba8773f4247c955d5e5c29bfaef1504d70aacc05794",
+        "project.edi": "5fa4c3449e3d89acd72272a86f3fd043e24ee4fe92cc6d9dcf95d9c1344e0902",
+        "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
+        "structures/alpo4_p63mc.edi": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e",
+        "structures/latp.edi": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin",
+      "prior_input_sha256": {
         "analysis/analysis.edi": "30e5b254899ee9ee803ecab5e65f4d24249268562b3011a0e15114d40a838945",
         "experiments/latp.edi": "651a5f307d158c673dfc8b15a5730045e353b41ec075461ee7ced4808fc50e96",
         "experiments/latp_scan/pattern_0_0001.txt": "eae36410cf05b182acade8bd670d00e25958a552b0030b6d4b0ac376104e9564",
@@ -819,7 +1251,7 @@
         "structures/alpo4_p63mc.edi": "96a589ebce83fbfddb3f05b79c0888bab799264fd37965fe7c65522eaf56e4c2",
         "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d"
       },
-      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      "source": "ADR-0048 rebuilt four-pattern verification input; BM01 at ESRF"
     },
     "repo:docs/user/cli/pd-xray-cwl_lif_single/project": {
       "input_sha256": {
@@ -827,6 +1259,24 @@
         "experiments/cu_ka.edi": "1b3407778dcdbeba8fcb83e95bc3c25b15ed9a5734d454568978bf070cdf40a1",
         "project.edi": "889a03d5f93dd1b479515d59b53eec51e417433901ce122fb805c8d056db7bab",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_nacl_simulation/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+        "experiments/lab.edi": "98b12de0de005be5ae82e5eef69e4d338f614377830de9029cdc7f8a095d7fdc",
+        "project.edi": "91fbf69d977176ba39c839a3f77859ff32d3eff2e1771c59b1d5be68235703de",
+        "structures/nacl.edi": "b83321f0b2a722cd6f359baeb5b816bf7c6c42272f91352b0a8910baa13107ef"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_pbso4-lab/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+        "experiments/lab.edi": "ca3f995c61a0af07ffb660b5cef344a87f87ed79c7918704a595538c41662230",
+        "project.edi": "075f9672a6b401a1863e3dd37b7dc96b62cc0d84e000c6078b23d7cd5659fcf8",
+        "structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5"
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
@@ -848,7 +1298,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project": {
+    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project": {
       "input_sha256": {
         "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
         "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
@@ -875,7 +1325,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project": {
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project": {
       "input_sha256": {
         "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
         "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
@@ -902,7 +1352,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-tof_taurine_fit/project": {
+    "repo:docs/user/cli/sc-neut-tof_taurine-senju/project": {
       "input_sha256": {
         "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
         "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
@@ -912,5 +1362,10 @@
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     }
   },
-  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128"
+  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128",
+  "catalogue_identity_aliases": {
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
+  }
 }

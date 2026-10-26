@@ -2,7 +2,9 @@
 #ifndef EDI_APP_SCAN_VIEW_MODEL_HPP
 #define EDI_APP_SCAN_VIEW_MODEL_HPP
 
+#include <QFont>
 #include <QObject>
+#include <QVariantList>
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
@@ -62,7 +64,7 @@ class ScanViewModel : public QObject {
     // datablock's name.
     Q_PROPERTY(QStringList rowTexts READ rowTexts NOTIFY rowTextsChanged)
     // Bumped when rowTexts changes: what a label reads rowText by, so it is evaluated only then.
-    Q_PROPERTY(int rowTextsRevision READ rowTextsRevision NOTIFY rowTextsChanged)
+    Q_PROPERTY(int rowTextsRevision READ rowTextsRevision NOTIFY rowTextsRevisionChanged)
     // Whether the rows sit at their scan values (else in order, by file or datablock, one equal band each).
     Q_PROPERTY(bool rowsByValue READ rowsByValue NOTIFY rowsByValueChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
@@ -135,6 +137,8 @@ class ScanViewModel : public QObject {
     Q_INVOKABLE QString rowText(int dataset) const {
         return dataset >= 0 && dataset < row_texts_.size() ? row_texts_.at(dataset) : QString();
     }
+    // The widest label text of the rows `shown` marks (true by dataset), in `font`; in pixels.
+    Q_INVOKABLE double widestRowText(const QVariantList& shown, const QFont& font) const;
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.
@@ -176,6 +180,7 @@ class ScanViewModel : public QObject {
     void rowTitleChanged();
     void orderNameChanged();
     void rowTextsChanged();
+    void rowTextsRevisionChanged();
     void rowsByValueChanged();
     void xMinChanged();
     void xMaxChanged();

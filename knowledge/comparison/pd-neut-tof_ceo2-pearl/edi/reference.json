@@ -1,0 +1,32 @@
+{
+  "program": "edi",
+  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
+  "banks": [
+    "pearl"
+  ],
+  "n_free": 19,
+  "status": "done",
+  "converged": true,
+  "iterations": 5,
+  "rwp": 0.052932869424714486,
+  "reduced_chi_square": 3.8772554631302087,
+  "cells": {
+    "ceo2": {
+      "a": [
+        5.410495,
+        0.0
+      ],
+      "b": [
+        5.410495,
+        0.0
+      ],
+      "c": [
+        5.410495,
+        0.0
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "pearl.csv": "694caed3ac6930a531d5c248775f4bf397f3ef1f82bdcf8797a969aa18a84b03"
+  }
+}

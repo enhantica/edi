@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.fast_chart_redraws.rendering import ROOT, actor, capture, qt_reference
+from tests.fixtures.fast_chart_redraws.startup import split_renderer_reports
+from tests.fixtures.fast_chart_redraws.timing import backend_identity
 
 
 def passed(status, output, case):
@@ -75,13 +77,16 @@ def test_normal_app_reports_its_actual_rendering_setup_at_startup(renderer_state
         env=env,
     )
     assert status == 0, 'The normal app must complete its bounded startup capture: ' + output
-    assert observed_qt['api'].lower() in output.lower(), (
-        'The app reports its actual graphics backend at startup without forced Qt debug logging'
+    reports, _ = split_renderer_reports(output)
+    assert len(reports) == 1, (
+        'The normal app emits exactly one complete startup renderer report without Qt debug logs'
     )
-    if observed_qt['api'] == 'OpenGL':
-        assert observed_qt['renderer'] in output, (
-            'The app reports the actual OpenGL renderer string at startup'
-        )
+    expected = backend_identity(observed_qt)
+    assert reports[0] == {
+        'api': expected['api'],
+        'renderer': expected['renderer'],
+        'software': expected['software'],
+    }, 'The startup report identifies the actual independently observed Qt backend and renderer'
 
 
 @pytest.mark.parametrize(

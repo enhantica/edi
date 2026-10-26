@@ -31,6 +31,16 @@ QList<QPointF> points_of(const edi::PatternSeries& series) {
     return list;
 }
 
+// Whether two columns hold the same values, a missing value (NaN) matching another.
+bool same_values(const edi::PatternSource::Column& a, const edi::PatternSource::Column& b) {
+    if (a == b) {
+        return true;
+    }
+    return a && b &&
+           std::equal(a->begin(), a->end(), b->begin(), b->end(),
+                      [](double u, double v) { return u == v || (std::isnan(u) && std::isnan(v)); });
+}
+
 constexpr int kTicks = 5;  // about this many labelled ticks along an axis (edi ADR-0017 §15)
 
 // The round step — 1, 2, 2.5 or 5 times a power of ten — whose ticks inside [low, high] are closest to `kTicks`
@@ -374,10 +384,24 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
     experiment_ = experiment;
+    // Hidden curves belong to the project they were hidden in: another project's experiment shows every curve.
+    if (experiment_ && experiment_->parent() != hidden_project_) {
+        hidden_project_ = experiment_->parent();
+        if (!hidden_.isEmpty()) {
+            hidden_.clear();
+            emit hiddenSeriesChanged();
+        }
+    }
     if (experiment_) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
+        // The slider let go: the y range is fitted once again, shrinking as well as growing.
+        connect(experiment_, &ExperimentViewModel::adjustingChanged, this, [this] {
+            if (!experiment_->adjusting()) {
+                invalidate();
+            }
+        });
         // An admitted edit: the frame stays, and it no longer describes the model.
         connect(experiment_, &ExperimentViewModel::patternWentStale, this, [this] {
             shown_.current = false;
@@ -610,7 +634,53 @@ edi::PatternView PatternChartController::view() const {
     view.structure_curves = structure_curves_;
     view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
     view.included_only = included_only_;
+    if (hidden_fits_range_) {
+        for (const QString& key : hidden_) {
+            view.uncounted.push_back(key.toStdString());
+            // A structure's entry is its ticks; its curve goes with them.
+            if (key.startsWith(QLatin1String("bragg/"))) {
+                view.uncounted.push_back("structure/" + key.mid(6).toStdString());
+            }
+        }
+    }
     return view;
+}
+
+bool PatternChartController::hiddenId(const std::string& id) const {
+    if (hidden_.isEmpty()) {
+        return false;
+    }
+    const QString key = QString::fromStdString(id);
+    return hidden_.contains(key) ||
+           (key.startsWith(QLatin1String("structure/")) && hidden_.contains(QLatin1String("bragg/") + key.mid(10)));
+}
+
+void PatternChartController::toggleSeries(const QString& key) {
+    if (hidden_.contains(key)) {
+        hidden_.removeAll(key);
+    } else {
+        hidden_.append(key);
+    }
+    emit hiddenSeriesChanged();
+    if (hidden_fits_range_) {
+        // The y range fitted once to the curves still shown.
+        stopAnimation();
+        y_min_.reset();
+        y_max_.reset();
+        held_range_.reset();
+        emit viewRangesChanged();
+    }
+    invalidate();
+}
+
+void PatternChartController::setHiddenFitsRange(bool on) {
+    if (on != hidden_fits_range_) {
+        hidden_fits_range_ = on;
+        emit hiddenFitsRangeChanged();
+        if (!hidden_.isEmpty()) {
+            invalidate();
+        }
+    }
 }
 
 void PatternChartController::refresh() {
@@ -644,6 +714,16 @@ void PatternChartController::refresh() {
         }
         if (experiment_ && active_) {
             experiment_->notePresented();
+        }
+    }
+    // A hidden curve is presented with no points: nothing is drawn of it and the pointer reads none of its values, while
+    // the range keeps or leaves out its values as `hiddenFitsRange` says.
+    for (edi::PatternSeries& series : shown_.series) {
+        if (hiddenId(series.id)) {
+            series.points.clear();
+            series.rows.clear();
+            series.bar_low.clear();
+            series.bar_high.clear();
         }
     }
 
@@ -682,6 +762,8 @@ void PatternChartController::refresh() {
                        : dashed ? QStringLiteral("dash")
                                 : QStringLiteral("line"),
                        bragg, width, texts, colours});
+        legend.back().key = QString::fromStdString(series.id);
+        legend.back().hidden = hidden_.contains(legend.back().key);
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -757,15 +839,15 @@ void PatternChartController::refresh() {
         y_step = round_step(y_low, y_high);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     }
-    // While a parameter is adjusted (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
-    // inside it and grows only when the curve leaves it; another experiment, dataset, axis, scale or x range, a fit,
-    // and a reset fit it again.
+    // While a parameter's slider is held (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
+    // inside it and grows only when the curve leaves it; letting the slider go, another experiment, dataset, axis,
+    // scale or x range, a fit and a reset fit it again.
     if (fitted && !animating_ && !report_) {
         const edi::PatternSource* source = experiment_ ? &experiment_->patternSource(axis()) : nullptr;
-        HeldRange now{experiment_, source != nullptr ? source->meas.get() : nullptr, presented_x_, y_scale_, x_low,
+        HeldRange now{experiment_, source != nullptr ? source->meas : nullptr, presented_x_, y_scale_, x_low,
                       x_high, y_low, y_high};
         if (held_range_ && experiment_ && experiment_->adjusting() && held_range_->experiment == now.experiment &&
-            held_range_->measured == now.measured && held_range_->axis == now.axis && held_range_->scale == now.scale &&
+            same_values(held_range_->measured, now.measured) && held_range_->axis == now.axis && held_range_->scale == now.scale &&
             held_range_->x_min == now.x_min && held_range_->x_max == now.x_max) {
             now.low = y_low = std::min(y_low, held_range_->low);
             now.high = y_high = std::max(y_high, held_range_->high);
@@ -924,7 +1006,12 @@ void PatternChartController::refresh() {
     // Each Bragg row's label at its left: the structure's name in its colour, at the row's centre.
     QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
-        labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre});
+        // Hidden with its row's ticks, which share its style.
+        const auto ticks = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
+            return series.kind == edi::SeriesKind::BraggTicks && series.style == label.style;
+        });
+        labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre,
+                       ticks != shown_.series.end() && hiddenId(ticks->id)});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     // Past the palette's own colours the count sets every experiment's colour, the measured key's too.

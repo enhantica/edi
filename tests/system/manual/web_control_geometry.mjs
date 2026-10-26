@@ -1,6 +1,24 @@
 // Read current Qt geometry before trusted pointer input; synthetic states are not UI evidence.
 import assert from 'node:assert/strict';
 
+export async function waitControlGeometry(evaluate, frame, objectName, {enabled=true, timeoutMs=45000}={}) {
+  const deadline=Date.now()+timeoutMs;
+  do {
+    const item=await evaluate(`(() => {try {return window.ediControlGeometry(${JSON.stringify(objectName)});}
+      catch(error) {if (/no visible item|no item is named/.test(error.message)) return null; throw error;}})()`);
+    if (item && item.visible === true && (!enabled || item.enabled === true)) {
+      assert(item.objectName===objectName && typeof item.enabled==='boolean' &&
+        ['x','y','width','height'].every(key=>Number.isFinite(item[key])) &&
+        item.width>0 && item.height>0 && item.x>=0 && item.y>=0 &&
+        item.x+item.width<=1280 && item.y+item.height<=768,
+        'Native dialog observations must identify the named rendered control wholly inside the browser viewport');
+      return item;
+    }
+    await frame();
+  } while(Date.now()<deadline);
+  throw Error('The rendered app must expose its declared native control '+objectName);
+}
+
 export async function controlPointer(evaluate, objectName, containerName) {
   assert.equal(await evaluate('typeof window.ediControlGeometry'), 'function',
     'The web app must expose current native control geometry when its AX rectangles are stale');

@@ -18,7 +18,7 @@ def test_no_tracked_file_keeps_a_retired_cw_token():
     paths = [ROOT / name.decode() for name in result.stdout.split(b'\0') if name]
     hits = profiles.migration_hits(paths, ROOT)
     assert not hits, (
-        'Every tracked file outside the exact sealed pre-change capture '
+        'Every tracked file outside the exact historical capture and external enum boundary '
         'must migrate retired CW tokens'
     )
 
@@ -55,4 +55,39 @@ def test_retained_capture_exception_requires_exact_bytes_and_location(tmp_path, 
     assert profiles.migration_hits([historical], tmp_path) == [str(historical)], (
         'A changed vehicle, extra retired token or copied path '
         'cannot borrow the historical exemption'
+    )
+
+
+@pytest.mark.parametrize(
+    'escape', ['ordinary', 'extra', 'duplicate', 'wrong-backend', 'copied-path']
+)
+def test_external_profile_literal_is_limited_to_its_reader_boundary(tmp_path, escape):
+    fixture = tmp_path / 'tests/fixtures/cwl_family'
+    fixture.mkdir(parents=True)
+    shutil.copyfile(
+        ROOT / 'tests/fixtures/cwl_family/rename-input-sha256.json',
+        fixture / 'rename-input-sha256.json',
+    )
+    path = tmp_path / 'tools/comparison/run_diffraction_lib.py'
+    path.parent.mkdir(parents=True)
+    source = (ROOT / 'tools/comparison/run_diffraction_lib.py').read_text()
+    path.write_text(source)
+    assert not profiles.migration_hits([path], tmp_path), (
+        'The external reader must retain its own profile and calculator enum literals'
+    )
+    if escape == 'ordinary':
+        path.write_text(source + f"\nPEAK_TYPE = '{profiles.RETIRED[1]}'\n")
+    elif escape == 'extra':
+        path.write_text(source + f"\nOTHER = '{profiles.RETIRED[0]}'\n")
+    elif escape == 'duplicate':
+        line = next(line for line in source.splitlines(True) if line.startswith('CALCULATOR ='))
+        path.write_text(source + line)
+    elif escape == 'wrong-backend':
+        path.write_text(source.replace("'crysfml'", "'crysta'"))
+    else:
+        copied = path.with_name('copied.py')
+        copied.write_text(source)
+        path = copied
+    assert profiles.migration_hits([path], tmp_path) == [str(path)], (
+        'The external enum exemption rejects extra tokens, duplicates, changed dispatch and copies'
     )

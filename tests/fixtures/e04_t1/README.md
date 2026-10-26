@@ -231,6 +231,24 @@ original profile witnesses and all other saved values remain intact. The scoped
 update refuses a changed experiment/display-witness population. No app output
 supplies a number.
 
+Catalogue changes use `generate.py --catalogue` and `generate_display.py --catalogue`.
+They read the independent selection fixture and committed project text. They add
+new cases and refresh selected cases plus the rebuilt four-pattern LATP fixture;
+other frozen project, category and display witnesses are retained. The app host
+opens the selected cases through catalogue rows, while verification fixtures keep
+their direct directory-opening checks. Synthetic simulation grids are derived
+from the declared range and step without calling a calculation engine.
+Scan axis samples keep the ASCII input precision. Report-cell expectations use
+the independent IUCr rounding reference and crystallographic equality of tied
+cell lengths; the raw model values and physical bounds remain separate.
+
+The app selection is exactly the catalogue. The 23 October owner decision adds
+`sc-neut-cwl_tb2ti2o7-heidi`, `sc-neut-cwl_pr2nio4-5c2` and
+`sc-neut-tof_taurine-senju` after the scans. The app-only list is empty.
+`generate.py --catalogue` and `generate_display.py --catalogue` retire the old
+paths while retaining every unrelated witness; the identity mapping is in
+`../example_catalogue/single-crystal-renames.json`.
+Every other registered project keeps its direct-opening coverage.
 
 The single-crystal input adaptation uses `adapt_single_crystal_inputs.py`. It
 matches every original file pin of the eight existing single-crystal projects to

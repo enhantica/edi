@@ -8,6 +8,7 @@
 #include <QPointF>
 #include <QPointer>
 #include <QString>
+#include <QStringList>
 #include <QVariantAnimation>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
@@ -23,19 +24,21 @@
 
 namespace edi_app {
 
-// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, and the row's centre in rows from the
-// bottom. QML reads a list of them as an array.
+// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, the row's centre in rows from the
+// bottom, and whether its ticks are hidden. QML reads a list of them as an array.
 struct BraggLabel {
     Q_GADGET
     QML_VALUE_TYPE(braggLabel)
     Q_PROPERTY(QString text MEMBER text CONSTANT)
     Q_PROPERTY(QColor color MEMBER color CONSTANT)
     Q_PROPERTY(double centre MEMBER centre CONSTANT)
+    Q_PROPERTY(bool hidden MEMBER hidden CONSTANT)
 
    public:
     QString text;
     QColor color;
     double centre = 0.0;
+    bool hidden = false;  // its ticks are hidden from the legend
     bool operator==(const BraggLabel&) const = default;
 };
 
@@ -146,6 +149,12 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QString viewRangesAxis READ viewRangesAxis WRITE setViewRangesAxis NOTIFY viewRangesAxisChanged)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
+    // The curves hidden by a click on their legend entry (the owner, 2026-10-25), by the entry's key: kept while the
+    // app runs, cleared when another project's experiment is shown. A structure's entry hides its ticks and its
+    // curve. `hiddenFitsRange`: hiding or showing fits the y range once to the curves still shown, and later fits
+    // count only those; otherwise nothing moves and every fit counts the hidden curves too.
+    Q_PROPERTY(QStringList hiddenSeries READ hiddenSeries NOTIFY hiddenSeriesChanged)
+    Q_PROPERTY(bool hiddenFitsRange READ hiddenFitsRange WRITE setHiddenFitsRange NOTIFY hiddenFitsRangeChanged)
 
    public:
     enum YScale { Linear, Sqrt, Log10 };
@@ -235,6 +244,11 @@ class PatternChartController : public QObject {
     // them as `braggColors` grows and hands each over here.
     Q_INVOKABLE void setBraggSeries(int place, QXYSeries* series);
     int revision() const { return revision_; }
+    QStringList hiddenSeries() const { return hidden_; }
+    bool hiddenFitsRange() const { return hidden_fits_range_; }
+    void setHiddenFitsRange(bool on);
+    // Hides the curve of a legend entry's key, or shows it again.
+    Q_INVOKABLE void toggleSeries(const QString& key);
 
     // A style key's colour in the current theme, with the table's opacity.
     Q_INVOKABLE QColor color(const QString& styleKey) const;
@@ -304,6 +318,8 @@ class PatternChartController : public QObject {
     void braggLabelsChanged();
     void residualTitleChanged();
     void revisionChanged();
+    void hiddenSeriesChanged();
+    void hiddenFitsRangeChanged();
     void measuredColorChanged();
     void calculatedColorChanged();
     void backgroundColorChanged();
@@ -400,13 +416,18 @@ class PatternChartController : public QObject {
     // changed, the range holds and only grows (the owner, 2026-10-25).
     struct HeldRange {
         const void* experiment = nullptr;
-        const void* measured = nullptr;
+        edi::PatternSource::Column measured;  // compared by its values: a preview publishes the same data anew
         std::string axis;
         int scale = -1;
         double x_min = 0.0, x_max = 0.0;
         double low = 0.0, high = 0.0;
     };
     std::optional<HeldRange> held_range_;
+    QStringList hidden_;
+    bool hidden_fits_range_ = false;
+    QPointer<QObject> hidden_project_;  // the project the hidden curves belong to
+    // Whether a presented series (by id) is hidden: its own entry's, or its structure's.
+    bool hiddenId(const std::string& id) const;
     double residual_min_ = -1.0, residual_max_ = 1.0, bragg_height_ = 0.0;
     double x_tick_ = 0.0, x_anchor_ = 0.0, y_tick_ = 0.0, y_anchor_ = 0.0, residual_tick_ = 0.0;
     int bragg_rows_ = 0, revision_ = 0;

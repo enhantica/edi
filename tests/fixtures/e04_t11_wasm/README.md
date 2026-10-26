@@ -107,3 +107,25 @@ including a mutant that switches Structure to a multiple-file request. Those gat
 QML receiver for request identity, terminal cancellation and initiating-project ownership. These checks
 complement the real browser cases; neither source patterns nor unchanged empty-project labels alone
 prove an asynchronous upload transition. Navigation requires the requested native tab to become selected.
+
+The browser catalogue routes use separate `catalogue-native.json` pins captured by
+`generate_catalogue.py` from `pd-neut-cwl_lbco-hrpt` and `pd-neut-tof_ncaf-wish`.
+These are native CLI parity regression pins, bound to their complete input bytes and
+retained transcripts. They do not replace an external physics reference. The original
+`native.json`, transcript and start-model numerical backend controls remain unchanged.
+The browser retains its original chi-square and Rwp comparison bounds; its exact
+iteration pin now belongs to the selected catalogue input.
+
+`catalogue_scientific/` separately retains the complete saved native operands and
+covariance/weighted-Jacobian captures for those inputs. Generate them with
+`generate_catalogue_scientific.py` and the existing native conditioning executable.
+The browser uses the existing complete-operand comparator, its original value/pattern
+bounds, and the same conditioning-derived uncertainty checks. The older
+`web_parallel/` captures are retained for their original numerical vehicles.
+
+The native saved files use rounded uncertainty spelling. Each positive uncertainty in
+the complete parity reference is restored from its independently captured native
+covariance column only when decimal rounding reproduces the actual saved native token.
+Experiment and positive background-point identities disambiguate equal rounded values;
+ambiguous bindings refuse. `native_precision_bindings` retains every before/after token
+and column. The existing conditioning writer then verifies the unrounded native operands.

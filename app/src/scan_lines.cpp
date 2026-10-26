@@ -33,7 +33,8 @@ class LineMaterial : public QSGMaterial {
     QSGMaterialShader* createShader(QSGRendererInterface::RenderMode /*mode*/) const override;
     int compare(const QSGMaterial* other) const override {
         const auto* that = static_cast<const LineMaterial*>(other);
-        if (placement != that->placement || colour != that->colour || half_width != that->half_width) {
+        if (placement != that->placement || colour != that->colour || half_width != that->half_width ||
+            pixel != that->pixel) {
             return this < that ? -1 : 1;
         }
         return 0;
@@ -42,6 +43,7 @@ class LineMaterial : public QSGMaterial {
     std::array<float, 4 * kGroup> placement{};
     std::array<float, 4 * kGroup> colour{};
     float half_width = 1.0F;
+    float pixel = 1.0F;  // one device pixel, in item pixels
 };
 
 class LineShader : public QSGMaterialShader {
@@ -50,7 +52,8 @@ class LineShader : public QSGMaterialShader {
         setShaderFileName(VertexStage, QStringLiteral(":/edi/shaders/scan_line.vert.qsb"));
         setShaderFileName(FragmentStage, QStringLiteral(":/edi/shaders/scan_line.frag.qsb"));
     }
-    // The uniform block's std140 layout: the matrix, the placements, the colours, then the opacity and half width.
+    // The uniform block's std140 layout: the matrix, the placements, the colours, then the opacity, the half width and
+    // the device pixel.
     bool updateUniformData(RenderState& state, QSGMaterial* material, QSGMaterial* /*old*/) override {
         constexpr std::size_t kArray = 4 * kGroup * sizeof(float);
         char* buffer = state.uniformData()->data();
@@ -58,7 +61,7 @@ class LineShader : public QSGMaterialShader {
         std::memcpy(buffer, state.combinedMatrix().constData(), 64);
         std::memcpy(buffer + 64, line->placement.data(), kArray);
         std::memcpy(buffer + 64 + kArray, line->colour.data(), kArray);
-        const float rest[2] = {state.opacity(), line->half_width};
+        const float rest[3] = {state.opacity(), line->half_width, line->pixel};
         std::memcpy(buffer + 64 + 2 * kArray, rest, sizeof(rest));
         return true;
     }
@@ -68,17 +71,19 @@ QSGMaterialShader* LineMaterial::createShader(QSGRendererInterface::RenderMode /
     return new LineShader;
 }
 
-// A vertex: its segment's two points (x in pixels, v in [0, 1]), which end and which side of the segment it is, and
-// its pattern's place in the group.
+// A vertex: its segment's two points (x in pixels, v in [0, 1]), the points before and after it (each equal to the
+// segment's end when there is none), which end and which side of the segment it is (end * 2 + side), and its pattern's
+// place in the group with whether the points before and after exist (place * 4 + before + 2 * after).
 struct Vertex {
-    float x0, v0, x1, v1, end, side, pattern;
+    float x0, v0, x1, v1, xb, vb, xa, va, corner, pattern;
 };
 
 const QSGGeometry::AttributeSet& vertex_layout() {
     static const QSGGeometry::Attribute attributes[] = {
         QSGGeometry::Attribute::createWithAttributeType(0, 4, QSGGeometry::FloatType, QSGGeometry::PositionAttribute),
-        QSGGeometry::Attribute::createWithAttributeType(1, 3, QSGGeometry::FloatType, QSGGeometry::UnknownAttribute)};
-    static const QSGGeometry::AttributeSet layout = {2, sizeof(Vertex), attributes};
+        QSGGeometry::Attribute::createWithAttributeType(1, 4, QSGGeometry::FloatType, QSGGeometry::UnknownAttribute),
+        QSGGeometry::Attribute::createWithAttributeType(2, 2, QSGGeometry::FloatType, QSGGeometry::UnknownAttribute)};
+    static const QSGGeometry::AttributeSet layout = {3, sizeof(Vertex), attributes};
     return layout;
 }
 
@@ -110,10 +115,14 @@ QSGGeometry* quads_of(const std::vector<ScanLines::Trace>& traces, std::size_t f
                 continue;
             }
             const float x0 = trace.x[k], v0 = trace.v[k], x1 = trace.x[k + 1], v1 = trace.v[k + 1];
-            *vertex++ = {x0, v0, x1, v1, 0.0F, -1.0F, place};
-            *vertex++ = {x0, v0, x1, v1, 0.0F, 1.0F, place};
-            *vertex++ = {x0, v0, x1, v1, 1.0F, -1.0F, place};
-            *vertex++ = {x0, v0, x1, v1, 1.0F, 1.0F, place};
+            const bool before = k > 0 && finite_point(trace, k - 1);
+            const bool after = k + 2 < points && finite_point(trace, k + 2);
+            const float xb = before ? trace.x[k - 1] : x0, vb = before ? trace.v[k - 1] : v0;
+            const float xa = after ? trace.x[k + 2] : x1, va = after ? trace.v[k + 2] : v1;
+            const float code = 4.0F * place + (before ? 1.0F : 0.0F) + (after ? 2.0F : 0.0F);
+            for (const float corner : {0.0F, 1.0F, 2.0F, 3.0F}) {
+                *vertex++ = {x0, v0, x1, v1, xb, vb, xa, va, corner, code};
+            }
         }
     }
     const auto fill = [segments](auto* index) {
@@ -235,11 +244,15 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
             material->colour[4 * i + 3] = alpha;
         }
         material->half_width = static_cast<float>(line_width_ / 2.0);
+        material->pixel = static_cast<float>(1.0 / (window() != nullptr ? window()->effectiveDevicePixelRatio() : 1.0));
         node->markDirty(QSGNode::DirtyMaterial);
         child = node->nextSibling();
     }
     traces_changed_ = false;
-    emit rendered();
+    // A hidden item draws nothing: a size change syncs it while the painter draws the view.
+    if (isVisible()) {
+        emit rendered();
+    }
     return root;
 }
 

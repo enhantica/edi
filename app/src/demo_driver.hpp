@@ -18,6 +18,10 @@ class QQuickWindow;
 
 namespace edi_app {
 
+// Copies the CLI project docs/user/cli/<id>/project of this build's source tree into <into>/<id>/project, for a
+// test project the app does not bundle. Returns the copy's path, or an empty string when it cannot be made.
+QString copy_cli_project(const QString& id, const QDir& into);
+
 // The scripted demo mode: clicks through the app with real mouse events on controls found by
 // objectName, waits for each state to settle, and saves one image per state into <dir>. The UI test
 // compares those images with the committed expected set. A step whose control is missing, hidden or
@@ -86,6 +90,8 @@ class DemoDriver : public QObject {
     bool timed_reset();
     // Polls every few milliseconds until nothing is calculating, then calls `next`.
     void idle_then(std::function<void()> next, int waited_ms = 0);
+    // Waits until a display catching up with a scan has drawn every pattern, then until nothing is calculating.
+    void drawn_then(std::function<void()> next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
     // Waits until a scan view's model has read every dataset, then calls `next`.
