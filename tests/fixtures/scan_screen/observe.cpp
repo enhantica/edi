@@ -275,150 +275,194 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
             publish(*result);
             return;
         }
-        press(window->findChild<QObject*>("appBar.tab.analysis"));
-        for (auto* button : window->findChildren<QObject*>("sideBar.tab.extras")) {
-            QObject* owner = button;
-            while (owner && owner->property("pageName").toString() != "analysis")
-                owner = owner->parent();
-            if (owner) press(button);
-        }
-        QObject* combo = nullptr;
-        QStringList options;
-        bool label = false, extras = false;
-        for (auto* object : window->findChildren<QObject*>()) {
-            const QString text = object->property("text").toString();
-            if (text == "Extras" || text == "Extra") {
-                extras = true;
-                press(object);
+        // The pages are built in the background after a project opens (edi ADR-0052): the Analysis tab and its
+        // Extras are pressed once they exist, and the selector is searched for once Extras list it, each for at most
+        // half a minute, as the desktop host's observer waits for them.
+        const auto analysis_extras = [=]() -> QObject* {
+            for (auto* button : window->findChildren<QObject*>("sideBar.tab.extras")) {
+                QObject* owner = button;
+                while (owner && owner->property("pageName").toString() != "analysis")
+                    owner = owner->parent();
+                if (owner) return button;
             }
-            if (text.startsWith("Pattern updates during a scan") ||
-                object->property("title").toString() == "Pattern updates during a scan") {
-                label = true;
-                object->setProperty("collapsed", false);
+            return nullptr;
+        };
+        const auto selector_listed = [=] {
+            for (auto* object : window->findChildren<QObject*>()) {
+                const QString values = choices(object).join("|");
+                if (values.contains("adaptive", Qt::CaseInsensitive) &&
+                    values.contains("every pattern", Qt::CaseInsensitive))
+                    return true;
             }
-            const auto values = choices(object);
-            if (values.join("|").contains("adaptive", Qt::CaseInsensitive) &&
-                values.join("|").contains("every pattern", Qt::CaseInsensitive)) {
-                combo = object;
-                options = values;
-            }
-        }
-        (*result)["extras"] = extras;
-        (*result)["label"] = label;
-        (*result)["options"] = QJsonArray::fromStringList(options);
-        (*result)["initial"] = combo ? combo->property("currentText").toString() : QString();
-        auto* control = qobject_cast<QQuickItem*>(combo);
-        (*result)["selectorUsable"] = control && control->isVisible() && control->isEnabled();
-        const QString mode = result->value("mode").toString();
-        if (combo && mode != "read") {
-            int index = -1;
-            for (int i = 0; i < options.size(); ++i) {
-                const QString option = options[i].toLower();
-                if ((mode == "every" && option.contains("every pattern")) ||
-                    (mode == "second" && option.contains("second")) ||
-                    (mode == "adaptive" && option.contains("adaptive")) ||
-                    (mode == "end" && option.contains("end")))
-                    index = i;
-            }
-            if (index >= 0) {
-                combo->setProperty("currentIndex", index);
-                QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, index));
-            }
-        }
-        (*result)["selected"] = combo ? combo->property("currentText").toString() : QString();
-        auto* dialog = window->findChild<QObject*>("preferences");
-        if (dialog) QMetaObject::invokeMethod(dialog, "close");
-        if (wanted("SCAN_SCREEN_SETTINGS_ONLY", "0") == "1") {
-            QTimer::singleShot(1000, window, [=] { publish(*result); });
-            return;
-        }
-        if (mode != "adaptive" && !combo) {
-            (*result)["error"] = "The requested scan pattern selector is absent";
-            publish(*result);
-            return;
-        }
-        auto* timer = new QTimer(window);
-        timer->setInterval(25);
-        QObject::connect(timer, &QTimer::timeout, window, [=] {
-            auto* project = session->project();
-            auto* pattern_tab = window->findChild<QObject*>("mainArea.analysis.tab.fitting");
-            if (pattern_tab && pattern_tab->property("enabled").toBool() &&
-                !pattern_tab->property("checked").toBool()) {
-                press(pattern_tab);
-                window->update();
-                return;
-            }
-            if (!project->pendingRefusal().isEmpty() || project->calculating() ||
-                project->currentExperiment()->pattern()->stale() || result->value("frames").toArray().isEmpty())
-                return;
-            if (!result->contains("readyGeneration")) {
-                (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
-                window->update();
-                return;
-            }
-            if (result->value("frames").toArray().isEmpty()) return;
-            timer->stop();
-            (*result)["started"] = true;
-            QObject::connect(project->fit(), &edi_app::FitViewModel::runningChanged, window, [=] {
-                if (project->fit()->running()) return;
-                (*result)["outcome"] = project->fit()->outcome();
-                QTimer::singleShot(1500, window, [=] {
-                    finish->stop();
-                    publish(*result);
-                });
-            });
-            if (mode == "adaptive") {
-                const auto hide = [=] {
-                    if (result->contains("heldMs")) return;
-                    press(window->findChild<QObject*>("mainArea.analysis.tab.evolution"));
-                    (*result)["heldMs"] = static_cast<double>(clock->elapsed());
-                    (*result)["heldGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
-                    {
-                        std::lock_guard lock(completed_mutex);
-                        (*result)["finishedAtHold"] = completed_files.size();
-                    }
-                    QTimer::singleShot(1000, window, [=] {
-                        QStringList completed;
-                        {
-                            std::lock_guard lock(completed_mutex);
-                            completed = completed_files;
-                        }
-                        (*result)["finishedAtRelease"] = QJsonArray::fromStringList(completed);
-                        (*result)["releasedGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
-                        (*result)["releasedMs"] = static_cast<double>(clock->elapsed());
-                        press(window->findChild<QObject*>("mainArea.analysis.tab.fitting"));
-                    });
-                };
-                if (wanted("SCAN_SCREEN_FORCE_HIDE", "0") == "1") {
-                    // Interrupt the first applied pattern before its drawing, exercising the held redraw.
-                    (*result)["forced"] = true;
-                    QObject::connect(project->currentExperiment(), &edi_app::ExperimentViewModel::patternSourceChanged,
-                                     window, [=] {
-                        if (!project->fit()->running()) return;
-                        {
-                            std::lock_guard lock(completed_mutex);
-                            if (completed_files.isEmpty()) return;
-                        }
-                        hide();
-                    }, Qt::DirectConnection);
-                } else {
-                    auto* visibility = new QTimer(window);
-                    visibility->setInterval(25);
-                    QObject::connect(visibility, &QTimer::timeout, window, [=] {
-                        QStringList files;
-                        {
-                            std::lock_guard lock(completed_mutex);
-                            files = completed_files;
-                        }
-                        if (files.size() < 3 || !project->fit()->running()) return;
-                        visibility->stop();
-                        hide();
-                    });
-                    visibility->start();
+            return false;
+        };
+        const auto configure = [=, &engine] {
+            QObject* combo = nullptr;
+            QStringList options;
+            bool label = false, extras = false;
+            for (auto* object : window->findChildren<QObject*>()) {
+                const QString text = object->property("text").toString();
+                if (text == "Extras" || text == "Extra") {
+                    extras = true;
+                    press(object);
+                }
+                if (text.startsWith("Pattern updates during a scan") ||
+                    object->property("title").toString() == "Pattern updates during a scan") {
+                    label = true;
+                    object->setProperty("collapsed", false);
+                }
+                const auto values = choices(object);
+                if (values.join("|").contains("adaptive", Qt::CaseInsensitive) &&
+                    values.join("|").contains("every pattern", Qt::CaseInsensitive)) {
+                    combo = object;
+                    options = values;
                 }
             }
-            project->fit()->start();
+            (*result)["extras"] = extras;
+            (*result)["label"] = label;
+            (*result)["options"] = QJsonArray::fromStringList(options);
+            (*result)["initial"] = combo ? combo->property("currentText").toString() : QString();
+            auto* control = qobject_cast<QQuickItem*>(combo);
+            (*result)["selectorUsable"] = control && control->isVisible() && control->isEnabled();
+            const QString mode = result->value("mode").toString();
+            if (combo && mode != "read") {
+                int index = -1;
+                for (int i = 0; i < options.size(); ++i) {
+                    const QString option = options[i].toLower();
+                    if ((mode == "every" && option.contains("every pattern")) ||
+                        (mode == "second" && option.contains("second")) ||
+                        (mode == "adaptive" && option.contains("adaptive")) ||
+                        (mode == "end" && option.contains("end")))
+                        index = i;
+                }
+                if (index >= 0) {
+                    combo->setProperty("currentIndex", index);
+                    QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, index));
+                }
+            }
+            (*result)["selected"] = combo ? combo->property("currentText").toString() : QString();
+            auto* dialog = window->findChild<QObject*>("preferences");
+            if (dialog) QMetaObject::invokeMethod(dialog, "close");
+            if (wanted("SCAN_SCREEN_SETTINGS_ONLY", "0") == "1") {
+                QTimer::singleShot(1000, window, [=] { publish(*result); });
+                return;
+            }
+            if (mode != "adaptive" && !combo) {
+                (*result)["error"] = "The requested scan pattern selector is absent";
+                publish(*result);
+                return;
+            }
+            auto* timer = new QTimer(window);
+            timer->setInterval(25);
+            QObject::connect(timer, &QTimer::timeout, window, [=] {
+                auto* project = session->project();
+                auto* pattern_tab = window->findChild<QObject*>("mainArea.analysis.tab.fitting");
+                if (pattern_tab && pattern_tab->property("enabled").toBool() &&
+                    !pattern_tab->property("checked").toBool()) {
+                    press(pattern_tab);
+                    window->update();
+                    return;
+                }
+                if (!project->pendingRefusal().isEmpty() || project->calculating() ||
+                    project->currentExperiment()->pattern()->stale() || result->value("frames").toArray().isEmpty())
+                    return;
+                if (!result->contains("readyGeneration")) {
+                    (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+                    window->update();
+                    return;
+                }
+                if (result->value("frames").toArray().isEmpty()) return;
+                timer->stop();
+                (*result)["started"] = true;
+                QObject::connect(project->fit(), &edi_app::FitViewModel::runningChanged, window, [=] {
+                    if (project->fit()->running()) return;
+                    (*result)["outcome"] = project->fit()->outcome();
+                    QTimer::singleShot(1500, window, [=] {
+                        finish->stop();
+                        publish(*result);
+                    });
+                });
+                if (mode == "adaptive") {
+                    const auto hide = [=] {
+                        if (result->contains("heldMs")) return;
+                        press(window->findChild<QObject*>("mainArea.analysis.tab.evolution"));
+                        (*result)["heldMs"] = static_cast<double>(clock->elapsed());
+                        (*result)["heldGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+                        {
+                            std::lock_guard lock(completed_mutex);
+                            (*result)["finishedAtHold"] = completed_files.size();
+                        }
+                        QTimer::singleShot(1000, window, [=] {
+                            QStringList completed;
+                            {
+                                std::lock_guard lock(completed_mutex);
+                                completed = completed_files;
+                            }
+                            (*result)["finishedAtRelease"] = QJsonArray::fromStringList(completed);
+                            (*result)["releasedGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
+                            (*result)["releasedMs"] = static_cast<double>(clock->elapsed());
+                            press(window->findChild<QObject*>("mainArea.analysis.tab.fitting"));
+                        });
+                    };
+                    if (wanted("SCAN_SCREEN_FORCE_HIDE", "0") == "1") {
+                        // Interrupt the first applied pattern before its drawing, exercising the held redraw.
+                        (*result)["forced"] = true;
+                        QObject::connect(project->currentExperiment(), &edi_app::ExperimentViewModel::patternSourceChanged,
+                                         window, [=] {
+                            if (!project->fit()->running()) return;
+                            {
+                                std::lock_guard lock(completed_mutex);
+                                if (completed_files.isEmpty()) return;
+                            }
+                            hide();
+                        }, Qt::DirectConnection);
+                    } else {
+                        auto* visibility = new QTimer(window);
+                        visibility->setInterval(25);
+                        QObject::connect(visibility, &QTimer::timeout, window, [=] {
+                            QStringList files;
+                            {
+                                std::lock_guard lock(completed_mutex);
+                                files = completed_files;
+                            }
+                            if (files.size() < 3 || !project->fit()->running()) return;
+                            visibility->stop();
+                            hide();
+                        });
+                        visibility->start();
+                    }
+                }
+                project->fit()->start();
+            });
+            timer->start();
+        };
+        auto* waited = new QElapsedTimer;
+        waited->start();
+        auto* pages = new QTimer(window);
+        pages->setInterval(25);
+        QObject::connect(pages, &QTimer::timeout, window, [=] {
+            auto* tab = qobject_cast<QQuickItem*>(window->findChild<QObject*>("appBar.tab.analysis"));
+            if (!tab || !tab->isEnabled() || !analysis_extras()) {
+                if (waited->elapsed() > 30000) {
+                    pages->stop();
+                    (*result)["error"] = "The Analysis page was not built";
+                    publish(*result);
+                }
+                return;
+            }
+            pages->stop();
+            press(tab);
+            press(analysis_extras());
+            waited->restart();
+            auto* listed = new QTimer(window);
+            listed->setInterval(25);
+            QObject::connect(listed, &QTimer::timeout, window, [=] {
+                if (!selector_listed() && waited->elapsed() <= 30000) return;
+                listed->stop();
+                configure();
+            });
+            listed->start();
         });
-        timer->start();
+        pages->start();
     });
 }
