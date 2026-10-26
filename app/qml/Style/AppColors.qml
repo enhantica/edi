@@ -15,14 +15,14 @@ QtObject {
 
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
-    // The same, stronger: a framed status-bar item's hover, over its standing frame of `hoverHighlight`.
-    readonly property color hoverHighlightStrong: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.18)
 
-    // The fit buttons: dark grey with white text in light mode, light grey with dark text in dark mode, near-black and
-    // white on hover (the owner, 2026-10-26).
-    readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#e0e0e0" : "#333333"
-    readonly property color fitButtonBackgroundHovered: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
-    readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#222222" : "#ffffff"
+    // The status bar's buttons (the owner, 2026-10-26): the fit status, Reset and Follow white with a 1 px border in the
+    // bar's border colour in light mode, black with a border just off the bar's background in dark mode; the Fit button
+    // black in light mode and white in dark mode while it can act, the accent on hover.
+    readonly property color statusButtonBackground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
+    readonly property color statusButtonBorder: EaStyle.Colors.isDarkPalette ? "#3c3c3c" : EaStyle.Colors.appBarBorder
+    readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
+    readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
 
     // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
     // the first ones in order, or past five a gradient along the order.

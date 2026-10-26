@@ -9,9 +9,10 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 
 // The status bar's Fit button, in its right corner (the owner, 2026-10-26): from any page, it fits the project and reads
-// Fit, Continue or Stop, with the matching icon; a click while a fit runs stops it. Dark grey with white text in light
-// mode and the other way round in dark mode while it can act (AppColors.fitButtonBackground); otherwise it looks like
-// Reset and Follow. It keeps its word when the bar runs short of room.
+// Fit, Continue or Stop, with the matching icon; a click while a fit runs stops it. Black with white text in light mode
+// and the other way round in dark mode while it can act, its background the accent on hover
+// (AppColors.fitButtonBackground); otherwise it looks like Reset and Follow. It keeps its word when the bar runs short of
+// room.
 StatusBarButton {
     id: control
 
@@ -23,8 +24,10 @@ StatusBarButton {
     keyIcon: running ? "stop-circle" : "play-circle"
     valueText: running ? qsTr("Stop") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
     iconColor: clickable ? AppColors.fitButtonForeground : EaStyle.Colors.themeForegroundDisabled
-    frameColor: clickable ? AppColors.fitButtonBackground : AppColors.hoverHighlight
-    frameHoverColor: AppColors.fitButtonBackgroundHovered
+    frameColor: clickable ? AppColors.fitButtonBackground : AppColors.statusButtonBackground
+    frameHoverColor: clickable ? EaStyle.Colors.themeAccent : frameColor
+    frameBorderColor: clickable ? AppColors.fitButtonBackground : AppColors.statusButtonBorder
+    tintsOnHover: !clickable
     // Shown only while tool tips are on, as every tool tip is.
     ToolTip.text: qsTr("Fit the free parameters")
     onClicked: running ? fit.cancel() : fit.start()
