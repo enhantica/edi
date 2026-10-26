@@ -92,6 +92,7 @@
    "code": "U+00B7",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
@@ -173,7 +174,6 @@
    "code": "U+00D7",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/ScanViewChart.qml",
     "app/src/demo_driver.cpp",
     "app/src/structure_view_controller.cpp"
    ],

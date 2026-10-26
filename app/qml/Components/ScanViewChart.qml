@@ -506,11 +506,13 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.advanceWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
     }
-    // The row label's pieces' fonts, as IconLine sets them.
-    TextMetrics {
+    // The row label's pieces as IconLine draws them: the icon a label of the icon font, measured by the width it takes
+    // (an icon is measured in the font of an item drawing it, never one built from the family alone).
+    EaElements.Label {
         id: labelIcon
+        visible: false
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: chart.em
         text: "microscope"

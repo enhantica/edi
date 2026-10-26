@@ -465,11 +465,11 @@ void ScanViewModel::setIncludedOnly(bool on) {
     }
 }
 
-double ScanViewModel::widestRowText(const QVariantList& shown, const QFont& font) const {
+double ScanViewModel::widestRowText(const QList<bool>& shown, const QFont& font) const {
     const QFontMetricsF metrics(font);
     double widest = 0.0;
     for (qsizetype i = 0; i < shown.size() && i < row_texts_.size(); ++i) {
-        if (shown.at(i).toBool()) {
+        if (shown.at(i)) {
             widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(i)));
         }
     }
