@@ -7,10 +7,14 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <cmath>
+#include <exception>
+#include <string>
 #include <utility>
 #include <filesystem>
 
 #include "app_info.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
@@ -453,6 +457,95 @@ void Session::setLastError(const QString& error) {
         last_error_ = error;
         emit lastErrorChanged();
     }
+}
+
+namespace {
+
+// A bridge answer as text. A page asking for an item the dictionary lacks is a defect of the page: it is reported as
+// a warning, which fails every warning-strict test, and shows nothing, or the stored token for a selector, rather than
+// a plausible stand-in.
+template <typename Call>
+QString from_bridge(Call&& call, const QString& fallback = QString()) {
+    try {
+        return QString::fromStdString(call());
+    } catch (const std::exception& error) {
+        qWarning("dictionary: %s", error.what());
+        return fallback;
+    }
+}
+
+}  // namespace
+
+QString Session::label(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::label(uid.toStdString(), variant.toStdString()); });
+}
+
+QString Session::units(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::units_label(uid.toStdString(), variant.toStdString()); });
+}
+
+QString Session::tooltip(const QString& uid, const QString& variant) const {
+    return from_bridge([&] { return edi::tooltip(uid.toStdString(), variant.toStdString()); });
+}
+
+QString Session::optionLabel(const QString& uid, const QString& token) const {
+    return from_bridge([&] { return edi::option_label(uid.toStdString(), token.toStdString()); }, token);
+}
+
+QString Session::optionTooltip(const QString& uid, const QString& token) const {
+    return from_bridge([&] { return edi::option_tooltip(uid.toStdString(), token.toStdString()); });
+}
+
+QString Session::categoryTitle(const QString& id) const {
+    return from_bridge([&] { return edi::category_label(id.toStdString()); });
+}
+
+// A number that is not finite (an excluded row's computed value, an empty range) has no spelling: it shows nothing.
+QString Session::written(const QString& uid, double value) const {
+    if (!std::isfinite(value)) {
+        return {};
+    }
+    return from_bridge([&] { return edi::file_text(uid.toStdString(), value); });
+}
+
+QString Session::display(const QString& uid, double value, const QString& variant) const {
+    if (!std::isfinite(value)) {
+        return {};
+    }
+    return from_bridge([&] { return edi::display_text(uid.toStdString(), value, variant.toStdString()); });
+}
+
+namespace {
+
+// A value with an s.u., rounded by it under `rule`, as a fitted value shows (edi::fitted_text); empty for a bad item.
+edi::FileText fitted(const QString& uid, double value, double su, const std::string& rule) {
+    try {
+        return edi::fitted_text(uid.toStdString(), value, su, rule);
+    } catch (const std::exception& error) {
+        qWarning("dictionary: %s", error.what());
+        return {};
+    }
+}
+
+bool has_su(double value, double su) { return std::isfinite(su) && su > 0.0 && std::isfinite(value); }
+
+}  // namespace
+
+QString Session::valueText(const QString& uid, double value, double su) const {
+    // Without an s.u., the value by its item's display format.
+    if (!has_su(value, su)) {
+        return display(uid, value);
+    }
+    const std::string rule = project_ != nullptr ? project_->suRule().toStdString() : std::string(edi::kDefaultSuRule);
+    return QString::fromStdString(fitted(uid, value, su, rule).value);
+}
+
+QString Session::suText(const QString& uid, double value, double su) const {
+    if (!has_su(value, su)) {
+        return {};
+    }
+    const std::string rule = project_ != nullptr ? project_->suRule().toStdString() : std::string(edi::kDefaultSuRule);
+    return QString::fromStdString(fitted(uid, value, su, rule).su);
 }
 
 }  // namespace edi_app

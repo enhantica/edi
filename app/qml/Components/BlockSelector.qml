@@ -85,7 +85,7 @@ Row {
             };
             const lead = row.outcomeRole !== "" ? [number, icon, slot] : [number, icon];
             const tag = {
-                "text": qsTr("template"),
+                "text": Session.label("sequential_fit.template_file"),
                 "color": EaStyle.Colors.themeAccent
             };
             // The template mark follows the name, so the names line up across the rows.

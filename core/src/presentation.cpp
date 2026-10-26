@@ -9,6 +9,7 @@
 #include <sstream>
 #include <utility>
 
+#include "edi/display.hpp"
 #include "edi/model.hpp"
 
 namespace edi {
@@ -216,6 +217,12 @@ void fill_points(PatternSeries& series, const Kept& kept, const std::vector<doub
     }
 }
 
+// An axis title from its data item in the dictionary: `2θ (deg)`.
+std::string axis_title(const char* uid) {
+    const std::string units = units_label(uid);
+    return units.empty() ? label(uid) : label(uid) + " (" + units + ")";
+}
+
 // An experiment's or a structure's style row is its place's.
 std::string style_key(const char* base, std::size_t place) { return std::string(base) + "." + std::to_string(place); }
 
@@ -228,20 +235,41 @@ std::string number(double value) {
     return stream.str();
 }
 
-// A read-out number, as diffraction-lib's: two decimals and a comma between thousands (`1,192.23`).
-std::string readout_number(double value) {
-    if (!std::isfinite(value)) {
-        return number(value);
+// A value of item `uid` as a point label or a read-out shows it: by the item's dictionary format (the residual, meas −
+// calc, by the measured intensity's), with a comma between thousands in a read-out, as diffraction-lib's (`1,192.23`).
+std::string item_number(const std::string& uid, double value) {
+    return uid.empty() || !std::isfinite(value) ? number(value) : display_text(uid, value);
+}
+
+std::string readout_number(const std::string& uid, double value) {
+    std::string text = item_number(uid, value);
+    const std::size_t start = text.starts_with('-') ? 1 : 0;
+    if (text.find_first_of("eEn", start) != std::string::npos) {
+        return text;  // an exponent, inf or nan: no thousands to group
     }
-    std::ostringstream stream;
-    stream.imbue(std::locale::classic());
-    stream << std::fixed << std::setprecision(2) << std::fabs(value);
-    std::string digits = stream.str();
-    const std::size_t point = digits.find('.');
-    for (std::size_t at = point; at > 3; at -= 3) {
-        digits.insert(at - 3, ",");
+    const std::size_t point = std::min(text.find('.'), text.size());
+    for (std::size_t at = point; at > start + 3; at -= 3) {
+        text.insert(at - 3, ",");
     }
-    return (value < 0.0 && digits.find_first_not_of("0.,") != std::string::npos ? "-" : "") + digits;
+    return text;
+}
+
+// The dictionary item a series' values are of.
+const char* series_item(SeriesKind kind) {
+    switch (kind) {
+        case SeriesKind::Measured:
+        case SeriesKind::Residual:
+            return "data.intensity_meas";
+        case SeriesKind::Calculated:
+            return "data.intensity_calc";
+        case SeriesKind::Background:
+            return "data.intensity_bkg";
+        case SeriesKind::StructureCurve:
+            return "pd_calc.component_intensities_net";
+        case SeriesKind::BraggTicks:
+            break;
+    }
+    return "";
 }
 
 }  // namespace
@@ -370,7 +398,8 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
         const double a = d_at(native, d, band.x_min), b = d_at(native, d, band.x_max);
         band = {std::min(a, b), std::max(a, b)};
     }
-    source.x_title = "d (Å)";
+    source.x_title = axis_title("data.d_spacing");
+    source.x_item = "data.d_spacing";
     source.x = data.d_spacing.buffer();
     if (d.front() > d.back()) {
         for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
@@ -423,7 +452,8 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     if (data.two_theta.has_value() == data.time_of_flight.has_value()) {
         return source;  // no single engaged axis: nothing to present
     }
-    source.x_title = data.two_theta.has_value() ? "2θ (deg)" : "TOF (µs)";
+    source.x_item = data.two_theta.has_value() ? "data.two_theta" : "data.time_of_flight";
+    source.x_title = axis_title(source.x_item.c_str());
     const auto copy = [](const std::vector<double>& values) -> PatternSource::Column {
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(values);
     };
@@ -866,7 +896,7 @@ std::string hover_text(const PatternSource& source, const PatternSeries& series,
     if (!source.x || !column || row >= source.x->size() || row >= column->size()) {
         return {};
     }
-    return number((*source.x)[row]) + ", " + number((*column)[row]);
+    return item_number(source.x_item, (*source.x)[row]) + ", " + item_number(series_item(series.kind), (*column)[row]);
 }
 
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point) {
@@ -894,7 +924,7 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
             const auto& hkl = (*phase.hkl)[index];
             // Only the Miller indices take the tick's colour (the owner, 2026-10-03).
             return {{phase.structure_id, "", {}},
-                    {"x: " + readout_number((*read)[index]), "", {}},
+                    {"x: " + readout_number(source.x_item, (*read)[index]), "", {}},
                     {"Miller indices: (" + std::to_string(hkl[0]) + " " + std::to_string(hkl[1]) + " " +
                          std::to_string(hkl[2]) + ")",
                      series.style,
@@ -905,19 +935,21 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
     if (!source.x || row >= source.x->size()) {
         return {};
     }
-    std::vector<HoverLine> lines{{"x: " + readout_number((*source.x)[row]), "", {}}};
-    const auto line = [&lines, row](const char* name, const PatternSource::Column& column, std::string style) {
+    std::vector<HoverLine> lines{{"x: " + readout_number(source.x_item, (*source.x)[row]), "", {}}};
+    const auto line = [&lines, row](const char* name, const PatternSource::Column& column, SeriesKind kind,
+                                    std::string style) {
         if (column && row < column->size()) {
-            lines.push_back({std::string(name) + ": " + readout_number((*column)[row]), std::move(style), {}});
+            lines.push_back(
+                {std::string(name) + ": " + readout_number(series_item(kind), (*column)[row]), std::move(style), {}});
         }
     };
     const std::string measured_style = style_key("meas", source.experiment_place);
-    line("meas", source.meas, measured_style);
-    line("bkg", source.bkg, "bkg");
-    line("calc", source.calc, "calc");
+    line("meas", source.meas, SeriesKind::Measured, measured_style);
+    line("bkg", source.bkg, SeriesKind::Background, "bkg");
+    line("calc", source.calc, SeriesKind::Calculated, "calc");
     // Named and coloured as the residual pane's title (edi ADR-0017 §15), its value in the residual's colour.
     if (source.resid && row < source.resid->size()) {
-        const std::string value = ": " + readout_number((*source.resid)[row]);
+        const std::string value = ": " + readout_number(series_item(SeriesKind::Residual), (*source.resid)[row]);
         lines.push_back({"meas \xE2\x88\x92 calc" + value,
                          "resid",
                          {{"meas", measured_style}, {" \xE2\x88\x92 ", ""}, {"calc", "calc"}, {value, "resid"}}});

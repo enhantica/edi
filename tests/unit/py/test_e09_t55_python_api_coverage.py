@@ -98,6 +98,18 @@ def test_cli_human_and_machine_channels_preserve_public_output_contract(
 
     analysis = AnalysisDouble()
     project = SimpleNamespace(analysis=analysis)
+    metric_contexts = []
+    rendered_variants = []
+
+    def metric_variant(context):
+        metric_contexts.append(context)
+        return 'single crystal'
+
+    def rendered(text, variant):
+        rendered_variants.append(variant)
+        return text
+
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', metric_variant)
     preamble = SimpleNamespace(pre_fit=SimpleNamespace(reduced_chi_square=9.0))
     iteration = SimpleNamespace(reduced_chi_square=4.0)
     outcome = object()
@@ -111,10 +123,25 @@ def test_cli_human_and_machine_channels_preserve_public_output_contract(
         return outcome
 
     monkeypatch.setattr(cli, '_fit', fit)
-    monkeypatch.setattr(cli.edi, 'stream_header', lambda _p, name: f'HEADER {name}\n')
-    monkeypatch.setattr(cli.edi, 'iteration_line', lambda _r, previous: f'ITER {previous}')
-    monkeypatch.setattr(cli.edi, 'summary_line', lambda _outcome: 'SUMMARY\n')
-    monkeypatch.setattr(cli.edi, 'parameter_table', lambda _outcome: 'PARAMETERS\n')
+    monkeypatch.setattr(
+        cli.edi, 'stream_header', lambda _p, name, variant: rendered(f'HEADER {name}\n', variant)
+    )
+    monkeypatch.setattr(
+        cli.edi,
+        'iteration_line',
+        lambda _r, previous, variant: rendered(f'ITER {previous}', variant),
+    )
+    monkeypatch.setattr(
+        cli.edi, 'summary_line', lambda _outcome, variant: rendered('SUMMARY\n', variant)
+    )
+
+    def parameter_table(_outcome, _project):
+        assert _outcome is outcome and _project is project, (
+            'The CLI table receives both its outcome and the original display-context project'
+        )
+        return 'PARAMETERS\n'
+
+    monkeypatch.setattr(cli.edi, 'parameter_table', parameter_table)
     monkeypatch.setattr(cli.edi, 'progress_report', lambda _record: 'PROGRESS\n')
     monkeypatch.setattr(cli.edi, 'machine_report', lambda _p, _o, _v: 'MACHINE\n')
 
@@ -143,6 +170,12 @@ def test_cli_human_and_machine_channels_preserve_public_output_contract(
     assert analysis.fitting_mode_reads == 3, (
         'the two human runs and streamed machine run must each inspect the real project '
         'analysis fitting mode; OFF human still selects scan no-op subscribers'
+    )
+    assert metric_contexts == [project], (
+        'The emitting single-fit channel selects metric names from the original project'
+    )
+    assert rendered_variants == ['single crystal'] * 3, (
+        'Header, iteration and summary receive the selected sample-form display context'
     )
 
 
@@ -179,6 +212,18 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
 
     analysis = ScanAnalysis()
     project = SimpleNamespace(analysis=analysis)
+    metric_contexts = []
+    rendered_variants = []
+
+    def metric_variant(context):
+        metric_contexts.append(context)
+        return 'single crystal'
+
+    def iteration_line(row, _previous, variant):
+        rendered_variants.append(variant)
+        return f'ITER {row.iteration}'
+
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', metric_variant)
     progress_lines = (
         'PROGRESS 1/2 · previous-file-with-a-long-name',
         'PROGRESS 2/2',
@@ -193,7 +238,7 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         'scan_summary',
         lambda **values: f'SUMMARY {values["ok_count"]}/{values["fail_count"]}\n',
     )
-    monkeypatch.setattr(cli.edi, 'iteration_line', lambda row, _previous: f'ITER {row.iteration}')
+    monkeypatch.setattr(cli.edi, 'iteration_line', iteration_line)
 
     compact_clock = iter((0.0, 3.0, 8.0))
     assert (
@@ -255,6 +300,12 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
     assert not quiet.getvalue(), 'the OFF scan route must write no output bytes'
     assert analysis.iteration_subscribers == [False, True, False, False], (
         'only FULL may subscribe to per-iteration scan output across every emission policy'
+    )
+    assert metric_contexts == [project] * 3, (
+        'Every emitting scan channel selects metric names from the original project'
+    )
+    assert rendered_variants == ['single crystal'] * 2, (
+        'Each FULL scan iteration carries the selected sample-form display context'
     )
 
 

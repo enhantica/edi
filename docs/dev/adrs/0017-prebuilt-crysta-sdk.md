@@ -89,6 +89,10 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
    has no release or differs from it. So a paired task pins a crysta head as soon as that head's two `checks` jobs
    have packed, and nothing is published for a head that never ships.
 5. **osx-64 is not built.** edi's platforms are `linux-64` and `osx-arm64`.
+6. **An untested SDK is for a local trial only.** crysta can pack an SDK without its qualification for a desk try of
+   an unfinished change; its manifest records both tiers as `untested`. The fingerprint check refuses it unless
+   `EDI_ALLOW_UNTESTED_SDK=1` is set, and refuses that setting in CI, so no CI run or release builds on one (owner,
+   2026-10-23).
 
 **Supersedes** the earlier decision (2026-09-03) that edi floats on crysta `main`.
 

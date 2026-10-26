@@ -335,12 +335,13 @@ function drawSingleCrystal(figure, crystal) {
   const points = {
     type: 'scatter',
     mode: 'markers',
-    name: 'Reflections',
+    name: crystal.name,
     x: crystal.calc,
     y: crystal.meas,
     error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: style.light },
-    text: crystal.meas.map((meas, i) => `${crystal.h[i]} ${crystal.k[i]} ${crystal.l[i]}`),
-    hovertemplate: '%{text}<br>F²meas %{y}<br>F²calc %{x}<extra></extra>',
+    // Each point's hover as the core writes it: its indices and values by the dictionary's labels and formats.
+    text: crystal.hover,
+    hovertemplate: '%{text}<extra></extra>',
     marker: { color: style.light, size: 5 },
   };
   const diagonal = {
@@ -361,8 +362,8 @@ function drawSingleCrystal(figure, crystal) {
       ? [{ text: crystal.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
            showarrow: false, font: { family: font } }]
       : [],
-    xaxis: { ...axis, title: { text: 'F² calc' } },
-    yaxis: { ...axis, title: { text: 'F² meas' } },
+    xaxis: { ...axis, title: { text: crystal.x_title } },
+    yaxis: { ...axis, title: { text: crystal.y_title } },
   };
   window.Plotly.newPlot(figure, [diagonal, points], layout, { responsive: true, displaylogo: false });
 }

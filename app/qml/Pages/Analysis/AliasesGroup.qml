@@ -27,19 +27,19 @@ Column {
         defaultInfoText: qsTr("No aliases")
         sourceModel: group.aliases
 
-        columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("alias")), -1, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, textColumnWidth("id", Session.label("alias.id")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("alias")
+                uid: "alias.id"
             }
-            EaComponents.ListViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("parameter")
+                uid: "alias.parameter_unique_name"
             }
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter

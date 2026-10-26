@@ -19,7 +19,7 @@ EaElements.GroupRow {
 
     SelectorField {
         objectName: "fittingMode.type"
-        label: qsTr("mode")
+        uid: "fitting_mode.type"
         options: row.analysis ? row.analysis.fittingModeOptions : null
         token: row.analysis ? row.analysis.fittingMode : ""
         writable: !row.onlyMode
