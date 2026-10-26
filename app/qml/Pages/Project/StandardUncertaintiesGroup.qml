@@ -20,7 +20,7 @@ EaElements.GroupBox {
 
     objectName: "group.su_format"
     collapsed: !SideBarGroups.isOpen(openKey, group)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     title: qsTr("Standard uncertainties")
     icon: "ruler-horizontal"
