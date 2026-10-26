@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-25T23:53:22Z
+# measured_utc = 2026-10-26T00:39:39Z
 #
-# Recorded from: measured test run (16 node(s) measured once, 15642 banked, 0 stale row(s) dropped)
-# Collected tests: 17528; with a reported duration: 10190
+# Recorded from: measured test run (14 node(s) measured once, 15657 banked, 0 stale row(s) dropped)
+# Collected tests: 17542; with a reported duration: 10204
 # Module-scoped fixture costs recorded: 75
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17528
+# inventory_python = 17542
 # inventory_cpp = 393
-# inventory_measured = 15657
+# inventory_measured = 15671
 # inventory_unmeasured = 2264
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -7083,6 +7083,20 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.060	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_requires_a_live_post_release_handover[only-held]
 0.060	tests/integration/py/test_scan_release_observer.py::test_scan_release_observer_requires_a_live_post_release_handover[stopped]
 0.070	tests/integration/py/test_scan_release_observer.py::test_scan_release_selection_keeps_held_redraw_diagnostic_and_checks_the_new_handover
+0.090	tests/integration/py/test_scan_screen_build_identity.py::test_browser_snapshot_excludes_dirty_working_source_and_declares_it
+0.090	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_binds_clean_marker_and_actual_binary_bytes
+0.070	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rechecks_binary_before_publication
+0.060	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_refuses_uncommitted_source_even_with_current_marker[staged]
+0.060	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_refuses_uncommitted_source_even_with_current_marker[unstaged]
+0.060	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_refuses_uncommitted_source_even_with_current_marker[untracked-source]
+0.050	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[ambiguous]
+0.050	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[dirty]
+0.160	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[missing]
+0.050	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[plain-sha]
+0.050	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[stale]
+0.050	tests/integration/py/test_scan_screen_build_identity.py::test_receipt_rejects_unqualified_binary_stamp[unknown]
+0.190	tests/integration/py/test_scan_screen_build_identity.py::test_relabelled_receipt_cannot_hide_stale_delivered_binary[cache]
+0.190	tests/integration/py/test_scan_screen_build_identity.py::test_relabelled_receipt_cannot_hide_stale_delivered_binary[prepared]
 0.120	tests/integration/py/test_scan_template.py::test_legacy_scan_without_template_field_preserves_model
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../other/all594687.dat]
 0.010	tests/integration/py/test_scan_template.py::test_loader_refuses_outside_template_file[../outside.dat]
