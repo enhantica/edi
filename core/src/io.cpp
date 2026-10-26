@@ -3334,6 +3334,58 @@ Block translate_experiment_cif(const Block& in) {
 // is not supported yet. The two from-text entries keep reading the CIFs they always read, by the
 // readers above.
 
+// An ADP column spelled by a name of some site types only (`_atom_site_U_iso_or_equiv` holds a U value) must match
+// the type of every site it gives a value for, declared or the default Biso, or the value would be read in the wrong
+// representation; such a column is refused (crysta ADR-0103 §1). Checked on the names as written.
+static void refuse_adp_spellings(const Block& written, const std::string& where) {
+    const auto column_of = [](const Loop& loop, const std::string& name) {
+        for (std::size_t index = 0; index < loop.tags.size(); ++index) {
+            if (detail::current_edi_name(loop.tags[index], true) == name) {
+                return static_cast<int>(index);
+            }
+        }
+        return -1;
+    };
+    const auto lower = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    std::map<std::string, std::string> site_types;  // lowercase site id -> type
+    for (const Loop& loop : written.loops) {
+        const int id = column_of(loop, "_atom_site.id");
+        const int type = column_of(loop, "_atom_site.adp_type");
+        for (const auto& row : id < 0 ? std::vector<std::vector<std::string>>{} : loop.rows) {
+            site_types[lower(row[static_cast<std::size_t>(id)])] =
+                type < 0 ? std::string("Biso") : row[static_cast<std::size_t>(type)];
+        }
+    }
+    for (const Loop& loop : written.loops) {
+        int id = column_of(loop, "_atom_site.id");
+        if (id < 0) {
+            id = column_of(loop, "_atom_site_aniso.id");
+        }
+        for (std::size_t column = 0; id >= 0 && column < loop.tags.size(); ++column) {
+            const std::vector<std::string> variants = detail::name_variants(loop.tags[column]);
+            for (const auto& row : variants.empty() ? std::vector<std::vector<std::string>>{} : loop.rows) {
+                const std::string& site = row[static_cast<std::size_t>(id)];
+                const auto found = site_types.find(lower(site));
+                const std::string type = found != site_types.end() ? found->second : std::string("Biso");
+                if (std::none_of(variants.begin(), variants.end(),
+                                 [&](const std::string& token) { return lower(token) == lower(type); })) {
+                    std::string allowed = variants.front();
+                    for (std::size_t index = 1; index < variants.size(); ++index) {
+                        allowed += " or " + variants[index];
+                    }
+                    fail_schema(where, "adp-name-disagrees-with-type",
+                                "site '" + site + "' is " + type + ", but its column " + loop.tags[column] +
+                                    " holds a value for " + allowed + ": the type and the name disagree");
+                }
+            }
+        }
+    }
+}
+
 // A structure or experiment text: refused when it is a CIF, else read by edi's `.edi` reader.
 static Block edi_text_block(const std::string& text, const std::string& where) {
     std::vector<std::string> tags;
@@ -3346,6 +3398,9 @@ static Block edi_text_block(const std::string& text, const std::string& where) {
         detail::refuse_cif_names(tags);
     } catch (const std::invalid_argument& error) {
         throw IoError(where + ": " + error.what());
+    }
+    if (std::any_of(tags.begin(), tags.end(), [](const std::string& tag) { return !detail::name_variants(tag).empty(); })) {
+        refuse_adp_spellings(parse_block(text, where, true, false), where);
     }
     return parse_block(text, where, true, true);
 }
@@ -3363,9 +3418,17 @@ static std::optional<Block> classic_cif_block(const std::string& text, const std
     } catch (const IoError&) {
         return std::nullopt;
     }
-    const bool schema_line = std::any_of(block->items.begin(), block->items.end(), [](const auto& item) {
-        return detail::current_edi_name(item.first, true) == "_edi.schema_version";
-    });
+    // The schema line in either notation and any case; its CIF name, which the CIF report writes, marks a CIF.
+    const auto key = [](std::string name) {
+        std::transform(name.begin(), name.end(), name.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (const std::size_t dot = name.find('.'); dot != std::string::npos) {
+            name[dot] = '_';
+        }
+        return name;
+    };
+    const bool schema_line = std::any_of(block->items.begin(), block->items.end(),
+                                         [&key](const auto& item) { return key(item.first) == "_edi_schema_version"; });
     return is_classic(*block) && !schema_line ? block : std::nullopt;
 }
 

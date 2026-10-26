@@ -33,6 +33,10 @@ std::string current_edi_name(const std::string& tag, bool every_name);
 // an item of a loop category or a name no item lists. Such an item written as a loop column is refused.
 std::string one_row_category(const std::string& tag);
 
+// The site types whose own names include `tag`, an ADP name that spells its item for those types only
+// (`_atom_site_U_iso_or_equiv`: Uiso and Uani); empty for a name every type shares (crysta ADR-0103 §1).
+std::vector<std::string> name_variants(const std::string& tag);
+
 // Returns unless `tags`, the names a structure or experiment text spells as edi's reader reads
 // them, are a CIF's by crysta's rule; crysta throws std::invalid_argument for a CIF, as reading
 // CIF files is not supported yet.
