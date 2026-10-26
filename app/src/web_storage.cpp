@@ -10,6 +10,7 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QPointer>
 #include <QQmlEngine>
 #include <algorithm>
@@ -469,14 +470,86 @@ QPointer<WebStorage>& the_instance() {
     return instance;
 }
 
-QJsonObject refusal(const QString& message) { return QJsonObject{{QStringLiteral("ok"), false}, {QStringLiteral("message"), message}}; }
+QJsonObject object_of(const QString& json) { return QJsonDocument::fromJson(json.toUtf8()).object(); }
+
+WebStorageAnswer answer_of(const QString& json) {
+    const QJsonObject object = object_of(json);
+    WebStorageAnswer answer;
+    answer.ok = object.value(QStringLiteral("ok")).toBool();
+    answer.cancelled = object.value(QStringLiteral("cancelled")).toBool();
+    answer.message = object.value(QStringLiteral("message")).toString();
+    answer.key = object.value(QStringLiteral("key")).toString();
+    answer.kind = object.value(QStringLiteral("kind")).toString();
+    answer.name = object.value(QStringLiteral("name")).toString();
+    answer.path = object.value(QStringLiteral("path")).toString();
+    return answer;
+}
+
+// A refusal as the script would have sent it, for a job that fails before reaching the script.
+[[maybe_unused]] QString refusal(const QString& message) {
+    const QJsonObject object{{QStringLiteral("ok"), false}, {QStringLiteral("message"), message}};
+    return QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact));
+}
+
+[[maybe_unused]] WebStorageAnswer refused(const QString& message) {
+    WebStorageAnswer answer;
+    answer.message = message;
+    return answer;
+}
 }  // namespace
 
-WebStorage::WebStorage(QObject* parent) : QObject(parent) {
+// ---- WebPlaceListModel --------------------------------------------------------------------------
+
+int WebPlaceListModel::rowCount(const QModelIndex& parent) const {
+    return parent.isValid() ? 0 : static_cast<int>(places_.size());
+}
+
+QVariant WebPlaceListModel::data(const QModelIndex& index, int role) const {
+    const Place* place = index.isValid() ? at(index.row()) : nullptr;
+    if (place == nullptr) {
+        return {};
+    }
+    switch (role) {
+        case KeyRole: return place->key;
+        case KindRole: return place->kind;
+        case NameRole: return place->name;
+        case SavedRole: return place->saved;
+        case RecoveryRole: return place->recovery;
+        default: return {};
+    }
+}
+
+QHash<int, QByteArray> WebPlaceListModel::roleNames() const {
+    return {{KeyRole, "key"}, {KindRole, "kind"}, {NameRole, "name"}, {SavedRole, "saved"}, {RecoveryRole, "recovery"}};
+}
+
+const WebPlaceListModel::Place* WebPlaceListModel::at(int row) const {
+    return row >= 0 && row < places_.size() ? &places_[row] : nullptr;
+}
+
+QString WebPlaceListModel::key(int row) const { return at(row) != nullptr ? at(row)->key : QString(); }
+QString WebPlaceListModel::kind(int row) const { return at(row) != nullptr ? at(row)->kind : QString(); }
+QString WebPlaceListModel::name(int row) const { return at(row) != nullptr ? at(row)->name : QString(); }
+bool WebPlaceListModel::saved(int row) const { return at(row) != nullptr && at(row)->saved; }
+bool WebPlaceListModel::recovery(int row) const { return at(row) != nullptr && at(row)->recovery; }
+
+void WebPlaceListModel::setPlaces(QList<Place> places) {
+    const bool counted = places.size() != places_.size();
+    beginResetModel();
+    places_ = std::move(places);
+    endResetModel();
+    if (counted) {
+        emit countChanged();
+    }
+}
+
+// ---- WebStorage ---------------------------------------------------------------------------------
+
+WebStorage::WebStorage(QObject* parent) : QObject(parent), places_(new WebPlaceListModel(this)) {
 #if defined(Q_OS_WASM)
     edi_storage_install();
-    edi_storage_probe(begin([this](const QJsonObject& answer) {
-        if (answer.value(QStringLiteral("ok")).toBool()) {
+    edi_storage_probe(begin([this](const WebStorageAnswer& answer) {
+        if (answer.ok) {
             usable_ = true;
             emit usableChanged();
         }
@@ -513,25 +586,19 @@ bool WebStorage::diskAccess() {
 #endif
 }
 
-QVariantMap WebStorage::place(const QString& key) const {
-    for (const QVariant& place : places_) {
-        const QVariantMap map = place.toMap();
-        if (map.value(QStringLiteral("key")).toString() == key) {
-            return map;
-        }
-    }
-    return {};
-}
-
-int WebStorage::begin(Answer answer) {
-    jobs_.insert(++last_, std::move(answer));
+int WebStorage::begin(Reply reply) {
+    jobs_.insert(++last_, std::move(reply));
     return last_;
 }
 
-void WebStorage::finish(int job, const QJsonObject& answer) {
-    const Answer done = jobs_.take(job);
+int WebStorage::begin(Answer answer) {
+    return begin(Reply([answer = std::move(answer)](const QString& json) { answer(answer_of(json)); }));
+}
+
+void WebStorage::finish(int job, const QString& json) {
+    const Reply done = jobs_.take(job);
     if (done) {
-        done(answer);
+        done(json);
     }
 }
 
@@ -540,12 +607,11 @@ void WebStorage::answered(int job, const QString& json) {
     if (storage.isNull()) {
         return;
     }
-    const QJsonObject answer = QJsonDocument::fromJson(json.toUtf8()).object();
     // Answered on the app's own turn, never inside the browser's promise.
     QMetaObject::invokeMethod(
-        storage.data(), [storage, job, answer] {
+        storage.data(), [storage, job, json] {
             if (!storage.isNull()) {
-                storage->finish(job, answer);
+                storage->finish(job, json);
             }
         },
         Qt::QueuedConnection);
@@ -553,19 +619,28 @@ void WebStorage::answered(int job, const QString& json) {
 
 void WebStorage::refresh() {
 #if defined(Q_OS_WASM)
-    const int job = begin([this](const QJsonObject& answer) {
+    const int job = begin(Reply([this](const QString& json) {
+        const QJsonObject answer = object_of(json);
         if (!answer.value(QStringLiteral("ok")).toBool()) {
             return;
         }
-        QVariantList places = answer.value(QStringLiteral("places")).toArray().toVariantList();
-        const auto latest = [](const QVariant& place) {
-            const QVariantMap map = place.toMap();
-            return std::max(map.value(QStringLiteral("time")).toDouble(), map.value(QStringLiteral("recoveryTime")).toDouble());
+        QList<QJsonObject> records;
+        for (const QJsonValue& record : answer.value(QStringLiteral("places")).toArray()) {
+            records.append(record.toObject());
+        }
+        const auto latest = [](const QJsonObject& place) {
+            return std::max(place.value(QStringLiteral("time")).toDouble(), place.value(QStringLiteral("recoveryTime")).toDouble());
         };
-        std::sort(places.begin(), places.end(), [&latest](const QVariant& a, const QVariant& b) { return latest(a) > latest(b); });
-        places_ = places;
+        std::sort(records.begin(), records.end(), [&latest](const QJsonObject& a, const QJsonObject& b) { return latest(a) > latest(b); });
+        QList<WebPlaceListModel::Place> places;
+        for (const QJsonObject& place : records) {
+            places.append({place.value(QStringLiteral("key")).toString(), place.value(QStringLiteral("kind")).toString(),
+                           place.value(QStringLiteral("name")).toString(), place.value(QStringLiteral("saved")).toBool(),
+                           place.value(QStringLiteral("recovery")).toBool()});
+        }
+        places_->setPlaces(std::move(places));
         emit placesChanged();
-    });
+    }));
     edi_storage_list(job);
 #endif
 }
@@ -576,7 +651,7 @@ void WebStorage::pickOpen(const QString& kind, const QString& root, Answer answe
 #else
     Q_UNUSED(kind);
     Q_UNUSED(root);
-    answer(refusal(QStringLiteral("opening through the browser is the browser build's")));
+    answer(refused(QStringLiteral("opening through the browser is the browser build's")));
 #endif
 }
 
@@ -588,17 +663,17 @@ void WebStorage::pickSave(const QString& kind, const QString& suggested, const Q
     Q_UNUSED(kind);
     Q_UNUSED(suggested);
     Q_UNUSED(startKey);
-    answer(refusal(QStringLiteral("saving through the browser is the browser build's")));
+    answer(refused(QStringLiteral("saving through the browser is the browser build's")));
 #endif
 }
 
 void WebStorage::write(const QString& key, const QString& kind, const QString& name, const QString& folder,
                        bool recovery, Answer answer) {
 #if defined(Q_OS_WASM)
-    const int job = begin([this, answer = std::move(answer)](const QJsonObject& result) {
+    const int job = begin(Reply([this, answer = std::move(answer)](const QString& json) {
         refresh();
-        answer(result);
-    });
+        answer(answer_of(json));
+    }));
     if (kind == QStringLiteral("zip") && !recovery) {
         try {
             const std::string bytes = edi::project_archive_bytes(folder.toStdString());
@@ -630,7 +705,7 @@ void WebStorage::write(const QString& key, const QString& kind, const QString& n
     Q_UNUSED(name);
     Q_UNUSED(folder);
     Q_UNUSED(recovery);
-    answer(refusal(QStringLiteral("the browser's storage is the browser build's")));
+    answer(refused(QStringLiteral("the browser's storage is the browser build's")));
 #endif
 }
 
@@ -641,13 +716,13 @@ void WebStorage::load(const QString& key, bool recovery, const QString& root, An
     Q_UNUSED(key);
     Q_UNUSED(recovery);
     Q_UNUSED(root);
-    answer(refusal(QStringLiteral("the browser's storage is the browser build's")));
+    answer(refused(QStringLiteral("the browser's storage is the browser build's")));
 #endif
 }
 
 void WebStorage::dropRecovery(const QString& key) {
 #if defined(Q_OS_WASM)
-    edi_storage_drop(begin([this](const QJsonObject&) { refresh(); }), key.toUtf8().constData(), 0);
+    edi_storage_drop(begin(Reply([this](const QString&) { refresh(); })), key.toUtf8().constData(), 0);
 #else
     Q_UNUSED(key);
 #endif
@@ -655,7 +730,7 @@ void WebStorage::dropRecovery(const QString& key) {
 
 void WebStorage::forget(const QString& key) {
 #if defined(Q_OS_WASM)
-    edi_storage_drop(begin([this](const QJsonObject&) { refresh(); }), key.toUtf8().constData(), 1);
+    edi_storage_drop(begin(Reply([this](const QString&) { refresh(); })), key.toUtf8().constData(), 1);
 #else
     Q_UNUSED(key);
 #endif
