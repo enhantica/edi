@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T08:41:21Z
+# measured_utc = 2026-10-26T09:47:25Z
 #
-# Recorded from: measured test run (9 node(s) measured once, 15823 banked, 0 stale row(s) dropped)
-# Collected tests: 17511; with a reported duration: 10115
-# Module-scoped fixture costs recorded: 84
+# Recorded from: measured test run (22 node(s) measured once, 15832 banked, 0 stale row(s) dropped)
+# Collected tests: 17533; with a reported duration: 10115
+# Module-scoped fixture costs recorded: 85
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17511
+# inventory_python = 17533
 # inventory_cpp = 393
-# inventory_measured = 15832
-# inventory_unmeasured = 2072
+# inventory_measured = 15842
+# inventory_unmeasured = 2084
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -10313,6 +10313,28 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[correlations]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[evolution]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[map]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-bragg]
+0.004	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-main]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-residual]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-f]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-squared]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[stacked]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-axis-letters]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-labels]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[correlations]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[evolution]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[map]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[powder-bragg]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[powder-main]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[powder-residual]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[single-f]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[single-squared]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[stacked]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[structure-axis-letters]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[structure-labels]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[job]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[workflow]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_comparisons_cannot_hide_cancellation_or_replacement[case-pull_request-cancel-job]
@@ -17981,6 +18003,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 15.206	tests/system/py/test_chart_fonts.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
 # module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 353.159	tests/system/py/test_current_row_input.py
