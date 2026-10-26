@@ -140,7 +140,10 @@ Item {
                 tryCompare(entry(data.single, key), "hidden", true, 2000, "Clicking a legend name marks its curve hidden");
                 const hidden = entry(data.single, key), disabled = legend(data.single).colors.themeForegroundDisabled;
                 compare(hidden.textColor, disabled, "A hidden curve's legend name uses the disabled colour");
-                verify(hidden.segments.length >= 2 && hidden.segments.every(piece => String(piece.color) === String(disabled)), "A hidden curve's name and symbol both use the disabled style");
+                verify(hidden.segments.length >= 2 && hidden.segments.every(piece => String(piece.color ?? hidden.textColor) === String(disabled)), "A hidden curve's name and symbols use the disabled style, including pieces inheriting the row foreground");
+                const drawnPieces = Render.descendants(hidden).filter(piece => typeof piece.isIcon === "boolean" && piece.modelData !== undefined && typeof piece.index === "number");
+                compare(drawnPieces.length, hidden.segments.length, "Every hidden legend segment has an actual drawing piece");
+                verify(drawnPieces.every(piece => String(piece.color) === String(disabled)), "Every actual hidden legend name and symbol paints the disabled foreground");
                 verify(Render.texts(hidden).some(text => String(text.color) === String(disabled)), "The hidden legend label actually paints its disabled text");
                 if (data.single) {
                     compare(findChild(chart, "singleCrystal.points").visible, false, "A single-crystal legend click removes the actual reflection layer from the scene");
