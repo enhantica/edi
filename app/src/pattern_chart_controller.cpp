@@ -31,6 +31,16 @@ QList<QPointF> points_of(const edi::PatternSeries& series) {
     return list;
 }
 
+// Whether two columns hold the same values, a missing value (NaN) matching another.
+bool same_values(const edi::PatternSource::Column& a, const edi::PatternSource::Column& b) {
+    if (a == b) {
+        return true;
+    }
+    return a && b &&
+           std::equal(a->begin(), a->end(), b->begin(), b->end(),
+                      [](double u, double v) { return u == v || (std::isnan(u) && std::isnan(v)); });
+}
+
 constexpr int kTicks = 5;  // about this many labelled ticks along an axis (edi ADR-0017 §15)
 
 // The round step — 1, 2, 2.5 or 5 times a power of ten — whose ticks inside [low, high] are closest to `kTicks`
@@ -834,10 +844,10 @@ void PatternChartController::refresh() {
     // scale or x range, a fit and a reset fit it again.
     if (fitted && !animating_ && !report_) {
         const edi::PatternSource* source = experiment_ ? &experiment_->patternSource(axis()) : nullptr;
-        HeldRange now{experiment_, source != nullptr ? source->meas.get() : nullptr, presented_x_, y_scale_, x_low,
+        HeldRange now{experiment_, source != nullptr ? source->meas : nullptr, presented_x_, y_scale_, x_low,
                       x_high, y_low, y_high};
         if (held_range_ && experiment_ && experiment_->adjusting() && held_range_->experiment == now.experiment &&
-            held_range_->measured == now.measured && held_range_->axis == now.axis && held_range_->scale == now.scale &&
+            same_values(held_range_->measured, now.measured) && held_range_->axis == now.axis && held_range_->scale == now.scale &&
             held_range_->x_min == now.x_min && held_range_->x_max == now.x_max) {
             now.low = y_low = std::min(y_low, held_range_->low);
             now.high = y_high = std::max(y_high, held_range_->high);

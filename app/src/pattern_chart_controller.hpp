@@ -414,7 +414,7 @@ class PatternChartController : public QObject {
     // changed, the range holds and only grows (the owner, 2026-10-25).
     struct HeldRange {
         const void* experiment = nullptr;
-        const void* measured = nullptr;
+        edi::PatternSource::Column measured;  // compared by its values: a preview publishes the same data anew
         std::string axis;
         int scale = -1;
         double x_min = 0.0, x_max = 0.0;
