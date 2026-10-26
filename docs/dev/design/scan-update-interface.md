@@ -79,13 +79,24 @@ must shrink the range. The actual Qt axis endpoint signals count the commit;
 each endpoint may change at most once, with an actual upper-endpoint change
 for the deliberately shrinking release.
 
-The gate reads actual `chart.series.calc` and `chart.measured` points, checks
-containment, and compares the committed range with the existing fit-to-data
+The gate reads actual `chart.series.calc` points and the measured drawing path,
+checks containment, and compares the committed range with the existing fit-to-data
 zoom reset at the same values. A typed round trip and a discrete value commit
 exercise immediate refitting. Dataset and model replacements separately
 exercise recomputation after an expanded range. `ProjectViewModel.adjusting`
 is observed to prove that the pointer-held phase reaches the production
 adjustment state. No second copy of the controller's range algorithm is used.
+
+Measured points can be drawn by `chart.measured` (markers),
+`chart.series.meas` (line), or the default band. The band clears both other
+paths, so an empty marker layer is not evidence of missing measurements. Its
+actual `chart.series.meas.band.top` and `.bottom` points must pair at the same
+x coordinates; on this linear-scale witness their midpoint is the measured value
+because the band is the
+measurement plus/minus its uncertainty. The containment reference includes
+these values as well as the actual calculated line, then compares the committed
+range with a real zoom reset. This replaces the marker-only lookup without
+changing the holding, widening, release or reset requirements.
 
 ## First group in each sidebar tab
 
