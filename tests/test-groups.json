@@ -45,14 +45,16 @@
         "tests/system/py/test_sequential_scan_performance.py",
         "tests/system/py/test_scan_native_boundary.py",
         "tests/system/py/test_scan_correlation_save_stability.py",
-        "tests/system/py/test_shared_correlation_app_state.py"
+        "tests/system/py/test_shared_correlation_app_state.py",
+        "tests/system/py/test_project_transactions.py"
       ],
       "app_builders": [
         "tests/fixtures/plain_data/build_probe.py",
         "tests/fixtures/scan_app/build_probe.py",
         "tests/fixtures/scan_app/harness.py",
         "tests/fixtures/thread_selector/build.py",
-        "tests/fixtures/scan_screen/build.py"
+        "tests/fixtures/scan_screen/build.py",
+        "tests/fixtures/project_transactions/build.py"
       ],
       "task": "group-nightly-only",
       "gap_to_merge": "pull requests and main pushes never run these files; the nightly schedule runs them on both platforms. They observe the app through a build of their own, and app_builders names the only files that may compile one"

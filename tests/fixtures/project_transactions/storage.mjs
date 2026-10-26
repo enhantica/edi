@@ -7,7 +7,7 @@ const [root,input,output,chrome]=process.argv.slice(2);
 assert(root&&input&&output&&chrome,'Storage observations require source, independent files, output and pinned Chromium');
 const source=await readFile(join(root,'app/src/web_storage.cpp'),'utf8');
 const bodies={};
-for(const name of ['edi_storage_install','edi_storage_pick_save','edi_storage_write']) {
+for(const name of ['edi_storage_install','edi_storage_pick_save','edi_storage_write','edi_storage_drop']) {
   const match=source.match(new RegExp('EM_JS\\([^,]+,\\s*'+name+',\\s*\\([^]*?\\), \\{([^]*?)\\n\\}\\);'));
   assert(match,'The storage observer must execute each actual production entry point');bodies[name]=match[1];
 }
@@ -48,7 +48,22 @@ try {
    invoke('edi_storage_write',[['job',2],['key_utf8',picked.key],['kind_utf8','folder'],['name_utf8',picked.name],['recovery',0]]);
    const written=await answer(2);const actual={};
    for(const [name,handle] of await ediStorage.walk(chosen,'',[]))actual[name]=btoa(String.fromCharCode(...new Uint8Array(await(await handle.getFile()).arrayBuffer())));
-   return {picked,written,actual};
+   // Hold the worker boundary with immediate fake metadata/directory operations.
+   // The real production write/drop entry points still own their causal ordering.
+   let releaseWrite, announceHeld, recoveryPresent=true;
+   const held=new Promise(ok=>announceHeld=ok), gate=new Promise(ok=>releaseWrite=ok);
+   ediStorage.record=async key=>({key,saved:true,kind:'browser',name:'held'});
+   ediStorage.put=async()=>{};ediStorage.remove=async()=>{};
+   ediStorage.opfs=async()=>({removeEntry:async()=>{recoveryPresent=false;}});
+   ediStorage.writeBrowser=async()=>{announceHeld();await gate;recoveryPresent=true;};
+   ediStorage.staged.set(10,[['project.edi',new Uint8Array([1])]]);
+   invoke('edi_storage_write',[['job',10],['key_utf8','held-recovery'],['kind_utf8','browser'],['name_utf8','held'],['recovery',1]]);
+   await held;
+   invoke('edi_storage_drop',[['job',11],['key_utf8','held-recovery'],['whole',0]]);
+   await new Promise(ok=>requestAnimationFrame(ok));
+   const discardedBeforeWriteSettled=answers.has(11);
+   releaseWrite();await Promise.all([answer(10),answer(11)]);
+   return {picked,written,actual,recoveryRace:{discardedBeforeWriteSettled,recoveryPresent}};
  },{bodies,files});
  await writeFile(output,JSON.stringify(result,null,2));
 } finally {await browser.close();await new Promise(ok=>server.close(ok));}

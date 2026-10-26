@@ -14,6 +14,7 @@
 #include <QTemporaryDir>
 #include <QThread>
 #include <QtQml>
+#include <QtTest/QSignalSpy>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -25,6 +26,7 @@
 #include "session.hpp"
 #include "web_storage.hpp"
 #undef private
+#include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 using namespace edi_app;
@@ -60,13 +62,27 @@ QString copy(const QString& input, const QString& destination) {
     return destination;
 }
 QJsonObject state(Session& session) {
+    QJsonArray parameters;
+    if (session.project()) {
+        auto copy = session.project()->project();
+        for (const auto& entry : edi::parameter_entries(copy)) {
+            const auto& parameter = *entry.parameter;
+            parameters.append(QJsonObject{
+                {"path", QString::fromStdString(entry.path)},
+                {"value", static_cast<double>(parameter.value)},
+                {"uncertainty",
+                 parameter.uncertainty ? QJsonValue(*parameter.uncertainty) : QJsonValue()},
+                {"free", static_cast<bool>(parameter.free)}});
+        }
+    }
     return {{"name", session.project() ? session.project()->name() : QString()},
             {"modified", session.project() && session.project()->modified()},
             {"path", session.project() ? session.project()->path() : QString()},
             {"location", session.projectLocation()},
             {"needsSaveAs", session.needsSaveAs()},
             {"example", session.openedExample()},
-            {"archive", session.openedArchive()}};
+            {"archive", session.openedArchive()},
+            {"parameters", parameters}};
 }
 void finish(size_t index, bool ok, const QString& input = {}) {
     need(index < jobs.size(), "A completion must belong to an actually started I/O request");
@@ -90,7 +106,8 @@ void start(Session& session, const QString& route, const QString& key) {
         session.openStoredProject(key, route == "recovery");
 }
 QJsonObject overlap(const QString& source, const QString& first, const QString& second,
-                    bool newerFirst, bool edit, bool replacement) {
+                    bool newerFirst, bool edit, bool replacement,
+                    const QString& replacementKind = "desktop") {
     QTemporaryDir temp;
     Session session;
     need(session.openProject(QUrl::fromLocalFile(copy(source, temp.filePath("initial")))),
@@ -116,8 +133,16 @@ QJsonObject overlap(const QString& source, const QString& first, const QString& 
     if (edit) session.project()->setName("edited-while-reading");
     if (replacement) {
         browser = false;
-        need(session.openProject(QUrl::fromLocalFile(copy(source, temp.filePath("replacement")))),
-             "The independent replacement really opens");
+        if (replacementKind == "example")
+            need(session.openExample("pd-neut-cwl_cosio-d20"),
+                 "The example replacement really opens");
+        else if (replacementKind == "new")
+            need(session.createProject("new-project", "", temp.filePath("new-project")),
+                 "The New-project replacement really creates a project");
+        else
+            need(session.openProject(
+                     QUrl::fromLocalFile(copy(source, temp.filePath("replacement")))),
+                 "The desktop replacement really opens");
         session.project()->setName("different-project");
         browser = true;
     }
@@ -159,6 +184,7 @@ QJsonObject overlap(const QString& source, const QString& first, const QString& 
             {"newerFirst", newerFirst},
             {"edit", edit},
             {"replacement", replacement},
+            {"replacementKind", replacementKind},
             {"initial", initial},
             {"after", after},
             {"olderRootRemoved", !QFileInfo::exists(olderRoot)},
@@ -182,6 +208,7 @@ QJsonObject browserSave(const QString& source, const QString& kind, bool ok, boo
     settle(session);
     jobs.clear();
     drops.clear();
+    QSignalSpy finished(&session, SIGNAL(webSaveFinished(bool)));
     int success = 0, errors = 0;
     QObject::connect(&session, &Session::webSaved, &session, [&](const QString&) { ++success; });
     QObject::connect(&session, &Session::webSaveFailed, &session,
@@ -216,6 +243,8 @@ QJsonObject browserSave(const QString& source, const QString& kind, bool ok, boo
         finish(size_t(index), ok);
     }
     const auto after = state(session);
+    QJsonArray finishedValues;
+    for (const auto& arguments : finished) finishedValues.append(arguments[0].toBool());
     browser = false;
     WebStorage::instance()->usable_ = true;
     return {{"kind", kind},
@@ -231,7 +260,8 @@ QJsonObject browserSave(const QString& source, const QString& kind, bool ok, boo
             {"success", success},
             {"errors", errors},
             {"drops", drops.size()},
-            {"writes", index >= 0}};
+            {"writes", index >= 0},
+            {"finished", finishedValues}};
 }
 QJsonObject continuation(const QString& source, bool ok, bool changed, bool unavailable,
                          bool quit) {
@@ -294,6 +324,43 @@ QJsonObject continuation(const QString& source, bool ok, bool changed, bool unav
             {"quit", quit},    {"pending", pending}, {"after", after},
             {"edited", edited}};
 }
+QJsonObject archiveLink(const QString& source, const QString& kind) {
+    QTemporaryDir temp;
+    const QString folder = copy(source, temp.filePath("input"));
+    QDir().mkpath(folder + "/reports");
+    QFile report(folder + "/reports/original.html");
+    need(report.open(QIODevice::WriteOnly), "An independent carried report must exist");
+    report.write("independent report bytes\n");
+    report.close();
+    QFile external(temp.filePath("external.txt"));
+    need(external.open(QIODevice::WriteOnly), "An independent external linked file must exist");
+    external.write("independent external bytes\n");
+    external.close();
+    const std::string link = (folder + "/reports/alias.html").toStdString();
+    if (kind == "internal")
+        std::filesystem::create_symlink("original.html", link);
+    else if (kind == "external")
+        std::filesystem::create_symlink(external.fileName().toStdString(), link);
+    else if (kind == "directory")
+        std::filesystem::create_directory_symlink(folder.toStdString(), link);
+    else
+        std::filesystem::create_symlink("missing.html", link);
+    bool ok = false;
+    QString error;
+    const QString destination = temp.filePath("result.zip");
+    try {
+        edi::write_project_archive(folder.toStdString(), destination.toStdString());
+        ok = true;
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+    }
+    QFile archive(destination);
+    const QByteArray data = archive.open(QIODevice::ReadOnly) ? archive.readAll() : QByteArray();
+    return {{"kind", kind},
+            {"ok", ok},
+            {"error", error},
+            {"archive", QString::fromLatin1(data.toBase64())}};
+}
 QJsonObject desktopSave(const QString& source, const QString& origin, const QString& target) {
     browser = false;
     QTemporaryDir temp;
@@ -312,6 +379,7 @@ QJsonObject desktopSave(const QString& source, const QString& origin, const QStr
         need(session.openProject(QUrl::fromLocalFile(input)),
              "The desktop origin must really open");
     settle(session);
+    session.project()->currentStructure()->cell()->lengthA()->setValue(4.123456789);
     session.project()->setName("unsaved-refusal-edit");
     const auto before = state(session);
     // ENOTDIR and an existing directory at a ZIP filename are reliable even as root.
@@ -402,11 +470,13 @@ int main(int argc, char** argv) {
                 for (const auto& second : {"Open", "Recent", "recovery"})
                     for (bool order : {false, true})
                         rows.append(overlap(source, first, second, order, false, false));
-        else if (group == "read-edits")
-            for (const auto& route : {"Open", "Recent", "recovery"})
-                for (bool replacement : {false, true})
-                    rows.append(overlap(source, route, "", false, !replacement, replacement));
-        else if (group == "browser-save") {
+        else if (group == "read-edits") {
+            for (const auto& route : {"Open", "Recent", "recovery"}) {
+                rows.append(overlap(source, route, "", false, true, false));
+                for (const auto& replacementKind : {"example", "new", "desktop"})
+                    rows.append(overlap(source, route, "", false, false, true, replacementKind));
+            }
+        } else if (group == "browser-save") {
             for (const auto& kind : {"browser", "folder", "zip"})
                 for (bool ok : {false, true})
                     for (bool moving : {false, true})
@@ -418,7 +488,10 @@ int main(int argc, char** argv) {
                 rows.append(browserSave(source, kind, true, true, false, false, false));
                 rows.append(browserSave(source, kind, false, false, false, true, false));
             }
-        else if (group == "continuation") {
+        else if (group == "archive-links") {
+            for (const auto& kind : {"internal", "external", "directory", "broken"})
+                rows.append(archiveLink(source, kind));
+        } else if (group == "continuation") {
             for (bool quit : {false, true}) {
                 rows.append(continuation(source, false, false, false, quit));
                 rows.append(continuation(source, true, false, false, quit));

@@ -780,7 +780,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
 
     if (['all','overlap'].includes(fileRequestCase)) {
     for (const newerFirst of [false,true]) {
-    await openFolder('routing_b');
+    await openFolder('routing_initial');
     await projectPage(); await armReads();
     const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
@@ -796,7 +796,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     for(const index of order) {
       await releaseRead(index);await completedPicker(ids[index]);
       const observed=await snapshot();
-      assert.equal(observed.name,'routing_b',
+      const expected=newerFirst||index===1?'routing_b':'routing_initial';
+      assert.equal(observed.name,expected,
         'Only the newest Open intent may publish, even before the other read completes');
     }
     await waitName('routing_b');
