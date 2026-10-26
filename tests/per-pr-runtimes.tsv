@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T08:14:09Z
+# measured_utc = 2026-10-26T08:41:21Z
 #
-# Recorded from: measured test run (30 node(s) measured once, 15802 banked, 0 stale row(s) dropped)
-# Collected tests: 17511; with a reported duration: 10114
+# Recorded from: measured test run (9 node(s) measured once, 15823 banked, 0 stale row(s) dropped)
+# Collected tests: 17511; with a reported duration: 10115
 # Module-scoped fixture costs recorded: 84
 #
 # Breaches are decided PER TIER against the table
@@ -13232,14 +13232,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::te
 0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-one-resid]
 0.000	tests/system/py/test_legend_symbols.py::test_hidden_entry_retains_its_own_drawn_symbols[test_symbol:experiment-single]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-powder-fit]
-0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-powder-keep]
+0.020	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-powder-keep]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-single-fit]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:analysis-single-keep]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:experiment-powder-fit]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:experiment-powder-keep]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:experiment-single-fit]
 0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_curves:experiment-single-keep]
-0.003	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_preference]
+0.000	tests/system/py/test_legend_visibility.py::test_legend_curve_visibility_and_range[test_preference]
 UNMEASURED:failed-in-this-run	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[one-ulp-down]
 0.660	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[one-ulp-up]
 0.700	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[original]
@@ -17997,7 +17997,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 205.663	tests/system/py/test_legend_symbols.py
-# module-cost: 212.277	tests/system/py/test_legend_visibility.py
+# module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
