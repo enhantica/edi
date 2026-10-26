@@ -33,10 +33,10 @@
           "HRPT"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -83,10 +83,10 @@
           "SEPD"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -133,7 +133,7 @@
           ""
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
           "__not_applicable__"
@@ -183,10 +183,10 @@
           "HRPT"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -233,10 +233,10 @@
           "HRPT"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -283,10 +283,10 @@
           "D20"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -333,10 +333,10 @@
           "ECHIDNA"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -383,10 +383,10 @@
           "SPODI"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -434,10 +434,10 @@
           "SPODI"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -485,10 +485,10 @@
           "SEPD"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -535,10 +535,10 @@
           "POLARIS"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -585,10 +585,10 @@
           "PEARL"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -636,10 +636,10 @@
           "McStas"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -687,10 +687,10 @@
           "WISH"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -742,10 +742,10 @@
           "BEER"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -794,7 +794,7 @@
           ""
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
           "__not_applicable__"
@@ -844,7 +844,7 @@
           "P02.1"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
           "__not_applicable__"
@@ -889,16 +889,19 @@
           "joint"
         ],
         "facilities": [
+          "",
           "ILL"
         ],
         "instruments": [
+          "",
           "D1A"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "__not_applicable__"
+          "__not_applicable__",
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -946,10 +949,10 @@
           "D20"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -998,7 +1001,7 @@
           "BM01"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
           "__not_applicable__"
@@ -1050,10 +1053,10 @@
           "HEiDi"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -1100,10 +1103,10 @@
           "5C2"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [
@@ -1150,10 +1153,10 @@
           "SENJU"
         ],
         "dimensionality": [
-          "1D"
+          "1d"
         ],
         "polarisation": [
-          "none"
+          "unpolarised"
         ]
       },
       "searchAliases": [

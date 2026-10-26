@@ -30,6 +30,8 @@ QString label(const QString& value) {
         return ExampleListModel::tr("Not applicable");
     if (value == QLatin1String("refinement")) return ExampleListModel::tr("Fitting");
     if (value == QLatin1String("simulation")) return ExampleListModel::tr("Simulation");
+    // The dimensionality token's display name.
+    if (value == QLatin1String("1d")) return QStringLiteral("1D");
     QString result = value;
     if (!result.isEmpty()) result[0] = result[0].toUpper();
     return result;

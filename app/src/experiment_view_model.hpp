@@ -45,11 +45,18 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString beamModeToken READ beamModeToken CONSTANT)
     Q_PROPERTY(QString radiationProbeToken READ radiationProbeToken CONSTANT)
     Q_PROPERTY(QString scatteringTypeToken READ scatteringTypeToken CONSTANT)
+    // ADR-0052: the experiment's description, its effective values.
+    Q_PROPERTY(QString dimensionalityToken READ dimensionalityToken CONSTANT)
+    Q_PROPERTY(QString polarisationToken READ polarisationToken CONSTANT)
+    Q_PROPERTY(QString instrumentName READ instrumentName CONSTANT)
+    Q_PROPERTY(QString facility READ facility CONSTANT)
     // Each type axis's values by their dictionary names, for the Experiment type group's selectors.
     Q_PROPERTY(edi_app::OptionListModel* sampleFormOptions READ sampleFormOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* beamModeOptions READ beamModeOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* radiationProbeOptions READ radiationProbeOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* scatteringTypeOptions READ scatteringTypeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* dimensionalityOptions READ dimensionalityOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* polarisationOptions READ polarisationOptions CONSTANT)
     Q_PROPERTY(QString peakType READ peakType WRITE setPeakType NOTIFY peakTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
@@ -167,10 +174,16 @@ class ExperimentViewModel : public QObject {
     QString beamModeToken() const;
     QString radiationProbeToken() const;
     QString scatteringTypeToken() const;
+    QString dimensionalityToken() const;
+    QString polarisationToken() const;
+    QString instrumentName() const;
+    QString facility() const;
     OptionListModel* sampleFormOptions() const { return sample_form_options_; }
     OptionListModel* beamModeOptions() const { return beam_mode_options_; }
     OptionListModel* radiationProbeOptions() const { return radiation_probe_options_; }
     OptionListModel* scatteringTypeOptions() const { return scattering_type_options_; }
+    OptionListModel* dimensionalityOptions() const { return dimensionality_options_; }
+    OptionListModel* polarisationOptions() const { return polarisation_options_; }
     QString peakType() const { return peak_type_; }
     void setPeakType(const QString& token);
     OptionListModel* peakTypeOptions() const { return peak_type_options_; }
@@ -367,6 +380,8 @@ class ExperimentViewModel : public QObject {
     OptionListModel* beam_mode_options_;
     OptionListModel* radiation_probe_options_;
     OptionListModel* scattering_type_options_;
+    OptionListModel* dimensionality_options_;
+    OptionListModel* polarisation_options_;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
     OptionListModel* extinction_type_options_;
