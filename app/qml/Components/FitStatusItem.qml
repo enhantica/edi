@@ -26,14 +26,15 @@ Control {
     // The key is shown only while every item of the bar fits with its key (StatusBar.keysFit).
     property bool showKey: true
     property bool clickable: false
-    // A framed item shows its frame all the time, as a button: `frameColor` with a 1 px `frameBorderColor` border, and
-    // `frameHoverColor` while a clickable one is hovered. With `tintsOnHover` its icon and word turn the accent on hover
-    // instead (the owner, 2026-10-26).
+    // A framed item shows its frame all the time, as a button: `frameColor`, and `frameHoverColor` while a clickable one
+    // is hovered. With `tintsOnHover` its icon and word turn the accent on hover instead. An `outlined` frame has a 1 px
+    // `frameBorderColor` border outside its body, so every button's body is `frameHeight` tall (the owner, 2026-10-26).
     property bool framed: false
     property color frameColor: AppColors.statusButtonBackground
     property color frameHoverColor: frameColor
     property color frameBorderColor: AppColors.statusButtonBorder
     property bool tintsOnHover: true
+    property bool outlined: true
     readonly property bool hoverTinted: framed && tintsOnHover && clickable && hover.hovered
     // A framed item's word, which one that `dropsWord` gives up while the bar is short of room (`showWord` false),
     // before the Fit button gives up its own (the owner, 2026-10-26).
@@ -119,16 +120,19 @@ Control {
     // progress bar.
     background: Item {
         Rectangle {
+            readonly property int outline: control.framed && control.outlined ? 1 : 0
+
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width
-            height: control.frameHeight
+            x: -outline
+            width: parent.width + 2 * outline
+            height: control.frameHeight + 2 * outline
             radius: control.framed ? height / 2 : 2
             visible: control.framed || (control.clickable && hover.hovered)
             color: !control.framed ? AppColors.hoverHighlight : control.clickable && hover.hovered ? control.frameHoverColor : control.frameColor
             Behavior on color {
                 EaAnimations.ThemeChange {}
             }
-            border.width: control.framed ? 1 : 0
+            border.width: outline
             border.color: control.frameBorderColor
         }
     }

@@ -26,7 +26,8 @@ StatusBarButton {
     iconColor: clickable ? AppColors.fitButtonForeground : EaStyle.Colors.themeForegroundDisabled
     frameColor: clickable ? AppColors.fitButtonBackground : AppColors.statusButtonBackground
     frameHoverColor: clickable ? EaStyle.Colors.themeAccent : frameColor
-    frameBorderColor: clickable ? AppColors.fitButtonBackground : AppColors.statusButtonBorder
+    // No border while it can act, so its hover is the accent alone, without a ring.
+    outlined: !clickable
     tintsOnHover: !clickable
     // Shown only while tool tips are on, as every tool tip is.
     ToolTip.text: qsTr("Fit the free parameters")
