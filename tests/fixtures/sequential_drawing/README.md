@@ -65,3 +65,10 @@ a handover therefore needs that identity timing checked before a filename/
 measured-series mismatch establishes wrong scientific drawing. The independently
 parsed measured columns remain the reference; no oracle is switched to the
 newest fitted dataset merely to pass the handover.
+
+The separate `scan_screen` observer instead identifies a file by independently
+matching the current `PatternModel`'s measured-column hash (`modelMeasured`) and
+samples `chart.measured`'s actual points in that same `afterSynchronizing`
+callback. Its derived `file` is not this receipt. That observer can establish a
+synchronized model/chart-source mismatch without the GUI grab's receipt-phase
+ambiguity; neither gate substitutes the newest worker file for its own identity.
